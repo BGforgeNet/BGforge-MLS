@@ -15,6 +15,7 @@ import type {
     SSLDialogData,
     SSLDialogNode,
     SSLDialogOptionType,
+    TDWiring,
 } from "./dialog-types";
 
 /** The source language a dialog model was parsed from - the single discriminant on `DialogModel`. */
@@ -99,6 +100,12 @@ export interface DialogModel {
      * adapter from `SSLDialogData.procNames`; absent for D.
      */
     existingProcNames?: string[];
+    /**
+     * TD only: state-list wiring (append/begin membership) plus the insertion anchors for a new state's function
+     * declaration and its state-list entry. Set by the WeiDU D adapter from `DDialogData.tdWiring` (the TD source
+     * parser populates it); absent for plain `.d`, SSL, and TSSL. The TD splicer reads it for add/remove/rename.
+     */
+    tdWiring?: TDWiring;
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -299,6 +306,12 @@ export interface DialogChoice {
      */
     callRange?: { start: number; end: number };
     targetRange?: { start: number; end: number };
+    /**
+     * TD only: byte span of the transition's target-producing call `goTo(<id>)`/`exit()`/`extern(...)`, used to
+     * flip an inbound option to `exit()` when its target node is deleted (the reply is kept). Set by the WeiDU D
+     * adapter from `DDialogTransition.targetCallRange`; absent for plain `.d`, SSL, and chained TD replies.
+     */
+    targetCallRange?: { start: number; end: number };
     /** SSL only: byte span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
     stmtRange?: { start: number; end: number };
     /**
@@ -517,8 +530,10 @@ function stateFromD(s: DDialogState): DialogState {
             target: targetFromD(tr.target),
             sourceRange: tr.range,
             targetRange: tr.targetRange,
+            targetCallRange: tr.targetCallRange,
         })),
         sourceRange: s.range,
+        nameRange: s.nameRange,
         sayRange: s.sayRange,
         triggerRange: s.triggerRange,
         derivedFrom: s.derivedFrom,
@@ -567,6 +582,7 @@ export function modelFromD(data: DDialogData): DialogModel {
         editable: true,
         roots: [...dialogRoots, ...patchRoots],
         messages: data.messages,
+        ...(data.tdWiring ? { tdWiring: data.tdWiring } : {}),
     };
 }
 

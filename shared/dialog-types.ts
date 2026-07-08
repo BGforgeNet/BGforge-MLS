@@ -279,8 +279,20 @@ export interface DDialogTransition {
      * Byte range of this transition's node in the original source (the whole
      * `IF ... THEN ...` / `++ ... + ...` construct). Set by the parser; used by the
      * per-field surgical edit to splice just this transition without reflowing siblings.
+     *
+     * For TD (statement-form replies) this spans the whole `reply(...); [action(...);] goTo(...);` statement
+     * GROUP - from the `reply(` statement through the target statement - so a remove/insert operates on the
+     * complete player option, not a lone call. Set by the TD source parser.
      */
     range?: { start: number; end: number };
+    /**
+     * TD only: byte span of the transition's target-producing call itself - `goTo(<id>)` / `exit()` /
+     * `extern(...)`. A terminal-flip (an inbound option redirected to exit when its target node is deleted)
+     * replaces this span with `exit()`, keeping the `reply(...)` intact. Set by the TD source parser only when
+     * the call is a standalone statement-form call (a chained `reply(m).goTo(t)` has no isolable target span,
+     * so it is absent there).
+     */
+    targetCallRange?: { start: number; end: number };
 }
 
 export interface DDialogState {
@@ -305,6 +317,11 @@ export interface DDialogState {
      * Used by the surgical edit engine to splice changed states back in-place.
      */
     range?: { start: number; end: number };
+    /**
+     * TD only: byte span of the state function's NAME identifier token (`function <name>`), for a rename that
+     * rewrites the definition name. Set by the TD source parser; absent on tree-sitter-parsed `.d` states.
+     */
+    nameRange?: { start: number; end: number };
     /**
      * Byte ranges of the state's SAY value node and trigger node, for per-field surgical
      * edits (splice just the changed field, leaving the rest of the state byte-identical).
@@ -346,9 +363,43 @@ export interface DDialogBlock {
     stateRefs?: string[];
 }
 
+/**
+ * TD only: a reference to a state function from OUTSIDE its own body - either a state-list element in an
+ * `append`/`begin`/`appendEarly` call, or a `goTo(<id>)` target inside an entry/extend block's arrow body.
+ * These are not model choices (which are handled by the retarget path), so the writer rewrites them directly
+ * on rename and prunes/redirects them on delete.
+ */
+export interface TDStateRef {
+    /** The referenced state's identifier text. */
+    name: string;
+    /** Byte span of the identifier token (rewritten on rename). */
+    range: { start: number; end: number };
+    /** `list`: a state-list element (append/begin), removed wholesale with its separator on delete. `entry`: a
+     *  `goTo(...)` target in an entry/extend block, redirected to `exit()` on delete. */
+    kind: "list" | "entry";
+    /** Byte span of the enclosing `goTo(...)` call (for the `exit()` redirect). Set only for `kind: "entry"`. */
+    callRange?: { start: number; end: number };
+}
+
+/** TD only: the source anchors a structural edit needs beyond per-state spans - state-list membership and the
+ *  insertion points for a brand-new state's function declaration and its state-list entry. */
+export interface TDWiring {
+    refs: TDStateRef[];
+    /** Insert point for a new state's function id in the PRIMARY state list: the offset just before the closing
+     *  `]`/`)`, plus the separator to prepend (", " when the list already has elements, else ""). Absent when
+     *  the file declares no append/begin list. */
+    listInsert?: { offset: number; separator: string };
+    /** Byte offset to insert a NEW `function` declaration: the start of the primary wiring statement. Absent when
+     *  the file has no append/begin call. */
+    newFnAnchor?: number;
+}
+
 export interface DDialogData {
     blocks: DDialogBlock[];
     states: DDialogState[];
     /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
     messages?: Record<string, string>;
+    /** TD only: state-list wiring + new-state insertion anchors (see `TDWiring`). Set by the TD source parser;
+     *  absent for tree-sitter-parsed `.d`. */
+    tdWiring?: TDWiring;
 }

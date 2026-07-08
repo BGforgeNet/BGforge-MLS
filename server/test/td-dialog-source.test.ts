@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
+import { modelFromD } from "../../shared/dialog-model";
 
 const dir = fileURLToPath(new URL("td/samples", import.meta.url));
 const sample = (name: string): string => readFileSync(`${dir}/${name}`, "utf8");
@@ -21,6 +22,44 @@ describe("parseTDSource - botsmith (statement-form replies)", () => {
         const s = parseTDSource(sample("botsmith.td")).states.find((st) => st.label === "g_item_type")!;
         expect(s.transitions.map((t) => t.replyText)).toEqual(["@3", "@4", "@5", "@6"]);
         expect(s.transitions[0]!.target).toEqual({ kind: "goto", label: "g_weapon" });
+    });
+
+    it("records each transition's whole reply+goTo statement group span, its target-call span, and the fn name span", () => {
+        const s = parseTDSource(src).states.find((st) => st.label === "g_item_type")!;
+        const t0 = s.transitions[0]!;
+        // range spans the complete player option: `reply(tra(3));\n    goTo(g_weapon);`.
+        expect(src.slice(t0.range!.start, t0.range!.end)).toBe("reply(tra(3));\n    goTo(g_weapon);");
+        // targetCallRange isolates just the target-producing call, for an exit() flip.
+        expect(src.slice(t0.targetCallRange!.start, t0.targetCallRange!.end)).toBe("goTo(g_weapon)");
+        // nameRange covers the function's own name token.
+        expect(src.slice(s.nameRange!.start, s.nameRange!.end)).toBe("g_item_type");
+    });
+
+    it("records state-list wiring (append membership + insertion anchors)", () => {
+        const data = parseTDSource(src);
+        const wiring = data.tdWiring!;
+        // Every append-list element is a state ref, plus the extendBottom entry goTo(g_item_type).
+        const listRefs = wiring.refs.filter((r) => r.kind === "list").map((r) => r.name);
+        expect(listRefs).toEqual(["g_item_type", "g_weapon", "g_armor", "g_trinket"]);
+        const entryRefs = wiring.refs.filter((r) => r.kind === "entry");
+        expect(entryRefs.map((r) => r.name)).toEqual(["g_item_type"]);
+        expect(src.slice(entryRefs[0]!.callRange!.start, entryRefs[0]!.callRange!.end)).toBe("goTo(g_item_type)");
+        // The list insert anchor sits just before the array's closing `]`, joining with ", ".
+        expect(src.slice(wiring.listInsert!.offset - "g_trinket".length, wiring.listInsert!.offset)).toBe("g_trinket");
+        expect(src[wiring.listInsert!.offset]).toBe("]");
+        expect(wiring.listInsert!.separator).toBe(", ");
+        // The new-function anchor is the start of the `append(...)` statement.
+        expect(src.slice(wiring.newFnAnchor!, wiring.newFnAnchor! + "append".length)).toBe("append");
+    });
+
+    it("threads the transition/name spans and wiring onto the DialogModel via modelFromD", () => {
+        const model = { ...modelFromD(parseTDSource(src)), sourceLang: "td" as const };
+        const state = model.roots.flatMap((r) => r.states).find((s) => s.id === "g_item_type")!;
+        expect(src.slice(state.nameRange!.start, state.nameRange!.end)).toBe("g_item_type");
+        const c0 = state.choices[0]!;
+        expect(src.slice(c0.sourceRange!.start, c0.sourceRange!.end)).toBe("reply(tra(3));\n    goTo(g_weapon);");
+        expect(src.slice(c0.targetCallRange!.start, c0.targetCallRange!.end)).toBe("goTo(g_weapon)");
+        expect(model.tdWiring!.refs.filter((r) => r.kind === "list")).toHaveLength(4);
     });
 });
 

@@ -16,6 +16,8 @@ import type {
     DDialogState,
     DDialogTarget,
     DDialogTransition,
+    TDStateRef,
+    TDWiring,
 } from "../../../shared/dialog-types";
 
 const span = (n: Node): { start: number; end: number } => ({ start: n.getStart(), end: n.getEnd() });
@@ -64,15 +66,39 @@ function targetOf(method: string, call: CallExpression): DDialogTarget | undefin
     return undefined;
 }
 
+type Range = { start: number; end: number };
+
+/** The enclosing statement span of a call (incl. the trailing `;`), for the reply/goTo statement group. */
+function stmtSpanOf(call: CallExpression): Range {
+    const stmt = call.getFirstAncestorByKind(SyntaxKind.ExpressionStatement);
+    return stmt ? span(stmt) : span(call);
+}
+
 function parseState(fn: FunctionDeclaration): DDialogState {
     const label = fn.getName() ?? "";
-    const sayTexts: Array<{ text: string; range: { start: number; end: number } }> = [];
+    const sayTexts: Array<{ text: string; range: Range }> = [];
     const transitions: DDialogTransition[] = [];
-    let pending: { replyText?: string; action?: string } = {};
+    // `replyStart` is the start offset of the transition's first statement (the `reply(...)`), so the whole
+    // `reply(...); [action(...);] goTo(...);` group can be spliced as one unit on remove.
+    let pending: { replyText?: string; action?: string; replyStart?: number } = {};
     let pendingLine = 0;
 
-    const flush = (target: DDialogTarget, targetRange?: { start: number; end: number }): void => {
-        transitions.push({ line: pendingLine || 1, ...pending, target, ...(targetRange ? { targetRange } : {}) });
+    const flush = (target: DDialogTarget, targetRange: Range | undefined, targetCall: CallExpression): void => {
+        const { replyStart, ...rest } = pending;
+        const targetStmt = stmtSpanOf(targetCall);
+        const range: Range = { start: replyStart ?? targetStmt.start, end: targetStmt.end };
+        // Only a standalone (identifier-callee) target call has an isolable span; a chained reply(m).goTo(t)
+        // call node spans the whole chain, so its target cannot be flipped in isolation - leave it absent.
+        const targetCallRange =
+            targetCall.getExpression().getKind() === SyntaxKind.Identifier ? span(targetCall) : undefined;
+        transitions.push({
+            line: pendingLine || 1,
+            ...rest,
+            target,
+            ...(targetRange ? { targetRange } : {}),
+            range,
+            ...(targetCallRange ? { targetCallRange } : {}),
+        });
         pending = {};
         pendingLine = 0;
     };
@@ -86,6 +112,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
             if (t !== undefined) sayTexts.push({ text: t, range: span(call) });
         } else if (m === "reply") {
             pending.replyText = traText(args[0]);
+            if (pending.replyStart === undefined) pending.replyStart = stmtSpanOf(call).start;
             pendingLine = call.getStartLineNumber();
         } else if (m === "action") {
             pending.action = stripQuotes(args[0]?.getText() ?? "");
@@ -95,7 +122,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
                 if (!pendingLine) pendingLine = call.getStartLineNumber();
                 // The target identifier arg: goTo(<id>) / extern(file, <id>) - its span drives token-splice retarget.
                 const idArg = m === "goTo" ? args[0] : m === "extern" ? args[1] : undefined;
-                flush(target, idArg ? span(idArg) : undefined);
+                flush(target, idArg ? span(idArg) : undefined, call);
             }
         }
     };
@@ -117,6 +144,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
     // Entry trigger: the nearest enclosing `if (...)` wrapping the state function (the state-gate pattern).
     const ifStmt = fn.getFirstAncestorByKind(SyntaxKind.IfStatement);
     const trigger = ifStmt ? ifStmt.getExpression().getText() : undefined;
+    const nameNode = fn.getNameNode();
 
     return {
         label,
@@ -126,6 +154,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
         ...(trigger !== undefined ? { trigger } : {}),
         transitions,
         range: span(fn),
+        ...(nameNode ? { nameRange: span(nameNode) } : {}),
     };
 }
 
@@ -167,10 +196,82 @@ function parseBlocks(sf: SourceFile): DDialogBlock[] {
     return blocks;
 }
 
+/** Functions that carry a state LIST (their args after the file are state function identifiers). */
+const LIST_FNS: ReadonlySet<string> = new Set(["append", "appendEarly", "begin"]);
+
 /**
- * Parse TD source into WeiDU D DialogData with ranges into the source. Phase 1 (read-only view): every
- * zero-parameter top-level `function` is treated as a state (param'd functions are inlined helpers). Full
- * state/block cross-linking and write-back anchors land with TD editing (Phase 2+).
+ * Extract the wiring a structural edit needs beyond per-state spans: every out-of-body reference to a state
+ * (state-list elements in append/begin/appendEarly, and entry-block `goTo` targets), plus the insertion anchors
+ * for a new state's function declaration and its state-list entry. `stateNames` scopes the collection to real
+ * state functions so an unrelated identifier is never treated as a state ref. The PRIMARY state list (the first
+ * append/begin found) owns the insertion anchors - a new state joins it.
+ */
+function parseWiring(sf: SourceFile, stateNames: ReadonlySet<string>): TDWiring | undefined {
+    const refs: TDStateRef[] = [];
+    let listInsert: TDWiring["listInsert"];
+    let newFnAnchor: number | undefined;
+    let primarySeen = false;
+
+    sf.forEachDescendant((node) => {
+        if (!Node.isCallExpression(node)) return;
+        const m = methodName(node);
+        if (m === undefined) return;
+
+        // An entry/extend-block goTo target is a `goTo(<id>)` with no enclosing state function (it lives in the
+        // block's arrow body). A goTo inside a state function is a model choice, handled by the retarget path.
+        if (m === "goTo") {
+            const insideState = node.getFirstAncestorByKind(SyntaxKind.FunctionDeclaration) !== undefined;
+            const arg = node.getArguments()[0];
+            if (!insideState && arg && arg.getKind() === SyntaxKind.Identifier && stateNames.has(arg.getText())) {
+                refs.push({ name: arg.getText(), range: span(arg), kind: "entry", callRange: span(node) });
+            }
+            return;
+        }
+
+        if (!LIST_FNS.has(m)) return;
+        const args = node.getArguments();
+        const second = args[1];
+        const elements: Node[] = [];
+        let closeOffset: number;
+        if (second && Node.isArrayLiteralExpression(second)) {
+            for (const el of second.getElements()) if (el.getKind() === SyntaxKind.Identifier) elements.push(el);
+            closeOffset = second.getEnd() - 1; // just before `]`
+        } else {
+            for (let i = 1; i < args.length; i++) {
+                const a = args[i]!;
+                if (a.getKind() === SyntaxKind.Identifier) elements.push(a);
+            }
+            closeOffset = node.getEnd() - 1; // just before `)`
+        }
+        for (const el of elements) {
+            if (stateNames.has(el.getText())) refs.push({ name: el.getText(), range: span(el), kind: "list" });
+        }
+        if (!primarySeen) {
+            primarySeen = true;
+            listInsert = { offset: closeOffset, separator: elements.length > 0 ? ", " : "" };
+            // Anchor a new function before the whole primary wiring statement (an `append(...)` statement or an
+            // `export default begin(...)`), so it lands among the other state functions.
+            let anchor: Node = node;
+            let p: Node | undefined = node.getParent();
+            while (p && !Node.isSourceFile(p)) {
+                anchor = p;
+                p = p.getParent();
+            }
+            newFnAnchor = anchor.getStart();
+        }
+    });
+    if (refs.length === 0 && listInsert === undefined) return undefined;
+    return {
+        refs,
+        ...(listInsert ? { listInsert } : {}),
+        ...(newFnAnchor !== undefined ? { newFnAnchor } : {}),
+    };
+}
+
+/**
+ * Parse TD source into WeiDU D DialogData with ranges into the source. Every zero-parameter top-level
+ * `function` is a state (param'd functions are inlined helpers); per-state and per-transition byte ranges plus
+ * the state-list wiring (`tdWiring`) drive surgical write-back.
  */
 export function parseTDSource(text: string): DDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
@@ -185,5 +286,7 @@ export function parseTDSource(text: string): DDialogData {
         if (fn.getParameters().length > 0) continue;
         states.push(parseState(fn));
     }
-    return { blocks: parseBlocks(sf), states };
+    const stateNames = new Set(states.map((s) => s.label));
+    const tdWiring = parseWiring(sf, stateNames);
+    return { blocks: parseBlocks(sf), states, ...(tdWiring ? { tdWiring } : {}) };
 }

@@ -98,4 +98,20 @@ describe("computeDialogSourceEdit - td id allocation", () => {
         expect(result.messages["25"]).toBe("Forge me a shield");
         expect(state.choices.at(-1)!.text).toBe("@25");
     });
+
+    it("does not report an existing @N td option as a pending allocation (its source span keys it committed)", () => {
+        const original = tdModel(botsmith);
+        original.messages = existingFromModel(original);
+        const edited = structuredClone(original);
+        // Retarget an existing transition so a splice happens (newText != null); the allocations map must then
+        // exclude the file's existing @N options - each carries a sourceRange, so it is not a pending new item.
+        const choice = edited.roots
+            .flatMap((r) => r.states)
+            .find((s) => s.id === "g_item_type")!
+            .choices.find((c) => c.target.kind === "state" && c.target.stateId === "g_weapon")!;
+        (choice.target as { kind: "state"; stateId: string }).stateId = "g_armor";
+        const result = computeDialogSourceEdit(botsmith, edited, original);
+        expect(result.newText).not.toBeNull();
+        expect(result.allocations).toEqual({});
+    });
 });
