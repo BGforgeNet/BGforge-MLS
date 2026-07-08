@@ -6,6 +6,7 @@ import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { applyTSSLDialogEdits } from "../../shared/dialog-tssl-edit";
 
 const flat = readFileSync(fileURLToPath(new URL("tssl/samples/flat.tssl", import.meta.url)), "utf8");
+const multi = readFileSync(fileURLToPath(new URL("tssl/samples/multi.tssl", import.meta.url)), "utf8");
 
 function tsslModel(src: string): DialogModel {
     return { ...modelFromSSL(parseTSSLSource(src)), sourceLang: "tssl", editable: true };
@@ -54,6 +55,23 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         // The Low/non-Low forms differ in arg count (3-arg -> 2-arg), so the whole call is re-serialized; the
         // original numeric id text is preserved.
         expect(out).toBe(flat.replace("NOption(101, Node002, 4)", "NLowOption(101, Node002)"));
+    });
+
+    it("reorders a node's options: moving option #2 above #1 swaps their source statements", () => {
+        const original = { ...modelFromSSL(parseTSSLSource(multi)), sourceLang: "tssl" as const, editable: true };
+        const edited = structuredClone(original);
+        const node1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Source order: [-> Node002, -> Node003]. Swap so Node003's option comes first.
+        node1.choices = [node1.choices[1]!, node1.choices[0]!];
+        const out = applyTSSLDialogEdits(multi, edited, original);
+        // The two option statements are swapped in source; everything else byte-identical.
+        expect(out.indexOf("NOption(102, Node003, 4)")).toBeLessThan(out.indexOf("NOption(101, Node002, 4)"));
+        expect(out).toBe(
+            multi.replace(
+                "    NOption(101, Node002, 4);\n    NOption(102, Node003, 4);",
+                "    NOption(102, Node003, 4);\n    NOption(101, Node002, 4);",
+            ),
+        );
     });
 
     it("splices an edited option condition into the .tssl if-wrapper", () => {

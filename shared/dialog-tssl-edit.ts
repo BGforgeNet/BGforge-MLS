@@ -74,6 +74,42 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     }
     const origById = new Map(statesOf(original).map((c) => [c.id, c]));
     const ops: SpliceOp[] = [];
+
+    // REORDER (per node): when a node's surviving flat options appear in a different order than source, refill
+    // each source callRange slot with the option now at that position (survivor refill, mirroring SSL's nodeOps).
+    // Field edits (target/reaction/low) are subsumed via `survivorReplacement`, so a reordered option's own
+    // per-choice field splice below is suppressed (`reorderedIds`) to avoid double-splicing its callRange. Only
+    // FLAT options participate: a conditional option's callRange sits inside an `if` wrapper that does not move
+    // with the call, so it is pinned to its own slot - matching SSL. Slot refills are disjoint from add (a
+    // zero-width insert at the survivor anchor) and remove (a whole-statement splice of a NON-survivor option),
+    // so this composes with a concurrent structural edit.
+    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
+    const reorderedIds = new Set<string>();
+    for (const state of allStates(edited)) {
+        const origState = origStateById.get(state.renamedFrom ?? state.id);
+        if (!origState) continue;
+        const editedIdSet = new Set(state.choices.map((ch) => ch.id));
+        const isFlatOrig = (o: DialogChoice): boolean => o.callRange !== undefined && o.condition === undefined;
+        const flatOrigSurvivors = origState.choices.filter((o) => isFlatOrig(o) && editedIdSet.has(o.id));
+        const flatEditedSurvivors = state.choices.filter((ch) => {
+            const o = origById.get(ch.id);
+            return o !== undefined && isFlatOrig(o);
+        });
+        const sourceOrder = flatOrigSurvivors.map((o) => o.id).join("|");
+        const editedOrder = flatEditedSurvivors.map((ch) => ch.id).join("|");
+        if (sourceOrder === editedOrder) continue; // no reorder - the per-choice field splices below apply
+        for (let i = 0; i < flatOrigSurvivors.length; i++) {
+            const slot = flatOrigSurvivors[i]!.callRange!;
+            const moved = flatEditedSurvivors[i]!;
+            const movedOrig = origById.get(moved.id)!;
+            reorderedIds.add(moved.id);
+            const replacement = survivorReplacement(originalText, moved, movedOrig);
+            if (replacement !== originalText.slice(slot.start, slot.end)) {
+                ops.push({ start: slot.start, end: slot.end, replacement });
+            }
+        }
+    }
+
     for (const c of statesOf(edited)) {
         const orig = origById.get(c.id);
         if (!orig) continue;
@@ -83,7 +119,13 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         // reaction change token-patches just the macro-name (`NOption` -> `GOption`), leaving the other args
         // byte-exact; a low-INT toggle re-serializes the whole call (the Low/non-Low forms differ in arg count,
         // `NOption(id, node, skill)` <-> `NLowOption(id, node)`), preserving the original numeric id text.
-        if (c.target.kind === "state" && orig.target.kind === "state" && orig.callRange && orig.targetRange) {
+        if (
+            !reorderedIds.has(c.id) &&
+            c.target.kind === "state" &&
+            orig.target.kind === "state" &&
+            orig.callRange &&
+            orig.targetRange
+        ) {
             const replacement = survivorReplacement(originalText, c, orig);
             if (replacement !== originalText.slice(orig.callRange.start, orig.callRange.end)) {
                 ops.push({ start: orig.callRange.start, end: orig.callRange.end, replacement });
@@ -177,7 +219,6 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // since the call syntax is byte-identical) and insert after the last SURVIVING option's statement so it
     // never lands inside a removed option's span. A reply-only node with no surviving option anchors just
     // before its closing brace. Mirrors `applySSLDialogEdits`' ADD case.
-    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
     for (const state of allStates(edited)) {
         const origState = origStateById.get(state.id);
         if (!origState) continue; // a brand-new node is emitted whole by the add-node writer, not here
