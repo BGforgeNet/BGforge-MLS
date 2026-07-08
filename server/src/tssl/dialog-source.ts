@@ -246,20 +246,48 @@ export function parseTSSLSource(text: string): SSLDialogData {
     const nodes: SSLDialogNode[] = [];
     const entryPoints: string[] = [];
     const procNames: string[] = [];
+    const entryCalls: NonNullable<SSLDialogData["entryCalls"]> = [];
+    let newProcAnchor: number | undefined;
+    let entryCallAnchor: number | undefined;
     for (const fn of fns) {
         const name = fn.getName();
         if (name === undefined) continue;
         if (name === TALK_PROC) {
-            // Entry points: each `NodeNNN();` call in talk_p_proc (a call to a local node).
+            // Entry router: record each `NodeNNN();` call in talk_p_proc with its statement + target spans, so a
+            // node rename/delete can rewrite/remove the entry call. `newProcAnchor` (a new node is spliced just
+            // before the router) and `entryCallAnchor` (a new entry call is appended after the last body
+            // statement) mirror the SSL parser's write-back anchors.
+            newProcAnchor = fn.getStart();
+            const body = fn.getBody();
+            const bodyStmts = body && Node.isBlock(body) ? body.getStatements() : [];
+            entryCallAnchor = bodyStmts.length > 0 ? bodyStmts[bodyStmts.length - 1]!.getEnd() : fn.getStart();
             fn.forEachDescendant((node) => {
                 if (!Node.isCallExpression(node)) return;
                 const cn = calleeName(node);
-                if (cn !== undefined && localFns.has(cn) && !entryPoints.includes(cn)) entryPoints.push(cn);
+                if (cn === undefined || !localFns.has(cn)) return;
+                if (!entryPoints.includes(cn)) entryPoints.push(cn);
+                // topLevel: the call's own statement is a direct child of the router body (not nested in an if),
+                // so it can be removed without leaving a dangling conditional (mirrors the SSL entry-call guard).
+                const stmt = node.getFirstAncestorByKind(SyntaxKind.ExpressionStatement);
+                const topLevel = stmt !== undefined && stmt.getParent() === body;
+                entryCalls.push({
+                    name: cn,
+                    stmtRange: stmtSpan(node),
+                    targetRange: span(node.getExpression()),
+                    topLevel,
+                });
             });
             continue;
         }
         procNames.push(name);
         nodes.push(buildNode(fn, name, localFns));
     }
-    return { nodes, entryPoints, procNames };
+    return {
+        nodes,
+        entryPoints,
+        procNames,
+        ...(entryCalls.length > 0 ? { entryCalls } : {}),
+        ...(newProcAnchor !== undefined ? { newProcAnchor } : {}),
+        ...(entryCallAnchor !== undefined ? { entryCallAnchor } : {}),
+    };
 }

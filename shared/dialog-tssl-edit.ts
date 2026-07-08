@@ -119,6 +119,27 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // in a DELETED node is removed by that node's whole-function splice below; removing it individually too
     // would overlap.) A pure conditional option is the sole content of its `if`, so remove the whole `if`;
     // otherwise just the call.
+    // RENAME node: a node whose id changed carries `renamedFrom` (set by ops.renameState). Rewrite its
+    // function-name token and every entry call / out-of-band call targeting the OLD id. Inbound OPTION targets
+    // were moved by the model's retarget (handled by the state->state retarget splice above), so they are not
+    // touched here - the double-splice guard, mirroring applySSLDialogEdits. The old id is also excluded from
+    // the DELETE loop below (a renamed-away id is absent from editedStateIds but is NOT a deletion).
+    const renamedFromIds = new Set<string>();
+    for (const state of allStates(edited)) {
+        if (!state.renamedFrom || !state.nameRange) continue;
+        renamedFromIds.add(state.renamedFrom);
+        ops.push({ start: state.nameRange.start, end: state.nameRange.end, replacement: state.id });
+        for (const ec of original.entryCalls ?? []) {
+            if (ec.name === state.renamedFrom) {
+                ops.push({ start: ec.targetRange.start, end: ec.targetRange.end, replacement: state.id });
+            }
+        }
+        for (const ob of original.outOfBandCalls ?? []) {
+            if (ob.name === state.renamedFrom) {
+                ops.push({ start: ob.targetRange.start, end: ob.targetRange.end, replacement: state.id });
+            }
+        }
+    }
     const editedIds = new Set(statesOf(edited).map((c) => c.id));
     const editedStateIds = new Set(allStates(edited).map((s) => s.id));
     for (const os of allStates(original)) {
@@ -136,7 +157,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // overlap, and an inbound option that flipped to a terminal lives in a DIFFERENT surviving node). Mirrors
     // `applySSLDialogEdits`' DELETE case; renamed-away nodes are excluded once rename lands (Phase 3 task 3).
     for (const os of allStates(original)) {
-        if (editedStateIds.has(os.id) || !os.procRange) continue;
+        if (editedStateIds.has(os.id) || renamedFromIds.has(os.id) || !os.procRange) continue;
         const start = os.procRange.start;
         const nl = originalText.indexOf("\n", os.procRange.end);
         const end = nl === -1 ? os.procRange.end : nl + 1;

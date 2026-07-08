@@ -125,6 +125,41 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).toContain("function Node002()");
     });
 
+    it("renames a node: rewrites the function name and the talk_p_proc entry call", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // What ops.renameState records: renamedFrom = old id, id = new id (no inbound options for Node001).
+        node.renamedFrom = "Node001";
+        node.id = "Node009";
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).toContain("function Node009()"); // definition renamed
+        expect(out).not.toContain("function Node001()");
+        // The entry call inside talk_p_proc is renamed (assert on the router body, not the header comment
+        // which legitimately still mentions Node001 as documentation).
+        const router = out.slice(out.indexOf("function talk_p_proc()"));
+        expect(router).toContain("Node009();");
+        expect(router).not.toMatch(/\bNode001\b/);
+        expect(out).toContain("function Node002()"); // an unrelated node is untouched
+    });
+
+    it("renames a node targeted by an option: the inbound option retargets to the new id", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        node.renamedFrom = "Node002";
+        node.id = "Node009";
+        // ops.renameState also moves inbound option targets old id -> new id.
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.target.kind === "state",
+        )!;
+        (opt.target as { kind: "state"; stateId: string }).stateId = "Node009";
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).toContain("function Node009()");
+        expect(out).toContain("NOption(101, Node009, 4);"); // inbound option retargeted
+        expect(out).not.toMatch(/\bNode002\b/);
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
