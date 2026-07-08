@@ -8,7 +8,7 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { serializeTDTransition } from "./dialog-td-serialize";
+import { serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 
 function choicesOf(model: DialogModel): DialogChoice[] {
@@ -48,6 +48,35 @@ function removeLineSplice(text: string, span: { start: number; end: number }): S
     return { start, end, replacement: "" };
 }
 
+/** Splice a whole state function out, plus the blank line separating it from the next (up to two trailing
+ *  newlines), so deleting a node leaves the surrounding functions cleanly spaced. */
+function removeFunctionSplice(text: string, span: { start: number; end: number }): SpliceOp {
+    let end = span.end;
+    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
+    else if (text[end] === "\n") end += 1;
+    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
+    else if (text[end] === "\n") end += 1;
+    return { start: span.start, end, replacement: "" };
+}
+
+/**
+ * Splice a state-list element out of an `append`/`begin` list, consuming one adjacent comma so the list stays
+ * well-formed: a non-last element eats its FOLLOWING `, `, a last element eats its PRECEDING `, `.
+ */
+function removeListElement(text: string, range: { start: number; end: number }): SpliceOp {
+    let e = range.end;
+    while (e < text.length && (text[e] === " " || text[e] === "\t")) e++;
+    if (text[e] === ",") {
+        e++;
+        while (e < text.length && (text[e] === " " || text[e] === "\t")) e++;
+        return { start: range.start, end: e, replacement: "" };
+    }
+    let s = range.start;
+    while (s > 0 && (text[s - 1] === " " || text[s - 1] === "\t")) s--;
+    if (text[s - 1] === ",") s--;
+    return { start: s, end: range.end, replacement: "" };
+}
+
 /**
  * Compute the `.td` source with the model's surgical field edits applied. Returns the text unchanged when
  * nothing surgical changed.
@@ -71,6 +100,17 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
             orig.targetRange
         ) {
             ops.push({ start: orig.targetRange.start, end: orig.targetRange.end, replacement: c.target.stateId });
+        }
+        // Terminal flip: an inbound option retargeted from a state to a terminal (exit/external) - typically its
+        // target node was deleted and `deleteState` redirected it to exit - rewrites the `goTo(<id>)` call to
+        // `exit()` (or `extern(...)`), keeping the `reply(...)`. Uses the isolable target-call span (statement
+        // form only); mutually exclusive with the state->state retarget above.
+        if (orig.target.kind === "state" && c.target.kind !== "state" && orig.targetCallRange) {
+            ops.push({
+                start: orig.targetCallRange.start,
+                end: orig.targetCallRange.end,
+                replacement: serializeTDTarget(c.target),
+            });
         }
     }
     // Structural: an existing option removed from a SURVIVING node -> splice out its whole `reply(...); goTo(...);`
@@ -117,6 +157,24 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
         if (offset !== undefined) {
             const block = added.map((c) => `\n\n${serializeTDTransition(c, indent)}`).join("");
             ops.push({ start: offset, end: offset, replacement: block });
+        }
+    }
+    // Structural: DELETE node - an original node absent from the edited model -> splice out its whole function
+    // (plus the separating blank line), prune its state-list membership, and redirect any entry-block goTo to
+    // exit() so no reference dangles. Disjoint from every option splice (functions do not overlap, and an inbound
+    // option that flipped to a terminal lives in a DIFFERENT surviving node's body).
+    const deletedIds = new Set<string>();
+    for (const os of allStates(original)) {
+        if (editedStateIds.has(os.id) || os.derivedFrom || !os.sourceRange) continue;
+        deletedIds.add(os.id);
+        ops.push(removeFunctionSplice(originalText, os.sourceRange));
+    }
+    for (const ref of original.tdWiring?.refs ?? []) {
+        if (!deletedIds.has(ref.name)) continue;
+        if (ref.kind === "list") ops.push(removeListElement(originalText, ref.range));
+        else if (ref.callRange) {
+            // Entry-block goTo target: redirect to exit() rather than leave a jump to a removed state.
+            ops.push({ start: ref.callRange.start, end: ref.callRange.end, replacement: "exit()" });
         }
     }
     return applySplices(originalText, ops);

@@ -21,7 +21,7 @@ function bareMsgId(text: string | undefined): number | undefined {
  * (`targetFromD`); COPY_TRANS keeps its sentinel prefix out of the call and is emitted as a best-effort
  * `extern` since add-option never authors one (it is a read-only construct in the editor).
  */
-function serializeTDTarget(target: DialogTarget): string {
+export function serializeTDTarget(target: DialogTarget): string {
     switch (target.kind) {
         case "state":
             return `goTo(${target.stateId})`;

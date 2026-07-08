@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
 import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { applyTDDialogEdits } from "../../shared/dialog-td-edit";
+import { deleteState } from "../../shared/dialog-edit-ops";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
 
@@ -102,5 +103,29 @@ describe("applyTDDialogEdits - add option", () => {
         const armorBody = out.slice(out.indexOf("function g_armor()"), out.indexOf("function g_trinket()"));
         expect(armorBody).toContain("reply(tra(26));");
         expect(armorBody).toContain("exit();");
+    });
+});
+
+describe("applyTDDialogEdits - remove node", () => {
+    it("splices the function, prunes the append list, and flips inbound goTo(deleted) to exit()", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const gw = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_weapon")!;
+        // deleteState: redirect inbound same-dialogue GOTOs to EXIT, then drop the state.
+        deleteState(edited, gw);
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        // The whole function is gone, body and all.
+        expect(out).not.toContain("function g_weapon()");
+        expect(out).not.toContain("say(tra(22))");
+        // The append state list no longer names g_weapon.
+        expect(out).toContain("append(dlg, [g_item_type, g_armor, g_trinket]);");
+        // The inbound option in g_item_type keeps its reply but flips its target to exit() - no dangling goTo.
+        const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_armor()"));
+        expect(itemType).toContain("reply(tra(3));");
+        expect(itemType).toContain("exit();");
+        expect(itemType).not.toContain("goTo(g_weapon)");
+        // Unrelated nodes survive.
+        expect(out).toContain("function g_armor()");
+        expect(out).toContain("function g_trinket()");
     });
 });
