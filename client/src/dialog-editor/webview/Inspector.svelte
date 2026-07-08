@@ -9,7 +9,6 @@
         type DialogChoice,
         type DialogReaction,
         type RenderFamily,
-        type SourceLang,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
@@ -34,7 +33,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, sourceLang, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -53,10 +52,6 @@
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
         onFocusOwnerState: () => void;
         format: RenderFamily;
-        /** Exact source language. Some structural ops (option reorder, reaction, low-INT) are implemented for
-            real SSL but not yet for the TS-source languages (td/tssl), so those controls gate on `=== "ssl"`
-            even where the node is otherwise structurally editable - avoiding a control that no-ops on save. */
-        sourceLang: SourceLang;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
         // a faithful node, which gains the structural ops the save path can persist (retarget, reorder,
@@ -138,11 +133,6 @@
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
 
-    // Option reorder / reaction / low-INT write-back is implemented for real SSL but not yet for the TS-source
-    // languages (td/tssl faithful nodes get add/remove/rename + retarget/condition, but not these three). Gate
-    // those controls so they never render enabled where a save would silently drop them (see the sourceLang prop).
-    const sslOnlyOps = $derived(structuralEditable && sourceLang === "ssl");
-
     // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
     // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
     const textFile = $derived(ssl ? ".msg" : ".tra");
@@ -162,13 +152,6 @@
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
     const structReason = $derived(structuralLockReason(state, ssl, editable));
     const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
-    // Tooltip for an sslOnlyOps-gated control: when the node IS structurally editable but the language is
-    // td/tssl (reorder/reaction/low-INT not written yet), say it is source-only; else the generic lock reason.
-    const sslOnlyReason = $derived(
-        structuralEditable
-            ? "Not yet editable from the graph for this source language - edit the source file."
-            : structReason,
-    );
 
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
     // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
@@ -411,7 +394,7 @@
                                  UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
                                  save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
                                  hidden) with a tooltip - the unavailable action stays visible and explained. -->
-                            {#if sslOnlyOps && !state.branches}
+                            {#if structuralEditable && !state.branches}
                                 <button title={i === 0 ? "Already the first option" : "Move up"} disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                                 <button title={i === state.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                             {/if}
@@ -471,13 +454,13 @@
                      which has no reaction/low-INT concept. -->
                 <div class="rctrow">
                     <span class="rctlbl">Reaction</span>
-                    <select class="iv rct" disabled={!sslOnlyOps} title={!sslOnlyOps ? sslOnlyReason : ""} value={c.reaction} onchange={(e) => onReactionChange(c, e.currentTarget.value)}>
+                    <select class="iv rct" disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} value={c.reaction} onchange={(e) => onReactionChange(c, e.currentTarget.value)}>
                         <option value="good">Good</option>
                         <option value="neutral">Neutral</option>
                         <option value="bad">Bad</option>
                     </select>
                     <label class="lowlbl">
-                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!sslOnlyOps} title={!sslOnlyOps ? sslOnlyReason : ""} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
+                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
                         Low INT
                     </label>
                 </div>

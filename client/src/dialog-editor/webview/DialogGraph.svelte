@@ -984,9 +984,7 @@
             if (structEditable(selected)) removeOption(selected, choiceId); // Tier 2 remove option: D or faithful SSL
         },
         moveReply: (choiceId: string, dir: -1 | 1) => {
-            // Reorder is implemented for real SSL / D only - the td/tssl writers do not re-serialize the option
-            // run yet, so gate on exact sourceLang (not renderFamily) to avoid a keyboard/context-menu no-op.
-            if (!structEditable(selected) || (editModel.sourceLang !== "ssl" && editModel.sourceLang !== "d")) return;
+            if (!structEditable(selected)) return; // reorder writes back to source for every family (D/SSL/td/tssl)
             ops.moveReply(selected, choiceId, dir);
             void rebuild({ frame: "none" });
         },
@@ -996,14 +994,15 @@
             void rebuild({ frame: "none" });
         },
         setReaction: (choiceId: string, reaction: DialogReaction) => {
-            // Reaction (N/G/B macro rewrite) is implemented for real SSL only, not the td/tssl writers yet.
-            if (!structEditable(selected) || editModel.sourceLang !== "ssl") return;
+            // Reaction (N/G/B macro rewrite) is a Fallout-SSL-family concept: real SSL and TSSL. It has no D-family
+            // (d/td) equivalent and the reaction control never renders there; guard anyway for keyboard paths.
+            if (!structEditable(selected) || (editModel.sourceLang !== "ssl" && editModel.sourceLang !== "tssl")) return;
             ops.setChoiceReaction(selected, choiceId, reaction);
             void rebuild({ frame: "none" });
         },
         setLowIq: (choiceId: string, on: boolean) => {
-            // Low-INT (arg-count) rewrite is implemented for real SSL only, not the td/tssl writers yet.
-            if (!structEditable(selected) || editModel.sourceLang !== "ssl") return;
+            // Low-INT (arg-count) rewrite is also SSL-family only (real SSL + TSSL).
+            if (!structEditable(selected) || (editModel.sourceLang !== "ssl" && editModel.sourceLang !== "tssl")) return;
             ops.setChoiceLowIq(selected, choiceId, on);
             void rebuild({ frame: "none" });
         },
@@ -1214,7 +1213,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceLang={editModel.sourceLang} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
