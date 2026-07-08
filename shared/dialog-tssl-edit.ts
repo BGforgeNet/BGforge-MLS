@@ -8,8 +8,13 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
+import { isLocalNewSSLNode } from "./dialog-ssl-edit";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
+import { serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
+
+/** The TSSL entry router (a bare-call dispatcher), mirroring SSL's `talk_p_proc`. New nodes anchor before it. */
+const TALK_PROC = "talk_p_proc";
 
 function statesOf(model: DialogModel): DialogChoice[] {
     // Flatten every choice across roots/states for id-keyed diffing.
@@ -169,6 +174,18 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         if (offset !== undefined) {
             const block = added.map((c) => `\n${indent}${serializeSSLOption(c, msgIdOf(c))}`).join("");
             ops.push({ start: offset, end: offset, replacement: block });
+        }
+    }
+    // Structural: ADD node - a locally-new node (no procRange, not derived/renamed) -> serialize a whole
+    // `function <id>() { ... }` and insert it just before the `talk_p_proc` entry router, mirroring
+    // `applySSLDialogEdits`' add-node (which anchors before talk_p_proc). @N ids are already allocated
+    // upstream (renderFamily=fallout-ssl gate). A file with no entry router is a from-scratch scaffold, out
+    // of scope here. Disjoint from every option/node splice (the anchor is a zero-width insert at talk_p_proc).
+    const talkAnchor = originalText.indexOf(`function ${TALK_PROC}`);
+    if (talkAnchor !== -1) {
+        for (const state of allStates(edited)) {
+            if (!isLocalNewSSLNode(state) || state.committed) continue;
+            ops.push({ start: talkAnchor, end: talkAnchor, replacement: `${serializeTSSLProcedure(state)}\n\n` });
         }
     }
     return applySplices(originalText, ops);

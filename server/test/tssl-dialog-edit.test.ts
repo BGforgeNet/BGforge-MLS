@@ -101,6 +101,30 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).toContain("Node001();"); // talk_p_proc entry untouched
     });
 
+    it("adds a new node: serializes a function before talk_p_proc and retargets the inbound option to it", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const root = edited.roots[0]!;
+        // A brand-new node (no procRange) with a reply and one terminal option, both already @N-allocated.
+        root.states.push({
+            id: "Node003",
+            text: "@300",
+            choices: [{ id: "Node003#o0", text: "@301", target: { kind: "exit" } }],
+        } as (typeof root.states)[number]);
+        // Wire it in: retarget Node001's existing option from Node002 to the new node.
+        const opt = root.states.find((s) => s.id === "Node001")!.choices.find((c) => c.target.kind === "state")!;
+        (opt.target as { kind: "state"; stateId: string }).stateId = "Node003";
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        // The new function is serialized before the entry router, with its Reply and terminal option.
+        expect(out).toContain("function Node003() {");
+        expect(out).toMatch(/function Node003\(\) \{\n {4}Reply\(300\);\n {4}NMessage\(301\);\n\}/);
+        expect(out.indexOf("function Node003()")).toBeLessThan(out.indexOf("function talk_p_proc"));
+        // The inbound option is retargeted to it; Node002's own function is untouched (it was not deleted).
+        expect(out).toContain("NOption(101, Node003, 4);");
+        expect(out).not.toContain("NOption(101, Node002");
+        expect(out).toContain("function Node002()");
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
