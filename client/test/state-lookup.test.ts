@@ -15,7 +15,7 @@ describe("findStateInRoots", () => {
         // the choice (it lives on the active root's state) and the target never changes.
         const a = st("shared", [{ id: "shared#a", text: "", target: { kind: "exit" } }]);
         const b = st("shared", [{ id: "shared#b", text: "", target: { kind: "exit" } }]);
-        const model: DialogModel = { format: "weidu-d", editable: true, roots: roots(["A", [a]], ["B", [b]]) };
+        const model: DialogModel = { sourceLang: "d", editable: true, roots: roots(["A", [a]], ["B", [b]]) };
         // Active tab is B: the B instance must win, so its choice ids are the editable ones.
         expect(findStateInRoots(model.roots, "B", "shared")).toBe(b);
         expect(findStateInRoots(model.roots, "A", "shared")).toBe(a);
@@ -23,12 +23,12 @@ describe("findStateInRoots", () => {
 
     it("falls back to other roots when the id is absent from the active root", () => {
         const a = st("only_in_a");
-        const model: DialogModel = { format: "weidu-d", editable: true, roots: roots(["A", [a]], ["B", []]) };
+        const model: DialogModel = { sourceLang: "d", editable: true, roots: roots(["A", [a]], ["B", []]) };
         expect(findStateInRoots(model.roots, "B", "only_in_a")).toBe(a);
     });
 
     it("returns null when no root has the id", () => {
-        const model: DialogModel = { format: "weidu-d", editable: true, roots: roots(["A", [st("x")]]) };
+        const model: DialogModel = { sourceLang: "d", editable: true, roots: roots(["A", [st("x")]]) };
         expect(findStateInRoots(model.roots, "A", "nope")).toBeNull();
     });
 });

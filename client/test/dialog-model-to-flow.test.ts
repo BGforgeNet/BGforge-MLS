@@ -29,7 +29,7 @@ describe("modelToFlow - cards and edges", () => {
 
     test("a choice with reply text is a 'player' edge; a bare continue is 'continue'", () => {
         const model: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [
                 {
@@ -64,7 +64,7 @@ describe("modelToFlow - duplicate state ids (shared CHAIN label)", () => {
         // crashes. One card per DISTINCT id keeps node (and edge) keys unique - matching the tree, which
         // already merges these states.
         const model: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [
                 {
@@ -120,7 +120,7 @@ describe("modelToFlow - synthetic terminals and stubs", () => {
 
     test("a goto to a state absent from the model is kept as an external stub, not a dangling edge", () => {
         const model: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [
                 {
@@ -168,7 +168,7 @@ describe("modelToFlow - real producer output (no dangling edges)", () => {
 describe("modelToFlow - spotlight flag", () => {
     test("tags each card with whether it is flagged (carries a badge)", () => {
         const model: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [
                 {
@@ -197,7 +197,7 @@ describe("modelToFlow - spotlight flag", () => {
         // node must reach the card with enough state for that to include "side-effect", and
         // be flagged for the spotlight. Guards against data.state being narrowed to a subset.
         const model: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {
@@ -222,7 +222,7 @@ describe("modelToFlow - spotlight flag", () => {
         // non-editable so structure can't be dragged. Guards the source of that wiring (the SSL
         // faithful/non-faithful split is covered by the dedicated test below).
         const ssl: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [] }] }],
         };
@@ -234,7 +234,7 @@ describe("modelToFlow - spotlight flag", () => {
         // structuralEditable promotes the model-level `editable` to per-node: a view-only SSL
         // model still lets faithful nodes be edited structurally, while complex ones stay locked.
         const ssl = (faithful: boolean): DialogModel => ({
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [], faithful }] }],
         });
@@ -246,7 +246,7 @@ describe("modelToFlow - spotlight flag", () => {
 describe("modelToFlow - shared-text coupling", () => {
     test("flags every state that shares a @N ref (line or option) with another state", () => {
         const model: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {
@@ -287,7 +287,7 @@ describe("stateNodeSize", () => {
 // as a tooltip; the exit terminal is shared with plain exits so it does not.
 describe("modelToFlow - Node998/Node999 as Combat/Exit terminals (SSL)", () => {
     const sslModel: DialogModel = {
-        format: "fallout-ssl",
+        sourceLang: "ssl",
         editable: false,
         roots: [
             {

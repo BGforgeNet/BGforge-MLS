@@ -423,7 +423,7 @@ describe("verifySSLEditApplied", () => {
     // Minimal hand-built model: one node with one option carrying a specific condition.
     // verifySSLEditApplied only iterates roots/states/choices, so no SSL spans are needed.
     const modelWithOptionCondition = (nodeId: string, msgId: number, condition: string): DialogModel => ({
-        format: "fallout-ssl",
+        sourceLang: "ssl",
         editable: true,
         roots: [
             {

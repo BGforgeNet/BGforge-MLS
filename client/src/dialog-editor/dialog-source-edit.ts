@@ -1,7 +1,7 @@
 import { applyDialogEdits } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
 import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
-import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
+import { renderFamily, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
 
 export interface DialogSourceEdit {
     /** Spliced source text, or null when the structure is unchanged (no source WorkspaceEdit needed). */
@@ -39,14 +39,14 @@ export function computeDialogSourceEdit(
     // splicer below reads each new reply/option's assigned `@id` off the model. Nodes are allocated before
     // options against the merged set, matching the original save() ordering, so a node's own new options
     // never collide with the node's own newly-assigned id.
-    if (edited.format === "fallout-ssl" && original) {
+    if (renderFamily(edited.sourceLang) === "fallout-ssl" && original) {
         const node = allocateNodeIds(edited, original.messages ?? {});
         const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
         messages = { ...messages, ...node.newMessages, ...opt };
         edited.messages = messages;
     }
     const spliced =
-        edited.format === "weidu-d"
+        edited.sourceLang === "d"
             ? applyDialogEdits(text, edited, original ?? undefined)
             : original
               ? applySSLDialogEdits(text, edited, original)

@@ -605,11 +605,11 @@ function branchConditionOps(_text: string, edited: DialogState, orig: DialogStat
  * them. Only faithful nodes are eligible; an edit to a non-faithful node is silently skipped (its
  * structure is read-only). Returns the original text unchanged when there is nothing to splice.
  *
- * @throws if `edited.format !== "fallout-ssl"`.
+ * @throws if `edited.sourceLang !== "ssl"`.
  */
 export function applySSLDialogEdits(originalText: string, edited: DialogModel, original: DialogModel): string {
-    if (edited.format !== "fallout-ssl") {
-        throw new Error("applySSLDialogEdits: only fallout-ssl models are supported");
+    if (edited.sourceLang !== "ssl") {
+        throw new Error("applySSLDialogEdits: only fallout-ssl source models are supported");
     }
     const origById = new Map(original.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
@@ -859,7 +859,9 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
  * Non-SSL models defer to their own delete rules (D states are deletable when not derived).
  */
 export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
-    if (model.format !== "fallout-ssl") return true;
+    // Phase 2 (TSSL editing): treat "tssl" like "ssl" here (via renderFamily) so it inherits these delete
+    // rules; until then tssl is view-only and never reaches this, so an exact "ssl" check is correct now.
+    if (model.sourceLang !== "ssl") return true;
     // A conditional entry (a `call` nested in an `if` inside talk_p_proc) cannot be removed without rewriting
     // the `if` - defer to condition editing.
     for (const ec of model.entryCalls ?? []) if (ec.name === stateId && !ec.topLevel) return false;
@@ -901,7 +903,7 @@ function targetKey(t: DialogTarget): string {
  * here, so they always verify.
  */
 export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
-    if (intended.format !== "fallout-ssl") return { ok: true };
+    if (intended.sourceLang !== "ssl") return { ok: true };
     const intendedById = new Map(intended.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
     for (const a of actual.roots.flatMap((r) => r.states)) {
         const s = intendedById.get(a.id);

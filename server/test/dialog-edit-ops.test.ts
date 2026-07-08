@@ -146,7 +146,7 @@ END
 
     it("names a new SSL node NodeNNN (next free), not new_state", () => {
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {
@@ -169,7 +169,7 @@ END
         // hands out Node1000 even though low ids are free (the reported bug). A new node must take the next
         // free id among the real (non-reserved) nodes.
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {
@@ -189,7 +189,7 @@ END
 
     it("never allocates a reserved id: after Node997 the next node jumps past 998/999 to Node1000", () => {
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {
@@ -207,14 +207,14 @@ END
         // A dialog started from scratch parses to zero roots; addState must mint the first root rather than
         // no-op, so the `+ State` button works on a blank file. SSL flags the first node as the entry (the
         // scaffolded talk_p_proc must call it); D has no entry concept and seeds the BEGIN resref from sourceName.
-        const ssl: DialogModel = { format: "fallout-ssl", editable: false, sourceName: "myscript", roots: [] };
+        const ssl: DialogModel = { sourceLang: "ssl", editable: false, sourceName: "myscript", roots: [] };
         const s = ops.addState(ssl);
         expect(ssl.roots).toHaveLength(1);
         expect(ssl.roots[0]!.kind).toBe("dialog");
         expect(s.id).toBe("Node001");
         expect(s.isEntry).toBe(true);
 
-        const d: DialogModel = { format: "weidu-d", editable: true, sourceName: "mydlg", roots: [] };
+        const d: DialogModel = { sourceLang: "d", editable: true, sourceName: "mydlg", roots: [] };
         const ds = ops.addState(d);
         expect(d.roots).toHaveLength(1);
         expect(d.roots[0]!.label).toBe("mydlg");
@@ -222,7 +222,7 @@ END
     });
 
     it("scaffolds a BEGIN block for a from-scratch .d file, re-parseable", () => {
-        const m: DialogModel = { format: "weidu-d", editable: true, sourceName: "mydlg", roots: [] };
+        const m: DialogModel = { sourceLang: "d", editable: true, sourceName: "mydlg", roots: [] };
         const s = ops.addState(m);
         s.text = "A brand new line.";
         s.choices.push({ id: `${s.id}#0`, text: "ok", target: { kind: "exit" } });
@@ -249,7 +249,7 @@ END
 
     // Manual node naming ("Auto node names" off): suggestStateId + newStateIdError + addState(id).
     const sslModel = (ids: string[], procNames?: string[]): DialogModel => ({
-        format: "fallout-ssl",
+        sourceLang: "ssl",
         editable: false,
         existingProcNames: procNames,
         roots: [
@@ -296,7 +296,7 @@ END
         });
         it("D: enforces only uniqueness (no SSL identifier rule), matching renameState's D scope", () => {
             const d: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [{ id: "r", label: "r", kind: "dialog", states: [{ id: "start", text: "", choices: [] }] }],
             };
@@ -355,7 +355,7 @@ describe("dialog-edit-ops (branch-aware)", () => {
         };
 
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: true,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
         };
@@ -491,7 +491,7 @@ describe("dialog-edit-ops (branch structural)", () => {
             branches: [brA],
         };
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: true,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
         };
@@ -524,7 +524,7 @@ describe("dialog-edit-ops (branch structural)", () => {
             branches: [brA, brB],
         };
         const m: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: true,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
         };
@@ -640,7 +640,7 @@ describe("dialog-edit-ops (branch structural)", () => {
     describe("applyReconcile", () => {
         function reconcileModel(): DialogModel {
             return {
-                format: "fallout-ssl",
+                sourceLang: "ssl",
                 editable: false,
                 messages: { "100": "npc" },
                 roots: [

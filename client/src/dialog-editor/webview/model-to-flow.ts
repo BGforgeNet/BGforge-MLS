@@ -9,6 +9,7 @@
 
 import {
     isFlaggedNode,
+    renderFamily,
     resolveText,
     sslTerminalKind,
     type DialogModel,
@@ -94,7 +95,7 @@ export function modelToFlow(model: DialogModel): FlowGraph {
 
     // SSL convention: Node998/Node999 are terminal Combat/Exit targets, not drawn cards (SSL_TERMINAL_NODES).
     // Skip their cards and route an option targeting them to the matching terminal instead (mirrors the tree).
-    const isSSL = model.format === "fallout-ssl";
+    const isSSL = renderFamily(model.sourceLang) === "fallout-ssl";
     const terminalKindOf = (id: string): "exit" | "combat" | undefined => (isSSL ? sslTerminalKind(id) : undefined);
 
     for (const root of model.roots) {
@@ -159,7 +160,8 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // only when faithfully representable (see DialogState.faithful / bundleFaithful).
                     structuralEditable:
                         model.editable ||
-                        (model.format === "fallout-ssl" && (s.faithful === true || s.bundleFaithful === true)),
+                        (renderFamily(model.sourceLang) === "fallout-ssl" &&
+                            (s.faithful === true || s.bundleFaithful === true)),
                 },
             });
 

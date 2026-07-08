@@ -129,10 +129,10 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
  * Splices are applied from the highest byte offset to the lowest so that earlier
  * offsets remain valid while later ones are being substituted.
  *
- * @throws if `editedModel.format !== "weidu-d"`.
+ * @throws if `editedModel.sourceLang !== "d"`.
  */
 export function applyDialogEdits(originalText: string, editedModel: DialogModel, originalModel?: DialogModel): string {
-    if (editedModel.format !== "weidu-d") {
+    if (editedModel.sourceLang !== "d") {
         throw new Error("applyDialogEdits: only weidu-d models are supported");
     }
 
@@ -275,7 +275,7 @@ function dialogStatesOf(model: DialogModel): DialogState[] {
  * so they always verify.
  */
 export function verifyDialogEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
-    if (intended.format !== "weidu-d") return { ok: true };
+    if (intended.sourceLang !== "d") return { ok: true };
     const actualById = new Map(dialogStatesOf(actual).map((s) => [s.id, s]));
     for (const s of dialogStatesOf(intended)) {
         if (s.derivedFrom) continue;

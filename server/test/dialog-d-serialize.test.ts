@@ -110,7 +110,7 @@ END
             // The parser does not populate DialogState.weight (gap in the parser),
             // so weight can only be tested via a hand-built model here.
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -136,7 +136,7 @@ END
     describe("shape assertions on a hand-built model", () => {
         it("emits expected keywords and structure", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -179,7 +179,7 @@ END
 
         it("emits a conditional reply in short form (+ ~cond~ + reply), not longhand", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -210,7 +210,7 @@ END
 
         it("omits REPLY when choice has no text", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -239,7 +239,7 @@ END
 
         it("emits EXTERN for external targets", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -267,7 +267,7 @@ END
 
         it("emits COPY_TRANS for copy_trans targets", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [
                     {
@@ -297,7 +297,7 @@ END
     describe("error cases", () => {
         it("throws for non-weidu-d format", () => {
             const model: DialogModel = {
-                format: "fallout-ssl",
+                sourceLang: "ssl",
                 editable: false,
                 roots: [],
             };
@@ -306,7 +306,7 @@ END
 
         it("returns empty string when there are no dialog roots", () => {
             const model: DialogModel = {
-                format: "weidu-d",
+                sourceLang: "d",
                 editable: true,
                 roots: [],
             };

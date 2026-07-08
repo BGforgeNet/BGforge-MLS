@@ -48,7 +48,7 @@ function buildModel(): DialogModel {
         sourceRange: stateRange("IF ~~ THEN BEGIN more"),
     };
     return {
-        format: "weidu-d",
+        sourceLang: "d",
         editable: true,
         roots: [{ id: "test", label: "test", kind: "dialog", states: [hello, more] }],
         messages: {},

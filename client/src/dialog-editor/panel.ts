@@ -253,7 +253,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
     ): Promise<void> {
         const session = this.sessions.get(panel);
         if (!session) return;
-        if (edited.format === "weidu-d" || edited.format === "fallout-ssl") {
+        if (edited.sourceLang === "d" || edited.sourceLang === "ssl") {
             const text = document.getText();
             let data: unknown;
             try {

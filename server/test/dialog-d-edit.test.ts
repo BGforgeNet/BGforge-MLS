@@ -219,7 +219,7 @@ describe("applyDialogEdits", () => {
 
     it("throws for non-weidu-d format", () => {
         const model = modelFromD(parseDDialog(FIXTURE));
-        const bad = { ...model, format: "fallout-ssl" as const };
+        const bad = { ...model, sourceLang: "ssl" as const };
         expect(() => applyDialogEdits(FIXTURE, bad)).toThrow("applyDialogEdits: only weidu-d models are supported");
     });
 });

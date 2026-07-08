@@ -22,7 +22,7 @@ IF ~~ THEN BEGIN next
 END
 `;
         const model = modelFromD(parseDDialog(d));
-        expect(model.format).toBe("weidu-d");
+        expect(model.sourceLang).toBe("d");
         expect(model.editable).toBe(true);
 
         const dialog = model.roots.find((r) => r.kind === "dialog")!;
@@ -52,7 +52,7 @@ procedure talk_p_proc begin
 end
 `;
         const model = modelFromSSL(await parseSSL(ssl));
-        expect(model.format).toBe("fallout-ssl");
+        expect(model.sourceLang).toBe("ssl");
         expect(model.editable).toBe(false);
 
         const states = model.roots[0]!.states;

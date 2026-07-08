@@ -17,14 +17,38 @@ import type {
     SSLDialogOptionType,
 } from "./dialog-types";
 
-export type DialogFormat = "weidu-d" | "fallout-ssl";
+/** The source language a dialog model was parsed from - the single discriminant on `DialogModel`. */
+export type SourceLang = "d" | "ssl" | "td" | "tssl";
+
+/** The target-language family a source language renders as (D-family vs SSL-family conventions). */
+export type RenderFamily = "weidu-d" | "fallout-ssl";
+
+/**
+ * Derive the render family from the source language. Render/convention gates call this instead of reading a
+ * stored `format` field, so the family can never drift from the source language (it is computed, not stored),
+ * and adding a fifth language turns every `switch (m.sourceLang)` into a compile error via the `never` guard.
+ */
+export function renderFamily(lang: SourceLang): RenderFamily {
+    switch (lang) {
+        case "d":
+        case "td":
+            return "weidu-d";
+        case "ssl":
+        case "tssl":
+            return "fallout-ssl";
+        default: {
+            const exhaustiveCheck: never = lang;
+            return exhaustiveCheck;
+        }
+    }
+}
 
 /** Resolved translation-string entries keyed by id (the .msg/.tra id space both formats share). */
 export type DialogMessages = Record<string, string>;
 
 export interface DialogModel {
-    format: DialogFormat;
-    /** Whether this format's adapter can serialize edits back (D yes, SSL view-only in v1). */
+    sourceLang: SourceLang;
+    /** Whether this source language's adapter can serialize edits back (D yes, SSL view-only in v1). */
     editable: boolean;
     /**
      * Dialog file base name (no extension), e.g. `tribec7` for `tribec7.ssl`. Set by the host from the
@@ -334,7 +358,7 @@ export const SSL_TERMINAL_NODES: Record<string, "exit" | "combat"> = { Node999: 
 /**
  * The terminal kind for an SSL state id, or undefined if it is a normal node. Uses `Object.hasOwn` rather than
  * a bare index so a state whose id collides with an `Object.prototype` member (`"toString"`, `"constructor"`)
- * is not mis-read as a terminal. Callers still gate on `format === "fallout-ssl"` - this is an SSL convention.
+ * is not mis-read as a terminal. Callers still gate on `renderFamily(sourceLang) === "fallout-ssl"` - an SSL convention.
  */
 export function sslTerminalKind(id: string): "exit" | "combat" | undefined {
     return Object.hasOwn(SSL_TERMINAL_NODES, id) ? SSL_TERMINAL_NODES[id] : undefined;
@@ -538,7 +562,7 @@ export function modelFromD(data: DDialogData): DialogModel {
     }));
 
     return {
-        format: "weidu-d",
+        sourceLang: "d",
         editable: true,
         roots: [...dialogRoots, ...patchRoots],
         messages: data.messages,
@@ -710,7 +734,7 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
         state.isEntry = data.entryPoints.includes(state.id);
     }
     return {
-        format: "fallout-ssl",
+        sourceLang: "ssl",
         editable: false,
         roots: states.length > 0 ? [{ id: "dialog", label: "dialog", kind: "dialog", states }] : [],
         messages: data.messages,

@@ -4,8 +4,8 @@ import type { DialogModel, DialogState } from "../../shared/dialog-model";
 
 const st = (over: Partial<DialogState> & { id: string }): DialogState => ({ text: "", choices: [], ...over });
 
-function model(states: DialogState[], format: DialogModel["format"] = "weidu-d"): DialogModel {
-    return { format, editable: true, roots: [{ id: "d", label: "d", kind: "dialog", states }] };
+function model(states: DialogState[], sourceLang: DialogModel["sourceLang"] = "d"): DialogModel {
+    return { sourceLang, editable: true, roots: [{ id: "d", label: "d", kind: "dialog", states }] };
 }
 
 describe("dialogIssues", () => {
@@ -28,7 +28,7 @@ describe("dialogIssues", () => {
 
     it("does not flag the same label across different dialogs (labels are unique per DLG, not globally)", () => {
         const m: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [
                 { id: "a", label: "a", kind: "dialog", states: [st({ id: "hello" })] },

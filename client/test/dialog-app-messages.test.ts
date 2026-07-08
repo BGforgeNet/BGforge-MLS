@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 import { reduceDialogView, shouldTimeOut, type DialogView } from "../src/dialog-editor/webview/app-messages";
 import type { DialogModel } from "../../shared/dialog-model";
 
-const MODEL = { format: "weidu-d", editable: true, roots: [] } as DialogModel;
+const MODEL = { sourceLang: "d", editable: true, roots: [] } as DialogModel;
 const EMPTY: DialogView = { model: null, error: null };
 
 describe("reduceDialogView", () => {
@@ -35,7 +35,7 @@ describe("reduceDialogView", () => {
         // The host tags a self-edit's faithful parse `reparse:true`; the root must ignore it so it does not
         // reset the view - DialogGraph adopts it directly, preserving selection / an in-progress inline edit.
         const prev: DialogView = { model: MODEL, error: null };
-        const other = { format: "weidu-d", editable: true, roots: [{ id: "x" }] } as unknown as DialogModel;
+        const other = { sourceLang: "d", editable: true, roots: [{ id: "x" }] } as unknown as DialogModel;
         expect(reduceDialogView(prev, { type: "model", reparse: true, model: other, seq: 1 })).toEqual(prev);
     });
 

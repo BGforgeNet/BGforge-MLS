@@ -5,7 +5,7 @@ import type { DialogModel } from "../../../../../shared/dialog-model";
 // %var% external anchor. The adapter that produces such a model from a real D
 // parse is covered by server/test/dialog-model.test.ts.
 export const SAMPLE: DialogModel = {
-    format: "weidu-d",
+    sourceLang: "d",
     editable: true,
     roots: [
         {

@@ -3,7 +3,7 @@ import { allocateNodeIds, allocateOptionIds } from "../../shared/dialog-ssl-ids"
 import type { DialogModel } from "../../shared/dialog-model";
 
 const sslModel = (): DialogModel => ({
-    format: "fallout-ssl",
+    sourceLang: "ssl",
     editable: false,
     roots: [
         {
@@ -61,7 +61,7 @@ describe("allocateOptionIds", () => {
 describe("allocateNodeIds", () => {
     it("allocates ids for a new node's reply and options, returning the id map and the new messages", () => {
         const model: DialogModel = {
-            format: "fallout-ssl",
+            sourceLang: "ssl",
             editable: false,
             roots: [
                 {

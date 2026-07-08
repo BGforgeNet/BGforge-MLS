@@ -6,7 +6,7 @@ const span = { start: 0, end: 1 };
 
 function model(states: DialogState[], extra: Partial<DialogModel> = {}): DialogModel {
     return {
-        format: "fallout-ssl",
+        sourceLang: "ssl",
         editable: false,
         roots: [{ id: "d", label: "d", kind: "dialog", states }],
         ...extra,

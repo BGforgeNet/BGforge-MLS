@@ -18,7 +18,7 @@ import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget }
  * choosing BEGIN vs APPEND if the distinction matters for the target use case.
  */
 export function modelToD(model: DialogModel): string {
-    if (model.format !== "weidu-d") {
+    if (model.sourceLang !== "d") {
         throw new Error("modelToD: only weidu-d is serializable");
     }
 

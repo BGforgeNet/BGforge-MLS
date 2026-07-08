@@ -16,6 +16,7 @@ import {
     type DialogRoot,
     type DialogState,
     type DialogTarget,
+    renderFamily,
     rewriteSameFileExternRef,
 } from "./dialog-model";
 
@@ -143,7 +144,7 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
     // different dialogue) but matches on the referenced file, so only same-file refs are touched. The "file:state"
     // encoding is D-specific (targetFromD), so this is gated to weidu-d; a genuinely cross-FILE EXTERN is
     // inherently unresolvable by a single-file editor and is left untouched.
-    if (model.format === "weidu-d" && root !== undefined) {
+    if (renderFamily(model.sourceLang) === "weidu-d" && root !== undefined) {
         const file = root.label;
         for (const r of model.roots)
             for (const s of r.states)
@@ -192,7 +193,7 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     // reads cleanly through proxy traps and is faithful for plain DialogState data.
     // oxlint-disable-next-line unicorn/prefer-structured-clone -- structuredClone throws DataCloneError on the $state proxy; that is the bug being fixed.
     const copy = JSON.parse(JSON.stringify(state)) as DialogState;
-    const ssl = model.format === "fallout-ssl";
+    const ssl = renderFamily(model.sourceLang) === "fallout-ssl";
     copy.id = ssl ? nextSslNodeId(model) : uniqueStateId(model, `${state.id}_copy`);
     // Strip every source-span marker so the copy is a PENDING-NEW node, spliced in fresh rather than over
     // the original's bytes. D keys "pending" on the absent sourceRange; SSL on the absent procRange (the
@@ -247,7 +248,7 @@ function resolveTargetRoot(model: DialogModel, targetRoot?: DialogRoot): DialogR
  * prompts for a manual node name (the "Auto node names" toggle is off). Pure: does not mutate the model.
  */
 export function suggestStateId(model: DialogModel): string {
-    return model.format === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
+    return renderFamily(model.sourceLang) === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
 }
 
 /**
@@ -260,7 +261,7 @@ export function suggestStateId(model: DialogModel): string {
 export function newStateIdError(model: DialogModel, id: string, targetRoot?: DialogRoot): string | null {
     const trimmed = id.trim();
     if (!trimmed) return "Enter a node name.";
-    const ssl = model.format === "fallout-ssl";
+    const ssl = renderFamily(model.sourceLang) === "fallout-ssl";
     if (ssl) {
         if (!/^[A-Za-z_]\w*$/.test(trimmed))
             return "SSL node names must be a procedure identifier: letters, digits, and underscores, not starting with a digit.";
@@ -298,7 +299,7 @@ export function addState(model: DialogModel, targetRoot?: DialogRoot, id?: strin
     // On SSL bootstrap the first node IS the conversation entry: the scaffolded talk_p_proc must `call` it or
     // the dialog is unreachable. Flag it so applySSLDialogEdits wires the router; the parser re-derives isEntry
     // from that written call on the next reparse, after which this transient flag no longer matters.
-    if (bootstrap && model.format === "fallout-ssl") state.isEntry = true;
+    if (bootstrap && renderFamily(model.sourceLang) === "fallout-ssl") state.isEntry = true;
     if (root) {
         root.states.push(state);
     } else {

@@ -116,7 +116,7 @@ END
 
     it("returns an empty classification for a root with no states", () => {
         const model: DialogModel = {
-            format: "weidu-d",
+            sourceLang: "d",
             editable: true,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [] }],
         };

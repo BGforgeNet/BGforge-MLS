@@ -12,7 +12,7 @@ const dState = (id: string, text: string, choices: DialogState["choices"] = []):
 });
 
 function model(states: DialogState[], messages: Record<string, string>): DialogModel {
-    return { format: "weidu-d", editable: true, messages, roots: [{ id: "d", label: "d", kind: "dialog", states }] };
+    return { sourceLang: "d", editable: true, messages, roots: [{ id: "d", label: "d", kind: "dialog", states }] };
 }
 
 describe("unresolvedRefCount", () => {

@@ -2,7 +2,7 @@
 import type { DialogModel } from "../../../../../shared/dialog-model";
 
 export const REAL_MODEL: DialogModel = {
-    format: "weidu-d",
+    sourceLang: "d",
     editable: true,
     roots: [
         {
