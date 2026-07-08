@@ -47,6 +47,17 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).not.toContain("GVAR_X");
     });
 
+    it("removes an option by splicing its statement out (reply stays)", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const node1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        node1.choices = node1.choices.filter((c) => c.target.kind !== "state"); // drop the NOption -> Node002
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).not.toContain("NOption(101");
+        expect(out).toContain("Reply(100)");
+        expect(out).toContain("function Node001()"); // node wrapper intact, no blank line left
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);

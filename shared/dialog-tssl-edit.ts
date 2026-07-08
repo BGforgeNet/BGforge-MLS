@@ -14,6 +14,16 @@ function statesOf(model: DialogModel): DialogChoice[] {
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
 }
 
+/** Splice a whole statement out, eating its line's leading indent and trailing newline so no blank line remains. */
+function removeLineSplice(text: string, span: { start: number; end: number }): SpliceOp {
+    let start = span.start;
+    while (start > 0 && (text[start - 1] === " " || text[start - 1] === "\t")) start--;
+    let end = span.end;
+    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
+    else if (text[end] === "\n") end += 1;
+    return { start, end, replacement: "" };
+}
+
 /**
  * Compute the `.tssl` source with the model's surgical field edits applied. Currently: option RETARGET
  * (an option whose target node id changed splices its recorded `targetRange` with the new id). Returns the
@@ -51,6 +61,16 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         ) {
             ops.push({ start: orig.condRange.start, end: orig.condRange.end, replacement: c.condition });
         }
+    }
+    // Structural: an existing option removed from the edited model -> splice its statement out. A pure
+    // conditional option is the sole content of its `if`, so remove the whole `if`; otherwise just the call.
+    const editedIds = new Set(statesOf(edited).map((c) => c.id));
+    for (const orig of statesOf(original)) {
+        if (editedIds.has(orig.id)) continue;
+        // A pure conditional option (conditionEditable => its `if` gates it alone) removes the whole `if`;
+        // an unconditional or shared-condition option removes just its own call statement.
+        const removeSpan = orig.ifRange && orig.conditionEditable !== false ? orig.ifRange : orig.stmtRange;
+        if (removeSpan) ops.push(removeLineSplice(originalText, removeSpan));
     }
     return applySplices(originalText, ops);
 }
