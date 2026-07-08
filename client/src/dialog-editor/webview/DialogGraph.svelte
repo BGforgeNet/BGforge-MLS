@@ -832,10 +832,13 @@
     const structEditable = (s: DialogState | null): s is DialogState =>
         s != null &&
         !s.derivedFrom &&
-        // Faithful SSL and faithful TSSL are structurally editable: the writers serialize add/remove/rename of
-        // nodes and options back to source. (TSSL's option reorder / reaction / low-INT are not yet written, so
-        // those specific controls gate on exact sourceLang "ssl" - see Inspector sslOnlyOps and the actions.)
+        // Faithful SSL/TSSL and every non-derived TD node are structurally editable: the writers serialize
+        // add/remove/rename of nodes and options back to source. TD (D-family) has no faithfulness tier, so it
+        // mirrors fieldEditable's unconditional td clause. Option reorder / reaction / low-INT are SSL-only (not
+        // written for td/tssl, and reaction/low-INT are Fallout-only concepts) - those controls gate on exact
+        // sourceLang "ssl" via Inspector sslOnlyOps and the actions, so enabling td/tssl here surfaces no no-op.
         (editModel.editable ||
+            editModel.sourceLang === "td" ||
             ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
                 (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 
@@ -1173,7 +1176,7 @@
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
         <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
     </span>
-    {#if editModel.editable || editModel.sourceLang === "ssl"}
+    {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
         <button class="toolbtn" onclick={addState}>+ State</button>
     {/if}
     {#if inGraph}
@@ -1251,7 +1254,7 @@
                     <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
                     <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
                 {/if}
-                {#if editModel.editable || editModel.sourceLang === "ssl"}
+                {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
                     <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D new_state). Off: you're prompted for the name each time.">
                         <input type="checkbox" bind:checked={autoNodeNames} />
                         Auto node names

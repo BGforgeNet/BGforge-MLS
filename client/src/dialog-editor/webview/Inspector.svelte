@@ -415,7 +415,10 @@
                             {/if}
                             {#if !readOnly}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
-                            {:else if ssl && structuralEditable && !state.branches}
+                            {:else if structuralEditable && !state.branches}
+                                <!-- Faithful SSL/TSSL and every TD node: remove writes back to source. A conditional
+                                     SSL/TSSL option sits in an `if` the save leaves alone, so its Remove is disabled
+                                     with a reason; a TD option carries no per-option condition, so it is removable. -->
                                 <button title={c.condition ? optionRemoveLockReason() : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {/if}
                         {/if}

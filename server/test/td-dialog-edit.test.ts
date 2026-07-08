@@ -4,7 +4,14 @@ import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
 import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { applyTDDialogEdits } from "../../shared/dialog-td-edit";
-import { addReply, addState, deleteState, renameState, setChoiceTarget } from "../../shared/dialog-edit-ops";
+import {
+    addReply,
+    addState,
+    deleteState,
+    removeReply,
+    renameState,
+    setChoiceTarget,
+} from "../../shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
@@ -49,6 +56,22 @@ describe("applyTDDialogEdits - transition retarget", () => {
     it("rejects a non-td model", () => {
         const ssl = { ...tdModel(botsmith), sourceLang: "ssl" as const };
         expect(() => applyTDDialogEdits(botsmith, ssl, tdModel(botsmith))).toThrow(/only td/);
+    });
+});
+
+describe("TD remove-option via the LIVE two-parse path (regression for the live no-op)", () => {
+    it("computeDialogSourceEdit removes an option when edited and original come from SEPARATE parses", () => {
+        // The live editor parses the model once for the webview and re-parses `original` at applyEdit time -
+        // two separate parses, NOT a structuredClone. This asserts the choice ids match across parses so the
+        // writer's diff still finds the removed option (the unit test above uses one parse + clone, which hides
+        // an id-instability bug).
+        const original = tdModel(botsmith);
+        const edited = tdModel(botsmith); // a SECOND independent parse
+        const st = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_item_type")!;
+        removeReply(st, st.choices[0]!.id);
+        const { newText } = computeDialogSourceEdit(botsmith, edited, original);
+        expect(newText, "a source edit should be produced").not.toBeNull();
+        expect(newText).not.toContain("reply(tra(3))");
     });
 });
 
