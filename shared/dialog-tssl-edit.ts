@@ -3,15 +3,47 @@
  * ranges the source parser recorded (ranges into the .tssl, not generated SSL). Mirrors `applySSLDialogEdits`
  * but over TS syntax; because a TSSL option call is byte-identical to SSL (`NOption(101, Node002, 4)`), the
  * per-field token splices (retarget, ...) are the same - only the node wrapper and block syntax differ, which
- * field edits do not touch. Structural edits (add/remove node/option) are Phase 3.
+ * field edits do not touch. Structural edits: remove-option and add-option land here (add reuses the SSL option
+ * serializer, the syntax being identical); add/remove/rename NODE is handled alongside as it lands.
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import type { DialogChoice, DialogModel } from "./dialog-model";
+import { serializeSSLOption } from "./dialog-ssl-serialize";
+import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 
 function statesOf(model: DialogModel): DialogChoice[] {
     // Flatten every choice across roots/states for id-keyed diffing.
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
+}
+
+function allStates(model: DialogModel): DialogState[] {
+    return model.roots.flatMap((r) => r.states);
+}
+
+/**
+ * A pending-new option: no source span yet (`callRange`/`stmtRange` absent), already carries an allocated
+ * `@N` id (allocation runs before this writer, gated on renderFamily fallout-ssl - TSSL inherits it), and not
+ * `committed` (already spliced on a prior save). Byte-identical predicate to SSL's `isNewSSLOption`.
+ */
+function isNewTSSLOption(c: DialogChoice): boolean {
+    return (
+        !c.committed && c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim())
+    );
+}
+
+/** The numeric `.msg` id from an `@N` display text, or NaN. The serialized option references ids by number. */
+function msgIdOf(c: DialogChoice): number {
+    const m = /^@(\d+)$/.exec((c.text ?? "").trim());
+    return m ? Number(m[1]) : NaN;
+}
+
+/** The leading whitespace of the line containing `offset` - reused as the indent for an inserted statement. */
+function lineIndentAt(text: string, offset: number): string {
+    let start = offset;
+    while (start > 0 && text[start - 1] !== "\n") start--;
+    let i = start;
+    while (i < text.length && (text[i] === " " || text[i] === "\t")) i++;
+    return text.slice(start, i);
 }
 
 /** Splice a whole statement out, eating its line's leading indent and trailing newline so no blank line remains. */
@@ -71,6 +103,40 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         // an unconditional or shared-condition option removes just its own call statement.
         const removeSpan = orig.ifRange && orig.conditionEditable !== false ? orig.ifRange : orig.stmtRange;
         if (removeSpan) ops.push(removeLineSplice(originalText, removeSpan));
+    }
+    // Structural: a NEW option added to an existing node -> serialize it (reusing the SSL option serializer,
+    // since the call syntax is byte-identical) and insert after the last SURVIVING option's statement so it
+    // never lands inside a removed option's span. A reply-only node with no surviving option anchors just
+    // before its closing brace. Mirrors `applySSLDialogEdits`' ADD case.
+    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
+    for (const state of allStates(edited)) {
+        const origState = origStateById.get(state.id);
+        if (!origState) continue; // a brand-new node is emitted whole by the add-node writer, not here
+        const added = state.choices.filter((c) => isNewTSSLOption(c) && Number.isFinite(msgIdOf(c)));
+        if (added.length === 0) continue;
+        const survivorEnds = origState.choices
+            .filter((o) => editedIds.has(o.id) && o.stmtRange)
+            .map((o) => o.stmtRange!);
+        let offset: number | undefined;
+        let indent = "    ";
+        if (survivorEnds.length > 0) {
+            const last = survivorEnds.reduce((a, b) => (b.end > a.end ? b : a));
+            offset = last.end;
+            indent = lineIndentAt(originalText, last.start);
+        } else if (origState.procRange) {
+            // Reply-only node: anchor just before the function's closing brace, matching the body indent.
+            const close = originalText.lastIndexOf("}", origState.procRange.end - 1);
+            if (close > origState.procRange.start) {
+                offset = close;
+                let bodyStart = origState.procRange.start;
+                while (bodyStart < close && originalText[bodyStart] !== "\n") bodyStart++;
+                indent = lineIndentAt(originalText, bodyStart + 1) || indent;
+            }
+        }
+        if (offset !== undefined) {
+            const block = added.map((c) => `\n${indent}${serializeSSLOption(c, msgIdOf(c))}`).join("");
+            ops.push({ start: offset, end: offset, replacement: block });
+        }
     }
     return applySplices(originalText, ops);
 }

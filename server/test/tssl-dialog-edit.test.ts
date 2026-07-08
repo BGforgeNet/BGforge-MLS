@@ -58,6 +58,29 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).toContain("function Node001()"); // node wrapper intact, no blank line left
     });
 
+    it("adds a new option by serializing NOption after the last surviving option", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const node1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // A pending-new option (no callRange/stmtRange, already-allocated @N) targeting Node002.
+        node1.choices.push({
+            id: "Node001#new0",
+            text: "@500",
+            target: { kind: "state", stateId: "Node002" },
+            skill: 4,
+        });
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        // The existing option stays and the new one is serialized right after it, inside the same function.
+        expect(out).toContain("NOption(101, Node002, 4);");
+        expect(out).toContain("NOption(500, Node002, 4);");
+        expect(out.indexOf("NOption(500")).toBeGreaterThan(out.indexOf("NOption(101"));
+        // The new call lands before Node001's closing brace (still inside the function body), at the body indent.
+        const node1Body = out.slice(out.indexOf("function Node001()"), out.indexOf("function Node002()"));
+        expect(node1Body).toMatch(/\n {4}NOption\(500, Node002, 4\);/);
+        // Node002 is untouched (byte-identical outside Node001's body).
+        expect(out.slice(out.indexOf("function Node002()"))).toBe(flat.slice(flat.indexOf("function Node002()")));
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
