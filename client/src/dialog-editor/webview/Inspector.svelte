@@ -337,7 +337,9 @@
         </div>
     {/if}
 
-    <div class="ik">{ssl ? "State" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
+    <!-- Read-only label only when the id input actually IS read-only (same condition as its `disabled` below):
+         a structurally-editable node (D, or a faithful td/tssl node) can be renamed, so it is a jump target. -->
+    <div class="ik">{ssl ? "State" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} title={!structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches && !state.block}
