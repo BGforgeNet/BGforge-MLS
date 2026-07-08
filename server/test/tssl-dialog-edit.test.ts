@@ -43,6 +43,19 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).toBe(flat.replace("NOption(101, Node002, 4)", "GOption(101, Node002, 4)"));
     });
 
+    it("toggles a surviving option's low-INT variant (NOption -> NLowOption), dropping the skill arg", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.target.kind === "state",
+        )!;
+        opt.lowIq = true;
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        // The Low/non-Low forms differ in arg count (3-arg -> 2-arg), so the whole call is re-serialized; the
+        // original numeric id text is preserved.
+        expect(out).toBe(flat.replace("NOption(101, Node002, 4)", "NLowOption(101, Node002)"));
+    });
+
     it("splices an edited option condition into the .tssl if-wrapper", () => {
         const conditional = readFileSync(
             fileURLToPath(new URL("tssl/samples/conditional.tssl", import.meta.url)),

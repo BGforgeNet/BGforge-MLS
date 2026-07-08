@@ -77,20 +77,13 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     for (const c of statesOf(edited)) {
         const orig = origById.get(c.id);
         if (!orig) continue;
-        // In-place field edits on a surviving state-target option (retarget + reaction N/G/B): rewrite the
-        // option call in its `callRange` slot, sharing `survivorReplacement` with the SSL writer since a TSSL
-        // option call is byte-identical to SSL's. A retarget-only edit token-patches the target; a reaction
-        // change token-patches just the macro-name (`NOption` -> `GOption`), leaving the msg-id/target/skill
-        // args byte-exact. The low-INT variant is handled in a later slice (arg count changes), so this branch
-        // is scoped to arg-count-preserving edits and skips a low-INT toggle for now.
-        const lowChanged = Boolean(c.lowIq) !== Boolean(orig.lowIq);
-        if (
-            c.target.kind === "state" &&
-            orig.target.kind === "state" &&
-            orig.callRange &&
-            orig.targetRange &&
-            !lowChanged
-        ) {
+        // In-place field edits on a surviving state-target option (retarget + reaction N/G/B + low-INT variant):
+        // rewrite the option call in its `callRange` slot, sharing `survivorReplacement` with the SSL writer
+        // since a TSSL option call is byte-identical to SSL's. A retarget-only edit token-patches the target; a
+        // reaction change token-patches just the macro-name (`NOption` -> `GOption`), leaving the other args
+        // byte-exact; a low-INT toggle re-serializes the whole call (the Low/non-Low forms differ in arg count,
+        // `NOption(id, node, skill)` <-> `NLowOption(id, node)`), preserving the original numeric id text.
+        if (c.target.kind === "state" && orig.target.kind === "state" && orig.callRange && orig.targetRange) {
             const replacement = survivorReplacement(originalText, c, orig);
             if (replacement !== originalText.slice(orig.callRange.start, orig.callRange.end)) {
                 ops.push({ start: orig.callRange.start, end: orig.callRange.end, replacement });
