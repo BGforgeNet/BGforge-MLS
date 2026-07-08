@@ -8,7 +8,7 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
+import { serializeTDState, serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 
 function choicesOf(model: DialogModel): DialogChoice[] {
@@ -175,6 +175,25 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
         else if (ref.callRange) {
             // Entry-block goTo target: redirect to exit() rather than leave a jump to a removed state.
             ops.push({ start: ref.callRange.start, end: ref.callRange.end, replacement: "exit()" });
+        }
+    }
+    // Structural: ADD node - a locally-new state (no sourceRange, not derived/committed) -> serialize a whole
+    // `function <id>() { ... }` before the primary wiring statement and append its id to that state list. All new
+    // functions coalesce into one insert at the anchor (and one id-list insert) so their order is deterministic
+    // and no two zero-width ops contend for the same offset. A file with no append/begin list (no anchor) cannot
+    // wire a new node, so it is left unserialized - a from-scratch scaffold is out of scope for this writer.
+    const wiring = original.tdWiring;
+    const newStates = allStates(edited).filter((s) => s.sourceRange === undefined && !s.derivedFrom && !s.committed);
+    if (newStates.length > 0 && wiring?.newFnAnchor !== undefined) {
+        const fns = newStates.map((s) => `${serializeTDState(s)}\n\n`).join("");
+        ops.push({ start: wiring.newFnAnchor, end: wiring.newFnAnchor, replacement: fns });
+        if (wiring.listInsert) {
+            const ids = newStates.map((s) => s.id).join(", ");
+            ops.push({
+                start: wiring.listInsert.offset,
+                end: wiring.listInsert.offset,
+                replacement: `${wiring.listInsert.separator}${ids}`,
+            });
         }
     }
     return applySplices(originalText, ops);

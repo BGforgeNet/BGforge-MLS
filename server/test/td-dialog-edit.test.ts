@@ -129,3 +129,36 @@ describe("applyTDDialogEdits - remove node", () => {
         expect(out).toContain("function g_trinket()");
     });
 });
+
+describe("applyTDDialogEdits - add node", () => {
+    it("serializes a new function before the append statement and wires its id into the state list", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const root = edited.roots.find((r) => r.kind === "dialog")!;
+        // A brand-new node (no sourceRange) with an already-@N say and one terminal option.
+        root.states.push({
+            id: "g_shield",
+            text: "@25",
+            choices: [{ id: "g_shield#0", text: "@26", target: { kind: "exit" } }],
+        });
+        // Wire it in: retarget g_item_type's existing option from g_weapon to the new node.
+        const opt = root.states
+            .find((s) => s.id === "g_item_type")!
+            .choices.find((c) => c.target.kind === "state" && c.target.stateId === "g_weapon")!;
+        (opt.target as { kind: "state"; stateId: string }).stateId = "g_shield";
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        // The new function is serialized with its say and terminal option, in statement form.
+        expect(out).toMatch(
+            /function g_shield\(\) \{\n {4}say\(tra\(25\)\);\n {4}reply\(tra\(26\)\);\n {4}exit\(\);\n\}/,
+        );
+        // It lands before the append statement (among the other state functions), after g_trinket.
+        expect(out.indexOf("function g_shield()")).toBeGreaterThan(out.indexOf("function g_trinket()"));
+        expect(out.indexOf("function g_shield()")).toBeLessThan(out.indexOf("append(dlg,"));
+        // Its id is appended to the state list.
+        expect(out).toContain("append(dlg, [g_item_type, g_weapon, g_armor, g_trinket, g_shield]);");
+        // The inbound option is retargeted to it.
+        const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_weapon()"));
+        expect(itemType).toContain("goTo(g_shield);");
+        expect(itemType).not.toContain("goTo(g_weapon)");
+    });
+});
