@@ -1,0 +1,17 @@
+// Authored fixture (SSL-in-TS). A single-level `if` wrapping a dialog call is the bundle-faithful tier:
+// editable, one top-level condition. Mirrors the "single-level if is faithful" SSL case in TS syntax.
+function Node001() {
+    Reply(100);
+    if (global_var(GVAR_X) == 1) {
+        NOption(101, Node002, 4);
+    }
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function talk_p_proc() {
+    Node001();
+}
