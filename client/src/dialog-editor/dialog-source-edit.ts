@@ -3,6 +3,7 @@ import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
 import { applyTSSLDialogEdits } from "../../../shared/dialog-tssl-edit";
 import { applyTDDialogEdits } from "../../../shared/dialog-td-edit";
 import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
+import { allocateDFamilyIds } from "../../../shared/dialog-td-ids";
 import { renderFamily, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
 
 export interface DialogSourceEdit {
@@ -45,6 +46,13 @@ export function computeDialogSourceEdit(
         const node = allocateNodeIds(edited, original.messages ?? {});
         const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
         messages = { ...messages, ...node.newMessages, ...opt };
+        edited.messages = messages;
+    } else if (edited.sourceLang === "td" && original) {
+        // TD (WeiDU D-family in TypeScript syntax) mints `.tra` ids for its new say/reply text via the shared
+        // D-family allocator - a single pass over the model (no node-then-option split, since a new node's say
+        // and its options share one ascending id run). Plain `.d` joins this branch in the next slice.
+        const created = allocateDFamilyIds(edited, original.messages ?? {});
+        messages = { ...messages, ...created };
         edited.messages = messages;
     }
     const spliced =
