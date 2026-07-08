@@ -19,7 +19,7 @@ export function msgRef(text: string | undefined): string | null {
  * pending its `@id`) updates the value's own `text` field in place. `target` is the DialogState or
  * DialogChoice that owns the text. (Was copy-pasted at four sites - see coding.md *Share, don't duplicate*.)
  */
-export function writeText(target: { text: string }, messages: DialogMessages | undefined, value: string): void {
+export function writeText(target: { text?: string }, messages: DialogMessages | undefined, value: string): void {
     const ref = msgRef(target.text);
     if (ref !== null && messages) messages[ref] = value;
     else target.text = value;

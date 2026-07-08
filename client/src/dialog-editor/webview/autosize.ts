@@ -14,7 +14,12 @@
  * the DOM value has settled. The general form: defer any DOM-reading action/effect to a microtask/tick, or
  * derive the measurement from the reactive value - do not measure the DOM synchronously at update time.
  */
-export function autosize(el: HTMLTextAreaElement): { update: () => void; destroy: () => void } {
+import type { Action } from "svelte/action";
+
+// The action parameter is the display VALUE (a reactivity trigger so a value change re-fits, not just
+// keystrokes); the action reads it only through Svelte's change detection, not directly. Typed via `Action`
+// so `use:autosize={value}` type-checks (a bare function signature would report the parameter as an extra arg).
+export const autosize: Action<HTMLTextAreaElement, string | undefined> = (el) => {
     const fit = (): void => {
         el.style.height = "auto";
         el.style.height = `${el.scrollHeight}px`;
@@ -22,4 +27,4 @@ export function autosize(el: HTMLTextAreaElement): { update: () => void; destroy
     fit();
     el.addEventListener("input", fit);
     return { update: () => queueMicrotask(fit), destroy: () => el.removeEventListener("input", fit) };
-}
+};

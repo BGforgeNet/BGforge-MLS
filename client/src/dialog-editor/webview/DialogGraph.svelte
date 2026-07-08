@@ -1,5 +1,14 @@
 <script lang="ts">
-    import { SvelteFlow, Background, Controls, ControlButton, MiniMap, Panel } from "@xyflow/svelte";
+    import {
+        SvelteFlow,
+        Background,
+        Controls,
+        ControlButton,
+        MiniMap,
+        Panel,
+        type Node as XyNode,
+        type Edge as XyEdge,
+    } from "@xyflow/svelte";
     import "@xyflow/svelte/dist/style.css";
     import { tick, untrack } from "svelte";
     import Node from "./Node.svelte";
@@ -24,6 +33,7 @@
         renderFamily,
         resolveText,
         sslTerminalKind,
+        type DialogChoice,
         type DialogMessages,
         type DialogModel,
         type DialogReaction,
@@ -54,8 +64,8 @@
     }
     let editModel = $state<DialogModel>(cloneModel(model));
 
-    let nodes = $state.raw<unknown[]>([]);
-    let edges = $state.raw<unknown[]>([]);
+    let nodes = $state.raw<XyNode[]>([]);
+    let edges = $state.raw<XyEdge[]>([]);
     let selected = $state<DialogState | null>(null);
     // The individually-selected option within `selected`, when the user clicks an option row in the tree
     // (null when a whole state is selected). Highlights that option in the tree and drives the docked
@@ -630,7 +640,12 @@
         // An edge out of a state that can't be retargeted (derived, or a non-faithful SSL node)
         // carries a `locked` flag the custom edge reads to hide its reconnect anchor.
         const lockedSources = new Set(
-            editModel.roots.flatMap((r) => r.states).filter((s) => !structEditable(s)).map((s) => s.id),
+            editModel.roots
+                .flatMap((r) => r.states)
+                .filter((s) => !structEditable(s))
+                // `!structEditable` (a `s is DialogState` guard) narrows s to `never`; annotate the widened
+                // type back since the filtered states are still DialogStates at runtime.
+                .map((s: DialogState) => s.id),
         );
         edges = g.edges.map((e) => ({
             id: e.id,
@@ -807,14 +822,6 @@
     // model transform, then relayouts (keeping the viewport mid-edit) and updates
     // selection. The correctness-critical logic (ref-update on rename, redirect on
     // delete, sourceRange handling on duplicate) lives in the tested ops module.
-    // A derived state (CHAIN/INTERJECT/EXTEND link) has no source span to splice an edit
-    // back into, and SSL has no structural write-back at all, so every structural mutation
-    // is rejected here as well as disabled in the inspector - the guard is the backstop in
-    // case a control slips through. (Message-text edits are not gated here; they persist for
-    // SSL too, via the .msg.)
-    const editable = (s: DialogState | null): s is DialogState =>
-        s != null && !s.derivedFrom && editModel.editable;
-
     // Per-node structural editability for the Tier 1 SSL ops (retarget + reorder). A D state
     // tracks the model-level flag; an SSL node is editable only when faithfully representable
     // (DialogState.faithful), so retarget/reorder write back losslessly via applySSLDialogEdits.
@@ -926,6 +933,7 @@
     // model's GOTOs dangling.
     function requestDeleteState(s: DialogState | null): void {
         if (!s) return; // nothing selected - Del is a no-op
+        const label = s.id; // capture before `!canDelete` (a `s is DialogState` guard) narrows s to never
         if (!canDelete(s)) {
             // The tree/inspector delete affordances are already disabled for a non-deletable node, but the Del
             // KEY still reaches here - so explain why instead of doing nothing (a silent no-op reads as "Del is
@@ -934,7 +942,7 @@
                 postToHost({
                     type: "notify",
                     level: "warn",
-                    text: `"${s.id}" can't be deleted from the graph - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the ${renderFamily(editModel.sourceLang) === "fallout-ssl" ? ".ssl" : ".d"} source.`,
+                    text: `"${label}" can't be deleted from the graph - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the ${renderFamily(editModel.sourceLang) === "fallout-ssl" ? ".ssl" : ".d"} source.`,
                 });
             return;
         }
@@ -1115,7 +1123,7 @@
         // Only a structurally-editable node (D, or a faithful SSL node) can be retargeted; reject
         // the canvas gesture for derived/non-faithful sources just as the inspector and the locked
         // edge anchor do.
-        if (!structEditable(owner ?? null)) return;
+        if (!owner || !structEditable(owner)) return;
         let target: DialogTarget;
         if (targetNodeId === "exit") target = { kind: "exit" };
         // The Combat terminal (SSL Node998) is a synthetic node, not a model state; map a drop on it back to a

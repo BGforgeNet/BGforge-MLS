@@ -349,7 +349,7 @@
     <div class="ik">Options ({state.choices.length})</div>
     {/if}
 
-    {#snippet choiceRow(c, i, bi, branchLen, labeled)}
+    {#snippet choiceRow(c: DialogChoice, i: number, bi?: number, branchLen?: number, labeled?: boolean)}
         <!-- data-cid + choicesel drive the tree's option selection: picking an option in the tree scrolls
              this row into view, highlights it, and focuses its text field. Only flat options (bi undefined)
              are selectable from the tree; branch options stay read-only there. -->
