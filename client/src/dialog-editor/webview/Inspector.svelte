@@ -138,10 +138,11 @@
     // editing it would require rewriting the containing construct, which the save does not do.
     const readOnly = $derived(!editable || Boolean(state.derivedFrom));
 
-    // Message text (the NPC line and player replies) persists for both formats - D to the
-    // .tra, SSL to the .msg - so it stays editable even when the structure is read-only (SSL).
-    // A derived state is still fully read-only (its line is owned by the source construct).
-    const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
+    // Message text (the NPC line and player replies) persists for every source language - D/TD to the
+    // .tra, SSL/TSSL to the .msg - so it stays editable even when the structure is read-only. Gates on
+    // per-node FIELD editability (not the whole-file `editable`) so a faithful td/tssl node's text is
+    // editable while its structural add/remove stays Phase 3. A derived state is fully read-only.
+    const textRO = $derived(Boolean(state.derivedFrom) || (!fieldEditable && !ssl));
 
     // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.

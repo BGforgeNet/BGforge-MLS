@@ -845,6 +845,7 @@
         // Inlines structEditable's core rather than calling it: `structEditable(s) || ...` would narrow s to
         // `never` on the right (a negated `s is DialogState` guard). Adds the tssl family to the ssl clause.
         (editModel.editable ||
+            editModel.sourceLang === "td" || // every non-derived TD state is field-editable (D-family)
             ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
                 (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 

@@ -1,6 +1,7 @@
 import { applyDialogEdits } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
 import { applyTSSLDialogEdits } from "../../../shared/dialog-tssl-edit";
+import { applyTDDialogEdits } from "../../../shared/dialog-td-edit";
 import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
 import { renderFamily, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
 
@@ -49,13 +50,17 @@ export function computeDialogSourceEdit(
     const spliced =
         edited.sourceLang === "d"
             ? applyDialogEdits(text, edited, original ?? undefined)
-            : edited.sourceLang === "tssl"
+            : edited.sourceLang === "td"
               ? original
-                  ? applyTSSLDialogEdits(text, edited, original)
+                  ? applyTDDialogEdits(text, edited, original)
                   : text
-              : original
-                ? applySSLDialogEdits(text, edited, original)
-                : text;
+              : edited.sourceLang === "tssl"
+                ? original
+                    ? applyTSSLDialogEdits(text, edited, original)
+                    : text
+                : original
+                  ? applySSLDialogEdits(text, edited, original)
+                  : text;
     const newText = spliced !== text ? spliced : null;
     // When something was spliced, report the pending items THIS edit just spliced so the webview can mark them
     // committed. A pending item lacks a source span (option: no callRange/stmtRange; node: no procRange) and is

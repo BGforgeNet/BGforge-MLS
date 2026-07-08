@@ -71,8 +71,8 @@ function parseState(fn: FunctionDeclaration): DDialogState {
     let pending: { replyText?: string; action?: string } = {};
     let pendingLine = 0;
 
-    const flush = (target: DDialogTarget): void => {
-        transitions.push({ line: pendingLine || 1, ...pending, target });
+    const flush = (target: DDialogTarget, targetRange?: { start: number; end: number }): void => {
+        transitions.push({ line: pendingLine || 1, ...pending, target, ...(targetRange ? { targetRange } : {}) });
         pending = {};
         pendingLine = 0;
     };
@@ -93,7 +93,9 @@ function parseState(fn: FunctionDeclaration): DDialogState {
             const target = targetOf(m, call);
             if (target) {
                 if (!pendingLine) pendingLine = call.getStartLineNumber();
-                flush(target);
+                // The target identifier arg: goTo(<id>) / extern(file, <id>) - its span drives token-splice retarget.
+                const idArg = m === "goTo" ? args[0] : m === "extern" ? args[1] : undefined;
+                flush(target, idArg ? span(idArg) : undefined);
             }
         }
     };

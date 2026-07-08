@@ -272,6 +272,9 @@ export interface DDialogTransition {
     trigger?: string;
     action?: string;
     target: DDialogTarget;
+    /** Byte span of the target identifier (the `goTo(<id>)` / `extern(file, <id>)` argument) in the source,
+     * for a token-splice retarget without reflowing the transition. Set by the TD source parser. */
+    targetRange?: { start: number; end: number };
     /**
      * Byte range of this transition's node in the original source (the whole
      * `IF ... THEN ...` / `++ ... + ...` construct). Set by the parser; used by the

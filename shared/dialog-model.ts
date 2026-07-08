@@ -516,6 +516,7 @@ function stateFromD(s: DDialogState): DialogState {
             action: tr.action,
             target: targetFromD(tr.target),
             sourceRange: tr.range,
+            targetRange: tr.targetRange,
         })),
         sourceRange: s.range,
         sayRange: s.sayRange,
