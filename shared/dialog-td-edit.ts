@@ -1,14 +1,32 @@
 /**
- * TD surgical source editor: splices field edits back into the `.td` TypeScript SOURCE using the byte ranges
- * the TD source parser recorded (into the `.td`, not generated D). Field edits only; structural add/remove is
- * Phase 3. Currently: option/transition RETARGET (a `goTo(<id>)` whose target changed splices its target token).
+ * TD surgical source editor: splices field and structural edits back into the `.td` TypeScript SOURCE using the
+ * byte ranges the TD source parser recorded (into the `.td`, not generated D). Mirrors `applyTSSLDialogEdits`
+ * but over TD's WeiDU-D-family syntax (`function id() { say(tra(N)); reply(tra(M)); goTo(t); }`), so the edits
+ * are surgical per-statement splices - never a lossy whole-function re-serialize, which would drop the comments
+ * a TD function can carry. Currently: transition RETARGET (a `goTo(<id>)` whose target changed) and REMOVE
+ * OPTION (a transition dropped from a surviving node -> its whole `reply(...); goTo(...);` group is spliced out).
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import type { DialogChoice, DialogModel } from "./dialog-model";
+import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 
 function choicesOf(model: DialogModel): DialogChoice[] {
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
+}
+
+function allStates(model: DialogModel): DialogState[] {
+    return model.roots.flatMap((r) => r.states);
+}
+
+/** Splice a whole statement group out, eating its line's leading indent and trailing newline so no blank line
+ *  is left where it was. Mirrors the TSSL writer's `removeLineSplice`. */
+function removeLineSplice(text: string, span: { start: number; end: number }): SpliceOp {
+    let start = span.start;
+    while (start > 0 && (text[start - 1] === " " || text[start - 1] === "\t")) start--;
+    let end = span.end;
+    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
+    else if (text[end] === "\n") end += 1;
+    return { start, end, replacement: "" };
 }
 
 /**
@@ -34,6 +52,18 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
             orig.targetRange
         ) {
             ops.push({ start: orig.targetRange.start, end: orig.targetRange.end, replacement: c.target.stateId });
+        }
+    }
+    // Structural: an existing option removed from a SURVIVING node -> splice out its whole `reply(...); goTo(...);`
+    // statement group (the choice's `sourceRange`). An option in a DELETED node goes with that node's function
+    // splice (Phase 3 remove-node), so only surviving nodes are scanned here to keep the spans disjoint.
+    const editedIds = new Set(choicesOf(edited).map((c) => c.id));
+    const editedStateIds = new Set(allStates(edited).map((s) => s.id));
+    for (const os of allStates(original)) {
+        if (!editedStateIds.has(os.id)) continue;
+        for (const orig of os.choices) {
+            if (editedIds.has(orig.id) || !orig.sourceRange) continue;
+            ops.push(removeLineSplice(originalText, orig.sourceRange));
         }
     }
     return applySplices(originalText, ops);
