@@ -22,7 +22,15 @@ import { computeDialogSourceEdit } from "./dialog-source-edit";
 import { EchoGuard } from "./edit-origin";
 import { SerialQueue } from "./serial-queue";
 
-const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d", "tssl", "td"]);
+// The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
+// language service + the tssl/td plugins run), so they are recognized by EXTENSION, not languageId - see
+// isDialogDocument. (The old set listed "tssl"/"td" as languageIds; those never matched - the live-open bug.)
+const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d"]);
+
+/** Whether a document is an editable dialog file: a real dialog language, or a `.td`/`.tssl` (languageId typescript). */
+function isDialogDocument(doc: vscode.TextDocument): boolean {
+    return DIALOG_LANGS.has(doc.languageId) || (doc.languageId === "typescript" && /\.(tssl|td)$/i.test(doc.uri.path));
+}
 
 /** Discriminate the parse payload by shape (D has `blocks`, SSL has `nodes`). */
 function toModel(data: unknown): DialogModel | null {
@@ -358,7 +366,7 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
     // Keep the command + Ctrl+Shift+V: open the active dialog file in the custom editor beside the source.
     const open = vscode.commands.registerCommand("extension.bgforge.dialogEditor", async () => {
         const active = vscode.window.activeTextEditor;
-        if (!active || !DIALOG_LANGS.has(active.document.languageId)) {
+        if (!active || !isDialogDocument(active.document)) {
             void vscode.window.showInformationMessage("Open a dialog file (.d / .ssl / .td / .tssl) first.");
             return;
         }
