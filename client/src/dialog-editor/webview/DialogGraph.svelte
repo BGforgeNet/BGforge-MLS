@@ -832,8 +832,11 @@
     const structEditable = (s: DialogState | null): s is DialogState =>
         s != null &&
         !s.derivedFrom &&
+        // Faithful SSL and faithful TSSL are structurally editable: the writers serialize add/remove/rename of
+        // nodes and options back to source. (TSSL's option reorder / reaction / low-INT are not yet written, so
+        // those specific controls gate on exact sourceLang "ssl" - see Inspector sslOnlyOps and the actions.)
         (editModel.editable ||
-            (editModel.sourceLang === "ssl" &&
+            ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
                 (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 
     // Per-node FIELD editability (retarget now; text/condition next). A superset of structEditable that also
@@ -978,7 +981,9 @@
             if (structEditable(selected)) removeOption(selected, choiceId); // Tier 2 remove option: D or faithful SSL
         },
         moveReply: (choiceId: string, dir: -1 | 1) => {
-            if (!structEditable(selected)) return; // Tier 1 reorder: D or faithful SSL
+            // Reorder is implemented for real SSL / D only - the td/tssl writers do not re-serialize the option
+            // run yet, so gate on exact sourceLang (not renderFamily) to avoid a keyboard/context-menu no-op.
+            if (!structEditable(selected) || (editModel.sourceLang !== "ssl" && editModel.sourceLang !== "d")) return;
             ops.moveReply(selected, choiceId, dir);
             void rebuild({ frame: "none" });
         },
@@ -988,12 +993,14 @@
             void rebuild({ frame: "none" });
         },
         setReaction: (choiceId: string, reaction: DialogReaction) => {
-            if (!structEditable(selected)) return; // SSL only: reaction (N/G/B) macro rewrite
+            // Reaction (N/G/B macro rewrite) is implemented for real SSL only, not the td/tssl writers yet.
+            if (!structEditable(selected) || editModel.sourceLang !== "ssl") return;
             ops.setChoiceReaction(selected, choiceId, reaction);
             void rebuild({ frame: "none" });
         },
         setLowIq: (choiceId: string, on: boolean) => {
-            if (!structEditable(selected)) return; // SSL only: low-INT variant (arg-count) rewrite
+            // Low-INT (arg-count) rewrite is implemented for real SSL only, not the td/tssl writers yet.
+            if (!structEditable(selected) || editModel.sourceLang !== "ssl") return;
             ops.setChoiceLowIq(selected, choiceId, on);
             void rebuild({ frame: "none" });
         },
@@ -1204,7 +1211,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceLang={editModel.sourceLang} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />

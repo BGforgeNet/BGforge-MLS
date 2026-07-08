@@ -163,6 +163,13 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         const end = nl === -1 ? os.procRange.end : nl + 1;
         ops.push({ start, end, replacement: "" });
     }
+    // Entry-call cleanup: when a node is deleted, remove its `NodeNNN();` entry call from talk_p_proc so no
+    // dangling reference remains. Only top-level entry calls are spliced (a call nested in an `if` cannot be
+    // removed without rewriting the conditional). A renamed node keeps its entry call (rewritten above).
+    for (const ec of original.entryCalls ?? []) {
+        if (editedStateIds.has(ec.name) || renamedFromIds.has(ec.name) || !ec.topLevel) continue;
+        ops.push(removeLineSplice(originalText, ec.stmtRange));
+    }
     // Structural: a NEW option added to an existing node -> serialize it (reusing the SSL option serializer,
     // since the call syntax is byte-identical) and insert after the last SURVIVING option's statement so it
     // never lands inside a removed option's span. A reply-only node with no surviving option anchors just

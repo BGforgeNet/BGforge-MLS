@@ -160,6 +160,17 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out).not.toMatch(/\bNode002\b/);
     });
 
+    it("deletes an entry node: removes its function and its talk_p_proc entry call", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const root = edited.roots[0]!;
+        root.states = root.states.filter((s) => s.id !== "Node001"); // Node001 is the sole talk_p_proc entry
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).not.toContain("function Node001()"); // the procedure is gone
+        const router = out.slice(out.indexOf("function talk_p_proc()"));
+        expect(router).not.toMatch(/\bNode001\b/); // ...and its entry call, no dangling reference
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
