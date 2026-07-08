@@ -21,6 +21,7 @@
     import { eligibleToDelete, isLocalNewSSLNode } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
     import {
+        renderFamily,
         resolveText,
         sslTerminalKind,
         type DialogMessages,
@@ -150,7 +151,7 @@
     // ids would raise svelte's each_key_duplicate; a jump target is a label, so distinct is correct.
     // Target-picker id list. On SSL the reserved terminals (Node998/Node999) are presented as the Combat/Exit
     // picker entries, not raw ids, so drop them here (they would otherwise appear as `-> Node998` in the menus).
-    const isSSL = $derived(editModel.format === "fallout-ssl");
+    const isSSL = $derived(renderFamily(editModel.sourceLang) === "fallout-ssl");
     const stateIds = $derived(
         distinctStateIds(activeRoot?.states ?? []).filter((id) => !isSSL || !sslTerminalKind(id)),
     );
@@ -159,7 +160,7 @@
     const unresolvedRefs = $derived(unresolvedRefCount(editModel));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
     // recomputes as edits mutate editModel (a save path will post this to the host).
-    const sourceText = $derived(showSource && editModel.format === "weidu-d" ? modelToD(editModel) : "");
+    const sourceText = $derived(showSource && editModel.sourceLang === "d" ? modelToD(editModel) : "");
     let showIssues = $state(false);
     // A delete that would silently redirect inbound transitions to EXIT waits on this confirmation.
     let confirmDelete = $state<{ state: DialogState; refCount: number } | null>(null);
@@ -239,7 +240,7 @@
     const treeData = $derived(
         activeRoot
             ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot), {
-                  ssl: editModel.format === "fallout-ssl",
+                  ssl: renderFamily(editModel.sourceLang) === "fallout-ssl",
                   editable: editModel.editable,
               })
             : { roots: [] },
@@ -825,7 +826,7 @@
         s != null &&
         !s.derivedFrom &&
         (editModel.editable ||
-            (editModel.format === "fallout-ssl" &&
+            (editModel.sourceLang === "ssl" &&
                 (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 
     // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
@@ -933,7 +934,7 @@
                 postToHost({
                     type: "notify",
                     level: "warn",
-                    text: `"${s.id}" can't be deleted from the graph - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the ${editModel.format === "fallout-ssl" ? ".ssl" : ".d"} source.`,
+                    text: `"${s.id}" can't be deleted from the graph - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the ${renderFamily(editModel.sourceLang) === "fallout-ssl" ? ".ssl" : ".d"} source.`,
                 });
             return;
         }
@@ -1144,7 +1145,7 @@
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
         <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
     </span>
-    {#if editModel.editable || editModel.format === "fallout-ssl"}
+    {#if editModel.editable || editModel.sourceLang === "ssl"}
         <button class="toolbtn" onclick={addState}>+ State</button>
     {/if}
     {#if inGraph}
@@ -1158,7 +1159,7 @@
             Spotlight
         </button>
     {/if}
-    {#if editModel.format === "weidu-d"}
+    {#if editModel.sourceLang === "d"}
         <button class="toolbtn" class:active={showSource} onclick={() => (showSource = !showSource)}>Source</button>
     {/if}
     <button class="toolbtn" class:warn={issues.length > 0} class:active={showIssues} onclick={() => (showIssues = !showIssues)}>
@@ -1182,7 +1183,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -1222,7 +1223,7 @@
                     <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
                     <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
                 {/if}
-                {#if editModel.editable || editModel.format === "fallout-ssl"}
+                {#if editModel.editable || editModel.sourceLang === "ssl"}
                     <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D new_state). Off: you're prompted for the name each time.">
                         <input type="checkbox" bind:checked={autoNodeNames} />
                         Auto node names
@@ -1327,7 +1328,7 @@
                         <span class="lg player">player reply</span>
                         <span class="lg continue">continue</span>
                         <span class="lg exit">exit</span>
-                        <span class="lg external">{editModel.format === "fallout-ssl" ? "unresolved" : "extern"}</span>
+                        <span class="lg external">{renderFamily(editModel.sourceLang) === "fallout-ssl" ? "unresolved" : "extern"}</span>
                     </div>
                 </Panel>
             </SvelteFlow>
@@ -1337,7 +1338,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} searchHits={searchHits} currentMatchKey={currentMatchKey} searchActive={searchInputFocused} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} searchHits={searchHits} currentMatchKey={currentMatchKey} searchActive={searchInputFocused} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={renderFamily(editModel.sourceLang) === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

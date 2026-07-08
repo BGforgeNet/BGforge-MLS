@@ -7,8 +7,8 @@
         type DialogBlock,
         type DialogBranch,
         type DialogChoice,
-        type DialogFormat,
         type DialogReaction,
+        type RenderFamily,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
@@ -51,7 +51,7 @@
         onNavigate: (stateId: string) => void;
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
         onFocusOwnerState: () => void;
-        format: DialogFormat;
+        format: RenderFamily;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
         // a faithful node, which gains the structural ops the save path can persist (retarget, reorder,
