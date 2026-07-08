@@ -8,7 +8,7 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { isLocalNewSSLNode } from "./dialog-ssl-edit";
+import { isLocalNewSSLNode, survivorReplacement } from "./dialog-ssl-edit";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
 import { serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
@@ -77,14 +77,24 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     for (const c of statesOf(edited)) {
         const orig = origById.get(c.id);
         if (!orig) continue;
-        // Retarget: an option's target node changed and the parser recorded the target token's span.
+        // In-place field edits on a surviving state-target option (retarget + reaction N/G/B): rewrite the
+        // option call in its `callRange` slot, sharing `survivorReplacement` with the SSL writer since a TSSL
+        // option call is byte-identical to SSL's. A retarget-only edit token-patches the target; a reaction
+        // change token-patches just the macro-name (`NOption` -> `GOption`), leaving the msg-id/target/skill
+        // args byte-exact. The low-INT variant is handled in a later slice (arg count changes), so this branch
+        // is scoped to arg-count-preserving edits and skips a low-INT toggle for now.
+        const lowChanged = Boolean(c.lowIq) !== Boolean(orig.lowIq);
         if (
             c.target.kind === "state" &&
             orig.target.kind === "state" &&
-            c.target.stateId !== orig.target.stateId &&
-            orig.targetRange
+            orig.callRange &&
+            orig.targetRange &&
+            !lowChanged
         ) {
-            ops.push({ start: orig.targetRange.start, end: orig.targetRange.end, replacement: c.target.stateId });
+            const replacement = survivorReplacement(originalText, c, orig);
+            if (replacement !== originalText.slice(orig.callRange.start, orig.callRange.end)) {
+                ops.push({ start: orig.callRange.start, end: orig.callRange.end, replacement });
+            }
         }
         // Terminal flip: an option retargeted from a state to exit/terminal - e.g. its target node was deleted
         // and `ops.deleteState` redirected the inbound option to exit - is rewritten from `NOption(id, Node, sk)`

@@ -155,7 +155,7 @@ function splitCallArgs(call: string): string[] {
  * low-INT variant when either changed vs the original. Lifted from `nodeOps` so `bundleNodeOps` can
  * share the same logic without duplication.
  */
-function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
+export function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
     const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
     if (moved.target.kind !== "state") {
         // The option's target node was deleted (the model redirected it to exit): re-serialize the

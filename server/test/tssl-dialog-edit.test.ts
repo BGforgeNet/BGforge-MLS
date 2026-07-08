@@ -31,6 +31,18 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(applyTSSLDialogEdits(flat, structuredClone(original), original)).toBe(flat);
     });
 
+    it("flips a surviving option's reaction Neutral -> Good (NOption -> GOption), rest byte-identical", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.target.kind === "state",
+        )!;
+        opt.reaction = "good";
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        // Only the macro-name token changes; the msg-id/target/skill args are byte-exact.
+        expect(out).toBe(flat.replace("NOption(101, Node002, 4)", "GOption(101, Node002, 4)"));
+    });
+
     it("splices an edited option condition into the .tssl if-wrapper", () => {
         const conditional = readFileSync(
             fileURLToPath(new URL("tssl/samples/conditional.tssl", import.meta.url)),
