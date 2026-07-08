@@ -22,8 +22,10 @@
             /** This node's text (line or a reply) shares a .msg/.tra ref with another node. */
             sharedText?: boolean;
             editable?: boolean;
-            /** Per-node structural editability (D: model-level; SSL: node is faithful). Gates drag-to-retarget. */
+            /** Per-node structural editability (D: model-level; SSL: node is faithful). Gates add/remove. */
             structuralEditable?: boolean;
+            /** Per-node FIELD editability (superset incl. faithful/bundle TSSL). Gates drag-to-retarget. */
+            fieldEditable?: boolean;
         };
         type: string;
     } = $props();
@@ -60,7 +62,7 @@
                 <!-- A derived state's transitions can't be rewritten, and a non-faithful SSL node's
                      structure is read-only, so those output handles are non-connectable (no
                      drag-to-retarget). A faithful SSL node is structurally editable, so it connects. -->
-                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom && data.structuralEditable !== false} />
+                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom && data.fieldEditable !== false} />
             </div>
         {/each}
     </div>

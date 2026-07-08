@@ -164,6 +164,12 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     structuralEditable:
                         model.editable ||
                         (model.sourceLang === "ssl" && (s.faithful === true || s.bundleFaithful === true)),
+                    // Field editability (drives output-handle connectability for RETARGET): the ssl-family
+                    // superset - real SSL plus faithful/bundle TSSL, whose target token round-trips to source.
+                    fieldEditable:
+                        model.editable ||
+                        ((model.sourceLang === "ssl" || model.sourceLang === "tssl") &&
+                            (s.faithful === true || s.bundleFaithful === true)),
                 },
             });
 

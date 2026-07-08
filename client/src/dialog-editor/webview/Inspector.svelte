@@ -33,7 +33,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -59,6 +59,10 @@
         // the D edit surface (rename, condition/action, duplicate) stays read-only for SSL - D-only or
         // later SSL tiers the save path can't persist yet.
         structuralEditable: boolean;
+        // Per-node FIELD editability (retarget, and later text/condition): a superset of structuralEditable
+        // that also covers td/tssl faithful nodes, whose field edits round-trip to source even though their
+        // structural add/remove is Phase 3. For d/ssl this equals structuralEditable (no separate behavior).
+        fieldEditable: boolean;
         // Whether this node can be deleted (D: any non-derived; faithful SSL: only when every inbound
         // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
         // the SSL Delete button (Tier 3a); D's delete stays in the `!readOnly` ops block below.
@@ -411,9 +415,10 @@
                 {#if labeled}<div class="ik">Action</div>{/if}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
-            <!-- Retarget is enabled for any structurally-editable node (D, faithful SSL, or bundle SSL). -->
+            <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
+                 faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
             {#if labeled}<div class="ik">Target</div>{/if}
-            <select class="iv tgt" disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
+            <select class="iv tgt" disabled={!fieldEditable} title={!fieldEditable ? structReason : ""} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
                 {/if}

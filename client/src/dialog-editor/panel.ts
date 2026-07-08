@@ -265,7 +265,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
     ): Promise<void> {
         const session = this.sessions.get(panel);
         if (!session) return;
-        if (edited.sourceLang === "d" || edited.sourceLang === "ssl") {
+        if (edited.sourceLang === "d" || edited.sourceLang === "ssl" || edited.sourceLang === "tssl") {
             const text = document.getText();
             let data: unknown;
             try {

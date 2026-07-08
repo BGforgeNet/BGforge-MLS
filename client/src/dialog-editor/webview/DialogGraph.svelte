@@ -836,6 +836,18 @@
             (editModel.sourceLang === "ssl" &&
                 (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 
+    // Per-node FIELD editability (retarget now; text/condition next). A superset of structEditable that also
+    // enables td/tssl faithful/bundle nodes: their FIELD edits round-trip to the TS source via the recorded
+    // ranges even though structural add/remove/rename is Phase 3. For d/ssl this equals structEditable.
+    const fieldEditable = (s: DialogState | null): s is DialogState =>
+        s != null &&
+        !s.derivedFrom &&
+        // Inlines structEditable's core rather than calling it: `structEditable(s) || ...` would narrow s to
+        // `never` on the right (a negated `s is DialogState` guard). Adds the tssl family to the ssl clause.
+        (editModel.editable ||
+            ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
+                (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
+
     // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
     // only when every inbound reference can be cleaned up on save (eligibleToDelete - not an entry, not
     // reached by a `call`, no inbound option in a non-faithful node). eligibleToDelete returns true for D.
@@ -1123,7 +1135,7 @@
         // Only a structurally-editable node (D, or a faithful SSL node) can be retargeted; reject
         // the canvas gesture for derived/non-faithful sources just as the inspector and the locked
         // edge anchor do.
-        if (!owner || !structEditable(owner)) return;
+        if (!owner || !fieldEditable(owner)) return;
         let target: DialogTarget;
         if (targetNodeId === "exit") target = { kind: "exit" };
         // The Combat terminal (SSL Node998) is a synthetic node, not a model state; map a drop on it back to a
@@ -1191,7 +1203,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
