@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
 import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { applyTDDialogEdits } from "../../shared/dialog-td-edit";
-import { deleteState } from "../../shared/dialog-edit-ops";
+import { deleteState, renameState } from "../../shared/dialog-edit-ops";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
 
@@ -160,5 +160,40 @@ describe("applyTDDialogEdits - add node", () => {
         const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_weapon()"));
         expect(itemType).toContain("goTo(g_shield);");
         expect(itemType).not.toContain("goTo(g_weapon)");
+    });
+});
+
+describe("applyTDDialogEdits - rename node", () => {
+    it("rewrites the function name and its append-list entry; inbound goTo retargets; comments survive", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const gw = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_weapon")!;
+        // renameState records renamedFrom + moves inbound GOTO model choices to the new id.
+        renameState(edited, gw, "g_blade");
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        // Definition renamed in place (the surgical splice keeps the node's `// %cespenar_weapon%` comment).
+        expect(out).toContain("function g_blade()");
+        expect(out).not.toContain("function g_weapon()");
+        expect(out).toContain("// %cespenar_weapon% transitions would be inserted here by TP2");
+        // The append state list names the new id.
+        expect(out).toContain("append(dlg, [g_item_type, g_blade, g_armor, g_trinket]);");
+        // The inbound option in g_item_type retargets to the new id (moved by renameState, spliced by retarget).
+        const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_blade()"));
+        expect(itemType).toContain("goTo(g_blade);");
+        // No dangling reference to the old id anywhere (the comment mentions cespenar_weapon, not g_weapon).
+        expect(out).not.toMatch(/\bg_weapon\b/);
+    });
+
+    it("rewrites an entry-block goTo target when the entry node is renamed", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const git = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_item_type")!;
+        renameState(edited, git, "g_menu");
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        expect(out).toContain("function g_menu()");
+        // The extendBottom entry block's goTo(g_item_type) is rewritten (it is not a model choice).
+        expect(out).toContain("goTo(g_menu)");
+        expect(out).not.toMatch(/\bg_item_type\b/);
+        expect(out).toContain("append(dlg, [g_menu, g_weapon, g_armor, g_trinket]);");
     });
 });

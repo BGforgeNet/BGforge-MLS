@@ -3,8 +3,10 @@
  * byte ranges the TD source parser recorded (into the `.td`, not generated D). Mirrors `applyTSSLDialogEdits`
  * but over TD's WeiDU-D-family syntax (`function id() { say(tra(N)); reply(tra(M)); goTo(t); }`), so the edits
  * are surgical per-statement splices - never a lossy whole-function re-serialize, which would drop the comments
- * a TD function can carry. Currently: transition RETARGET (a `goTo(<id>)` whose target changed) and REMOVE
- * OPTION (a transition dropped from a surviving node -> its whole `reply(...); goTo(...);` group is spliced out).
+ * a TD function can carry. Supports: transition RETARGET (a `goTo(<id>)` whose target changed) and TERMINAL FLIP
+ * (an inbound option redirected to exit); REMOVE/ADD OPTION (a `reply(...); goTo(...);` group spliced out or
+ * inserted at the survivor anchor); and REMOVE/ADD/RENAME NODE (the `function` span plus its state-list wiring
+ * in append/begin and its entry-block goTo references).
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
@@ -159,13 +161,30 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
             ops.push({ start: offset, end: offset, replacement: block });
         }
     }
+    // Structural: RENAME node - a state whose id changed carries `renamedFrom` (set by renameState). Rewrite its
+    // function-name token and every OUT-OF-BODY reference to the old id (append/begin list element, entry-block
+    // goTo target). Inbound OPTION targets inside state functions were moved by the model retarget (handled by
+    // the retarget splice above), so they are NOT touched here - the double-splice guard, mirroring
+    // applyTSSLDialogEdits. A renamed-away old id is also excluded from the DELETE loop below (absent from
+    // editedStateIds, but not a deletion).
+    const renamedFromIds = new Set<string>();
+    for (const state of allStates(edited)) {
+        if (!state.renamedFrom || !state.nameRange) continue;
+        renamedFromIds.add(state.renamedFrom);
+        ops.push({ start: state.nameRange.start, end: state.nameRange.end, replacement: state.id });
+        for (const ref of original.tdWiring?.refs ?? []) {
+            if (ref.name === state.renamedFrom) {
+                ops.push({ start: ref.range.start, end: ref.range.end, replacement: state.id });
+            }
+        }
+    }
     // Structural: DELETE node - an original node absent from the edited model -> splice out its whole function
     // (plus the separating blank line), prune its state-list membership, and redirect any entry-block goTo to
     // exit() so no reference dangles. Disjoint from every option splice (functions do not overlap, and an inbound
     // option that flipped to a terminal lives in a DIFFERENT surviving node's body).
     const deletedIds = new Set<string>();
     for (const os of allStates(original)) {
-        if (editedStateIds.has(os.id) || os.derivedFrom || !os.sourceRange) continue;
+        if (editedStateIds.has(os.id) || renamedFromIds.has(os.id) || os.derivedFrom || !os.sourceRange) continue;
         deletedIds.add(os.id);
         ops.push(removeFunctionSplice(originalText, os.sourceRange));
     }
