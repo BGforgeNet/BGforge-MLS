@@ -15,6 +15,7 @@ import { SyntaxType } from "./syntax-type";
 import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
 import {
     extractSayText,
+    extractSayTexts,
     extractSayTextContent,
     extractChainText,
     extractChainTextTrigger,
@@ -239,6 +240,7 @@ function parseState(node: SyntaxNode, speaker: string): DDialogState | undefined
 
     const label = labelNode.text;
     const sayText = extractSayText(node);
+    const sayTexts = extractSayTexts(node);
     const trigger = extractTrigger(node);
     const weight = extractWeight(node);
     const transitions: DDialogTransition[] = [];
@@ -258,6 +260,7 @@ function parseState(node: SyntaxNode, speaker: string): DDialogState | undefined
         label,
         line: node.startPosition.row + 1,
         sayText,
+        sayTexts,
         trigger: trigger || undefined,
         weight,
         speaker,

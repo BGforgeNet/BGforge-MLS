@@ -312,6 +312,13 @@ export interface DDialogState {
     sayRange?: { start: number; end: number };
     triggerRange?: { start: number; end: number };
     /**
+     * Every SAY text of a multisay state (`SAY @a = @b = @c`), in source order, each with its own byte
+     * range. A single-text state has a one-element list. `sayText` keeps the first text for the collapsed
+     * display line; `sayTexts` carries all of them so the writer and inspector round-trip the whole SAY
+     * instead of truncating to the first (the pre-existing multisay-truncation fix). Set by the parser.
+     */
+    sayTexts?: Array<{ text: string; range: { start: number; end: number } }>;
+    /**
      * Set when this state was expanded from a higher-level construct (CHAIN, INTERJECT,
      * EXTEND) rather than authored as a standalone state block. Names the construct, for
      * display. Such states have no `range`, so the editor treats them as read-only - there

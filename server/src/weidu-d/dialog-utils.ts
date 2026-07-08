@@ -18,27 +18,38 @@ export function extractSayText(stateNode: SyntaxNode): string {
     return extractSayTextContent(sayNode);
 }
 
+// The `_text` alternatives a say_text node holds (one per multisay entry). Membership set so the same
+// list drives both first-text extraction and the full multisay list.
+const SAY_TEXT_KINDS: ReadonlySet<string> = new Set<string>([
+    SyntaxType.TildeString,
+    SyntaxType.String,
+    SyntaxType.TraRef,
+    SyntaxType.TlkRef,
+    SyntaxType.AtVarRef,
+    SyntaxType.DoubleString,
+]);
+
 /**
  * Extract text from a say_text node, which may contain tilde_string, tra_ref, tlk_ref, or at_var_ref.
+ * Returns the FIRST text of a multisay (`@a = @b`); use `extractSayTexts` for the whole list.
  */
 export function extractSayTextContent(sayTextNode: SyntaxNode): string {
     for (const child of sayTextNode.children) {
-        switch (child.type) {
-            case SyntaxType.TildeString:
-                return extractTildeContent(child);
-            case SyntaxType.String:
-                return extractStringContent(child);
-            case SyntaxType.TraRef:
-                return child.text;
-            case SyntaxType.TlkRef:
-                return child.text;
-            case SyntaxType.AtVarRef:
-                return child.text;
-            case SyntaxType.DoubleString:
-                return extractDoubleContent(child);
-        }
+        if (SAY_TEXT_KINDS.has(child.type)) return extractTextContent(child);
     }
     return sayTextNode.text.trim();
+}
+
+/**
+ * Every text of a state's SAY, in source order, each with its byte range. A multisay
+ * (`SAY @a = @b = @c`) yields one entry per text; a single SAY yields one entry.
+ */
+export function extractSayTexts(stateNode: SyntaxNode): Array<{ text: string; range: { start: number; end: number } }> {
+    const sayNode = stateNode.childForFieldName("say");
+    if (!sayNode) return [];
+    return sayNode.children
+        .filter((c) => SAY_TEXT_KINDS.has(c.type))
+        .map((c) => ({ text: extractTextContent(c), range: { start: c.startIndex, end: c.endIndex } }));
 }
 
 function extractTildeContent(node: SyntaxNode): string {
