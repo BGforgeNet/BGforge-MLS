@@ -146,6 +146,17 @@ function parseState(fn: FunctionDeclaration): DDialogState {
     const trigger = ifStmt ? ifStmt.getExpression().getText() : undefined;
     const nameNode = fn.getNameNode();
 
+    // Enclosing-if delete span: when the state function is the SOLE meaningful statement of an `if` then-block
+    // (and the `if` has no `else`), the `if` exists only to conditionally define this state - so a delete must
+    // remove the whole gate, not leave `if (...) {}` behind. Only a directly-wrapping block-bodied `if` qualifies.
+    const parentBlock = fn.getParentIfKind(SyntaxKind.Block);
+    const enclosingIf = parentBlock?.getParentIfKind(SyntaxKind.IfStatement);
+    let enclosingIfRange: Range | undefined;
+    if (enclosingIf && enclosingIf.getThenStatement() === parentBlock && !enclosingIf.getElseStatement()) {
+        const meaningful = parentBlock!.getStatements().filter((s) => !Node.isEmptyStatement(s));
+        if (meaningful.length === 1 && meaningful[0] === fn) enclosingIfRange = span(enclosingIf);
+    }
+
     return {
         label,
         line: fn.getStartLineNumber(),
@@ -155,6 +166,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
         transitions,
         range: span(fn),
         ...(nameNode ? { nameRange: span(nameNode) } : {}),
+        ...(enclosingIfRange ? { enclosingIfRange } : {}),
     };
 }
 
@@ -277,14 +289,25 @@ export function parseTDSource(text: string): DDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
     const sf = project.createSourceFile("dialog.td.ts", text);
     const states: DDialogState[] = [];
+    // Ambient forward declarations (`declare function <name>(): void;`) keyed by name, so a node delete can
+    // splice out the matching declaration and leave no dangling forward decl (mirrors the SSL forward-decl cleanup).
+    const declares = new Map<string, Range>();
     // States can be nested inside their entry `if` block, so walk all function declarations (not just
-    // top-level). Skip bodiless `declare function` ambient decls (TS forward decls) and param'd functions
-    // (inlined helpers, not states).
+    // top-level). A bodiless zero-arg function is a `declare function` forward decl (recorded above, not a state);
+    // param'd functions are inlined helpers, not states.
     for (const fn of sf.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
-        if (fn.getName() === undefined) continue;
-        if (fn.getBody() === undefined) continue;
+        const nm = fn.getName();
+        if (nm === undefined) continue;
+        if (fn.getBody() === undefined) {
+            if (fn.getParameters().length === 0) declares.set(nm, span(fn));
+            continue;
+        }
         if (fn.getParameters().length > 0) continue;
         states.push(parseState(fn));
+    }
+    for (const s of states) {
+        const decl = declares.get(s.label);
+        if (decl) s.forwardDeclStmtRange = decl;
     }
     const stateNames = new Set(states.map((s) => s.label));
     const tdWiring = parseWiring(sf, stateNames);

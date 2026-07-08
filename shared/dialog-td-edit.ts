@@ -247,7 +247,12 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     for (const os of allStates(original)) {
         if (editedStateIds.has(os.id) || renamedFromIds.has(os.id) || os.derivedFrom || !os.sourceRange) continue;
         deletedIds.add(os.id);
-        ops.push(removeFunctionSplice(originalText, os.sourceRange));
+        // A state nested in a sole-content entry `if (...)` gate is removed WITH its gate (enclosingIfRange), so
+        // no dead empty `if` is left; a plain top-level state removes just its function span.
+        ops.push(removeFunctionSplice(originalText, os.enclosingIfRange ?? os.sourceRange));
+        // Splice out the state's ambient forward declaration too, so no `declare function <name>(): void;` dangles
+        // for the removed state (disjoint from the function/gate span above - the decl sits elsewhere in the file).
+        if (os.forwardDeclStmtRange) ops.push(removeLineSplice(originalText, os.forwardDeclStmtRange));
     }
     for (const ref of original.tdWiring?.refs ?? []) {
         if (!deletedIds.has(ref.name)) continue;

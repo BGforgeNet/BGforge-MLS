@@ -226,15 +226,23 @@ export interface DialogState {
      */
     nameRange?: { start: number; end: number };
     /**
+     * TD only: byte span of the entry `if (...)` that wraps this state function and holds nothing else (the
+     * state-gate pattern). A node DELETE splices this whole `if` out instead of just the function span, so the
+     * removal does not leave a dead empty gate. Set by the WeiDU D adapter from a TD state's `enclosingIfRange`;
+     * absent for tree-sitter `.d`, SSL, unwrapped states, and states sharing a gate with siblings.
+     */
+    enclosingIfRange?: { start: number; end: number };
+    /**
      * SSL only: byte span of the name token in this node's forward declaration (`procedure <name>;`), when
      * one exists. Rename rewrites it alongside `nameRange`. Set by the SSL adapter from
      * `SSLDialogNode.forwardDeclRange`; absent for D, for new nodes, and for procedures with no forward decl.
      */
     forwardDeclRange?: { start: number; end: number };
     /**
-     * SSL only: byte span of the WHOLE forward-declaration statement (`procedure <name>;`). A node DELETE
-     * splices it out so the file is not left with an orphan declaration. Set by the SSL adapter from
-     * `SSLDialogNode.forwardDeclStmtRange`; absent for D, new nodes, and procedures with no forward decl.
+     * SSL/TD: byte span of the WHOLE forward-declaration statement (SSL `procedure <name>;`, TD
+     * `declare function <name>(): void;`). A node DELETE splices it out so the file is not left with an orphan
+     * declaration. Set by the SSL adapter from `SSLDialogNode.forwardDeclStmtRange` and by the WeiDU D adapter
+     * from a TD state's `forwardDeclStmtRange`; absent for tree-sitter `.d`, new nodes, and states with no forward decl.
      */
     forwardDeclStmtRange?: { start: number; end: number };
     /**
@@ -535,6 +543,8 @@ function stateFromD(s: DDialogState): DialogState {
         })),
         sourceRange: s.range,
         nameRange: s.nameRange,
+        enclosingIfRange: s.enclosingIfRange,
+        forwardDeclStmtRange: s.forwardDeclStmtRange,
         sayRange: s.sayRange,
         triggerRange: s.triggerRange,
         derivedFrom: s.derivedFrom,

@@ -15,6 +15,7 @@ import {
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
+const wmRhia = readFileSync(fileURLToPath(new URL("td/samples/wm_rhia.td", import.meta.url)), "utf8");
 
 function tdModel(src: string): DialogModel {
     return { ...modelFromD(parseTDSource(src)), sourceLang: "td", editable: true };
@@ -187,6 +188,24 @@ describe("applyTDDialogEdits - remove node", () => {
         // Unrelated nodes survive.
         expect(out).toContain("function g_armor()");
         expect(out).toContain("function g_trinket()");
+    });
+});
+
+describe("applyTDDialogEdits - remove a state nested in an entry `if` gate", () => {
+    it("splices out the whole enclosing if too, leaving no dead empty gate", () => {
+        const original = tdModel(wmRhia);
+        const edited = structuredClone(original);
+        const s100 = edited.roots.flatMap((r) => r.states).find((s) => s.id === "state100")!;
+        deleteState(edited, s100);
+        const out = applyTDDialogEdits(wmRhia, edited, original);
+        // The function and its sole-content entry gate are both gone (no empty `if (Global(...)) { }` residue).
+        expect(out).not.toContain("function state100()");
+        expect(out).not.toContain('if (Global("wm_start", "GLOBAL", 1))');
+        expect(out).not.toMatch(/if \([^)]*\)\s*\{\s*\}/);
+        // The sibling state and ITS gate survive; the begin state list is pruned to just state110.
+        expect(out).toContain("function state110()");
+        expect(out).toContain('if (!Global("wm_start", "GLOBAL", 1))');
+        expect(out).toContain("begin(dialog, [state110]);");
     });
 });
 

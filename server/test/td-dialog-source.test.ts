@@ -71,6 +71,18 @@ describe("parseTDSource - wm_rhia (multisay + entry trigger)", () => {
         expect(s.sayTexts?.map((t) => t.text)).toEqual(["@100", "@101", "@102", "@103"]);
         expect(s.trigger).toContain("wm_start");
     });
+
+    it("records the sole-content enclosing-if span and the ambient forward-decl span for delete cleanup", () => {
+        const s = parseTDSource(src).states.find((st) => st.label === "state100")!;
+        // The state gate `if (Global(...)) { function state100() {...} }` is recorded whole (starts at `if`).
+        expect(src.slice(s.enclosingIfRange!.start, s.enclosingIfRange!.start + 3)).toBe("if ");
+        expect(src.slice(s.enclosingIfRange!.start, s.enclosingIfRange!.end)).toContain("function state100()");
+        expect(src.slice(s.enclosingIfRange!.start, s.enclosingIfRange!.end).trimEnd().endsWith("}")).toBe(true);
+        // The `declare function state100(): void;` forward declaration span is recorded for delete cleanup.
+        expect(src.slice(s.forwardDeclStmtRange!.start, s.forwardDeclStmtRange!.end)).toBe(
+            "declare function state100(): void;",
+        );
+    });
 });
 
 describe("parseTDSource - cohort smoke", () => {

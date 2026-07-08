@@ -323,6 +323,20 @@ export interface DDialogState {
      */
     nameRange?: { start: number; end: number };
     /**
+     * TD only: byte span of the entry `if (...)` statement that wraps this state function AND holds nothing else
+     * (the state-gate pattern, e.g. `if (Global(...)) { function stateNNN() {...} }`). A node DELETE splices this
+     * whole `if` out instead of just the function span, so removing the state does not leave a dead empty gate.
+     * Set by the TD source parser only when the function is the sole meaningful statement of the `if` then-block
+     * and the `if` has no `else`; absent otherwise (an unwrapped state, or one sharing its gate with siblings).
+     */
+    enclosingIfRange?: { start: number; end: number };
+    /**
+     * TD only: byte span of this state's ambient forward declaration statement (`declare function <name>(): void;`),
+     * when the file carries one. A node DELETE splices it out so no dangling declaration is left for the removed
+     * state. Set by the TD source parser; absent when the state has no forward declaration.
+     */
+    forwardDeclStmtRange?: { start: number; end: number };
+    /**
      * Byte ranges of the state's SAY value node and trigger node, for per-field surgical
      * edits (splice just the changed field, leaving the rest of the state byte-identical).
      * `sayRange` covers the value after `SAY` (e.g. `@1`); `triggerRange` covers the
