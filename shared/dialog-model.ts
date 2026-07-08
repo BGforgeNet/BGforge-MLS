@@ -220,8 +220,9 @@ export interface DialogState {
      */
     procRange?: { start: number; end: number };
     /**
-     * SSL only: byte span of the `procedure <name>` identifier token (used to rename the node). Set by the
-     * SSL adapter from `SSLDialogNode.nameRange`; absent for D and for new (not-yet-spliced) nodes.
+     * SSL/TD: byte span of the node's name identifier token (SSL `procedure <name>`, TD `function <name>`), used
+     * to rename the node. Set by the SSL adapter from `SSLDialogNode.nameRange` and by the WeiDU D adapter from a
+     * TD state's `nameRange`; absent for tree-sitter `.d` and for new (not-yet-spliced) nodes.
      */
     nameRange?: { start: number; end: number };
     /**
