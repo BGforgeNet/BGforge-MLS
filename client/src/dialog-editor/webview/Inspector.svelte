@@ -33,7 +33,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, srcExt, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -52,10 +52,6 @@
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
         onFocusOwnerState: () => void;
         format: RenderFamily;
-        /** The opened source file's extension (.tssl/.td/.ssl/.d) for editability copy - renderFamily can't
-            distinguish .ssl from .tssl. Field-edit write-back targets the SOURCE, never generated output.
-            Computed once by the parent via srcExtOf() and shared with the Tree so both agree. */
-        srcExt: string;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
         // a faithful node, which gains the structural ops the save path can persist (retarget, reorder,
@@ -137,8 +133,8 @@
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
 
-    // `srcExt` (the real opened source, .ssl vs .tssl) arrives as a prop, computed once by the parent so
-    // the Tree and Inspector agree. Text saves to the message file of the family: .msg for SSL, .tra for D.
+    // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
+    // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
     const textFile = $derived(ssl ? ".msg" : ".tra");
 
     // Structure is read-only when the model can't be saved (SSL) or for a derived state
@@ -154,7 +150,7 @@
 
     // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
-    const structReason = $derived(structuralLockReason(state, ssl, editable, srcExt));
+    const structReason = $derived(structuralLockReason(state, ssl, editable));
     const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
 
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
@@ -289,15 +285,15 @@
     {:else if ssl && structuralEditable && state.branches}
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>; each branch's <b>condition</b>, option <b>retarget</b>,
-            and <b>add/remove/reorder</b> options write back to the <b>{srcExt}</b>.
-            Branch side-effects are source-only - edit the <b>{srcExt}</b> for those.
+            and <b>add/remove/reorder</b> options write back to the <b>source file</b>.
+            Branch side-effects are source-only - edit the <b>source file</b> for those.
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>; structure - <b>rename</b>, <b>retarget</b>,
-            <b>reorder</b>, add/remove options - writes back to the <b>{srcExt}</b>.
+            <b>reorder</b>, add/remove options - writes back to the <b>source file</b>.
             A condition is editable here when it belongs to one option; a condition shared by
-            several options is source-only (edit the <b>{srcExt}</b>).
+            several options is source-only (edit the <b>source file</b>).
         </div>
     {:else if ssl && state.approximate}
         <!-- Approximate node: the shown tree is not just read-only, it is LOSSY - control flow the editor can't
@@ -305,22 +301,22 @@
         <div class="ronote">
             <b>Approximate view.</b> This node uses control flow (a loop or switch) the editor can't fully
             model, so the tree shown is a simplification - not everything here is represented. Read the
-            <b>{srcExt}</b> source for the full logic. Text edits still save to the <b>{textFile}</b>.
+            <b>source file</b> for the full logic. Text edits still save to the <b>{textFile}</b>.
         </div>
     {:else if fieldEditable && !structuralEditable}
-        <!-- Faithful td/tssl (and the field-edit tier generally): FIELD edits round-trip to the TypeScript
-             source the user opened; only add/remove/reorder structure is deferred to source. Reference the
-             real source extension (.td/.tssl), never the generated .ssl/.d. -->
+        <!-- Faithful td/tssl (and the field-edit tier generally): FIELD edits round-trip to the source file
+             the user opened; only add/remove/reorder structure is deferred to source. The copy stays generic
+             ("the source file") so it reads right whether that file is a .td, .tssl, .ssl, or .d. -->
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>; an option's <b>target</b>{#if ssl}{" "}and its
-                <b>condition</b>{/if} write{ssl ? "" : "s"} back to the <b>{srcExt}</b> source. Adding, removing,
-            or reordering options is source-only - edit the <b>{srcExt}</b> for that.
+                <b>condition</b>{/if} write{ssl ? "" : "s"} back to the <b>source file</b>. Adding, removing,
+            or reordering options is source-only - edit the <b>source file</b> for that.
         </div>
     {:else if ssl}
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>. The dialog structure (options, targets,
             conditions) is read-only - this node is not simple enough to edit safely from the graph;
-            edit the <b>{srcExt}</b> source for that.
+            edit the <b>source file</b> for that.
         </div>
     {/if}
 
@@ -331,7 +327,7 @@
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for branch nodes. -->
         <div class="ik">NPC line</div>
-        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} title={textLockReason({ text: state.text, messages, ssl, textRO, srcExt, isNew: isPendingState(state), derivedFrom: state.derivedFrom })} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} title={textLockReason({ text: state.text, messages, ssl, textRO, isNew: isPendingState(state), derivedFrom: state.derivedFrom })} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
 
     {#if ssl}
@@ -403,14 +399,14 @@
                             {#if !readOnly}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {:else if ssl && structuralEditable && !state.branches}
-                                <button title={c.condition ? optionRemoveLockReason(srcExt) : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                                <button title={c.condition ? optionRemoveLockReason() : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {/if}
                         {/if}
                     </span>
                 {/if}
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} title={textLockReason({ text: c.text, messages, ssl, textRO, srcExt, isNew: isPendingChoice(c), derivedFrom: state.derivedFrom })} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} title={textLockReason({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c), derivedFrom: state.derivedFrom })} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
@@ -420,13 +416,13 @@
                      (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
-                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={(ssl ? !c.conditionEditable : readOnly) ? conditionLockReason(state, c, ssl, editable, srcExt) : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={(ssl ? !c.conditionEditable : readOnly) ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
                      read-only, so repeating it on all N option cards is just clutter - the dashed field carries
                      the signal, the banner the explanation. -->
                 {#if ssl && c.conditionEditable === false && !state.structured && !state.approximate}
-                    <div class="condnote">shared by other options - edit in <b>{srcExt}</b></div>
+                    <div class="condnote">shared by other options - edit in <b>source file</b></div>
                 {/if}
             {/if}
             {#if !ssl && !state.branches}

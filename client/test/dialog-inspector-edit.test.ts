@@ -126,59 +126,52 @@ describe("disabled-reason helpers", () => {
     });
 
     it("structuralLockReason distinguishes derived, approximate, structured, and generic SSL nodes", () => {
-        expect(structuralLockReason(st({ derivedFrom: "INTERJECT" }), true, false, ".ssl")).toContain("INTERJECT");
-        expect(structuralLockReason(st({ approximate: true }), true, false, ".ssl")).toMatch(/loop or switch/);
-        expect(structuralLockReason(st({ structured: true }), true, false, ".ssl")).toMatch(/nests if\/else/);
-        expect(structuralLockReason(st(), true, false, ".ssl")).toMatch(/isn't simple enough/);
+        expect(structuralLockReason(st({ derivedFrom: "INTERJECT" }), true, false)).toContain("INTERJECT");
+        expect(structuralLockReason(st({ approximate: true }), true, false)).toMatch(/loop or switch/);
+        expect(structuralLockReason(st({ structured: true }), true, false)).toMatch(/nests if\/else/);
+        expect(structuralLockReason(st(), true, false)).toMatch(/isn't simple enough/);
         // Non-SSL (D): editable file -> no reason; view-only -> read-only.
-        expect(structuralLockReason(st(), false, true, ".d")).toBe("");
-        expect(structuralLockReason(st(), false, false, ".d")).toBe("This dialog is open read-only.");
-        // Each SSL reason points the user at the source.
-        expect(structuralLockReason(st({ structured: true }), true, false, ".ssl")).toMatch(/\.ssl source/);
-    });
-
-    it("structuralLockReason names the real source extension (.tssl, never the generated .ssl)", () => {
-        // Regression guard: a .tssl file must not be told to edit the .ssl (there is no .ssl; it is generated).
-        const r = structuralLockReason(st({ structured: true }), true, false, ".tssl");
-        expect(r).toMatch(/\.tssl source/);
-        expect(r).not.toMatch(/\.ssl source/);
+        expect(structuralLockReason(st(), false, true)).toBe("");
+        expect(structuralLockReason(st(), false, false)).toBe("This dialog is open read-only.");
+        // Each reason points the user at the source generically (never a specific ext - a .tssl has no .ssl).
+        const r = structuralLockReason(st({ structured: true }), true, false);
+        expect(r).toMatch(/edit the source file/);
+        expect(r).not.toMatch(/\.ssl/);
     });
 
     it("textLockReason explains an unresolved @N vs a literal, and is empty when editable", () => {
         // Editable resolvable @N -> no reason.
-        expect(textLockReason({ text: "@200", messages, ssl: true, textRO: false, srcExt: ".ssl" })).toBe("");
+        expect(textLockReason({ text: "@200", messages, ssl: true, textRO: false })).toBe("");
         // Unresolved @N -> names the id and points at translation.directory.
-        const unresolved = textLockReason({ text: "@999", messages, ssl: true, textRO: false, srcExt: ".ssl" });
+        const unresolved = textLockReason({ text: "@999", messages, ssl: true, textRO: false });
         expect(unresolved).toContain("@999");
         expect(unresolved).toMatch(/translation\.directory/);
-        // Literal (no @N) -> says there's no .msg entry, at the real source (.tssl here, not .ssl).
-        expect(textLockReason({ text: "raw", messages, ssl: true, textRO: false, srcExt: ".tssl" })).toMatch(
-            /no plain @N.*\.tssl source/s,
-        );
+        // Literal (no @N) -> says there's no .msg entry, pointing at the source file generically (no .ssl).
+        const literal = textLockReason({ text: "raw", messages, ssl: true, textRO: false });
+        expect(literal).toMatch(/no plain @N.*source file/s);
+        expect(literal).not.toMatch(/\.ssl/);
         // Read-only derived state -> derived wording.
-        expect(
-            textLockReason({ text: "@200", messages, ssl: true, textRO: true, srcExt: ".ssl", derivedFrom: "EXTEND" }),
-        ).toContain("EXTEND");
+        expect(textLockReason({ text: "@200", messages, ssl: true, textRO: true, derivedFrom: "EXTEND" })).toContain(
+            "EXTEND",
+        );
     });
 
     it("conditionLockReason distinguishes a read-only structure from a shared condition", () => {
-        expect(
-            conditionLockReason(st({ structured: true }), ch({ conditionEditable: false }), true, false, ".ssl"),
-        ).toMatch(/can't round-trip/);
-        expect(conditionLockReason(st(), ch({ conditionEditable: false }), true, false, ".ssl")).toMatch(
-            /gates more than just this option/,
+        expect(conditionLockReason(st({ structured: true }), ch({ conditionEditable: false }), true, false)).toMatch(
+            /can't round-trip/,
         );
+        const shared = conditionLockReason(st(), ch({ conditionEditable: false }), true, false);
+        expect(shared).toMatch(/gates more than just this option/);
+        expect(shared).toMatch(/source file/);
+        expect(shared).not.toMatch(/\.ssl/);
         // Editable condition -> no reason.
-        expect(conditionLockReason(st(), ch({ conditionEditable: true }), true, false, ".ssl")).toBe("");
-        // Real source extension threads through (.tssl, not .ssl).
-        expect(conditionLockReason(st(), ch({ conditionEditable: false }), true, false, ".tssl")).toMatch(
-            /\.tssl source/,
-        );
+        expect(conditionLockReason(st(), ch({ conditionEditable: true }), true, false)).toBe("");
     });
 
-    it("optionRemoveLockReason points at the real source extension", () => {
-        expect(optionRemoveLockReason(".ssl")).toMatch(/\.ssl source/);
-        expect(optionRemoveLockReason(".tssl")).toMatch(/\.tssl source/);
+    it("optionRemoveLockReason points at the source file generically", () => {
+        const r = optionRemoveLockReason();
+        expect(r).toMatch(/remove it in the source file/);
+        expect(r).not.toMatch(/\.ssl/);
     });
 });
 
