@@ -109,6 +109,30 @@ describe("applyTDDialogEdits - remove option", () => {
     });
 });
 
+describe("applyTDDialogEdits - reorder options", () => {
+    it("swaps two reply/goTo groups losslessly (comments/say untouched); order is significant in WeiDU", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const node = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_weapon")!;
+        // g_weapon: [reply@10 -> g_item_type, reply@6 -> startState]. Swap the two transitions.
+        node.choices = [node.choices[1]!, node.choices[0]!];
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        const weaponBody = out.slice(out.indexOf("function g_weapon()"), out.indexOf("function g_armor()"));
+        // The groups are swapped in place - reply@6/startState now precedes reply@10/g_item_type.
+        expect(weaponBody).toContain(
+            "reply(tra(6));\n    goTo(startState);\n\n    reply(tra(10));\n    goTo(g_item_type);",
+        );
+        // Lossless: the say line and the TP2 macro comment are untouched (a re-serialize would drop the comment).
+        expect(weaponBody).toContain("say(tra(22));");
+        expect(weaponBody).toContain("// %cespenar_weapon% transitions would be inserted here by TP2");
+        // An unrelated node is byte-identical.
+        const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_weapon()"));
+        expect(itemType).toBe(
+            botsmith.slice(botsmith.indexOf("function g_item_type()"), botsmith.indexOf("function g_weapon()")),
+        );
+    });
+});
+
 describe("applyTDDialogEdits - add option", () => {
     it("serializes a new reply(tra(N)); goTo(target); after the last surviving option, inside the function", () => {
         const original = tdModel(botsmith);

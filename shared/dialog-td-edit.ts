@@ -80,6 +80,35 @@ function removeListElement(text: string, range: { start: number; end: number }):
 }
 
 /**
+ * The source text of a transition group being MOVED to a new slot on reorder: its original `reply(...); ...;`
+ * bytes copied verbatim (preserving comments/`journal`/chain form), with a concurrent retarget or terminal-flip
+ * applied in place. Retarget rewrites the recorded target-id span; a flip to a terminal rewrites the whole
+ * target-producing call span - both mapped into the copied slice by subtracting the group's start offset. When
+ * the moved transition has no target edit (the common reorder case) the original bytes are returned unchanged.
+ */
+function reorderedTransitionText(text: string, moved: DialogChoice, orig: DialogChoice): string {
+    const base = text.slice(orig.sourceRange!.start, orig.sourceRange!.end);
+    const rel = (r: { start: number; end: number }): [number, number] => [
+        r.start - orig.sourceRange!.start,
+        r.end - orig.sourceRange!.start,
+    ];
+    if (
+        moved.target.kind === "state" &&
+        orig.target.kind === "state" &&
+        moved.target.stateId !== orig.target.stateId &&
+        orig.targetRange
+    ) {
+        const [s, e] = rel(orig.targetRange);
+        return base.slice(0, s) + moved.target.stateId + base.slice(e);
+    }
+    if (orig.target.kind === "state" && moved.target.kind !== "state" && orig.targetCallRange) {
+        const [s, e] = rel(orig.targetCallRange);
+        return base.slice(0, s) + serializeTDTarget(moved.target) + base.slice(e);
+    }
+    return base;
+}
+
+/**
  * Compute the `.td` source with the model's surgical field edits applied. Returns the text unchanged when
  * nothing surgical changed.
  *
@@ -91,9 +120,42 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     }
     const origById = new Map(choicesOf(original).map((c) => [c.id, c]));
     const ops: SpliceOp[] = [];
+
+    // REORDER (per node): when a node's surviving transitions appear in a different order than source, move each
+    // transition's WHOLE `reply(...); [action(...);] goTo(...);` group into the slot the option now occupies -
+    // by copying the original source text of the group (NOT re-serializing it). WeiDU transition order is
+    // significant, so a graph reorder must reorder the source. The lossless slot-move mirrors this module's
+    // surgical-splice convention (see the file header): a re-serialize would drop comments, `journal(...)`, chain
+    // form, and any construct the serializer does not model. A concurrent retarget/terminal-flip on a moved
+    // transition is baked into the copied text (`reorderedTransitionText`), and the moved ids are excluded from
+    // the per-choice retarget/flip loop below (`reorderedIds`) so a span is never spliced twice. Survivor slots
+    // are disjoint from a removed option's whole-statement splice (a non-survivor) and an added option's anchor.
+    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
+    const reorderedIds = new Set<string>();
+    for (const state of allStates(edited)) {
+        const origState = origStateById.get(state.renamedFrom ?? state.id);
+        if (!origState) continue;
+        const editedIdSet = new Set(state.choices.map((ch) => ch.id));
+        const origSurvivors = origState.choices.filter((o) => o.sourceRange !== undefined && editedIdSet.has(o.id));
+        const editedSurvivors = state.choices.filter((ch) => origById.get(ch.id)?.sourceRange !== undefined);
+        const sourceOrder = origSurvivors.map((o) => o.id).join("|");
+        const editedOrder = editedSurvivors.map((ch) => ch.id).join("|");
+        if (sourceOrder === editedOrder) continue; // no reorder - the per-choice retarget/flip below applies
+        for (let i = 0; i < origSurvivors.length; i++) {
+            const slot = origSurvivors[i]!.sourceRange!;
+            const moved = editedSurvivors[i]!;
+            const movedOrig = origById.get(moved.id)!;
+            reorderedIds.add(moved.id);
+            const replacement = reorderedTransitionText(originalText, moved, movedOrig);
+            if (replacement !== originalText.slice(slot.start, slot.end)) {
+                ops.push({ start: slot.start, end: slot.end, replacement });
+            }
+        }
+    }
+
     for (const c of choicesOf(edited)) {
         const orig = origById.get(c.id);
-        if (!orig) continue;
+        if (!orig || reorderedIds.has(c.id)) continue; // a reordered transition already carries its target edit
         // Retarget: a transition's target state (a `goTo(<id>)`) changed and the parser recorded the id span.
         if (
             c.target.kind === "state" &&
@@ -106,7 +168,7 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
         // Terminal flip: an inbound option retargeted from a state to a terminal (exit/external) - typically its
         // target node was deleted and `deleteState` redirected it to exit - rewrites the `goTo(<id>)` call to
         // `exit()` (or `extern(...)`), keeping the `reply(...)`. Uses the isolable target-call span (statement
-        // form only); mutually exclusive with the state->state retarget above.
+        // OR chain form - see the parser); mutually exclusive with the state->state retarget above.
         if (orig.target.kind === "state" && c.target.kind !== "state" && orig.targetCallRange) {
             ops.push({
                 start: orig.targetCallRange.start,
@@ -131,7 +193,6 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     // insert after the last SURVIVING option's statement (so it never lands inside a removed option's span). A
     // node with no surviving option (say-only) anchors just before its function's closing brace. Mirrors
     // `applyTSSLDialogEdits`' add-option case.
-    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
     for (const state of allStates(edited)) {
         const origState = origStateById.get(state.id);
         if (!origState) continue; // a brand-new node is emitted whole by the add-node writer, not here
