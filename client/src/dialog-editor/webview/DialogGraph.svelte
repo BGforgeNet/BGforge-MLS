@@ -983,7 +983,7 @@
             void rebuild({ frame: "none" });
         },
         setTarget: (choiceId: string, target: DialogTarget) => {
-            if (!structEditable(selected)) return; // Tier 1 retarget: D or faithful SSL
+            if (!fieldEditable(selected)) return; // retarget is a FIELD edit: D, faithful SSL, or faithful td/tssl
             ops.setChoiceTarget(selected, choiceId, target);
             void rebuild({ frame: "none" });
         },
