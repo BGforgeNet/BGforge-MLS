@@ -288,9 +288,9 @@ export interface DDialogTransition {
     /**
      * TD only: byte span of the transition's target-producing call itself - `goTo(<id>)` / `exit()` /
      * `extern(...)`. A terminal-flip (an inbound option redirected to exit when its target node is deleted)
-     * replaces this span with `exit()`, keeping the `reply(...)` intact. Set by the TD source parser only when
-     * the call is a standalone statement-form call (a chained `reply(m).goTo(t)` has no isolable target span,
-     * so it is absent there).
+     * replaces this span with `exit()`, keeping the `reply(...)` intact. Set by the TD source parser for both
+     * forms: a standalone statement-form call (`goTo(t);`) spans the whole call, and a chained `reply(m).goTo(t)`
+     * spans just its trailing `.goTo(t)` method call (from the method name, excluding the leading `.`).
      */
     targetCallRange?: { start: number; end: number };
 }

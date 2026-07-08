@@ -16,6 +16,7 @@ import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-s
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
 const wmRhia = readFileSync(fileURLToPath(new URL("td/samples/wm_rhia.td", import.meta.url)), "utf8");
+const gBags = readFileSync(fileURLToPath(new URL("td/samples/g_bags_v2.td", import.meta.url)), "utf8");
 
 function tdModel(src: string): DialogModel {
     return { ...modelFromD(parseTDSource(src)), sourceLang: "td", editable: true };
@@ -188,6 +189,24 @@ describe("applyTDDialogEdits - remove node", () => {
         // Unrelated nodes survive.
         expect(out).toContain("function g_armor()");
         expect(out).toContain("function g_trinket()");
+    });
+});
+
+describe("applyTDDialogEdits - chain-form terminal flip", () => {
+    it("retargets a chain-form reply(m).goTo(t) to exit -> reply(m).exit(), sibling untouched", () => {
+        const original = { ...modelFromD(parseTDSource(gBags)), sourceLang: "td" as const, editable: true };
+        const edited = structuredClone(original);
+        const choice = edited.roots
+            .flatMap((r) => r.states)
+            .find((s) => s.id === "state0")!
+            .choices.find((c) => c.target.kind === "state" && c.target.stateId === "state1")!;
+        choice.target = { kind: "exit" };
+        const out = applyTDDialogEdits(gBags, edited, original);
+        // Only the trailing `.goTo(state1)` call flips to `.exit()`; the `reply(tra(21))` stays.
+        expect(out).toContain("reply(tra(21)).exit()");
+        expect(out).not.toContain("goTo(state1)");
+        // The sibling chain-form transition is byte-identical.
+        expect(out).toContain("reply(tra(22)).goTo(state2)");
     });
 });
 

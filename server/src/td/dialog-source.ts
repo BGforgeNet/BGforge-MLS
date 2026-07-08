@@ -87,10 +87,17 @@ function parseState(fn: FunctionDeclaration): DDialogState {
         const { replyStart, ...rest } = pending;
         const targetStmt = stmtSpanOf(targetCall);
         const range: Range = { start: replyStart ?? targetStmt.start, end: targetStmt.end };
-        // Only a standalone (identifier-callee) target call has an isolable span; a chained reply(m).goTo(t)
-        // call node spans the whole chain, so its target cannot be flipped in isolation - leave it absent.
+        // The isolable target-producing call span, for an exit()/extern() flip. A standalone (identifier-callee)
+        // call IS its own span. A chained `reply(m).goTo(t)` call node spans the WHOLE chain, but the target call
+        // is just the trailing `.goTo(t)` - so span from its method-name token (excluding the leading `.`) to the
+        // call end, which a flip replaces with `exit()` to yield `reply(m).exit()`.
+        const callee = targetCall.getExpression();
         const targetCallRange =
-            targetCall.getExpression().getKind() === SyntaxKind.Identifier ? span(targetCall) : undefined;
+            callee.getKind() === SyntaxKind.Identifier
+                ? span(targetCall)
+                : Node.isPropertyAccessExpression(callee)
+                  ? { start: callee.getNameNode().getStart(), end: targetCall.getEnd() }
+                  : undefined;
         transitions.push({
             line: pendingLine || 1,
             ...rest,

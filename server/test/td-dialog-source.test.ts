@@ -85,6 +85,17 @@ describe("parseTDSource - wm_rhia (multisay + entry trigger)", () => {
     });
 });
 
+describe("parseTDSource - g_bags (chain-form replies)", () => {
+    const src = sample("g_bags_v2.td");
+
+    it("records a chain-form transition's target span as just its trailing .goTo(t) call", () => {
+        const s = parseTDSource(src).states.find((st) => st.label === "state0")!;
+        const t0 = s.transitions.find((t) => t.target.kind === "goto" && t.target.label === "state1")!;
+        // For `reply(tra(21)).goTo(state1)` the isolable target call is `goTo(state1)` (no leading dot).
+        expect(src.slice(t0.targetCallRange!.start, t0.targetCallRange!.end)).toBe("goTo(state1)");
+    });
+});
+
 describe("parseTDSource - cohort smoke", () => {
     it("parses every real .td sample without throwing, every state ranged", () => {
         for (const f of readdirSync(dir).filter((n) => n.endsWith(".td"))) {
