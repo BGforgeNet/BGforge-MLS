@@ -57,8 +57,6 @@
     // simple and correct for the entry counts in practice (effects/abilities are small; even thousands of
     // MAP objects are lightweight rows). A core-side filter is deferred as not needed at current scale.
     let allRows = $state<Row[]>([]);
-    // eslint-disable-next-line prefer-const -- reassigned by the full-fetch effect
-    let allRowsFetched = $state(false);
 
     const activeQuery = $derived(filterQuery.trim().toLowerCase());
     const filteredRows = $derived(activeQuery ? filterRows(allRows, filterQuery) : undefined);
@@ -71,20 +69,18 @@
         lastAppliedSelection = undefined;
         filterQuery = "";
         allRows = [];
-        allRowsFetched = false;
     });
 
     // When a filter query becomes active, fetch all rows so filterRows has the complete set.
     // Re-runs on version bumps so structure-op mutations are reflected in the filtered view.
     $effect(() => {
         void version;
-        if (!activeQuery) { allRows = []; allRowsFetched = false; return; }
+        if (!activeQuery) { allRows = []; return; }
         if (total === 0) return; // wait until total is known
         let cancelled = false;
         bridge.requestChildren(nodeId, 0, total).then((w) => {
             if (cancelled) return;
             allRows = w.rows;
-            allRowsFetched = true;
         });
         return () => { cancelled = true; };
     });
@@ -116,7 +112,7 @@
                 const { rows, index } = await locateEntry(fetchWindow, w.rows, w.total, hostSelection);
                 if (cancelled) return;
                 if (index !== -1) {
-                    pick(rows[index], index);
+                    pick(rows[index]!, index); // index validated !== -1 above
                     // Host selection (e.g. a jump): bring the entry into view in the master list.
                     scrollTarget = { index, token: (scrollTarget?.token ?? 0) + 1 };
                     return;
@@ -129,7 +125,7 @@
             const cur = selected;
             if (cur !== undefined) {
                 const i = w.rows.findIndex((r) => r.id === cur.id);
-                if (i !== -1) pick(w.rows[i], i);
+                if (i !== -1) pick(w.rows[i]!, i);
                 else if (w.total <= w.rows.length) { selected = undefined; selectedIndex = undefined; }
                 return;
             }
@@ -142,8 +138,8 @@
                     ? await locateEntry(fetchWindow, w.rows, w.total, remembered)
                     : { rows: w.rows, index: -1 };
             if (cancelled) return;
-            if (found.index !== -1) pick(found.rows[found.index], found.index);
-            else if (w.rows.length > 0) pick(w.rows[0], 0);
+            if (found.index !== -1) pick(found.rows[found.index]!, found.index);
+            else if (w.rows.length > 0) pick(w.rows[0]!, 0);
         })();
         return () => { cancelled = true; };
     });

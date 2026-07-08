@@ -40,6 +40,7 @@ step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "pnpm lint:shell" \
     "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
+    "Typecheck svelte" "pnpm typecheck:svelte" \
     "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
     "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \

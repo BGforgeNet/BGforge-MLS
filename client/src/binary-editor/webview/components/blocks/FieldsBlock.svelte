@@ -12,7 +12,7 @@
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
         // Runs of fields folded into one labelled inline row (see the layout `joins` schema).
-        joins?: { label: string; fields: FieldRef[]; separator: string }[];
+        joins?: { label: string; fields: FieldRef[]; separator: string | string[] }[];
         // Reserve a minimum label width (ch) for ONLY the columns containing these fields - keeps a rewritten
         // label's column from jumping while the static columns beside it hug their labels (see schema). Each ref
         // carries its own `ch`; a column floors to the max `ch` among its reserved fields.
