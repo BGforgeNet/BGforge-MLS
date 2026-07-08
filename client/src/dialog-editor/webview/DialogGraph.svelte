@@ -18,7 +18,7 @@
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { collectMatches } from "./tree-search";
-    import { writeText } from "./inspector-edit";
+    import { srcExtOf, writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { unresolvedRefCount } from "./translation-status";
@@ -63,6 +63,10 @@
         return $state.snapshot(m) as DialogModel;
     }
     let editModel = $state<DialogModel>(cloneModel(model));
+
+    // The opened source's extension (.ssl vs .tssl, .d vs .td), computed once and shared with the Tree and
+    // Inspector so their editability copy names the real file the user is editing, not the generated output.
+    const srcExt = $derived(srcExtOf(editModel.sourceLang));
 
     let nodes = $state.raw<XyNode[]>([]);
     let edges = $state.raw<XyEdge[]>([]);
@@ -1204,7 +1208,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} {srcExt} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -1359,7 +1363,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} searchHits={searchHits} currentMatchKey={currentMatchKey} searchActive={searchInputFocused} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={renderFamily(editModel.sourceLang) === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} searchHits={searchHits} currentMatchKey={currentMatchKey} searchActive={searchInputFocused} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={renderFamily(editModel.sourceLang) === "fallout-ssl"} {srcExt} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

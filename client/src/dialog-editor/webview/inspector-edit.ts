@@ -4,7 +4,16 @@
  * has no unit-test seam).
  */
 
-import type { DialogChoice, DialogMessages, DialogState } from "../../../../shared/dialog-model";
+import type { DialogChoice, DialogMessages, DialogState, SourceLang } from "../../../../shared/dialog-model";
+
+/**
+ * The source-file extension the user actually opened, for editability copy. renderFamily can't tell
+ * `.ssl` from `.tssl` (or `.d` from `.td`); field-edit write-back targets the SOURCE, so a `.tssl` node
+ * must never be told to "edit the .ssl" (there is no `.ssl` - it is generated from the `.tssl`).
+ */
+export function srcExtOf(sourceLang: SourceLang): string {
+    return sourceLang === "tssl" ? ".tssl" : sourceLang === "td" ? ".td" : sourceLang === "ssl" ? ".ssl" : ".d";
+}
 
 /** Parse a bare `@N` line to its numeric id, or null for a literal / non-`@N` text. */
 export function msgRef(text: string | undefined): string | null {
@@ -101,16 +110,17 @@ export function stateReadOnlyReason(derivedFrom?: string): string {
  * Call only when the control is disabled (i.e. structuralEditable is false); returns "" if it is actually
  * editable. `editable` is the whole-file flag (D); `ssl` selects Fallout-SSL wording.
  */
-export function structuralLockReason(state: DialogState, ssl: boolean, editable: boolean): string {
+export function structuralLockReason(state: DialogState, ssl: boolean, editable: boolean, srcExt: string): string {
     if (state.derivedFrom) return stateReadOnlyReason(state.derivedFrom);
     if (!ssl) return editable ? "" : stateReadOnlyReason();
     // SSL: structuralEditable is true only on a faithful/bundle node, so a disabled control here means the
     // node is structured (nested), approximate (loop/switch), or otherwise not round-trippable on save.
+    // `srcExt` is the real opened source (.ssl or .tssl) - a .tssl node must not be told to edit the .ssl.
     if (state.approximate)
-        return "This node uses control flow the editor can't model (a loop or switch), so its structure is read-only - edit the .ssl source.";
+        return `This node uses control flow the editor can't model (a loop or switch), so its structure is read-only - edit the ${srcExt} source.`;
     if (state.structured)
-        return "This node nests if/else conditions the graph can't rewrite safely, so its structure is read-only - edit the .ssl source.";
-    return "This node isn't simple enough to edit structurally from the graph - edit the .ssl source.";
+        return `This node nests if/else conditions the graph can't rewrite safely, so its structure is read-only - edit the ${srcExt} source.`;
+    return `This node isn't simple enough to edit structurally from the graph - edit the ${srcExt} source.`;
 }
 
 /**
@@ -122,16 +132,17 @@ export function textLockReason(opts: {
     messages: Record<string, string> | undefined;
     ssl: boolean;
     textRO: boolean;
+    srcExt: string;
     isNew?: boolean;
     derivedFrom?: string;
 }): string {
     if (!textFieldLocked(opts)) return "";
-    const { text, ssl, textRO, derivedFrom } = opts;
+    const { text, ssl, textRO, srcExt, derivedFrom } = opts;
     if (textRO) return stateReadOnlyReason(derivedFrom);
     if (!ssl) return ""; // unreachable: a locked non-SSL field is always textRO
     const ref = msgRef(text);
     if (ref === null)
-        return "This line has no plain @N message id (it's a literal or computed value), so there's no .msg entry to edit here - change it in the .ssl source.";
+        return `This line has no plain @N message id (it's a literal or computed value), so there's no .msg entry to edit here - change it in the ${srcExt} source.`;
     return `This line's @${ref} message isn't loaded, so there's no entry to edit. Point translation.directory in .bgforge.yml at the folder holding this .msg (or edit the .msg directly).`;
 }
 
@@ -140,15 +151,21 @@ export function textLockReason(opts: {
  * (D); for SSL the per-option `conditionEditable` decides, and the reason distinguishes a read-only node
  * structure from a condition shared across several options.
  */
-export function conditionLockReason(state: DialogState, choice: DialogChoice, ssl: boolean, editable: boolean): string {
+export function conditionLockReason(
+    state: DialogState,
+    choice: DialogChoice,
+    ssl: boolean,
+    editable: boolean,
+    srcExt: string,
+): string {
     if (!ssl) return editable && !state.derivedFrom ? "" : stateReadOnlyReason(state.derivedFrom);
     if (choice.conditionEditable !== false) return "";
     if (state.approximate || state.structured)
-        return "This node's structure is read-only - its nested/composite condition can't round-trip to a single if, so edit it in the .ssl source.";
-    return "This condition gates more than just this option - a reply line, another option, or a side-effect shares the same if, so the graph can't edit it. Change it in the .ssl source.";
+        return `This node's structure is read-only - its nested/composite condition can't round-trip to a single if, so edit it in the ${srcExt} source.`;
+    return `This condition gates more than just this option - a reply line, another option, or a side-effect shares the same if, so the graph can't edit it. Change it in the ${srcExt} source.`;
 }
 
 /** Why a faithful SSL option's Remove is disabled: it sits in its own `if` the save path won't rewrite. */
-export function optionRemoveLockReason(): string {
-    return "This option sits inside an `if` the graph won't rewrite on save - remove it in the .ssl source.";
+export function optionRemoveLockReason(srcExt: string): string {
+    return `This option sits inside an \`if\` the graph won't rewrite on save - remove it in the ${srcExt} source.`;
 }

@@ -9,7 +9,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, highlightedBranchKey, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onSelectBranch, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState, searchHits, currentMatchKey, searchActive }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, highlightedBranchKey, collapsed, editableStateIds, deletableStateIds, ssl, srcExt, onSelect, onSelectReply, onSelectBranch, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState, searchHits, currentMatchKey, searchActive }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The key of the currently highlighted if/else branch (set by clicking a branch line), or null. Every
@@ -37,6 +37,10 @@
         /** True for a Fallout SSL dialogue: a conditional option's remove is shown disabled, because
             the save path does not rewrite its `if` wrapper (mirrors the inspector). */
         ssl: boolean;
+        /** The opened source file's extension (.ssl/.tssl/.d/.td) for lock-reason copy - a .tssl node must
+            not be told to edit the generated .ssl. Computed once by the parent (srcExtOf), shared with the
+            Inspector so both name the same real file. */
+        srcExt: string;
         onSelect: (stateId: string) => void;
         /** Select an individual option: highlights it and reveals it in the docked Inspector. */
         onSelectReply: (stateId: string, choiceId: string) => void;
@@ -746,7 +750,7 @@
             {@const blocked = ssl && Boolean(r.condition)}
             <button
                 class="delopt"
-                title={blocked ? optionRemoveLockReason() : "Remove option"}
+                title={blocked ? optionRemoveLockReason(srcExt) : "Remove option"}
                 disabled={blocked}
                 onclick={(e) => (e.stopPropagation(), onRemoveReply(ownerId, r.id))}>&#10005;</button
             >

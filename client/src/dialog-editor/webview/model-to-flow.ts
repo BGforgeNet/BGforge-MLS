@@ -159,8 +159,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // Tier 1 controls): a D state is editable with the model; an SSL node is editable
                     // only when faithfully representable (see DialogState.faithful / bundleFaithful).
                     // Editability, NOT render family: only real SSL (sourceLang "ssl") is structurally
-                    // editable via the tier system this phase. TSSL renders as SSL (renderFamily) but is
-                    // view-only until its write-back lands (Phase 2), so it must not gate on renderFamily here.
+                    // editable via the tier system. TSSL renders as SSL (renderFamily) but its faithful nodes
+                    // are FIELD-editable only (see fieldEditable below) - structural add/remove stays Phase 3 -
+                    // so structural editability must gate on the exact sourceLang, never on renderFamily.
                     structuralEditable:
                         model.editable ||
                         (model.sourceLang === "ssl" && (s.faithful === true || s.bundleFaithful === true)),
