@@ -4,12 +4,25 @@ import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
 import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { applyTDDialogEdits } from "../../shared/dialog-td-edit";
-import { deleteState, renameState } from "../../shared/dialog-edit-ops";
+import { addReply, addState, deleteState, renameState, setChoiceTarget } from "../../shared/dialog-edit-ops";
+import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
 
 function tdModel(src: string): DialogModel {
     return { ...modelFromD(parseTDSource(src)), sourceLang: "td", editable: true };
+}
+
+/** The on-disk `.tra` set as the client loads it: every `@N` the file references, so allocation grows above. */
+function existingFromModel(model: DialogModel): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const s of model.roots.flatMap((r) => r.states)) {
+        for (const t of [s.text, ...s.choices.map((c) => c.text)]) {
+            const m = /^@(\d+)$/.exec((t ?? "").trim());
+            if (m) out[m[1]!] = `line ${m[1]}`;
+        }
+    }
+    return out;
 }
 
 describe("applyTDDialogEdits - transition retarget", () => {
@@ -195,5 +208,48 @@ describe("applyTDDialogEdits - rename node", () => {
         expect(out).toContain("goTo(g_menu)");
         expect(out).not.toMatch(/\bg_item_type\b/);
         expect(out).toContain("append(dlg, [g_menu, g_weapon, g_armor, g_trinket]);");
+    });
+});
+
+// End-to-end guard over the REAL webview save path: the model-edit ops build the edited model, then
+// computeDialogSourceEdit runs D-family id allocation + the TD splice, and the produced source is re-parsed to
+// confirm the change actually took effect and round-trips - not just that an intermediate helper returned data.
+describe("TD structural editing - full computeDialogSourceEdit round-trip", () => {
+    it("add-node authored with literal text mints tra ids, wires it in, and re-parses with the new content", () => {
+        const original = tdModel(botsmith);
+        original.messages = existingFromModel(original);
+        const edited = tdModel(botsmith);
+        edited.messages = { ...original.messages };
+        // Author a new node the way the editor does: addState, type its say, add one option to an existing node
+        // pointing at it, and give the new node a terminal reply.
+        const root = edited.roots.find((r) => r.kind === "dialog")!;
+        const node = addState(edited, root, "g_forge");
+        node.text = "Forge something new?";
+        const back = addReply(edited, node);
+        back.text = "On second thought, no.";
+        const menu = root.states.find((s) => s.id === "g_item_type")!;
+        const opt = addReply(edited, menu);
+        opt.text = "Show me the forge.";
+        setChoiceTarget(menu, opt.id, { kind: "state", stateId: "g_forge" });
+
+        const { newText, messages } = computeDialogSourceEdit(botsmith, edited, original);
+        expect(newText).not.toBeNull();
+        // Literal say/reply text was minted ascending ids in DOCUMENT order: g_item_type (earlier in the list)
+        // and its new inbound option come before the appended g_forge, so the inbound reply takes 25.
+        expect(messages["25"]).toBe("Show me the forge.");
+        expect(messages["26"]).toBe("Forge something new?");
+        expect(messages["27"]).toBe("On second thought, no.");
+
+        // Re-parse the produced source: the new node exists, is wired into the append list, and the inbound
+        // option and its reply landed - the change took effect and round-trips through the parser.
+        const reparsed = modelFromD(parseTDSource(newText!));
+        const forge = reparsed.roots.flatMap((r) => r.states).find((s) => s.id === "g_forge");
+        expect(forge).toBeDefined();
+        expect(forge!.text).toBe("@26");
+        expect(newText).toContain("append(dlg, [g_item_type, g_weapon, g_armor, g_trinket, g_forge]);");
+        const menu2 = reparsed.roots.flatMap((r) => r.states).find((s) => s.id === "g_item_type")!;
+        const inbound = menu2.choices.find((c) => c.target.kind === "state" && c.target.stateId === "g_forge");
+        expect(inbound).toBeDefined();
+        expect(inbound!.text).toBe("@25");
     });
 });
