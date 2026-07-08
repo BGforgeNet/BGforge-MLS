@@ -31,6 +31,22 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(applyTSSLDialogEdits(flat, structuredClone(original), original)).toBe(flat);
     });
 
+    it("splices an edited option condition into the .tssl if-wrapper", () => {
+        const conditional = readFileSync(
+            fileURLToPath(new URL("tssl/samples/conditional.tssl", import.meta.url)),
+            "utf8",
+        );
+        const original = { ...modelFromSSL(parseTSSLSource(conditional)), sourceLang: "tssl" as const, editable: true };
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.condition !== undefined,
+        )!;
+        opt.condition = "global_var(GVAR_Y) == 2";
+        const out = applyTSSLDialogEdits(conditional, edited, original);
+        expect(out).toContain("if (global_var(GVAR_Y) == 2)");
+        expect(out).not.toContain("GVAR_X");
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);

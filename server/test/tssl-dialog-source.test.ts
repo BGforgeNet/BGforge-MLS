@@ -37,6 +37,14 @@ describe("parseTSSLSource - tiers", () => {
         expect(n1.faithful).toBe(true);
     });
 
+    it("records the enclosing-if condition span on a conditional option (edit-ready)", () => {
+        const src = sample("conditional.tssl");
+        const opt = parseTSSLSource(src).nodes.find((n) => n.name === "Node001")!.options[0]!;
+        expect(opt.conditional).toContain("GVAR_X");
+        expect(src.slice(opt.condRange!.start, opt.condRange!.end)).toContain("GVAR_X");
+        expect(opt.ifPure).toBe(true); // the then-block holds this option alone -> condition-editable
+    });
+
     it("a nested if is structured (read-only, faithfully displayed)", () => {
         const n1 = parseTSSLSource(sample("nested.tssl")).nodes.find((n) => n.name === "Node001")!;
         expect(n1.faithful).toBe(false);

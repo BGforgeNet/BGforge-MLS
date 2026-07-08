@@ -39,6 +39,18 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         ) {
             ops.push({ start: orig.targetRange.start, end: orig.targetRange.end, replacement: c.target.stateId });
         }
+        // Condition edit-text: an editable option's `if` condition changed to new (non-empty) text -> splice
+        // its `condRange` (the expression between `if (` and `)`). Wrap (add a condition to a flat option) and
+        // unwrap (remove it) are Phase 3 - they add/remove the `if` wrapper, not just its condition token.
+        if (
+            orig.condRange &&
+            orig.conditionEditable !== false &&
+            c.condition !== undefined &&
+            c.condition !== "" &&
+            c.condition !== orig.condition
+        ) {
+            ops.push({ start: orig.condRange.start, end: orig.condRange.end, replacement: c.condition });
+        }
     }
     return applySplices(originalText, ops);
 }

@@ -58,6 +58,49 @@ function msgIdOf(arg: Node | undefined): { msgId: number | string; msgKind?: "co
     return { msgId: arg.getText(), msgKind: "computed" };
 }
 
+interface IfSpans {
+    condition: string;
+    condRange: { start: number; end: number };
+    ifRange: { start: number; end: number };
+    ifPure: boolean;
+}
+
+/** Number of real statements in an `if`'s then-branch (a block's statements, or 1 for a bare statement). */
+function branchStatementCount(thenStmt: Node): number {
+    if (Node.isBlock(thenStmt)) return thenStmt.getStatements().filter((s) => !Node.isEmptyStatement(s)).length;
+    return 1;
+}
+
+/**
+ * The nearest enclosing single-level `if (cond) { ... }` whose then-branch directly contains this call, or
+ * undefined when the call is unconditional, in an `else`, or MULTI-level nested (a second enclosing `if` can't
+ * round-trip to one condition, so it stays read-only). Mirrors `server/src/dialog.ts` `enclosingIfSpans` over
+ * the TS AST. `condRange` covers the condition expression (between `if (` and `)`); `ifRange` the whole `if`;
+ * `ifPure` is true iff the then-branch holds this call ALONE - the only condition-editable shape.
+ */
+function enclosingIfSpans(call: CallExpression): IfSpans | undefined {
+    let inner: IfSpans | undefined;
+    let cur: Node | undefined = call.getParent();
+    while (cur && !Node.isFunctionDeclaration(cur)) {
+        if (Node.isIfStatement(cur)) {
+            if (inner) return undefined; // a second enclosing `if` -> multi-level, not round-trippable
+            if (cur.getElseStatement()) return undefined; // else -> not a pure single-level gate
+            const thenStmt = cur.getThenStatement();
+            // The call must sit inside the THEN branch (not the condition or an else).
+            if (call.getStart() < thenStmt.getStart() || call.getEnd() > thenStmt.getEnd()) return undefined;
+            const cond = cur.getExpression();
+            inner = {
+                condition: cond.getText(),
+                condRange: span(cond),
+                ifRange: span(cur),
+                ifPure: branchStatementCount(thenStmt) === 1,
+            };
+        }
+        cur = cur.getParent();
+    }
+    return inner;
+}
+
 // ---------------------------------------------------------------------------
 // Faithfulness tiers (mirror server/src/dialog.ts, over the TS AST).
 // ---------------------------------------------------------------------------
@@ -130,14 +173,36 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         const args = node.getArguments();
         const line = node.getStartLineNumber();
         if (cn === "Reply" && args[0]) {
-            replies.push({ ...msgIdOf(args[0]), line });
+            const ifSpans = enclosingIfSpans(node);
+            replies.push({
+                ...msgIdOf(args[0]),
+                line,
+                ...(ifSpans
+                    ? {
+                          conditional: ifSpans.condition,
+                          condRange: ifSpans.condRange,
+                          ifRange: ifSpans.ifRange,
+                          ifPure: ifSpans.ifPure,
+                      }
+                    : {}),
+            });
         } else if (isOptionFn(cn) && args[0] && args[1]) {
+            const ifSpans = enclosingIfSpans(node);
             options.push({
                 type: cn,
                 ...msgIdOf(args[0]),
                 target: args[1].getText(),
                 skill: args[2] ? Number(args[2].getText()) : undefined,
                 line,
+                ...(ifSpans
+                    ? {
+                          conditional: ifSpans.condition,
+                          scopedConditional: ifSpans.condition,
+                          condRange: ifSpans.condRange,
+                          ifRange: ifSpans.ifRange,
+                          ifPure: ifSpans.ifPure,
+                      }
+                    : {}),
                 callRange: span(node),
                 targetRange: span(args[1]),
                 stmtRange: stmtSpan(node),
