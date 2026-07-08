@@ -3,8 +3,8 @@ import { COMMAND_compile, compile } from "../compile";
 import { showInfo, showWarning } from "../user-messages";
 import { parseDialog } from "../dialog";
 import { getSSLSideEffectFunctions } from "../fallout-ssl/side-effects";
-import { parseTDDialog } from "../td/dialog";
-import { parseTSSLDialog } from "../tssl/dialog";
+import { parseTDSource } from "../td/dialog-source";
+import { parseTSSLSource } from "../tssl/dialog-source";
 import { parseDDialog } from "../weidu-d/dialog";
 import { getServerContext } from "../server-context";
 import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
@@ -32,12 +32,13 @@ const dialogHandlers = [
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TD),
-        parse: (uri: string, text: string) => parseTDDialog(uri, text),
+        // Source-native parse (ranges into the .td), not transpile-then-parse - so edits round-trip to source.
+        parse: (_uri: string, text: string) => Promise.resolve(parseTDSource(text)),
         translationLangId: LANG_WEIDU_D,
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TSSL),
-        parse: (uri: string, text: string) => parseTSSLDialog(uri, text),
+        parse: (_uri: string, text: string) => Promise.resolve(parseTSSLSource(text)),
         translationLangId: LANG_FALLOUT_SSL,
     },
 ];

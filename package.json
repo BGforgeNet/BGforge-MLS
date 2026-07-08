@@ -447,6 +447,12 @@
                     },
                     {
                         "filenamePattern": "*.ssl"
+                    },
+                    {
+                        "filenamePattern": "*.td"
+                    },
+                    {
+                        "filenamePattern": "*.tssl"
                     }
                 ],
                 "priority": "option"

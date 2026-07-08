@@ -158,10 +158,12 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // Per-node structural editability (drives handle connectability + the inspector's
                     // Tier 1 controls): a D state is editable with the model; an SSL node is editable
                     // only when faithfully representable (see DialogState.faithful / bundleFaithful).
+                    // Editability, NOT render family: only real SSL (sourceLang "ssl") is structurally
+                    // editable via the tier system this phase. TSSL renders as SSL (renderFamily) but is
+                    // view-only until its write-back lands (Phase 2), so it must not gate on renderFamily here.
                     structuralEditable:
                         model.editable ||
-                        (renderFamily(model.sourceLang) === "fallout-ssl" &&
-                            (s.faithful === true || s.bundleFaithful === true)),
+                        (model.sourceLang === "ssl" && (s.faithful === true || s.bundleFaithful === true)),
                 },
             });
 

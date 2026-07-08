@@ -181,6 +181,18 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         const session = this.sessions.get(panel);
         if (session) session.latest = model ?? undefined;
         if (model) {
+            // Refine the render-family sourceLang the adapter set (d/ssl) to the actual transpiler source
+            // language when this is a .td/.tssl document, and force it view-only: the model's ranges point
+            // into generated D/SSL fields the adapter filled, but structural write-back to TS source is not
+            // wired yet (Phase 1). renderFamily keeps rendering it as D/SSL; only editing is withheld.
+            const lowerPath = document.uri.path.toLowerCase();
+            if (lowerPath.endsWith(".td")) {
+                model.sourceLang = "td";
+                model.editable = false;
+            } else if (lowerPath.endsWith(".tssl")) {
+                model.sourceLang = "tssl";
+                model.editable = false;
+            }
             // The adapter does not know the file name; supply it here (from the document URI) so the webview
             // can label states by speaker - the base name is the NPC for SSL and a fallback speaker for D.
             model.sourceName =
