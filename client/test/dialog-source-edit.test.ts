@@ -60,7 +60,8 @@ describe("computeDialogSourceEdit", () => {
         const model = buildModel();
         const result = computeDialogSourceEdit(D_SRC, model, model);
         expect(result.newText).toBeNull();
-        expect(result.messages).toEqual({}); // no id allocation for D; messages pass through unchanged
+        // An unchanged model authors no new content, so the D-family allocator mints nothing; messages pass through.
+        expect(result.messages).toEqual({});
     });
 
     it("returns spliced text when a transition is retargeted", () => {
@@ -72,7 +73,33 @@ describe("computeDialogSourceEdit", () => {
         const result = computeDialogSourceEdit(D_SRC, edited, original);
         expect(result.newText).not.toBeNull();
         expect(result.newText).toContain("EXIT");
-        expect(result.messages).toEqual({}); // D never allocates ids; messages pass through unchanged
+        // A retarget touches no new content, so nothing is allocated; the existing (empty) message set passes through.
+        expect(result.messages).toEqual({});
+    });
+
+    it("allocates a tra id for a NEW D state's literal say, splices its block, and reports it committed", () => {
+        // The on-disk .tra the client loaded: @0/@1 already exist, so the first free id is 2.
+        const original = buildModel();
+        original.messages = { "0": "hello line", "1": "more line" };
+        const edited = buildModel();
+        edited.messages = { ...original.messages };
+        // A brand-new state (no sourceRange), authored with literal say/reply text.
+        edited.roots[0]!.states.push({
+            id: "extra",
+            text: "A fresh line.",
+            choices: [{ id: "extra#0", text: "Bye now.", target: { kind: "exit" } }],
+        });
+        const result = computeDialogSourceEdit(D_SRC, edited, original);
+        expect(result.newText).not.toBeNull();
+        // The literal say/reply were minted ascending ids above the max, and ride out in messages for the .tra.
+        expect(result.messages["2"]).toBe("A fresh line.");
+        expect(result.messages["3"]).toBe("Bye now.");
+        // The new block is serialized with the allocated refs (SAY @2), after the last existing state.
+        expect(result.newText).toContain("BEGIN extra");
+        expect(result.newText).toContain("SAY @2");
+        expect(result.newText!.indexOf("BEGIN extra")).toBeGreaterThan(result.newText!.indexOf("BEGIN more"));
+        // Only the new state (no sourceRange) is reported as a pending allocation; existing states are not.
+        expect(result.allocations).toEqual({ extra: "@2", "extra#0": "@3" });
     });
 });
 

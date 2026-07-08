@@ -164,7 +164,9 @@ export function applyDialogEdits(originalText: string, editedModel: DialogModel,
     // state is left untouched so its original bytes survive verbatim.
     for (const state of allEditedStates) {
         if (!state.sourceRange) {
-            // No source range -> newly added state, deferred to v2.
+            // No source range -> a newly-added state. It is not spliced in place here (there is no span to
+            // replace); the insert loop near the end of this function serializes it after the last existing
+            // state of its root.
             continue;
         }
         const key = `${state.sourceRange.start}:${state.sourceRange.end}`;

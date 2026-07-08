@@ -47,10 +47,10 @@ export function computeDialogSourceEdit(
         const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
         messages = { ...messages, ...node.newMessages, ...opt };
         edited.messages = messages;
-    } else if (edited.sourceLang === "td" && original) {
-        // TD (WeiDU D-family in TypeScript syntax) mints `.tra` ids for its new say/reply text via the shared
-        // D-family allocator - a single pass over the model (no node-then-option split, since a new node's say
-        // and its options share one ascending id run). Plain `.d` joins this branch in the next slice.
+    } else if (renderFamily(edited.sourceLang) === "weidu-d" && original) {
+        // The WeiDU D family (`.d` and `.td`) mints `.tra` ids for its new say/reply text via the shared
+        // D-family allocator - a single pass over the model (no node-then-option split, since a new state's say
+        // and its options share one ascending id run).
         const created = allocateDFamilyIds(edited, original.messages ?? {});
         messages = { ...messages, ...created };
         edited.messages = messages;
@@ -81,14 +81,24 @@ export function computeDialogSourceEdit(
     // every later save. It reports "" (commit-only - no `.msg` entry, which travels in `messages`, not here);
     // its reply, once typed, splices into the now-committed procedure. An OPTION still needs its `@N` (a terminal
     // option carries no source span, so the id is the only thing that distinguishes a committed one from new).
+    //
+    // The "pending new item" marker is family-specific: SSL keys it on the absent `procRange`/`callRange` (its
+    // source-span fields), the WeiDU D family (`.d`/`.td`) on the absent `sourceRange`. Using the wrong family's
+    // marker would mis-report every existing item (D/TD states never carry a `procRange`, so the SSL marker
+    // treats them all as new), re-marking them committed every save.
+    const dFamily = renderFamily(edited.sourceLang) === "weidu-d";
     const allocations: Record<string, string> = {};
     if (newText !== null) {
         for (const state of edited.roots.flatMap((r) => r.states)) {
-            if (state.procRange === undefined && !state.derivedFrom && !state.committed) {
+            const stateIsNew = dFamily ? state.sourceRange === undefined : state.procRange === undefined;
+            if (stateIsNew && !state.derivedFrom && !state.committed) {
                 allocations[state.id] = state.text;
             }
             for (const c of state.choices) {
-                if (c.callRange === undefined && c.stmtRange === undefined && !c.committed && isBareRef(c.text)) {
+                const choiceIsNew = dFamily
+                    ? c.sourceRange === undefined
+                    : c.callRange === undefined && c.stmtRange === undefined;
+                if (choiceIsNew && !c.committed && isBareRef(c.text)) {
                     allocations[c.id] = c.text!;
                 }
             }

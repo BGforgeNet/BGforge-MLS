@@ -179,6 +179,32 @@ describe("applyDialogEdits", () => {
         expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
     });
 
+    it("inserts a new state's serialized block after the last existing state; other bytes unchanged", () => {
+        const data = parseDDialog(FIXTURE);
+        const model = modelFromD(data);
+        const root = model.roots.find((r) => r.kind === "dialog")!;
+        // A brand-new state (no sourceRange), authored with an already-allocated @N say and one exit reply.
+        root.states.push({
+            id: "extra",
+            text: "@42",
+            choices: [{ id: "extra#0", text: "@43", target: { kind: "exit" } }],
+        });
+        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+
+        // The new block is emitted, keeping its @N refs (SAY @42, not ~@42~).
+        expect(result).toContain("BEGIN extra");
+        expect(result).toContain("SAY @42");
+        expect(result).not.toContain("SAY ~@42~");
+        // It lands after the last existing state (details), inside the BEGIN block (before the block's END).
+        expect(result.indexOf("BEGIN extra")).toBeGreaterThan(result.indexOf("BEGIN details"));
+        // Every original byte up to the last state's END is preserved verbatim - only new bytes were added.
+        const upToDetailsEnd = FIXTURE.slice(0, FIXTURE.indexOf("END\n\nALTER_TRANS"));
+        expect(result.startsWith(upToDetailsEnd)).toBe(true);
+        // The patch block and comment still survive after the insertion.
+        expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
+        expect(result).toContain("/* greeting dialog - do not edit manually */");
+    });
+
     it("pendingInserts returns states with no sourceRange", () => {
         const data = parseDDialog(FIXTURE);
         const model = modelFromD(data);
