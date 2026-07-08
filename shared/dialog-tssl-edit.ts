@@ -81,6 +81,22 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         ) {
             ops.push({ start: orig.targetRange.start, end: orig.targetRange.end, replacement: c.target.stateId });
         }
+        // Terminal flip: an option retargeted from a state to exit/terminal - e.g. its target node was deleted
+        // and `ops.deleteState` redirected the inbound option to exit - is rewritten from `NOption(id, Node, sk)`
+        // to the terminal `NMessage(id)` (reusing the SSL serializer, whose non-state branch emits NMessage).
+        // Replaces the whole statement span; mutually exclusive with the state->state retarget above.
+        if (
+            orig.target.kind === "state" &&
+            c.target.kind !== "state" &&
+            orig.stmtRange &&
+            Number.isFinite(msgIdOf(c))
+        ) {
+            ops.push({
+                start: orig.stmtRange.start,
+                end: orig.stmtRange.end,
+                replacement: serializeSSLOption(c, msgIdOf(c)),
+            });
+        }
         // Condition edit-text: an editable option's `if` condition changed to new (non-empty) text -> splice
         // its `condRange` (the expression between `if (` and `)`). Wrap (add a condition to a flat option) and
         // unwrap (remove it) are Phase 3 - they add/remove the `if` wrapper, not just its condition token.
@@ -94,15 +110,32 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
             ops.push({ start: orig.condRange.start, end: orig.condRange.end, replacement: c.condition });
         }
     }
-    // Structural: an existing option removed from the edited model -> splice its statement out. A pure
-    // conditional option is the sole content of its `if`, so remove the whole `if`; otherwise just the call.
+    // Structural: an existing option removed from a SURVIVING node -> splice its statement out. (An option
+    // in a DELETED node is removed by that node's whole-function splice below; removing it individually too
+    // would overlap.) A pure conditional option is the sole content of its `if`, so remove the whole `if`;
+    // otherwise just the call.
     const editedIds = new Set(statesOf(edited).map((c) => c.id));
-    for (const orig of statesOf(original)) {
-        if (editedIds.has(orig.id)) continue;
-        // A pure conditional option (conditionEditable => its `if` gates it alone) removes the whole `if`;
-        // an unconditional or shared-condition option removes just its own call statement.
-        const removeSpan = orig.ifRange && orig.conditionEditable !== false ? orig.ifRange : orig.stmtRange;
-        if (removeSpan) ops.push(removeLineSplice(originalText, removeSpan));
+    const editedStateIds = new Set(allStates(edited).map((s) => s.id));
+    for (const os of allStates(original)) {
+        if (!editedStateIds.has(os.id)) continue; // deleted node - its options go with the procRange splice below
+        for (const orig of os.choices) {
+            if (editedIds.has(orig.id)) continue;
+            // A pure conditional option (conditionEditable => its `if` gates it alone) removes the whole `if`;
+            // an unconditional or shared-condition option removes just its own call statement.
+            const removeSpan = orig.ifRange && orig.conditionEditable !== false ? orig.ifRange : orig.stmtRange;
+            if (removeSpan) ops.push(removeLineSplice(originalText, removeSpan));
+        }
+    }
+    // Structural: DELETE node - an original node absent from the edited model -> splice out its whole function
+    // span plus the trailing newline it would leave. Disjoint from every option splice (functions do not
+    // overlap, and an inbound option that flipped to a terminal lives in a DIFFERENT surviving node). Mirrors
+    // `applySSLDialogEdits`' DELETE case; renamed-away nodes are excluded once rename lands (Phase 3 task 3).
+    for (const os of allStates(original)) {
+        if (editedStateIds.has(os.id) || !os.procRange) continue;
+        const start = os.procRange.start;
+        const nl = originalText.indexOf("\n", os.procRange.end);
+        const end = nl === -1 ? os.procRange.end : nl + 1;
+        ops.push({ start, end, replacement: "" });
     }
     // Structural: a NEW option added to an existing node -> serialize it (reusing the SSL option serializer,
     // since the call syntax is byte-identical) and insert after the last SURVIVING option's statement so it

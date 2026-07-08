@@ -81,6 +81,26 @@ describe("applyTSSLDialogEdits - option retarget", () => {
         expect(out.slice(out.indexOf("function Node002()"))).toBe(flat.slice(flat.indexOf("function Node002()")));
     });
 
+    it("deletes a node: splices out its function and flips the inbound option to a terminal NMessage", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const root = edited.roots[0]!;
+        // What ops.deleteState does: redirect same-dialogue inbound targets to exit, drop the state.
+        for (const s of root.states) {
+            for (const c of s.choices) {
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+            }
+        }
+        root.states = root.states.filter((s) => s.id !== "Node002");
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).not.toContain("function Node002()"); // the whole procedure is gone
+        expect(out).not.toContain("NMessage(201)"); // ...along with its own body
+        expect(out).toContain("NMessage(101);"); // the inbound option flipped state -> terminal
+        expect(out).not.toContain("NOption(101"); // no longer an option targeting the deleted node
+        expect(out).toContain("function Node001()"); // the surviving node stays
+        expect(out).toContain("Node001();"); // talk_p_proc entry untouched
+    });
+
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
