@@ -41,6 +41,11 @@ function toModel(data: unknown): DialogModel | null {
     return null;
 }
 
+/** The message of a caught unknown - `Error.message`, else its string form. */
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
 function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     // Resolve the vscode/webview-bound inputs here; the pure HTML assembly (CSP shape +
     // verbatim inline of the bundle) lives in buildDialogWebviewHtml, which is unit-tested
@@ -186,19 +191,12 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         panel: vscode.WebviewPanel,
         reparse?: { seq: number; allocations: Record<string, string>; messages: DialogMessages },
     ): Promise<void> {
-        const params: ExecuteCommandParams = {
-            command: LSP_COMMAND_PARSE_DIALOG,
-            arguments: [{ uri: document.uri.toString() }],
-        };
-        let data: unknown;
-        try {
-            data = await this.client.sendRequest(ExecuteCommandRequest.type, params);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void panel.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${message}` });
+        const parsed = await this.requestParse(document);
+        if ("error" in parsed) {
+            void panel.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${parsed.error}` });
             return;
         }
-        const model = toModel(data);
+        const model = toModel(parsed.data);
         const session = this.sessions.get(panel);
         // Disposed while the parse was in flight (the session is removed on dispose): don't post to a dead webview.
         if (!session || session.disposed) return;
@@ -241,7 +239,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             void panel.webview.postMessage({
                 type: "error",
                 message:
-                    data == null
+                    parsed.data == null
                         ? "The language server returned no dialog data for this file. Make sure it is a recognized, open dialog file."
                         : "The parsed dialog data could not be interpreted.",
             });
@@ -297,23 +295,16 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             edited.sourceLang === "td"
         ) {
             const text = document.getText();
-            let data: unknown;
-            try {
-                const params: ExecuteCommandParams = {
-                    command: LSP_COMMAND_PARSE_DIALOG,
-                    arguments: [{ uri: document.uri.toString() }],
-                };
-                data = await this.client.sendRequest(ExecuteCommandRequest.type, params);
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
+            const parsed = await this.requestParse(document);
+            if ("error" in parsed) {
+                void vscode.window.showErrorMessage(`Dialog edit failed: ${parsed.error}`);
                 return;
             }
             // The panel may have been disposed while the parse request was in flight. A captured session
             // survives the WeakMap delete, so re-check its flag before touching the document or the webview -
             // otherwise a mid-flight edit lands a WorkspaceEdit and posts to a closed panel.
             if (session.disposed) return;
-            const original = toModel(data);
+            const original = toModel(parsed.data);
             const { newText, messages, allocations } = computeDialogSourceEdit(text, edited, original);
             edited.messages = messages;
             if (newText !== null) {
@@ -372,8 +363,24 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             };
             await this.client.sendRequest(ExecuteCommandRequest.type, params);
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Saving dialog message text failed: ${message}`);
+            void vscode.window.showErrorMessage(`Saving dialog message text failed: ${errorMessage(error)}`);
+        }
+    }
+
+    /**
+     * Send the LSP parse-dialog request for `document`. Returns the raw command result, or an error message
+     * when the request itself failed - each caller surfaces that its own way (a webview `error` post from
+     * postModel, a VS Code toast from applyEdit), so the shared step is only the request, not the reporting.
+     */
+    private async requestParse(document: vscode.TextDocument): Promise<{ data: unknown } | { error: string }> {
+        const params: ExecuteCommandParams = {
+            command: LSP_COMMAND_PARSE_DIALOG,
+            arguments: [{ uri: document.uri.toString() }],
+        };
+        try {
+            return { data: await this.client.sendRequest(ExecuteCommandRequest.type, params) };
+        } catch (error) {
+            return { error: errorMessage(error) };
         }
     }
 }
