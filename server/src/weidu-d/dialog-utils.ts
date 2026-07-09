@@ -133,6 +133,26 @@ export function extractChainText(chainTextNode: SyntaxNode): string {
     return chainTextNode.text.trim();
 }
 
+/**
+ * Every text of a chain line's SAY, in source order with byte ranges - the multisay-aware analog of the
+ * take-first `extractChainText`. A chain line's texts live in its `say_text` child (or, without one, directly
+ * on the chain_text), so a `@a = @b = @c` chain entry yields one entry per text instead of dropping all but
+ * the first. Mirrors `extractSayTexts` for the state case.
+ */
+export function extractChainTexts(
+    chainTextNode: SyntaxNode,
+): Array<{ text: string; range: { start: number; end: number } }> {
+    const sayTextNode = chainTextNode.children.find((c) => c.type === SyntaxType.SayText);
+    const scope = sayTextNode ?? chainTextNode;
+    const texts = scope.children
+        .filter((c) => SAY_TEXT_KINDS.has(c.type))
+        .map((c) => ({ text: extractTextContent(c), range: { start: c.startIndex, end: c.endIndex } }));
+    if (texts.length > 0) return texts;
+    // No typed text child (an untyped/wrapper say_text): fall back to the take-first content as a single entry.
+    const text = extractChainText(chainTextNode);
+    return text ? [{ text, range: { start: chainTextNode.startIndex, end: chainTextNode.endIndex } }] : [];
+}
+
 export function extractChainTextTrigger(chainTextNode: SyntaxNode): string | undefined {
     const triggerNode = chainTextNode.childForFieldName("trigger");
     if (!triggerNode) return undefined;

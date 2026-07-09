@@ -18,6 +18,7 @@ import {
     extractSayTexts,
     extractSayTextContent,
     extractChainText,
+    extractChainTexts,
     extractChainTextTrigger,
     extractTrigger,
     extractWeight,
@@ -380,13 +381,16 @@ function flattenChain(
     let stateIndex = 0;
 
     const pushChainState = (child: SyntaxNode): void => {
-        const sayText = extractChainText(child);
+        // Record the FULL multisay list (parity with parseState); sayText stays the first for the flat display.
+        const sayTexts = extractChainTexts(child);
+        const sayText = sayTexts[0]?.text ?? extractChainText(child);
         const trigger = extractChainTextTrigger(child);
         const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
         syntheticStates.push({
             label,
             line: child.startPosition.row + 1,
             sayText,
+            ...(sayTexts.length > 0 ? { sayTexts } : {}),
             trigger: trigger || undefined,
             speaker: currentSpeaker,
             // Owning dialog is the chain's target file, never the per-line switched speaker.

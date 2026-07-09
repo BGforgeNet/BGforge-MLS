@@ -23,3 +23,23 @@ describe("D multisay is not truncated", () => {
         expect(s!.sayTexts?.map((t) => t.text)).toEqual(["@100", "@101", "@102"]);
     });
 });
+
+// A CHAIN whose entry line is a multisay. flattenChain's synthetic-state builder used the take-first
+// extractChainText and never populated sayTexts, so the derived state silently dropped every text after the
+// first - unlike parseState (BEGIN/APPEND/REPLACE), which records the full multisay list.
+const CHAIN_SRC = `CHAIN BJKLSY chainmulti
+@200 = @201 = @202
+EXIT`;
+
+describe("D CHAIN multisay is not truncated", () => {
+    beforeAll(async () => {
+        if (!isInitialized()) await initParser();
+    });
+
+    it("records every text of a chain line's multisay, in order", () => {
+        const data = parseDDialog(CHAIN_SRC);
+        const s = data.states.find((st) => st.sayText === "@200");
+        expect(s).toBeDefined();
+        expect(s!.sayTexts?.map((t) => t.text)).toEqual(["@200", "@201", "@202"]);
+    });
+});
