@@ -26,6 +26,7 @@ import {
     type SourceLang,
 } from "../../shared/dialog-model";
 import {
+    addBranch,
     addReply,
     addState,
     deleteState,
@@ -49,11 +50,19 @@ interface ProjChoice {
     reaction: string;
     lowIq: boolean;
 }
+interface ProjBranch {
+    kind: string;
+    condition: string;
+    /** The branch's option texts, in order - so add/remove/retarget of a branch option shows up here. */
+    options: string[];
+}
 interface ProjState {
     id: string;
     text: string;
     trigger: string;
     choices: ProjChoice[];
+    /** Bundle (if/else) structure, when present, so branch add/remove and condition edits are asserted too. */
+    branches?: ProjBranch[];
 }
 
 const targetKey = (c: DialogChoice): string => {
@@ -90,14 +99,29 @@ const projectChoice = (c: DialogChoice): ProjChoice => ({
 const project = (model: DialogModel): ProjState[] =>
     model.roots
         .flatMap((r) => r.states)
-        .map(
-            (s: DialogState): ProjState => ({
+        .map((s: DialogState): ProjState => {
+            // An option inside a bundle branch carries the branch's gate as a DERIVED `scopedConditional`
+            // re-display. Its source of truth is the branch's own condition (asserted via ProjBranch below),
+            // and the SSL/TSSL parsers render a negated else gate with a cosmetic inner-paren difference
+            // (`not (X)` vs `not X`) that normCond's single outer layer doesn't fold. So blank the per-option
+            // condition for branched options and assert their gating through the branch structure instead.
+            const branchChoiceIds = new Set(s.branches?.flatMap((b) => b.choiceIds));
+            return {
                 id: s.id,
                 text: (s.text ?? "").trim(),
                 trigger: (s.trigger ?? "").trim(),
-                choices: s.choices.map(projectChoice),
-            }),
-        )
+                choices: s.choices.map((c) =>
+                    branchChoiceIds.has(c.id) ? { ...projectChoice(c), condition: "" } : projectChoice(c),
+                ),
+                branches: s.branches?.map(
+                    (b): ProjBranch => ({
+                        kind: b.kind,
+                        condition: normCond((b.condition ?? "").trim()),
+                        options: b.choiceIds.map((id) => (s.choices.find((c) => c.id === id)?.text ?? "").trim()),
+                    }),
+                ),
+            };
+        })
         .sort((a, b) => a.id.localeCompare(b.id));
 
 const clone = (m: DialogModel): DialogModel => structuredClone(m);
@@ -270,6 +294,98 @@ describe("cross-language parity: fallout-ssl family (SSL <-> TSSL)", () => {
         it(`${name} -> SSL and TSSL reparse to equivalent models`, async () => {
             const sslResult = await editAndReparse(sslCase, (edited) => op(edited));
             const tsslResult = await editAndReparse(tsslCase, (edited) => op(edited));
+            expect(tsslResult).toEqual(sslResult);
+        });
+    }
+});
+
+// --- Bundle (if/else) parity: guards the per-variant BRANCH serializer (serializeSSLBranch vs
+// serializeTSSLBranch), the main piece the shared write-back engine injects per source variant. A TSSL branch
+// add/else/condition wiring bug would slip past the flat-node matrix above; here it fails by construction. ------
+
+/** Node001 is a bundle node: an if-branch (-> Node002) and an else-branch (-> Node003). Both terminal replies. */
+const SSL_BUNDLE_FIXTURE = `procedure Node001 begin
+    if (global_var(GVAR_A) == 1) then begin
+        NOption(101, Node002, 4);
+    end else begin
+        NOption(102, Node003, 4);
+    end
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+const TSSL_BUNDLE_FIXTURE = `function Node001() {
+    if (global_var(GVAR_A) == 1) {
+        NOption(101, Node002, 4);
+    } else {
+        NOption(102, Node003, 4);
+    }
+}
+function Node002() { Reply(200); }
+function Node003() { Reply(300); }
+function talk_p_proc() { Node001(); }
+`;
+
+const BUNDLE_OPS: { name: string; op: Op }[] = [
+    {
+        name: "edit a bundle if-branch condition",
+        op: (m) => {
+            nodeById(m, "Node001").branches!.find((b) => b.kind === "if")!.condition = "global_var(GVAR_B) == 2";
+        },
+    },
+    {
+        name: "add a new if-branch to a bundle node",
+        op: (m) => {
+            addBranch(nodeById(m, "Node001"), "global_var(GVAR_C) == 3");
+        },
+    },
+    {
+        name: "remove the else branch from a bundle node",
+        op: (m) => {
+            const n = nodeById(m, "Node001");
+            const i = n.branches!.findIndex((b) => b.kind === "else");
+            const elseB = n.branches![i]!;
+            n.choices = n.choices.filter((c) => !elseB.choiceIds.includes(c.id));
+            n.branches!.splice(i, 1);
+        },
+    },
+    {
+        name: "retarget an option inside a bundle branch",
+        op: (m) => {
+            const n = nodeById(m, "Node001");
+            const ifB = n.branches!.find((b) => b.kind === "if")!;
+            const c = n.choices.find((ch) => ifB.choiceIds.includes(ch.id))!;
+            setChoiceTarget(n, c.id, { kind: "state", stateId: "Node003" });
+        },
+    },
+];
+
+describe("cross-language parity: fallout-ssl family bundle (if/else) nodes", () => {
+    const sslBundle: LangCase = { ...sslCase, fixture: SSL_BUNDLE_FIXTURE };
+    const tsslBundle: LangCase = { ...tsslCase, fixture: TSSL_BUNDLE_FIXTURE };
+
+    it("the bundle fixtures are the same logical dialog before any edit", async () => {
+        const ssl = project(await sslBundle.parse(sslBundle.fixture));
+        const tssl = project(await tsslBundle.parse(tsslBundle.fixture));
+        expect(tssl).toEqual(ssl);
+    });
+
+    it("Node001 parses as a bundle node in both variants (guard)", async () => {
+        const sslModel = await sslBundle.parse(sslBundle.fixture);
+        const tsslModel = await tsslBundle.parse(tsslBundle.fixture);
+        const sslNode = sslModel.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const tsslNode = tsslModel.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(sslNode.bundleFaithful).toBe(true);
+        expect(tsslNode.bundleFaithful).toBe(true);
+        expect(sslNode.branches?.length).toBe(2);
+    });
+
+    for (const { name, op } of BUNDLE_OPS) {
+        it(`${name} -> SSL and TSSL reparse to equivalent models`, async () => {
+            const sslResult = await editAndReparse(sslBundle, (edited) => op(edited));
+            const tsslResult = await editAndReparse(tsslBundle, (edited) => op(edited));
             expect(tsslResult).toEqual(sslResult);
         });
     }
