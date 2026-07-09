@@ -195,10 +195,10 @@ export function survivorReplacement(text: string, moved: DialogChoice, movedOrig
  * through this ONE implementation, so the two source variants of the family cannot drift (the recurring
  * "TSSL parity" defect). Everything it emits uses the byte-identical option/reply call syntax both variants
  * share (`serializeSSLOption`/`serializeSSLReply`/`survivorReplacement`); the ONE piece that differs by target
- * syntax - wrapping a flat option INTO a conditional (`if (c) then ... end` vs `if (c) { ... }`) - is injected
- * via `serializeConditionalOption`. A caller that omits it (TSSL, which has no conditional-option serializer
- * yet) simply does not perform the flat->conditional wrap; unwrap and condition edit-text, whose output is the
- * shared bare call, work for both regardless.
+ * syntax - wrapping a flat option INTO a conditional (`if (c) then ...` vs `if (c) { ... }`) - is injected via
+ * `serializeConditionalOption` (SSL `serializeSSLConditionalOption`, TSSL `serializeTSSLConditionalOption`). The
+ * parameter is optional so a caller may omit it and degrade to leaving the option flat rather than crashing;
+ * unwrap and condition edit-text, whose output is the shared bare call, work regardless.
  *
  * `anchor` is the fallback insertion point for a NEW option on a node with no surviving option (a reply-only
  * node): SSL passes the parser-captured `insertAnchor`; TSSL passes a close-brace-derived anchor. When the node
@@ -285,9 +285,9 @@ export function nodeOps(
         if (!had && has && o.stmtRange && serializeConditionalOption) {
             // wrap: replace the flat statement with the target syntax's conditional form, serializing the inner
             // call from the EDITED choice so a concurrent retarget is subsumed. Exclude from the survivor slots
-            // below to avoid a double-splice on the same stmtRange. Skipped entirely when the caller injects no
-            // `serializeConditionalOption` (TSSL has no conditional-option serializer yet) - the option then stays
-            // flat and its added condition is not written back, matching that variant's prior behavior.
+            // below to avoid a double-splice on the same stmtRange. Both family variants inject a serializer (SSL
+            // `serializeSSLConditionalOption`, TSSL `serializeTSSLConditionalOption`); the guard remains so a caller
+            // that omits one degrades to leaving the option flat rather than crashing.
             const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
             const indent = /^[ \t]*/.exec(text.slice(lineStart, o.stmtRange.start))?.[0] ?? "    ";
             const msgId = Number(

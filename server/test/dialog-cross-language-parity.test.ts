@@ -37,6 +37,7 @@ import {
     setChoiceTarget,
 } from "../../shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
+import { serializeCond } from "../../shared/dialog-ssl-serialize";
 
 // --- Projection: the language-agnostic logical shape we assert parity on ---------------------------------------
 
@@ -66,9 +67,15 @@ const targetKey = (c: DialogChoice): string => {
     }
 };
 
+// Normalize a condition to the one-paren-layer form BOTH writers apply via `serializeCond`. The SSL parser keeps
+// a wrapped option's outer parens in `cond` (load-bearing per the grammar) while the TSSL ts-morph parser strips
+// them, so `(X)` vs `X` reparse differently - a cosmetic, round-trip-stable divergence, not a logical one. Folding
+// through the writers' own `serializeCond` asserts logical condition parity without pinning that paren cosmetic.
+const normCond = (cond: string): string => (cond === "" ? "" : serializeCond(cond));
+
 const projectChoice = (c: DialogChoice): ProjChoice => ({
     text: (c.text ?? "").trim(),
-    condition: (c.condition ?? "").trim(),
+    condition: normCond((c.condition ?? "").trim()),
     action: (c.action ?? "").trim(),
     target: targetKey(c),
     reaction: c.reaction ?? "neutral",
@@ -238,6 +245,16 @@ const SSL_FAMILY_OPS: { name: string; op: Op }[] = [
         op: (m) => {
             const n = nodeById(m, "Node001");
             setChoiceTarget(n, n.choices[0]!.id, { kind: "exit" });
+        },
+    },
+    {
+        // Add a condition to a flat option -> the writer wraps it in the family's conditional gate (SSL
+        // `if ... then`, TSSL `if (...) { }`). This was a live divergence: TSSL skipped the wrap and silently
+        // dropped the condition on save, while SSL wrapped it. Parity now requires both to reparse conditional.
+        name: "add a condition to a flat option (wrap)",
+        op: (m) => {
+            const n = nodeById(m, "Node001");
+            n.choices[0]!.condition = "local_var(LVAR_x) == 0";
         },
     },
 ];

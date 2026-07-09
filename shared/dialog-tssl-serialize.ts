@@ -6,8 +6,26 @@
  */
 
 import { bareMsgId } from "./dialog-edit-common";
-import { serializeSSLOption } from "./dialog-ssl-serialize";
+import { serializeCond, serializeSSLOption } from "./dialog-ssl-serialize";
 import type { DialogChoice, DialogState } from "./dialog-model";
+
+/**
+ * Wrap a single option in a TS-brace conditional gate - `if (<cond>) { <NOption...>; }` - the TSSL counterpart of
+ * `serializeSSLConditionalOption` (`if <cond> then <NOption...>`). The shared nodeOps engine calls this when a
+ * condition is ADDED to a flat TSSL option (`applyTSSLDialogEdits` passes it as the wrap serializer); without it
+ * the wrap was skipped and a typed condition was silently dropped on save. `cond` is normalized to one paren layer
+ * via the shared `serializeCond`; the option line reuses `serializeSSLOption` (NOption/GOption syntax is identical
+ * across the fallout-ssl family - only the block delimiters differ). The signature matches
+ * `serializeSSLConditionalOption` so nodeOps can take either as its conditional-option serializer.
+ */
+export function serializeTSSLConditionalOption(
+    choice: DialogChoice,
+    msgId: number,
+    cond: string,
+    indent: string,
+): string {
+    return `if ${serializeCond(cond)} {\n${indent}    ${serializeSSLOption(choice, msgId)}\n${indent}}`;
+}
 
 /**
  * Emit a NEW `if`/`else` bundle branch block in TS syntax - `if (<cond>) {` / `else {`, body indented one

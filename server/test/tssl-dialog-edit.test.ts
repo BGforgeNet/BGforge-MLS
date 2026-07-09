@@ -398,3 +398,31 @@ function talk_p_proc() { Node001(); }
         expect(n1r.choices).toHaveLength(1);
     });
 });
+
+describe("applyTSSLDialogEdits - conditional-option ADD / wrap (parity with SSL)", () => {
+    // SSL wraps a flat option in an `if (...) then begin ... end` when a condition is added (Tier 3c). TSSL exposes
+    // the same editable condition field (a flat faithful option is conditionEditable), and its edit-text and
+    // remove/unwrap paths already work - only the ADD/wrap path was unwired, so a typed condition was silently
+    // dropped on save (the writer returned the source unchanged). This asserts TSSL now wraps at parity with SSL,
+    // in TS-brace syntax.
+    const SRC = `function Node001() {
+    NOption(101, Node002, 4);
+}
+function Node002() { Reply(200); }
+function talk_p_proc() { Node001(); }
+`;
+
+    it("wraps a flat option in a TS-brace `if (...) { }` when a condition is added", () => {
+        const original = tsslModel(SRC);
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        opt.condition = "local_var(LVAR_x) == 0";
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("if (local_var(LVAR_x) == 0) {"); // gated in TS syntax
+        expect(out).toContain("NOption(101, Node002, 4);"); // the option itself is preserved
+        expect(out).not.toContain("then begin"); // never the SSL block form
+        // Round-trips: the reparsed option is now conditionally gated.
+        const n1r = tsslModel(out).roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices[0]!.condition).toContain("local_var(LVAR_x)");
+    });
+});

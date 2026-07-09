@@ -19,7 +19,7 @@ import {
     nodeOps,
     replyOps,
 } from "./dialog-ssl-edit";
-import { serializeTSSLBranch, serializeTSSLProcedure } from "./dialog-tssl-serialize";
+import { serializeTSSLBranch, serializeTSSLConditionalOption, serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogModel, DialogState } from "./dialog-model";
 
 /**
@@ -51,14 +51,15 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
 
-    // Per-node OPTION editing (remove / retarget / reorder / terminal-flip / condition edit-text + unwrap /
+    // Per-node OPTION editing (remove / retarget / reorder / terminal-flip / condition edit-text + wrap + unwrap /
     // add-option) routes through the SHARED fallout-ssl-family engine `nodeOps` - byte-for-byte the path
     // applySSLDialogEdits takes - so the two source variants of the family cannot drift on these operations (the
     // recurring "TSSL parity" defect this consolidation retires). The engine emits the option/reply call syntax
-    // TSSL and SSL share verbatim. Two per-variant inputs only: the reply-only add-option anchor (`tsslBodyAnchor`
-    // - TSSL's `}` close where SSL has its parser-captured `insertAnchor`) and the branch-ADD serializer
-    // (`serializeTSSLBranch`). No conditional-option serializer is injected, so the flat->conditional WRAP is a
-    // no-op here (TSSL has no such serializer yet); condition edit-text and unwrap still work (shared bare call).
+    // TSSL and SSL share verbatim. Three per-variant inputs: the reply-only add-option anchor (`tsslBodyAnchor` -
+    // TSSL's `}` close where SSL has its parser-captured `insertAnchor`), the flat->conditional WRAP serializer
+    // (`serializeTSSLConditionalOption`, the TS `if (...) { }` gate; without it a typed condition was silently
+    // dropped on save), and the branch-ADD serializer (`serializeTSSLBranch`). Condition edit-text and unwrap need
+    // no serializer (shared bare call syntax) and always worked.
     // Bundle nodes go through the shared bundle writer; the branch condition/structure ops are a no-op on a
     // non-bundle node. A renamed node resolves to its original via `renamedFrom` so its options still diff.
     for (const state of allStates(edited)) {
@@ -67,7 +68,15 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         if (orig.bundleFaithful) {
             ops.push(...bundleNodeOps(originalText, state, orig));
         } else {
-            ops.push(...nodeOps(originalText, state, orig, tsslBodyAnchor(originalText, orig)));
+            ops.push(
+                ...nodeOps(
+                    originalText,
+                    state,
+                    orig,
+                    tsslBodyAnchor(originalText, orig),
+                    serializeTSSLConditionalOption,
+                ),
+            );
             ops.push(...replyOps(state, orig));
         }
         ops.push(...branchConditionOps(originalText, state, orig));
