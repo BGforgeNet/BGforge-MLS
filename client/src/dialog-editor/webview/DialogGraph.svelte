@@ -251,7 +251,9 @@
         activeRoot
             ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot), {
                   ssl: renderFamily(editModel.sourceLang) === "fallout-ssl",
-                  editable: editModel.editable,
+                  // The SAME per-state predicate the graph/inspector gate on, so the tree's text lock matches
+                  // the inspector (a .td state is field-editable even though editModel.editable is false).
+                  fieldEditable: (s) => fieldEditable(s),
               })
             : { roots: [] },
     );

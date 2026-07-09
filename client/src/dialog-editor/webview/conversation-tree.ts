@@ -22,6 +22,7 @@ import {
     type DialogChoice,
     type DialogReaction,
     type DialogRoot,
+    type DialogState,
 } from "../../../../shared/dialog-model";
 import { isPendingChoice, isPendingState, textFieldLocked } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
@@ -164,12 +165,15 @@ export function buildConversationTree(
     messages: Record<string, string> | undefined,
     resolveJump: ResolveJump,
     // Edit-gating context for each reply's `textEditable`, mirroring the inspector's textFieldLocked inputs.
-    // Optional (defaults to an editable D file) so the pure-projection tests can stay 3-arg; the editor
-    // always passes real values. Destructured with per-key defaults rather than an object-literal default
-    // param (which oxlint's no-object-as-default-parameter rightly flags - a shared mutable default).
-    opts?: { ssl: boolean; editable: boolean },
+    // `fieldEditable` is the SAME per-state predicate the inspector and graph use - a `.td` state can be
+    // field-editable even though the model's blanket `editable` is false, so consuming it here makes the tree's
+    // text lock match the inspector instead of diverging on the model-level flag (the old `editable` boolean).
+    // Optional (defaults to an editable file) so the pure-projection tests can stay 3-arg; the editor always
+    // passes real values. Destructured with per-key defaults rather than an object-literal default param (which
+    // oxlint's no-object-as-default-parameter rightly flags - a shared mutable default).
+    opts?: { ssl: boolean; fieldEditable: (s: DialogState) => boolean },
 ): ConversationTree {
-    const { ssl = false, editable = true } = opts ?? {};
+    const { ssl = false, fieldEditable = () => true } = opts ?? {};
     // SSL convention: Node998/Node999 are terminal Combat/Exit targets, not drawn conversation nodes
     // (SSL_TERMINAL_NODES). Exclude them from the states the tree draws; buildTarget maps an option targeting
     // them to a terminal chip instead. Non-SSL formats keep every state.
@@ -228,10 +232,12 @@ export function buildConversationTree(
     function expand(id: string): ConvState {
         const s = byId.get(id)!;
         shown.add(id);
-        // Whether this state's text fields are read-only (mirrors the inspector's `textRO`): a derived
-        // state is fully read-only; a non-editable non-SSL file (view-only D) is too. SSL text persists to
-        // the .msg, so it stays editable subject to the per-@N resolvability gate inside textFieldLocked.
-        const textRO = Boolean(s.derivedFrom) || (!editable && !ssl);
+        // Whether this state's text fields are read-only - the SAME formula the inspector's `textRO` uses, now
+        // over the per-state `fieldEditable` predicate (not the model-level flag), so a `.td` state that the
+        // inspector treats as editable is not spuriously locked in the tree. A derived state is fully read-only;
+        // a non-field-editable non-SSL file (view-only D) is too. SSL text persists to the .msg, so it stays
+        // editable subject to the per-@N resolvability gate inside textFieldLocked.
+        const textRO = Boolean(s.derivedFrom) || (!fieldEditable(s) && !ssl);
         // A bundle (if/else) node groups its replies per branch, each with its own NPC line. Build the
         // branch structure instead of the flat choice list so the tree mirrors the graph/inspector
         // (otherwise the else branch's NPC line and the per-branch grouping are lost). Each choice is

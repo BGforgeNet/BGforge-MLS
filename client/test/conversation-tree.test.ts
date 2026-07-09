@@ -132,20 +132,39 @@ describe("buildConversationTree", () => {
     // inspector's textFieldLocked gate (SSL @N resolvability, read-only/derived states, pending-new).
     it("marks a D literal option's text as editable", () => {
         const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })])]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
         expect(roots[0]!.replies[0]!.textEditable).toBe(true);
     });
 
     it("locks option text on a derived (read-only) state", () => {
         const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })], { derivedFrom: "CHAIN" })]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
         expect(roots[0]!.replies[0]!.textEditable).toBe(false);
     });
 
     it("locks option text in a view-only (non-editable) D file", () => {
         const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })])]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: false });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => false });
         expect(roots[0]!.replies[0]!.textEditable).toBe(false);
+    });
+
+    // Parity fix: the tree honors the PER-STATE fieldEditable predicate, not the model-level flag. A .td file
+    // sets model.editable=false but each non-derived state is field-editable, so the inspector treats its text
+    // as editable; the tree used to lock it (it consumed the model-level `editable`), diverging from the
+    // inspector. With the per-state predicate the two agree.
+    it("honors a per-state field-editable predicate (a .td state editable in the inspector is editable in the tree)", () => {
+        const r = root([
+            st("A", "hi", [ch("A#0", { kind: "exit" }, { text: "reply" })]), // field-editable per the predicate
+            st("B", "bye", [ch("B#0", { kind: "exit" }, { text: "reply" })], { derivedFrom: "CHAIN" }), // derived: still locked
+        ]);
+        const { roots } = buildConversationTree(r, undefined, noJump, {
+            ssl: false,
+            fieldEditable: (s) => !s.derivedFrom, // the .td gate: every non-derived state is field-editable
+        });
+        const byId = new Map(roots.map((n) => [n.id, n]));
+        expect(byId.get("A")!.textEditable).toBe(true); // was false under the model-level flag - the bug
+        expect(byId.get("A")!.replies[0]!.textEditable).toBe(true);
+        expect(byId.get("B")!.textEditable).toBe(false); // derived stays read-only
     });
 
     it("SSL: an option backed by a resolvable @N is editable; a non-resolvable one is locked", () => {
@@ -157,14 +176,14 @@ describe("buildConversationTree", () => {
                 ch("A#1", { kind: "exit" }, { text: "@99", committed: true }), // no .msg entry - nowhere to write
             ]),
         ]);
-        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, fieldEditable: () => false });
         expect(roots[0]!.replies[0]!.textEditable).toBe(true);
         expect(roots[0]!.replies[1]!.textEditable).toBe(false);
     });
 
     it("SSL: a just-added (pending) option is editable even before it has an @N", () => {
         const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "" })])]);
-        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, fieldEditable: () => false });
         expect(roots[0]!.replies[0]!.textEditable).toBe(true);
     });
 
@@ -172,19 +191,19 @@ describe("buildConversationTree", () => {
     // textFieldLocked gate to the state's OWN text, driving inline NPC-line editing in the tree.
     it("marks a D literal NPC line as editable", () => {
         const r = root([st("A", "hi", [])]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
         expect(roots[0]!.textEditable).toBe(true);
     });
 
     it("locks the NPC line on a derived (read-only) state", () => {
         const r = root([st("A", "hi", [], { derivedFrom: "CHAIN" })]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
         expect(roots[0]!.textEditable).toBe(false);
     });
 
     it("locks the NPC line in a view-only (non-editable) D file", () => {
         const r = root([st("A", "hi", [])]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: false });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => false });
         expect(roots[0]!.textEditable).toBe(false);
     });
 
@@ -194,7 +213,7 @@ describe("buildConversationTree", () => {
             st("Node001", "@10", [], { committed: true }), // resolves in messages
             st("Node002", "@99", [], { committed: true }), // no .msg entry - nowhere to write
         ]);
-        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, fieldEditable: () => false });
         const byId = new Map(roots.map((n) => [n.id, n]));
         expect(byId.get("Node001")!.textEditable).toBe(true);
         expect(byId.get("Node002")!.textEditable).toBe(false);
@@ -202,7 +221,7 @@ describe("buildConversationTree", () => {
 
     it("SSL: a just-added (pending) state's NPC line is editable even before it has an @N", () => {
         const r = root([st("A", "", [])]);
-        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, fieldEditable: () => false });
         expect(roots[0]!.textEditable).toBe(true);
     });
 
@@ -338,7 +357,7 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
             st("Node998", "", []),
             st("Node999", "", []),
         ]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, fieldEditable: () => false });
         // Only the real node is drawn; the two support nodes are terminals, not conversation nodes.
         expect(roots.map((n) => n.id)).toEqual(["Node001"]);
         expect(roots[0]!.replies[0]!.target).toEqual({ kind: "exit", nodeId: "Node999" });
@@ -350,7 +369,7 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
             st("A", "Hello.", [ch("A#0", { kind: "state", stateId: "Node999" }, { text: "Leave." })]),
             st("Node999", "end", []),
         ]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
         const t = roots[0]!.replies[0]!.target;
         expect(t.kind).toBe("state");
         expect((t as Extract<ConvTarget, { kind: "state" }>).node.id).toBe("Node999");
@@ -398,7 +417,7 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
             st("C", "@3", []),
             st("D", "@4", []),
         ]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, fieldEditable: () => false });
         const n1 = roots.find((s) => s.id === "N1")!;
         const block = n1.block!;
         expect(block).toBeDefined();
@@ -459,12 +478,13 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
     // to ConvState so the tree shows the loud "approx" warning badge (dialog-nested-flatten-bug-class dec. 3).
     it("carries the approximate flag onto ConvState", () => {
         const r = root([st("A", "@1", [ch("A#0", { kind: "exit" }, { text: "@2" })], { approximate: true })]);
-        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, fieldEditable: () => false });
         expect(roots[0]!.approximate).toBe(true);
         // A normal node does not get the flag.
         const r2 = root([st("B", "@1", [ch("B#0", { kind: "exit" })])]);
         expect(
-            buildConversationTree(r2, undefined, noJump, { ssl: true, editable: false }).roots[0]!.approximate,
+            buildConversationTree(r2, undefined, noJump, { ssl: true, fieldEditable: () => false }).roots[0]!
+                .approximate,
         ).toBeUndefined();
     });
 });
