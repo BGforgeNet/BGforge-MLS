@@ -31,57 +31,65 @@ export type Reachability = "reachable" | "external-entry" | "orphan";
  * plus every state with no in-file inbound GOTO (those must be entered externally).
  * Reachability is the transitive closure from that entry set over in-file GOTO edges.
  */
+const REACHABILITY_RANK: Record<Reachability, number> = { reachable: 2, "external-entry": 1, orphan: 0 };
+
 export function classifyReachability(model: DialogModel): Map<string, Reachability> {
-    const byId = new Map<string, DialogState>();
-    for (const root of model.roots) {
-        for (const s of root.states) byId.set(s.id, s);
-    }
-
-    // Which states are pointed at by an in-file GOTO/target.
-    const hasInbound = new Set<string>();
-    for (const state of byId.values()) {
-        for (const choice of state.choices) {
-            if (choice.target.kind === "state" && byId.has(choice.target.stateId)) {
-                hasInbound.add(choice.target.stateId);
-            }
-        }
-    }
-
-    // Entry points: each dialog root's first state, plus every no-inbound state (entered
-    // from outside the file). Treating no-inbound states as entries is what keeps
-    // EXTERN-entered banter states from being mass-flagged as dead.
-    const rootEntries = new Set<string>();
-    for (const root of model.roots) {
-        if (root.kind === "dialog" && root.states[0]) rootEntries.add(root.states[0].id);
-    }
-    const queue: string[] = [...rootEntries];
-    for (const id of byId.keys()) {
-        if (!hasInbound.has(id)) queue.push(id);
-    }
-
-    const reached = new Set<string>();
-    while (queue.length > 0) {
-        const id = queue.shift();
-        if (id === undefined || reached.has(id)) continue;
-        reached.add(id);
-        const state = byId.get(id);
-        if (!state) continue;
-        for (const choice of state.choices) {
-            if (choice.target.kind === "state" && byId.has(choice.target.stateId)) {
-                queue.push(choice.target.stateId);
-            }
-        }
-    }
-
+    // A state label is unique only WITHIN its own dialogue (root): a `.d` file with several BEGIN/APPEND
+    // dialogues can define the same label in two roots. So classify each root INDEPENDENTLY - flattening every
+    // root into one id-keyed map lets one root's state overwrite the other's, and a walk that reaches the shared
+    // label then explores the WRONG root's edges. A label appearing in several roots (or twice in one root, the
+    // duplicate-CHAIN-label case) takes its BEST verdict, matching the graph, which collapses duplicate-id states
+    // to one card.
     const result = new Map<string, Reachability>();
-    for (const id of byId.keys()) {
-        // A root's first state is the canonical entry (reachable); any other no-inbound
-        // state is entered from outside the file (external-entry); the rest classify by
-        // whether the GOTO walk reached them.
-        if (rootEntries.has(id)) result.set(id, "reachable");
-        else if (!hasInbound.has(id)) result.set(id, "external-entry");
-        else if (reached.has(id)) result.set(id, "reachable");
-        else result.set(id, "orphan");
+    const record = (id: string, r: Reachability): void => {
+        const prev = result.get(id);
+        if (prev === undefined || REACHABILITY_RANK[r] > REACHABILITY_RANK[prev]) result.set(id, r);
+    };
+
+    for (const root of model.roots) {
+        const byId = new Map<string, DialogState>();
+        for (const s of root.states) byId.set(s.id, s);
+
+        // Which states this root's own GOTO/targets point at.
+        const hasInbound = new Set<string>();
+        for (const state of root.states) {
+            for (const choice of state.choices) {
+                if (choice.target.kind === "state" && byId.has(choice.target.stateId)) {
+                    hasInbound.add(choice.target.stateId);
+                }
+            }
+        }
+
+        // Entry points: the dialog root's first state, plus every no-inbound state (entered from outside the
+        // file). Treating no-inbound states as entries is what keeps EXTERN-entered banter states from being
+        // mass-flagged as dead. A patch root (kind !== "dialog") has no canonical entry.
+        const rootEntry = root.kind === "dialog" ? root.states[0]?.id : undefined;
+        const queue: string[] = [];
+        if (rootEntry !== undefined) queue.push(rootEntry);
+        for (const s of root.states) if (!hasInbound.has(s.id)) queue.push(s.id);
+
+        const reached = new Set<string>();
+        while (queue.length > 0) {
+            const id = queue.shift();
+            if (id === undefined || reached.has(id)) continue;
+            reached.add(id);
+            const state = byId.get(id);
+            if (!state) continue;
+            for (const choice of state.choices) {
+                if (choice.target.kind === "state" && byId.has(choice.target.stateId)) {
+                    queue.push(choice.target.stateId);
+                }
+            }
+        }
+
+        for (const s of root.states) {
+            // The root's first state is the canonical entry (reachable); any other no-inbound state is entered
+            // from outside the file (external-entry); the rest classify by whether the GOTO walk reached them.
+            if (s.id === rootEntry) record(s.id, "reachable");
+            else if (!hasInbound.has(s.id)) record(s.id, "external-entry");
+            else if (reached.has(s.id)) record(s.id, "reachable");
+            else record(s.id, "orphan");
+        }
     }
     return result;
 }

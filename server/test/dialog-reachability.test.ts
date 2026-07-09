@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogModel } from "../../shared/dialog-model";
+import { modelFromD, type DialogModel, type DialogState } from "../../shared/dialog-model";
 import { classifyReachability } from "../../shared/dialog-reachability";
 
 // 1C reachability lens: honest three-way split (reachable / external-entry / orphan).
@@ -121,5 +121,44 @@ END
             roots: [{ id: "d", label: "d", kind: "dialog", states: [] }],
         };
         expect(classifyReachability(model).size).toBe(0);
+    });
+
+    // A state label is unique only WITHIN its own dialogue (root), so a `.d` file with several BEGIN/APPEND
+    // dialogues can define the same label in two roots. Flattening every root into one id-keyed map lets one
+    // root's state overwrite the other's, so a BFS walk that reaches the shared label then explores the WRONG
+    // root's edges - mis-classifying states reachable only through the local copy.
+    it("classifies per-root so a label shared by two dialogues does not corrupt the walk", () => {
+        const stateOf = (id: string, targets: string[]): DialogState => ({
+            id,
+            text: `@${id}`,
+            choices: targets.map((t, i) => ({ id: `${id}#${i}`, target: { kind: "state", stateId: t } })),
+        });
+        const model: DialogModel = {
+            sourceLang: "d",
+            editable: true,
+            roots: [
+                // Root A: a_main (entry) -> shared -> a_only. All three are reachable WITHIN root A.
+                {
+                    id: "dlgA",
+                    label: "a",
+                    kind: "dialog",
+                    states: [stateOf("a_main", ["shared"]), stateOf("shared", ["a_only"]), stateOf("a_only", [])],
+                },
+                // Root B: b_main (entry), plus its OWN `shared` with no outgoing edge.
+                {
+                    id: "dlgB",
+                    label: "b",
+                    kind: "dialog",
+                    states: [stateOf("b_main", []), stateOf("shared", [])],
+                },
+            ],
+        };
+        const r = classifyReachability(model);
+        // a_only is reached only through root A's `shared` (a_main -> shared -> a_only). If the two `shared`
+        // states collide, root A's walk explores root B's edgeless `shared` and never reaches a_only.
+        expect(r.get("a_only")).toBe("reachable");
+        expect(r.get("shared")).toBe("reachable"); // reachable in root A -> best verdict for the shared label
+        expect(r.get("a_main")).toBe("reachable");
+        expect(r.get("b_main")).toBe("reachable");
     });
 });

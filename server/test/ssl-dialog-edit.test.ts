@@ -3,6 +3,7 @@ import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { applySSLDialogEdits, eligibleToDelete, isLocalNewSSLNode } from "../../shared/dialog-ssl-edit";
 import { duplicateState, renameState } from "../../shared/dialog-edit-ops";
+import { findCallers } from "../../client/src/dialog-editor/webview/find-callers";
 import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
 import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
 
@@ -625,6 +626,35 @@ describe("duplicateState - SSL (share refs)", () => {
         duplicateState(model, model.roots[0]!.states.find((s) => s.id === "Node001")!);
         const created = allocateNodeIds(model, {}); // panel.save runs this; an all-@N node yields nothing new
         expect(created.newMessages).toEqual({});
+    });
+
+    // A bundle (if/else) node carries `branches` whose `choiceIds` reference the state's choice ids. The copy
+    // renumbers its choices to `${copy.id}#i`, so keeping the branches would leave them referencing the
+    // ORIGINAL choice ids - a desync that renders the copy's branch view empty. And a pending-new node always
+    // serializes FLAT (serializeSSLProcedure ignores branches), so a retained branch view would diverge from
+    // the saved file. The copy is therefore stripped to a flat node (all options, no branch structure).
+    const BUNDLE_DUP_SRC = `procedure Node001;\nprocedure Node900;\n\nprocedure Node001 begin\n    if (local_var(LVAR_0) == 0) then begin\n        Reply(120);\n        NOption(122, Node900, 4);\n    end else begin\n        Reply(121);\n        NOption(123, Node900, 4);\n    end\nend\nprocedure Node900 begin Reply(900); end\nprocedure talk_p_proc begin call Node001; end\n`;
+
+    it("the bundle fixture parses to a bundleFaithful node with branch choiceIds (guard)", async () => {
+        const n1 = modelFromSSL(await parseDialog(BUNDLE_DUP_SRC)).roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1.bundleFaithful).toBe(true);
+        expect(n1.branches?.length).toBe(2);
+        // Every branch choiceId resolves to a real choice on the node (the invariant a stale copy would break).
+        const choiceIds = new Set(n1.choices.map((c) => c.id));
+        for (const b of n1.branches!) for (const id of b.choiceIds) expect(choiceIds.has(id)).toBe(true);
+    });
+
+    it("duplicating a bundle node strips it to a consistent flat node (no dangling branch refs)", async () => {
+        const model = modelFromSSL(await parseDialog(BUNDLE_DUP_SRC));
+        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const copy = duplicateState(model, n1)!;
+        // Structure stripped: the copy is a flat new node, so its branch view can't reference stale choice ids.
+        expect(copy.branches).toBeUndefined();
+        expect(copy.block).toBeUndefined();
+        expect(copy.bundleFaithful).toBeFalsy();
+        // All options are carried over, renumbered to the copy, sharing the original @N refs.
+        expect(copy.choices.map((c) => c.text)).toEqual(n1.choices.map((c) => c.text));
+        expect(copy.choices.every((c) => c.id.startsWith(`${copy.id}#`))).toBe(true);
     });
 
     it("a duplicated entry node is NOT auto-wired as a second dialog entry", async () => {
@@ -1624,5 +1654,69 @@ procedure talk_p_proc begin call Node001; end
         const reparsed = modelFromSSL(await parseDialog(out));
         const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
         expect(n1r.choices).toHaveLength(1);
+    });
+});
+
+describe("renameState keeps the denormalized entry arrays in sync (no stale entryIds)", () => {
+    // A node reached only by force_dialog_start / start_dialog_at_node is in `entryIds` but NOT `entryCalls`
+    // (its call lives in a non-dialog procedure the writer can't reach), so it must NOT be deletable. Renaming
+    // it must move its entry-array membership with it, or the id-keyed consumers (eligibleToDelete, findCallers)
+    // see the OLD id and mis-report the renamed node as a safe-to-delete non-entry.
+    const externalEntryModel = (): DialogModel => ({
+        sourceLang: "ssl",
+        editable: false,
+        entryIds: ["Node005"],
+        entryCalls: [], // Node005 has no talk_p_proc call -> it is an EXTERNAL entry
+        roots: [
+            {
+                id: "d",
+                label: "d",
+                kind: "dialog",
+                states: [{ id: "Node005", text: "@1", choices: [], faithful: true, nameRange: { start: 0, end: 5 } }],
+            },
+        ],
+        messages: {},
+    });
+
+    it("a renamed external-entry node stays non-deletable (entryIds moves with the rename)", () => {
+        const model = externalEntryModel();
+        const node = model.roots[0]!.states[0]!;
+        expect(eligibleToDelete(model, "Node005")).toBe(false); // baseline: an external entry is not deletable
+        renameState(model, node, "GuardEntry");
+        expect(node.id).toBe("GuardEntry");
+        expect(model.entryIds).toEqual(["GuardEntry"]); // the array moved with the rename
+        expect(eligibleToDelete(model, "GuardEntry")).toBe(false); // still not deletable under the new id
+    });
+
+    it("findCallers reports the external-entry row under the renamed id", () => {
+        const model = externalEntryModel();
+        renameState(model, model.roots[0]!.states[0]!, "GuardEntry");
+        expect(findCallers(model, "GuardEntry").some((c) => c.kind === "external-entry")).toBe(true);
+        expect(findCallers(model, "Node005")).toEqual([]); // nothing left under the old id
+    });
+
+    it("a renamed talk_p_proc entry keeps its entryCalls membership under the new id", () => {
+        const model: DialogModel = {
+            sourceLang: "ssl",
+            editable: false,
+            entryIds: ["Node001"],
+            entryCalls: [
+                { name: "Node001", topLevel: true, stmtRange: { start: 0, end: 5 }, targetRange: { start: 0, end: 5 } },
+            ],
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        { id: "Node001", text: "@1", choices: [], faithful: true, nameRange: { start: 0, end: 5 } },
+                    ],
+                },
+            ],
+            messages: {},
+        };
+        renameState(model, model.roots[0]!.states[0]!, "Node042");
+        expect(model.entryCalls?.[0]?.name).toBe("Node042");
+        expect(findCallers(model, "Node042").some((c) => c.kind === "entry")).toBe(true);
     });
 });

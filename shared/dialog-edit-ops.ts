@@ -155,6 +155,16 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
                     if (rewritten !== null) c.target = { ...c.target, label: rewritten };
                 }
     }
+    // Keep the denormalized entry arrays (keyed by state id) in sync with the rename, so the id-keyed UI
+    // predicates that read them - eligibleToDelete, findCallers - resolve the RENAMED node correctly (a stale
+    // entryIds would let a still-referenced external-entry node report as safe to delete). The writer rewrites
+    // references on the ORIGINAL model via renamedFrom, so only the edited model's copies move; outOfBandCalls
+    // is writer/original-only (no UI consumer reads it) and its targetRange is original-source-relative, so it
+    // is intentionally left untouched here.
+    const oldId = state.id;
+    if (model.entryIds) model.entryIds = model.entryIds.map((id) => (id === oldId ? trimmed : id));
+    if (model.entryCalls)
+        model.entryCalls = model.entryCalls.map((ec) => (ec.name === oldId ? { ...ec, name: trimmed } : ec));
     // Tag a source-backed node (has nameRange) with its ORIGINAL id so the SSL splicer can rewrite the
     // procedure name token + references it keys on. The `=== undefined` guard means a second rename keeps
     // the original source id, not an intermediate one.
@@ -214,6 +224,13 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     // source's entry status (which would auto-splice a `call <copy>;` into talk_p_proc on save). The parser
     // keeps unreachable dialog nodes visible, so the un-wired copy still shows in the graph.
     delete copy.isEntry;
+    // Strip the bundle/structured tier: a pending-new node always serializes FLAT (serializeSSLProcedure /
+    // serializeTSSLProcedure ignore branches), so a retained `branches`/`block` would (a) keep `choiceIds`
+    // pointing at the ORIGINAL choice ids the renumber below invalidates - an empty branch view - and (b) show
+    // an if/else structure that the saved file drops. The copy is a flat node carrying every option instead.
+    delete copy.branches;
+    delete copy.block;
+    delete copy.bundleFaithful;
     copy.choices = copy.choices.map((c, i) => {
         const { committed: _committed, ...rest } = c;
         return { ...rest, id: `${copy.id}#${i}` };
