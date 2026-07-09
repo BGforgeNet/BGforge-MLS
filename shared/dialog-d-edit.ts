@@ -275,6 +275,10 @@ function dialogStatesOf(model: DialogModel): DialogState[] {
  * Derived (CHAIN/INTERJECT/EXTEND) states are skipped - they are read-only and regenerate
  * from their preserved source construct. Non-weidu-d models are view-only (never written),
  * so they always verify.
+ *
+ * DELIBERATELY a TEST oracle, NOT wired into the live save path (see `verifySSLEditApplied`'s note): a
+ * live intended-vs-reparse comparison false-positives on a real multi-edit session because the webview
+ * model carries edit-session artifacts a clean re-parse does not. The round-trip unit tests use it.
  */
 export function verifyDialogEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
     if (intended.sourceLang !== "d") return { ok: true };

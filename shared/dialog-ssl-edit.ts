@@ -886,6 +886,13 @@ function targetKey(t: DialogTarget): string {
  * option-call spans inside a faithful node, so they can never remove a procedure; a node missing from
  * `actual` is therefore always an orphan, never lost data. Non-fallout-ssl models are never written
  * here, so they always verify.
+ *
+ * DELIBERATELY a TEST oracle, NOT wired into the live save path. The round-trip unit tests
+ * (`ssl-dialog-edit.test.ts`) call it on a single clean edit -> splice -> re-parse and it holds. It was
+ * briefly wired into panel.ts and false-positived on a real multi-edit session: the live webview model
+ * accumulates edit-session artifacts across successive saves (committed flags, mid-add pending items,
+ * selection remaps) that transiently diverge from a clean re-parse even when the SAVED FILE is correct,
+ * so a live intended-vs-reparse comparison cries wolf. The writers are guarded by these unit tests instead.
  */
 export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
     if (intended.sourceLang !== "ssl") return { ok: true };
