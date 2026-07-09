@@ -153,8 +153,13 @@
     // `labeled` mode) instead of the whole-state editor. Only flat options are tree-selectable (branch options
     // are read-only there), so this is scoped to a non-bundle state; `selectedChoiceId` then always names one
     // of `state.choices`. If the id doesn't resolve (e.g. stale after a delete), fall back to the full view.
+    // A structured node (`block`) renders its options through a dedicated read-only summary, exactly like a
+    // bundle node (`branches`); excluding both keeps a clicked option on a structured node out of the flat
+    // "focused option" template (dashed disabled inputs with no explanation banner) and in its own read-only view.
     const focusedChoice = $derived(
-        !state.branches && selectedChoiceId ? state.choices.find((c) => c.id === selectedChoiceId) : undefined,
+        !state.branches && !state.block && selectedChoiceId
+            ? state.choices.find((c) => c.id === selectedChoiceId)
+            : undefined,
     );
     const focusedIndex = $derived(focusedChoice ? state.choices.findIndex((c) => c.id === selectedChoiceId) : -1);
 
