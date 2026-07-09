@@ -16,7 +16,7 @@
     import ReconnectEdge from "./ReconnectEdge.svelte";
     import Tree from "./Tree.svelte";
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
-    import { buildConversationTree, type ConvState } from "./conversation-tree";
+    import { buildConversationTree, childStates, type ConvState } from "./conversation-tree";
     import { collectMatches } from "./tree-search";
     import { writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
@@ -281,12 +281,13 @@
     function goToSource(sourceOffset: number): void {
         postToHost({ type: "revealSource", offset: sourceOffset });
     }
-    // Every collapsible state in the current tree (each ConvState appears once).
+    // Every collapsible state in the current tree (each ConvState appears once). Walks children via the shared
+    // `childStates` so branch/block nodes' children are collapsed too, matching the tree's reveal/search walks.
     function allTreeStateIds(): string[] {
         const ids: string[] = [];
         const walk = (s: ConvState): void => {
             ids.push(s.id);
-            for (const r of s.replies) if (r.target.kind === "state") walk(r.target.node);
+            for (const k of childStates(s)) walk(k);
         };
         treeData.roots.forEach(walk);
         return ids;

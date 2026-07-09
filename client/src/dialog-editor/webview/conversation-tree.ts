@@ -324,3 +324,32 @@ export function buildConversationTree(
     for (const s of drawn) if (!shown.has(s.id)) roots.push(expand(s.id));
     return { roots };
 }
+
+/**
+ * The child ConvStates a node expands into - its replies' first-expansion `state` targets - across ALL reply
+ * shapes: flat replies, per-branch replies, and structured-block replies. A node populates exactly one of
+ * `replies`/`branches`/`block`, so this yields that one source's targets in render order (branch/flat, then
+ * block). The single traversal every tree walk shares (reveal-ancestors, collapse-all, find-in-tree) so none of
+ * them silently omits a branch or block node's children - the divergence that let those walks miss structured
+ * SSL nodes when each hand-rolled its own child collection.
+ */
+export function childStates(s: ConvState): ConvState[] {
+    const kids: ConvState[] = [];
+    if (s.branches)
+        for (const b of s.branches) for (const r of b.replies) if (r.target.kind === "state") kids.push(r.target.node);
+    for (const r of s.replies) if (r.target.kind === "state") kids.push(r.target.node);
+    if (s.block) collectBlockTargets(s.block, kids);
+    return kids;
+}
+
+/** Child states reached by a structured node's block replies, in block order (a helper for `childStates`). */
+function collectBlockTargets(block: ConvBlock, out: ConvState[]): void {
+    for (const item of block) {
+        if (item.kind === "reply") {
+            if (item.reply.target.kind === "state") out.push(item.reply.target.node);
+        } else if (item.kind === "group") {
+            collectBlockTargets(item.thenBlock, out);
+            if (item.elseBlock) collectBlockTargets(item.elseBlock, out);
+        }
+    }
+}

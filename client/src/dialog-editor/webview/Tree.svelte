@@ -1,6 +1,6 @@
 <script lang="ts">
     import { tick } from "svelte";
-    import type { ConversationTree, ConvState, ConvReply, ConvBranch, ConvBlock } from "./conversation-tree";
+    import { childStates, type ConversationTree, type ConvState, type ConvReply, type ConvBranch, type ConvBlock } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
     import { optionRemoveLockReason } from "./inspector-edit";
@@ -114,16 +114,10 @@
     // not an expanded node here (only a ref, or cross-file). Walks the conversation nesting - flat replies
     // and branch replies alike - so reveal() can un-collapse exactly the branches hiding the target.
     function ancestorsOf(targetId: string): string[] | null {
-        const childrenOf = (s: ConvState): ConvState[] => {
-            const kids: ConvState[] = [];
-            if (s.branches) for (const b of s.branches) for (const r of b.replies) if (r.target.kind === "state") kids.push(r.target.node);
-            for (const r of s.replies) if (r.target.kind === "state") kids.push(r.target.node);
-            return kids;
-        };
         const find = (s: ConvState, acc: string[]): string[] | null => {
             if (s.id === targetId) return acc;
             const next = [...acc, s.id];
-            for (const k of childrenOf(s)) {
+            for (const k of childStates(s)) {
                 const p = find(k, next);
                 if (p) return p;
             }

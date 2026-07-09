@@ -7,7 +7,7 @@
  * source access. Each match carries the same selection coordinates the tree's click handlers use, so
  * navigating a match reuses the existing select + reveal + scroll path.
  */
-import type { ConvBlock, ConvState, ConversationTree } from "./conversation-tree";
+import { childStates, type ConvBlock, type ConvState, type ConversationTree } from "./conversation-tree";
 
 export interface SearchMatch {
     /** Row key for the tree highlight: a state id (node/flat-line match), a choice id (option match), or a
@@ -77,28 +77,11 @@ export function collectMatches(tree: ConversationTree, rawQuery: string): Search
         }
 
         // Recurse into child states (first-expansion `state` targets), in render order: flat/branch replies,
-        // then block replies. Mirrors Tree.svelte's ancestorsOf so matches follow the visible layout.
-        const kids: ConvState[] = [];
-        if (s.branches)
-            for (const b of s.branches)
-                for (const r of b.replies) if (r.target.kind === "state") kids.push(r.target.node);
-        for (const r of s.replies) if (r.target.kind === "state") kids.push(r.target.node);
-        if (s.block) collectBlockTargets(s.block, kids);
-        for (const k of kids) walkState(k);
+        // then block replies. Uses the shared `childStates` so matches follow the same visible layout every
+        // tree walk (reveal, collapse-all) traverses.
+        for (const k of childStates(s)) walkState(k);
     };
 
     for (const root of tree.roots) walkState(root);
     return out;
-}
-
-/** Child states reached by a structured node's block replies, in block order (for the render-order recursion). */
-function collectBlockTargets(block: ConvBlock, out: ConvState[]): void {
-    for (const item of block) {
-        if (item.kind === "reply") {
-            if (item.reply.target.kind === "state") out.push(item.reply.target.node);
-        } else if (item.kind === "group") {
-            collectBlockTargets(item.thenBlock, out);
-            if (item.elseBlock) collectBlockTargets(item.elseBlock, out);
-        }
-    }
 }

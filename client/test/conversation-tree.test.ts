@@ -3,7 +3,12 @@
  * jump resolver that the graph and tree views both use.
  */
 import { describe, expect, it } from "vitest";
-import { buildConversationTree, type ConvState, type ConvTarget } from "../src/dialog-editor/webview/conversation-tree";
+import {
+    buildConversationTree,
+    childStates,
+    type ConvState,
+    type ConvTarget,
+} from "../src/dialog-editor/webview/conversation-tree";
 import { resolveJumpTarget } from "../src/dialog-editor/webview/jump-resolve";
 import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "../../shared/dialog-model";
 
@@ -486,5 +491,23 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
             buildConversationTree(r2, undefined, noJump, { ssl: true, fieldEditable: () => false }).roots[0]!
                 .approximate,
         ).toBeUndefined();
+    });
+});
+
+describe("childStates (shared tree traversal)", () => {
+    it("finds a branch node's reply target, which a flat-only walk misses", () => {
+        // A bundle (if/else) node keeps its replies per branch, so its flat `replies` is empty. A traversal that
+        // only walked flat replies (the old reveal/collapse-all walks) missed the branch reply's child state.
+        const r = root([
+            st("Hub", "@10", [ch("Hub#opt0", { kind: "state", stateId: "A" }, { text: "ask", condition: "X==0" })], {
+                branches: [
+                    { kind: "if", condition: "X==0", replies: [{ text: "@10" }], choiceIds: ["Hub#opt0"], opaque: [] },
+                ],
+            }),
+            st("A", "@30", [ch("A#0", { kind: "exit" })]),
+        ]);
+        const hub = buildConversationTree(r, { "10": "line", "30": "a" }, noJump).roots[0]!;
+        expect(hub.replies).toHaveLength(0); // branch node: no flat replies for a flat-only walk to find
+        expect(childStates(hub).map((c) => c.id)).toEqual(["A"]);
     });
 });
