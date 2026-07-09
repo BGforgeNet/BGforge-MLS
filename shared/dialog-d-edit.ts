@@ -19,7 +19,7 @@
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
-import { serializeChoice, serializeState, serializeTextValue } from "./dialog-d-serialize";
+import { serializeChoice, serializeSayValue, serializeState } from "./dialog-d-serialize";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
@@ -81,10 +81,12 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
     const ops: SpliceOp[] = [];
     if (original.text !== edited.text) {
         if (!original.sayRange) return null;
+        // `sayRange` covers the whole `text = text = text` value, so the replacement must re-emit every
+        // alternate - not just `edited.text` - or a multisay state loses its other lines here (see serializeSayValue).
         ops.push({
             start: original.sayRange.start,
             end: original.sayRange.end,
-            replacement: serializeTextValue(edited.text),
+            replacement: serializeSayValue(edited),
         });
     }
     if ((original.trigger ?? "") !== (edited.trigger ?? "")) {

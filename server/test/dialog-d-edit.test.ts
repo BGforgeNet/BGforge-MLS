@@ -518,4 +518,36 @@ END
         expect(out).toContain("COPY_TRANS ~second~ deep_renamed");
         expect(out).not.toMatch(/COPY_TRANS ~second~ deep\b/);
     });
+
+    // A multisay state (`SAY a = b = c`) carries every alternate in the model's `sayTexts`. The model's flat
+    // `text` field only holds the first, so any write-back that re-emits the SAY value from `text` alone would
+    // silently drop the other alternates on save. Both the whole-state re-serialize path (structural change) and
+    // the per-field SAY splice (which overwrites the whole `sayRange`) must preserve every alternate.
+    const MULTISAY = `BEGIN ~narrator~
+IF ~~ THEN BEGIN opening
+  SAY ~First line.~ = ~Second line.~ = ~Third line.~
+  IF ~~ THEN REPLY ~Continue.~ EXIT
+  IF ~~ THEN REPLY ~Leave.~ EXIT
+END
+END
+`;
+
+    it("multisay: a structural edit (remove option) preserves every SAY alternate", () => {
+        const original = modelFromD(parseDDialog(MULTISAY));
+        const edited = modelFromD(parseDDialog(MULTISAY));
+        const st = edited.roots.find((r) => r.kind === "dialog")!.states.find((s) => s.id === "opening")!;
+        // Removing a choice changes the transition count -> forces a whole-state re-serialize.
+        st.choices = [st.choices[0]!];
+        const out = applyDialogEdits(MULTISAY, edited, original);
+        expect(out).toContain("SAY ~First line.~ = ~Second line.~ = ~Third line.~");
+    });
+
+    it("multisay: editing the NPC line keeps the other SAY alternates", () => {
+        const original = modelFromD(parseDDialog(MULTISAY));
+        const edited = modelFromD(parseDDialog(MULTISAY));
+        const st = edited.roots.find((r) => r.kind === "dialog")!.states.find((s) => s.id === "opening")!;
+        st.text = "Edited first line.";
+        const out = applyDialogEdits(MULTISAY, edited, original);
+        expect(out).toContain("SAY ~Edited first line.~ = ~Second line.~ = ~Third line.~");
+    });
 });

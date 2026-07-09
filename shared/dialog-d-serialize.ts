@@ -58,6 +58,17 @@ export function serializeTextValue(text: string): string {
     return REF_TOKEN.test(text) ? text : `~${text}~`;
 }
 
+/**
+ * The value after `SAY` for a state. A single-text state emits just its `text`; a multisay state
+ * (`sayTexts` holds every alternate) re-joins them with ` = ` per the grammar's `say_text: text (= text)*`.
+ * `text` supplies the first alternate rather than `sayTexts[0]` so an edit to the NPC line is reflected,
+ * while `sayTexts[1..]` (which the inspector does not expose) are preserved verbatim.
+ */
+export function serializeSayValue(state: DialogState): string {
+    if (!state.sayTexts || state.sayTexts.length <= 1) return serializeTextValue(state.text);
+    return [state.text, ...state.sayTexts.slice(1)].map((t) => serializeTextValue(t)).join(" = ");
+}
+
 export function serializeState(state: DialogState): string[] {
     const lines: string[] = [];
 
@@ -65,7 +76,7 @@ export function serializeState(state: DialogState): string[] {
     const weight = state.weight != null ? `WEIGHT #${state.weight} ` : "";
     const trigger = state.trigger ?? "";
     lines.push(`  IF ${weight}~${trigger}~ THEN BEGIN ${state.id}`);
-    lines.push(`    SAY ${serializeTextValue(state.text)}`);
+    lines.push(`    SAY ${serializeSayValue(state)}`);
 
     for (const choice of state.choices) {
         lines.push(`    ${serializeChoice(choice)}`);

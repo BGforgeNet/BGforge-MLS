@@ -197,6 +197,14 @@ export interface DialogState {
     sayRange?: { start: number; end: number };
     triggerRange?: { start: number; end: number };
     /**
+     * Every SAY alternate of a multisay state (`SAY a = b = c`), in source order, including the first.
+     * The flat `text` field carries only the first alternate for display, so a write-back that re-emits the
+     * SAY value from `text` alone would drop the rest on save; the WeiDU D writer re-joins these with ` = `
+     * (with `text` supplying the first, so an edit to the NPC line is reflected). Set by the WeiDU D adapter;
+     * a single-text state leaves it absent (a one-element list would be equivalent).
+     */
+    sayTexts?: string[];
+    /**
      * Set when this state was expanded from a higher-level construct (WeiDU CHAIN /
      * INTERJECT / EXTEND, etc.) rather than authored as a standalone, independently
      * addressable state. Names the construct, for display. A derived state has no
@@ -562,6 +570,8 @@ function stateFromD(s: DDialogState): DialogState {
         forwardDeclStmtRange: s.forwardDeclStmtRange,
         sayRange: s.sayRange,
         triggerRange: s.triggerRange,
+        // Carry every SAY alternate so a multisay state round-trips; a single-text state leaves it absent.
+        sayTexts: s.sayTexts && s.sayTexts.length > 1 ? s.sayTexts.map((t) => t.text) : undefined,
         derivedFrom: s.derivedFrom,
     };
 }
