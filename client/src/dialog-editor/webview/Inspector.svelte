@@ -33,7 +33,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, fieldEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -53,16 +53,11 @@
         onFocusOwnerState: () => void;
         format: RenderFamily;
         editable: boolean;
-        // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
-        // a faithful node, which gains the structural ops the save path can persist (retarget, reorder,
-        // add/remove unconditional option). Delete is gated separately by `deletable` below; the rest of
-        // the D edit surface (rename, condition/action, duplicate) stays read-only for SSL - D-only or
-        // later SSL tiers the save path can't persist yet.
+        // Per-node editability (`nodeEditable`): field AND structural edits both round-trip to source - the two
+        // coincide now, so this is the single gate (retarget, reorder, add/remove option, and the reaction/low-INT
+        // and rename/duplicate ops the save path persists). A faithful SSL/TSSL node, a bundle, a locally-new node,
+        // or a non-derived faithful D/TD state. Delete is gated separately by `deletable` below.
         structuralEditable: boolean;
-        // Per-node FIELD editability (retarget, and later text/condition): a superset of structuralEditable
-        // that also covers td/tssl faithful nodes, whose field edits round-trip to source even though their
-        // structural add/remove is Phase 3. For d/ssl this equals structuralEditable (no separate behavior).
-        fieldEditable: boolean;
         // Whether this node can be deleted (D: any non-derived; faithful SSL: only when every inbound
         // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
         // the SSL Delete button (Tier 3a); D's delete stays in the `!readOnly` ops block below.
@@ -142,11 +137,11 @@
     // editing it would require rewriting the containing construct, which the save does not do.
     const readOnly = $derived(!editable || Boolean(state.derivedFrom));
 
-    // Message text (the NPC line and player replies) persists for every source language - D/TD to the
-    // .tra, SSL/TSSL to the .msg - so it stays editable even when the structure is read-only. Gates on
-    // per-node FIELD editability (not the whole-file `editable`) so a faithful td/tssl node's text is
-    // editable while its structural add/remove stays Phase 3. A derived state is fully read-only.
-    const textRO = $derived(Boolean(state.derivedFrom) || (!fieldEditable && !ssl));
+    // Message text (the NPC line and player replies) is a .tra/.msg edit keyed by @N, independent of the
+    // structure - so for the D-family it stays editable even when the STRUCTURE is read-only (e.g. an unfaithful
+    // TD state): a typo in an else-branch line can still be fixed. Only a derived state (no own source) locks it.
+    // The SSL family does its own per-option text/condition gating inside the `ssl` branch below.
+    const textRO = $derived(Boolean(state.derivedFrom));
 
     // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
@@ -303,20 +298,19 @@
             model, so the tree shown is a simplification - not everything here is represented. Read the
             <b>source file</b> for the full logic. Text edits still save to the <b>{textFile}</b>.
         </div>
-    {:else if fieldEditable && !structuralEditable}
-        <!-- Faithful td/tssl (and the field-edit tier generally): FIELD edits round-trip to the source file
-             the user opened; only add/remove/reorder structure is deferred to source. The copy stays generic
-             ("the source file") so it reads right whether that file is a .td, .tssl, .ssl, or .d. -->
-        <div class="ronote">
-            Text edits save to the <b>{textFile}</b>; an option's <b>target</b>{#if ssl}{" "}and its
-                <b>condition</b>{/if} write{ssl ? "" : "s"} back to the <b>source file</b>. Adding, removing,
-            or reordering options is source-only - edit the <b>source file</b> for that.
-        </div>
     {:else if ssl}
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>. The dialog structure (options, targets,
             conditions) is read-only - this node is not simple enough to edit safely from the graph;
             edit the <b>source file</b> for that.
+        </div>
+    {:else if !structuralEditable}
+        <!-- D-family (D/TD) node the parser could not fully model (an inner if/else it can't round-trip), so its
+             structure is read-only. Text still saves (a .tra edit is structure-independent). -->
+        <div class="ronote">
+            Text edits save to the <b>{textFile}</b>. The dialog <b>structure</b> is read-only - this state uses a
+            conditional branch (an <code>if</code>/<code>else</code>) the editor can't fully model yet; edit the
+            <b>source file</b> for that.
         </div>
     {/if}
 
@@ -437,7 +431,7 @@
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
             {#if labeled}<div class="ik">Target</div>{/if}
-            <select class="iv tgt" disabled={!fieldEditable} title={!fieldEditable ? structReason : ""} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
+            <select class="iv tgt" disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
                 {/if}

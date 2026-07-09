@@ -224,7 +224,16 @@ describe("modelToFlow - spotlight flag", () => {
         const ssl: DialogModel = {
             sourceLang: "ssl",
             editable: false,
-            roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [] }] }],
+            // A parsed non-faithful SSL node carries a procRange; without one it would read as a locally-new node
+            // (editable). This fixture is a real parsed read-only node, so its handle is non-connectable.
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [{ id: "N", text: "@1", choices: [], procRange: { start: 0, end: 10 } }],
+                },
+            ],
         };
         expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(false);
         expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.fieldEditable).toBe(true);
@@ -236,7 +245,15 @@ describe("modelToFlow - spotlight flag", () => {
         const ssl = (faithful: boolean): DialogModel => ({
             sourceLang: "ssl",
             editable: false,
-            roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [], faithful }] }],
+            // procRange present -> a parsed node, so faithful=false reads as read-only (not a locally-new node).
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [{ id: "N", text: "@1", choices: [], faithful, procRange: { start: 0, end: 10 } }],
+                },
+            ],
         });
         expect(modelToFlow(ssl(true)).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(true);
         expect(modelToFlow(ssl(false)).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(false);

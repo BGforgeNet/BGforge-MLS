@@ -7,6 +7,7 @@
  * nodes so no edge dangles.
  */
 
+import { nodeEditable } from "../../../../shared/dialog-editability";
 import {
     isFlaggedNode,
     renderFamily,
@@ -155,13 +156,10 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // True when this node's line or a reply shares a .msg/.tra ref with another node
                     // (e.g. a duplicated node) - editing the text here also changes the other node.
                     sharedText: isShared(s),
-                    // Field editability (drives output-handle connectability for RETARGET): the ssl-family
-                    // superset - real SSL plus faithful/bundle TSSL, whose target token round-trips to source.
-                    fieldEditable:
-                        model.editable ||
-                        model.sourceLang === "td" || // every TD state (derivedFrom gates connectability separately)
-                        ((model.sourceLang === "ssl" || model.sourceLang === "tssl") &&
-                            (s.faithful === true || s.bundleFaithful === true)),
+                    // Editability (drives output-handle connectability for RETARGET) via the ONE shared predicate
+                    // the inspector and graph gate on, so the card can't be dragged when they say read-only - in
+                    // particular an unfaithful TD state (faithful === false) is not drag-retargetable.
+                    fieldEditable: nodeEditable(model, s),
                 },
             });
 

@@ -27,7 +27,7 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
-    import { eligibleToDelete, isLocalNewSSLNode } from "../../../../shared/dialog-ssl-edit";
+    import { nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
     import { hasHost, postToHost } from "./host";
     import {
         renderFamily,
@@ -255,7 +255,7 @@
                   ssl: renderFamily(editModel.sourceLang) === "fallout-ssl",
                   // The SAME per-state predicate the graph/inspector gate on, so the tree's text lock matches
                   // the inspector (a .td state is field-editable even though editModel.editable is false).
-                  fieldEditable: (s) => fieldEditable(s),
+                  fieldEditable: (s) => structEditable(s),
               })
             : { roots: [] },
     );
@@ -827,44 +827,12 @@
     // model transform, then relayouts (keeping the viewport mid-edit) and updates
     // selection. The correctness-critical logic (ref-update on rename, redirect on
     // delete, sourceRange handling on duplicate) lives in the tested ops module.
-    // Per-node structural editability for the Tier 1 SSL ops (retarget + reorder). A D state
-    // tracks the model-level flag; an SSL node is editable only when faithfully representable
-    // (DialogState.faithful), so retarget/reorder write back losslessly via applySSLDialogEdits.
-    // The other ops (rename/add/remove/delete/duplicate) stay on `editable` - D-only / later tiers.
-    // A locally-added SSL node (isLocalNewSSLNode) is editable immediately: it has no `faithful` flag yet
-    // (only the parser sets that, on the next save round-trip), but we created it, so it is safe to edit,
-    // delete, and add options to. Without this a freshly-added node stays greyed out until a save.
-    const structEditable = (s: DialogState | null): s is DialogState =>
-        s != null &&
-        !s.derivedFrom &&
-        // Faithful SSL/TSSL and every non-derived TD node are structurally editable: the writers serialize
-        // add/remove/rename of nodes and options back to source. TD (D-family) has no faithfulness tier, so it
-        // mirrors fieldEditable's unconditional td clause. Reaction and low-INT are Fallout (SSL-family) concepts,
-        // so their controls apply to ssl/tssl only; the reaction/low-INT action handlers and their Inspector
-        // controls gate on sourceLang directly, so enabling structural editing for td here surfaces no no-op.
-        (editModel.editable ||
-            editModel.sourceLang === "td" ||
-            ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
-                (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
-
-    // Per-node FIELD editability (retarget now; text/condition next). A superset of structEditable that also
-    // enables td/tssl faithful/bundle nodes: their FIELD edits round-trip to the TS source via the recorded
-    // ranges even though structural add/remove/rename is Phase 3. For d/ssl this equals structEditable.
-    const fieldEditable = (s: DialogState | null): s is DialogState =>
-        s != null &&
-        !s.derivedFrom &&
-        // Inlines structEditable's core rather than calling it: `structEditable(s) || ...` would narrow s to
-        // `never` on the right (a negated `s is DialogState` guard). Adds the tssl family to the ssl clause.
-        (editModel.editable ||
-            editModel.sourceLang === "td" || // every non-derived TD state is field-editable (D-family)
-            ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&
-                (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
-
-    // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
-    // only when every inbound reference can be cleaned up on save (eligibleToDelete - not an entry, not
-    // reached by a `call`, no inbound option in a non-faithful node). eligibleToDelete returns true for D.
-    const canDelete = (s: DialogState | null): s is DialogState =>
-        structEditable(s) && eligibleToDelete(editModel, s.id);
+    // Per-node editability lives in the shared `nodeEditable`/`nodeDeletable` predicates (one definition the
+    // inspector shares, so the two views can never disagree). Field and structural editability coincide now, so
+    // there is one predicate, not the former structEditable/fieldEditable pair. These thin closures bind the model
+    // and preserve the `s is DialogState` narrowing the template filters and handlers rely on.
+    const structEditable = (s: DialogState | null): s is DialogState => nodeEditable(editModel, s);
+    const canDelete = (s: DialogState | null): s is DialogState => nodeDeletable(editModel, s);
 
     // Ids of the active root's structurally-editable states, for the tree's inline add/remove-option
     // affordances (the "+" row and the per-option hover "x"). Same derivation the graph uses for
@@ -994,7 +962,7 @@
             void rebuild({ frame: "none" });
         },
         setTarget: (choiceId: string, target: DialogTarget) => {
-            if (!fieldEditable(selected)) return; // retarget is a FIELD edit: D, faithful SSL, or faithful td/tssl
+            if (!structEditable(selected)) return; // retarget: D, faithful SSL/TSSL, or a faithful/new td node
             ops.setChoiceTarget(selected, choiceId, target);
             void rebuild({ frame: "none" });
         },
@@ -1150,7 +1118,7 @@
         // Only a structurally-editable node (D, or a faithful SSL node) can be retargeted; reject
         // the canvas gesture for derived/non-faithful sources just as the inspector and the locked
         // edge anchor do.
-        if (!owner || !fieldEditable(owner)) return;
+        if (!owner || !structEditable(owner)) return;
         let target: DialogTarget;
         if (targetNodeId === "exit") target = { kind: "exit" };
         // The Combat terminal (SSL Node998) is a synthetic node, not a model state; map a drop on it back to a
@@ -1218,7 +1186,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} fieldEditable={fieldEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
