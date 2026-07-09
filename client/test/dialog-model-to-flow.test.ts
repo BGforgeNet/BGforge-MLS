@@ -216,30 +216,30 @@ describe("modelToFlow - spotlight flag", () => {
         expect(stateBadges(cardState)).toContain("side-effect");
     });
 
-    test("carries structural editability onto each card (drives handle connectability)", () => {
-        // Node.svelte gates drag-to-retarget on data.structuralEditable; an editable (D) model
-        // marks its cards editable, while a view-only SSL model with no faithful node marks them
-        // non-editable so structure can't be dragged. Guards the source of that wiring (the SSL
-        // faithful/non-faithful split is covered by the dedicated test below).
+    test("carries field editability onto each card (drives handle connectability)", () => {
+        // Node.svelte gates drag-to-retarget on data.fieldEditable; an editable (D) model marks its
+        // cards editable, while a view-only SSL model with no faithful node marks them non-editable so
+        // structure can't be dragged. Guards the field the card actually reads (the SSL faithful/
+        // non-faithful split is covered by the dedicated test below).
         const ssl: DialogModel = {
             sourceLang: "ssl",
             editable: false,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [] }] }],
         };
-        expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(false);
-        expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.structuralEditable).toBe(true);
+        expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(false);
+        expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.fieldEditable).toBe(true);
     });
 
-    test("a faithful SSL node is structurally editable; a non-faithful one is not", () => {
-        // structuralEditable promotes the model-level `editable` to per-node: a view-only SSL
-        // model still lets faithful nodes be edited structurally, while complex ones stay locked.
+    test("a faithful SSL node is field-editable; a non-faithful one is not", () => {
+        // fieldEditable promotes the model-level `editable` to per-node: a view-only SSL model still
+        // lets faithful nodes be edited (retarget), while complex ones stay locked.
         const ssl = (faithful: boolean): DialogModel => ({
             sourceLang: "ssl",
             editable: false,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [], faithful }] }],
         });
-        expect(modelToFlow(ssl(true)).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(true);
-        expect(modelToFlow(ssl(false)).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(false);
+        expect(modelToFlow(ssl(true)).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(true);
+        expect(modelToFlow(ssl(false)).nodes.find((n) => n.id === "N")?.data.fieldEditable).toBe(false);
     });
 });
 
