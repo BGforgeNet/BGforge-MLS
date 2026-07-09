@@ -23,6 +23,7 @@
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { translationHint, unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
+    import { decideReparse, type ReparseMessage } from "./reparse-decision";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
@@ -761,37 +762,21 @@
 
     // Re-parse message from the host (production only): after it splices a self-edit into the source, the host
     // posts the faithful parse (`reparse:true`) so the tree becomes a pure view of source - real spans (F4
-    // resolves), canonical ids. Two cases:
-    //  - NO inline edit open -> adopt the parse wholesale (adoptModel), remapping the just-added option's
-    //    selection through the allocated `@N`.
-    //  - an inline edit IS open -> the user is mid-typing; adopting would re-seed the input and lose the draft.
-    //    So keep the optimistic copy and only stamp the allocated `@N` in place (applyReconcile) - which stops
-    //    the next save re-splicing/duplicating the pending item - and adopt the faithful parse once the edit
-    //    closes (its commit re-emits, and that re-parse arrives with no edit open).
-    // A stale re-parse (seq behind the latest emit) is dropped: a newer optimistic edit already supersedes it.
-    // suppressEmit keeps either host-driven mutation from echoing back as an edit. The body reads no reactive
-    // state at registration, so the listener registers once.
+    // resolves), canonical ids. The ignore/reconcile/adopt routing (stale-seq drop, editing-open draft
+    // preservation) is the pure kernel in reparse-decision.ts, unit-tested there. suppressEmit keeps either
+    // host-driven mutation from echoing back as an edit (adoptModel sets it itself on the adopt path). The
+    // body reads no reactive state at registration, so the listener registers once.
     $effect(() => {
         function onReparse(e: MessageEvent): void {
-            const d = e.data as
-                | {
-                      type?: string;
-                      reparse?: boolean;
-                      model?: DialogModel;
-                      seq?: number;
-                      allocations?: Record<string, string>;
-                      messages?: Record<string, string>;
-                  }
-                | null;
-            if (d?.type !== "model" || !d.reparse || !d.model) return;
-            if (d.seq !== localSeq) return; // stale: a newer optimistic edit already superseded this parse
             const editing = editingChoiceId !== null || editingStateId !== null || renamingStateId !== null;
-            if (editing) {
+            const decision = decideReparse(e.data as ReparseMessage | null, localSeq, editing);
+            if (decision.kind === "ignore") return;
+            if (decision.kind === "reconcile") {
                 suppressEmit = true;
-                ops.applyReconcile(editModel, d.allocations ?? {}, d.messages);
+                ops.applyReconcile(editModel, decision.allocations, decision.messages);
                 void rebuild({ frame: "none" });
             } else {
-                adoptModel(d.model, d.allocations, d.messages);
+                adoptModel(decision.model, decision.allocations, decision.messages);
             }
         }
         window.addEventListener("message", onReparse);
