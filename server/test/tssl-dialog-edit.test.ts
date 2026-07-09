@@ -338,4 +338,63 @@ function talk_p_proc() { Node001(); }
         const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
         expect(n1r.choices).toHaveLength(1);
     });
+
+    // Parity with the SSL shared-block removal cases: a flat option plus a SHARED `if` gating TWO options
+    // (multi-call block -> impure -> conditionEditable=false), in TS syntax through the same shared nodeOps engine.
+    const SRC_SHARED_RM = `function Node001() {
+    NOption(101, Node002, 4);
+    if (local_var(LVAR_x) == 0) {
+        NOption(102, Node003, 4);
+        NOption(103, Node004, 4);
+    }
+}
+function Node002() { Reply(200); }
+function Node003() { Reply(300); }
+function Node004() { Reply(400); }
+function talk_p_proc() { Node001(); }
+`;
+
+    it("the shared-block fixture parses to a faithful node whose if-gated options are condition-read-only (guard)", () => {
+        const m = tsslModel(SRC_SHARED_RM);
+        const n1 = m.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1.faithful).toBe(true);
+        expect(n1.bundleFaithful ?? false).toBe(false);
+        expect(n1.choices).toHaveLength(3);
+        const [flatOpt, o102, o103] = n1.choices;
+        expect(flatOpt!.condition ?? "").toBe("");
+        expect(o102!.condition).toContain("local_var(LVAR_x)");
+        expect(o102!.conditionEditable).toBe(false);
+        expect(o103!.conditionEditable).toBe(false);
+        expect(o102!.ifRange).toEqual(o103!.ifRange); // one shared `if`
+        expect(o102!.stmtRange).not.toEqual(o103!.stmtRange); // distinct calls
+    });
+
+    it("removing one option from a shared `if` block keeps the `if`, the sibling, and the flat option", () => {
+        const original = tsslModel(SRC_SHARED_RM);
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => !(c.target.kind === "state" && c.target.stateId === "Node003"));
+        const out = applyTSSLDialogEdits(SRC_SHARED_RM, edited, original);
+        expect(out).not.toContain("NOption(102");
+        expect(out).toContain("if (local_var(LVAR_x) == 0)"); // shared `if` survives
+        expect(out).toContain("NOption(103, Node004, 4);"); // sibling survives
+        expect(out).toContain("NOption(101, Node002, 4);"); // flat option survives
+        const n1r = tsslModel(out).roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(2);
+    });
+
+    it("removing ALL options from a shared `if` block leaves no dead empty gate", () => {
+        const original = tsslModel(SRC_SHARED_RM);
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.condition === undefined); // keep only the flat option
+        const out = applyTSSLDialogEdits(SRC_SHARED_RM, edited, original);
+        expect(out).toContain("NOption(101, Node002, 4);");
+        expect(out).not.toContain("NOption(102");
+        expect(out).not.toContain("NOption(103");
+        expect(out).not.toContain("local_var(LVAR_x)"); // the whole `if` is gone, not left as an empty `if () {}`
+        expect(out).not.toMatch(/\bif\b[^{]*\{\s*\}/); // no dead empty `if (...) { }` gate
+        const n1r = tsslModel(out).roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(1);
+    });
 });

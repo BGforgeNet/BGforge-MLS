@@ -1551,4 +1551,78 @@ procedure talk_p_proc begin call Node001; end
         const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
         expect(n1r.choices).toHaveLength(1);
     });
+
+    // A flat option plus a SHARED-block `if` gating TWO options (multi-call then-branch -> ifPure=false ->
+    // conditionEditable=false). The dangerous corner: removing ONE shared-block option must splice only that
+    // option's own call, never the `if` that also gates its sibling - otherwise the sibling is silently deleted.
+    const SRC_SHARED_RM = `procedure Node001 begin
+    NOption(101, Node002, 4);
+    if (local_var(LVAR_x) == 0) then begin
+        NOption(102, Node003, 4);
+        NOption(103, Node004, 4);
+    end
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure Node004 begin Reply(400); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    it("the shared-block fixture parses to a faithful node whose if-gated options are condition-read-only (guard)", async () => {
+        // Without this guard the removal test could pass vacuously on a mis-parsed fixture (e.g. a bundle node,
+        // which takes a different write-back path). Confirm the exact construct: a faithful Node001 with a flat
+        // option (condition-editable) and two if-gated options that share one `ifRange` and are NOT editable.
+        const m = modelFromSSL(await parseDialog(SRC_SHARED_RM));
+        const n1 = m.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1.faithful).toBe(true);
+        expect(n1.bundleFaithful ?? false).toBe(false);
+        expect(n1.choices).toHaveLength(3);
+        const [flatOpt, o102, o103] = n1.choices;
+        expect(flatOpt!.condition ?? "").toBe(""); // flat option, no gate
+        expect(o102!.condition).toContain("local_var(LVAR_x)"); // both if-gated options carry the shared gate
+        expect(o103!.condition).toContain("local_var(LVAR_x)");
+        expect(o102!.conditionEditable).toBe(false); // multi-call `if` -> impure -> read-only condition
+        expect(o103!.conditionEditable).toBe(false);
+        // The two share ONE `if` statement (same ifRange), each with its own call `stmtRange`.
+        expect(o102!.ifRange).toEqual(o103!.ifRange);
+        expect(o102!.stmtRange).not.toEqual(o103!.stmtRange);
+    });
+
+    it("removing one option from a shared `if` block keeps the `if`, the sibling, and the flat option", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_SHARED_RM));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Drop only the first if-gated option (102 -> Node003); its sibling 103 shares the same `if`.
+        n1.choices = n1.choices.filter((c) => !(c.target.kind === "state" && c.target.stateId === "Node003"));
+        const out = applySSLDialogEdits(SRC_SHARED_RM, edited, original);
+        expect(out).not.toContain("NOption(102"); // the removed option is gone
+        expect(out).toContain("if (local_var(LVAR_x) == 0)"); // the shared `if` wrapper SURVIVES (not spliced out)
+        expect(out).toContain("NOption(103, Node004, 4);"); // the sibling in the same `if` survives
+        expect(out).toContain("NOption(101, Node002, 4);"); // the flat option survives
+        // Reparse: Node001 keeps two options (101 flat, 103 still gated by the intact `if`).
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(2);
+        const survivor = n1r.choices.find((c) => c.target.kind === "state" && c.target.stateId === "Node004")!;
+        expect(survivor.condition).toContain("local_var(LVAR_x)"); // 103 is still conditionally gated
+    });
+
+    it("removing ALL options from a shared `if` block leaves no dead empty gate", async () => {
+        // The boundary of the shared-block removal: drop BOTH if-gated options. Splicing each option's own call
+        // would otherwise leave a dead `if (...) then begin end` husk. Intent: the node keeps only its flat
+        // option, with no empty gate left behind.
+        const original = modelFromSSL(await parseDialog(SRC_SHARED_RM));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.condition === undefined); // keep only the flat option (101)
+        const out = applySSLDialogEdits(SRC_SHARED_RM, edited, original);
+        expect(out).toContain("NOption(101, Node002, 4);"); // the flat option survives
+        expect(out).not.toContain("NOption(102"); // both if-gated options are gone
+        expect(out).not.toContain("NOption(103");
+        expect(out).not.toContain("local_var(LVAR_x)"); // the whole `if` is gone, not left as an empty gate
+        expect(out).not.toMatch(/then\s+begin\s+end/); // no dead empty `if (...) then begin end` gate left behind
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(1);
+    });
 });

@@ -235,10 +235,34 @@ export function nodeOps(
     // own statement. The SSL engine previously BAILED on any conditional-option removal (returned no ops for the
     // whole node, deferring to a later tier); TSSL's writer already removed pure-conditional options this way, so
     // the unified engine adopts it - SSL gains safe conditional-option removal at parity with TSSL. A shared-block
-    // conditional (`conditionEditable === false`) still removes only its own call, never the `if` that also gates
-    // its siblings. Line-aware `removeStatementSplice` eats the option's line cleanly (no stray blank line).
+    // conditional (`conditionEditable === false`) removes only its own call, never the `if` that also gates its
+    // siblings. Line-aware `removeStatementSplice` eats the option's line cleanly (no stray blank line).
+    //
+    // BOUNDARY: when EVERY option of one shared `if` block is removed in the same save (a rapid double-remove the
+    // 250ms edit-debounce can coalesce into one edit), splicing each option's line individually would leave a dead
+    // `if (...) then begin end` husk. Detect a fully-emptied shared `if` and splice the whole `if` once instead.
+    const ifKey = (r: { start: number; end: number }): string => `${r.start}:${r.end}`;
+    const sharedIf = new Map<string, { total: number; removed: number }>();
+    for (const o of origOpts) {
+        if (!o.ifRange || o.conditionEditable !== false) continue; // only multi-call shared blocks (impure `if`)
+        const k = ifKey(o.ifRange);
+        const e = sharedIf.get(k) ?? { total: 0, removed: 0 };
+        e.total++;
+        if (!editedIds.has(o.id)) e.removed++;
+        sharedIf.set(k, e);
+    }
+    const emptiedIfs = new Set([...sharedIf].filter(([, v]) => v.removed === v.total).map(([k]) => k));
+    const splicedEmptiedIfs = new Set<string>();
     for (const o of origOpts) {
         if (editedIds.has(o.id)) continue;
+        // Shared `if` whose every option is being removed -> splice the whole `if` once (dedup across its options).
+        if (o.ifRange && o.conditionEditable === false && emptiedIfs.has(ifKey(o.ifRange))) {
+            const k = ifKey(o.ifRange);
+            if (splicedEmptiedIfs.has(k)) continue;
+            splicedEmptiedIfs.add(k);
+            ops.push(removeStatementSplice(text, o.ifRange));
+            continue;
+        }
         const removeSpan = o.ifRange && o.conditionEditable !== false ? o.ifRange : o.stmtRange;
         if (!removeSpan) return []; // no removable span -> cannot remove safely
         ops.push(removeStatementSplice(text, removeSpan));
