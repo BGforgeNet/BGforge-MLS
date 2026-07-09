@@ -21,7 +21,8 @@ direct `DialogGraph` mount: the point of the harness is to exercise what product
 ## Run
 
 ```bash
-# Rebuild app.html after any webview/Svelte change (bundles harness-main -> App):
+# Build app.html (a generated bundle - gitignored, not committed; required before any driver runs,
+# and rebuilt after any webview/Svelte change):
 pnpm exec tsx client/src/dialog-editor/test/harness/build.mts
 # Drive the production path (posts the model, asserts render + a Duplicate edit + the
 # error state; fails on any uncaught page error or CSP violation; writes the screenshot to repo tmp/):
@@ -33,7 +34,8 @@ Prereqs are environmental, not repo deps: Playwright + a Chromium browser on `PA
 ## Files
 
 - `harness-main.ts` - mounts `App.svelte` (the production root).
-- `build.mts` - bundles it to `app.html` with a production-shaped CSP.
+- `build.mts` - bundles it to `app.html` (gitignored) with a production-shaped CSP.
+- `driver-util.ts` - shared driver plumbing: app.html resolution (fail-loud when unbuilt) + the check/report accumulator.
 - `render.mts` - the production-path driver (assertions + screenshot).
 - `render-search.mts` - the tree find-bar driver (find-as-you-type, navigation, node-id dim guard).
 - `edit-behavior.mts` - the selection/add/edit driver (the unified `select()` primitive + shared add/remove paths).

@@ -9,21 +9,12 @@
  *   pnpm exec tsx client/src/dialog-editor/test/harness/edit-behavior.mts
  */
 import { chromium } from "playwright";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { mkdirSync } from "node:fs";
 import { REAL_MODEL } from "./real-model";
+import { harnessPaths, makeChecker } from "./driver-util";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const appHtml = path.join(here, "app.html");
-const outDir = path.resolve(here, "../../../../../tmp");
-mkdirSync(outDir, { recursive: true });
+const { appHtml } = harnessPaths(import.meta.url);
 
-const results: boolean[] = [];
-function check(label: string, ok: boolean, detail = ""): void {
-    results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? "  " + detail : ""}`);
-}
+const { check, finish } = makeChecker();
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1300, height: 900 } });
@@ -133,10 +124,5 @@ check(
 );
 
 await browser.close();
-if (errs.length) {
-    console.log("\nPAGE ERRORS:");
-    for (const err of errs) console.log("  " + err);
-}
-const failed = results.filter((r) => !r).length + errs.length;
-console.log(`\n${failed === 0 ? "OK" : "FAILED"}: ${results.length} checks, ${failed} problem(s)`);
-process.exit(failed === 0 ? 0 : 1);
+
+finish(errs);

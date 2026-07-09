@@ -19,21 +19,13 @@
 
 import { chromium } from "playwright";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { mkdirSync } from "node:fs";
 import { REAL_MODEL } from "./real-model";
+import { harnessPaths, makeChecker } from "./driver-util";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const appHtml = path.join(here, "app.html");
-// Runtime artefacts go under the repo-level tmp/, never the source tree (project convention).
-const outDir = path.resolve(here, "../../../../../tmp");
-mkdirSync(outDir, { recursive: true });
+const { appHtml, outDir } = harnessPaths(import.meta.url);
 const shot = process.argv[2] ?? path.join(outDir, "dialog-harness-shot.png");
 
-const results: string[] = [];
-function check(label: string, ok: boolean, detail = ""): void {
-    results.push(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? "  " + detail : ""}`);
-}
+const { check, finish } = makeChecker();
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1100, height: 700 } });
@@ -601,9 +593,4 @@ check("no CSP violations", cspViolations.length === 0, cspViolations.join(" | ")
 
 await browser.close();
 
-console.log("wrote " + shot);
-console.log("\n=== dialog production-path harness results ===");
-console.log(results.join("\n"));
-const failed = results.filter((r) => r.startsWith("FAIL")).length;
-console.log(failed === 0 ? "\nALL DIALOG PRODUCTION-PATH ASSERTIONS PASS" : `\n${failed} ASSERTION(S) FAILED`);
-if (failed > 0) process.exit(1);
+finish([], `Screenshot: ${shot}`);
