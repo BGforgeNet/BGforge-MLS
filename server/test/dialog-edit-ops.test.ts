@@ -8,7 +8,7 @@ import {
     type DialogModel,
     type DialogState,
 } from "../../shared/dialog-model";
-import { applyDialogEdits } from "../../shared/dialog-d-edit";
+import { applyDDialogEdits } from "../../shared/dialog-d-edit";
 import * as ops from "../../shared/dialog-edit-ops";
 
 const SRC = `APPEND ~coranj~
@@ -135,7 +135,7 @@ END
     it("a duplicated state does not corrupt the original on surgical save", () => {
         const m = model();
         ops.duplicateState(m, state(m, "hello"));
-        const out = applyDialogEdits(SRC, m);
+        const out = applyDDialogEdits(SRC, m);
         // The original `hello` block is untouched (the copy has no sourceRange to splice).
         expect(out).toContain("BEGIN hello");
         expect((out.match(/BEGIN hello\b/g) ?? []).length).toBe(1);
@@ -148,7 +148,7 @@ END
         // retarget the rename's ref pass is irrelevant here; set content directly
         added.text = "A new line.";
         added.choices.push({ id: "fresh#0", text: "ok", target: { kind: "exit" } });
-        const out = applyDialogEdits(SRC, m);
+        const out = applyDDialogEdits(SRC, m);
         expect(out).toContain("BEGIN fresh");
         // Original states + comment-free structure preserved; re-parse round-trips the new state.
         const reparsed = modelFromD(parseDDialog(out));
@@ -240,7 +240,7 @@ END
         const s = ops.addState(m);
         s.text = "A brand new line.";
         s.choices.push({ id: `${s.id}#0`, text: "ok", target: { kind: "exit" } });
-        const out = applyDialogEdits("", m);
+        const out = applyDDialogEdits("", m);
         expect(out).toContain("BEGIN ~mydlg~"); // wraps the states so they form a valid dialog file
         const reparsed = modelFromD(parseDDialog(out));
         const again = reparsed.roots.flatMap((r) => r.states).find((st) => st.id === s.id);

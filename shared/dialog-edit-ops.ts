@@ -295,7 +295,7 @@ export function newStateIdError(model: DialogModel, id: string, targetRoot?: Dia
  * block) parses to zero roots, so there is no root to add the first node to. Rather than refuse - the old
  * `return null` left the `+ State` button a silent no-op on a blank file - mint the dialog root here and let
  * the write-back paths scaffold the source skeleton on save (SSL: a `talk_p_proc` router plus Node998/Node999
- * support nodes via applySSLDialogEdits; D: a `BEGIN` block via applyDialogEdits). The root label seeds the D
+ * support nodes via applySSLDialogEdits; D: a `BEGIN` block via applyDDialogEdits). The root label seeds the D
  * `BEGIN` resref; "dialog" mirrors the SSL adapter's own single-root label (dialog-model.ts).
  */
 export function addState(model: DialogModel, targetRoot?: DialogRoot, id?: string): DialogState {

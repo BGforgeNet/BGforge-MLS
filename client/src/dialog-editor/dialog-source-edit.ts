@@ -1,4 +1,4 @@
-import { applyDialogEdits } from "../../../shared/dialog-d-edit";
+import { applyDDialogEdits } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
 import { applyTSSLDialogEdits } from "../../../shared/dialog-tssl-edit";
 import { applyTDDialogEdits } from "../../../shared/dialog-td-edit";
@@ -28,7 +28,7 @@ function isBareRef(text: string | undefined): boolean {
 
 /**
  * Compute the source-text edit for a webview model against the on-disk original, host-agnostic so it is
- * unit-testable without the vscode runtime. WeiDU D splices via applyDialogEdits; faithful Fallout SSL nodes
+ * unit-testable without the vscode runtime. WeiDU D splices via applyDDialogEdits; faithful Fallout SSL nodes
  * splice via applySSLDialogEdits (non-faithful nodes stay read-only). New SSL content is allocated .msg ids
  * here (nodes first, then options) so the spliced source and the appended .msg entries agree.
  */
@@ -62,7 +62,7 @@ export function computeDialogSourceEdit(
     let spliced: string;
     switch (edited.sourceLang) {
         case "d":
-            spliced = applyDialogEdits(text, edited, original ?? undefined);
+            spliced = applyDDialogEdits(text, edited, original ?? undefined);
             break;
         case "td":
             spliced = original ? applyTDDialogEdits(text, edited, original) : text;

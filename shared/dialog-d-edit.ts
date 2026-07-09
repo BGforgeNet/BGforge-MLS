@@ -133,9 +133,9 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
  *
  * @throws if `editedModel.sourceLang !== "d"`.
  */
-export function applyDialogEdits(originalText: string, editedModel: DialogModel, originalModel?: DialogModel): string {
+export function applyDDialogEdits(originalText: string, editedModel: DialogModel, originalModel?: DialogModel): string {
     if (editedModel.sourceLang !== "d") {
-        throw new Error("applyDialogEdits: only weidu-d models are supported");
+        throw new Error("applyDDialogEdits: only weidu-d models are supported");
     }
 
     // Collect all states across all roots in the edited model.

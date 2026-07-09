@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { modelFromD, type DialogState } from "../../shared/dialog-model";
-import { applyDialogEdits } from "../../shared/dialog-d-edit";
+import { applyDDialogEdits } from "../../shared/dialog-d-edit";
 import { renameState } from "../../shared/dialog-edit-ops";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ EXIT
 
 // ---------------------------------------------------------------------------
 
-describe("applyDialogEdits", () => {
+describe("applyDDialogEdits", () => {
     beforeAll(async () => {
         await initParser();
     });
@@ -76,7 +76,7 @@ describe("applyDialogEdits", () => {
         // Replace intro in the root.
         root.states = root.states.map((s) => (s.id === "intro" ? mutated : s));
 
-        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
         // Edited content appears.
         expect(result).toContain("Good day, friend.");
@@ -104,7 +104,7 @@ describe("applyDialogEdits", () => {
         };
         root.states = root.states.map((s) => (s.id === "details" ? mutated : s));
 
-        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
         // Re-parse the spliced output.
         const data2 = parseDDialog(result);
@@ -125,7 +125,7 @@ describe("applyDialogEdits", () => {
         const root = model.roots.find((r) => r.kind === "dialog")!;
         root.states = root.states.filter((s) => s.id !== "details");
 
-        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
         // 'details' block is gone.
         expect(result).not.toContain("The item lies to the north.");
@@ -163,7 +163,7 @@ describe("applyDialogEdits", () => {
 
         root.states = [updatedIntro, renamedDetails];
 
-        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
         // New id and the retargeted transition appear. The referencing transition is a
         // conditional reply, so it serializes in short form (`+ lore`), not `GOTO lore`.
@@ -189,7 +189,7 @@ describe("applyDialogEdits", () => {
             text: "@42",
             choices: [{ id: "extra#0", text: "@43", target: { kind: "exit" } }],
         });
-        const result = applyDialogEdits(FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
         // The new block is emitted, keeping its @N refs (SAY @42, not ~@42~).
         expect(result).toContain("BEGIN extra");
@@ -217,7 +217,7 @@ describe("applyDialogEdits", () => {
         // Saving with no edits must not duplicate the chain (the CHAIN's derived states are never re-emitted). The CHAIN block is preserved
         // verbatim (no state range covers it), so each line appears exactly once - the old
         // insert-fallback would have re-serialized the derived links into standalone blocks.
-        const result = applyDialogEdits(CHAIN_FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(CHAIN_FIXTURE, model, modelFromD(data));
         expect(result.match(/Line three\./g)).toHaveLength(1);
         expect(result.match(/CHAIN ~speakerA~ greet_chain/g)).toHaveLength(1);
         expect(result).toContain("CHAIN ~speakerA~ greet_chain");
@@ -226,7 +226,7 @@ describe("applyDialogEdits", () => {
     it("throws for non-weidu-d format", () => {
         const model = modelFromD(parseDDialog(FIXTURE));
         const bad = { ...model, sourceLang: "ssl" as const };
-        expect(() => applyDialogEdits(FIXTURE, bad)).toThrow("applyDialogEdits: only weidu-d models are supported");
+        expect(() => applyDDialogEdits(FIXTURE, bad)).toThrow("applyDDialogEdits: only weidu-d models are supported");
     });
 });
 
@@ -251,7 +251,7 @@ END
 END
 `;
 
-describe("applyDialogEdits source-text fidelity", () => {
+describe("applyDDialogEdits source-text fidelity", () => {
     beforeAll(async () => {
         await initParser();
     });
@@ -273,7 +273,7 @@ describe("applyDialogEdits source-text fidelity", () => {
     it("an identity save (no edits) returns the source byte-for-byte", () => {
         const data = parseDDialog(SHORTHAND_FIXTURE);
         const model = modelFromD(data);
-        const result = applyDialogEdits(SHORTHAND_FIXTURE, model, modelFromD(data));
+        const result = applyDDialogEdits(SHORTHAND_FIXTURE, model, modelFromD(data));
         expect(result).toBe(SHORTHAND_FIXTURE);
     });
 
@@ -286,7 +286,7 @@ describe("applyDialogEdits source-text fidelity", () => {
         const root = model.roots.find((r) => r.kind === "dialog")!;
         root.states = root.states.map((s) => (s.id === "g_weapon" ? { ...s, text: "@999" } : s));
 
-        const result = applyDialogEdits(SHORTHAND_FIXTURE, model, original);
+        const result = applyDDialogEdits(SHORTHAND_FIXTURE, model, original);
 
         // The untouched g_item_type block keeps its exact original bytes - @21 ref
         // and ++ shorthand intact, not rewritten to ~@21~ / longhand.
@@ -306,7 +306,7 @@ describe("applyDialogEdits source-text fidelity", () => {
             s.id === "g_item_type" ? { ...s, trigger: 'Global("x","GLOBAL",1)' } : s,
         );
 
-        const result = applyDialogEdits(SHORTHAND_FIXTURE, model, original);
+        const result = applyDDialogEdits(SHORTHAND_FIXTURE, model, original);
         expect(result).toContain('IF ~Global("x","GLOBAL",1)~ THEN BEGIN g_item_type');
         expect(result).toContain("SAY @21");
         expect(result).not.toContain("SAY ~@21~");
@@ -322,7 +322,7 @@ describe("applyDialogEdits source-text fidelity", () => {
         const root = model.roots.find((r) => r.kind === "dialog")!;
         root.states = root.states.map((s) => (s.id === "g_item_type" ? { ...s, trigger: "True()" } : s));
 
-        const result = applyDialogEdits(SHORTHAND_FIXTURE, model, original);
+        const result = applyDDialogEdits(SHORTHAND_FIXTURE, model, original);
         expect(result).toContain("++ @3 + g_weapon");
         expect(result).toContain("++ @6 EXIT");
         expect(result).not.toContain("REPLY ~@3~");
@@ -344,7 +344,7 @@ END
         const model = modelFromD(data);
         const root = model.roots.find((r) => r.kind === "dialog")!;
         root.states = root.states.map((s) => (s.id === "s" ? { ...s, text: "@99" } : s));
-        const out = applyDialogEdits(FIX, model, original);
+        const out = applyDDialogEdits(FIX, model, original);
         expect(out).toBe(FIX.replace("SAY @1", "SAY @99"));
     });
 
@@ -361,7 +361,7 @@ END
         const model = modelFromD(data);
         const root = model.roots.find((r) => r.kind === "dialog")!;
         root.states = root.states.map((s) => (s.id === "s" ? { ...s, trigger: "Foo()" } : s));
-        const out = applyDialogEdits(FIX, model, original);
+        const out = applyDDialogEdits(FIX, model, original);
         expect(out).toBe(FIX.replace("IF ~~ THEN", "IF ~Foo()~ THEN"));
     });
 
@@ -381,7 +381,7 @@ END
         root.states = root.states.map((s) =>
             s.id === "s" ? { ...s, choices: s.choices.map((c, i) => (i === 0 ? { ...c, text: "@88" } : c)) } : s,
         );
-        const out = applyDialogEdits(FIX, model, original);
+        const out = applyDDialogEdits(FIX, model, original);
         expect(out).toBe(FIX.replace("++ @2 + s", "++ @88 + s"));
     });
 
@@ -409,7 +409,7 @@ END
                   }
                 : s,
         );
-        const out = applyDialogEdits(FIX, model, original);
+        const out = applyDDialogEdits(FIX, model, original);
         const s2 = modelFromD(parseDDialog(out))
             .roots.find((r) => r.kind === "dialog")!
             .states.find((st) => st.id === "s")!;
@@ -456,7 +456,7 @@ END
     });
 });
 
-describe("applyDialogEdits - rename across same-file EXTERN", () => {
+describe("applyDDialogEdits - rename across same-file EXTERN", () => {
     beforeAll(async () => {
         await initParser();
     });
@@ -485,7 +485,7 @@ END
         const secondRoot = edited.roots.find((r) => r.label === "second")!;
         const deep = secondRoot.states.find((s) => s.id === "deep")!;
         renameState(edited, deep, "deep_renamed");
-        const out = applyDialogEdits(CROSS, edited, original);
+        const out = applyDDialogEdits(CROSS, edited, original);
         expect(out).toContain("BEGIN deep_renamed"); // definition renamed
         expect(out).toContain("EXTERN ~second~ deep_renamed"); // cross-dialogue reference rewritten
         expect(out).not.toMatch(/EXTERN ~second~ deep\b/); // no dangling reference to the old name
@@ -513,7 +513,7 @@ END
         const edited = modelFromD(parseDDialog(CROSS_CT));
         const deep = edited.roots.find((r) => r.label === "second")!.states.find((s) => s.id === "deep")!;
         renameState(edited, deep, "deep_renamed");
-        const out = applyDialogEdits(CROSS_CT, edited, original);
+        const out = applyDDialogEdits(CROSS_CT, edited, original);
         expect(out).toContain("BEGIN deep_renamed");
         expect(out).toContain("COPY_TRANS ~second~ deep_renamed");
         expect(out).not.toMatch(/COPY_TRANS ~second~ deep\b/);
@@ -538,7 +538,7 @@ END
         const st = edited.roots.find((r) => r.kind === "dialog")!.states.find((s) => s.id === "opening")!;
         // Removing a choice changes the transition count -> forces a whole-state re-serialize.
         st.choices = [st.choices[0]!];
-        const out = applyDialogEdits(MULTISAY, edited, original);
+        const out = applyDDialogEdits(MULTISAY, edited, original);
         expect(out).toContain("SAY ~First line.~ = ~Second line.~ = ~Third line.~");
     });
 
@@ -547,7 +547,7 @@ END
         const edited = modelFromD(parseDDialog(MULTISAY));
         const st = edited.roots.find((r) => r.kind === "dialog")!.states.find((s) => s.id === "opening")!;
         st.text = "Edited first line.";
-        const out = applyDialogEdits(MULTISAY, edited, original);
+        const out = applyDDialogEdits(MULTISAY, edited, original);
         expect(out).toContain("SAY ~Edited first line.~ = ~Second line.~ = ~Third line.~");
     });
 });
