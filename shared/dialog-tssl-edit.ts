@@ -3,15 +3,23 @@
  * ranges the source parser recorded (ranges into the .tssl, not generated SSL). Mirrors `applySSLDialogEdits`
  * but over TS syntax; because a TSSL option call is byte-identical to SSL (`NOption(101, Node002, 4)`), the
  * per-field token splices (retarget, ...) are the same - only the node wrapper and block syntax differ, which
- * field edits do not touch. Structural edits: remove-option and add-option land here (add reuses the SSL option
- * serializer, the syntax being identical); add/remove/rename NODE is handled alongside as it lands.
+ * field edits do not touch. Structural edits: option add/remove, node add/remove/rename, and full BUNDLE-node
+ * editing (per-branch option add/remove/retarget/reorder, branch-condition edits, add/remove if/else). Bundle
+ * editing reuses the shared SSL bundle writer (`bundleNodeOps`/`branchConditionOps`/`branchStructureOps`) - all
+ * byte-range + shared SSL call syntax - with `serializeTSSLBranch` supplying the TS `{ }` block ADD syntax.
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
 import { allStates, bareMsgId, isAllocatedNewOption, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
-import { isLocalNewSSLNode, survivorReplacement } from "./dialog-ssl-edit";
+import {
+    branchConditionOps,
+    branchStructureOps,
+    bundleNodeOps,
+    isLocalNewSSLNode,
+    survivorReplacement,
+} from "./dialog-ssl-edit";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
-import { serializeTSSLProcedure } from "./dialog-tssl-serialize";
+import { serializeTSSLBranch, serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogChoice, DialogModel } from "./dialog-model";
 
 function statesOf(model: DialogModel): DialogChoice[] {
@@ -23,9 +31,9 @@ function statesOf(model: DialogModel): DialogChoice[] {
 const msgIdOf = (c: DialogChoice): number => bareMsgId(c.text) ?? NaN;
 
 /**
- * Compute the `.tssl` source with the model's surgical field edits applied. Currently: option RETARGET
- * (an option whose target node id changed splices its recorded `targetRange` with the new id). Returns the
- * text unchanged when nothing surgical changed.
+ * Compute the `.tssl` source with the model's surgical edits applied: option field edits (retarget, reaction,
+ * low-INT, terminal flip, condition), option reorder/add/remove, node add/remove/rename, and full bundle-node
+ * branch editing (routed through the shared SSL bundle writer). Returns the text unchanged when nothing changed.
  *
  * @throws if `edited.sourceLang !== "tssl"` - a D/SSL/TD model must not be serialized as TSSL.
  */
@@ -45,10 +53,17 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // zero-width insert at the survivor anchor) and remove (a whole-statement splice of a NON-survivor option),
     // so this composes with a concurrent structural edit.
     const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
+    // A bundle node's per-branch option edits go through the shared bundle writer below, not the generic
+    // per-choice loops - so its choices are excluded from reorder/field/remove/add here to avoid double-splicing.
+    const origBundleChoiceIds = new Set(
+        allStates(original)
+            .filter((s) => s.bundleFaithful)
+            .flatMap((s) => s.choices.map((c) => c.id)),
+    );
     const reorderedIds = new Set<string>();
     for (const state of allStates(edited)) {
         const origState = origStateById.get(state.renamedFrom ?? state.id);
-        if (!origState) continue;
+        if (!origState || origState.bundleFaithful) continue;
         const editedIdSet = new Set(state.choices.map((ch) => ch.id));
         const isFlatOrig = (o: DialogChoice): boolean => o.callRange !== undefined && o.condition === undefined;
         const flatOrigSurvivors = origState.choices.filter((o) => isFlatOrig(o) && editedIdSet.has(o.id));
@@ -73,7 +88,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
 
     for (const c of statesOf(edited)) {
         const orig = origById.get(c.id);
-        if (!orig) continue;
+        if (!orig || origBundleChoiceIds.has(c.id)) continue;
         // In-place field edits on a surviving state-target option (retarget + reaction N/G/B + low-INT variant):
         // rewrite the option call in its `callRange` slot, sharing `survivorReplacement` with the SSL writer
         // since a TSSL option call is byte-identical to SSL's. A retarget-only edit token-patches the target; a
@@ -121,10 +136,22 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
             ops.push({ start: orig.condRange.start, end: orig.condRange.end, replacement: c.condition });
         }
     }
+    // BUNDLE nodes: per-branch option edits (add/remove/retarget/reorder), branch-condition edits, and branch
+    // structure (add/remove if/else) go through the SHARED SSL bundle writer - byte-range splices plus the SSL
+    // call syntax that TSSL reuses verbatim, with TS block synthesis (serializeTSSLBranch) for the ADD paths.
+    // Bundle nodes are excluded from the generic per-choice loops (reorder/field above, remove/add below) so an
+    // option is never double-spliced. Node-level ops (rename/delete/entry-cleanup/add-node) still apply below.
+    for (const state of allStates(edited)) {
+        const os = origStateById.get(state.renamedFrom ?? state.id);
+        if (!os?.bundleFaithful) continue;
+        ops.push(...bundleNodeOps(originalText, state, os));
+        ops.push(...branchConditionOps(originalText, state, os));
+        ops.push(...branchStructureOps(originalText, state, os, serializeTSSLBranch));
+    }
     // Structural: an existing option removed from a SURVIVING node -> splice its statement out. (An option
     // in a DELETED node is removed by that node's whole-function splice below; removing it individually too
     // would overlap.) A pure conditional option is the sole content of its `if`, so remove the whole `if`;
-    // otherwise just the call.
+    // otherwise just the call. Bundle nodes are handled above (their branch options never reach here).
     // RENAME node: a node whose id changed carries `renamedFrom` (set by ops.renameState). Rewrite its
     // function-name token and every entry call / out-of-band call targeting the OLD id. Inbound OPTION targets
     // were moved by the model's retarget (handled by the state->state retarget splice above), so they are not
@@ -150,6 +177,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     const editedStateIds = new Set(allStates(edited).map((s) => s.id));
     for (const os of allStates(original)) {
         if (!editedStateIds.has(os.id)) continue; // deleted node - its options go with the procRange splice below
+        if (os.bundleFaithful) continue; // bundle node - its branch options are handled by bundleNodeOps above
         for (const orig of os.choices) {
             if (editedIds.has(orig.id)) continue;
             // A pure conditional option (conditionEditable => its `if` gates it alone) removes the whole `if`;
@@ -182,7 +210,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // before its closing brace. Mirrors `applySSLDialogEdits`' ADD case.
     for (const state of allStates(edited)) {
         const origState = origStateById.get(state.id);
-        if (!origState) continue; // a brand-new node is emitted whole by the add-node writer, not here
+        if (!origState || origState.bundleFaithful) continue; // new node -> add-node writer; bundle -> bundleNodeOps
         const added = state.choices.filter((c) => isAllocatedNewOption(c) && Number.isFinite(msgIdOf(c)));
         if (added.length === 0) continue;
         const survivorEnds = origState.choices

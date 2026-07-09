@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { parseTSSLSource } from "../src/tssl/dialog-source";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { applyTSSLDialogEdits } from "../../shared/dialog-tssl-edit";
+import * as ops from "../../shared/dialog-edit-ops";
 
 const flat = readFileSync(fileURLToPath(new URL("tssl/samples/flat.tssl", import.meta.url)), "utf8");
 const multi = readFileSync(fileURLToPath(new URL("tssl/samples/multi.tssl", import.meta.url)), "utf8");
@@ -217,5 +218,95 @@ describe("applyTSSLDialogEdits - option retarget", () => {
     it("rejects a non-tssl model (each writer serializes only its own source syntax)", () => {
         const d = { ...tsslModel(flat), sourceLang: "d" as const };
         expect(() => applyTSSLDialogEdits(flat, d, tsslModel(flat))).toThrow(/only tssl/);
+    });
+});
+
+describe("applyTSSLDialogEdits - bundle branch editing (SSL parity)", () => {
+    // Body is only if/else (no top-level flat call), each branch carrying its NPC line + options, plus a
+    // preservable side-effect statement. Classifies as bundleFaithful -> editable, per the source parser.
+    const SRC = `function Node002() {
+    if (local_var(LVAR_0) == 0) {
+        set_local_var(LVAR_0, 1);
+        Reply(120);
+        NOption(122, Node915, 4);
+        NOption(123, Node999, 4);
+    } else {
+        Reply(121);
+        NOption(124, Node915, 4);
+    }
+}
+
+function Node915() { Reply(900); }
+
+function Node999() { Reply(999); }
+
+function talk_p_proc() { Node002(); }
+`;
+    const model = () => ({ ...modelFromSSL(parseTSSLSource(SRC)), sourceLang: "tssl" as const, editable: true });
+    const node = (m: DialogModel) => m.roots[0]!.states.find((s) => s.id === "Node002")!;
+
+    it("edits an if-branch condition in place, leaving else/options/side-effect byte-exact", () => {
+        const original = model();
+        const edited = structuredClone(original);
+        node(edited).branches!.find((b) => b.kind === "if")!.condition = "local_var(LVAR_0) == 2";
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("if (local_var(LVAR_0) == 2)");
+        expect(out).not.toContain("== 0)");
+        expect(out).toContain("set_local_var(LVAR_0, 1);"); // side-effect intact
+        expect(out).toContain("NOption(122, Node915, 4)"); // options intact
+        expect(out).toContain("} else {"); // skeleton intact
+    });
+
+    it("retargets an else-branch option in place, then-branch + side-effect byte-exact", () => {
+        const original = model();
+        const edited = structuredClone(original);
+        const elseB = node(edited).branches!.find((b) => b.kind === "else")!;
+        const opt = node(edited).choices.find((c) => elseB.choiceIds.includes(c.id))!;
+        (opt.target as { kind: "state"; stateId: string }).stateId = "Node999";
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("NOption(124, Node999, 4)"); // else option retargeted
+        expect(out).toContain("NOption(122, Node915, 4)"); // then-branch untouched
+        expect(out).toContain("set_local_var(LVAR_0, 1);");
+    });
+
+    it("removes one option from the then-branch, leaving the rest byte-exact", () => {
+        const original = model();
+        const edited = structuredClone(original);
+        const n = node(edited);
+        const ifB = n.branches!.find((b) => b.kind === "if")!;
+        const tgt = n.choices.find(
+            (c) => ifB.choiceIds.includes(c.id) && c.target.kind === "state" && c.target.stateId === "Node999",
+        )!;
+        n.choices = n.choices.filter((c) => c.id !== tgt.id);
+        ifB.choiceIds = ifB.choiceIds.filter((id) => id !== tgt.id);
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).not.toContain("NOption(123, Node999, 4)"); // removed
+        expect(out).toContain("NOption(122, Node915, 4)"); // kept (then)
+        expect(out).toContain("NOption(124, Node915, 4)"); // kept (else)
+        expect(out).toContain("set_local_var(LVAR_0, 1);");
+    });
+
+    it("removes the else branch, collapsing `} else { ... }` to `}`", () => {
+        const original = model();
+        const edited = structuredClone(original);
+        const n = node(edited);
+        const elseIdx = n.branches!.findIndex((b) => b.kind === "else");
+        const elseB = n.branches![elseIdx]!;
+        n.choices = n.choices.filter((c) => !elseB.choiceIds.includes(c.id));
+        n.branches!.splice(elseIdx, 1);
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).not.toContain("else"); // the whole else clause is gone
+        expect(out).not.toContain("NOption(124"); // its option gone with it
+        expect(out).toContain("NOption(122, Node915, 4)"); // then-branch intact
+    });
+
+    it("adds a new if-branch, serialized in TS `if (cond) { ... }` syntax", () => {
+        const original = model();
+        const edited = structuredClone(original);
+        ops.addBranch(node(edited), "global_var(GVAR_NEW) == 1");
+        const out = applyTSSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("if (global_var(GVAR_NEW) == 1) {");
+        // The new branch uses TS braces, never the SSL `then begin`/`end` form.
+        expect(out).not.toContain("then begin");
     });
 });

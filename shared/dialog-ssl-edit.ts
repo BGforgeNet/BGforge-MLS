@@ -361,7 +361,7 @@ function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
 // elseClauseRange.start for `else` branches), not positional index. A survivor carries these spans from
 // the original parse; a pending-new branch (no span) is skipped here and handled by branchStructureOps.
 // This prevents a branch add/remove from shifting the index and mis-aligning the option-level ops.
-function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+export function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const ob = orig.branches ?? [];
     const eb = edited.branches ?? [];
@@ -452,13 +452,20 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
  * regions) and from `bundleNodeOps` ops (which touch option call spans inside surviving branches
  * only; a removed branch's span is entirely distinct from every survivor's option spans).
  */
-function branchStructureOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+export function branchStructureOps(
+    text: string,
+    edited: DialogState,
+    orig: DialogState,
+    // The branch serializer for the ADD paths - `serializeSSLBranch` for `.ssl` (`if (c) then begin...end`),
+    // `serializeTSSLBranch` for `.tssl` (`if (c) { ... }`). REMOVE is byte-range only and language-agnostic.
+    serializeBranch: typeof serializeSSLBranch = serializeSSLBranch,
+): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const eb = edited.branches;
     const ob = orig.branches;
     if (!eb || !ob) return ops;
 
-    const indent = "    "; // proc-body indent convention (4 spaces)
+    const indent = "    "; // proc-body / function-body indent convention (4 spaces)
 
     // REMOVE: build sets of which original spans survive in the edited branch list.
     // A branch with a stmtRange/elseClauseRange in the edited list is a survivor; one absent is removed.
@@ -518,7 +525,7 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
                 survivingOrigEnds.length > 0
                     ? Math.max(...survivingOrigEnds)
                     : Math.min(...allOrigIfStmts.map((o) => o.stmtRange!.start));
-            const block = serializeSSLBranch("if", b.condition, [], options, indent);
+            const block = serializeBranch("if", b.condition, [], options, indent);
             ops.push({ start: insertAt, end: insertAt, replacement: `\n${indent}${block}` });
         } else {
             // kind: "else" - inject at the preceding surviving if branch's thenBlockEnd.
@@ -538,7 +545,7 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
             const origIf = ob.find((o) => o.kind === "if" && o.stmtRange?.start === precedingIf.stmtRange!.start);
             const thenBlockEnd = origIf?.thenBlockEnd;
             if (thenBlockEnd === undefined) continue; // bare then-branch has no thenBlockEnd -> skip
-            const block = serializeSSLBranch("else", undefined, [], options, indent);
+            const block = serializeBranch("else", undefined, [], options, indent);
             ops.push({ start: thenBlockEnd, end: thenBlockEnd, replacement: `\n${indent}${block}` });
         }
     }
@@ -555,7 +562,7 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
 // overlap with one another - but they WOULD overlap with branchStructureOps' whole-branch delete
 // if the positional zip paired a surviving branch against a removed original branch. Span-identity
 // matching prevents that pairing.
-function branchConditionOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+export function branchConditionOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const eb = edited.branches;
     const ob = orig.branches;

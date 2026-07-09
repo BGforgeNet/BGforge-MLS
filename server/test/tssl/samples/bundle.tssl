@@ -1,0 +1,25 @@
+// Authored fixture (SSL-in-TS). The BUNDLE tier: the body is ONLY single-level `if`/`else` statements
+// (no top-level flat call), each branch carrying its own NPC line plus dialog calls, and a preservable
+// simple statement (an assignment / side-effect call) kept byte-exact. This is editable with per-branch
+// grouping - mirrors the SSL bundle case (`if (c) then begin ... end else begin ... end`) in TS syntax, so
+// the source parser must classify it `bundleFaithful` with an `if` branch and an `else` branch, not demote
+// the whole node to read-only `structured` as the 3-tier parser did.
+function Node001() {
+    if (global_var(GVAR_X) == 1) {
+        Reply(100);
+        set_local_var(LVAR_SEEN, 1);
+        NOption(101, Node002, 4);
+    } else {
+        Reply(200);
+        NMessage(301);
+    }
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function talk_p_proc() {
+    Node001();
+}

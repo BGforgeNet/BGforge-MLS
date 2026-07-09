@@ -63,6 +63,79 @@ describe("parseTSSLSource - tiers", () => {
     });
 });
 
+describe("parseTSSLSource - bundle tier (SSL parity)", () => {
+    const src = sample("bundle.tssl");
+    const node = () => parseTSSLSource(src).nodes.find((n) => n.name === "Node001")!;
+
+    it("classifies a single-level if/else of dialog calls as bundleFaithful (editable), not read-only structured", () => {
+        const n = node();
+        expect(n.faithful).toBe(false);
+        expect(n.bundleFaithful).toBe(true);
+        expect(n.structured).toBeUndefined();
+        expect(n.approximate).toBeUndefined();
+    });
+
+    it("builds an if branch and an else branch, indexing the flat reply/option arrays by source order", () => {
+        const n = node();
+        expect(n.branches?.map((b) => b.kind)).toEqual(["if", "else"]);
+        const ifBranch = n.branches!.find((b) => b.kind === "if")!;
+        const elseBranch = n.branches!.find((b) => b.kind === "else")!;
+        // if-branch: Reply(100) -> replies[0], NOption -> options[0]. else-branch: Reply(200) -> replies[1],
+        // NMessage(301) -> options[1]. Indices advance in the source-order preorder the flat walk uses.
+        expect(ifBranch.replyIndices).toEqual([0]);
+        expect(ifBranch.optionIndices).toEqual([0]);
+        expect(elseBranch.replyIndices).toEqual([1]);
+        expect(elseBranch.optionIndices).toEqual([1]);
+        expect(n.options[0]!.target).toBe("Node002");
+        expect(n.options[1]!.msgId).toBe(301);
+    });
+
+    it("preserves a non-dialog side-effect statement in a branch as opaque byte-exact text", () => {
+        const ifBranch = node().branches!.find((b) => b.kind === "if")!;
+        expect(ifBranch.opaque.map((o) => o.text)).toEqual(["set_local_var(LVAR_SEEN, 1);"]);
+    });
+
+    it("records the if-branch condition span (edit-ready) and the else-clause span", () => {
+        const n = node();
+        const ifBranch = n.branches!.find((b) => b.kind === "if")!;
+        expect(src.slice(ifBranch.conditionRange!.start, ifBranch.conditionRange!.end)).toContain("GVAR_X");
+        const elseBranch = n.branches!.find((b) => b.kind === "else")!;
+        expect(src.slice(elseBranch.elseClauseRange!.start, elseBranch.elseClauseRange!.end)).toMatch(/^else/);
+    });
+});
+
+describe("parseTSSLSource - assignment in structured tier (SSL parity)", () => {
+    const src = sample("assign.tssl");
+    const node = () => parseTSSLSource(src).nodes.find((n) => n.name === "Node001")!;
+
+    it("keeps a node whose branch holds an assignment at the structured tier, not lossy approximate", () => {
+        const n = node();
+        expect(n.approximate).toBeUndefined();
+        expect(n.structured).toBe(true);
+    });
+
+    it("preserves the assignment as an opaque block item, byte-exact", () => {
+        const group = node().block!.find((i) => i.kind === "group") as { thenBlock: { kind: string; text?: string }[] };
+        const opaque = group.thenBlock.find((i) => i.kind === "opaque")!;
+        expect(opaque.text).toBe("game_global_var = 5;");
+    });
+});
+
+describe("parseTSSLSource - node inclusion (SSL parity)", () => {
+    const data = () => parseTSSLSource(sample("hook.tssl"));
+
+    it("excludes a *_p_proc engine hook even when it contains a dialog call", () => {
+        expect(data().nodes.map((n) => n.name)).not.toContain("look_at_p_proc");
+    });
+
+    it("keeps a reachable node and an unwired orphan dialog node", () => {
+        const names = data()
+            .nodes.map((n) => n.name)
+            .sort();
+        expect(names).toEqual(["Node001", "Node099"]);
+    });
+});
+
 describe("parseTSSLSource - conditional scoping + block (SSL parity)", () => {
     const scoped = sample("scoped.tssl");
     const node = () => parseTSSLSource(scoped).nodes.find((n) => n.name === "Node001")!;

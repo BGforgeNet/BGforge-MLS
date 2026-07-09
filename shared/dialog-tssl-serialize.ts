@@ -7,7 +7,29 @@
 
 import { bareMsgId } from "./dialog-edit-common";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
-import type { DialogState } from "./dialog-model";
+import type { DialogChoice, DialogState } from "./dialog-model";
+
+/**
+ * Emit a NEW `if`/`else` bundle branch block in TS syntax - `if (<cond>) {` / `else {`, body indented one
+ * step, closing `}` at column `indent`. The TS counterpart of `serializeSSLBranch` (`if <cond> then begin ...
+ * end`); the option/reply lines are byte-identical to SSL (shared `serializeSSLOption`), only the block
+ * delimiters differ. `cond` is stored paren-free (the TSSL `conditionRange` convention), so the parens are added
+ * here. Signature matches `serializeSSLBranch` so `branchStructureOps` can take either as its branch serializer.
+ */
+export function serializeTSSLBranch(
+    kind: "if" | "else",
+    cond: string | undefined,
+    replyMsgIds: number[],
+    options: { choice: DialogChoice; msgId: number }[],
+    indent: string,
+): string {
+    const header = kind === "if" ? `if (${cond}) {` : `else {`;
+    const innerIndent = `${indent}    `;
+    const lines: string[] = [];
+    for (const id of replyMsgIds) lines.push(`${innerIndent}Reply(${id});`);
+    for (const { choice, msgId } of options) lines.push(`${innerIndent}${serializeSSLOption(choice, msgId)}`);
+    return `${header}\n${lines.join("\n")}${lines.length > 0 ? "\n" : ""}${indent}}`;
+}
 
 /**
  * Serialize a new TSSL node as a `function <id>() { ... }` block. The NPC line becomes `Reply(<n>);` when the

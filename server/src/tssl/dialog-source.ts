@@ -15,6 +15,7 @@ import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaratio
 import type {
     SSLDialogBlock,
     SSLDialogBlockItem,
+    SSLDialogBranch,
     SSLDialogData,
     SSLDialogGroup,
     SSLDialogNode,
@@ -166,6 +167,22 @@ function isDialogOrTransitionStmt(stmt: Node, localFns: ReadonlySet<string>): bo
     return name === "Reply" || isOptionFn(name) || isMessageFn(name) || localFns.has(name);
 }
 
+/**
+ * A non-dialog statement the bundle/structured tiers keep byte-exact without modeling it: an assignment or
+ * local declaration (`x = 1`, `let x = 1`), or an expression statement whose call is NOT a recognized dialog
+ * call/transition (a side-effect builtin like `set_local_var`). No control flow. Mirrors the SSL parser's
+ * `isPreservableSimpleStatement`; the two families share the SSL-in-TS call vocabulary, so the only shape TS
+ * adds is the `let`/`const` variable statement.
+ */
+function isPreservableSimpleStmt(stmt: Node, localFns: ReadonlySet<string>): boolean {
+    if (Node.isVariableStatement(stmt)) return true;
+    if (!Node.isExpressionStatement(stmt)) return false;
+    // Any simple expression statement that is not a dialog/transition call - an assignment expression or a
+    // side-effect builtin call - is preserved opaque. Control flow (if/while/for/switch) is not an
+    // ExpressionStatement, so it is correctly excluded here and handled by the recursive structured gate.
+    return !isDialogOrTransitionStmt(stmt, localFns);
+}
+
 /** Faithful: a flat sequence of dialog statements plus single-level `if` (no else) wrapping faithful bodies. */
 function isFaithfulStmt(stmt: Node, allowIf: boolean, localFns: ReadonlySet<string>): boolean {
     if (Node.isExpressionStatement(stmt)) return isDialogOrTransitionStmt(stmt, localFns);
@@ -182,28 +199,70 @@ function isFaithfulBranch(branch: Node, localFns: ReadonlySet<string>): boolean 
     return isFaithfulStmt(branch, false, localFns);
 }
 
-/** Structured: any call plus arbitrarily nested `if`/`else` blocks - no loop/switch/return-branching. */
-function isStructuredStmt(stmt: Node): boolean {
-    if (Node.isExpressionStatement(stmt)) return Node.isCallExpression(stmt.getExpression());
+/**
+ * Structured: a dialog/transition call, a preservable simple statement (assignment / side-effect call), or an
+ * `if`/`else` whose branches are themselves structured (RECURSIVE - unlike the bundle gate, which rejects any
+ * nested `if`). No loop/switch/return-branching. Mirrors the SSL parser's `isStructuredStatement`; the 3-tier
+ * parser rejected any statement that was not a call expression, demoting a node with a bare assignment to lossy
+ * `approximate` where the SSL parser keeps it structured.
+ */
+function isStructuredStmt(stmt: Node, localFns: ReadonlySet<string>): boolean {
+    if (Node.isExpressionStatement(stmt) || Node.isVariableStatement(stmt)) return true;
     if (Node.isIfStatement(stmt)) {
         const elseStmt = stmt.getElseStatement();
-        return isStructuredBranch(stmt.getThenStatement()) && (!elseStmt || isStructuredBranch(elseStmt));
+        return (
+            isStructuredBranch(stmt.getThenStatement(), localFns) &&
+            (!elseStmt || isStructuredBranch(elseStmt, localFns))
+        );
     }
     return false; // for/while/switch/... -> not structured
 }
 
-function isStructuredBranch(branch: Node): boolean {
-    if (Node.isBlock(branch)) return branch.getStatements().every((s) => isStructuredStmt(s));
-    return isStructuredStmt(branch);
+function isStructuredBranch(branch: Node, localFns: ReadonlySet<string>): boolean {
+    if (Node.isBlock(branch)) return branch.getStatements().every((s) => isStructuredStmt(s, localFns));
+    return isStructuredStmt(branch, localFns);
+}
+
+/** A statement usable inside a bundle branch: a dialog/transition call or a preservable simple statement. No
+ * nested `if` (an IfStatement is neither) - that would make the node structured, not bundle. */
+function isBundleBranchStmt(stmt: Node, localFns: ReadonlySet<string>): boolean {
+    return isDialogOrTransitionStmt(stmt, localFns) || isPreservableSimpleStmt(stmt, localFns);
+}
+
+/** A bundle branch body (a block or a single bare statement): every statement is a bundle-branch statement. */
+function isBundleBranch(branch: Node, localFns: ReadonlySet<string>): boolean {
+    return branchStmtsTSSL(branch).every((s) => isBundleBranchStmt(s, localFns));
+}
+
+/**
+ * Bundle: the body is ONLY top-level single-level `if`s (each with an optional `else`) whose branches are
+ * bundle branches - editable, one condition per branch. Mirrors the SSL parser's `isBundleFaithfulProcedure`
+ * (a top-level flat call or a nested `if` disqualifies the node - those are faithful and structured
+ * respectively). Caller checks this only when the node is not plain-faithful, keeping the tiers exclusive.
+ */
+function isBundleProc(fn: FunctionDeclaration, localFns: ReadonlySet<string>): boolean {
+    const stmts = fn.getStatements();
+    if (stmts.length === 0) return false;
+    for (const stmt of stmts) {
+        if (!Node.isIfStatement(stmt)) return false;
+        if (!isBundleBranch(stmt.getThenStatement(), localFns)) return false;
+        const elseStmt = stmt.getElseStatement();
+        if (elseStmt && !isBundleBranch(elseStmt, localFns)) return false;
+    }
+    return true;
 }
 
 function classifyTier(
     fn: FunctionDeclaration,
     localFns: ReadonlySet<string>,
-): "faithful" | "structured" | "approximate" {
+): "faithful" | "bundle" | "structured" | "approximate" {
     const stmts = fn.getStatements();
+    // Tiers are mutually exclusive, checked most-faithful first: faithful (flat, editable) > bundle (single-
+    // level if/else, editable) > structured (arbitrarily nested, read-only) > approximate (lossy). Parity with
+    // server/src/dialog.ts.
     if (stmts.every((s) => isFaithfulStmt(s, true, localFns))) return "faithful";
-    if (stmts.every((s) => isStructuredStmt(s))) return "structured";
+    if (isBundleProc(fn, localFns)) return "bundle";
+    if (stmts.every((s) => isStructuredStmt(s, localFns))) return "structured";
     return "approximate";
 }
 
@@ -262,6 +321,88 @@ function buildBlockTSSL(
         items.push({ kind: "opaque", text: stmt.getText(), textRange: span(stmt) });
     }
     return items;
+}
+
+/** Splice point for a new option at the end of a bundle branch block: end of the last statement + that line's
+ * indent; an empty block anchors just inside `{`. Only called for block branches (a bare single-statement
+ * branch carries no insertAnchor, so add is a no-op there - mirrors the SSL parser). */
+function branchInsertAnchorTSSL(block: Node, text: string): { offset: number; indent: string } {
+    const stmts = Node.isBlock(block) ? block.getStatements() : [];
+    const last = stmts.at(-1);
+    if (!last) return { offset: block.getStart() + 1, indent: "        " };
+    const lineStart = text.lastIndexOf("\n", last.getStart() - 1) + 1;
+    const indent = /^[ \t]*/.exec(text.slice(lineStart, last.getStart()))?.[0] ?? "        ";
+    return { offset: last.getEnd(), indent };
+}
+
+/**
+ * Group a bundle node's body into ordered branches, mirroring `server/src/dialog.ts` `buildBranches` over the
+ * TS AST. The body is only top-level `if`s (the bundle gate), so each yields an "if" branch (its then-body)
+ * and, when present, an "else" branch. Dialog calls are matched to the flat replies/options arrays by source
+ * order: both this walk and `buildNode`'s `forEachDescendant` are preorder (each if's then before its else),
+ * so the Nth Reply -> replies[N], the Nth option/message -> options[N]. Non-dialog statements (assignments,
+ * side-effect calls, transitions) become opaque items preserved byte-exact on save.
+ */
+function buildBranchesTSSL(fn: FunctionDeclaration): SSLDialogBranch[] {
+    const text = fn.getSourceFile().getFullText();
+    const branches: SSLDialogBranch[] = [];
+    let replyIdx = 0;
+    let optIdx = 0;
+
+    const collectBody = (branch: SSLDialogBranch, body: Node): void => {
+        for (const stmt of branchStmtsTSSL(body)) {
+            if (Node.isExpressionStatement(stmt)) {
+                const expr = stmt.getExpression();
+                if (Node.isCallExpression(expr)) {
+                    const cn = calleeName(expr);
+                    if (cn === "Reply") {
+                        branch.replyIndices.push(replyIdx++);
+                        continue;
+                    }
+                    if (cn !== undefined && (isOptionFn(cn) || isMessageFn(cn))) {
+                        branch.optionIndices.push(optIdx++);
+                        continue;
+                    }
+                }
+            }
+            branch.opaque.push({ text: stmt.getText(), textRange: span(stmt) });
+        }
+    };
+
+    for (const stmt of fn.getStatements()) {
+        if (!Node.isIfStatement(stmt)) continue; // bundle guarantees every top-level statement is an if
+        const cond = stmt.getExpression();
+        const thenStmt = stmt.getThenStatement();
+        const ifBranch: SSLDialogBranch = {
+            kind: "if",
+            condition: cond.getText(),
+            conditionRange: span(cond),
+            stmtRange: span(stmt),
+            replyIndices: [],
+            optionIndices: [],
+            opaque: [],
+        };
+        collectBody(ifBranch, thenStmt);
+        if (Node.isBlock(thenStmt)) {
+            ifBranch.insertAnchor = branchInsertAnchorTSSL(thenStmt, text);
+            // Offset right after the then-block's `}` - where ` else { ... }` is appended when adding an else.
+            ifBranch.thenBlockEnd = thenStmt.getEnd();
+        }
+        branches.push(ifBranch);
+
+        const elseStmt = stmt.getElseStatement();
+        if (elseStmt) {
+            const elseBranch: SSLDialogBranch = { kind: "else", replyIndices: [], optionIndices: [], opaque: [] };
+            collectBody(elseBranch, elseStmt);
+            if (Node.isBlock(elseStmt)) elseBranch.insertAnchor = branchInsertAnchorTSSL(elseStmt, text);
+            // The `else` keyword through the else body's end - for deleting just the else clause. Located by text
+            // search after the then-block end (mirrors the SSL parser); the `else` token is unambiguous there.
+            const elseKw = text.indexOf("else", thenStmt.getEnd());
+            elseBranch.elseClauseRange = { start: elseKw, end: elseStmt.getEnd() };
+            branches.push(elseBranch);
+        }
+    }
+    return branches;
 }
 
 // ---------------------------------------------------------------------------
@@ -368,6 +509,10 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         callTargets,
         ...(callTransitions.length > 0 ? { callTransitions } : {}),
         faithful: tier === "faithful",
+        // A bundle node carries its ordered if/else branches so the editor renders per-branch grouping and can
+        // add/remove options and branches - editable parity with the SSL bundle tier (the 3-tier parser demoted
+        // an if/else dialog node to read-only structured).
+        ...(tier === "bundle" ? { bundleFaithful: true as const, branches: buildBranchesTSSL(fn) } : {}),
         // A structured node carries the recursive block mirroring its body so nested if/else render faithfully
         // (rather than the empty block the old parser left, which made a structured node show no nested content).
         ...(tier === "structured"
@@ -384,9 +529,13 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
 
 /**
  * Parse TSSL source into SSL DialogData with byte ranges into the `.tssl` source: nodes (name, replies,
- * options with multi-level conditions, callTargets/callTransitions, faithfulness tier, structured `block`,
- * procRange/nameRange), entry points, entry-call and new-node write-back anchors, and out-of-band starts.
- * At display parity with the native SSL parser; a structured node is faithfully rendered but read-only.
+ * options with multi-level conditions, callTargets/callTransitions, faithfulness tier, bundle `branches`,
+ * structured `block`, procRange/nameRange), entry points, entry-call and new-node write-back anchors, and
+ * out-of-band starts. At FULL parity with the native SSL parser (`server/src/dialog.ts`): the same four
+ * mutually-exclusive tiers (faithful > bundle > structured > approximate), the same preservable-simple-
+ * statement handling (assignments/side-effects kept opaque), and the same reachability/`*_p_proc` hook
+ * node-inclusion filter. Faithful and bundle nodes are editable (bundle branch edits round-trip via
+ * `applyTSSLDialogEdits`); a structured node renders faithfully but read-only; approximate is lossy.
  */
 export function parseTSSLSource(text: string): SSLDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
@@ -394,7 +543,9 @@ export function parseTSSLSource(text: string): SSLDialogData {
     const fns = sf.getFunctions();
     const localFns = new Set<string>(fns.map((f) => f.getName()).filter((n): n is string => n !== undefined));
 
-    const nodes: SSLDialogNode[] = [];
+    // Parse every dialog procedure into a map first (source order preserved); the reachability/hook filter
+    // below decides which become emitted `nodes`, mirroring the SSL parser's two-pass structure.
+    const parsed = new Map<string, SSLDialogNode>();
     const entryPoints: string[] = [];
     const procNames: string[] = [];
     const entryCalls: NonNullable<SSLDialogData["entryCalls"]> = [];
@@ -431,7 +582,7 @@ export function parseTSSLSource(text: string): SSLDialogData {
             continue;
         }
         procNames.push(name);
-        nodes.push(buildNode(fn, name, localFns));
+        parsed.set(name, buildNode(fn, name, localFns));
     }
     // force_dialog_start(Node) / start_dialog_at_node(Node) reached from ANYWHERE (timers, map-enter handlers)
     // start a conversation out of band; treat their targets as entry points and capture the target-identifier
@@ -451,6 +602,28 @@ export function parseTSSLSource(text: string): SSLDialogData {
         // A call_expr arg has no single target token to splice, so it is left name-only (not a renamable node id).
         if (!Node.isCallExpression(arg)) outOfBandCalls.push({ name: targetName, targetRange: span(arg) });
     });
+    // Node inclusion (SSL parity): keep a procedure reachable from a dialog entry (talk_p_proc calls +
+    // force_dialog_start targets, following option/call transitions), OR an unreachable-but-authored orphan
+    // dialog node (has a Reply/option and is not an engine `*_p_proc` hook). A `*_p_proc` lifecycle handler is
+    // never a dialog node even when it contains a Reply, so it stays excluded - the 3-tier parser emitted it as
+    // a spurious dialog node. `procNames` still lists every parsed procedure (incl. hooks) for name allocation.
+    const reachable = new Set<string>();
+    const queue = [...entryPoints];
+    while (queue.length > 0) {
+        const name = queue.shift()!;
+        if (reachable.has(name)) continue;
+        reachable.add(name);
+        const node = parsed.get(name);
+        if (!node) continue;
+        for (const opt of node.options) if (opt.target) queue.push(opt.target);
+        for (const t of node.callTargets) queue.push(t);
+    }
+    const isHookProc = (name: string): boolean => name.endsWith("_p_proc");
+    const nodes: SSLDialogNode[] = [];
+    for (const [name, node] of parsed) {
+        const isOrphanDialogNode = !isHookProc(name) && (node.replies.length > 0 || node.options.length > 0);
+        if (reachable.has(name) || isOrphanDialogNode) nodes.push(node);
+    }
     return {
         nodes,
         entryPoints,
