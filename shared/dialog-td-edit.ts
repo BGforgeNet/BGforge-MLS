@@ -10,13 +10,9 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { allStates, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
+import { allChoices, allStates, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
 import { serializeTDState, serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
 import type { DialogChoice, DialogModel } from "./dialog-model";
-
-function choicesOf(model: DialogModel): DialogChoice[] {
-    return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
-}
 
 /**
  * A pending-new option: no source span yet (`sourceRange` absent) and text already allocated to a bare `@N`
@@ -95,7 +91,7 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     if (edited.sourceLang !== "td") {
         throw new Error("applyTDDialogEdits: only td source models are supported");
     }
-    const origById = new Map(choicesOf(original).map((c) => [c.id, c]));
+    const origById = new Map(allChoices(original).map((c) => [c.id, c]));
     const ops: SpliceOp[] = [];
 
     // REORDER (per node): when a node's surviving transitions appear in a different order than source, move each
@@ -130,7 +126,7 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
         }
     }
 
-    for (const c of choicesOf(edited)) {
+    for (const c of allChoices(edited)) {
         const orig = origById.get(c.id);
         if (!orig || reorderedIds.has(c.id)) continue; // a reordered transition already carries its target edit
         // Retarget: a transition's target state (a `goTo(<id>)`) changed and the parser recorded the id span.
@@ -157,7 +153,7 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     // Structural: an existing option removed from a SURVIVING node -> splice out its whole `reply(...); goTo(...);`
     // statement group (the choice's `sourceRange`). An option in a DELETED node goes with that node's function
     // splice (Phase 3 remove-node), so only surviving nodes are scanned here to keep the spans disjoint.
-    const editedIds = new Set(choicesOf(edited).map((c) => c.id));
+    const editedIds = new Set(allChoices(edited).map((c) => c.id));
     const editedStateIds = new Set(allStates(edited).map((s) => s.id));
     for (const os of allStates(original)) {
         if (!editedStateIds.has(os.id)) continue;

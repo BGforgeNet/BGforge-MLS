@@ -1,9 +1,11 @@
 /**
- * Helpers shared by the dialog source writers/serializers and the id allocators. These were duplicated byte-for-
- * byte across the SSL/TSSL/TD families (each writer is a sibling over a different target syntax); the logic here
- * is family-agnostic - line/indent geometry, `@N` parsing, id seeding, and the SSL-family new-option marker - so
- * it lives once. Family-SPECIFIC markers stay in their own module (e.g. the TD writer's `isNewTDOption` keys on
- * the D-family `sourceRange`, not the SSL-family `callRange`/`stmtRange` that `isNewOption` below reads).
+ * Helpers shared by the dialog source writers/serializers and the id allocators, family-agnostic so the logic
+ * lives once instead of duplicated byte-for-byte across the SSL/TSSL/TD writers (each a sibling over a different
+ * target syntax): the model flatten helpers (`allStates`/`allChoices`), line/indent geometry, `@N` parsing, id
+ * seeding, and the SSL-family new-option marker. Every writer routes its whole-model scans through `allStates`/
+ * `allChoices` here rather than re-inlining `roots.flatMap(...)`. Family-SPECIFIC markers stay in their own
+ * module (e.g. the TD writer's `isNewTDOption` keys on the D-family `sourceRange`, not the SSL-family
+ * `callRange`/`stmtRange` that `isNewOption` below reads).
  */
 
 import type { SpliceOp } from "./dialog-splice";
@@ -12,6 +14,11 @@ import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 /** Every state across the model's roots, flattened - for id-keyed diffing and whole-model scans. */
 export function allStates(model: DialogModel): DialogState[] {
     return model.roots.flatMap((r) => r.states);
+}
+
+/** Every choice across every state, flattened - for id-keyed choice diffing (shared by the TSSL/TD writers). */
+export function allChoices(model: DialogModel): DialogChoice[] {
+    return allStates(model).flatMap((s) => s.choices);
 }
 
 /**

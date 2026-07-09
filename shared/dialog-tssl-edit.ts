@@ -10,7 +10,14 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { allStates, bareMsgId, isAllocatedNewOption, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
+import {
+    allChoices,
+    allStates,
+    bareMsgId,
+    isAllocatedNewOption,
+    lineIndentAt,
+    removeLineSplice,
+} from "./dialog-edit-common";
 import {
     branchConditionOps,
     branchStructureOps,
@@ -21,11 +28,6 @@ import {
 import { serializeSSLOption } from "./dialog-ssl-serialize";
 import { serializeTSSLBranch, serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogChoice, DialogModel } from "./dialog-model";
-
-function statesOf(model: DialogModel): DialogChoice[] {
-    // Flatten every choice across roots/states for id-keyed diffing.
-    return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
-}
 
 /** The numeric `.msg` id from an `@N` display text, or NaN. The serialized option references ids by number. */
 const msgIdOf = (c: DialogChoice): number => bareMsgId(c.text) ?? NaN;
@@ -41,7 +43,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     if (edited.sourceLang !== "tssl") {
         throw new Error("applyTSSLDialogEdits: only tssl source models are supported");
     }
-    const origById = new Map(statesOf(original).map((c) => [c.id, c]));
+    const origById = new Map(allChoices(original).map((c) => [c.id, c]));
     const ops: SpliceOp[] = [];
 
     // REORDER (per node): when a node's surviving flat options appear in a different order than source, refill
@@ -86,7 +88,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
         }
     }
 
-    for (const c of statesOf(edited)) {
+    for (const c of allChoices(edited)) {
         const orig = origById.get(c.id);
         if (!orig || origBundleChoiceIds.has(c.id)) continue;
         // In-place field edits on a surviving state-target option (retarget + reaction N/G/B + low-INT variant):
@@ -173,7 +175,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
             }
         }
     }
-    const editedIds = new Set(statesOf(edited).map((c) => c.id));
+    const editedIds = new Set(allChoices(edited).map((c) => c.id));
     const editedStateIds = new Set(allStates(edited).map((s) => s.id));
     for (const os of allStates(original)) {
         if (!editedStateIds.has(os.id)) continue; // deleted node - its options go with the procRange splice below

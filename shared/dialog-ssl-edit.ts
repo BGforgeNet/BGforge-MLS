@@ -49,7 +49,7 @@ import {
     serializeSupportProcedure,
     sslOptionMacro,
 } from "./dialog-ssl-serialize";
-import { bareMsgId, isAllocatedNewOption } from "./dialog-edit-common";
+import { allStates, bareMsgId, isAllocatedNewOption } from "./dialog-edit-common";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -602,14 +602,14 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     if (edited.sourceLang !== "ssl") {
         throw new Error("applySSLDialogEdits: only fallout-ssl source models are supported");
     }
-    const origById = new Map(original.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
+    const origById = new Map(allStates(original).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
 
     // RENAME: an edited node carrying `renamedFrom` is an existing node whose id changed. Rewrite its procedure
     // name token and the references nodeOps does NOT handle. Exclude it from the delete loop (its old id looks
     // "missing") and the add loop (its new id has no procRange).
     const renamedFromOf = new Map<string, string>(); // oldId -> newId
-    for (const s of edited.roots.flatMap((r) => r.states)) {
+    for (const s of allStates(edited)) {
         // `renamedFrom !== s.id` skips a no-op rename (renamedFrom set but id unchanged) - nothing to rewrite.
         if (s.renamedFrom && s.renamedFrom !== s.id) renamedFromOf.set(s.renamedFrom, s.id);
     }
@@ -628,7 +628,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         // An option target in a FAITHFUL node is left to the per-node survivor retarget: renameState already updated
         // that option's model target to newId, so nodeOps rewrites its targetRange. Rewriting it here too would push
         // a SECOND op on the identical span -> overlap corruption.
-        for (const s of original.roots.flatMap((r) => r.states)) {
+        for (const s of allStates(original)) {
             for (const c of s.choices) {
                 if (c.target.kind !== "state" || c.target.stateId !== oldId) continue;
                 if (c.callSites?.length) {
@@ -656,7 +656,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         }
     }
 
-    for (const state of edited.roots.flatMap((r) => r.states)) {
+    for (const state of allStates(edited)) {
         // A renamed node's id is its NEW id; origById is keyed by ORIGINAL ids, so resolve via renamedFrom.
         // This lets nodeOps process the renamed node's own options against its original, AND lets a faithful
         // node referencing the renamed node retarget that option's targetRange to the new id.
@@ -680,8 +680,8 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // logic above (their target changed state -> exit in the edited model). A deleted node's procedure span
     // never overlaps another node's option slots (procedures are disjoint), and a redirected inbound option
     // lives in a DIFFERENT surviving node, so this deletion and that slot rewrite cannot overlap.
-    const editedIds = new Set(edited.roots.flatMap((r) => r.states).map((s) => s.id));
-    for (const orig of original.roots.flatMap((r) => r.states)) {
+    const editedIds = new Set(allStates(edited).map((s) => s.id));
+    for (const orig of allStates(original)) {
         // A renamed-away old id is absent from editedIds but is NOT a deletion (the RENAME block rewrote it).
         if (editedIds.has(orig.id) || !orig.procRange || renamedFromOf.has(orig.id)) continue;
         const start = orig.procRange.start;
@@ -701,9 +701,9 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // splicer stays safe if ever called directly. Entry calls inside talk_p_proc for the
     // same deleted nodes are already handled by the ENTRY WIRING block (a deleted node is absent from
     // `editedById`, so its entry call is removed there); do NOT duplicate that here.
-    for (const orig of original.roots.flatMap((r) => r.states)) {
+    for (const orig of allStates(original)) {
         if (editedIds.has(orig.id) || renamedFromOf.has(orig.id)) continue; // survives or renamed -> nothing to do
-        for (const s of original.roots.flatMap((r) => r.states)) {
+        for (const s of allStates(original)) {
             if (!editedIds.has(s.id)) continue; // source node was also deleted -> skip
             for (const c of s.choices) {
                 if (c.target.kind !== "state" || c.target.stateId !== orig.id) continue;
@@ -724,7 +724,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // The new nodes to emit (both branches below): local, never-spliced additions. `committed` marks a node
     // already spliced on a prior save (still without a procRange in the webview copy); excluding it stops its
     // procedure being re-emitted (duplicated) on later saves.
-    const newNodes = edited.roots.flatMap((r) => r.states).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
+    const newNodes = allStates(edited).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
     if (anchor !== undefined) {
         const blocks = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
         if (blocks.length > 0) {
@@ -775,7 +775,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // posture). No-op from scratch (the scaffold already emitted the conventional pair).
     if (anchor !== undefined) {
         const referenced = new Set<string>();
-        for (const s of edited.roots.flatMap((r) => r.states))
+        for (const s of allStates(edited))
             for (const c of s.choices)
                 if (c.target.kind === "state" && sslTerminalKind(c.target.stateId)) referenced.add(c.target.stateId);
         const missing = [...referenced].filter(
@@ -802,7 +802,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // an entry produces two ops: the procedure deletion (in its own procedure) and the entry-call removal
     // (in talk_p_proc) - the two procedures are disjoint so the ops cannot overlap.
     const originalEntries = new Set(original.entryIds);
-    const editedById = new Map(edited.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
+    const editedById = new Map(allStates(edited).map((s) => [s.id, s]));
     // Removals: an original entry whose edited node is gone or no longer isEntry.
     for (const ec of original.entryCalls ?? []) {
         // A renamed entry's old id is absent from editedById, but its call must NOT be removed - the RENAME block
@@ -863,7 +863,7 @@ export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
     // node's procedure would leave that call dangling, so refuse (the entry toggle gates the same case).
     if ((model.entryIds ?? []).includes(stateId) && !(model.entryCalls ?? []).some((ec) => ec.name === stateId))
         return false;
-    for (const s of model.roots.flatMap((r) => r.states)) {
+    for (const s of allStates(model)) {
         for (const c of s.choices) {
             if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;
             if (s.faithful !== true) return false; // inbound option/call in a node whose source we cannot rewrite
