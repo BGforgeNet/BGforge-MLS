@@ -63,6 +63,9 @@ interface Session {
     latest: DialogModel | undefined;
     traTimer: ReturnType<typeof setTimeout> | undefined;
     edits: SerialQueue;
+    /** Set once the panel is disposed. A queued/in-flight edit captured this session before the WeakMap entry
+     *  was removed, so it re-checks this flag after each await rather than acting on a dead panel. */
+    disposed: boolean;
 }
 
 class DialogEditorProvider implements vscode.CustomTextEditorProvider {
@@ -90,6 +93,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             latest: undefined,
             traTimer: undefined,
             edits: new SerialQueue(),
+            disposed: false,
         };
         this.sessions.set(panel, session);
 
@@ -150,7 +154,12 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         });
         panel.onDidDispose(() => {
             const s = this.sessions.get(panel);
-            if (s?.traTimer) clearTimeout(s.traTimer);
+            if (s) {
+                // Mark BEFORE deleting the map entry: an in-flight applyEdit captured `s` and only sees the
+                // dispose via this flag (the map lookup would already be gone).
+                s.disposed = true;
+                if (s.traTimer) clearTimeout(s.traTimer);
+            }
             changeSub.dispose();
             saveSub.dispose();
             this.sessions.delete(panel);
@@ -187,12 +196,16 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         }
         const model = toModel(data);
         const session = this.sessions.get(panel);
-        if (session) session.latest = model ?? undefined;
+        // Disposed while the parse was in flight (the session is removed on dispose): don't post to a dead webview.
+        if (!session || session.disposed) return;
+        session.latest = model ?? undefined;
         if (model) {
             // Refine the render-family sourceLang the adapter set (d/ssl) to the actual transpiler source
-            // language when this is a .td/.tssl document, and force it view-only: the model's ranges point
-            // into generated D/SSL fields the adapter filled, but structural write-back to TS source is not
-            // wired yet (Phase 1). renderFamily keeps rendering it as D/SSL; only editing is withheld.
+            // language for a .td/.tssl document. `editable` is the D-family BLANKET-editable flag; TD/TSSL are
+            // deliberately NOT blanket-editable - their field/structural edits are gated per node by the
+            // faithfulness tier and sourceLang (see model-to-flow `fieldEditable` / DialogGraph `structEditable`)
+            // and written back to the TS source by the td/tssl writers. So keep `editable=false` and let the
+            // tier gating drive editing; renderFamily keeps rendering it as D/SSL.
             const lowerPath = document.uri.path.toLowerCase();
             if (lowerPath.endsWith(".td")) {
                 model.sourceLang = "td";
@@ -292,6 +305,10 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
                 return;
             }
+            // The panel may have been disposed while the parse request was in flight. A captured session
+            // survives the WeakMap delete, so re-check its flag before touching the document or the webview -
+            // otherwise a mid-flight edit lands a WorkspaceEdit and posts to a closed panel.
+            if (session.disposed) return;
             const original = toModel(data);
             const { newText, messages, allocations } = computeDialogSourceEdit(text, edited, original);
             edited.messages = messages;

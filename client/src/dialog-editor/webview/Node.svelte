@@ -21,9 +21,6 @@
             flagged?: boolean;
             /** This node's text (line or a reply) shares a .msg/.tra ref with another node. */
             sharedText?: boolean;
-            editable?: boolean;
-            /** Per-node structural editability (D: model-level; SSL: node is faithful). Gates add/remove. */
-            structuralEditable?: boolean;
             /** Per-node FIELD editability (superset incl. faithful/bundle TSSL). Gates drag-to-retarget. */
             fieldEditable?: boolean;
         };

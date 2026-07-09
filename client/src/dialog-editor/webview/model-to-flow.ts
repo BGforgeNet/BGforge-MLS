@@ -155,16 +155,6 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // True when this node's line or a reply shares a .msg/.tra ref with another node
                     // (e.g. a duplicated node) - editing the text here also changes the other node.
                     sharedText: isShared(s),
-                    // Per-node structural editability (drives handle connectability + the inspector's
-                    // Tier 1 controls): a D state is editable with the model; an SSL node is editable
-                    // only when faithfully representable (see DialogState.faithful / bundleFaithful).
-                    // Editability, NOT render family: only real SSL (sourceLang "ssl") is structurally
-                    // editable via the tier system. TSSL renders as SSL (renderFamily) but its faithful nodes
-                    // are FIELD-editable only (see fieldEditable below) - structural add/remove stays Phase 3 -
-                    // so structural editability must gate on the exact sourceLang, never on renderFamily.
-                    structuralEditable:
-                        model.editable ||
-                        (model.sourceLang === "ssl" && (s.faithful === true || s.bundleFaithful === true)),
                     // Field editability (drives output-handle connectability for RETARGET): the ssl-family
                     // superset - real SSL plus faithful/bundle TSSL, whose target token round-trips to source.
                     fieldEditable:

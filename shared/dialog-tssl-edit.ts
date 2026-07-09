@@ -13,9 +13,6 @@ import { serializeSSLOption } from "./dialog-ssl-serialize";
 import { serializeTSSLProcedure } from "./dialog-tssl-serialize";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
 
-/** The TSSL entry router (a bare-call dispatcher), mirroring SSL's `talk_p_proc`. New nodes anchor before it. */
-const TALK_PROC = "talk_p_proc";
-
 function statesOf(model: DialogModel): DialogChoice[] {
     // Flatten every choice across roots/states for id-keyed diffing.
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
@@ -253,8 +250,12 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     // `applySSLDialogEdits`' add-node (which anchors before talk_p_proc). @N ids are already allocated
     // upstream (renderFamily=fallout-ssl gate). A file with no entry router is a from-scratch scaffold, out
     // of scope here. Disjoint from every option/node splice (the anchor is a zero-width insert at talk_p_proc).
-    const talkAnchor = originalText.indexOf(`function ${TALK_PROC}`);
-    if (talkAnchor !== -1) {
+    // Anchor a brand-new node's `function` just before the entry router, using the offset the parser recorded
+    // (`newProcAnchor` = `fn.getStart()` of talk_p_proc) instead of a raw text search - the recorded anchor is
+    // exact and cannot match `talk_p_proc` inside a comment or string. Absent only for a from-scratch scaffold
+    // with no router (out of scope here). Mirrors applySSLDialogEdits' `edited.newProcAnchor ?? original...`.
+    const talkAnchor = edited.newProcAnchor ?? original.newProcAnchor;
+    if (talkAnchor !== undefined) {
         for (const state of allStates(edited)) {
             if (!isLocalNewSSLNode(state) || state.committed) continue;
             ops.push({ start: talkAnchor, end: talkAnchor, replacement: `${serializeTSSLProcedure(state)}\n\n` });

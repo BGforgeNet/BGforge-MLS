@@ -834,9 +834,9 @@
         !s.derivedFrom &&
         // Faithful SSL/TSSL and every non-derived TD node are structurally editable: the writers serialize
         // add/remove/rename of nodes and options back to source. TD (D-family) has no faithfulness tier, so it
-        // mirrors fieldEditable's unconditional td clause. Option reorder / reaction / low-INT are SSL-only (not
-        // written for td/tssl, and reaction/low-INT are Fallout-only concepts) - those controls gate on exact
-        // sourceLang "ssl" via Inspector sslOnlyOps and the actions, so enabling td/tssl here surfaces no no-op.
+        // mirrors fieldEditable's unconditional td clause. Reaction and low-INT are Fallout (SSL-family) concepts,
+        // so their controls apply to ssl/tssl only; the reaction/low-INT action handlers and their Inspector
+        // controls gate on sourceLang directly, so enabling structural editing for td here surfaces no no-op.
         (editModel.editable ||
             editModel.sourceLang === "td" ||
             ((editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl") &&

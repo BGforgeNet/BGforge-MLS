@@ -55,20 +55,29 @@ export function computeDialogSourceEdit(
         messages = { ...messages, ...created };
         edited.messages = messages;
     }
-    const spliced =
-        edited.sourceLang === "d"
-            ? applyDialogEdits(text, edited, original ?? undefined)
-            : edited.sourceLang === "td"
-              ? original
-                  ? applyTDDialogEdits(text, edited, original)
-                  : text
-              : edited.sourceLang === "tssl"
-                ? original
-                    ? applyTSSLDialogEdits(text, edited, original)
-                    : text
-                : original
-                  ? applySSLDialogEdits(text, edited, original)
-                  : text;
+    // Dispatch by source language to the matching writer. A `switch` + `never` default (mirroring
+    // `renderFamily`) keeps this exhaustive: a new `SourceLang` member without a dispatch arm is a compile
+    // error, and an unhandled value at runtime fails loud rather than silently splicing as SSL. A from-scratch
+    // model (`original === null`) has no on-disk source to splice against, so each writer no-ops to `text`.
+    let spliced: string;
+    switch (edited.sourceLang) {
+        case "d":
+            spliced = applyDialogEdits(text, edited, original ?? undefined);
+            break;
+        case "td":
+            spliced = original ? applyTDDialogEdits(text, edited, original) : text;
+            break;
+        case "tssl":
+            spliced = original ? applyTSSLDialogEdits(text, edited, original) : text;
+            break;
+        case "ssl":
+            spliced = original ? applySSLDialogEdits(text, edited, original) : text;
+            break;
+        default: {
+            const unhandled: never = edited.sourceLang;
+            throw new Error(`computeDialogSourceEdit: unhandled sourceLang ${String(unhandled)}`);
+        }
+    }
     const newText = spliced !== text ? spliced : null;
     // When something was spliced, report the pending items THIS edit just spliced so the webview can mark them
     // committed. A pending item lacks a source span (option: no callRange/stmtRange; node: no procRange) and is

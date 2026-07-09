@@ -20,7 +20,7 @@ import {
     rewriteSameFileExternRef,
 } from "./dialog-model";
 
-export function stateIdsOf(model: DialogModel): string[] {
+function stateIdsOf(model: DialogModel): string[] {
     return model.roots.flatMap((r) => r.states.map((s) => s.id));
 }
 
@@ -77,7 +77,7 @@ function uniqueId(taken: Set<string>, base: string): string {
     return `${base}_${i}`;
 }
 
-export function uniqueStateId(model: DialogModel, base: string): string {
+function uniqueStateId(model: DialogModel, base: string): string {
     return uniqueId(new Set(stateIdsOf(model)), base);
 }
 

@@ -77,6 +77,15 @@ describe("computeDialogSourceEdit", () => {
         expect(result.messages).toEqual({});
     });
 
+    it("throws on an unhandled sourceLang instead of silently splicing as SSL", () => {
+        // The dispatch is exhaustive over the SourceLang union; an unknown value (only reachable via a cast,
+        // e.g. a future SourceLang member without a dispatch arm) must fail loud, not fall through to the SSL
+        // writer or return the text unchanged. original=null bypasses the renderFamily allocation guard so this
+        // exercises the dispatch itself.
+        const edited = { ...buildModel(), sourceLang: "bogus" as DialogModel["sourceLang"] };
+        expect(() => computeDialogSourceEdit(D_SRC, edited, null)).toThrow(/sourceLang/);
+    });
+
     it("allocates a tra id for a NEW D state's literal say, splices its block, and reports it committed", () => {
         // The on-disk .tra the client loaded: @0/@1 already exist, so the first free id is 2.
         const original = buildModel();
