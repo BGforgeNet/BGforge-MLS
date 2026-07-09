@@ -118,6 +118,20 @@ END
         expect(ops.duplicateState(m, original)!.id).toBe("hello_copy_1"); // unique on repeat
     });
 
+    it("a duplicated state is not marked committed (so the writer emits it, never skips it)", () => {
+        const m = model();
+        const hello = state(m, "hello");
+        // Simulate a prior save: reconcile stamps `committed` on the state and its options.
+        ops.applyReconcile(m, { [hello.id]: "@100", [hello.choices[0]!.id]: "@101" }, { "100": "Hi.", "101": "more" });
+        expect(hello.committed).toBe(true);
+        expect(hello.choices[0]!.committed).toBe(true);
+        // Duplicating a committed state must produce a pending-new copy: carrying `committed` would make the
+        // SSL/TSSL/TD `!committed` new-node filters skip it, silently dropping the duplicate on the next save.
+        const copy = ops.duplicateState(m, hello)!;
+        expect(copy.committed).toBeFalsy();
+        expect(copy.choices.every((c) => !c.committed)).toBe(true);
+    });
+
     it("a duplicated state does not corrupt the original on surgical save", () => {
         const m = model();
         ops.duplicateState(m, state(m, "hello"));

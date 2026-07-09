@@ -31,11 +31,13 @@ export function bareMsgId(text: string | undefined): number | undefined {
     return m ? Number(m[1]) : undefined;
 }
 
-/** First free `.msg`/`.tra` id: one past the max existing numeric key (or 1 when there are none). */
+/** First free `.msg`/`.tra` id: one past the max existing numeric key (or 1 when there are none). Only
+ * fully-numeric keys count - `Number.parseInt` would read a partial key like `"5abc"` as `5`, matching the
+ * anchored `@N` convention `bareMsgId` uses above. */
 export function nextIdSeed(existingMessages: Record<string, string>): number {
     const ids = Object.keys(existingMessages)
-        .map((k) => Number.parseInt(k, 10))
-        .filter((n) => Number.isFinite(n));
+        .filter((k) => /^\d+$/.test(k))
+        .map(Number);
     return (ids.length > 0 ? Math.max(...ids) : 0) + 1;
 }
 

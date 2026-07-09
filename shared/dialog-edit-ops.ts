@@ -19,9 +19,11 @@ import {
     renderFamily,
     rewriteSameFileExternRef,
 } from "./dialog-model";
+import { allChoices, allStates } from "./dialog-edit-common";
 
+/** Every state id across the model - a thin projection over the shared `allStates` flatten. */
 function stateIdsOf(model: DialogModel): string[] {
-    return model.roots.flatMap((r) => r.states.map((s) => s.id));
+    return allStates(model).map((s) => s.id);
 }
 
 /**
@@ -81,10 +83,9 @@ function uniqueStateId(model: DialogModel, base: string): string {
     return uniqueId(new Set(stateIdsOf(model)), base);
 }
 
+/** Every choice id across the model - a thin projection over the shared `allChoices` flatten. */
 function allChoiceIds(model: DialogModel): Set<string> {
-    const ids = new Set<string>();
-    for (const r of model.roots) for (const s of r.states) for (const c of s.choices) ids.add(c.id);
-    return ids;
+    return new Set(allChoices(model).map((c) => c.id));
 }
 
 /**
@@ -205,11 +206,18 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     delete copy.nameRange;
     delete copy.forwardDeclRange;
     delete copy.insertAnchor;
+    // `committed` marks an item the host already spliced on a prior save; a fresh copy has been spliced nowhere,
+    // and inheriting it would make the SSL/TSSL/TD `!committed` new-node filters skip the copy - silently dropping
+    // it on save (it also has no source span, so it would never be emitted). Strip it here and on each choice below.
+    delete copy.committed;
     // A copy is an orphan to wire deliberately, not a silent second conversation entry: don't inherit the
     // source's entry status (which would auto-splice a `call <copy>;` into talk_p_proc on save). The parser
     // keeps unreachable dialog nodes visible, so the un-wired copy still shows in the graph.
     delete copy.isEntry;
-    copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
+    copy.choices = copy.choices.map((c, i) => {
+        const { committed: _committed, ...rest } = c;
+        return { ...rest, id: `${copy.id}#${i}` };
+    });
     root.states.push(copy);
     return copy;
 }
