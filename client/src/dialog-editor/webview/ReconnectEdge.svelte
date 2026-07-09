@@ -11,6 +11,9 @@
     let { sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, markerEnd, style, data }: EdgeProps = $props();
 
     const bezier = $derived(getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }));
+    // `@xyflow/svelte` types `EdgeProps.data` as an untyped bag (`Record<string, unknown> | undefined`), so a
+    // structural cast is the only way to read the `locked` flag the host sets; the read is a single optional
+    // boolean that defaults falsy, so a shape mismatch degrades safely to "unlocked" rather than throwing.
     const locked = $derived(Boolean((data as { locked?: boolean } | undefined)?.locked));
 </script>
 

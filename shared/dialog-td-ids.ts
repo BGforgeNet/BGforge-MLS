@@ -19,8 +19,6 @@ function isNewText(text: string | undefined): boolean {
     return t !== "" && !/^@\d+$/.test(t);
 }
 
-/** The first free id: `max(existing numeric id) + 1` (1 when the set is empty/non-numeric). */
-
 /**
  * Assign a fresh `.tra` id to every NEW state say and NEW option reply (mutating each new item's `text` to
  * `@<id>`), and return the id->text map of entries to append to the `.tra`. "New" means the item carries no

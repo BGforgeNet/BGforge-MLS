@@ -65,6 +65,13 @@ export function register(ctx: HandlerContext): void {
 
         // Handle parseDialog command
         if (command === LSP_COMMAND_PARSE_DIALOG) {
+            // Validate the webview-supplied uri like the compile branch below (args[0] may be absent, and
+            // reading `.uri` off it would throw). No user-facing message - this is an internal editor command,
+            // not a user-invoked one, so a bad uri is a programming error to log, not to surface.
+            if (typeof args?.uri !== "string") {
+                conlog(`parseDialog: invalid uri '${String(args?.uri)}'`, "warn");
+                return null;
+            }
             const uri: string = args.uri;
             const textDoc = ctx.documents.get(uri);
             if (!textDoc) {
@@ -96,6 +103,10 @@ export function register(ctx: HandlerContext): void {
 
         // Persist edited @N dialogue strings to the resolved .tra (dialog editor save).
         if (command === LSP_COMMAND_SAVE_TRA) {
+            if (typeof args?.uri !== "string") {
+                conlog(`saveTra: invalid uri '${String(args?.uri)}'`, "warn");
+                return null;
+            }
             const uri: string = args.uri;
             const messages = args.messages as Record<string, string> | undefined;
             const textDoc = ctx.documents.get(uri);

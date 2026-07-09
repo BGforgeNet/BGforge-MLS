@@ -156,6 +156,16 @@ export type DialogBlockItem =
 
 export type DialogBlock = DialogBlockItem[];
 
+/**
+ * The unified dialog-state IR every backend (Fallout SSL, TSSL, WeiDU D, TD) maps into. It is deliberately ONE
+ * wide interface with many backend-specific optional fields (each tagged "SSL only" / "TD only" / etc. below)
+ * rather than a discriminated union on `sourceLang`: the generic edit operations (`renameState`/`deleteState`/
+ * `addReply` in dialog-edit-ops, the reachability/selection/projection passes) operate across all four backends
+ * uniformly, and a union would force every one of them to narrow (and cast) per format at each use site. The
+ * cost is that a reader must know which optional-field subset applies to the model in hand - the per-field "who
+ * sets this" comments are that map. The per-language WRITERS re-impose the invariants a union would encode, so
+ * an out-of-family field is simply never read for the wrong backend.
+ */
 export interface DialogState {
     id: string;
     speaker?: string;
@@ -502,6 +512,11 @@ function targetFromD(t: DDialogTarget): DialogTarget {
             return { kind: "external", label: `${t.file}:${t.label}`, resolved: !t.file.includes("%") };
         case "copy_trans":
             return { kind: "external", label: `COPY_TRANS ${t.file}:${t.label}`, resolved: false };
+        default: {
+            // Exhaustiveness: a new DDialogTarget kind must be mapped explicitly.
+            const exhaustiveCheck: never = t;
+            return exhaustiveCheck;
+        }
     }
 }
 

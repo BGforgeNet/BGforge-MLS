@@ -160,5 +160,10 @@ function serializeTarget(target: DialogTarget): string {
             const stateId = target.label.slice(colon + 1);
             return `EXTERN ~${file}~ ${stateId}`;
         }
+        default: {
+            // Exhaustiveness: a new DialogTarget kind must be given an explicit serialization here.
+            const exhaustiveCheck: never = target;
+            return exhaustiveCheck;
+        }
     }
 }

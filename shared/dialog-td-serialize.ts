@@ -31,6 +31,11 @@ export function serializeTDTarget(target: DialogTarget): string {
             const state = colon === -1 ? "" : rest.slice(colon + 1);
             return `extern("${file}", ${state})`;
         }
+        default: {
+            // Exhaustiveness: a new DialogTarget kind must be given an explicit serialization here.
+            const exhaustiveCheck: never = target;
+            return exhaustiveCheck;
+        }
     }
 }
 
