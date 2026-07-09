@@ -120,6 +120,8 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 ```
 
+**Testing against real external files.** The `external/` mod trees are gitignored but REPRODUCIBLE - `pnpm test:external` (via `scripts/reset-external.sh` + `scripts/external-repos-lib.sh`) clones/checks them out at pinned refs. So real-corpus coverage belongs in a committed test, not a throwaway: tests that exercise real external files live under `server/test/integration/**` (run by `pnpm test:integration`, config `server/vitest.integration.config.ts`), using `test/integration/test-helpers.ts` (`FALLOUT_FIXTURES` = `external/fallout`, `IE_FIXTURES` = `external/infinity-engine`, `loadFixture`/`loadFixtures`). Gate a corpus sweep with `describe.skipIf(files.length === 0)` so it skips cleanly when the corpus is not checked out. Before placing any real-file test, read a sibling there (`integration/weidu-d.test.ts`, `fallout-ssl/rename.test.ts`) for the fixture/init conventions. Do NOT commit copies of gitignored `external/` files as fixtures, and do NOT hand-run a one-off script where this suite is the home.
+
 ## Publishing & Release
 
 Releases are tag-driven via GitHub Actions. `docs/releasing.md` is the canonical reference: the tag scheme (which tag form triggers which workflow), and the per-stream release procedures for the extension, the three libraries, and the reusable Action - including the root/`server` version-identity invariant. The server and VSIX bundle their `@bgforge/*` libraries rather than depending on them at runtime, so the extension and the libraries release in any order. Consult it before cutting any release. See `docs/architecture.md` for packaging mechanics.
