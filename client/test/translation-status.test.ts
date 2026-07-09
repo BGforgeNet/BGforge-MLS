@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { unresolvedRefCount } from "../src/dialog-editor/webview/translation-status";
+import { translationHint, unresolvedRefCount } from "../src/dialog-editor/webview/translation-status";
 import type { DialogModel, DialogState } from "../../shared/dialog-model";
 
 const span = { start: 0, end: 1 };
@@ -44,5 +44,28 @@ describe("unresolvedRefCount", () => {
         // is not counted - no need to special-case pending items (and no spurious banner on add).
         const m = model([dState("New", "")], {});
         expect(unresolvedRefCount(m)).toBe(0);
+    });
+});
+
+describe("translationHint", () => {
+    // The unresolved-refs banner tells the author how to point the translation path. Its wording is
+    // family-specific: Fallout SSL reads `.msg` files under the engine dialog path; WeiDU D reads `.tra`
+    // files under the plain `tra` default. A single set of D-family words ("the tra path", "tra/english",
+    // "name.tra") on a Fallout SSL file is wrong terminology - the whole point of this helper is that the two
+    // families never share the other's vocabulary.
+    it("gives Fallout SSL its .msg vocabulary (message path, engine dialog dir, .msg ext)", () => {
+        expect(translationHint(true)).toEqual({
+            pathWord: "message",
+            dirExample: "data/text/english/dialog",
+            ext: "msg",
+        });
+    });
+
+    it("gives WeiDU D its .tra vocabulary (tra path, tra dir, .tra ext)", () => {
+        expect(translationHint(false)).toEqual({
+            pathWord: "tra",
+            dirExample: "tra/english",
+            ext: "tra",
+        });
     });
 });

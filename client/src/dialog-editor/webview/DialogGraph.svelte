@@ -21,7 +21,7 @@
     import { writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
-    import { unresolvedRefCount } from "./translation-status";
+    import { translationHint, unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
@@ -168,6 +168,8 @@
     // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
     // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.
     const unresolvedRefs = $derived(unresolvedRefCount(editModel));
+    // Family-specific words for the unresolved-refs banner (Fallout SSL `.msg` vs WeiDU D `.tra`).
+    const traHint = $derived(translationHint(isSSL));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
     // recomputes as edits mutate editModel (a save path will post this to the host).
     const sourceText = $derived(showSource && editModel.sourceLang === "d" ? modelToD(editModel) : "");
@@ -1330,8 +1332,8 @@
              leaving the whole conversation unreadable with no explanation. -->
         <div class="untra" role="status">
             <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
-            Point the tra path in <b>.bgforge.yml</b> (<code>translation.directory</code>, e.g. <code>tra/english</code>)
-            or add a <code>/**&nbsp;@tra&nbsp;name.{isSSL ? "msg" : "tra"}&nbsp;*/</code> comment as the source file's first line.
+            Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
+            or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
         </div>
     {/if}
     <div class="body">
