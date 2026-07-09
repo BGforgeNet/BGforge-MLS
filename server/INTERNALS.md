@@ -85,7 +85,7 @@ server/src/
 |   +-- folding.ts            # onFoldingRanges
 |   +-- inlay-hints.ts        # inlayHint.on
 |   +-- semantic-tokens.ts    # semanticTokens.on
-|   +-- execute-command.ts    # onExecuteCommand + dialog-tree commands
+|   +-- execute-command.ts    # onExecuteCommand + dialog editor commands
 |
 +-- core/
 |   +-- symbol.ts             # IndexedSymbol type definitions

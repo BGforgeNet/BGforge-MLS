@@ -19,7 +19,6 @@ const config: KnipConfig = {
             entry: [
                 // esbuild entry points (moved from package.json to scripts/*.sh)
                 "src/extension.ts",
-                "src/dialog-tree/dialogTree-webview.ts",
                 "src/binary-editor/worker.ts",
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
@@ -128,7 +127,7 @@ const config: KnipConfig = {
         "scripts/**",
     ],
     ignoreDependencies: [
-        // icon font used via CSS classes in dialogTree.ts (e.g. "codicon codicon-references")
+        // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",
         // invoked via pnpm exec in scripts
         "oxfmt",

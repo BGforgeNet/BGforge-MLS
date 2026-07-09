@@ -407,8 +407,8 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // Styles load as <link> stylesheets resolved through asWebviewUri and authorised by
         // `style-src {{cspSource}}` - not inlined as <style nonce>. The VS Code webview layer only honours
         // style-src sources it attributes to the webview origin (cspSource); a bare `style-src 'nonce-...'`
-        // is honoured by raw Chromium but silently ignored here, leaving the panel unstyled. The dialog-tree
-        // webview relies on the same cspSource rule. See docs/architecture.md (Webview CSP).
+        // is honoured by raw Chromium but silently ignored here, leaving the panel unstyled. See
+        // docs/architecture.md (Webview CSP).
         // codicon.css links directly too: its @font-face `url("./codicon.ttf")` resolves relative to the
         // stylesheet's webview URI (same dir, both under localResourceRoots), so no font-URL rewrite is needed.
         const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));

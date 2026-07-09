@@ -38,4 +38,3 @@ export function lspWorkspaceSymbolsCommand(languageId: WorkspaceSymbolScopedLang
 
 /** VS Code extension command identifiers. These are client-side wrappers, not LSP commands. */
 export const VSCODE_COMMAND_COMPILE = "extension.bgforge.compile";
-export const VSCODE_COMMAND_DIALOG_PREVIEW = "extension.bgforge.dialogPreview";

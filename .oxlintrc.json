@@ -290,7 +290,6 @@
             // `window.postMessage`; none take a `targetOrigin`.
             "files": [
                 "client/src/editors/**",
-                "client/src/dialog-tree/**",
                 "client/src/webview-utils.ts",
                 "client/src/binary-editor/**",
                 "client/src/dialog-editor/**"

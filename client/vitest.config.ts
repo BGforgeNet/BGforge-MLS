@@ -45,12 +45,7 @@ export default defineConfig({
                 // VSCode extension entry point: activate/deactivate require the live vscode
                 // runtime; there is no meaningful unit surface to test here.
                 "client/src/extension.ts",
-                // Panel lifecycle management is built entirely around vscode.WebviewPanel,
-                // vscode.workspace, and vscode.window APIs; mocking them would recreate the
-                // framework rather than test behaviour.
-                "client/src/dialog-tree/shared.ts",
                 // Webview bundle entry points that only run inside the webview context.
-                "client/src/dialog-tree/dialogTree-webview.ts",
                 "client/src/binary-editor/webview/main.ts",
                 // worker_threads entry: runs only inside a spawned worker. Its behaviour is
                 // covered by the spawned-worker integration test (which bundles it through

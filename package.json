@@ -403,11 +403,6 @@
                 "title": "BGforge MLS: compile"
             },
             {
-                "command": "extension.bgforge.dialogPreview",
-                "title": "BGforge MLS: Dialog Preview",
-                "icon": "$(open-preview)"
-            },
-            {
                 "command": "extension.bgforge.dialogEditor",
                 "title": "BGforge MLS: Dialog Editor",
                 "icon": "$(type-hierarchy)"
@@ -649,11 +644,6 @@
             {
                 "command": "extension.bgforge.compile",
                 "key": "ctrl+r"
-            },
-            {
-                "command": "extension.bgforge.dialogPreview",
-                "key": "ctrl+shift+alt+v",
-                "when": "editorLangId == fallout-ssl || resourceExtname == .tssl || editorLangId == weidu-d || resourceExtname == .td"
             },
             {
                 "command": "extension.bgforge.dialogEditor",

@@ -17,10 +17,10 @@ const D_SRC = [
 ].join("\n");
 
 // Hand-built DialogModel rather than parsed: client/test has no D-parser fixture helper (parsing
-// lives in server/src, out of bounds for a client-side unit test), and client/test/dialog-tree-d.test.ts
-// establishes the project's pattern of hand-building the parser's output shape directly for this kind
-// of test. computeDialogSourceEdit only needs a DialogModel with real sourceRange offsets into D_SRC -
-// it does not re-test the D parser itself, only the splice/id-allocation wrapper.
+// lives in server/src, out of bounds for a client-side unit test), so this test hand-builds the
+// parser's output shape directly. computeDialogSourceEdit only needs a DialogModel with real
+// sourceRange offsets into D_SRC - it does not re-test the D parser itself, only the splice/id-allocation
+// wrapper.
 //
 // Each state's sourceRange is derived from D_SRC via indexOf (not hand-counted), so it stays correct
 // if the fixture text above is ever edited.

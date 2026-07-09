@@ -1,9 +1,6 @@
 /**
- * Shared styles for the dialog tree preview webview panel.
+ * Shared styles for extension webview panels.
  * Concatenated at load time with panel-specific CSS by the panel's asset loader.
- *
- * Panel-specific overrides:
- *   - dialog-tree/dialogTree.css (dialog tree preview -- body, h1, breadcrumb, tree nodes)
  */
 
 /* Always reserve scrollbar space so content doesn't shift when scrollbar appears/disappears */
