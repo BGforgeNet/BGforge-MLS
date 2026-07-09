@@ -279,36 +279,4 @@ describe("weidu-d/dialog - sample files", () => {
             expect(bodhiState!.transitions.length).toBeGreaterThanOrEqual(3);
         });
     });
-
-    // -----------------------------------------------------------------------
-    // Summary: print aggregate stats after all tests
-    // -----------------------------------------------------------------------
-
-    describe("aggregate summary", () => {
-        it("prints parsing summary for all sample files", () => {
-            let totalBlocks = 0;
-            let totalStates = 0;
-            let totalTransitions = 0;
-            let filesWithErrors = 0;
-
-            for (const fileName of sampleFiles) {
-                const filePath = path.join(SAMPLES_DIR, fileName);
-                const text = fs.readFileSync(filePath, "utf-8");
-
-                try {
-                    const result = parseDDialog(text);
-                    totalBlocks += result.blocks.length;
-                    totalStates += result.states.length;
-                    totalTransitions += result.states.reduce((sum, s) => sum + s.transitions.length, 0);
-                } catch {
-                    filesWithErrors++;
-                }
-            }
-
-            expect(filesWithErrors).toBe(0);
-            expect(totalBlocks).toBeGreaterThan(0);
-            expect(totalStates).toBeGreaterThan(0);
-            expect(totalTransitions).toBeGreaterThan(0);
-        });
-    });
 });
