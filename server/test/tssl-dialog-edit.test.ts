@@ -426,3 +426,67 @@ function talk_p_proc() { Node001(); }
         expect(n1r.choices[0]!.condition).toContain("local_var(LVAR_x)");
     });
 });
+
+describe("applyTSSLDialogEdits - whole-model orchestration parity with SSL", () => {
+    // A surviving node with a top-level CALL TRANSITION (`Node002();`, a goto) to the node being deleted. SSL
+    // splices such an inbound `call` out on delete (its INBOUND CALL REMOVAL pass); TSSL must do the same or the
+    // saved source calls a function that no longer exists. Same shared engine, so the two cannot diverge.
+    const SRC_CALL = `function Node001() {
+    Reply(100);
+    Node002();
+}
+function Node002() { Reply(200); }
+function talk_p_proc() { Node001(); }
+`;
+
+    it("the fixture forms a top-level call transition Node001 -> Node002 (guard)", () => {
+        const n1 = tsslModel(SRC_CALL).roots[0]!.states.find((s) => s.id === "Node001")!;
+        const callChoice = n1.choices.find((c) => c.callSites && c.callSites.length > 0);
+        expect(callChoice).toBeDefined();
+        expect(callChoice!.target).toEqual({ kind: "state", stateId: "Node002" });
+        expect(callChoice!.callSites!.some((s) => s.topLevel === true)).toBe(true);
+    });
+
+    it("deleting a called node removes the inbound `NodeX();` call from the surviving node", () => {
+        const original = tsslModel(SRC_CALL);
+        const edited = structuredClone(original);
+        const root = edited.roots[0]!;
+        // deleteState: redirect same-dialogue inbound state targets to exit, then drop the state.
+        for (const s of root.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+        root.states = root.states.filter((s) => s.id !== "Node002");
+        const out = applyTSSLDialogEdits(SRC_CALL, edited, original);
+        expect(out).not.toContain("function Node002()"); // the deleted node's function is gone
+        expect(out).not.toMatch(/\n {4}Node002\(\);/); // ...and no dangling call to it survives in Node001
+        expect(out).toContain("Reply(100);"); // the surviving node keeps its other content
+        // Round-trips clean: no state references Node002.
+        const reparsed = tsslModel(out);
+        const allTargets = reparsed.roots
+            .flatMap((r) => r.states)
+            .flatMap((s) => s.choices)
+            .map((c) => c.target);
+        expect(allTargets).not.toContainEqual({ kind: "state", stateId: "Node002" });
+    });
+
+    // Retargeting an option to the reserved Combat terminal (Node998) that the source does not declare: SSL
+    // emits the missing support procedure so the reference resolves; TSSL must emit the support function or the
+    // `NOption(.., Node998)` dangles on transpile. Same shared ensure-terminal pass.
+    it("retargeting an option to a reserved terminal the source lacks emits the support function", () => {
+        const original = tsslModel(flat);
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.target.kind === "state",
+        )!;
+        (opt.target as { kind: "state"; stateId: string }).stateId = "Node998";
+        const out = applyTSSLDialogEdits(flat, edited, original);
+        expect(out).toContain("NOption(101, Node998, 4)"); // the option now targets the terminal
+        expect(out).toContain("function Node998()"); // ...and the support function was emitted (no dangling ref)
+        // Round-trips: Node998 exists as a state after reparse.
+        expect(
+            tsslModel(out)
+                .roots.flatMap((r) => r.states)
+                .some((s) => s.id === "Node998"),
+        ).toBe(true);
+    });
+});

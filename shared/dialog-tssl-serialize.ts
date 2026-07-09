@@ -50,6 +50,19 @@ export function serializeTSSLBranch(
 }
 
 /**
+ * Emit a reserved support node as a TSSL `function <id>() { }`. The fallout-ssl family reserves Node999 (exit)
+ * and Node998 (combat) as conversation terminals; when an edited option retargets to one the source does not yet
+ * declare, the writer emits this stub so the reference resolves instead of dangling on transpile. Unlike SSL's
+ * `serializeSupportProcedure` (which emits Node998's default set-hostile combat body), the TSSL stub is emitted
+ * EMPTY: the SSL combat body's macro form has no verified TSSL spelling, so the body is left to the modder rather
+ * than guessing one that may transpile wrong. Node999 is empty in SSL too, so the common Exit terminal matches.
+ * Signature and role mirror `serializeSupportProcedure` so the shared write-back engine can take either.
+ */
+export function serializeTSSLSupportProcedure(id: string): string {
+    return `function ${id}() {\n}`;
+}
+
+/**
  * Serialize a new TSSL node as a `function <id>() { ... }` block. The NPC line becomes `Reply(<n>);` when the
  * node carries a resolvable `@N`; each option is serialized by the shared SSL option serializer (a node target
  * -> `NOption(...)`, a terminal -> `NMessage(...)`). Body lines are indented by `indent`; the caller owns the

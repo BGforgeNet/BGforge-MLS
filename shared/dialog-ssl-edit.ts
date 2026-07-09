@@ -634,17 +634,47 @@ export function branchConditionOps(_text: string, edited: DialogState, orig: Dia
 }
 
 /**
- * Write SSL structural edits (retarget, reorder) back to the `.ssl` source. Diffs `edited` against
- * `original` (matched by state id), builds byte splices from the captured option ranges, and applies
- * them. Only faithful nodes are eligible; an edit to a non-faithful node is silently skipped (its
- * structure is read-only). Returns the original text unchanged when there is nothing to splice.
- *
- * @throws if `edited.sourceLang !== "ssl"`.
+ * The per-variant hooks that distinguish the two fallout-ssl-family source syntaxes (`.ssl` and `.tssl`) inside
+ * the ONE shared write-back engine below. Everything else - the whole-model orchestration (rename, delete,
+ * inbound-call removal, add-node, ensure-terminal, entry wiring) and the per-node option/branch splices - is
+ * byte-identical between the two, so it lives once in `applyFalloutFamilyEdits` and each variant injects only
+ * the handful of pieces that genuinely differ by target syntax. This is what retires the recurring "TSSL parity"
+ * defect class at the source: a new orchestration pass is added once and both variants get it, instead of being
+ * hand-duplicated (and silently drifting) between two writers.
  */
-export function applySSLDialogEdits(originalText: string, edited: DialogModel, original: DialogModel): string {
-    if (edited.sourceLang !== "ssl") {
-        throw new Error("applySSLDialogEdits: only fallout-ssl source models are supported");
-    }
+export interface FalloutFamilyWriteVariant {
+    /** Serialize a whole NEW node: SSL `procedure <id> begin ... end`, TSSL `function <id>() { ... }`. */
+    serializeProcedure: (state: DialogState, indent: string) => string;
+    /** Wrap a flat option into a conditional gate: SSL `if (c) then ...`, TSSL `if (c) { ... }`. */
+    serializeConditionalOption: (choice: DialogChoice, msgId: number, condition: string, indent: string) => string;
+    /** Serialize a NEW bundle branch: SSL `if (c) then begin ... end`, TSSL `if (c) { ... }`. */
+    serializeBranch: typeof serializeSSLBranch;
+    /** Serialize a reserved terminal (Node998/Node999) the source lacks: SSL procedure, TSSL function. */
+    serializeSupportNode: (id: string) => string;
+    /** A `talk_p_proc` entry call for a node: SSL `call <id>;`, TSSL `<id>();`. (Dormant - no make-entry gesture.) */
+    serializeEntryCall: (id: string) => string;
+    /** Whether the source already declares/defines node `id` (SSL `procedure <id>`, TSSL `function <id>`). */
+    declaresNode: (text: string, id: string) => boolean;
+    /** The reply-only add-option body anchor: SSL the parser-captured `insertAnchor`, TSSL a close-brace offset. */
+    bodyAnchor: (text: string, orig: DialogState) => { offset: number; indent: string } | undefined;
+    /** From-scratch skeleton emitter (SSL only). Omitted => a file with no entry router is out of scope (no-op). */
+    serializeScaffold?: (entryIds: string[], nodeIds: string[], procedures: string[], support: string[]) => string;
+}
+
+/**
+ * Write structural edits back to a fallout-ssl-family source (`.ssl` or `.tssl`), the ONE engine both variants
+ * share. Diffs `edited` against `original` (matched by state id), builds byte splices from the captured ranges,
+ * and applies them; only faithful/bundle nodes are eligible and an edit to a non-faithful node is silently
+ * skipped (its structure is read-only). Returns the original text unchanged when there is nothing to splice.
+ * The `variant` supplies the target-syntax pieces; the callers (`applySSLDialogEdits`/`applyTSSLDialogEdits`)
+ * guard the source language and pass their variant.
+ */
+export function applyFalloutFamilyEdits(
+    originalText: string,
+    edited: DialogModel,
+    original: DialogModel,
+    variant: FalloutFamilyWriteVariant,
+): string {
     const origById = new Map(allStates(original).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
 
@@ -709,13 +739,21 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         if (orig.bundleFaithful) {
             ops.push(...bundleNodeOps(originalText, state, orig));
         } else {
-            ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor, serializeSSLConditionalOption));
+            ops.push(
+                ...nodeOps(
+                    originalText,
+                    state,
+                    orig,
+                    variant.bodyAnchor(originalText, orig),
+                    variant.serializeConditionalOption,
+                ),
+            );
             // Add the node's own reply (NPC line) when the edit introduced one the procedure lacks - the
             // from-scratch scaffold path, where the entry node was emitted empty then given a line.
             ops.push(...replyOps(state, orig));
         }
         ops.push(...branchConditionOps(originalText, state, orig));
-        ops.push(...branchStructureOps(originalText, state, orig));
+        ops.push(...branchStructureOps(originalText, state, orig, variant.serializeBranch));
     }
 
     // DELETE: an original node missing from the edited model -> remove its whole procedure span (and the
@@ -769,7 +807,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // procedure being re-emitted (duplicated) on later saves.
     const newNodes = allStates(edited).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
     if (anchor !== undefined) {
-        const blocks = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
+        const blocks = newNodes.map((s) => variant.serializeProcedure(s, "    "));
         if (blocks.length > 0) {
             // Guarantee the spliced procedure starts on its own line. `newProcAnchor` normally sits at the start
             // of `procedure talk_p_proc` (preceded by a newline), but the webview model can carry a STALE anchor
@@ -784,21 +822,21 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
                 replacement: (needsLeadingNL ? "\n" : "") + blocks.map((b) => `${b}\n`).join(""),
             });
         }
-    } else if (newNodes.length > 0) {
+    } else if (newNodes.length > 0 && variant.serializeScaffold) {
         // SCAFFOLD (from scratch): no `talk_p_proc`, so the ADD branch has no anchor. Emit the whole dialog
         // skeleton at EOF - forward decls, a talk_p_proc router calling the entry node(s), each new node's
         // procedure, and the Node998/Node999 support nodes. Mutually exclusive with the ADD branch (that runs
         // only when an anchor exists), so a node is never emitted twice, and the ENTRY WIRING below is a no-op
         // from scratch (entryCallAnchor is also undefined) - the router the scaffold writes IS the entry wiring.
-        const procedures = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
+        // Only a variant that supplies a scaffold emitter reaches here; a variant that omits it (TSSL) treats a
+        // routerless file as out of scope and no-ops.
+        const procedures = newNodes.map((s) => variant.serializeProcedure(s, "    "));
         const entryIds = newNodes.filter((s) => s.isEntry).map((s) => s.id);
         // Emit a support node only if the file does not already declare or define it (matches both the forward
         // decl `procedure Node998;` and the definition `procedure Node998 begin`), so an existing Node998/Node999
         // is left byte-for-byte untouched.
-        const emitSupport = ["Node998", "Node999"].filter(
-            (id) => !new RegExp(String.raw`\bprocedure\s+${id}\b`).test(originalText),
-        );
-        const scaffold = serializeSSLDialogScaffold(
+        const emitSupport = ["Node998", "Node999"].filter((id) => !variant.declaresNode(originalText, id));
+        const scaffold = variant.serializeScaffold(
             entryIds,
             newNodes.map((s) => s.id),
             procedures,
@@ -821,9 +859,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         for (const s of allStates(edited))
             for (const c of s.choices)
                 if (c.target.kind === "state" && sslTerminalKind(c.target.stateId)) referenced.add(c.target.stateId);
-        const missing = [...referenced].filter(
-            (id) => !new RegExp(String.raw`\bprocedure\s+${id}\b`).test(originalText),
-        );
+        const missing = [...referenced].filter((id) => !variant.declaresNode(originalText, id));
         if (missing.length > 0) {
             // Same own-line guarantee as the ADD branch: a stale/abutting anchor must not glue the scaffolded
             // support procedure onto a preceding `end` (`endprocedure Node999`), which would drop it on re-parse.
@@ -832,7 +868,8 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
                 start: anchor,
                 end: anchor,
                 replacement:
-                    (needsLeadingNL ? "\n" : "") + missing.map((id) => `${serializeSupportProcedure(id)}\n`).join(""),
+                    (needsLeadingNL ? "\n" : "") +
+                    missing.map((id) => `${variant.serializeSupportNode(id)}\n`).join(""),
             });
         }
     }
@@ -873,12 +910,37 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             ops.push({
                 start: anchorE,
                 end: anchorE,
-                replacement: added.map((s) => `\n${indent}call ${s.id};`).join(""),
+                replacement: added.map((s) => `\n${indent}${variant.serializeEntryCall(s.id)}`).join(""),
             });
         }
     }
 
     return applySplices(originalText, ops);
+}
+
+/** The `.ssl` target syntax: `procedure`/`begin`/`end`, `call <id>;` entries, the from-scratch scaffold. */
+const SSL_WRITE_VARIANT: FalloutFamilyWriteVariant = {
+    serializeProcedure: (state, indent) => serializeSSLProcedure(state, newNodeMsgIds(state), indent),
+    serializeConditionalOption: serializeSSLConditionalOption,
+    serializeBranch: serializeSSLBranch,
+    serializeSupportNode: serializeSupportProcedure,
+    serializeEntryCall: (id) => `call ${id};`,
+    declaresNode: (text, id) => new RegExp(String.raw`\bprocedure\s+${id}\b`).test(text),
+    bodyAnchor: (_text, orig) => orig.insertAnchor,
+    serializeScaffold: serializeSSLDialogScaffold,
+};
+
+/**
+ * Write SSL structural edits back to the `.ssl` source. Thin wrapper over the shared `applyFalloutFamilyEdits`
+ * engine with the `.ssl` variant; guards the source language so a D/TSSL/TD model is never serialized as SSL.
+ *
+ * @throws if `edited.sourceLang !== "ssl"`.
+ */
+export function applySSLDialogEdits(originalText: string, edited: DialogModel, original: DialogModel): string {
+    if (edited.sourceLang !== "ssl") {
+        throw new Error("applySSLDialogEdits: only fallout-ssl source models are supported");
+    }
+    return applyFalloutFamilyEdits(originalText, edited, original, SSL_WRITE_VARIANT);
 }
 
 /**
