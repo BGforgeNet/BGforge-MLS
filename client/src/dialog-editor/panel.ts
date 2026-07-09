@@ -68,7 +68,11 @@ interface Session {
     disposed: boolean;
 }
 
-class DialogEditorProvider implements vscode.CustomTextEditorProvider {
+// Exported for the integration test (client/test/dialog-panel.test.ts), which drives resolveCustomTextEditor
+// through a mocked vscode to exercise the session-lifecycle wiring - the SerialQueue serialization of
+// back-to-back edits and the disposed-mid-flight guard - that the SerialQueue/EchoGuard unit tests can't cover
+// in isolation. `registerDialogEditor` remains the production entry point.
+export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
     private readonly sessions = new WeakMap<vscode.WebviewPanel, Session>();
     private readonly context: vscode.ExtensionContext;
     private readonly client: LanguageClient;
