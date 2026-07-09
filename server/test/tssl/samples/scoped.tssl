@@ -1,0 +1,29 @@
+// Authored fixture (SSL-in-TS). A state-level gate (the outer `if` also wrapping the first Reply) plus a
+// nested option gate and an else branch and a call transition - exercises multi-level conditional composition,
+// state-gate scoping (scopedConditional drops the outer gate the state trigger already shows), the else
+// negation, a conditional terminal message, and the recursive block (group inside group, with an else).
+function Node001() {
+    if (global_var(GVAR_X) == 1) {
+        Reply(100);
+        if (global_var(GVAR_Y) == 1) {
+            NOption(101, Node002, 4);
+        } else {
+            NMessage(301);
+        }
+        Node003();
+    }
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function Node003() {
+    Reply(300);
+    NMessage(302);
+}
+
+function talk_p_proc() {
+    Node001();
+}

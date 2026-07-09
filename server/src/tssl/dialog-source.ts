@@ -13,7 +13,10 @@
 
 import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaration } from "ts-morph";
 import type {
+    SSLDialogBlock,
+    SSLDialogBlockItem,
     SSLDialogData,
+    SSLDialogGroup,
     SSLDialogNode,
     SSLDialogOption,
     SSLDialogOptionType,
@@ -49,8 +52,7 @@ function stmtSpan(call: CallExpression): { start: number; end: number } {
 }
 
 /** Resolve a message-id argument: a numeric literal -> its number; anything else -> its text + a computed/random kind. */
-function msgIdOf(arg: Node | undefined): { msgId: number | string; msgKind?: "computed" | "random" } {
-    if (!arg) return { msgId: 0 };
+function msgIdOf(arg: Node): { msgId: number | string; msgKind?: "computed" | "random" } {
     if (arg.getKind() === SyntaxKind.NumericLiteral) return { msgId: Number(arg.getText()) };
     if (Node.isCallExpression(arg)) {
         return { msgId: arg.getText(), msgKind: calleeName(arg) === "random" ? "random" : "computed" };
@@ -99,6 +101,55 @@ function enclosingIfSpans(call: CallExpression): IfSpans | undefined {
         cur = cur.getParent();
     }
     return inner;
+}
+
+/**
+ * Walk up from a dialog call to the procedure body, conjoining EVERY enclosing `if` condition (not just the
+ * nearest). A doubly-nested option is gated by all its ancestors; returning only the innermost silently drops
+ * the outer gates (dialog-nested-flatten-bug-class, symptom 1). Mirrors `server/src/dialog.ts` `enclosingCondition`
+ * over the TS AST: parts are joined outermost-first with ` and `, an `else`-branch level negated with `not `. The
+ * condition tokens are TS syntax (`x == 1`), but the composition (join/negate) matches the SSL parser so the two
+ * families render an equivalent dialog identically (the flat projection is display-only; the string never round-
+ * trips - a single-level editable gate is rewritten through `condRange`, not this text). When `skip` holds an
+ * `if`'s `start:end` key, that level is omitted - used to drop the state-level gate (the `if`s the first Reply also
+ * sits under, already shown as the state trigger) so it is not re-shown on every child option.
+ */
+function enclosingConditionTSSL(call: Node, skip?: ReadonlySet<string>): string | undefined {
+    const parts: string[] = [];
+    let prev: Node = call;
+    let cur: Node | undefined = call.getParent();
+    while (cur && !Node.isFunctionDeclaration(cur)) {
+        if (Node.isIfStatement(cur) && !skip?.has(`${cur.getStart()}:${cur.getEnd()}`)) {
+            const cond = cur.getExpression().getText();
+            const elseStmt = cur.getElseStatement();
+            // The call sits in the `else` branch (runs on the negation) iff we ascended through the else node.
+            const inElse =
+                elseStmt !== undefined &&
+                prev.getStart() === elseStmt.getStart() &&
+                prev.getEnd() === elseStmt.getEnd();
+            parts.push(inElse ? `not ${cond}` : cond);
+        }
+        prev = cur;
+        cur = cur.getParent();
+    }
+    if (parts.length === 0) return undefined;
+    parts.reverse(); // innermost-first -> present outermost-first so the composite gate reads top-down
+    return parts.length === 1 ? parts[0]! : parts.join(" and ");
+}
+
+/**
+ * `start:end` keys of every enclosing `if` of `node`, up to the procedure body - identifies the exact `if`
+ * nodes so a caller can subtract a state-level gate by node identity (robust against two `if`s sharing the same
+ * condition text). Mirrors `server/src/dialog.ts` `enclosingIfKeys`.
+ */
+function enclosingIfKeysTSSL(node: Node): ReadonlySet<string> {
+    const keys = new Set<string>();
+    let cur: Node | undefined = node.getParent();
+    while (cur && !Node.isFunctionDeclaration(cur)) {
+        if (Node.isIfStatement(cur)) keys.add(`${cur.getStart()}:${cur.getEnd()}`);
+        cur = cur.getParent();
+    }
+    return keys;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +207,63 @@ function classifyTier(
     return "approximate";
 }
 
+/** A branch body's statements: a block's statements, or the single bare statement (a bare `if`/call). */
+function branchStmtsTSSL(branch: Node): Node[] {
+    return Node.isBlock(branch) ? branch.getStatements() : [branch];
+}
+
+/**
+ * Build the recursive block for a structured node, mirroring `server/src/dialog.ts` `buildBlock` over the TS AST.
+ * Leaf items reference the flat replies/options/callTransitions arrays by source-order index; `counters` advances
+ * in the SAME preorder the flat walk (`buildNode`'s `forEachDescendant`) uses - top-level statements in order,
+ * each group's `then` before its `else` - so the Nth Reply here indexes replies[N], the Nth option/message
+ * options[N], the Nth local-function transition callTransitions[N]. Non-dialog statements become opaque items.
+ */
+function buildBlockTSSL(
+    stmts: readonly Node[],
+    localFns: ReadonlySet<string>,
+    counters: { reply: number; opt: number; trans: number },
+): SSLDialogBlock {
+    const items: SSLDialogBlockItem[] = [];
+    for (const stmt of stmts) {
+        if (Node.isIfStatement(stmt)) {
+            const cond = stmt.getExpression();
+            const thenStmt = stmt.getThenStatement();
+            const elseStmt = stmt.getElseStatement();
+            const group: SSLDialogGroup = {
+                kind: "group",
+                condition: cond.getText(),
+                conditionRange: span(cond),
+                thenBlock: buildBlockTSSL(branchStmtsTSSL(thenStmt), localFns, counters),
+                ...(elseStmt ? { elseBlock: buildBlockTSSL(branchStmtsTSSL(elseStmt), localFns, counters) } : {}),
+            };
+            items.push(group);
+            continue;
+        }
+        if (Node.isExpressionStatement(stmt)) {
+            const expr = stmt.getExpression();
+            if (Node.isCallExpression(expr)) {
+                const cn = calleeName(expr);
+                if (cn === "Reply") {
+                    items.push({ kind: "line", replyIndex: counters.reply++ });
+                    continue;
+                }
+                if (cn !== undefined && (isOptionFn(cn) || isMessageFn(cn))) {
+                    items.push({ kind: "choice", optionIndex: counters.opt++ });
+                    continue;
+                }
+                if (cn !== undefined && localFns.has(cn)) {
+                    items.push({ kind: "transition", transitionIndex: counters.trans++ });
+                    continue;
+                }
+            }
+        }
+        // A preservable simple statement (assignment / side-effect call) the block keeps byte-exact.
+        items.push({ kind: "opaque", text: stmt.getText(), textRange: span(stmt) });
+    }
+    return items;
+}
+
 // ---------------------------------------------------------------------------
 // Node builder
 // ---------------------------------------------------------------------------
@@ -164,6 +272,20 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
+    const callTransitions: NonNullable<SSLDialogNode["callTransitions"]> = [];
+    const body = fn.getBody();
+
+    // The state's own gate: the enclosing `if`s of the FIRST Reply (whatever becomes state.trigger). Options
+    // scope their displayed condition to their own state by subtracting these. Pre-scanned so it is known before
+    // any option is processed - a Reply usually precedes its options, but the walk order is not relied upon.
+    let firstReply: Node | undefined;
+    fn.forEachDescendant((node, traversal) => {
+        if (Node.isCallExpression(node) && calleeName(node) === "Reply" && node.getArguments()[0]) {
+            firstReply = node;
+            traversal.stop();
+        }
+    });
+    const stateGate = firstReply ? enclosingIfKeysTSSL(firstReply) : undefined;
 
     // Full-subtree walk so a nested dialog call is never dropped (the content-faithfulness invariant).
     fn.forEachDescendant((node) => {
@@ -171,47 +293,67 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         const cn = calleeName(node);
         if (cn === undefined) return;
         const args = node.getArguments();
+        const arg0 = args[0];
         const line = node.getStartLineNumber();
-        if (cn === "Reply" && args[0]) {
+        if (cn === "Reply" && arg0) {
+            // `conditional` conjoins EVERY enclosing `if` (multi-level); the `if*` edit anchors come from the
+            // single-level `enclosingIfSpans` and are present only for a pure single-level gate.
             const ifSpans = enclosingIfSpans(node);
+            const conditional = enclosingConditionTSSL(node);
             replies.push({
-                ...msgIdOf(args[0]),
+                ...msgIdOf(arg0),
                 line,
-                ...(ifSpans
-                    ? {
-                          conditional: ifSpans.condition,
-                          condRange: ifSpans.condRange,
-                          ifRange: ifSpans.ifRange,
-                          ifPure: ifSpans.ifPure,
-                      }
-                    : {}),
+                ...(conditional !== undefined ? { conditional } : {}),
+                ...(ifSpans ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure } : {}),
             });
-        } else if (isOptionFn(cn) && args[0] && args[1]) {
+        } else if (isOptionFn(cn) && arg0 && args[1]) {
+            const arg1 = args[1];
             const ifSpans = enclosingIfSpans(node);
+            const conditional = enclosingConditionTSSL(node);
+            const scoped = enclosingConditionTSSL(node, stateGate);
             options.push({
                 type: cn,
-                ...msgIdOf(args[0]),
-                target: args[1].getText(),
+                ...msgIdOf(arg0),
+                target: arg1.getText(),
                 skill: args[2] ? Number(args[2].getText()) : undefined,
                 line,
-                ...(ifSpans
-                    ? {
-                          conditional: ifSpans.condition,
-                          scopedConditional: ifSpans.condition,
-                          condRange: ifSpans.condRange,
-                          ifRange: ifSpans.ifRange,
-                          ifPure: ifSpans.ifPure,
-                      }
-                    : {}),
+                ...(conditional !== undefined ? { conditional } : {}),
+                ...(scoped !== undefined ? { scopedConditional: scoped } : {}),
+                ...(ifSpans ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure } : {}),
                 callRange: span(node),
-                targetRange: span(args[1]),
+                targetRange: span(arg1),
                 stmtRange: stmtSpan(node),
             });
-        } else if (isMessageFn(cn) && args[0]) {
-            // A terminal message has no target node.
-            options.push({ type: cn, ...msgIdOf(args[0]), target: "", line, stmtRange: stmtSpan(node) });
+        } else if (isMessageFn(cn) && arg0) {
+            // A terminal message has no target node, but it can still be conditionally gated (Message-branch
+            // parity with the SSL parser, which the old single-level TSSL parser omitted entirely).
+            const conditional = enclosingConditionTSSL(node);
+            const scoped = enclosingConditionTSSL(node, stateGate);
+            options.push({
+                type: cn,
+                ...msgIdOf(arg0),
+                target: "",
+                line,
+                ...(conditional !== undefined ? { conditional } : {}),
+                ...(scoped !== undefined ? { scopedConditional: scoped } : {}),
+                stmtRange: stmtSpan(node),
+            });
         } else if (localFns.has(cn)) {
-            if (!callTargets.includes(cn)) callTargets.push(cn); // a call to another node is a transition
+            // A call to another node is a transition. `callTargets` dedupes (one graph edge / call-choice per
+            // target). `callTransitions` records every STATEMENT-level site (span for delete, target token for
+            // rename, top-level flag) so the structured block can index it in lockstep with this flat walk - a
+            // localFn call nested in an if-CONDITION (not a statement) is excluded so the two walks stay aligned.
+            if (!callTargets.includes(cn)) callTargets.push(cn);
+            const stmt = node.getFirstAncestorByKind(SyntaxKind.ExpressionStatement);
+            if (stmt !== undefined && stmt.getExpression() === node) {
+                const expr = node.getExpression();
+                callTransitions.push({
+                    name: cn,
+                    stmtRange: span(stmt),
+                    ...(expr.getKind() === SyntaxKind.Identifier ? { targetRange: span(expr) } : {}),
+                    topLevel: body !== undefined && stmt.getParent() === body,
+                });
+            }
         }
         // else: a side-effect / engine builtin - not surfaced as dialog this phase.
     });
@@ -224,8 +366,16 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         replies,
         options,
         callTargets,
+        ...(callTransitions.length > 0 ? { callTransitions } : {}),
         faithful: tier === "faithful",
-        ...(tier === "structured" ? { structured: true as const } : {}),
+        // A structured node carries the recursive block mirroring its body so nested if/else render faithfully
+        // (rather than the empty block the old parser left, which made a structured node show no nested content).
+        ...(tier === "structured"
+            ? {
+                  structured: true as const,
+                  block: buildBlockTSSL(fn.getStatements(), localFns, { reply: 0, opt: 0, trans: 0 }),
+              }
+            : {}),
         ...(tier === "approximate" ? { approximate: true as const } : {}),
         procRange: span(fn),
         ...(nameNode ? { nameRange: span(nameNode) } : {}),
@@ -233,9 +383,10 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
 }
 
 /**
- * Parse TSSL source into SSL DialogData with ranges into the source. Phase 1 (read-only view): produces
- * nodes (name, replies, options, callTargets, tier flags, procRange/nameRange) and entry points. The
- * write-back anchors (insertAnchor, entryCalls, branches/block) are added when TSSL editing lands (Phase 2+).
+ * Parse TSSL source into SSL DialogData with byte ranges into the `.tssl` source: nodes (name, replies,
+ * options with multi-level conditions, callTargets/callTransitions, faithfulness tier, structured `block`,
+ * procRange/nameRange), entry points, entry-call and new-node write-back anchors, and out-of-band starts.
+ * At display parity with the native SSL parser; a structured node is faithfully rendered but read-only.
  */
 export function parseTSSLSource(text: string): SSLDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
@@ -282,6 +433,24 @@ export function parseTSSLSource(text: string): SSLDialogData {
         procNames.push(name);
         nodes.push(buildNode(fn, name, localFns));
     }
+    // force_dialog_start(Node) / start_dialog_at_node(Node) reached from ANYWHERE (timers, map-enter handlers)
+    // start a conversation out of band; treat their targets as entry points and capture the target-identifier
+    // span so a node rename rewrites it, or the saved file dangles at the old name. Mirrors the SSL parser.
+    // (TS has no forward-declaration construct - function declarations hoist - so unlike the SSL parser there is
+    // no `procedure Name;` name token to record for rename; `forwardDeclRange` is legitimately absent for TSSL.)
+    const outOfBandCalls: NonNullable<SSLDialogData["outOfBandCalls"]> = [];
+    sf.forEachDescendant((node) => {
+        if (!Node.isCallExpression(node)) return;
+        const cn = calleeName(node);
+        if (cn !== "force_dialog_start" && cn !== "start_dialog_at_node") return;
+        const arg = node.getArguments()[0];
+        if (arg === undefined) return;
+        const targetName = Node.isCallExpression(arg) ? calleeName(arg) : arg.getText();
+        if (targetName === undefined) return;
+        if (!entryPoints.includes(targetName)) entryPoints.push(targetName);
+        // A call_expr arg has no single target token to splice, so it is left name-only (not a renamable node id).
+        if (!Node.isCallExpression(arg)) outOfBandCalls.push({ name: targetName, targetRange: span(arg) });
+    });
     return {
         nodes,
         entryPoints,
@@ -289,5 +458,6 @@ export function parseTSSLSource(text: string): SSLDialogData {
         ...(entryCalls.length > 0 ? { entryCalls } : {}),
         ...(newProcAnchor !== undefined ? { newProcAnchor } : {}),
         ...(entryCallAnchor !== undefined ? { entryCallAnchor } : {}),
+        ...(outOfBandCalls.length > 0 ? { outOfBandCalls } : {}),
     };
 }
