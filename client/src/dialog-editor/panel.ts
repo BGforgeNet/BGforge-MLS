@@ -14,7 +14,15 @@
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
-import { modelFromD, modelFromSSL, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
+import {
+    modelFromD,
+    modelFromSSL,
+    renderFamily,
+    type DialogMessages,
+    type DialogModel,
+} from "../../../shared/dialog-model";
+import { verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
+import { verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -181,7 +189,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         document: vscode.TextDocument,
         panel: vscode.WebviewPanel,
         reparse?: { seq: number; allocations: Record<string, string>; messages: DialogMessages },
-    ): Promise<void> {
+    ): Promise<DialogModel | undefined> {
         const params: ExecuteCommandParams = {
             command: LSP_COMMAND_PARSE_DIALOG,
             arguments: [{ uri: document.uri.toString() }],
@@ -192,12 +200,12 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void panel.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${message}` });
-            return;
+            return undefined;
         }
         const model = toModel(data);
         const session = this.sessions.get(panel);
         // Disposed while the parse was in flight (the session is removed on dispose): don't post to a dead webview.
-        if (!session || session.disposed) return;
+        if (!session || session.disposed) return undefined;
         session.latest = model ?? undefined;
         if (model) {
             // Refine the render-family sourceLang the adapter set (d/ssl) to the actual transpiler source
@@ -233,15 +241,16 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                       }
                     : { type: "model", model },
             );
-        } else {
-            void panel.webview.postMessage({
-                type: "error",
-                message:
-                    data == null
-                        ? "The language server returned no dialog data for this file. Make sure it is a recognized, open dialog file."
-                        : "The parsed dialog data could not be interpreted.",
-            });
+            return model;
         }
+        void panel.webview.postMessage({
+            type: "error",
+            message:
+                data == null
+                    ? "The language server returned no dialog data for this file. Make sure it is a recognized, open dialog file."
+                    : "The parsed dialog data could not be interpreted.",
+        });
+        return undefined;
     }
 
     /**
@@ -336,7 +345,24 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 // freshly-typed text before the debounced .tra flush. While the user is mid inline-edit the
                 // webview keeps its draft and only stamps the `@N` in place from these same fields (see
                 // DialogGraph's re-parse listener) - the enriched post serves both cases.
-                await this.postModel(document, panel, { seq, allocations, messages });
+                const reparsed = await this.postModel(document, panel, { seq, allocations, messages });
+                // Safety net: compare the re-parsed saved file against the model the webview intended. A splicer
+                // regression that emits a wrong-but-parseable file would otherwise be silently accepted. The verify
+                // guards the mature SSL / D writers (it no-ops for tssl/td by sourceLang); a divergence surfaces as
+                // a non-blocking warning - the edit already applied to the document, so this reports rather than
+                // prevents. Proven not to false-positive on a good edit by the applySSLDialogEdits /
+                // applyDialogEdits splice-then-reparse round-trip tests.
+                if (reparsed && !session.disposed) {
+                    const verdict =
+                        renderFamily(edited.sourceLang) === "weidu-d"
+                            ? verifyDialogEditApplied(edited, reparsed)
+                            : verifySSLEditApplied(edited, reparsed);
+                    if (!verdict.ok) {
+                        void vscode.window.showWarningMessage(
+                            `Dialog saved, but the result may not match your edit: ${verdict.reason ?? "unknown difference"}`,
+                        );
+                    }
+                }
             }
         }
         session.latest = edited;
