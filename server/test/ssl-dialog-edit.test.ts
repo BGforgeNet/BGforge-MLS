@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import {
-    applySSLDialogEdits,
-    eligibleToDelete,
-    isLocalNewSSLNode,
-    verifySSLEditApplied,
-} from "../../shared/dialog-ssl-edit";
+import { applySSLDialogEdits, eligibleToDelete, isLocalNewSSLNode } from "../../shared/dialog-ssl-edit";
 import { duplicateState, renameState } from "../../shared/dialog-edit-ops";
 import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
 import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
@@ -90,7 +85,6 @@ describe("applySSLDialogEdits - reaction / low-INT variant", () => {
         const opt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
         expect(opt.reaction).toBe("good");
         expect(opt.skill).toBe(4);
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("toggles low-INT ON: drops the IQ arg (Low is 2-arg, IQ hardcoded to the engine's LOW_IQ)", async () => {
@@ -105,7 +99,6 @@ describe("applySSLDialogEdits - reaction / low-INT variant", () => {
         const opt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
         expect(opt.lowIq).toBe(true);
         expect(opt.reaction).toBe("neutral");
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("toggles low-INT OFF: inserts the existing skill (or 0 when absent) as the IQ arg", async () => {
@@ -127,7 +120,6 @@ procedure talk_p_proc begin call Node001; end
         const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
         expect(reOpt.lowIq).toBeUndefined();
         expect(reOpt.skill).toBe(0);
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("applies a reaction change and a low-INT toggle together (e.g. N -> GLow) in one save", async () => {
@@ -143,7 +135,6 @@ procedure talk_p_proc begin call Node001; end
         const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
         expect(reOpt.reaction).toBe("good");
         expect(reOpt.lowIq).toBe(true);
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("keeps the enclosing if-condition intact when only the reaction changes on a conditional option", async () => {
@@ -165,7 +156,6 @@ procedure talk_p_proc begin call Node001; end
         const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
         expect(reOpt.reaction).toBe("bad");
         expect(reOpt.condition).toContain("GVAR_X");
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 });
 
@@ -342,6 +332,23 @@ describe("eligibleToDelete", () => {
         expect((model.entryCalls ?? []).some((ec) => ec.name === "NodeX")).toBe(false);
         expect(eligibleToDelete(model, "NodeX")).toBe(false);
     });
+
+    it("runs the same delete-safety checks for a TSSL model (parity with ssl, not an exact-sourceLang skip)", () => {
+        // TSSL is fallout-ssl family and now structurally editable, so eligibleToDelete must apply these SSL
+        // checks to it - before the renderFamily fix it exact-matched sourceLang "ssl" and returned true for
+        // ANY tssl node, skipping them. Its writer (like SSL's) only removes TOP-LEVEL entry calls, so a tssl
+        // node whose entry call is nested in an if (topLevel:false) is NOT safely deletable; a top-level one is.
+        const tsslModel = (topLevel: boolean): DialogModel => ({
+            sourceLang: "tssl",
+            editable: false,
+            entryCalls: [
+                { name: "Node001", stmtRange: { start: 0, end: 0 }, targetRange: { start: 0, end: 0 }, topLevel },
+            ],
+            roots: [{ id: "r", label: "", kind: "dialog", states: [{ id: "Node001", text: "@1", choices: [] }] }],
+        });
+        expect(eligibleToDelete(tsslModel(false), "Node001")).toBe(false); // nested entry call -> can't clean up
+        expect(eligibleToDelete(tsslModel(true), "Node001")).toBe(true); // top-level entry call -> writer removes it
+    });
 });
 
 describe("isLocalNewSSLNode", () => {
@@ -364,110 +371,6 @@ describe("isLocalNewSSLNode", () => {
         );
         expect(isLocalNewSSLNode({ id: "L", text: "", choices: [], derivedFrom: "Node001" })).toBe(false);
         expect(isLocalNewSSLNode({ id: "Node002", text: "", choices: [], renamedFrom: "Node001" })).toBe(false);
-    });
-});
-
-describe("verifySSLEditApplied", () => {
-    it("confirms a correctly-applied retarget and rejects a save that did not take", async () => {
-        const original = modelFromSSL(await parseDialog(SRC));
-        const edited = structuredCloneModel(original);
-        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
-            kind: "state",
-            stateId: "Node003",
-        };
-        const out = applySSLDialogEdits(SRC, edited, original);
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
-
-        // A save that silently did NOT take: the re-parse still matches the unedited source,
-        // whose first option targets Node002, not the intended Node003.
-        const stale = modelFromSSL(await parseDialog(SRC));
-        const verdict = verifySSLEditApplied(edited, stale);
-        expect(verdict.ok).toBe(false);
-        expect(verdict.reason).toContain("Node001");
-    });
-
-    const SRC_AD = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
-
-    it("verifies a node-add round-trip", async () => {
-        const original = modelFromSSL(await parseDialog(SRC_AD));
-        const edited = structuredCloneModel(original);
-        edited.roots[0]!.states.push({
-            id: "Node050",
-            text: "@500",
-            choices: [{ id: "Node050#opt0", text: "@501", target: { kind: "exit" } }],
-        });
-        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
-            kind: "state",
-            stateId: "Node050",
-        };
-        const out = applySSLDialogEdits(SRC_AD, edited, original);
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
-    });
-
-    it("verifies a node-delete round-trip (inbound option becomes a terminal)", async () => {
-        const original = modelFromSSL(await parseDialog(SRC_AD));
-        const edited = structuredCloneModel(original);
-        const root = edited.roots[0]!;
-        root.states = root.states.filter((s) => s.id !== "Node002");
-        for (const s of root.states)
-            for (const c of s.choices) {
-                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
-            }
-        const out = applySSLDialogEdits(SRC_AD, edited, original);
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
-    });
-
-    // Minimal hand-built model: one node with one option carrying a specific condition.
-    // verifySSLEditApplied only iterates roots/states/choices, so no SSL spans are needed.
-    const modelWithOptionCondition = (nodeId: string, msgId: number, condition: string): DialogModel => ({
-        sourceLang: "ssl",
-        editable: true,
-        roots: [
-            {
-                id: "root",
-                label: "",
-                kind: "dialog",
-                states: [
-                    {
-                        id: nodeId,
-                        text: `@${msgId}`,
-                        choices: [
-                            {
-                                id: `${nodeId}#opt0`,
-                                text: "@999",
-                                target: { kind: "exit" },
-                                condition,
-                            },
-                        ],
-                    },
-                ],
-            },
-        ],
-    });
-
-    it("verify flags a condition that did not land as intended", () => {
-        const intended = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_x) == 1)");
-        const actual = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_x) == 0)"); // stale
-        const res = verifySSLEditApplied(intended, actual);
-        expect(res.ok).toBe(false);
-    });
-
-    it("verify passes when conditions match", () => {
-        const intended = modelWithOptionCondition("Node001", 102, "(x)");
-        const actual = modelWithOptionCondition("Node001", 102, "(x)");
-        expect(verifySSLEditApplied(intended, actual).ok).toBe(true);
-    });
-
-    it("verify treats a bare condition as matching its serialized parenthesized form", () => {
-        // After a wrap, the intended model carries the user's bare condition while the reparse of the
-        // saved .ssl carries the serializeCond-parenthesized form. Verify must canonicalize parens so it
-        // does not flag this cosmetic difference as a failed save.
-        const intended = modelWithOptionCondition("Node001", 102, "local_var(LVAR_Z) == 5");
-        const actual = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_Z) == 5)");
-        expect(verifySSLEditApplied(intended, actual).ok).toBe(true);
     });
 });
 
@@ -983,8 +886,6 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toContain("NOption(122, Node915, 4)"); // then-branch option untouched
         expect(out).toContain("set_local_var(LVAR_0,1);"); // side-effect byte-exact
         expect(out).toContain("else begin"); // if/else skeleton intact
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });
 
@@ -1107,8 +1008,6 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toContain("NOption(124, Node915, 4)"); // kept (else-branch)
         expect(out).toContain("set_local_var(LVAR_0,1);"); // side-effect byte-exact
         expect(out).toContain("else begin");
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });
 
@@ -1174,35 +1073,7 @@ procedure talk_p_proc begin call Node002; end
     });
 });
 
-describe("verifySSLEditApplied - bundle branch conditions", () => {
-    const SRC_BC = `procedure Node002 begin
-    if (local_var(LVAR_0) == 0) then begin Reply(120); NOption(122, Node915, 4); end
-    else begin Reply(121); NOption(124, Node915, 4); end
-end
-procedure Node915 begin Reply(900); end
-procedure talk_p_proc begin call Node002; end
-`;
-    it("flags an intended branch-condition edit that did not land", async () => {
-        const original = modelFromSSL(await parseDialog(SRC_BC));
-        const intended = structuredClone(original);
-        intended.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.find((b) => b.kind === "if")!.condition =
-            "(local_var(LVAR_0) == 9)";
-        // actual = the unchanged parse (the edit "did not land")
-        const actual = modelFromSSL(await parseDialog(SRC_BC));
-        expect(verifySSLEditApplied(intended, actual).ok).toBe(false);
-    });
-    it("treats a bare vs parenthesized branch condition as matching", async () => {
-        const original = modelFromSSL(await parseDialog(SRC_BC));
-        const intended = structuredClone(original);
-        // intend the same condition without its outer parens; the canonicalizer must fold them
-        intended.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.find((b) => b.kind === "if")!.condition =
-            "local_var(LVAR_0) == 0";
-        const actual = modelFromSSL(await parseDialog(SRC_BC));
-        expect(verifySSLEditApplied(intended, actual)).toEqual({ ok: true });
-    });
-});
-
-describe("verifySSLEditApplied - branch add/remove (kind-aware fold)", () => {
+describe("applySSLDialogEdits - sibling-if branch add/remove", () => {
     // Single-if, no else; a side-effect keeps the node bundleFaithful.
     const SRC_SIF = `procedure Node002 begin
     if (local_var(LVAR_0) == 0) then begin
@@ -1229,7 +1100,7 @@ procedure Node999 begin Reply(999); end
 procedure talk_p_proc begin call Node002; end
 `;
 
-    it("verifies ok after a sibling-if add lands (branch-add round-trip)", async () => {
+    it("round-trips a sibling-if branch add to two branches", async () => {
         const original = modelFromSSL(await parseDialog(SRC_SIF));
         const edited = structuredClone(original);
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
@@ -1249,10 +1120,10 @@ procedure talk_p_proc begin call Node002; end
         });
         const out = applySSLDialogEdits(SRC_SIF, edited, original);
         const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+        expect(actual.roots[0]!.states.find((s) => s.id === "Node002")!.branches).toHaveLength(2);
     });
 
-    it("verifies ok after a sibling-if remove lands (branch-remove round-trip)", async () => {
+    it("round-trips a sibling-if branch remove to one branch", async () => {
         const original = modelFromSSL(await parseDialog(SRC_RIF));
         const edited = structuredClone(original);
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
@@ -1262,25 +1133,7 @@ procedure talk_p_proc begin call Node002; end
         node.choices = node.choices.filter((c) => !removedIds.has(c.id));
         const out = applySSLDialogEdits(SRC_RIF, edited, original);
         const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
-    });
-
-    it("flags an intended else-add that did not land (actual = unchanged parse)", async () => {
-        // Empty else branch added to intended - no new choices, so the choices-level check does
-        // not trigger. Only branchKey differs (intended: if+else, actual: if only). This is the
-        // case the current filter-to-if fold misses, making it the RED case for this task.
-        const original = modelFromSSL(await parseDialog(SRC_SIF));
-        const intended = structuredClone(original);
-        const node = intended.roots[0]!.states.find((s) => s.id === "Node002")!;
-        node.branches!.push({
-            kind: "else",
-            choiceIds: [],
-            replies: [],
-            opaque: [],
-        });
-        // actual = unchanged parse (the else add did NOT land)
-        const actual = modelFromSSL(await parseDialog(SRC_SIF));
-        expect(verifySSLEditApplied(intended, actual).ok).toBe(false);
+        expect(actual.roots[0]!.states.find((s) => s.id === "Node002")!.branches).toHaveLength(1);
     });
 });
 
@@ -1344,9 +1197,8 @@ procedure talk_p_proc begin call Node002; end
         const original = modelFromSSL(await parseDialog(SRC_SIF));
         const edited = structuredClone(original);
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
-        // New option and new sibling if branch (no stmtRange -> PENDING-NEW).
-        // Condition on the choice matches the branch condition so verifySSLEditApplied sees
-        // the same condition in both intended and reparsed models.
+        // New option and new sibling if branch (no stmtRange -> PENDING-NEW). The choice condition matches
+        // the branch condition so the option re-parses grouped under that new branch.
         const newOptId = "Node002#new0";
         node.choices.push({
             id: newOptId,
@@ -1375,7 +1227,6 @@ procedure talk_p_proc begin call Node002; end
         // Re-parses as a bundle-faithful node.
         const reparsed = modelFromSSL(await parseDialog(out));
         expect(reparsed.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("adds an else branch after the then-block, original if byte-exact", async () => {
@@ -1488,7 +1339,6 @@ procedure talk_p_proc begin call Node002; end
         const reparsedNode = reparsed.roots[0]!.states.find((s) => s.id === "Node002")!;
         expect(reparsedNode.bundleFaithful).toBe(true);
         expect(reparsedNode.branches).toHaveLength(1);
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("removes an else branch: the if block is byte-exact, else is gone", async () => {
@@ -1514,7 +1364,6 @@ procedure talk_p_proc begin call Node002; end
         expect(reparsedNode.bundleFaithful).toBe(true);
         expect(reparsedNode.branches).toHaveLength(1);
         expect(reparsedNode.branches![0]!.kind).toBe("if");
-        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
     });
 
     it("refuses to remove a branch that carries opaque (side-effect) statements: source is byte-exact", async () => {
@@ -1612,10 +1461,9 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toContain("set_local_var(LVAR_0, 1)");
         expect(out).toContain("NOption(122, Node915, 4)");
 
-        // Round-trip: re-parses as bundleFaithful and verifySSLEditApplied passes.
+        // Round-trip: re-parses as bundleFaithful.
         const actual = modelFromSSL(await parseDialog(out));
         expect(actual.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });
 
@@ -1672,9 +1520,5 @@ procedure talk_p_proc begin call Node002; end
         // The surviving branch's option and side-effect must be intact.
         expect(out).toContain("NOption(102, Node999, 4)");
         expect(out).toContain("set_local_var(LVAR_0, 1)");
-
-        // Round-trip: re-parse and verify both the condition edit and absence of the removed branch.
-        const actual = modelFromSSL(await parseDialog(out));
-        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });

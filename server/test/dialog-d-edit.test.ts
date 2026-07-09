@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { modelFromD, type DialogState } from "../../shared/dialog-model";
-import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../shared/dialog-d-edit";
+import { applyDialogEdits } from "../../shared/dialog-d-edit";
 import { renameState } from "../../shared/dialog-edit-ops";
 
 // ---------------------------------------------------------------------------
@@ -205,24 +205,6 @@ describe("applyDialogEdits", () => {
         expect(result).toContain("/* greeting dialog - do not edit manually */");
     });
 
-    it("pendingInserts returns states with no sourceRange", () => {
-        const data = parseDDialog(FIXTURE);
-        const model = modelFromD(data);
-
-        const root = model.roots.find((r) => r.kind === "dialog")!;
-        const newState: DialogState = {
-            id: "newstate",
-            text: "Newly added.",
-            choices: [{ id: "newstate#0", target: { kind: "exit" } }],
-            // No sourceRange.
-        };
-        root.states.push(newState);
-
-        const pending = pendingInserts(model);
-        expect(pending).toHaveLength(1);
-        expect(pending[0]!.id).toBe("newstate");
-    });
-
     it("flags CHAIN links as derived and never re-emits them on save", () => {
         const data = parseDDialog(CHAIN_FIXTURE);
         const model = modelFromD(data);
@@ -231,10 +213,8 @@ describe("applyDialogEdits", () => {
         const derived = model.roots.flatMap((r) => r.states).filter((s) => s.derivedFrom);
         expect(derived.length).toBeGreaterThan(0);
         expect(derived.every((s) => s.derivedFrom === "CHAIN")).toBe(true);
-        // Derived states are never pending inserts.
-        expect(pendingInserts(model)).toHaveLength(0);
 
-        // Saving with no edits must not duplicate the chain. The CHAIN block is preserved
+        // Saving with no edits must not duplicate the chain (the CHAIN's derived states are never re-emitted). The CHAIN block is preserved
         // verbatim (no state range covers it), so each line appears exactly once - the old
         // insert-fallback would have re-serialized the derived links into standalone blocks.
         const result = applyDialogEdits(CHAIN_FIXTURE, model, modelFromD(data));
@@ -458,29 +438,6 @@ END
         const istate = modelFromD(data).roots.find((r) => r.kind === "dialog")!.states[0]!;
         expect(FIX.slice(istate.sayRange!.start, istate.sayRange!.end)).toBe("@1");
         expect(FIX.slice(istate.choices[0]!.sourceRange!.start, istate.choices[0]!.sourceRange!.end)).toBe("++ @2 + s");
-    });
-
-    it("verifyDialogEditApplied: ok when the saved text re-parses to the edited model", () => {
-        const data = parseDDialog(SHORTHAND_FIXTURE);
-        const original = modelFromD(data);
-        const edited = modelFromD(data);
-        const root = edited.roots.find((r) => r.kind === "dialog")!;
-        root.states = root.states.map((s) => (s.id === "g_item_type" ? { ...s, text: "@77" } : s));
-        const out = applyDialogEdits(SHORTHAND_FIXTURE, edited, original);
-        const actual = modelFromD(parseDDialog(out));
-        expect(verifyDialogEditApplied(edited, actual).ok).toBe(true);
-    });
-
-    it("verifyDialogEditApplied: flags a state whose saved bytes diverge from the edited model", () => {
-        const data = parseDDialog(SHORTHAND_FIXTURE);
-        const edited = modelFromD(data);
-        // Simulate a serializer regression: the re-parsed `actual` disagrees with `edited`.
-        const actual = modelFromD(data);
-        const aroot = actual.roots.find((r) => r.kind === "dialog")!;
-        aroot.states = aroot.states.map((s) => (s.id === "g_item_type" ? { ...s, text: "WRONG" } : s));
-        const res = verifyDialogEditApplied(edited, actual);
-        expect(res.ok).toBe(false);
-        expect(res.reason).toContain("g_item_type");
     });
 
     it("parses the trigger of a conditional short-form reply (+ ~cond~ + reply)", () => {

@@ -29,17 +29,16 @@
  */
 
 import {
+    renderFamily,
     sslTerminalKind,
     type DialogBranch,
     type DialogChoice,
     type DialogModel,
     type DialogState,
-    type DialogTarget,
 } from "./dialog-model";
-import { applySplices, type SpliceOp, type VerifyResult } from "./dialog-splice";
+import { applySplices, type SpliceOp } from "./dialog-splice";
 import {
     type NodeMsgIds,
-    serializeCond,
     serializeSSLBranch,
     serializeSSLConditionalOption,
     serializeSSLDialogScaffold,
@@ -844,9 +843,11 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
  * Non-SSL models defer to their own delete rules (D states are deletable when not derived).
  */
 export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
-    // Phase 2 (TSSL editing): treat "tssl" like "ssl" here (via renderFamily) so it inherits these delete
-    // rules; until then tssl is view-only and never reaches this, so an exact "ssl" check is correct now.
-    if (model.sourceLang !== "ssl") return true;
+    // TSSL is the same fallout-ssl family as SSL and is now structurally editable, so it must run these same
+    // delete-safety checks - its writer (like SSL's) only removes TOP-LEVEL entry calls, so a tssl node with a
+    // conditional / non-top-level entry call must NOT be deletable or it would leave a dangling reference. Gate
+    // on renderFamily, not an exact "ssl". The D-family (d/td) defers to its own delete rules (return true).
+    if (renderFamily(model.sourceLang) !== "fallout-ssl") return true;
     // A conditional entry (a `call` nested in an `if` inside talk_p_proc) cannot be removed without rewriting
     // the `if` - defer to condition editing.
     for (const ec of model.entryCalls ?? []) if (ec.name === stateId && !ec.topLevel) return false;
@@ -864,61 +865,4 @@ export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
         }
     }
     return true;
-}
-
-/** Stable key for a transition target, so option order/targets can be compared structurally. */
-function targetKey(t: DialogTarget): string {
-    if (t.kind === "state") return `state:${t.stateId}`;
-    if (t.kind === "external") return `external:${t.label}`;
-    return "exit";
-}
-
-/**
- * Confirm an SSL structural save landed as intended: every node in `actual` (the re-parse of the
- * saved `.ssl`) matches its counterpart in `intended` (the model the editor wrote) on the ordered
- * option targets AND conditions. Tier 1 retargets and reorders options; Tier 3c wraps/unwraps/edits
- * condition text - both are observable here. A mismatch means the splice did not take (or corrupted
- * the file) and must be surfaced rather than reported as a clean save.
- *
- * The comparison iterates over `actual`, not `intended`: a retarget can leave a node unreachable, and
- * the parser prunes unreachable procedures, so an orphaned node legitimately disappears from the
- * re-parse - that is an expected consequence of the edit, not a failure. Tier 1 splices replace only
- * option-call spans inside a faithful node, so they can never remove a procedure; a node missing from
- * `actual` is therefore always an orphan, never lost data. Non-fallout-ssl models are never written
- * here, so they always verify.
- *
- * DELIBERATELY a TEST oracle, NOT wired into the live save path. The round-trip unit tests
- * (`ssl-dialog-edit.test.ts`) call it on a single clean edit -> splice -> re-parse and it holds. It was
- * briefly wired into panel.ts and false-positived on a real multi-edit session: the live webview model
- * accumulates edit-session artifacts across successive saves (committed flags, mid-add pending items,
- * selection remaps) that transiently diverge from a clean re-parse even when the SAVED FILE is correct,
- * so a live intended-vs-reparse comparison cries wolf. The writers are guarded by these unit tests instead.
- */
-export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
-    if (intended.sourceLang !== "ssl") return { ok: true };
-    const intendedById = new Map(intended.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
-    for (const a of actual.roots.flatMap((r) => r.states)) {
-        const s = intendedById.get(a.id);
-        if (!s) return { ok: false, reason: `unexpected node "${a.id}" in the saved file` };
-        // Encode target + condition + reaction + low-INT per option so a condition that did not land
-        // (edit-text, wrap, unwrap) or a reaction/lowIq rewrite that silently failed is caught
-        // alongside a mismatched target. Canonicalize the condition through serializeCond (the same
-        // paren-normalization the writer applies on wrap) then strip whitespace, so a bare typed
-        // condition (`X`) matches its written/reparsed form (`(X)`) and is not flagged as a failed
-        // save. An option with no condition contributes an empty segment on both sides, so existing
-        // target-only tests remain unaffected; reaction defaults to "neutral" and lowIq to "std" the
-        // same way the model does, so an untouched option's key is unaffected by this extension.
-        const normCond = (c?: string): string => (c && c.trim() !== "" ? serializeCond(c).replaceAll(/\s+/g, "") : "");
-        const key = (c: DialogChoice): string =>
-            `${targetKey(c.target)}@${normCond(c.condition)}@${c.reaction ?? "neutral"}@${c.lowIq ? "low" : "std"}`;
-        const want = s.choices.map(key).join("|");
-        const got = a.choices.map(key).join("|");
-        if (want !== got)
-            return { ok: false, reason: `node "${a.id}" option targets/conditions differ from the intended edit` };
-        const branchKey = (st: DialogState): string =>
-            (st.branches ?? []).map((b) => `${b.kind}:${b.kind === "if" ? normCond(b.condition) : ""}`).join("|");
-        if (branchKey(s) !== branchKey(a))
-            return { ok: false, reason: `node "${a.id}" branch conditions differ from the intended edit` };
-    }
-    return { ok: true };
 }

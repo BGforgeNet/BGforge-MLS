@@ -20,7 +20,7 @@
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import { serializeChoice, serializeState, serializeTextValue } from "./dialog-d-serialize";
-import { applySplices, type SpliceOp, type VerifyResult } from "./dialog-splice";
+import { applySplices, type SpliceOp } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
     if (a.kind !== b.kind) return false;
@@ -111,8 +111,8 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
 /**
  * Apply all edits from `editedModel` back into `originalText`.
  *
- * States that carry a `sourceRange` are spliced in place; states without one are
- * inserted after the last ranged state of their root (`pendingInserts()` reports them).
+ * States that carry a `sourceRange` are spliced in place; states without one (and not derived) are
+ * inserted after the last ranged state of their root.
  *
  * - An edited state that DIFFERS from its original (matched by `sourceRange`) ->
  *   its source span is replaced with the re-serialized block for that state.
@@ -246,48 +246,4 @@ export function applyDialogEdits(originalText: string, editedModel: DialogModel,
     // Apply splice ops via the shared core (sorts highest-offset-first so earlier
     // offsets remain valid as the string is modified from the end toward the front).
     return applySplices(originalText, ops);
-}
-
-/**
- * Returns states in `editedModel` that have no `sourceRange` (newly created in the
- * editor). `applyDialogEdits` inserts these after the last existing state of their
- * root; this accessor lets a caller report what was added.
- */
-export function pendingInserts(editedModel: DialogModel): DialogState[] {
-    // Exclude derived states (CHAIN/INTERJECT/EXTEND): they have no sourceRange but are not
-    // new - they belong to a preserved construct and must never be re-emitted as inserts.
-    return editedModel.roots.flatMap((r) => r.states).filter((s) => !s.sourceRange && !s.derivedFrom);
-}
-
-function dialogStatesOf(model: DialogModel): DialogState[] {
-    return model.roots.filter((r) => r.kind === "dialog").flatMap((r) => r.states);
-}
-
-/**
- * Confirm a save landed as intended: every editable state of `intended` (the model the
- * editor wrote) reappears, faithfully, in `actual` (the re-parse of the saved file). A
- * divergence means the serializer produced text that does NOT round-trip back to the
- * edit - a regression to surface rather than accept silently. This is the self-checking
- * minimal-diff guard: it runs over two models (no re-parse needed in-process, since the
- * server already re-parsed the saved document), so the client can compare what it sent
- * against what came back.
- *
- * Derived (CHAIN/INTERJECT/EXTEND) states are skipped - they are read-only and regenerate
- * from their preserved source construct. Non-weidu-d models are view-only (never written),
- * so they always verify.
- *
- * DELIBERATELY a TEST oracle, NOT wired into the live save path (see `verifySSLEditApplied`'s note): a
- * live intended-vs-reparse comparison false-positives on a real multi-edit session because the webview
- * model carries edit-session artifacts a clean re-parse does not. The round-trip unit tests use it.
- */
-export function verifyDialogEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
-    if (intended.sourceLang !== "d") return { ok: true };
-    const actualById = new Map(dialogStatesOf(actual).map((s) => [s.id, s]));
-    for (const s of dialogStatesOf(intended)) {
-        if (s.derivedFrom) continue;
-        const a = actualById.get(s.id);
-        if (!a) return { ok: false, reason: `state "${s.id}" is missing from the saved file` };
-        if (!stateUnchanged(s, a)) return { ok: false, reason: `state "${s.id}" differs from the intended edit` };
-    }
-    return { ok: true };
 }

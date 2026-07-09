@@ -1,13 +1,3 @@
-/**
- * Result of verifying a save round-tripped: shared by the D and SSL editors so neither
- * has to depend on the other's module for this format-neutral type.
- */
-export interface VerifyResult {
-    ok: boolean;
-    /** Human-readable reason when `ok` is false (names the first diverging state). */
-    reason?: string;
-}
-
 /** A byte-range replacement: replace `text[start, end)` with `replacement`. */
 export interface SpliceOp {
     start: number;
