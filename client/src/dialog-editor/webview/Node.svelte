@@ -196,7 +196,9 @@
     }
     /* Reaction is carried by the option text color (there is no longer a letter chip): good = green,
        bad = red, neutral = quiet grey - the same grey as the default, so a D transition (no reaction)
-       reads identically to an SSL neutral option. */
+       reads identically to an SSL neutral option. Color-only is a deliberate tradeoff: a per-option chip
+       was visual noise at this row density, and the value stays reachable without color perception via
+       the inspector's reaction <select>, which presents it as text. */
     .opt.r-good .otext {
         color: #86efac;
     }

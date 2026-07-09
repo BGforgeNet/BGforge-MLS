@@ -7,11 +7,11 @@
         type DialogBlock,
         type DialogBranch,
         type DialogChoice,
-        type DialogReaction,
         type RenderFamily,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
+    import type { DialogActions } from "./dialog-actions";
     import {
         conditionLockReason,
         isPendingChoice,
@@ -59,26 +59,10 @@
         // or a non-derived faithful D/TD state. Delete is gated separately by `deletable` below.
         structuralEditable: boolean;
         // Whether this node can be deleted (D: any non-derived; faithful SSL: only when every inbound
-        // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
-        // the SSL Delete button (Tier 3a); D's delete stays in the `!readOnly` ops block below.
+        // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Gates the
+        // Delete button's visibility in BOTH family branches below.
         deletable: boolean;
-        actions: {
-            rename: (newId: string) => void;
-            addReply: () => void;
-            removeReply: (choiceId: string) => void;
-            moveReply: (choiceId: string, dir: -1 | 1) => void;
-            setTarget: (choiceId: string, target: DialogTarget) => void;
-            setReaction: (choiceId: string, reaction: DialogReaction) => void;
-            setLowIq: (choiceId: string, on: boolean) => void;
-            deleteState: () => void;
-            duplicateState: () => void;
-            addReplyToBranch: (branchIndex: number) => void;
-            removeReplyInBranch: (branchIndex: number, choiceId: string) => void;
-            moveReplyInBranch: (branchIndex: number, choiceId: string, dir: -1 | 1) => void;
-            addBranch: (condition: string) => void;
-            addElse: () => void;
-            removeBranch: (branchIndex: number) => void;
-        };
+        actions: DialogActions;
     } = $props();
 
     // A bare `@N` line is backed by a .tra entry: edit that entry so localization is
@@ -603,9 +587,12 @@
     {/if}
 
     {#if !readOnly}
+        <!-- Delete visibility follows the same `deletable` gate as the SSL branch below (one nodeDeletable
+             predicate for both families) - the graph-side requestDeleteState re-checks it anyway, but a
+             button that will only ever toast a refusal should not render. -->
         <div class="stateops">
             <button onclick={actions.duplicateState}>Duplicate state</button>
-            <button class="del" onclick={actions.deleteState}>Delete state</button>
+            {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
         </div>
     {:else if ssl && structuralEditable}
         <!-- A faithful SSL node: Duplicate clones the procedure (sharing the source's @N refs, like D) and

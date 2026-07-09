@@ -23,6 +23,7 @@
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { translationHint, unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
+    import type { DialogActions } from "./dialog-actions";
     import { decideReparse, type ReparseMessage } from "./reparse-decision";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
@@ -931,7 +932,7 @@
         performDelete(s);
     }
 
-    const actions = {
+    const actions: DialogActions = {
         rename: (newId: string) => {
             if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
@@ -1063,6 +1064,12 @@
     function onWindowKeydown(e: KeyboardEvent): void {
         if (e.key === "Escape" && ctxMenu) {
             closeContext();
+            return;
+        }
+        // The delete-confirm modal has no input of its own to hang a key handler on (unlike the name
+        // prompt), so its Escape-to-dismiss lives here with the other window-level keys.
+        if (e.key === "Escape" && confirmDelete) {
+            confirmDelete = null;
             return;
         }
         // Ctrl/Cmd+F focuses the always-visible tree find-bar (tree view only - the graph has no scrollable
