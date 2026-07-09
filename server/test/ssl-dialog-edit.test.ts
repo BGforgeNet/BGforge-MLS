@@ -1720,3 +1720,62 @@ describe("renameState keeps the denormalized entry arrays in sync (no stale entr
         expect(findCallers(model, "Node042").some((c) => c.kind === "entry")).toBe(true);
     });
 });
+
+describe("write-back edge cases (invalid-output and overlap guards)", () => {
+    const cloneModel = (m: DialogModel): DialogModel => structuredClone(m);
+
+    it("adding an empty/whitespace condition to a flat option does NOT wrap it in an invalid `if ()`", async () => {
+        const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = cloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.condition = "   ";
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).not.toContain("if ("); // no empty gate emitted
+        expect(out).toContain("NOption(101, Node002, 4);"); // the option is left flat
+    });
+
+    it("clearing a conditional option's condition unwraps it (removes the if), never leaves `if ()`", async () => {
+        const src = `procedure Node001 begin\n    if (local_var(LVAR_x) == 0) then NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const opt = original.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(opt.condition).toBeDefined(); // guard: the fixture forms a conditional option
+        const edited = cloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.condition = "";
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).not.toContain("local_var(LVAR_x)"); // the if is gone
+        expect(out).not.toMatch(/if\s*\(\s*\)/); // never an empty gate
+        expect(out).toContain("NOption(101, Node002, 4);"); // the option survives, now flat
+    });
+
+    it("redirecting a deleted-target option with a computed (random) msg id emits no wrong NMessage", async () => {
+        const src = `procedure Node001 begin\n    NOption(random(3, 5), Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = cloneModel(original);
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+        edited.roots[0]!.states = edited.roots[0]!.states.filter((s) => s.id !== "Node002");
+        const out = applySSLDialogEdits(src, edited, original);
+        // The naive `/\(\s*(\d+)/` regex would grab `3` from `random(3, 5)` and emit NMessage(3) - a wrong message.
+        expect(out).not.toContain("NMessage(3)");
+    });
+
+    it("removing ALL branches of a bundle node AND adding a new one does not throw (overlapping splice)", async () => {
+        const src = `procedure Node001;\nprocedure Node900;\n\nprocedure Node001 begin\n    if (local_var(LVAR_0) == 0) then begin\n        Reply(120);\n        NOption(122, Node900, 4);\n    end else begin\n        Reply(121);\n        NOption(123, Node900, 4);\n    end\nend\nprocedure Node900 begin Reply(900); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const n = original.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n.bundleFaithful).toBe(true); // guard: the fixture is a bundle node
+        expect(n.branches?.length).toBe(2);
+        const edited = cloneModel(original);
+        const en = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Remove both original branches and their options; add one fresh empty if-branch (a pending-new branch).
+        en.choices = [];
+        en.branches = [{ kind: "if", condition: "global_var(GVAR_NEW) == 1", choiceIds: [], opaque: [], replies: [] }];
+        const out = applySSLDialogEdits(src, edited, original); // must not throw "overlapping ops"
+        expect(out).toContain("if (global_var(GVAR_NEW) == 1) then begin"); // the new branch is emitted
+        expect(out).not.toContain("LVAR_0"); // both old branches are gone
+        // Re-parseable: the spliced procedure is well-formed.
+        const reparsed = modelFromSSL(await parseDialog(out));
+        expect(reparsed.roots[0]!.states.find((s) => s.id === "Node001")).toBeDefined();
+    });
+});

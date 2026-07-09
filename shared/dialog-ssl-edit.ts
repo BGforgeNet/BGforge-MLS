@@ -147,7 +147,10 @@ export function survivorReplacement(text: string, moved: DialogChoice, movedOrig
         // the original call). serializeSSLOption emits a full statement ending in `;`, but the slot
         // is the call expression WITHOUT the trailing `;` - trim it so the existing `;` after the
         // slot stays.
-        const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
+        // The preserved msg id is the FIRST call argument. Use splitCallArgs (paren-aware) not a naive
+        // `/\(\s*(\d+)/`, which would grab `3` from a computed `random(3, 5)` first arg and emit NMessage(3) -
+        // a wrong message. A non-numeric (computed) first arg yields NaN, so the call is left unchanged.
+        const msgId = Number(splitCallArgs(origCall)[0]);
         return Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
     }
     const newTarget = moved.target.stateId;
@@ -277,7 +280,10 @@ export function nodeOps(
         if (!o) continue; // a new option - not a condition edit
         if (o.conditionEditable !== true) continue; // shared block - condition is source-only
         const had = o.condition !== undefined;
-        const has = e.condition !== undefined;
+        // Treat a blank/whitespace-only condition as NO condition: adding one must not wrap the option in an
+        // uncompilable `if () then`, and clearing an existing condition to empty must UNWRAP it (the `had && !has`
+        // branch below) rather than splice `""` into the condRange (`if () then begin`).
+        const has = (e.condition ?? "").trim() !== "";
         if (had && has && e.condition !== o.condition && o.condRange) {
             // edit-text: replace the condition expression span only (disjoint from the call's targetRange).
             ops.push({ start: o.condRange.start, end: o.condRange.end, replacement: e.condition! });
@@ -515,6 +521,15 @@ export function branchStructureOps(
     const editedIfStarts = new Set(eb.filter((b) => b.stmtRange).map((b) => b.stmtRange!.start));
     const editedElseStarts = new Set(eb.filter((b) => b.elseClauseRange).map((b) => b.elseClauseRange!.start));
 
+    // An `if` branch's stmtRange spans the WHOLE `if ... [else ...]` statement, so removing it also deletes its
+    // else clause. Collect the if-branches being removed whole first: an else removal whose clause sits inside
+    // one of these is subsumed and must be skipped, or the two removal splices overlap (applySplices throws).
+    const removedIfSpans = ob
+        .filter(
+            (o) => o.kind === "if" && o.stmtRange && !editedIfStarts.has(o.stmtRange.start) && o.opaque.length === 0,
+        )
+        .map((o) => o.stmtRange!);
+
     for (const o of ob) {
         if (o.kind === "if") {
             if (!o.stmtRange) continue; // no source span -> nothing to delete
@@ -529,6 +544,10 @@ export function branchStructureOps(
             if (editedElseStarts.has(o.elseClauseRange.start)) continue; // survivor
             // SIDE-EFFECT GUARD
             if (o.opaque.length > 0) continue;
+            // Subsumed by a whole-if removal above (its stmtRange contains this else clause): skip to avoid an
+            // overlapping splice.
+            const er = o.elseClauseRange;
+            if (removedIfSpans.some((r) => r.start <= er.start && er.end <= r.end)) continue;
             // Delete the elseClauseRange AND the whitespace immediately before the `else` keyword,
             // so `... end else begin...end` becomes `... end` and multi-line else consumes its
             // leading newline+indent without leaving a blank line.
@@ -564,12 +583,22 @@ export function branchStructureOps(
             const survivingOrigEnds = allOrigIfStmts
                 .filter((o) => editedIfStarts.has(o.stmtRange!.start))
                 .map((o) => o.stmtRange!.end);
-            const insertAt =
-                survivingOrigEnds.length > 0
-                    ? Math.max(...survivingOrigEnds)
-                    : Math.min(...allOrigIfStmts.map((o) => o.stmtRange!.start));
             const block = serializeBranch("if", b.condition, [], options, indent);
-            ops.push({ start: insertAt, end: insertAt, replacement: `\n${indent}${block}` });
+            if (survivingOrigEnds.length > 0) {
+                // A surviving branch remains: anchor after its end, on a fresh line.
+                const insertAt = Math.max(...survivingOrigEnds);
+                ops.push({ start: insertAt, end: insertAt, replacement: `\n${indent}${block}` });
+            } else {
+                // Every original branch is removed in this same save (a debounce-coalesced replace). Each removal
+                // eats its whole line - removeStatementSplice spans [lineStart, nl+1) for an indented branch - so
+                // anchoring at the earliest branch's stmtRange.start sits INSIDE that removal span and applySplices
+                // throws "overlapping ops". Anchor at that branch's LINE START instead (it ties with the removal's
+                // own start - disjoint, not overlapping) and emit the new branch as a fresh line: leading indent
+                // and a trailing newline, since the removed line's own newline was consumed.
+                const earliestStart = Math.min(...allOrigIfStmts.map((o) => o.stmtRange!.start));
+                const lineStart = text.lastIndexOf("\n", earliestStart - 1) + 1;
+                ops.push({ start: lineStart, end: lineStart, replacement: `${indent}${block}\n` });
+            }
         } else {
             // kind: "else" - inject at the preceding surviving if branch's thenBlockEnd.
             // Scan backwards in edited.branches from this else to find the nearest surviving if (one
@@ -626,7 +655,9 @@ export function branchConditionOps(_text: string, edited: DialogState, orig: Dia
         }
         if (!o) continue;
         if (o.kind !== "if" || !o.conditionRange) continue;
-        if (e.condition !== undefined && e.condition !== o.condition) {
+        // Skip a blank/whitespace branch condition: an `if`/`else` branch must be gated, so writing `""` into the
+        // conditionRange (`if () then begin`) is uncompilable. Keep the existing condition rather than corrupt it.
+        if (e.condition !== undefined && e.condition.trim() !== "" && e.condition !== o.condition) {
             ops.push({ start: o.conditionRange.start, end: o.conditionRange.end, replacement: e.condition });
         }
     }
