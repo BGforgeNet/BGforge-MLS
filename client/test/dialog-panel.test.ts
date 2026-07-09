@@ -10,10 +10,15 @@ import type * as vscode from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
 import type { DialogModel } from "../../shared/dialog-model";
 
-const { applyEditMock, computeDialogSourceEditMock } = vi.hoisted(() => ({
+const { applyEditMock, computeDialogSourceEditMock, showErrorMessageMock } = vi.hoisted(() => ({
     applyEditMock: vi.fn(async () => true),
     computeDialogSourceEditMock: vi.fn(() => ({ newText: null, messages: {}, allocations: {} })),
+    showErrorMessageMock: vi.fn(),
 }));
+
+// A valid (empty) D parse payload: toModel keys off `blocks`/`nodes`, so this yields a non-null model - a normal
+// open document always parses to at least an empty model (a null result means the server threw: a real failure).
+const OK_PARSE = { blocks: [], states: [] };
 
 vi.mock("vscode", () => ({
     Uri: { joinPath: (...parts: unknown[]) => ({ path: parts.join("/") }) },
@@ -28,7 +33,7 @@ vi.mock("vscode", () => ({
         onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
     },
     window: {
-        showErrorMessage: vi.fn(),
+        showErrorMessage: showErrorMessageMock,
         showWarningMessage: vi.fn(),
         showInformationMessage: vi.fn(),
     },
@@ -98,6 +103,7 @@ describe("DialogEditorProvider - session wiring", () => {
     beforeEach(() => {
         applyEditMock.mockClear();
         computeDialogSourceEditMock.mockClear();
+        showErrorMessageMock.mockClear();
     });
 
     it("serializes back-to-back edits: the second edit's parse waits for the first to finish", async () => {
@@ -105,7 +111,7 @@ describe("DialogEditorProvider - session wiring", () => {
         const sendRequest = vi
             .fn()
             .mockReturnValueOnce(first.promise) // edit #1's parse - held in flight
-            .mockResolvedValue(null); // edit #2's parse - resolves immediately once reached
+            .mockResolvedValue(OK_PARSE); // edit #2's parse - a valid model, resolves immediately once reached
         const h = await mountEditor(sendRequest);
 
         h.fireMessage({ type: "edit", model: dModel(), seq: 1 });
@@ -142,7 +148,7 @@ describe("DialogEditorProvider - session wiring", () => {
     });
 
     it("reaches the edit computation when NOT disposed (the guard is what blocks it above)", async () => {
-        const sendRequest = vi.fn().mockResolvedValue(null);
+        const sendRequest = vi.fn().mockResolvedValue(OK_PARSE);
         const h = await mountEditor(sendRequest);
 
         h.fireMessage({ type: "edit", model: dModel(), seq: 1 });
@@ -150,5 +156,21 @@ describe("DialogEditorProvider - session wiring", () => {
         await flush();
 
         expect(computeDialogSourceEditMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("surfaces a parse failure (null model) on an open doc instead of silently discarding the edit", async () => {
+        // The server returned null (it threw on parse or translation resolution) for an already-open document -
+        // a real failure, not a from-scratch state. The edit must NOT be silently computed/applied: it must
+        // surface an error so the change isn't lost without a trace.
+        const sendRequest = vi.fn().mockResolvedValue(null);
+        const h = await mountEditor(sendRequest);
+
+        h.fireMessage({ type: "edit", model: dModel(), seq: 1 });
+        await flush();
+        await flush();
+
+        expect(showErrorMessageMock).toHaveBeenCalledTimes(1);
+        expect(computeDialogSourceEditMock).not.toHaveBeenCalled(); // not computed against a null original
+        expect(applyEditMock).not.toHaveBeenCalled(); // and never applied to the document
     });
 });

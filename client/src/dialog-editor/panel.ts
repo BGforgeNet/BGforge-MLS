@@ -305,6 +305,17 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             // otherwise a mid-flight edit lands a WorkspaceEdit and posts to a closed panel.
             if (session.disposed) return;
             const original = toModel(parsed.data);
+            // A parse that yields NO model for an already-open document is a real failure (the server threw on
+            // parse or translation resolution and returned null), NOT a from-scratch state - a valid open doc
+            // always parses to at least an empty model. Proceeding would no-op the ssl/tssl/td writer against a
+            // null original and silently discard the edit, so surface it and stop. The webview keeps its
+            // optimistic model; the next successful edit re-syncs against live text.
+            if (original === null) {
+                void vscode.window.showErrorMessage(
+                    "Dialog edit not saved: the document could not be parsed. Fix the source and try again.",
+                );
+                return;
+            }
             const { newText, messages, allocations } = computeDialogSourceEdit(text, edited, original);
             edited.messages = messages;
             if (newText !== null) {
@@ -315,7 +326,16 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     newText,
                 );
                 session.guard.markSelfEdit();
-                const applied = await vscode.workspace.applyEdit(ws);
+                // A REJECTED applyEdit (extension-host error, not a `false` return) must still unmark the self-edit
+                // token, or the echo guard swallows the NEXT genuine external edit as if it were our own. Unmark on
+                // throw, then let the SerialQueue's onError surface the failure toast.
+                let applied: boolean;
+                try {
+                    applied = await vscode.workspace.applyEdit(ws);
+                } catch (error) {
+                    session.guard.unmarkSelfEdit();
+                    throw error;
+                }
                 if (!applied) {
                     session.guard.unmarkSelfEdit();
                     void vscode.window.showErrorMessage("Dialog edit could not be applied to the document.");
@@ -334,6 +354,11 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 await this.postModel(document, panel, { seq, allocations, messages });
             }
         }
+        // Record the EDITED model (with the user's just-typed messages) as the session's latest, deliberately
+        // OVERRIDING the source-accurate reparse postModel stored above: the .tra flush below is debounced, so the
+        // reparse's messages still hold the OLD on-disk .tra text while `edited.messages` holds what the user
+        // typed. flushTra reads session.latest.messages, so this must be the edited model or the flush writes
+        // stale text. (Not a redundant write - the reparse and the edited model diverge until the flush lands.)
         session.latest = edited;
         this.scheduleTraFlush(document, panel);
     }

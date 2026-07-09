@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick } from "svelte";
+    import { tick, untrack } from "svelte";
     import { childStates, type ConversationTree, type ConvState, type ConvReply, type ConvBranch, type ConvBlock } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
@@ -141,11 +141,14 @@
             treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
         }
     }
-    // Reveal whatever is selected whenever selection changes: covers clicking a ref
-    // leaf, a cross-file jump landing on a freshly-rendered tab, and selection driven
-    // from the graph view.
+    // Reveal whatever is selected whenever the SELECTION changes: covers clicking a ref leaf, a cross-file jump
+    // landing on a freshly-rendered tab, and selection driven from the graph view. `reveal` reads `collapsed`
+    // (to find collapsed ancestors) and `tree` (to walk them), so it must run UNTRACKED - otherwise the effect
+    // also depends on `collapsed`, and collapsing an ancestor of the selection re-runs it and immediately
+    // re-expands the branch the user just closed. Only `selectedId`, read outside untrack, is a dependency.
     $effect(() => {
-        if (selectedId) reveal(selectedId);
+        const id = selectedId;
+        if (id) untrack(() => reveal(id));
     });
 
     // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one row - a state row OR a
