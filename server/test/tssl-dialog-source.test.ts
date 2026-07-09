@@ -240,3 +240,39 @@ function Node002() { Reply(200); }
         expect(data.nodes.length).toBeGreaterThan(0);
     });
 });
+
+describe("parseTSSLSource - side-effect honesty badge (SSL parity)", () => {
+    const SIDE_EFFECT_FNS: ReadonlySet<string> = new Set(["set_global_var", "give_xp"]);
+
+    it("records source-ordered, deduplicated side-effect builtins on the node", () => {
+        const src = `function Node001() {
+    Reply(100);
+    set_global_var("GVAR_DONE", 1);
+    give_xp(500);
+    set_global_var("GVAR_AGAIN", 2);
+    NOption(101, Node002);
+}
+function Node002() {
+    Reply(200);
+}
+function talk_p_proc() {
+    Node001();
+}
+`;
+        const n1 = parseTSSLSource(src, SIDE_EFFECT_FNS).nodes.find((n) => n.name === "Node001")!;
+        expect(n1.sideEffects).toEqual(["set_global_var", "give_xp"]);
+    });
+
+    it("leaves sideEffects absent for calls outside the set, and when no set is passed", () => {
+        const src = `function Node001() {
+    Reply(100);
+    some_reader(1);
+}
+function talk_p_proc() {
+    Node001();
+}
+`;
+        expect(parseTSSLSource(src, SIDE_EFFECT_FNS).nodes[0]!.sideEffects).toBeUndefined();
+        expect(parseTSSLSource(src).nodes[0]!.sideEffects).toBeUndefined();
+    });
+});

@@ -38,7 +38,7 @@ const dialogHandlers = [
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TSSL),
-        parse: (_uri: string, text: string) => Promise.resolve(parseTSSLSource(text)),
+        parse: (_uri: string, text: string) => Promise.resolve(parseTSSLSource(text, getSSLSideEffectFunctions())),
         translationLangId: LANG_FALLOUT_SSL,
     },
 ];

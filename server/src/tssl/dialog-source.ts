@@ -39,6 +39,9 @@ const isMessageFn = (n: string): n is SSLDialogOptionType => MESSAGE_FNS.has(n);
 
 const TALK_PROC = "talk_p_proc";
 
+/** Default for callers that skip side-effect detection (mirrors `server/src/dialog.ts`). */
+const NO_SIDE_EFFECTS: ReadonlySet<string> = new Set();
+
 const span = (n: Node): { start: number; end: number } => ({ start: n.getStart(), end: n.getEnd() });
 
 /** The callee identifier of a call, or undefined for a non-identifier callee (member/computed call). */
@@ -410,11 +413,19 @@ function buildBranchesTSSL(fn: FunctionDeclaration): SSLDialogBranch[] {
 // Node builder
 // ---------------------------------------------------------------------------
 
-function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<string>): SSLDialogNode {
+function buildNode(
+    fn: FunctionDeclaration,
+    name: string,
+    localFns: ReadonlySet<string>,
+    sideEffectFns: ReadonlySet<string>,
+): SSLDialogNode {
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
     const callTransitions: NonNullable<SSLDialogNode["callTransitions"]> = [];
+    // Source-ordered, deduplicated side-effect builtins this node calls (the side-effect honesty badge,
+    // SSL-parser parity). The walk is top-down, so first-occurrence order is source order.
+    const sideEffects: string[] = [];
     const body = fn.getBody();
 
     // The state's own gate: the enclosing `if`s of the FIRST Reply (whatever becomes state.trigger). Options
@@ -434,6 +445,9 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         if (!Node.isCallExpression(node)) return;
         const cn = calleeName(node);
         if (cn === undefined) return;
+        // Checked for EVERY call (nested args included), like the SSL walk - a side-effect builtin is never
+        // also a dialog call, so this does not compete with the classification below.
+        if (sideEffectFns.has(cn) && !sideEffects.includes(cn)) sideEffects.push(cn);
         const args = node.getArguments();
         const arg0 = args[0];
         const line = node.getStartLineNumber();
@@ -497,7 +511,8 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
                 });
             }
         }
-        // else: a side-effect / engine builtin - not surfaced as dialog this phase.
+        // else: an engine builtin - recorded in sideEffects above when it is a known state-mutator;
+        // never surfaced as dialog structure.
     });
 
     const tier = classifyTier(fn, localFns);
@@ -509,6 +524,7 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
         options,
         callTargets,
         ...(callTransitions.length > 0 ? { callTransitions } : {}),
+        ...(sideEffects.length > 0 ? { sideEffects } : {}),
         faithful: tier === "faithful",
         // A bundle node carries its ordered if/else branches so the editor renders per-branch grouping and can
         // add/remove options and branches - editable parity with the SSL bundle tier (the 3-tier parser demoted
@@ -534,11 +550,12 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
  * structured `block`, procRange/nameRange), entry points, entry-call and new-node write-back anchors, and
  * out-of-band starts. At FULL parity with the native SSL parser (`server/src/dialog.ts`): the same four
  * mutually-exclusive tiers (faithful > bundle > structured > approximate), the same preservable-simple-
- * statement handling (assignments/side-effects kept opaque), and the same reachability/`*_p_proc` hook
- * node-inclusion filter. Faithful and bundle nodes are editable (bundle branch edits round-trip via
+ * statement handling (assignments/side-effects kept opaque), the same side-effect honesty badge
+ * (`sideEffects`, recorded from the caller-supplied builtin set), and the same reachability/`*_p_proc`
+ * hook node-inclusion filter. Faithful and bundle nodes are editable (bundle branch edits round-trip via
  * `applyTSSLDialogEdits`); a structured node renders faithfully but read-only; approximate is lossy.
  */
-export function parseTSSLSource(text: string): SSLDialogData {
+export function parseTSSLSource(text: string, sideEffectFns: ReadonlySet<string> = NO_SIDE_EFFECTS): SSLDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
     const sf = project.createSourceFile("dialog.tssl.ts", text);
     // The TS parser never throws on malformed input, but its error recovery is not local: an unclosed brace
@@ -596,7 +613,7 @@ export function parseTSSLSource(text: string): SSLDialogData {
             continue;
         }
         procNames.push(name);
-        parsed.set(name, buildNode(fn, name, localFns));
+        parsed.set(name, buildNode(fn, name, localFns, sideEffectFns));
     }
     // force_dialog_start(Node) / start_dialog_at_node(Node) reached from ANYWHERE (timers, map-enter handlers)
     // start a conversation out of band; treat their targets as entry points and capture the target-identifier
