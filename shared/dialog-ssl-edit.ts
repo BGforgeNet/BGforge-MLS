@@ -139,7 +139,7 @@ function splitCallArgs(call: string): string[] {
  * low-INT variant when either changed vs the original. Lifted from `nodeOps` so `bundleNodeOps` can
  * share the same logic without duplication.
  */
-export function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
+function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
     const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
     if (moved.target.kind !== "state") {
         // The option's target node was deleted (the model redirected it to exit): re-serialize the
@@ -392,7 +392,7 @@ export function nodeOps(
  * body anchor, before options (the parser sets the anchor to the empty body for a reply-less procedure). Bails if
  * the node has no anchor (no editable body position captured).
  */
-export function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
+function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
     const id = atMsgId(edited.text);
     if (!Number.isFinite(id) || orig.text.trim() !== "") return []; // no reply to add, or one already exists
     const anchor = orig.insertAnchor;

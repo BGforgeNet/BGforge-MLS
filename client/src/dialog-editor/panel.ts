@@ -136,8 +136,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     session.edits.enqueue(
                         () => this.applyEdit(document, panel, model, seq),
                         (error) => {
-                            const message = error instanceof Error ? error.message : String(error);
-                            void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
+                            void vscode.window.showErrorMessage(`Dialog edit failed: ${errorMessage(error)}`);
                         },
                     );
                 }
