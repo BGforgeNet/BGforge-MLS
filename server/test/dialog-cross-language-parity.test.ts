@@ -26,6 +26,8 @@ import {
     type SourceLang,
 } from "../../shared/dialog-model";
 import {
+    addReply,
+    addState,
     deleteState,
     moveReply,
     removeReply,
@@ -202,6 +204,40 @@ const SSL_FAMILY_OPS: { name: string; op: Op }[] = [
         name: "delete a node",
         op: (m) => {
             deleteState(m, nodeById(m, "Node003"));
+        },
+    },
+    {
+        name: "add an option to a node",
+        op: (m) => {
+            const n = nodeById(m, "Node001");
+            const c = addReply(m, n);
+            c.text = "New reply";
+            c.target = { kind: "state", stateId: "Node002" };
+        },
+    },
+    {
+        // Node002 is reply-only (no surviving option), so the new option anchors at the node body's end, not
+        // after a sibling option - the divergent anchor path (SSL insertAnchor vs the TS-source close-brace).
+        name: "add an option to a reply-only node",
+        op: (m) => {
+            const n = nodeById(m, "Node002");
+            const c = addReply(m, n);
+            c.text = "Reply on a bare node";
+            c.target = { kind: "state", stateId: "Node003" };
+        },
+    },
+    {
+        name: "add a new node",
+        op: (m) => {
+            const s = addState(m);
+            s.text = "A brand-new line";
+        },
+    },
+    {
+        name: "retarget an option to exit (terminal)",
+        op: (m) => {
+            const n = nodeById(m, "Node001");
+            setChoiceTarget(n, n.choices[0]!.id, { kind: "exit" });
         },
     },
 ];

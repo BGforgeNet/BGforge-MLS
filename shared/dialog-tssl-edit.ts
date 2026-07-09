@@ -10,27 +10,32 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import {
-    allChoices,
-    allStates,
-    bareMsgId,
-    isAllocatedNewOption,
-    lineIndentAt,
-    removeLineSplice,
-} from "./dialog-edit-common";
+import { allStates, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
 import {
     branchConditionOps,
     branchStructureOps,
     bundleNodeOps,
     isLocalNewSSLNode,
-    survivorReplacement,
+    nodeOps,
+    replyOps,
 } from "./dialog-ssl-edit";
-import { serializeSSLOption } from "./dialog-ssl-serialize";
 import { serializeTSSLBranch, serializeTSSLProcedure } from "./dialog-tssl-serialize";
-import type { DialogChoice, DialogModel } from "./dialog-model";
+import type { DialogModel, DialogState } from "./dialog-model";
 
-/** The numeric `.msg` id from an `@N` display text, or NaN. The serialized option references ids by number. */
-const msgIdOf = (c: DialogChoice): number => bareMsgId(c.text) ?? NaN;
+/**
+ * The reply-only add-option anchor for a TSSL node: the offset just before the function's closing brace, at the
+ * body indent. `nodeOps` uses this only when a new option lands on a node with NO surviving option (a say-only
+ * node); a node with a surviving option anchors the new option after it instead. This is TSSL's analogue of the
+ * SSL `insertAnchor` the parser records - TSSL's node has a `}` close where SSL's has its captured anchor.
+ */
+function tsslBodyAnchor(text: string, orig: DialogState): { offset: number; indent: string } | undefined {
+    if (!orig.procRange) return undefined;
+    const close = text.lastIndexOf("}", orig.procRange.end - 1);
+    if (close <= orig.procRange.start) return undefined;
+    let bodyStart = orig.procRange.start;
+    while (bodyStart < close && text[bodyStart] !== "\n") bodyStart++;
+    return { offset: close, indent: lineIndentAt(text, bodyStart + 1) || "    " };
+}
 
 /**
  * Compute the `.tssl` source with the model's surgical edits applied: option field edits (retarget, reaction,
@@ -43,122 +48,37 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     if (edited.sourceLang !== "tssl") {
         throw new Error("applyTSSLDialogEdits: only tssl source models are supported");
     }
-    const origById = new Map(allChoices(original).map((c) => [c.id, c]));
+    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
 
-    // REORDER (per node): when a node's surviving flat options appear in a different order than source, refill
-    // each source callRange slot with the option now at that position (survivor refill, mirroring SSL's nodeOps).
-    // Field edits (target/reaction/low) are subsumed via `survivorReplacement`, so a reordered option's own
-    // per-choice field splice below is suppressed (`reorderedIds`) to avoid double-splicing its callRange. Only
-    // FLAT options participate: a conditional option's callRange sits inside an `if` wrapper that does not move
-    // with the call, so it is pinned to its own slot - matching SSL. Slot refills are disjoint from add (a
-    // zero-width insert at the survivor anchor) and remove (a whole-statement splice of a NON-survivor option),
-    // so this composes with a concurrent structural edit.
-    const origStateById = new Map(allStates(original).map((s) => [s.id, s]));
-    // A bundle node's per-branch option edits go through the shared bundle writer below, not the generic
-    // per-choice loops - so its choices are excluded from reorder/field/remove/add here to avoid double-splicing.
-    const origBundleChoiceIds = new Set(
-        allStates(original)
-            .filter((s) => s.bundleFaithful)
-            .flatMap((s) => s.choices.map((c) => c.id)),
-    );
-    const reorderedIds = new Set<string>();
+    // Per-node OPTION editing (remove / retarget / reorder / terminal-flip / condition edit-text + unwrap /
+    // add-option) routes through the SHARED fallout-ssl-family engine `nodeOps` - byte-for-byte the path
+    // applySSLDialogEdits takes - so the two source variants of the family cannot drift on these operations (the
+    // recurring "TSSL parity" defect this consolidation retires). The engine emits the option/reply call syntax
+    // TSSL and SSL share verbatim. Two per-variant inputs only: the reply-only add-option anchor (`tsslBodyAnchor`
+    // - TSSL's `}` close where SSL has its parser-captured `insertAnchor`) and the branch-ADD serializer
+    // (`serializeTSSLBranch`). No conditional-option serializer is injected, so the flat->conditional WRAP is a
+    // no-op here (TSSL has no such serializer yet); condition edit-text and unwrap still work (shared bare call).
+    // Bundle nodes go through the shared bundle writer; the branch condition/structure ops are a no-op on a
+    // non-bundle node. A renamed node resolves to its original via `renamedFrom` so its options still diff.
     for (const state of allStates(edited)) {
-        const origState = origStateById.get(state.renamedFrom ?? state.id);
-        if (!origState || origState.bundleFaithful) continue;
-        const editedIdSet = new Set(state.choices.map((ch) => ch.id));
-        const isFlatOrig = (o: DialogChoice): boolean => o.callRange !== undefined && o.condition === undefined;
-        const flatOrigSurvivors = origState.choices.filter((o) => isFlatOrig(o) && editedIdSet.has(o.id));
-        const flatEditedSurvivors = state.choices.filter((ch) => {
-            const o = origById.get(ch.id);
-            return o !== undefined && isFlatOrig(o);
-        });
-        const sourceOrder = flatOrigSurvivors.map((o) => o.id).join("|");
-        const editedOrder = flatEditedSurvivors.map((ch) => ch.id).join("|");
-        if (sourceOrder === editedOrder) continue; // no reorder - the per-choice field splices below apply
-        for (let i = 0; i < flatOrigSurvivors.length; i++) {
-            const slot = flatOrigSurvivors[i]!.callRange!;
-            const moved = flatEditedSurvivors[i]!;
-            const movedOrig = origById.get(moved.id)!;
-            reorderedIds.add(moved.id);
-            const replacement = survivorReplacement(originalText, moved, movedOrig);
-            if (replacement !== originalText.slice(slot.start, slot.end)) {
-                ops.push({ start: slot.start, end: slot.end, replacement });
-            }
+        const orig = origStateById.get(state.renamedFrom ?? state.id);
+        if (!orig) continue;
+        if (orig.bundleFaithful) {
+            ops.push(...bundleNodeOps(originalText, state, orig));
+        } else {
+            ops.push(...nodeOps(originalText, state, orig, tsslBodyAnchor(originalText, orig)));
+            ops.push(...replyOps(state, orig));
         }
+        ops.push(...branchConditionOps(originalText, state, orig));
+        ops.push(...branchStructureOps(originalText, state, orig, serializeTSSLBranch));
     }
 
-    for (const c of allChoices(edited)) {
-        const orig = origById.get(c.id);
-        if (!orig || origBundleChoiceIds.has(c.id)) continue;
-        // In-place field edits on a surviving state-target option (retarget + reaction N/G/B + low-INT variant):
-        // rewrite the option call in its `callRange` slot, sharing `survivorReplacement` with the SSL writer
-        // since a TSSL option call is byte-identical to SSL's. A retarget-only edit token-patches the target; a
-        // reaction change token-patches just the macro-name (`NOption` -> `GOption`), leaving the other args
-        // byte-exact; a low-INT toggle re-serializes the whole call (the Low/non-Low forms differ in arg count,
-        // `NOption(id, node, skill)` <-> `NLowOption(id, node)`), preserving the original numeric id text.
-        if (
-            !reorderedIds.has(c.id) &&
-            c.target.kind === "state" &&
-            orig.target.kind === "state" &&
-            orig.callRange &&
-            orig.targetRange
-        ) {
-            const replacement = survivorReplacement(originalText, c, orig);
-            if (replacement !== originalText.slice(orig.callRange.start, orig.callRange.end)) {
-                ops.push({ start: orig.callRange.start, end: orig.callRange.end, replacement });
-            }
-        }
-        // Terminal flip: an option retargeted from a state to exit/terminal - e.g. its target node was deleted
-        // and `ops.deleteState` redirected the inbound option to exit - is rewritten from `NOption(id, Node, sk)`
-        // to the terminal `NMessage(id)` (reusing the SSL serializer, whose non-state branch emits NMessage).
-        // Replaces the whole statement span; mutually exclusive with the state->state retarget above.
-        if (
-            orig.target.kind === "state" &&
-            c.target.kind !== "state" &&
-            orig.stmtRange &&
-            Number.isFinite(msgIdOf(c))
-        ) {
-            ops.push({
-                start: orig.stmtRange.start,
-                end: orig.stmtRange.end,
-                replacement: serializeSSLOption(c, msgIdOf(c)),
-            });
-        }
-        // Condition edit-text: an editable option's `if` condition changed to new (non-empty) text -> splice
-        // its `condRange` (the expression between `if (` and `)`). Wrap (add a condition to a flat option) and
-        // unwrap (remove it) are Phase 3 - they add/remove the `if` wrapper, not just its condition token.
-        if (
-            orig.condRange &&
-            orig.conditionEditable !== false &&
-            c.condition !== undefined &&
-            c.condition !== "" &&
-            c.condition !== orig.condition
-        ) {
-            ops.push({ start: orig.condRange.start, end: orig.condRange.end, replacement: c.condition });
-        }
-    }
-    // BUNDLE nodes: per-branch option edits (add/remove/retarget/reorder), branch-condition edits, and branch
-    // structure (add/remove if/else) go through the SHARED SSL bundle writer - byte-range splices plus the SSL
-    // call syntax that TSSL reuses verbatim, with TS block synthesis (serializeTSSLBranch) for the ADD paths.
-    // Bundle nodes are excluded from the generic per-choice loops (reorder/field above, remove/add below) so an
-    // option is never double-spliced. Node-level ops (rename/delete/entry-cleanup/add-node) still apply below.
-    for (const state of allStates(edited)) {
-        const os = origStateById.get(state.renamedFrom ?? state.id);
-        if (!os?.bundleFaithful) continue;
-        ops.push(...bundleNodeOps(originalText, state, os));
-        ops.push(...branchConditionOps(originalText, state, os));
-        ops.push(...branchStructureOps(originalText, state, os, serializeTSSLBranch));
-    }
-    // Structural: an existing option removed from a SURVIVING node -> splice its statement out. (An option
-    // in a DELETED node is removed by that node's whole-function splice below; removing it individually too
-    // would overlap.) A pure conditional option is the sole content of its `if`, so remove the whole `if`;
-    // otherwise just the call. Bundle nodes are handled above (their branch options never reach here).
     // RENAME node: a node whose id changed carries `renamedFrom` (set by ops.renameState). Rewrite its
     // function-name token and every entry call / out-of-band call targeting the OLD id. Inbound OPTION targets
-    // were moved by the model's retarget (handled by the state->state retarget splice above), so they are not
-    // touched here - the double-splice guard, mirroring applySSLDialogEdits. The old id is also excluded from
-    // the DELETE loop below (a renamed-away id is absent from editedStateIds but is NOT a deletion).
+    // were moved by the model's retarget (handled inside `nodeOps` via survivorReplacement), so they are not
+    // touched here - the double-splice guard, mirroring applySSLDialogEdits. The old id is also excluded from the
+    // DELETE loop below (a renamed-away id is absent from editedStateIds but is NOT a deletion).
     const renamedFromIds = new Set<string>();
     for (const state of allStates(edited)) {
         if (!state.renamedFrom || !state.nameRange) continue;
@@ -175,23 +95,11 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
             }
         }
     }
-    const editedIds = new Set(allChoices(edited).map((c) => c.id));
     const editedStateIds = new Set(allStates(edited).map((s) => s.id));
-    for (const os of allStates(original)) {
-        if (!editedStateIds.has(os.id)) continue; // deleted node - its options go with the procRange splice below
-        if (os.bundleFaithful) continue; // bundle node - its branch options are handled by bundleNodeOps above
-        for (const orig of os.choices) {
-            if (editedIds.has(orig.id)) continue;
-            // A pure conditional option (conditionEditable => its `if` gates it alone) removes the whole `if`;
-            // an unconditional or shared-condition option removes just its own call statement.
-            const removeSpan = orig.ifRange && orig.conditionEditable !== false ? orig.ifRange : orig.stmtRange;
-            if (removeSpan) ops.push(removeLineSplice(originalText, removeSpan));
-        }
-    }
     // Structural: DELETE node - an original node absent from the edited model -> splice out its whole function
     // span plus the trailing newline it would leave. Disjoint from every option splice (functions do not
     // overlap, and an inbound option that flipped to a terminal lives in a DIFFERENT surviving node). Mirrors
-    // `applySSLDialogEdits`' DELETE case; renamed-away nodes are excluded once rename lands (Phase 3 task 3).
+    // `applySSLDialogEdits`' DELETE case; renamed-away nodes are excluded once rename lands.
     for (const os of allStates(original)) {
         if (editedStateIds.has(os.id) || renamedFromIds.has(os.id) || !os.procRange) continue;
         const start = os.procRange.start;
@@ -205,39 +113,6 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     for (const ec of original.entryCalls ?? []) {
         if (editedStateIds.has(ec.name) || renamedFromIds.has(ec.name) || !ec.topLevel) continue;
         ops.push(removeLineSplice(originalText, ec.stmtRange));
-    }
-    // Structural: a NEW option added to an existing node -> serialize it (reusing the SSL option serializer,
-    // since the call syntax is byte-identical) and insert after the last SURVIVING option's statement so it
-    // never lands inside a removed option's span. A reply-only node with no surviving option anchors just
-    // before its closing brace. Mirrors `applySSLDialogEdits`' ADD case.
-    for (const state of allStates(edited)) {
-        const origState = origStateById.get(state.id);
-        if (!origState || origState.bundleFaithful) continue; // new node -> add-node writer; bundle -> bundleNodeOps
-        const added = state.choices.filter((c) => isAllocatedNewOption(c) && Number.isFinite(msgIdOf(c)));
-        if (added.length === 0) continue;
-        const survivorEnds = origState.choices
-            .filter((o) => editedIds.has(o.id) && o.stmtRange)
-            .map((o) => o.stmtRange!);
-        let offset: number | undefined;
-        let indent = "    ";
-        if (survivorEnds.length > 0) {
-            const last = survivorEnds.reduce((a, b) => (b.end > a.end ? b : a));
-            offset = last.end;
-            indent = lineIndentAt(originalText, last.start);
-        } else if (origState.procRange) {
-            // Reply-only node: anchor just before the function's closing brace, matching the body indent.
-            const close = originalText.lastIndexOf("}", origState.procRange.end - 1);
-            if (close > origState.procRange.start) {
-                offset = close;
-                let bodyStart = origState.procRange.start;
-                while (bodyStart < close && originalText[bodyStart] !== "\n") bodyStart++;
-                indent = lineIndentAt(originalText, bodyStart + 1) || indent;
-            }
-        }
-        if (offset !== undefined) {
-            const block = added.map((c) => `\n${indent}${serializeSSLOption(c, msgIdOf(c))}`).join("");
-            ops.push({ start: offset, end: offset, replacement: block });
-        }
     }
     // Structural: ADD node - a locally-new node (no procRange, not derived/renamed) -> serialize a whole
     // `function <id>() { ... }` and insert it just before the `talk_p_proc` entry router, mirroring

@@ -188,11 +188,28 @@ export function survivorReplacement(text: string, moved: DialogChoice, movedOrig
  * - ADD: a new option (no `callRange`, allocated `@id`) -> serialize and insert at the node anchor.
  * Bails (returns no ops) if a conditional option is added/removed (would rewrite the `if` wrapper - Tier 3).
  */
-function nodeOps(
+/**
+ * The shared fallout-ssl-family flat-node option engine: remove / retarget / reorder / terminal-flip /
+ * condition-edit / add-option for one structurally-editable (non-bundle) node. Both the SSL writer
+ * (`applySSLDialogEdits`) and the TSSL writer (`applyTSSLDialogEdits`) route their per-node option handling
+ * through this ONE implementation, so the two source variants of the family cannot drift (the recurring
+ * "TSSL parity" defect). Everything it emits uses the byte-identical option/reply call syntax both variants
+ * share (`serializeSSLOption`/`serializeSSLReply`/`survivorReplacement`); the ONE piece that differs by target
+ * syntax - wrapping a flat option INTO a conditional (`if (c) then ... end` vs `if (c) { ... }`) - is injected
+ * via `serializeConditionalOption`. A caller that omits it (TSSL, which has no conditional-option serializer
+ * yet) simply does not perform the flat->conditional wrap; unwrap and condition edit-text, whose output is the
+ * shared bare call, work for both regardless.
+ *
+ * `anchor` is the fallback insertion point for a NEW option on a node with no surviving option (a reply-only
+ * node): SSL passes the parser-captured `insertAnchor`; TSSL passes a close-brace-derived anchor. When the node
+ * has a surviving option, the new option anchors after it and this is unused.
+ */
+export function nodeOps(
     text: string,
     edited: DialogState,
     orig: DialogState,
     anchor: { offset: number; indent: string } | undefined,
+    serializeConditionalOption?: (choice: DialogChoice, msgId: number, condition: string, indent: string) => string,
 ): SpliceOp[] {
     const origOpts = optionsOf(orig); // existing-in-source options (have a callRange), in source order
     const editedOpts = edited.choices.filter((c) => c.callRange || isAllocatedNewOption(c));
@@ -213,18 +230,18 @@ function nodeOps(
             ops.push({ start: c.stmtRange.start, end: c.stmtRange.end, replacement: serializeSSLOption(c, msgId) });
     }
 
-    // Adding/removing a CONDITIONAL option would rewrite its `if` wrapper (Tier 3): bail (no structural write).
-    // On DialogChoice the enclosing-if text is `condition` (the SSL adapter maps SSLDialogOption.conditional ->
-    // DialogChoice.condition).
-    for (const o of origOpts) if (!editedIds.has(o.id) && o.condition) return [];
-
-    // REMOVE: an original option absent from the edit -> splice its whole statement out, consuming the line's
-    // leading indentation and trailing newline so no stray blank line is left (only when the lead is all
-    // whitespace - otherwise something shares the line and we delete just the statement).
+    // REMOVE: an original option absent from the edit -> splice it out. A PURE conditional option (its `if` gates
+    // it alone, `conditionEditable`) removes the whole `if`; a flat or shared-condition option removes just its
+    // own statement. The SSL engine previously BAILED on any conditional-option removal (returned no ops for the
+    // whole node, deferring to a later tier); TSSL's writer already removed pure-conditional options this way, so
+    // the unified engine adopts it - SSL gains safe conditional-option removal at parity with TSSL. A shared-block
+    // conditional (`conditionEditable === false`) still removes only its own call, never the `if` that also gates
+    // its siblings. Line-aware `removeStatementSplice` eats the option's line cleanly (no stray blank line).
     for (const o of origOpts) {
         if (editedIds.has(o.id)) continue;
-        if (!o.stmtRange) return []; // no statement span -> cannot remove safely
-        ops.push(removeStatementSplice(text, o.stmtRange));
+        const removeSpan = o.ifRange && o.conditionEditable !== false ? o.ifRange : o.stmtRange;
+        if (!removeSpan) return []; // no removable span -> cannot remove safely
+        ops.push(removeStatementSplice(text, removeSpan));
     }
 
     // CONDITION EDITS (Tier 3c). Diff each surviving option's condition; emit splices for edit-text now,
@@ -241,10 +258,12 @@ function nodeOps(
             // edit-text: replace the condition expression span only (disjoint from the call's targetRange).
             ops.push({ start: o.condRange.start, end: o.condRange.end, replacement: e.condition! });
         }
-        if (!had && has && o.stmtRange) {
-            // wrap: replace the flat statement with `if (<cond>) then\n<indent>    <call>;`, serializing
-            // the inner call from the EDITED choice so a concurrent retarget is subsumed. Exclude from
-            // the survivor slots below to avoid a double-splice on the same stmtRange.
+        if (!had && has && o.stmtRange && serializeConditionalOption) {
+            // wrap: replace the flat statement with the target syntax's conditional form, serializing the inner
+            // call from the EDITED choice so a concurrent retarget is subsumed. Exclude from the survivor slots
+            // below to avoid a double-splice on the same stmtRange. Skipped entirely when the caller injects no
+            // `serializeConditionalOption` (TSSL has no conditional-option serializer yet) - the option then stays
+            // flat and its added condition is not written back, matching that variant's prior behavior.
             const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
             const indent = /^[ \t]*/.exec(text.slice(lineStart, o.stmtRange.start))?.[0] ?? "    ";
             const msgId = Number(
@@ -253,7 +272,7 @@ function nodeOps(
                     NaN,
             );
             if (Number.isFinite(msgId)) {
-                const wrapped = serializeSSLConditionalOption(e, msgId, e.condition!, indent);
+                const wrapped = serializeConditionalOption(e, msgId, e.condition!, indent);
                 ops.push({ start: o.stmtRange.start, end: o.stmtRange.end, replacement: wrapped });
                 wrappedOrUnwrapped.add(e.id);
             }
@@ -343,7 +362,7 @@ function nodeOps(
  * body anchor, before options (the parser sets the anchor to the empty body for a reply-less procedure). Bails if
  * the node has no anchor (no editable body position captured).
  */
-function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
+export function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
     const id = atMsgId(edited.text);
     if (!Number.isFinite(id) || orig.text.trim() !== "") return []; // no reply to add, or one already exists
     const anchor = orig.insertAnchor;
@@ -666,7 +685,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         if (orig.bundleFaithful) {
             ops.push(...bundleNodeOps(originalText, state, orig));
         } else {
-            ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
+            ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor, serializeSSLConditionalOption));
             // Add the node's own reply (NPC line) when the edit introduced one the procedure lacks - the
             // from-scratch scaffold path, where the entry node was emitted empty then given a line.
             ops.push(...replyOps(state, orig));

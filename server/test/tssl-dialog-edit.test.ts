@@ -310,3 +310,32 @@ function talk_p_proc() { Node002(); }
         expect(out).not.toContain("then begin");
     });
 });
+
+describe("applyTSSLDialogEdits - conditional-option removal (shared nodeOps engine)", () => {
+    // Mirror of the SSL conditional-removal shape in TS syntax: a flat option plus a PURE single-`if` conditional
+    // option in one faithful (non-bundle) node - the path now routed through the shared nodeOps engine.
+    const SRC_COND_RM = `function Node001() {
+    NOption(101, Node002, 4);
+    if (local_var(LVAR_x) == 0) {
+        NOption(102, Node003, 4);
+    }
+}
+function Node002() { Reply(200); }
+function Node003() { Reply(300); }
+function talk_p_proc() { Node001(); }
+`;
+
+    it("removes a pure-conditional option by splicing out its enclosing if", () => {
+        const original = tsslModel(SRC_COND_RM);
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.condition === undefined); // drop the conditional option (102)
+        const out = applyTSSLDialogEdits(SRC_COND_RM, edited, original);
+        expect(out).not.toContain("NOption(102"); // the conditional option is gone
+        expect(out).not.toContain("local_var(LVAR_x)"); // its enclosing `if` went with it
+        expect(out).toContain("NOption(101, Node002, 4);"); // the flat sibling survives
+        const reparsed = tsslModel(out);
+        const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(1);
+    });
+});

@@ -1522,3 +1522,33 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toContain("set_local_var(LVAR_0, 1)");
     });
 });
+
+describe("applySSLDialogEdits - conditional-option removal (unified nodeOps engine)", () => {
+    // One flat option (101 -> Node002) plus one PURE single-call-if conditional option (102 -> Node003).
+    const SRC_COND_RM = `procedure Node001 begin
+    NOption(101, Node002, 4);
+    if (local_var(LVAR_x) == 0) then
+        NOption(102, Node003, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    // Removing a pure-conditional option splices out its whole enclosing `if`, keeping the flat sibling. The SSL
+    // writer previously DEFERRED this (its engine bailed on any conditional-option removal); after unifying on the
+    // shared nodeOps engine SSL adopts TSSL's behavior and removes it cleanly - the parity gain this change makes.
+    it("removes a pure-conditional option by splicing out its enclosing if", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_COND_RM));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.condition === undefined); // drop the conditional option (102)
+        const out = applySSLDialogEdits(SRC_COND_RM, edited, original);
+        expect(out).not.toContain("NOption(102"); // the conditional option is gone
+        expect(out).not.toContain("local_var(LVAR_x)"); // its enclosing `if` went with it
+        expect(out).toContain("NOption(101, Node002, 4);"); // the flat sibling survives
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(n1r.choices).toHaveLength(1);
+    });
+});
