@@ -6,6 +6,7 @@
  * already-`@N` text) so both mint ids the same way and persist via the same `.tra`/`.msg` side-write.
  */
 
+import { nextIdSeed } from "./dialog-edit-common";
 import type { DialogModel } from "./dialog-model";
 
 /**
@@ -19,12 +20,6 @@ function isNewText(text: string | undefined): boolean {
 }
 
 /** The first free id: `max(existing numeric id) + 1` (1 when the set is empty/non-numeric). */
-function nextIdSeed(existingMessages: Record<string, string>): number {
-    const ids = Object.keys(existingMessages)
-        .map((k) => Number.parseInt(k, 10))
-        .filter((n) => Number.isFinite(n));
-    return (ids.length > 0 ? Math.max(...ids) : 0) + 1;
-}
 
 /**
  * Assign a fresh `.tra` id to every NEW state say and NEW option reply (mutating each new item's `text` to

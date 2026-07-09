@@ -5,14 +5,9 @@
  * `serializeSSLOption` unchanged - only the wrapper differs. Used by the add-node writer in dialog-tssl-edit.ts.
  */
 
+import { bareMsgId } from "./dialog-edit-common";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
 import type { DialogState } from "./dialog-model";
-
-/** The numeric id from a bare `@N` display text, or undefined for a literal / non-`@N` value. */
-function bareMsgId(text: string | undefined): number | undefined {
-    const m = /^@(\d+)$/.exec((text ?? "").trim());
-    return m ? Number(m[1]) : undefined;
-}
 
 /**
  * Serialize a new TSSL node as a `function <id>() { ... }` block. The NPC line becomes `Reply(<n>);` when the

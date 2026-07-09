@@ -7,13 +7,8 @@
  * or missing text emits no `tra(...)` line.
  */
 
+import { bareMsgId } from "./dialog-edit-common";
 import type { DialogChoice, DialogState, DialogTarget } from "./dialog-model";
-
-/** The numeric id from a bare `@N` display text, or undefined for a literal / non-`@N` value. */
-function bareMsgId(text: string | undefined): number | undefined {
-    const m = /^@(\d+)$/.exec((text ?? "").trim());
-    return m ? Number(m[1]) : undefined;
-}
 
 /**
  * The target-producing call for a transition: a node target -> `goTo(<id>)`, a terminal -> `exit()`, a

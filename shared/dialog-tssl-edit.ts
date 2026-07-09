@@ -8,55 +8,19 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
+import { allStates, bareMsgId, isAllocatedNewOption, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
 import { isLocalNewSSLNode, survivorReplacement } from "./dialog-ssl-edit";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
 import { serializeTSSLProcedure } from "./dialog-tssl-serialize";
-import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
+import type { DialogChoice, DialogModel } from "./dialog-model";
 
 function statesOf(model: DialogModel): DialogChoice[] {
     // Flatten every choice across roots/states for id-keyed diffing.
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
 }
 
-function allStates(model: DialogModel): DialogState[] {
-    return model.roots.flatMap((r) => r.states);
-}
-
-/**
- * A pending-new option: no source span yet (`callRange`/`stmtRange` absent), already carries an allocated
- * `@N` id (allocation runs before this writer, gated on renderFamily fallout-ssl - TSSL inherits it), and not
- * `committed` (already spliced on a prior save). Byte-identical predicate to SSL's `isNewSSLOption`.
- */
-function isNewTSSLOption(c: DialogChoice): boolean {
-    return (
-        !c.committed && c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim())
-    );
-}
-
 /** The numeric `.msg` id from an `@N` display text, or NaN. The serialized option references ids by number. */
-function msgIdOf(c: DialogChoice): number {
-    const m = /^@(\d+)$/.exec((c.text ?? "").trim());
-    return m ? Number(m[1]) : NaN;
-}
-
-/** The leading whitespace of the line containing `offset` - reused as the indent for an inserted statement. */
-function lineIndentAt(text: string, offset: number): string {
-    let start = offset;
-    while (start > 0 && text[start - 1] !== "\n") start--;
-    let i = start;
-    while (i < text.length && (text[i] === " " || text[i] === "\t")) i++;
-    return text.slice(start, i);
-}
-
-/** Splice a whole statement out, eating its line's leading indent and trailing newline so no blank line remains. */
-function removeLineSplice(text: string, span: { start: number; end: number }): SpliceOp {
-    let start = span.start;
-    while (start > 0 && (text[start - 1] === " " || text[start - 1] === "\t")) start--;
-    let end = span.end;
-    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
-    else if (text[end] === "\n") end += 1;
-    return { start, end, replacement: "" };
-}
+const msgIdOf = (c: DialogChoice): number => bareMsgId(c.text) ?? NaN;
 
 /**
  * Compute the `.tssl` source with the model's surgical field edits applied. Currently: option RETARGET
@@ -219,7 +183,7 @@ export function applyTSSLDialogEdits(originalText: string, edited: DialogModel, 
     for (const state of allStates(edited)) {
         const origState = origStateById.get(state.id);
         if (!origState) continue; // a brand-new node is emitted whole by the add-node writer, not here
-        const added = state.choices.filter((c) => isNewTSSLOption(c) && Number.isFinite(msgIdOf(c)));
+        const added = state.choices.filter((c) => isAllocatedNewOption(c) && Number.isFinite(msgIdOf(c)));
         if (added.length === 0) continue;
         const survivorEnds = origState.choices
             .filter((o) => editedIds.has(o.id) && o.stmtRange)

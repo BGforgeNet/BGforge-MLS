@@ -50,16 +50,16 @@ import {
     serializeSupportProcedure,
     sslOptionMacro,
 } from "./dialog-ssl-serialize";
+import { bareMsgId, isAllocatedNewOption } from "./dialog-edit-common";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
     return state.choices.filter((c) => c.callRange);
 }
 
-/** Parse an `@N` ref to its numeric msg id, or NaN if the text is not a bare `@N`. */
-function atMsgId(text: string | undefined): number {
-    return Number(/^@(\d+)$/.exec((text ?? "").trim())?.[1] ?? NaN);
-}
+/** Parse an `@N` ref to its numeric msg id, or NaN if the text is not a bare `@N` (the shared `bareMsgId`
+ *  parser with this file's NaN sentinel, so the many `Number.isFinite(...)` call sites below are unchanged). */
+const atMsgId = (text: string | undefined): number => bareMsgId(text) ?? NaN;
 const msgIdOf = (c: DialogChoice): number => atMsgId(c.text);
 
 /**
@@ -74,21 +74,6 @@ function newNodeMsgIds(s: DialogState): NodeMsgIds {
             s.choices.filter((c) => Number.isFinite(atMsgId(c.text))).map((c) => [c.id, atMsgId(c.text)]),
         ),
     };
-}
-
-// A NEW option: no source range of ANY kind (never existed in the .ssl) and an allocated `@<id>` text (the id
-// is assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
-// (literal text); here the id has already been assigned. The `stmtRange` check is what separates a freshly-added
-// option from an EXISTING terminal message (`NMessage`/`GMessage`/`BMessage`): a message carries no `callRange`
-// (it has no target node) but the parser records its `stmtRange`, so without this guard an existing message
-// would be misread as new and re-appended (duplicated) on every structural save.
-function isNewSSLOption(c: DialogChoice): boolean {
-    // `committed` marks an option the host already spliced on a prior save (the webview's working copy still
-    // lacks a callRange for it - the guard suppresses the re-project that would give it one). Excluding it here
-    // is what stops a still-pending, already-committed option being re-added (duplicated) on every later save.
-    return (
-        !c.committed && c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim())
-    );
 }
 
 /**
@@ -211,7 +196,7 @@ function nodeOps(
     anchor: { offset: number; indent: string } | undefined,
 ): SpliceOp[] {
     const origOpts = optionsOf(orig); // existing-in-source options (have a callRange), in source order
-    const editedOpts = edited.choices.filter((c) => c.callRange || isNewSSLOption(c));
+    const editedOpts = edited.choices.filter((c) => c.callRange || isAllocatedNewOption(c));
     const origById = new Map(origOpts.map((c) => [c.id, c]));
     const editedIds = new Set(editedOpts.map((c) => c.id));
     const ops: SpliceOp[] = [];
@@ -334,7 +319,7 @@ function nodeOps(
     // Anchor after the last SURVIVING option's statement (whose span is never deleted), so the insert can
     // never land inside a removed option's range; fall back to the parser node anchor only when no option
     // survives. `indent` is the parser-captured body indentation.
-    const added = editedOpts.filter((c) => isNewSSLOption(c) && !origById.has(c.id));
+    const added = editedOpts.filter((c) => isAllocatedNewOption(c) && !origById.has(c.id));
     if (added.length > 0) {
         const survivorEnds = origOpts.filter((o) => editedIds.has(o.id) && o.stmtRange).map((o) => o.stmtRange!.end);
         const offset = survivorEnds.length > 0 ? Math.max(...survivorEnds) : anchor?.offset;
@@ -436,7 +421,7 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
         const added = editedIds
             .filter((id) => !origById.has(id))
             .map((id) => editedById.get(id))
-            .filter((c): c is DialogChoice => c !== undefined && isNewSSLOption(c));
+            .filter((c): c is DialogChoice => c !== undefined && isAllocatedNewOption(c));
         if (added.length > 0 && anchor) {
             const block = added
                 .filter((c) => Number.isFinite(msgIdOf(c)))
@@ -514,7 +499,7 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
         // (no callRange/stmtRange, allocated @id text) with a valid numeric id.
         const options = b.choiceIds
             .map((id) => edited.choices.find((c) => c.id === id))
-            .filter((c): c is DialogChoice => c !== undefined && isNewSSLOption(c) && Number.isFinite(msgIdOf(c)))
+            .filter((c): c is DialogChoice => c !== undefined && isAllocatedNewOption(c) && Number.isFinite(msgIdOf(c)))
             .map((c) => ({ choice: c, msgId: msgIdOf(c) }));
 
         if (b.kind === "if") {

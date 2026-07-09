@@ -1,3 +1,4 @@
+import { nextIdSeed } from "./dialog-edit-common";
 import type { DialogModel } from "./dialog-model";
 import type { NodeMsgIds } from "./dialog-ssl-serialize";
 
@@ -10,14 +11,6 @@ import type { NodeMsgIds } from "./dialog-ssl-serialize";
 function isNewOption(choice: { callRange?: unknown; text?: string }): boolean {
     const t = (choice.text ?? "").trim();
     return choice.callRange === undefined && t !== "" && !/^@\d+$/.test(t);
-}
-
-/** The first free `.msg` id: `max(existing numeric id) + 1` (1 when the set is empty/non-numeric). */
-function nextIdSeed(existingMessages: Record<string, string>): number {
-    const ids = Object.keys(existingMessages)
-        .map((k) => Number.parseInt(k, 10))
-        .filter((n) => Number.isFinite(n));
-    return (ids.length > 0 ? Math.max(...ids) : 0) + 1;
 }
 
 /** A new node: no source `procRange` (it never existed in the .ssl). */

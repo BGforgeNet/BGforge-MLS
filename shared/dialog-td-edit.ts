@@ -10,44 +10,21 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
+import { allStates, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
 import { serializeTDState, serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
-import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
+import type { DialogChoice, DialogModel } from "./dialog-model";
 
 function choicesOf(model: DialogModel): DialogChoice[] {
     return model.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
 }
 
-function allStates(model: DialogModel): DialogState[] {
-    return model.roots.flatMap((r) => r.states);
-}
-
 /**
  * A pending-new option: no source span yet (`sourceRange` absent) and text already allocated to a bare `@N`
- * ref (allocation runs before this writer, in the weidu-d branch of computeDialogSourceEdit). Byte-identical in
- * spirit to the TSSL writer's `isNewTSSLOption`, keyed on the D-family source marker.
+ * ref (allocation runs before this writer, in the weidu-d branch of computeDialogSourceEdit). The D-family
+ * sibling of the shared SSL-family `isNewOption` - keyed on the D-family `sourceRange` marker, not `callRange`.
  */
 function isNewTDOption(c: DialogChoice): boolean {
     return c.sourceRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
-}
-
-/** The leading whitespace of the line containing `offset` - reused as the indent for an inserted statement. */
-function lineIndentAt(text: string, offset: number): string {
-    let start = offset;
-    while (start > 0 && text[start - 1] !== "\n") start--;
-    let i = start;
-    while (i < text.length && (text[i] === " " || text[i] === "\t")) i++;
-    return text.slice(start, i);
-}
-
-/** Splice a whole statement group out, eating its line's leading indent and trailing newline so no blank line
- *  is left where it was. Mirrors the TSSL writer's `removeLineSplice`. */
-function removeLineSplice(text: string, span: { start: number; end: number }): SpliceOp {
-    let start = span.start;
-    while (start > 0 && (text[start - 1] === " " || text[start - 1] === "\t")) start--;
-    let end = span.end;
-    if (text[end] === "\r" && text[end + 1] === "\n") end += 2;
-    else if (text[end] === "\n") end += 1;
-    return { start, end, replacement: "" };
 }
 
 /** Splice a whole state function out, plus the blank line separating it from the next (up to two trailing
