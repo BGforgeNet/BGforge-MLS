@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTSSLSource } from "../src/tssl/dialog-source";
 import { modelFromSSL } from "../../shared/dialog-model";
+
+// The syntax-error degrade logs through the LSP connection, which unit tests never initialize.
+vi.mock("../src/logger", () => ({ conlog: vi.fn() }));
 
 const sample = (name: string): string =>
     readFileSync(fileURLToPath(new URL(`tssl/samples/${name}`, import.meta.url)), "utf8");
@@ -219,5 +222,21 @@ describe("parseTSSLSource - out-of-band starts (SSL parity)", () => {
         expect(src.slice(span.start, span.end)).toBe("Node001");
         // The out-of-band target is also an entry point (the conversation can start there).
         expect(data.entryPoints).toContain("Node001");
+    });
+});
+
+describe("parseTSSLSource - malformed input", () => {
+    it("degrades to the empty model on a syntax error instead of building anchors from a misnested parse", () => {
+        // Unclosed brace: TS error recovery swallows the following function into Node001's body, so a
+        // best-effort parse would re-parent Node002 and yield splice anchors the write-back cannot trust.
+        const src = `function Node001() { Reply(100);
+function Node002() { Reply(200); }
+`;
+        expect(parseTSSLSource(src)).toEqual({ nodes: [], entryPoints: [] });
+    });
+
+    it("still parses clean input after the guard (the guard stays silent on valid source)", () => {
+        const data = parseTSSLSource(sample("flat.tssl"));
+        expect(data.nodes.length).toBeGreaterThan(0);
     });
 });

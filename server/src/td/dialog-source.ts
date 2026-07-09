@@ -9,6 +9,7 @@
  */
 
 import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaration, type SourceFile } from "ts-morph";
+import { conlog } from "../logger";
 import type {
     DDialogBlock,
     DDialogBlockKind,
@@ -334,6 +335,16 @@ function parseWiring(sf: SourceFile, stateNames: ReadonlySet<string>): TDWiring 
 export function parseTDSource(text: string): DDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
     const sf = project.createSourceFile("dialog.td.ts", text);
+    // The TS parser never throws on malformed input, but its error recovery is not local: an unclosed brace
+    // can swallow every following function into one misnested body, silently re-parenting states and shifting
+    // the splice anchors the write-back relies on. Unlike tree-sitter's localized ERROR nodes (which the
+    // .d/.ssl bridges tolerate), anchors from an errored TS parse are untrustworthy - so degrade to the empty
+    // model like the siblings' no-tree guard, logged at warn so the degrade is diagnosable.
+    const syntaxErrors = project.getProgram().getSyntacticDiagnostics(sf);
+    if (syntaxErrors.length > 0) {
+        conlog(`parseTDSource: ${syntaxErrors.length} syntax error(s) in TD source; returning empty dialog`, "warn");
+        return { blocks: [], states: [] };
+    }
     const states: DDialogState[] = [];
     // Ambient forward declarations (`declare function <name>(): void;`) keyed by name, so a node delete can
     // splice out the matching declaration and leave no dangling forward decl (mirrors the SSL forward-decl cleanup).

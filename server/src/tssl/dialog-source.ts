@@ -12,6 +12,7 @@
  */
 
 import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaration } from "ts-morph";
+import { conlog } from "../logger";
 import type {
     SSLDialogBlock,
     SSLDialogBlockItem,
@@ -540,6 +541,19 @@ function buildNode(fn: FunctionDeclaration, name: string, localFns: ReadonlySet<
 export function parseTSSLSource(text: string): SSLDialogData {
     const project = new Project({ useInMemoryFileSystem: true });
     const sf = project.createSourceFile("dialog.tssl.ts", text);
+    // The TS parser never throws on malformed input, but its error recovery is not local: an unclosed brace
+    // can swallow every following function into one misnested body, silently re-parenting nodes and shifting
+    // the splice anchors the write-back relies on. Unlike tree-sitter's localized ERROR nodes (which the
+    // .d/.ssl bridges tolerate), anchors from an errored TS parse are untrustworthy - so degrade to the empty
+    // model like the siblings' no-tree guard, logged at warn so the degrade is diagnosable.
+    const syntaxErrors = project.getProgram().getSyntacticDiagnostics(sf);
+    if (syntaxErrors.length > 0) {
+        conlog(
+            `parseTSSLSource: ${syntaxErrors.length} syntax error(s) in TSSL source; returning empty dialog`,
+            "warn",
+        );
+        return { nodes: [], entryPoints: [] };
+    }
     const fns = sf.getFunctions();
     const localFns = new Set<string>(fns.map((f) => f.getName()).filter((n): n is string => n !== undefined));
 

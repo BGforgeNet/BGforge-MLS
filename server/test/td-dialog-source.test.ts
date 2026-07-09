@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
 import { modelFromD } from "../../shared/dialog-model";
+
+// The syntax-error degrade logs through the LSP connection, which unit tests never initialize.
+vi.mock("../src/logger", () => ({ conlog: vi.fn() }));
 
 const dir = fileURLToPath(new URL("td/samples", import.meta.url));
 const sample = (name: string): string => readFileSync(`${dir}/${name}`, "utf8");
@@ -151,5 +154,22 @@ function s1() { say(tra(3)); }
         const s = stateOf(src, "s100");
         expect(s.trigger).toContain('Global("quest", "GLOBAL", 1)');
         expect(s.trigger).toContain('Global("chapter", "GLOBAL", 3)');
+    });
+});
+
+describe("parseTDSource - malformed input", () => {
+    it("degrades to the empty model on a syntax error instead of building anchors from a misnested parse", () => {
+        // Unclosed brace: TS error recovery swallows the following function into s1's body, so a best-effort
+        // parse would re-parent s2 and yield splice anchors the write-back cannot trust.
+        const src = `function s1() { say(tra(1));
+function s2() { say(tra(2)); }
+`;
+        expect(parseTDSource(src)).toEqual({ blocks: [], states: [] });
+    });
+
+    it("still parses clean input after the guard (the guard stays silent on valid source)", () => {
+        const src = `function s1() { say(tra(1)); }
+`;
+        expect(parseTDSource(src).states.map((s) => s.label)).toEqual(["s1"]);
     });
 });
