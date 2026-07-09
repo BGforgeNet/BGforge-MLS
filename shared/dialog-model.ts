@@ -579,6 +579,9 @@ function stateFromD(s: DDialogState): DialogState {
         // Carry every SAY alternate so a multisay state round-trips; a single-text state leaves it absent.
         sayTexts: s.sayTexts && s.sayTexts.length > 1 ? s.sayTexts.map((t) => t.text) : undefined,
         derivedFrom: s.derivedFrom,
+        // D-family faithfulness: false when the parser saw a body construct the transition list can't round-trip
+        // (an inner `if`/`else`), so the editability gate renders the state read-only. Absent = editable.
+        faithful: s.faithful,
     };
 }
 

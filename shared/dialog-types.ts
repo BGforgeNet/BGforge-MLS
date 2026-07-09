@@ -359,6 +359,15 @@ export interface DDialogState {
      * is no source span to splice an edit back into.
      */
     derivedFrom?: "CHAIN" | "INTERJECT" | "EXTEND";
+    /**
+     * `false` when the state's body holds a construct the flat transition list cannot round-trip - a conditional
+     * branch INSIDE the body (an inner `if`, whose gate/`else` transitions the list would drop on save). The
+     * D-family editability gate treats a `faithful === false` state as read-only, so an edit can never silently
+     * drop the else or the inner condition (the same decouple-editor-safety-from-parser-completeness tier the SSL
+     * family carries as `SSLDialogNode.faithful`). Absent (editable) for a plain unconditional state. Set by the
+     * TD source parser; the tree-sitter `.d` parser leaves it unset (its own faithfulness handling is separate).
+     */
+    faithful?: boolean;
 }
 
 /** Structural blocks produce dialog states. Modify blocks patch existing dialogs. */

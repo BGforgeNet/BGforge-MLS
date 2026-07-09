@@ -74,6 +74,35 @@ function stmtSpanOf(call: CallExpression): Range {
     return stmt ? span(stmt) : span(call);
 }
 
+/**
+ * Conjoin EVERY `if (...)` wrapping the state function into one entry trigger, outermost-first, joined with
+ * ` and `, an `else`-branch level negated `not ` - mirroring the SSL (`dialog.ts` `enclosingCondition`) and TSSL
+ * (`tssl/dialog-source.ts` `enclosingConditionTSSL`) parsers. Returning only the nearest ancestor `if` silently
+ * drops the outer gates (dialog-nested-flatten-bug-class). Returns undefined for an unwrapped state function.
+ */
+function enclosingTrigger(fn: FunctionDeclaration): string | undefined {
+    const parts: string[] = [];
+    let prev: Node = fn;
+    let cur: Node | undefined = fn.getParent();
+    while (cur && !Node.isSourceFile(cur)) {
+        if (Node.isIfStatement(cur)) {
+            const cond = cur.getExpression().getText();
+            const elseStmt = cur.getElseStatement();
+            // The function sits in the `else` branch (runs on the negation) iff we ascended through the else node.
+            const inElse =
+                elseStmt !== undefined &&
+                prev.getStart() === elseStmt.getStart() &&
+                prev.getEnd() === elseStmt.getEnd();
+            parts.push(inElse ? `not ${cond}` : cond);
+        }
+        prev = cur;
+        cur = cur.getParent();
+    }
+    if (parts.length === 0) return undefined;
+    parts.reverse(); // innermost-first -> outermost-first so the composite gate reads top-down
+    return parts.length === 1 ? parts[0]! : parts.join(" and ");
+}
+
 function parseState(fn: FunctionDeclaration): DDialogState {
     const label = fn.getName() ?? "";
     const sayTexts: Array<{ text: string; range: Range }> = [];
@@ -134,11 +163,19 @@ function parseState(fn: FunctionDeclaration): DDialogState {
         }
     };
 
+    // An `if` INSIDE the state body means conditional transitions the flat list can't round-trip: the gate is
+    // dropped and an `else`'s (negated) transitions vanish on save. Flag the state unfaithful (the editability
+    // gate then renders it read-only) rather than silently mis-serialize it. Still walk BOTH branches so the
+    // read-only view shows every transition instead of hiding the else.
+    let hasBodyConditional = false;
     const walk = (stmts: Node[]): void => {
         for (const stmt of stmts) {
             if (Node.isIfStatement(stmt)) {
+                hasBodyConditional = true;
                 const thenStmt = stmt.getThenStatement();
                 walk(Node.isBlock(thenStmt) ? thenStmt.getStatements() : [thenStmt]);
+                const elseStmt = stmt.getElseStatement();
+                if (elseStmt) walk(Node.isBlock(elseStmt) ? elseStmt.getStatements() : [elseStmt]);
                 continue;
             }
             if (Node.isExpressionStatement(stmt)) {
@@ -148,9 +185,10 @@ function parseState(fn: FunctionDeclaration): DDialogState {
     };
     walk(fn.getStatements());
 
-    // Entry trigger: the nearest enclosing `if (...)` wrapping the state function (the state-gate pattern).
-    const ifStmt = fn.getFirstAncestorByKind(SyntaxKind.IfStatement);
-    const trigger = ifStmt ? ifStmt.getExpression().getText() : undefined;
+    // Entry trigger: conjoin EVERY `if (...)` wrapping the state function, not just the nearest - returning only
+    // the innermost silently drops the outer gates (dialog-nested-flatten-bug-class). Mirrors the SSL/TSSL
+    // `enclosingCondition` parsers: outermost-first, joined with ` and `, an `else`-branch level negated `not `.
+    const trigger = enclosingTrigger(fn);
     const nameNode = fn.getNameNode();
 
     // Enclosing-if delete span: when the state function is the SOLE meaningful statement of an `if` then-block
@@ -174,6 +212,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
         range: span(fn),
         ...(nameNode ? { nameRange: span(nameNode) } : {}),
         ...(enclosingIfRange ? { enclosingIfRange } : {}),
+        ...(hasBodyConditional ? { faithful: false } : {}),
     };
 }
 

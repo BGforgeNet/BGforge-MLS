@@ -106,3 +106,50 @@ describe("parseTDSource - cohort smoke", () => {
         }
     });
 });
+
+describe("parseTDSource - faithfulness gate for constructs the transition-list can't round-trip", () => {
+    // The flat transition list models an unconditional `reply -> goTo`. An `else` branch adds transitions with a
+    // negated gate, and a transition nested in an inner `if` is condition-gated - neither round-trips through the
+    // flat list. The parser marks such a state `faithful: false` so the editor treats it read-only instead of
+    // silently dropping the else / the condition on save.
+    const stateOf = (src: string, label: string) => parseTDSource(src).states.find((s) => s.label === label)!;
+
+    it("a plain unconditional state is not flagged (faithful stays unset)", () => {
+        const src = `function s0() { say(tra(1)); reply(tra(2)).goTo(s1); }\nfunction s1() { say(tra(3)); }\n`;
+        expect(stateOf(src, "s0").faithful).toBeUndefined();
+    });
+
+    it("marks a state with an `else` branch unfaithful (its else transitions are dropped)", () => {
+        const src = `function s0() {
+    say(tra(1));
+    if (PartyHasItem("SWORD01")) { reply(tra(2)).goTo(hasSword); }
+    else { reply(tra(3)).goTo(noSword); }
+}
+function hasSword() { say(tra(4)); }
+function noSword() { say(tra(5)); }
+`;
+        expect(stateOf(src, "s0").faithful).toBe(false);
+    });
+
+    it("marks a state with a transition gated by an inner `if` unfaithful (the condition is dropped)", () => {
+        const src = `function s0() {
+    say(tra(1));
+    if (Global("q", "GLOBAL", 1)) { reply(tra(2)).goTo(s1); }
+}
+function s1() { say(tra(3)); }
+`;
+        expect(stateOf(src, "s0").faithful).toBe(false);
+    });
+
+    it("conjoins EVERY enclosing `if` into the trigger, not just the nearest (no outer gate dropped)", () => {
+        const src = `if (Global("chapter", "GLOBAL", 3)) {
+    if (Global("quest", "GLOBAL", 1)) {
+        function s100() { say(tra(1)); }
+    }
+}
+`;
+        const s = stateOf(src, "s100");
+        expect(s.trigger).toContain('Global("quest", "GLOBAL", 1)');
+        expect(s.trigger).toContain('Global("chapter", "GLOBAL", 3)');
+    });
+});
