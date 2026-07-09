@@ -5,6 +5,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
+import { conlog } from "./logger";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
 import type {
     SSLDialogBlock,
@@ -63,6 +64,9 @@ export async function parseDialog(
     }
     const tree = parseWithCache(text);
     if (!tree) {
+        // Deliberate degrade to an empty model (blank dialog rather than a thrown request); logged at warn
+        // (operator-visible output channel) so a failed parse is diagnosable, not silently an empty dialog.
+        conlog("parseDialog: fallout-ssl parse produced no tree; returning empty dialog", "warn");
         return { nodes: [], entryPoints: [] };
     }
     const root = tree.rootNode;
@@ -459,6 +463,9 @@ function nodeInsertAnchor(proc: SyntaxNode, fullText: string): { offset: number;
     // Empty body (e.g. a from-scratch scaffold's `procedure Node001 begin\nend`): anchor just AFTER the `begin`
     // keyword so a first statement lands INSIDE the procedure. `proc.startIndex` (the old value) sits before
     // `procedure`, which splices a body statement out ahead of the declaration and corrupts the file.
+    // `begin` is an anonymous grammar keyword token with no SyntaxType enum member (the enum only covers named
+    // nodes), so it must be matched as a raw string rather than via SyntaxType - same exemption the weidu-d
+    // parser documents for its `BEGIN`/`END`/`WEIGHT` anonymous tokens.
     const begin = proc.children.find((c) => c.type === "begin");
     return { offset: begin ? begin.endIndex : proc.startIndex, indent: "    " };
 }

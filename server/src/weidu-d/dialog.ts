@@ -11,6 +11,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { conlog } from "../logger";
 import { SyntaxType } from "./syntax-type";
 import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
 import {
@@ -49,11 +50,16 @@ import {
  * Parse dialog structure from D file text using tree-sitter.
  */
 export function parseDDialog(text: string): DDialogData {
+    // Both guards deliberately degrade to an empty model so the editor shows a blank dialog rather than throwing
+    // the request - but log at warn (operator-visible output channel) so the degrade is diagnosable instead of
+    // silently indistinguishable from a genuinely empty file.
     if (!isInitialized()) {
+        conlog("parseDDialog: weidu-d parser not initialized; returning empty dialog", "warn");
         return { blocks: [], states: [] };
     }
     const tree = parseWithCache(text);
     if (!tree) {
+        conlog("parseDDialog: weidu-d parse produced no tree; returning empty dialog", "warn");
         return { blocks: [], states: [] };
     }
 

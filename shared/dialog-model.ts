@@ -411,6 +411,12 @@ export function sslTerminalKind(id: string): "exit" | "combat" | undefined {
  * is kept on the model (it is the authored value and the binding the editor
  * writes back to the `.tra`); resolution happens only at render time. An
  * unresolved ref is left as `@N` so a missing string is visible, not blank.
+ *
+ * The match is intentionally UNANCHORED and global (unlike the anchored `^@(\d+)$`
+ * that `bareMsgId` and the id parsers use): this resolves EVERY embedded ref in a
+ * display line, not only a line that is exactly one bare ref, so a line mixing text
+ * and refs still renders. It is display-only, so a rare literal containing `@N` that
+ * happens to collide with a live id is a cosmetic over-resolve, never a saved edit.
  */
 export function resolveText(text: string | undefined, messages?: Record<string, string>): string {
     if (!text) return text ?? "";
