@@ -1,6 +1,11 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { rewriteMsgEntries, rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
+import {
+    appendTraEntries,
+    rewriteMsgEntries,
+    rewriteTraEntries,
+    siblingTraCandidates,
+} from "../../shared/dialog-tra-edit";
 
 describe("rewriteTraEntries", () => {
     const TRA = `// Coran's lines
@@ -63,6 +68,32 @@ describe("rewriteMsgEntries", () => {
 
     it("handles an empty text value", () => {
         expect(rewriteMsgEntries(`{5}{}{}\n`, { "5": "now has text" })).toBe(`{5}{}{now has text}\n`);
+    });
+});
+
+// The D-family allocator mints a fresh `@N` for editor-authored text (a new option or state), so the
+// save must be able to ADD that entry - a rewrite-only .tra write silently drops the typed text (the
+// spliced .d references an `@N` that resolves nowhere on reopen).
+describe("appendTraEntries", () => {
+    const TRA = `@0 = ~Existing zero.~\n`;
+
+    it("appends entries whose ids are absent, preserving existing bytes", () => {
+        const out = appendTraEntries(TRA, { "0": "Existing zero.", "1": "Brand new line." });
+        expect(out).toBe(`@0 = ~Existing zero.~\n@1 = ~Brand new line.~\n`);
+    });
+
+    it("is a no-op when every id already exists (idempotent with rewriteTraEntries)", () => {
+        expect(appendTraEntries(TRA, { "0": "changed elsewhere" })).toBe(TRA);
+    });
+
+    it("newline-terminates the file before appending so entries stay one-per-line", () => {
+        expect(appendTraEntries(`@0 = ~no trailing newline~`, { "1": "added" })).toBe(
+            `@0 = ~no trailing newline~\n@1 = ~added~\n`,
+        );
+    });
+
+    it("appends to an empty file without a leading blank line", () => {
+        expect(appendTraEntries("", { "1": "first" })).toBe(`@1 = ~first~\n`);
     });
 });
 

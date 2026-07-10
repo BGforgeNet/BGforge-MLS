@@ -6,10 +6,10 @@
  * byte-for-byte unchanged (comments, ordering, formatting, untouched entries). This
  * is the `.tra` counterpart of the surgical `.d` edit in `dialog-d-edit.ts`.
  *
- * Only entries that already exist in the `.tra` are rewritten - new literal text in
- * the editor stays literal in the `.d` and never becomes an `@N`. The entry value
- * grammar matches the parser's (`@N = ~...~`, value is everything up to the next
- * tilde, newlines included).
+ * `rewriteTraEntries` edits only entries that already exist in the `.tra`; `appendTraEntries` adds the
+ * brand-new ids the D-family allocator mints for editor-authored text (a new option or state). The entry
+ * value grammar matches the parser's (`@N = ~...~`, value is everything up to the next tilde, newlines
+ * included).
  */
 import * as path from "path";
 
@@ -55,6 +55,23 @@ export function appendMsgEntries(msgText: string, entries: Record<string, string
     if (additions.length === 0) return msgText;
     const base = msgText.length > 0 && !msgText.endsWith("\n") ? msgText + "\n" : msgText;
     return base + additions.map(([id, text]) => `{${id}}{}{${text}}\n`).join("");
+}
+
+/**
+ * Append brand-new `.tra` entries (`@N = ~text~`) for ids not already present - the `.tra` counterpart of
+ * `appendMsgEntries`. The D-family id allocator mints a fresh `@N` for text authored in the dialog editor
+ * (a new option or state), so the save path must be able to add the entry the spliced `.d`/`.td` now
+ * references; a rewrite-only path silently drops that text. Only an id absent from the file is appended,
+ * in the order given; existing bytes are preserved, and the file is newline-terminated before appending
+ * so entries stay one-per-line.
+ */
+export function appendTraEntries(traText: string, entries: Record<string, string>): string {
+    const present = new Set<string>();
+    for (const m of traText.matchAll(/@(\d+)\s*=\s*~/g)) present.add(m[1]!);
+    const additions = Object.entries(entries).filter(([id]) => !present.has(id));
+    if (additions.length === 0) return traText;
+    const base = traText.length > 0 && !traText.endsWith("\n") ? traText + "\n" : traText;
+    return base + additions.map(([id, text]) => `@${id} = ~${text}~\n`).join("");
 }
 
 /**
