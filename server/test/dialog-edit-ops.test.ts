@@ -127,6 +127,59 @@ END
         expect((out.match(/BEGIN hello\b/g) ?? []).length).toBe(1);
     });
 
+    it("duplicate detaches @N text refs to independent literals (copy-on-write, both families)", () => {
+        // A source-shared @N is copy-on-write on duplicate: the copy carries the RESOLVED literal, not the
+        // ref, so at save it mints its own fresh id and editing the copy's line writes to that new entry -
+        // never the original's shared .msg/.tra string (BUG C: editing the copy mutated the original).
+        const m: DialogModel = {
+            sourceLang: "ssl",
+            editable: false,
+            sourceName: "myscript",
+            messages: { "104": "Hello there.", "105": "Farewell." },
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        {
+                            id: "Node001",
+                            text: "@104",
+                            procRange: { start: 0, end: 10 },
+                            choices: [{ id: "Node001#0", text: "@105", target: { kind: "exit" } }],
+                        },
+                    ],
+                },
+            ],
+        };
+        const copy = ops.duplicateState(m, m.roots[0]!.states[0]!)!;
+        expect(copy.text).toBe("Hello there.");
+        expect(copy.choices[0]!.text).toBe("Farewell.");
+        // The original still holds its @N refs into the shared strings.
+        expect(m.roots[0]!.states[0]!.text).toBe("@104");
+        expect(m.roots[0]!.states[0]!.choices[0]!.text).toBe("@105");
+    });
+
+    it("duplicate keeps an UNRESOLVED @N ref intact (no loaded string to detach)", () => {
+        // The .msg entry never loaded, so there is nothing to copy; leave the ref rather than blank the line.
+        // Editing this copy is already gated (unresolved @N locks), so the alias is harmless here.
+        const m: DialogModel = {
+            sourceLang: "ssl",
+            editable: false,
+            sourceName: "myscript",
+            messages: {},
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [{ id: "Node001", text: "@999", procRange: { start: 0, end: 10 }, choices: [] }],
+                },
+            ],
+        };
+        expect(ops.duplicateState(m, m.roots[0]!.states[0]!)!.text).toBe("@999");
+    });
+
     it("inserts a newly-added state on save, after its siblings, re-parseable", () => {
         const m = model();
         const added = ops.addState(m)!;

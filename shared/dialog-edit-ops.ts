@@ -30,6 +30,20 @@ function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][nu
     return model.roots.find((r) => r.states.includes(state));
 }
 
+/**
+ * Copy-on-write a shared message ref: if `text` is ENTIRELY a bare `@N` whose `.msg`/`.tra` string is loaded,
+ * return that literal (so a save mints the copy its own id); otherwise return `text` unchanged (a literal, a
+ * computed/embedded ref, or an unresolved `@N` with no loaded string to detach). Whole-text only - an embedded
+ * `@N` inside a literal is left alone. Used by `duplicateState` so a copy never aliases the source's string.
+ */
+function detachRef(text: string | undefined, messages: DialogModel["messages"]): string | undefined {
+    const t = (text ?? "").trim();
+    const m = /^@(\d+)$/.exec(t);
+    const resolved = m ? messages?.[m[1]!] : undefined;
+    // Preserve `undefined` (a textless "continue" option) rather than coercing it to "".
+    return resolved ?? text;
+}
+
 function uniqueId(taken: Set<string>, base: string): string {
     if (!taken.has(base)) return base;
     let i = 1;
@@ -185,7 +199,19 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     delete copy.branches;
     delete copy.block;
     delete copy.bundleFaithful;
-    copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
+    // Copy-on-write the shared `.msg`/`.tra` strings: a source-backed line is stored as a bare `@N` ref, and a
+    // naive clone leaves the copy pointing at the SAME entry - so editing the copy's line (writeText -> the
+    // shared id) silently rewrites the ORIGINAL's line too. Detaching each resolvable ref to its literal makes
+    // the copy a new-node literal that the save allocator (allocateNodeIds / allocateDFamilyIds) mints a FRESH
+    // id for, so the copy owns an independent string. An UNRESOLVED ref (its .msg never loaded) has nothing to
+    // detach and stays a ref - harmless, since editing an unresolved line is already locked. Skips computed/
+    // random text (no plain `@N` to detach). Applies to both families (SSL and D both store shared refs as @N).
+    if (!copy.textKind) copy.text = detachRef(copy.text, model.messages) ?? copy.text;
+    copy.choices = copy.choices.map((c, i) => ({
+        ...c,
+        id: `${copy.id}#${i}`,
+        ...(c.textKind ? {} : { text: detachRef(c.text, model.messages) }),
+    }));
     root.states.push(copy);
     return copy;
 }
