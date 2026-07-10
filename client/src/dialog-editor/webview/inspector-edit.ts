@@ -189,6 +189,26 @@ export function textEditability(opts: {
 }
 
 /**
+ * Editability of ONE SAY line of a WeiDU D multisay state (`SAY @a = @b = @c`), given its raw text - the same
+ * lock+reason decision `textEditability` returns, but for a continuation line addressed by value rather than by
+ * owner. A continuation line is always existing source (never a pending item), so `isNew` is false: it is gated
+ * exactly like any other line by the @N-resolvability / literal rules. `textRO` locks every line (a derived
+ * state); `derivedFrom` selects the read-only wording. Composes the same primitives, so it can't disagree.
+ */
+export function sayLineEditability(opts: {
+    text: string | undefined;
+    messages: DialogMessages | undefined;
+    ssl: boolean;
+    textRO: boolean;
+    derivedFrom?: string;
+}): { editable: boolean; reason: string } {
+    const { text, messages, ssl, textRO, derivedFrom } = opts;
+    const base = { text, messages, ssl, textRO, isNew: false };
+    const locked = textFieldLocked(base);
+    return { editable: !locked, reason: locked ? textLockReason({ ...base, derivedFrom }) : "" };
+}
+
+/**
  * Why an option's condition field is read-only. Returns "" when editable. `editable` is the whole-file flag
  * (D); for SSL the per-option `conditionEditable` decides, and the reason distinguishes a read-only node
  * structure from a condition shared across several options.

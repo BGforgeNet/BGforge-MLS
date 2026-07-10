@@ -126,6 +126,25 @@ describe("buildConversationTree", () => {
         expect(roots[0]!.replies[0]!.hasText).toBe(true);
     });
 
+    it("carries every SAY line of a multisay state (continuation lines resolved), so none are hidden", () => {
+        // A WeiDU D `SAY @10 = @20 = @30` monologue: the model keeps all three in sayTexts. The tree must
+        // surface lines 2..N (they were invisible - shown first-line-only) as `sayLines`, line 0 stays `text`.
+        const r = root([st("A", "@10", [ch("A#0", { kind: "exit" })], { sayTexts: ["@10", "@20", "@30"] })]);
+        const { roots } = buildConversationTree(
+            r,
+            { "10": "First line.", "20": "Second line.", "30": "Third." },
+            noJump,
+        );
+        expect(roots[0]!.text).toBe("First line.");
+        expect(roots[0]!.sayLines).toEqual(["Second line.", "Third."]);
+    });
+
+    it("leaves sayLines absent for a single-say state", () => {
+        const r = root([st("A", "@10", [ch("A#0", { kind: "exit" })])]);
+        const { roots } = buildConversationTree(r, { "10": "Only line." }, noJump);
+        expect(roots[0]!.sayLines).toBeUndefined();
+    });
+
     it("marks a textless transition as a silent continue", () => {
         const r = root([st("A", "a", [ch("A#0", { kind: "exit" })])]);
         const { roots } = buildConversationTree(r, undefined, noJump);

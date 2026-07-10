@@ -352,6 +352,27 @@ END
         expect(out).toBe(FIX.replace("SAY @1", "SAY @99"));
     });
 
+    it("a continuation-line SAY edit (only sayTexts[1..], line 0 unchanged) still re-splices the whole SAY", () => {
+        // Editing ONLY a continuation line of a multisay monologue leaves state.text (line 0) unchanged, so a
+        // diff on `text` alone misses it and a literal continuation edit was silently dropped. The SAY re-splice
+        // must trigger on any sayTexts change, and re-emit every alternate via serializeSayValue.
+        const FIX = `APPEND ~X~
+IF ~~ THEN BEGIN s
+  SAY ~First line.~ = ~Second line.~ = ~Third line.~
+  IF ~~ THEN REPLY ~ok~ EXIT
+END
+END
+`;
+        const data = parseDDialog(FIX);
+        const original = modelFromD(data);
+        const model = modelFromD(data);
+        const st = model.roots.find((r) => r.kind === "dialog")!.states.find((s) => s.id === "s")!;
+        expect(st.text).toBe("First line."); // line 0 stays; we edit only the middle alternate
+        st.sayTexts![1] = "The middle changed.";
+        const out = applyDDialogEdits(FIX, model, original);
+        expect(out).toContain("SAY ~First line.~ = ~The middle changed.~ = ~Third line.~");
+    });
+
     it("a trigger edit splices just the trigger span (adding a trigger to an empty ~~)", () => {
         const FIX = `APPEND ~X~
 IF ~~ THEN BEGIN s

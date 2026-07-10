@@ -602,6 +602,14 @@
         {/if}
     </div>
     {#if !collapsed.has(st.id)}
+        <!-- Continuation SAY lines of a multisay monologue (line 1 shows on the node row above): the NPC speaks
+             several lines before the player replies. Rendered as muted, non-interactive rows so the whole speech
+             is visible instead of truncated to the first line. Editing them lives in the inspector. -->
+        {#if st.sayLines}
+            {#each st.sayLines as line, li (li)}
+                <div class="saycont" style="--lvl:{depth * 2}"><span class="line saymore" use:clipTitle={{ label: st.id, text: line }}>{line || "(no line)"}</span></div>
+            {/each}
+        {/if}
         {#if st.block}
             <!-- When the block opens with a top-level line, it is shown on the state row above, so skip it here. -->
             {@render convBlock(st.block[0]?.kind === "line" ? st.block.slice(1) : st.block, depth, st.id)}
@@ -1008,6 +1016,23 @@
     }
     .rmark {
         color: #475569;
+    }
+    /* Continuation lines of a multisay monologue: muted, italic, and indented under the node's first SAY line so
+       the sequence reads as one NPC speaking several lines (not truncated to the first). Display-only in the tree
+       - editing every line lives in the inspector. */
+    .saycont {
+        display: flex;
+        padding: 1px 6px;
+        padding-left: calc(var(--lvl) * 14px + 30px);
+        line-height: 1.35;
+    }
+    .saymore {
+        color: #94a3b8;
+        font-style: italic;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
     }
     /* Option text. min-width:0 lets it shrink and ellipsize inside the flex row; the row itself (.reprow) is
        the focusable selection target now, not this span. */

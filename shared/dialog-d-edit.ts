@@ -54,6 +54,9 @@ function stateUnchanged(a: DialogState, b: DialogState): boolean {
     return (
         a.id === b.id &&
         a.text === b.text &&
+        // A multisay continuation edit changes only sayTexts[1..] (line 0 == text unchanged); without this the
+        // state reads as unchanged and the edit is skipped before it can splice (silently dropped).
+        sameSayTexts(a.sayTexts, b.sayTexts) &&
         (a.trigger ?? "") === (b.trigger ?? "") &&
         (a.weight ?? null) === (b.weight ?? null) &&
         choicesEqual(a.choices, b.choices)
@@ -70,6 +73,12 @@ function stateUnchanged(a: DialogState, b: DialogState): boolean {
  * per-transition edits are added in later steps; structural changes (transition
  * add/remove/reorder) intentionally return null and fall back to whole-state.
  */
+/** Whether two multisay `sayTexts` arrays hold the same alternates (both absent counts as equal). */
+function sameSayTexts(a?: string[], b?: string[]): boolean {
+    if (!a || !b) return !a && !b;
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | null {
     // Header changes have no dedicated field span (the id and WEIGHT live inline in the
     // `IF [WEIGHT #n] ~trigger~ THEN BEGIN <id>` header), and an add/remove/count change to
@@ -79,7 +88,11 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
     if (original.choices.length !== edited.choices.length) return null;
 
     const ops: SpliceOp[] = [];
-    if (original.text !== edited.text) {
+    // The SAY value changed when line 0 (`text`) OR any multisay continuation line (`sayTexts[1..]`) changed.
+    // Keying only on `text` misses a continuation-only edit (line 0 unchanged), silently dropping it. An @N
+    // continuation edit leaves its raw ref in sayTexts unchanged (the .tra entry changes, flushed separately),
+    // so this correctly re-splices only a LITERAL continuation change; an @N one needs no source edit.
+    if (original.text !== edited.text || !sameSayTexts(original.sayTexts, edited.sayTexts)) {
         if (!original.sayRange) return null;
         // `sayRange` covers the whole `text = text = text` value, so the replacement must re-emit every
         // alternate - not just `edited.text` - or a multisay state loses its other lines here (see serializeSayValue).

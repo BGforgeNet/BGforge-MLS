@@ -8,6 +8,7 @@ import {
     optionRemoveLockReason,
     stateReadOnlyReason,
     structuralLockReason,
+    sayLineEditability,
     textEditability,
     textFieldLocked,
     textLockReason,
@@ -33,6 +34,21 @@ describe("writeText (single-line normalization)", () => {
         const literal = { text: "seed" };
         writeText(literal, undefined, "hello ");
         expect(literal.text).toBe("hello "); // a trailing space the user is mid-typing survives
+    });
+});
+
+describe("sayLineEditability (a multisay continuation line)", () => {
+    const messages = { "20": "Second line." };
+    it("editable for a resolved @N, locked for an unresolved one (with a reason), never pending", () => {
+        expect(sayLineEditability({ text: "@20", messages, ssl: false, textRO: false }).editable).toBe(true);
+        const locked = sayLineEditability({ text: "@99", messages, ssl: false, textRO: false });
+        expect(locked.editable).toBe(false);
+        expect(locked.reason).toContain("@99");
+    });
+    it("locks every line of a read-only (derived) state", () => {
+        const r = sayLineEditability({ text: "@20", messages, ssl: false, textRO: true, derivedFrom: "CHAIN" });
+        expect(r.editable).toBe(false);
+        expect(r.reason).toContain("CHAIN");
     });
 });
 

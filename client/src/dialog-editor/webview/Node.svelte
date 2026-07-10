@@ -46,6 +46,10 @@
         </div>
         <div class="bd">
             {resolveText(data.state.text, data.messages) || "(no line)"}
+            <!-- A multisay monologue says several lines before the player replies; the card is the compact
+                 overview, so show the first line + a count. All lines are visible in the tree and editable in
+                 the inspector. -->
+            {#if data.state.sayTexts && data.state.sayTexts.length > 1}<span class="saymore" title="This state says {data.state.sayTexts.length} lines in sequence - see all in the tree, edit each in the inspector.">+{data.state.sayTexts.length - 1} more</span>{/if}
         </div>
         {#each data.state.choices as c (c.id)}
             {@const cb = choiceBadges(c)}
@@ -181,6 +185,16 @@
     .bd {
         padding: 4px 8px 4px 15px;
         color: #93c5fd;
+    }
+    /* "+N more" chip marking a multisay monologue: the card shows the first line, this counts the rest. */
+    .bd .saymore {
+        margin-left: 4px;
+        color: #94a3b8;
+        font-size: 8px;
+        border: 1px solid #475569;
+        border-radius: 3px;
+        padding: 0 3px;
+        white-space: nowrap;
     }
     .opt {
         position: relative; /* so each row's source Handle (top:50%) centers on the ROW */

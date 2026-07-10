@@ -15,6 +15,7 @@
     import {
         conditionLockReason,
         optionRemoveLockReason,
+        sayLineEditability,
         stateReadOnlyReason,
         structuralLockReason,
         textEditability,
@@ -69,6 +70,16 @@
     }
     function setReply(c: DialogChoice, v: string): void {
         writeText(c, messages, v);
+    }
+    // Write ONE continuation line (index >= 1) of a multisay `SAY @a = @b = @c` state. Same write path as any
+    // line: an @N line edits its .msg/.tra entry (the raw ref in sayTexts is unchanged, so the .d source keeps
+    // `@a=@b=@c`); a literal line updates sayTexts[i] in place, which the writer's serializeSayValue re-joins.
+    // Line 0 is the primary `text` field above - the writer reads `text` for it and `sayTexts[1..]` for the rest.
+    function setSayLine(i: number, v: string): void {
+        if (!state.sayTexts) return;
+        const t = { text: state.sayTexts[i] };
+        writeText(t, messages, v);
+        state.sayTexts[i] = t.text ?? "";
     }
 
     // A `.msg`/`.tra` line is single-line, but these fields are <textarea>s (they wrap/autosize long lines for
@@ -315,6 +326,17 @@
         <div class="ik">NPC line</div>
         {@const npc = textEdit(null)}
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+        <!-- Continuation lines of a multisay `SAY @a = @b = @c` monologue (line 1 is the field above): the NPC
+             speaks several lines before the player replies. Each edits like the primary line - an @N line writes
+             its .msg/.tra entry, a literal writes the .d source (setSayLine). Absent for a single-say state. -->
+        {#if state.sayTexts && state.sayTexts.length > 1}
+            {#each state.sayTexts.slice(1) as _line, idx (idx)}
+                {@const i = idx + 1}
+                {@const sl = sayLineEditability({ text: state.sayTexts[i], messages, ssl, textRO: Boolean(state.derivedFrom), derivedFrom: state.derivedFrom })}
+                <div class="ik">NPC line (cont. {i + 1})</div>
+                <textarea class="iv npc" rows="1" use:autosize={resolveText(state.sayTexts[i], messages)} disabled={!sl.editable} title={sl.reason} value={resolveText(state.sayTexts[i], messages)} oninput={(e) => setSayLine(i, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+            {/each}
+        {/if}
     {/if}
 
     {#if ssl}

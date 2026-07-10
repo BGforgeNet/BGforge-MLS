@@ -102,8 +102,12 @@ export interface ConvState {
         The tree does NOT use the SSL file-name fallback the card/inspector do: down a single-file tree the
         base name repeats on every row (one SSL script is one NPC), so it is redundant noise there. */
     speaker?: string;
-    /** Resolved NPC line. */
+    /** Resolved NPC line (the first SAY line of a multisay state). */
     text: string;
+    /** The CONTINUATION SAY lines of a WeiDU D multisay state (`SAY @a = @b = @c`), resolved, in source order -
+        lines 2..N, since line 1 is `text`. Absent for a single-say state. The tree renders them as a sequence
+        after `text` so a monologue is not truncated to its first line (the pre-existing display gap). */
+    sayLines?: string[];
     trigger?: string;
     /** Set for a CHAIN/INTERJECT/EXTEND-derived (read-only) state. */
     derivedFrom?: string;
@@ -306,6 +310,11 @@ export function buildConversationTree(
             id: s.id,
             speaker: s.speaker,
             text: resolveText(s.text, messages),
+            // A multisay state carries every SAY alternate in `sayTexts` (line 0 == `text`); surface lines 2..N
+            // as resolved continuation lines so the tree shows the whole monologue, not just the first line.
+            ...(s.sayTexts && s.sayTexts.length > 1
+                ? { sayLines: s.sayTexts.slice(1).map((t) => resolveText(t, messages)) }
+                : {}),
             trigger: s.trigger,
             derivedFrom: s.derivedFrom,
             ...(s.approximate ? { approximate: true } : {}),
