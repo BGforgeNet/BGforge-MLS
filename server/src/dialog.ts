@@ -174,8 +174,20 @@ export async function parseDialog(
     // `*_p_proc` lifecycle handler (pickup_p_proc, look_at_p_proc, ...) is never a dialog node even when it
     // contains a Reply, so it stays excluded.
     const isHookProc = (name: string): boolean => name.endsWith("_p_proc");
+    // A `NodeNNN`-named procedure is a dialog node by convention; the reserved sinks (998 combat / 999 end)
+    // are transition TARGETS, not nodes, so they never project on their own (an option routing to one renders
+    // as exit/combat). An empty such node is a just-created or scaffolded node in progress - kept visible so
+    // `+ State` on an existing dialogue does not write an invisible disk orphan (BUG A). A renamed empty node
+    // (not `NodeNNN`) still needs wiring to show; the general pending-node layer covers that case.
+    const isDialogNodeName = (name: string): boolean => /^Node\d+$/.test(name);
+    const isReservedSink = (name: string): boolean => {
+        const num = /^Node0*(\d+)$/.exec(name);
+        return num !== null && (num[1] === "998" || num[1] === "999");
+    };
     for (const [procName, node] of parsed) {
-        const isOrphanDialogNode = !isHookProc(procName) && (node.replies.length > 0 || node.options.length > 0);
+        const hasDialogContent = node.replies.length > 0 || node.options.length > 0;
+        const isOrphanDialogNode =
+            !isHookProc(procName) && !isReservedSink(procName) && (hasDialogContent || isDialogNodeName(procName));
         if (reachable.has(procName) || isOrphanDialogNode) nodes.push(node);
     }
 

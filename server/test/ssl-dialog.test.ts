@@ -82,6 +82,28 @@ end
         expect(result.nodes.find((n) => n.name === "Node002")).toBeDefined();
     });
 
+    it("projects an unwired EMPTY NodeNNN (a just-created +State node) so it is not an invisible disk orphan", async () => {
+        // BUG A: `+ State` on an existing dialogue splices `procedure NodeXXX begin end`; the reparse dropped it
+        // (no reply/option), so the node was written to disk yet vanished from the tree. An empty NodeNNN is a
+        // dialog node in progress and must stay visible (its NPC line is authorable via the `replyless` gate).
+        const ssl = `
+procedure Node001 begin
+    Reply(100);
+end
+procedure Node002 begin
+end
+procedure Node999 begin
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const result = await parseDialog(ssl);
+        expect(result.nodes.find((n) => n.name === "Node002")).toBeDefined();
+        // The reserved sink Node999 (end-dialog target) is NOT a dialog node - it stays excluded.
+        expect(result.nodes.find((n) => n.name === "Node999")).toBeUndefined();
+    });
+
     it("detects force_dialog_start entry points outside talk_p_proc", async () => {
         const ssl = `
 procedure Node050 begin

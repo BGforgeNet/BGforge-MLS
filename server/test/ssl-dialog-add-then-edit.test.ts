@@ -158,16 +158,17 @@ describe("SSL from-scratch dialog scaffold", () => {
         expect(node1!.choices.some((c) => c.target.kind === "state" && c.target.stateId === "Node999")).toBe(true);
     });
 
-    it("allocates a new node id that dodges an existing UNPROJECTED procedure (no duplicate on save)", async () => {
-        // Node002 is an empty procedure: the model does not project it (no Reply/option, unreachable), but it is
-        // a real name. A new node must skip past it to Node003, or the add/scaffold splice would emit a second
-        // `procedure Node002`. Exercises the parser's procNames -> model.existingProcNames -> nextSslNodeId path.
+    it("allocates a new node id that dodges an existing empty NodeNNN (no duplicate on save)", async () => {
+        // Node002 is an empty procedure. It now PROJECTS as a dialog node in progress (BUG A: an empty NodeNNN
+        // is a real node, not an invisible disk orphan), and it is also a real name a new node must skip past to
+        // Node003 - or the add/scaffold splice would emit a second `procedure Node002`. Exercises the parser's
+        // procNames -> model.existingProcNames -> nextSslNodeId path plus the empty-node projection.
         const SRC = "procedure Node001 begin\n    Reply(100);\nend\nprocedure Node002 begin\nend\n";
         const model = modelFromSSL(await parseDialog(SRC));
-        // Sanity: Node001 projects (has a Reply); Node002 does not; but procNames carries both.
-        expect(model.roots.flatMap((r) => r.states).map((s) => s.id)).toEqual(["Node001"]);
+        // Both Node001 (has a Reply) and the empty Node002 project; procNames carries both too.
+        expect(model.roots.flatMap((r) => r.states).map((s) => s.id)).toEqual(["Node001", "Node002"]);
         expect(model.existingProcNames).toEqual(expect.arrayContaining(["Node001", "Node002"]));
-        expect(addState(structuredClone(model)).id).toBe("Node003"); // not Node002 (unprojected but present)
+        expect(addState(structuredClone(model)).id).toBe("Node003"); // not Node002 (already present)
     });
 
     it("emits Node998 with its combat body when an option is retargeted to Combat and the file lacks it", async () => {
