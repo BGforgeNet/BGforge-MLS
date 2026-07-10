@@ -4,9 +4,11 @@ import {
     isPendingChoice,
     isPendingState,
     msgRef,
+    npcLineAuthorable,
     optionRemoveLockReason,
     stateReadOnlyReason,
     structuralLockReason,
+    textEditability,
     textFieldLocked,
     textLockReason,
 } from "../src/dialog-editor/webview/inspector-edit";
@@ -106,6 +108,209 @@ describe("isPendingState", () => {
     });
     it("an existing WeiDU D state (sourceRange, no procRange) is not pending", () => {
         expect(isPendingState({ id: "N", text: "", choices: [], sourceRange: { start: 0, end: 1 } })).toBe(false);
+    });
+});
+
+describe("npcLineAuthorable", () => {
+    it("a pending-new node (no source span) is authorable", () => {
+        expect(npcLineAuthorable({ id: "N", text: "", choices: [] })).toBe(true);
+    });
+    it("a faithful reply-less node adopted from source (procRange + replyless) stays authorable after the pending window closes", () => {
+        // The +State regression: after the splice the webview adopts the re-parse, so the node has a procRange
+        // and is no longer pending - but its Reply is still empty and the save path will allocate it, so the
+        // NPC line must stay editable. `replyless` survives the user typing the first line (text becomes a literal).
+        const adopted: DialogState = {
+            id: "N",
+            text: "",
+            choices: [],
+            procRange: { start: 0, end: 9 },
+            replyless: true,
+        };
+        expect(isPendingState(adopted)).toBe(false); // no longer pending post-adopt
+        expect(npcLineAuthorable(adopted)).toBe(true);
+        // Still authorable once the user has typed a not-yet-saved literal into it.
+        expect(npcLineAuthorable({ ...adopted, text: "Hello there." })).toBe(true);
+    });
+    it("a node whose reply already resolves to @N is NOT authorable (edited via the resolvable-@N path, not allocation)", () => {
+        expect(npcLineAuthorable({ id: "N", text: "@200", choices: [], procRange: { start: 0, end: 9 } })).toBe(false);
+    });
+    it("a non-replyless literal node is NOT authorable (a genuine literal has nowhere to write on SSL save)", () => {
+        expect(npcLineAuthorable({ id: "N", text: "raw literal", choices: [], procRange: { start: 0, end: 9 } })).toBe(
+            false,
+        );
+    });
+});
+
+describe("replyless projection + gate (the +State NPC-line regression)", () => {
+    // An ADOPTED node (post-splice re-parse) carries a `procRange`, so it is not pending - isolating the
+    // `replyless` arm of the gate from the pending-new arm.
+    const faithlessNode = (over: Partial<SSLDialogData["nodes"][number]>): SSLDialogData["nodes"][number] => ({
+        name: "Node001",
+        line: 1,
+        callTargets: [],
+        replies: [],
+        options: [],
+        procRange: { start: 0, end: 30 },
+        ...over,
+    });
+
+    const anchor = { offset: 42, indent: "    " };
+
+    it("modelFromSSL marks a faithful reply-less node with a splice anchor `replyless`, so its empty NPC line is editable", () => {
+        const model = modelFromSSL({
+            entryPoints: ["Node001"],
+            nodes: [faithlessNode({ faithful: true, insertAnchor: anchor })],
+        });
+        const state = model.roots[0]!.states[0]!;
+        expect(state.text).toBe(""); // reply-less -> empty NPC line
+        expect(state.replyless).toBe(true);
+        // The composed inspector gate: an empty faithful reply-less SSL line is NOT locked.
+        expect(
+            textFieldLocked({
+                text: state.text,
+                messages: model.messages,
+                ssl: true,
+                textRO: false,
+                isNew: npcLineAuthorable(state),
+            }),
+        ).toBe(false);
+    });
+
+    it("a node WITH a reply is not `replyless` (its @N line uses the resolvable path)", () => {
+        const model = modelFromSSL({
+            entryPoints: ["Node001"],
+            nodes: [faithlessNode({ faithful: true, insertAnchor: anchor, replies: [{ msgId: 200, line: 2 }] })],
+        });
+        expect(model.roots[0]!.states[0]!.replyless).toBeUndefined();
+    });
+
+    it("a NON-faithful reply-less node is not `replyless` (the writer won't splice a reply into it)", () => {
+        const model = modelFromSSL({
+            entryPoints: ["Node001"],
+            nodes: [faithlessNode({ faithful: false, insertAnchor: anchor })],
+        });
+        expect(model.roots[0]!.states[0]!.replyless).toBeUndefined();
+    });
+
+    it("a faithful reply-less node with NO node-level insertAnchor (the TSSL shape) is not `replyless` - replyOps can't splice, so the line stays locked", () => {
+        const model = modelFromSSL({ entryPoints: ["Node001"], nodes: [faithlessNode({ faithful: true })] });
+        const state = model.roots[0]!.states[0]!;
+        expect(state.replyless).toBeUndefined();
+        expect(
+            textFieldLocked({
+                text: state.text,
+                messages: model.messages,
+                ssl: true,
+                textRO: false,
+                isNew: npcLineAuthorable(state),
+            }),
+        ).toBe(true);
+    });
+});
+
+describe("textEditability (unified text gate - one decision both views consume)", () => {
+    const messages = { "200": "The town is quiet." };
+    const st = (over: Partial<DialogState> = {}): DialogState => ({ id: "N", text: "@200", choices: [], ...over });
+    const ch = (over: Partial<DialogChoice> = {}): DialogChoice => ({ id: "c0", target: { kind: "exit" }, ...over });
+
+    it("returns both the lock AND the reason from one call, so the two views can't assemble it differently", () => {
+        // Editable -> empty reason.
+        expect(
+            textEditability({
+                state: st({ procRange: { start: 0, end: 9 } }),
+                choice: null,
+                messages,
+                ssl: true,
+                textRO: false,
+            }),
+        ).toEqual({
+            editable: true,
+            reason: "",
+        });
+        // Locked -> a concrete reason string.
+        const literal = textEditability({
+            state: st({ text: "raw", procRange: { start: 0, end: 9 } }),
+            choice: null,
+            messages,
+            ssl: true,
+            textRO: false,
+        });
+        expect(literal.editable).toBe(false);
+        expect(literal.reason).toMatch(/no plain @N/);
+    });
+
+    it("NPC line of a faithful reply-less adopted SSL node is editable (the +State regression, decided in one place)", () => {
+        const state = st({ text: "", procRange: { start: 0, end: 9 }, replyless: true });
+        expect(textEditability({ state, choice: null, messages, ssl: true, textRO: false })).toEqual({
+            editable: true,
+            reason: "",
+        });
+    });
+
+    it("NPC line of a read-only (derived) state is locked with the derived-construct reason", () => {
+        const r = textEditability({
+            state: st({ derivedFrom: "CHAIN" }),
+            choice: null,
+            messages,
+            ssl: true,
+            textRO: true,
+        });
+        expect(r.editable).toBe(false);
+        expect(r.reason).toContain("CHAIN");
+    });
+
+    it("option text: a pending choice is editable; an unresolved @N is locked", () => {
+        expect(textEditability({ state: st(), choice: ch({ text: "" }), messages, ssl: true, textRO: false })).toEqual({
+            editable: true,
+            reason: "",
+        });
+        const unresolved = textEditability({
+            state: st(),
+            choice: ch({ text: "@999", callRange: { start: 0, end: 1 } }),
+            messages,
+            ssl: true,
+            textRO: false,
+        });
+        expect(unresolved.editable).toBe(false);
+        expect(unresolved.reason).toContain("@999");
+    });
+
+    it("D-family text is always editable (persisted via the .d splice) when the caller's textRO is false", () => {
+        expect(
+            textEditability({
+                state: st({ text: "a literal D line" }),
+                choice: null,
+                messages,
+                ssl: false,
+                textRO: false,
+            }),
+        ).toEqual({
+            editable: true,
+            reason: "",
+        });
+    });
+
+    it("passes the caller's textRO straight through (the tree can lock text the inspector leaves open)", () => {
+        // Same D-family literal, but the caller (e.g. the tree, for a non-field-editable state) says textRO -> locked.
+        const r = textEditability({
+            state: st({ text: "a literal D line" }),
+            choice: null,
+            messages,
+            ssl: false,
+            textRO: true,
+        });
+        expect(r.editable).toBe(false);
+        expect(r.reason).toBe("This dialog is open read-only.");
+    });
+
+    it("agrees with the underlying primitives (it composes them, not a second derivation)", () => {
+        const state = st({ text: "", procRange: { start: 0, end: 9 }, replyless: true });
+        const unified = textEditability({ state, choice: null, messages, ssl: true, textRO: false });
+        const isNew = npcLineAuthorable(state);
+        expect(unified.editable).toBe(
+            !textFieldLocked({ text: state.text, messages, ssl: true, textRO: false, isNew }),
+        );
+        expect(unified.reason).toBe(textLockReason({ text: state.text, messages, ssl: true, textRO: false, isNew }));
     });
 });
 

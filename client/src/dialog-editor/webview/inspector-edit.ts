@@ -47,6 +47,19 @@ export function isPendingState(s: DialogState): boolean {
 }
 
 /**
+ * Whether a node's NPC line has no `.msg` entry yet but may be authored fresh - the `isNew` input to
+ * `textFieldLocked` for the node-level reply field. True for a just-added (pending) node, AND for a faithful
+ * SSL node adopted from source that carries no Reply (`replyless`): once a pending node is spliced and the
+ * webview adopts the re-parse it gains a `procRange` (so `isPendingState` flips false), but its reply is still
+ * empty and the save path will allocate an `@N` + splice `Reply(@N)` - so the line must stay editable for the
+ * user to type it. Keying on `replyless` (set at parse from the empty source reply) rather than `text === ""`
+ * keeps it editable through typing, when `text` has become an unsaved literal.
+ */
+export function npcLineAuthorable(s: DialogState): boolean {
+    return isPendingState(s) || s.replyless === true;
+}
+
+/**
  * Whether a dialog text field (NPC line or player reply) must render read-only.
  *
  * - A read-only state (`textRO`) locks everything.
@@ -128,6 +141,36 @@ export function textLockReason(opts: {
     if (ref === null)
         return "This line has no plain @N message id (it's a literal or computed value), so there's no .msg entry to edit here - change it in the source file.";
     return `This line's @${ref} message isn't loaded, so there's no entry to edit. Point translation.directory in .bgforge.yml at the folder holding this .msg (or edit the .msg directly).`;
+}
+
+/**
+ * The ONE decision for whether a dialog text field (a node's NPC line, or an option's reply text) may be edited,
+ * returning the lock AND its reason together. Both views - the Inspector's fields and the tree's inline edits -
+ * call this instead of each assembling the `isNew` "authorable" proxy at the call site: that per-site assembly
+ * was where the wrong proxy (`isPendingState`, which flips false the moment a new node is adopted from a
+ * re-parse) locked a just-added node's still-empty NPC line (the +State bug). Centralizing the authorable/`@N`
+ * decision makes any text field, either view, decide it identically.
+ *
+ * The `authorable` proxy differs by owner and is resolved here: an option keys on `isPendingChoice`, a node's
+ * NPC line on `npcLineAuthorable` (pending OR a faithful reply-less node whose Reply the save path allocates).
+ * `textRO` is the caller's, NOT re-derived here: the Inspector locks only a derived state's text, while the tree
+ * additionally locks a non-field-editable D-family state - a separate policy question (whether the D/TD writer
+ * persists a `.tra` edit on an unfaithful state) this decision does not adjudicate. Composes the primitives
+ * above rather than re-deriving, so it can never disagree with them; a `null` choice selects the NPC line.
+ */
+export function textEditability(opts: {
+    state: DialogState;
+    choice: DialogChoice | null;
+    messages: DialogMessages | undefined;
+    ssl: boolean;
+    textRO: boolean;
+}): { editable: boolean; reason: string } {
+    const { state, choice, messages, ssl, textRO } = opts;
+    const text = (choice ?? state).text;
+    const isNew = choice ? isPendingChoice(choice) : npcLineAuthorable(state);
+    const base = { text, messages, ssl, textRO, isNew };
+    const locked = textFieldLocked(base);
+    return { editable: !locked, reason: locked ? textLockReason({ ...base, derivedFrom: state.derivedFrom }) : "" };
 }
 
 /**

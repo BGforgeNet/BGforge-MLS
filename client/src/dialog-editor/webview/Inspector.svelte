@@ -14,13 +14,10 @@
     import type { DialogActions } from "./dialog-actions";
     import {
         conditionLockReason,
-        isPendingChoice,
-        isPendingState,
         optionRemoveLockReason,
         stateReadOnlyReason,
         structuralLockReason,
-        textFieldLocked,
-        textLockReason,
+        textEditability,
         writeText,
     } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
@@ -121,12 +118,6 @@
     // editing it would require rewriting the containing construct, which the save does not do.
     const readOnly = $derived(!editable || Boolean(state.derivedFrom));
 
-    // Message text (the NPC line and player replies) is a .tra/.msg edit keyed by @N, independent of the
-    // structure - so for the D-family it stays editable even when the STRUCTURE is read-only (e.g. an unfaithful
-    // TD state): a typo in an else-branch line can still be fixed. Only a derived state (no own source) locks it.
-    // The SSL family does its own per-option text/condition gating inside the `ssl` branch below.
-    const textRO = $derived(Boolean(state.derivedFrom));
-
     // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
     const structReason = $derived(structuralLockReason(state, ssl, editable));
@@ -147,16 +138,15 @@
     );
     const focusedIndex = $derived(focusedChoice ? state.choices.findIndex((c) => c.id === selectedChoiceId) : -1);
 
-    // For SSL a text field is editable only when it is backed by a RESOLVABLE @N message - an @N
-    // whose .msg line actually loaded into `messages` (the line the edit writes to). A literal, a
-    // computed id, or an @N whose .msg never resolved (translation dir misconfigured / not indexed)
-    // has no line to edit, and SSL save only rewrites the .msg - editing it would set an in-memory
-    // literal that silently vanishes on save - so it stays read-only. D persists literal text via the
-    // .d splice, so it has no such gate. A just-added (pending) option/node is the exception - it has no
-    // .msg entry yet, so `isNew` keeps it editable for the user to type the initial line. (See
-    // ./inspector-edit.ts; unit-tested there.)
-    function textLocked(text: string | undefined, isNew = false): boolean {
-        return textFieldLocked({ text, messages, ssl, textRO, isNew });
+    // The ONE text-field gate for this inspector, shared by the NPC line and every option row: it returns the
+    // lock AND its reason together so the template never re-assembles `textFieldLocked`'s inputs (the seam where
+    // the +State bug lived). `choice === null` selects the node's NPC line; a choice selects that option's text.
+    // See textEditability in ./inspector-edit.ts for the SSL/@N/authorable rules; unit-tested there.
+    function textEdit(choice: DialogChoice | null): { editable: boolean; reason: string } {
+        // The inspector locks text only on a derived (no-own-source) state; a D-family literal otherwise stays
+        // editable even when the STRUCTURE is read-only (a .tra edit is structure-independent - a typo in an
+        // unfaithful TD state's line can still be fixed). SSL's own @N gate lives inside textEditability.
+        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom) });
     }
 
 
@@ -312,7 +302,8 @@
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for branch nodes. -->
         <div class="ik">NPC line</div>
-        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} title={textLockReason({ text: state.text, messages, ssl, textRO, isNew: isPendingState(state), derivedFrom: state.derivedFrom })} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+        {@const npc = textEdit(null)}
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
 
     {#if ssl}
@@ -353,6 +344,7 @@
     {/if}
 
     {#snippet choiceRow(c: DialogChoice, i: number, bi?: number, branchLen?: number, labeled?: boolean)}
+        {@const oe = textEdit(c)}
         <!-- data-cid + choicesel drive the tree's option selection: picking an option in the tree scrolls
              this row into view, highlights it, and focuses its text field. Only flat options (bi undefined)
              are selectable from the tree; branch options stay read-only there. -->
@@ -394,7 +386,7 @@
                 {/if}
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} title={textLockReason({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c), derivedFrom: state.derivedFrom })} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->

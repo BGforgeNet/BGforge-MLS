@@ -227,6 +227,17 @@ export interface DialogState {
      */
     faithful?: boolean;
     /**
+     * SSL-native only: true when a faithful node has NO Reply in source AND carries the node-level `insertAnchor`
+     * `replyOps` splices into - the exact precondition under which the save path allocates an `@N` and splices
+     * `Reply(@N)` (see dialog-ssl-ids.ts `replylessInSource` / replyOps). The webview keeps the empty NPC line
+     * editable via this flag - `text === ""` alone can't, because typing the first line turns `text` into a
+     * literal before save and would otherwise re-lock the field mid-typing. Absent once the node has a reply
+     * (the next parse projects the `@N` and the resolvable-`@N` path takes over), for D, and for TSSL (whose
+     * parser sets no node-level `insertAnchor`, so `replyOps` cannot splice a reply-add - unlocking it would
+     * silently drop the edit).
+     */
+    replyless?: boolean;
+    /**
      * SSL only: where a newly-added option call is spliced in (the end of the node's last body statement,
      * plus its line indentation). Set by the SSL adapter; absent for D and synthetic states.
      */
@@ -765,6 +776,14 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,
+        // A faithful node with no Reply in source: its empty NPC line is authorable (the save path allocates an
+        // @N and splices Reply). Gated on the exact precondition `replyOps` needs - faithful, no reply, AND a
+        // node-level `insertAnchor` (the splice point). The SSL parser sets that anchor for every node; the TSSL
+        // parser sets only branch anchors, so a reply-less TSSL node projects `replyless` false and its NPC line
+        // stays locked (unlocking it would silently drop the edit, since `replyOps` bails without the anchor).
+        // Approximate/structured nodes aren't faithful; bundle nodes carry `branches`, so the node-level NPC
+        // field this flag gates is never rendered for them.
+        ...(node.faithful && firstReply === undefined && node.insertAnchor !== undefined ? { replyless: true } : {}),
         bundleFaithful: node.bundleFaithful,
         ...(branches ? { branches } : {}),
         ...(node.structured ? { structured: true, block: blockFromSSL(node, node.block ?? []) } : {}),

@@ -225,4 +225,50 @@ describe("computeDialogSourceEdit - fallout-ssl id allocation", () => {
             "202": "New choice text",
         });
     });
+
+    it("allocates + splices a Reply for a faithful reply-less EXISTING node whose NPC line the user typed (the +State save path)", () => {
+        // Node001 is faithful, has an insertAnchor, and carries no Reply in source -> `replyless`. After the user
+        // types its first NPC line (a literal in the working model), save must mint an @N and splice Reply(@N)
+        // into the procedure - the save side of the +State fix, driven by the shared `replyless` field.
+        const original = buildSSLModel();
+        const edited = buildSSLModel();
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(original.roots[0]!.states.find((s) => s.id === "Node001")!.replyless).toBe(true);
+        n1.text = "Hello, traveler.";
+
+        const result = computeDialogSourceEdit(SSL_SRC, edited, original);
+        // Next free id after 101/200 is 201; Reply(201) spliced at the node's body anchor, entry added to .msg.
+        expect(result.newText).toContain("Reply(201);");
+        expect(result.messages!["201"]).toBe("Hello, traveler.");
+    });
+
+    it("does NOT mint an orphan @N for a non-faithful reply-less node (the writer can't splice a Reply there)", () => {
+        // A non-faithful node has no round-trippable body, so `replyOps`/`nodeOps` never splice a Reply into it.
+        // The allocator must therefore not mint an @N for its text - that id would land in the .msg referenced by
+        // nothing. Gating allocation on `state.replyless` (faithful + anchor), the SAME field the UI gate reads,
+        // instead of a bare empty-text check, closes that orphan. (Text edits are UI-locked on such a node; this
+        // pins the writer's own robustness and the shared-field alignment.)
+        const data: SSLDialogData = {
+            entryPoints: ["Node001"],
+            messages: {},
+            nodes: [
+                {
+                    name: "Node001",
+                    line: 1,
+                    faithful: false, // structured/approximate: not round-trippable -> not `replyless`
+                    replies: [],
+                    options: [],
+                    callTargets: [],
+                    procRange: { start: 0, end: 27 },
+                },
+            ],
+        };
+        const original = modelFromSSL(data);
+        const edited = modelFromSSL(data);
+        expect(original.roots[0]!.states[0]!.replyless).toBeUndefined();
+        edited.roots[0]!.states[0]!.text = "orphan literal";
+
+        const result = computeDialogSourceEdit("procedure Node001 begin end", edited, original);
+        expect(result.messages).toEqual({}); // no id minted for a Reply that can never be spliced
+    });
 });

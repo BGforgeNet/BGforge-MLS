@@ -43,10 +43,14 @@ export function computeDialogSourceEdit(
     // options against the merged set, matching the original save() ordering, so a node's own new options
     // never collide with the node's own newly-assigned id.
     if (renderFamily(edited.sourceLang) === "fallout-ssl" && original) {
-        // States whose SOURCE has no Reply statement: a typed literal on one of these mints an id too
-        // (the writer splices `Reply(@N);` in), where any other existing node's line lives in the .msg.
+        // States whose SOURCE has no Reply statement AND into which the writer can actually splice one: the
+        // `replyless` field (faithful + a node-level insertAnchor, set at parse) - the SAME signal the UI text
+        // gate reads (textEditability -> npcLineAuthorable), so gate and writer agree by construction. A typed
+        // literal on one of these mints an id and the writer splices `Reply(@N);` in; a bare empty-text check
+        // would also mint ids for non-faithful / anchorless (TSSL) nodes that `replyOps` can never splice,
+        // orphaning them in the .msg.
         const replyless = new Set(
-            original.roots.flatMap((r) => r.states.filter((s) => s.text.trim() === "").map((s) => s.id)),
+            original.roots.flatMap((r) => r.states.filter((s) => s.replyless === true).map((s) => s.id)),
         );
         const node = allocateNodeIds(edited, original.messages ?? {}, replyless);
         const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });

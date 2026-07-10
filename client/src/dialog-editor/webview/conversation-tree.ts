@@ -24,7 +24,7 @@ import {
     type DialogRoot,
     type DialogState,
 } from "../../../../shared/dialog-model";
-import { isPendingChoice, isPendingState, textFieldLocked } from "./inspector-edit";
+import { textEditability } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -52,7 +52,7 @@ export interface ConvReply {
     reaction?: DialogReaction;
     lowIq?: boolean;
     /** Whether this option's text can be edited inline in the tree - the same gate the inspector's text
-        field uses (textFieldLocked): false for a locked SSL @N or a read-only/derived node. */
+        field uses (textEditability): false for a locked SSL @N or a read-only/derived node. */
     textEditable: boolean;
     target: ConvTarget;
     /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
@@ -121,7 +121,7 @@ export interface ConvState {
     /** True for a top-level state (no incoming same-file transition). */
     isEntry: boolean;
     /** Whether this state's NPC line can be edited inline in the tree - the same gate the inspector's NPC
-        field uses (textFieldLocked over the state's own text): false for a locked SSL @N or a read-only/
+        field uses (textEditability over the state's own text): false for a locked SSL @N or a read-only/
         derived node. Mirrors ConvReply.textEditable for the option text. */
     textEditable: boolean;
     /** Byte offset of this state's source (SSL `procRange`, or D `sourceRange`), for "go to source".
@@ -164,7 +164,7 @@ export function buildConversationTree(
     root: DialogRoot,
     messages: Record<string, string> | undefined,
     resolveJump: ResolveJump,
-    // Edit-gating context for each reply's `textEditable`, mirroring the inspector's textFieldLocked inputs.
+    // Edit-gating context for each reply's `textEditable`, feeding the same `textEditability` gate the inspector uses.
     // `fieldEditable` is the SAME per-state predicate the inspector and graph use - a `.td` state can be
     // field-editable even though the model's blanket `editable` is false, so consuming it here makes the tree's
     // text lock match the inspector instead of diverging on the model-level flag (the old `editable` boolean).
@@ -212,7 +212,7 @@ export function buildConversationTree(
         return { kind: "state", node: expand(byId.get(stateId)!.id) };
     };
 
-    const buildReply = (c: DialogChoice, textRO: boolean): ConvReply => ({
+    const buildReply = (c: DialogChoice, textRO: boolean, owner: DialogState): ConvReply => ({
         id: c.id,
         text: resolveText(c.text, messages),
         hasText: Boolean(c.text),
@@ -220,7 +220,7 @@ export function buildConversationTree(
         action: c.action,
         reaction: c.reaction,
         lowIq: c.lowIq,
-        textEditable: !textFieldLocked({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c) }),
+        textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO }).editable,
         target: buildTarget(c),
         // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
         // `sourceRange` (the SSL fields are absent for D), so F4 resolves on a D option too - parity with the
@@ -232,11 +232,13 @@ export function buildConversationTree(
     function expand(id: string): ConvState {
         const s = byId.get(id)!;
         shown.add(id);
-        // Whether this state's text fields are read-only - the SAME formula the inspector's `textRO` uses, now
-        // over the per-state `fieldEditable` predicate (not the model-level flag), so a `.td` state that the
-        // inspector treats as editable is not spuriously locked in the tree. A derived state is fully read-only;
-        // a non-field-editable non-SSL file (view-only D) is too. SSL text persists to the .msg, so it stays
-        // editable subject to the per-@N resolvability gate inside textFieldLocked.
+        // This state's text-read-only flag, fed to the shared `textEditability` gate. A derived state is fully
+        // read-only; the tree ALSO locks a non-field-editable D-family state (view-only D, or an unfaithful TD
+        // node). NOTE: the inspector's textRO is only `Boolean(derivedFrom)` - it leaves that unfaithful-TD text
+        // editable (a .tra edit is structure-independent). That divergence is intentional-until-decided: whether
+        // the D/TD writer actually persists a .tra edit on an unfaithful state is the open question that would
+        // settle which view is right (see textEditability's doc). SSL text persists to the .msg, so it stays
+        // editable subject to the per-@N resolvability gate inside the shared decision.
         const textRO = Boolean(s.derivedFrom) || (!fieldEditable(s) && !ssl);
         // A bundle (if/else) node groups its replies per branch, each with its own NPC line. Build the
         // branch structure instead of the flat choice list so the tree mirrors the graph/inspector
@@ -258,7 +260,7 @@ export function buildConversationTree(
                         return [{ kind: "line", npc: resolveText(it.text, messages), npcHasText: Boolean(it.text) }];
                     if (it.kind === "choice") {
                         const c = choiceById.get(it.choiceId);
-                        return c ? [{ kind: "reply", reply: buildReply(c, textRO) }] : [];
+                        return c ? [{ kind: "reply", reply: buildReply(c, textRO, s) }] : [];
                     }
                     if (it.kind === "group") {
                         const thenBlock = buildBlk(it.thenBlock);
@@ -294,11 +296,11 @@ export function buildConversationTree(
                     replies: b.choiceIds
                         .map((cid) => choiceById.get(cid))
                         .filter((c): c is DialogChoice => c !== undefined)
-                        .map((c) => ({ ...buildReply(c, textRO), branchKey })),
+                        .map((c) => ({ ...buildReply(c, textRO, s), branchKey })),
                 };
             });
         } else {
-            replies = s.choices.map((c) => buildReply(c, textRO));
+            replies = s.choices.map((c) => buildReply(c, textRO, s));
         }
         return {
             id: s.id,
@@ -311,7 +313,7 @@ export function buildConversationTree(
             ...(branches ? { branches } : {}),
             ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
-            textEditable: !textFieldLocked({ text: s.text, messages, ssl, textRO, isNew: isPendingState(s) }),
+            textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO }).editable,
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };
     }
