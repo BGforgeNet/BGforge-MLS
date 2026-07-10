@@ -264,22 +264,30 @@ describe("write-back faithfulness: multi-invocation (edit, reparse, edit again)"
             setChoiceTarget(n2, n2.choices[idx]!.id, { kind: "state", stateId: c.from });
             const r2 = computeDialogSourceEdit(mid, e2, original2);
             expect(r2.newText).not.toBeNull();
-            if (c.backend === dBackend) {
-                // The D writer currently re-serializes the edited TRANSITION in canonical shorthand
-                // (`IF ~~ THEN REPLY ~x~ GOTO y` comes back as `++ ~x~ + y`), so the reverse retarget is
-                // semantically - not byte - identical. The structure must still round-trip in full; the
-                // byte assertion joins the surgical backends when the writer splices at token granularity.
-                const final = await c.backend.parse(r2.newText!);
-                for (const s of statesOf(original)) {
-                    expect(semantic(stateById(final, s.id))).toEqual(semantic(s));
-                }
-                // And the canonicalized result is a fixed point: a third parse/no-op emit changes nothing.
-                expect(computeDialogSourceEdit(r2.newText!, clone(final), final).newText).toBeNull();
-            } else {
-                expect(r2.newText).toBe(c.source);
-            }
+            expect(r2.newText).toBe(c.source);
         });
     }
+
+    // The cumulative-indent defect the round-trip harness surfaced: a whole-state re-serialize is
+    // spliced over a span that starts AFTER the header line's indentation, so a writer that emits its
+    // own header indent shifts the header right on EVERY successive re-serialize of the same state.
+    // Two appended options = two whole-state re-serializes against carried-over output.
+    it("D: repeated structural appends keep the state header's position stable", () => {
+        let text = "BEGIN ~roundtrip~\n\nIF ~~ THEN BEGIN start\n  SAY ~Hi.~\n  IF ~~ THEN EXIT\nEND\n";
+        // Sync parse: each iteration's input is the previous iteration's output, so the loop is
+        // inherently sequential (no Promise.all shape exists for it).
+        const parseD = (t: string): DialogModel => ({ ...modelFromD(parseDDialog(t)), sourceLang: "d" });
+        for (let i = 1; i <= 2; i++) {
+            const original = parseD(text);
+            const edited = clone(original);
+            const state = edited.roots[0]!.states[0]!;
+            state.choices.push({ id: `new${i}`, text: `option ${i}`, target: { kind: "exit" } });
+            const res = computeDialogSourceEdit(text, edited, original);
+            expect(res.newText).not.toBeNull();
+            text = res.newText!;
+            expect(text).toContain("\nIF ~~ THEN BEGIN start\n");
+        }
+    });
 });
 
 describe("write-back faithfulness: multisay alternates survive an unrelated edit", () => {

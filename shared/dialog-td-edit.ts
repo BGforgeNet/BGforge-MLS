@@ -203,9 +203,14 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
     // editedStateIds, but not a deletion).
     const renamedFromIds = new Set<string>();
     for (const state of allStates(edited)) {
-        if (!state.renamedFrom || !state.nameRange) continue;
+        if (!state.renamedFrom) continue;
+        // Anchor on the ORIGINAL state's name span, resolved by the old id - the edited model's own
+        // ranges can be stale after a mid-edit reconcile (the same rule every splice in this writer
+        // follows, and the same anchoring the SSL family engine uses for its rename).
+        const origState = origStateById.get(state.renamedFrom);
+        if (!origState?.nameRange) continue;
         renamedFromIds.add(state.renamedFrom);
-        ops.push({ start: state.nameRange.start, end: state.nameRange.end, replacement: state.id });
+        ops.push({ start: origState.nameRange.start, end: origState.nameRange.end, replacement: state.id });
         for (const ref of original.tdWiring?.refs ?? []) {
             if (ref.name === state.renamedFrom) {
                 ops.push({ start: ref.range.start, end: ref.range.end, replacement: state.id });

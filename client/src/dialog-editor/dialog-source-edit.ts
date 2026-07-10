@@ -62,7 +62,7 @@ export function computeDialogSourceEdit(
     let spliced: string;
     switch (edited.sourceLang) {
         case "d":
-            spliced = applyDDialogEdits(text, edited, original ?? undefined);
+            spliced = original ? applyDDialogEdits(text, edited, original) : text;
             break;
         case "td":
             spliced = original ? applyTDDialogEdits(text, edited, original) : text;

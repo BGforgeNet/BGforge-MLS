@@ -27,6 +27,7 @@ import {
     extractDoAction,
     extractReplyText,
     extractTarget,
+    extractTargetLabelRange,
     getNodeFieldText,
 } from "./dialog-utils";
 import {
@@ -331,6 +332,7 @@ function parseTransitionFull(node: SyntaxNode): DDialogTransition {
         action: action || undefined,
         target,
         range: { start: node.startIndex, end: node.endIndex },
+        targetRange: extractTargetLabelRange(node),
     };
 }
 
@@ -353,6 +355,7 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
         action: action || undefined,
         target,
         range: { start: node.startIndex, end: node.endIndex },
+        targetRange: extractTargetLabelRange(node),
     };
 }
 

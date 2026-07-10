@@ -273,6 +273,25 @@ export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
     return undefined;
 }
 
+/**
+ * Byte span of a transition's target STATE label - the `label` of a `GOTO label` (goto_next) or
+ * `+ label` (short_goto) - for a token-splice retarget that leaves the rest of the transition
+ * byte-identical (see dialog-d-edit's fieldEditOps). Only state targets are spliceable this way;
+ * EXIT/EXTERN/COPY_TRANS retargets change the clause's shape, so they return undefined and the
+ * writer falls back to re-serializing the transition.
+ */
+export function extractTargetLabelRange(node: SyntaxNode): { start: number; end: number } | undefined {
+    for (const child of node.children) {
+        if (child.type === SyntaxType.GotoNext || child.type === SyntaxType.ShortGoto) {
+            const labelNode = child.childForFieldName("label");
+            if (labelNode) return { start: labelNode.startIndex, end: labelNode.endIndex };
+        }
+        const nested = extractTargetLabelRange(child);
+        if (nested) return nested;
+    }
+    return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // ALTER_TRANS detail extraction
 // ---------------------------------------------------------------------------

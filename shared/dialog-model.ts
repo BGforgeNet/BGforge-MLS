@@ -327,11 +327,15 @@ export interface DialogChoice {
      */
     sourceRange?: { start: number; end: number };
     /**
-     * SSL only: byte span of the whole option call `NOption(...)` (used by reorder) and of its
-     * target-Node argument (used by retarget). Set by the SSL adapter; absent for D, which uses
-     * `sourceRange` for its whole-transition span.
+     * SSL only: byte span of the whole option call `NOption(...)` (used by reorder). Set by the SSL
+     * adapter; absent for D, which uses `sourceRange` for its whole-transition span.
      */
     callRange?: { start: number; end: number };
+    /**
+     * Byte span of the transition's target token, for a token-splice retarget: SSL's target-Node
+     * argument, TD's `goTo(<id>)` argument, and plain D's `GOTO label` / `+ label` state label
+     * (absent for EXIT/EXTERN/COPY_TRANS targets, whose retarget changes the clause shape).
+     */
     targetRange?: { start: number; end: number };
     /**
      * TD only: byte span of the transition's target-producing call `goTo(<id>)`/`exit()`/`extern(...)`, used to

@@ -104,10 +104,39 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
         const oc = original.choices[i]!;
         const ec = edited.choices[i]!;
         if (choiceEqual(oc, ec)) continue;
+        // A state->state retarget with everything else equal splices ONLY the target label token
+        // (the parser records its span for goto_next/short_goto), so the user's chosen transition
+        // form - verbose `IF ... THEN REPLY ... GOTO x` or shorthand `++ ... + x` - survives
+        // byte-for-byte. Re-serializing the transition would canonicalize it to shorthand.
+        if (
+            (oc.text ?? null) === (ec.text ?? null) &&
+            (oc.condition ?? "") === (ec.condition ?? "") &&
+            (oc.action ?? null) === (ec.action ?? null) &&
+            oc.target.kind === "state" &&
+            ec.target.kind === "state" &&
+            oc.targetRange
+        ) {
+            ops.push({ start: oc.targetRange.start, end: oc.targetRange.end, replacement: ec.target.stateId });
+            continue;
+        }
         if (!oc.sourceRange) return null;
         ops.push({ start: oc.sourceRange.start, end: oc.sourceRange.end, replacement: serializeChoice(ec) });
     }
     return ops.length > 0 ? ops : null;
+}
+
+/**
+ * A whole-state re-serialize spliced IN PLACE over the state's source span. The span starts at the
+ * `IF` token - AFTER the header line's existing indentation, which stays in the document - so the
+ * replacement's first line must carry no indent of its own: `serializeState`'s fixed two-space header
+ * indent would otherwise be ADDED to the surviving original indent, shifting the header two columns
+ * right on every successive re-serialize of the same state (the cumulative-creep defect the
+ * round-trip harness surfaced).
+ */
+function serializeStateInPlace(state: DialogState): string {
+    return serializeState(state)
+        .join("\n")
+        .replace(/^[ \t]+/, "");
 }
 
 /**
@@ -122,11 +151,12 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
  *   This is the locality guarantee: a one-field edit to one state never reflows
  *   any other state's `@N` refs, shorthand, comments, or whitespace.
  * - An original-range span no edited state matched -> its source span is replaced
- *   with an empty string (deletion). Detecting the unchanged and deleted cases
- *   needs the original states, so the caller supplies `originalModel`: the parse
- *   of `originalText` BEFORE the webview's edits. If omitted, every edited ranged
- *   state is re-serialized over its own range and no deletion is applied
- *   (conservative legacy behavior - correct, but it reformats untouched states).
+ *   with an empty string (deletion).
+ *
+ * `originalModel` - the parse of `originalText` BEFORE the webview's edits - is REQUIRED: it is the
+ * only trustworthy range source (see the matching rules below), and every splice anchors on it. An
+ * earlier optional-original mode spliced at the edited model's own ranges when no original was given;
+ * that is exactly the stale-range corruption path, so the mode was removed rather than kept callable.
  *
  * Matching an edited state to its original: exact source-range key first, then state id within the
  * same root. The id fallback exists because the edited model's ranges can be STALE: while an inline
@@ -143,20 +173,19 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
  *
  * @throws if `editedModel.sourceLang !== "d"`.
  */
-export function applyDDialogEdits(originalText: string, editedModel: DialogModel, originalModel?: DialogModel): string {
+export function applyDDialogEdits(originalText: string, editedModel: DialogModel, originalModel: DialogModel): string {
     if (editedModel.sourceLang !== "d") {
         throw new Error("applyDDialogEdits: only weidu-d models are supported");
     }
 
-    const haveOriginal = originalModel !== undefined;
-    const originalStates = (originalModel?.roots.flatMap((r) => r.states) ?? []).filter((s) => s.sourceRange);
+    const originalStates = originalModel.roots.flatMap((r) => r.states).filter((s) => s.sourceRange);
     const originalByKey = new Map<string, DialogState>();
     for (const s of originalStates) {
         originalByKey.set(`${s.sourceRange!.start}:${s.sourceRange!.end}`, s);
     }
     // Per-root id index for the stale-range fallback (see the matching rules in the doc comment).
     const originalByRootAndId = new Map<string, Map<string, DialogState>>();
-    for (const root of originalModel?.roots ?? []) {
+    for (const root of originalModel.roots) {
         const byId = new Map<string, DialogState>();
         for (const s of root.states) if (s.sourceRange) byId.set(s.id, s);
         originalByRootAndId.set(root.id, byId);
@@ -180,21 +209,14 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
             if (state.sourceRange) {
                 original = originalByKey.get(`${state.sourceRange.start}:${state.sourceRange.end}`);
             }
-            if (!original && haveOriginal) {
+            if (!original) {
                 original = originalByRootAndId.get(root.id)?.get(state.id);
             }
 
             if (!original) {
-                if (!haveOriginal && state.sourceRange) {
-                    // Legacy no-original path: nothing to compare against - re-serialize in place over
-                    // the edited range (the only range there is).
-                    const replacement = serializeState(state).join("\n");
-                    ops.push({ start: state.sourceRange.start, end: state.sourceRange.end, replacement });
-                } else {
-                    // Newly added (or unmatchable behind stale ranges): serialized by the insert loop
-                    // below. A stale edited range is never a splice target.
-                    toInsert.add(state);
-                }
+                // Newly added (or unmatchable behind stale ranges): serialized by the insert loop
+                // below. A stale edited range is never a splice target.
+                toInsert.add(state);
                 continue;
             }
 
@@ -218,8 +240,11 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
                 ops.push(...fieldOps);
                 continue;
             }
-            const replacement = serializeState(state).join("\n");
-            ops.push({ start: original.sourceRange!.start, end: original.sourceRange!.end, replacement });
+            ops.push({
+                start: original.sourceRange!.start,
+                end: original.sourceRange!.end,
+                replacement: serializeStateInPlace(state),
+            });
         }
     }
 
@@ -239,13 +264,10 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
     for (const root of editedModel.roots) {
         const fresh = root.states.filter((s) => toInsert.has(s));
         if (fresh.length === 0) continue;
-        // The anchor must be an offset valid in `originalText`: use the fresh parse's ranges when
-        // available (the edited model's can be stale - see the matching rules above); the edited
-        // ranges are only the legacy no-original fallback.
+        // The anchor must be an offset valid in `originalText`: only the fresh parse's ranges
+        // qualify (the edited model's can be stale - see the matching rules above).
         let anchor = -1;
-        const anchorStates = haveOriginal
-            ? (originalModel.roots.find((r) => r.id === root.id)?.states ?? [])
-            : root.states;
+        const anchorStates = originalModel.roots.find((r) => r.id === root.id)?.states ?? [];
         for (const s of anchorStates) {
             if (s.sourceRange) anchor = Math.max(anchor, s.sourceRange.end);
         }

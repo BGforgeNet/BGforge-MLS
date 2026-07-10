@@ -227,10 +227,15 @@ export function nodeOps(
     // callRange, so survivorReplacement serializes its edited exit target to an NMessage in place.) A conditional
     // terminal is left to Tier 3. `stmtRange` spans the whole statement incl. its `;`, matching serializeSSLOption.
     for (const c of edited.choices) {
-        if (!c.stmtRange || c.callRange || c.condition || c.target.kind !== "state") continue;
+        if (c.condition || c.target.kind !== "state") continue;
+        // Anchor on the ORIGINAL choice's statement span, resolved by id - the edited model's own ranges
+        // can be stale after a mid-edit reconcile. The original's shape also decides the flip: a terminal
+        // has a stmtRange but no callRange there, whatever stale fields the edited copy still carries.
+        const oc = orig.choices.find((o) => o.id === c.id);
+        if (!oc?.stmtRange || oc.callRange) continue;
         const msgId = atMsgId(c.text);
         if (Number.isFinite(msgId))
-            ops.push({ start: c.stmtRange.start, end: c.stmtRange.end, replacement: serializeSSLOption(c, msgId) });
+            ops.push({ start: oc.stmtRange.start, end: oc.stmtRange.end, replacement: serializeSSLOption(c, msgId) });
     }
 
     // REMOVE: an original option absent from the edit -> splice it out. A PURE conditional option (its `if` gates

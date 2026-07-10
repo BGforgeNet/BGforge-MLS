@@ -165,10 +165,12 @@ describe("applyDDialogEdits", () => {
 
         const result = applyDDialogEdits(FIXTURE, model, modelFromD(data));
 
-        // New id and the retargeted transition appear. The referencing transition is a
-        // conditional reply, so it serializes in short form (`+ lore`), not `GOTO lore`.
+        // New id and the retargeted transition appear. The retarget is a target-only change, so
+        // only the label token is spliced - the referencing transition KEEPS its verbose
+        // `REPLY ... GOTO` form instead of being canonicalized to the `+ lore` shorthand.
         expect(result).toContain("BEGIN lore");
-        expect(result).toContain("+ lore");
+        expect(result).toContain("GOTO lore");
+        expect(result).not.toContain("+ lore");
 
         // Old id is gone.
         expect(result).not.toContain("BEGIN details");
@@ -226,7 +228,9 @@ describe("applyDDialogEdits", () => {
     it("throws for non-weidu-d format", () => {
         const model = modelFromD(parseDDialog(FIXTURE));
         const bad = { ...model, sourceLang: "ssl" as const };
-        expect(() => applyDDialogEdits(FIXTURE, bad)).toThrow("applyDDialogEdits: only weidu-d models are supported");
+        expect(() => applyDDialogEdits(FIXTURE, bad, model)).toThrow(
+            "applyDDialogEdits: only weidu-d models are supported",
+        );
     });
 });
 
