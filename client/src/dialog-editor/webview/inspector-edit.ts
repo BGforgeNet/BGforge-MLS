@@ -38,9 +38,10 @@ export function writeText(target: { text?: string }, messages: DialogMessages | 
  * `allocateOptionIds` turns it into an `@id` at save.
  */
 export function isPendingChoice(c: DialogChoice): boolean {
-    // `sourceRange` is D's span (the SSL fields are always absent for D): without it an existing D option
-    // would read as pending, which is harmless today (textFieldLocked short-circuits for D) but a trap for any
-    // future consumer - so gate on it too. A spliced option never lingers span-less in the working copy: the
+    // `sourceRange` is D's span (the SSL fields are always absent for D): without it an existing D option would
+    // read as pending, which makes textFieldLocked treat it as `isNew` (always editable) - so a D option backed
+    // by an UNRESOLVED @tra ref would wrongly stay editable instead of locking, exactly the drop the D gate now
+    // guards. Gate on `sourceRange` so that can't happen. A spliced option never lingers span-less in the copy: the
     // webview adopts the host's re-parse after every splice, which assigns the real span.
     return (
         c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length && c.sourceRange === undefined
