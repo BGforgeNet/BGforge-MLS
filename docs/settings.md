@@ -46,10 +46,13 @@ For a per-language layout such as `tra/english/x#viconia.tra`, point `translatio
 subdirectory: `auto_tra` matches by basename _within_ `directory`, so a bare `tra` never finds a file nested under
 `tra/<language>/`, and every `@N` stays unresolved.
 
+The keys nest under a top-level `mls:` block (a bare top-level `translation:` is not read):
+
 ```yaml
 # .bgforge.yml (workspace root)
-translation:
-  directory: tra/english
+mls:
+  translation:
+    directory: tra/english
 ```
 
 To override resolution for a single file, put a directive on its **first line** (it takes precedence over

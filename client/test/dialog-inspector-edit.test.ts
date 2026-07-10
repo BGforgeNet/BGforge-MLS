@@ -375,7 +375,9 @@ describe("disabled-reason helpers", () => {
     it("structuralLockReason distinguishes derived, approximate, structured, and generic SSL nodes", () => {
         expect(structuralLockReason(st({ derivedFrom: "INTERJECT" }), true, false)).toContain("INTERJECT");
         expect(structuralLockReason(st({ approximate: true }), true, false)).toMatch(/loop or switch/);
-        expect(structuralLockReason(st({ structured: true }), true, false)).toMatch(/nests if\/else/);
+        // The structured tier covers a nested if/else AND a preserved non-dialog statement (e.g. a var set), so
+        // the reason must not claim if/else EXCLUSIVELY (it misdescribed a trailing-side-effect node before).
+        expect(structuralLockReason(st({ structured: true }), true, false)).toMatch(/non-dialog statement/);
         expect(structuralLockReason(st(), true, false)).toMatch(/isn't simple enough/);
         // Non-SSL (D): editable file -> no reason; view-only -> read-only.
         expect(structuralLockReason(st(), false, true)).toBe("");

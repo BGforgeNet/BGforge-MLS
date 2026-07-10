@@ -126,7 +126,10 @@ export function structuralLockReason(state: DialogState, ssl: boolean, editable:
     if (state.approximate)
         return "This node uses control flow the editor can't model (a loop or switch), so its structure is read-only - edit the source file.";
     if (state.structured)
-        return "This node nests if/else conditions the graph can't rewrite safely, so its structure is read-only - edit the source file.";
+        // The structured tier is entered by a nested if/else OR by a preserved non-dialog statement (a var set,
+        // a side-effect call) the graph keeps byte-exact but can't model - so the reason names both, not if/else
+        // alone (which misdescribed a node gated only by a trailing set_*_var).
+        return "This node mixes dialog with structure the graph can't rewrite safely (a nested if/else, or a non-dialog statement like a variable set), so its structure is read-only - edit the source file.";
     return "This node isn't simple enough to edit structurally from the graph - edit the source file.";
 }
 
@@ -152,7 +155,7 @@ export function textLockReason(opts: {
     // An unresolved @N ref, for either family. The backing file differs: SSL reads .msg, the D family reads .tra.
     const kind = ssl ? "message" : "string";
     const file = ssl ? ".msg" : ".tra";
-    return `This line's @${ref} ${kind} isn't loaded, so there's no entry to edit. Point translation.directory in .bgforge.yml at the folder holding this ${file} (or edit the ${file} directly).`;
+    return `This line's @${ref} ${kind} isn't loaded, so there's no entry to edit. Point mls.translation.directory in .bgforge.yml at the folder holding this ${file} (or edit the ${file} directly).`;
 }
 
 /**

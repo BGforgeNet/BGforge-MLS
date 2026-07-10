@@ -1420,7 +1420,7 @@
              leaving the whole conversation unreadable with no explanation. -->
         <div class="untra" role="status">
             <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
-            Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
+            Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
             or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
         </div>
     {/if}
