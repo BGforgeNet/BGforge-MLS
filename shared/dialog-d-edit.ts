@@ -318,7 +318,71 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
         }
     }
 
+    // Derived-construct reference rewriting (EXTEND / CHAIN / INTERJECT). These pseudo-states are skipped by the
+    // block splicing above - they have no own BEGIN block, their bytes live inside the construct - so a rename or
+    // delete of a state they GOTO would otherwise leave a dangling reference in the construct (a WeiDU compile
+    // error, e.g. `EXTEND_BOTTOM ... THEN GOTO <renamed>`). `retargetReferences` already updated the EDITED
+    // model's derived choices with the correct per-dialogue scoping; mirror that model change into the source by
+    // diffing each derived state's original vs edited choices and splicing the ORIGINAL `targetRange` (valid in
+    // originalText). Derived states are neither added nor removed by an edit, so original and edited align by
+    // position within the root.
+    ops.push(...derivedReferenceOps(originalText, originalModel, editedModel));
+
     // Apply splice ops via the shared core (sorts highest-offset-first so earlier
     // offsets remain valid as the string is modified from the end toward the front).
     return applySplices(originalText, ops);
+}
+
+/** Are two targets the same jump? (id/kind equality - enough to detect a rename or a delete-to-exit flip.) */
+function sameTarget(a: DialogTarget, b: DialogTarget): boolean {
+    if (a.kind === "state" && b.kind === "state") return a.stateId === b.stateId;
+    if (a.kind === "external" && b.kind === "external") return a.label === b.label;
+    return a.kind === b.kind; // both exit (or a mismatched pair - not the same jump)
+}
+
+/**
+ * Splice ops that rewrite GOTO references living inside DERIVED constructs (EXTEND/CHAIN/INTERJECT) to match a
+ * rename or delete applied to the model. For each derived state, pair original and edited choices by position and,
+ * where the target changed:
+ *  - to another state (a rename): overwrite the original label span (`targetRange`) with the new id.
+ *  - to `exit` (a delete): flip the whole `GOTO <label>` clause to `EXIT` so no dangling jump remains.
+ * Only `state`-kind original targets are touched (an `external`/cross-file ref is not a local rename/delete).
+ */
+function derivedReferenceOps(originalText: string, originalModel: DialogModel, editedModel: DialogModel): SpliceOp[] {
+    const editedDerived = new Map<string, DialogState[]>();
+    for (const root of editedModel.roots) {
+        editedDerived.set(
+            root.id,
+            root.states.filter((s) => s.derivedFrom),
+        );
+    }
+    const ops: SpliceOp[] = [];
+    for (const root of originalModel.roots) {
+        const origDerived = root.states.filter((s) => s.derivedFrom);
+        const edited = editedDerived.get(root.id) ?? [];
+        for (let si = 0; si < origDerived.length; si++) {
+            const os = origDerived[si]!;
+            const es = edited[si];
+            if (!es) continue;
+            const n = Math.min(os.choices.length, es.choices.length);
+            for (let ci = 0; ci < n; ci++) {
+                const oc = os.choices[ci]!;
+                const ec = es.choices[ci]!;
+                if (oc.target.kind !== "state" || !oc.targetRange || sameTarget(oc.target, ec.target)) continue;
+                if (ec.target.kind === "state") {
+                    ops.push({ start: oc.targetRange.start, end: oc.targetRange.end, replacement: ec.target.stateId });
+                } else if (ec.target.kind === "exit") {
+                    // Flip `GOTO <label>` -> `EXIT`: scan back from the label over whitespace to the GOTO keyword
+                    // so the jump verb goes too (leaving just the label would be a syntax error). If the keyword
+                    // isn't the expected GOTO (an unusual construct), leave it rather than corrupt the source.
+                    let s = oc.targetRange.start;
+                    while (s > 0 && /\s/.test(originalText[s - 1]!)) s--;
+                    if (originalText.slice(Math.max(0, s - 4), s).toUpperCase() === "GOTO") {
+                        ops.push({ start: s - 4, end: oc.targetRange.end, replacement: "EXIT" });
+                    }
+                }
+            }
+        }
+    }
+    return ops;
 }

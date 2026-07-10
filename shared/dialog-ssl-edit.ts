@@ -147,11 +147,13 @@ function survivorReplacement(text: string, moved: DialogChoice, movedOrig: Dialo
         // the original call). serializeSSLOption emits a full statement ending in `;`, but the slot
         // is the call expression WITHOUT the trailing `;` - trim it so the existing `;` after the
         // slot stays.
-        // The preserved msg id is the FIRST call argument. Use splitCallArgs (paren-aware) not a naive
-        // `/\(\s*(\d+)/`, which would grab `3` from a computed `random(3, 5)` first arg and emit NMessage(3) -
-        // a wrong message. A non-numeric (computed) first arg yields NaN, so the call is left unchanged.
-        const msgId = Number(splitCallArgs(origCall)[0]);
-        return Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
+        // The preserved msg id is the FIRST call argument's SOURCE TEXT (paren-aware via splitCallArgs, not a
+        // naive `/\(\s*(\d+)/` that would grab `3` from a computed `random(3, 5)`). Emitting the text verbatim
+        // round-trips a computed/concatenated msg id (`mstr(1)+x+mstr(2)`) byte-exact - where the old numeric
+        // path bailed to `origCall` and left the option pointing at the now-DELETED node (a dangling reference,
+        // a compile error). A terminal is always the neutral `NMessage` (reaction is not modeled for terminals).
+        const msgIdText = splitCallArgs(origCall)[0]?.trim();
+        return msgIdText !== undefined ? `NMessage(${msgIdText})` : origCall;
     }
     const newTarget = moved.target.stateId;
     const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
@@ -745,12 +747,13 @@ export function applyFalloutFamilyEdits(
         // both). Disjoint from nameRange (decl is above the definition). Absent when the proc has no forward decl.
         if (orig.forwardDeclRange)
             ops.push({ start: orig.forwardDeclRange.start, end: orig.forwardDeclRange.end, replacement: newId });
-        // Rewrite ONLY references nodeOps does NOT handle, to avoid double-splicing the same span:
+        // Rewrite ONLY references neither per-node engine handles, to avoid double-splicing the same span:
         //  - call-statement targets (nodeOps only touches OPTION calls, never `call` statements);
-        //  - option targets in NON-faithful nodes (nodeOps skips non-faithful nodes entirely).
-        // An option target in a FAITHFUL node is left to the per-node survivor retarget: renameState already updated
-        // that option's model target to newId, so nodeOps rewrites its targetRange. Rewriting it here too would push
-        // a SECOND op on the identical span -> overlap corruption.
+        //  - option targets in nodes that are NEITHER faithful NOR bundle-faithful (no per-node engine runs).
+        // An option target in a FAITHFUL node is left to `nodeOps`, and in a BUNDLE-FAITHFUL node to `bundleNodeOps`
+        // (both below): renameState already updated that option's model target to newId, so the per-node engine
+        // reserializes/retargets it. Rewriting it here too would push a SECOND op on the identical span -> overlap
+        // corruption (a bundle node referencing the renamed node crashed applySplices before this guard).
         for (const s of allStates(original)) {
             for (const c of s.choices) {
                 if (c.target.kind !== "state" || c.target.stateId !== oldId) continue;
@@ -760,10 +763,10 @@ export function applyFalloutFamilyEdits(
                     for (const site of c.callSites)
                         if (site.targetRange)
                             ops.push({ start: site.targetRange.start, end: site.targetRange.end, replacement: newId });
-                } else if (c.targetRange && s.faithful !== true) {
+                } else if (c.targetRange && s.faithful !== true && s.bundleFaithful !== true) {
                     ops.push({ start: c.targetRange.start, end: c.targetRange.end, replacement: newId });
                 }
-                // option target in a faithful node -> handled by nodeOps (do nothing here).
+                // option target in a faithful node -> nodeOps; in a bundle-faithful node -> bundleNodeOps.
             }
         }
         for (const ec of original.entryCalls ?? []) {
