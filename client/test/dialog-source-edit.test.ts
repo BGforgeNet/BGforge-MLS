@@ -77,6 +77,15 @@ describe("computeDialogSourceEdit", () => {
         expect(result.messages).toEqual({});
     });
 
+    it("no-ops every writer when the original parse is missing (a from-scratch model has no source)", () => {
+        // Each family arm gates on `original`: with none there is nothing to splice against, so the text
+        // passes through unchanged for all four source languages (uniform since the D legacy path was removed).
+        for (const lang of ["d", "td", "tssl", "ssl"] as const) {
+            const edited = { ...buildModel(), sourceLang: lang };
+            expect(computeDialogSourceEdit(D_SRC, edited, null).newText).toBeNull();
+        }
+    });
+
     it("throws on an unhandled sourceLang instead of silently splicing as SSL", () => {
         // The dispatch is exhaustive over the SourceLang union; an unknown value (only reachable via a cast,
         // e.g. a future SourceLang member without a dispatch arm) must fail loud, not fall through to the SSL

@@ -84,6 +84,11 @@ export default defineConfig({
                 // host helpers above.
                 "client/src/dialog-editor/webview/main.ts",
                 "client/src/dialog-editor/webview/host.ts",
+                // Svelte textarea-autosize action: its whole job is measuring laid-out DOM (scrollHeight),
+                // which no in-process test environment lays out - a unit test could only re-assert its own
+                // stub. Exercised by the harness drivers and the live editor. Same category as
+                // jump-context.ts above.
+                "client/src/dialog-editor/webview/autosize.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach.
