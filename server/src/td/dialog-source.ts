@@ -307,7 +307,13 @@ function parseWiring(sf: SourceFile, stateNames: ReadonlySet<string>): TDWiring 
         }
         if (!primarySeen) {
             primarySeen = true;
-            listInsert = { offset: closeOffset, separator: elements.length > 0 ? ", " : "" };
+            // Anchor a new id right AFTER the last existing element, not just before the close token. A multi-line
+            // list emitted by the formatter carries a trailing comma after its last element, so inserting `, <id>`
+            // before the `)`/`]` would land it AFTER that comma and produce a double comma - an empty call
+            // argument (a hard syntax error) or an array hole. Inserting after the element leaves any trailing
+            // comma following the new id, which stays well-formed. Empty list: no anchor element, insert at close.
+            const lastEl = elements.at(-1);
+            listInsert = lastEl ? { offset: lastEl.getEnd(), separator: ", " } : { offset: closeOffset, separator: "" };
             // Anchor a new function before the whole primary wiring statement (an `append(...)` statement or an
             // `export default begin(...)`), so it lands among the other state functions.
             let anchor: Node = node;

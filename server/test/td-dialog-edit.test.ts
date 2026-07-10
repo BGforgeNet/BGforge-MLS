@@ -17,6 +17,7 @@ import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-s
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");
 const wmRhia = readFileSync(fileURLToPath(new URL("td/samples/wm_rhia.td", import.meta.url)), "utf8");
 const gBags = readFileSync(fileURLToPath(new URL("td/samples/g_bags_v2.td", import.meta.url)), "utf8");
+const familiarsV2 = readFileSync(fileURLToPath(new URL("td/samples/familiars_v2.td", import.meta.url)), "utf8");
 
 function tdModel(src: string): DialogModel {
     return { ...modelFromD(parseTDSource(src)), sourceLang: "td", editable: true };
@@ -336,5 +337,38 @@ describe("TD structural editing - full computeDialogSourceEdit round-trip", () =
         const inbound = menu2.choices.find((c) => c.target.kind === "state" && c.target.stateId === "g_forge");
         expect(inbound).toBeDefined();
         expect(inbound!.text).toBe("@25");
+    });
+});
+
+// Regression: a real `.td` file's `append(...)` is often the multi-line VARIADIC form with a trailing comma
+// after its last element (`g_familiar_confirm,`) - the shape a formatter emits. Anchoring the new id just before
+// the `)` prepended a second comma (`confirm,\n, <id>)`), an empty call argument that is a hard TS syntax error,
+// which broke ts-morph parsing for the ENTIRE file. The single-line array fixtures elsewhere never exercised it.
+describe("applyTDDialogEdits - add node into a trailing-comma variadic append", () => {
+    it("wires the new id into a multi-line variadic append without emitting a double comma; file re-parses", () => {
+        const original = tdModel(familiarsV2);
+        const edited = tdModel(familiarsV2);
+        const root = edited.roots.find((r) => r.kind === "dialog")!;
+        const node = addState(edited, root, "g_familiar_extra");
+        node.text = "@1";
+        const out = applyTDDialogEdits(familiarsV2, edited, original);
+        // The new id joins the list well-formed: no double comma anywhere in the append statement.
+        const appendStmt = out.slice(out.indexOf('append("%dialog%"'));
+        expect(appendStmt).toContain("g_familiar_extra");
+        expect(appendStmt).not.toMatch(/,\s*,/);
+        // The whole file still re-parses and every state survives, including the new one - proving the produced
+        // source is syntactically valid (the missing guard: the earlier tests asserted a substring, not a reparse).
+        const reparsed = modelFromD(parseTDSource(out));
+        const ids = new Set(reparsed.roots.flatMap((r) => r.states).map((s) => s.id));
+        for (const id of [
+            "g_familiar_follow",
+            "g_familiar_combat",
+            "g_familiar_potions",
+            "g_familiar_loot",
+            "g_familiar_confirm",
+            "g_familiar_extra",
+        ]) {
+            expect(ids.has(id)).toBe(true);
+        }
     });
 });
