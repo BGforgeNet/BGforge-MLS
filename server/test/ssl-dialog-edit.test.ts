@@ -199,6 +199,21 @@ procedure talk_p_proc begin call Node001; end
         expect(out.indexOf("NOption(500")).toBeLessThan(out.indexOf("\nend"));
     });
 
+    it("removes a TERMINAL (exit/NMessage) option by splicing its statement out", async () => {
+        // A terminal option (NMessage/GMessage/BMessage) has a stmtRange but no callRange, so it was invisible to
+        // the callRange-based remove pass and deleting it was a silent no-op - the option stayed on disk. Since a
+        // new option defaults to EXIT -> NMessage, "add an option then delete it" hit this exactly.
+        const SRC_T = `procedure Node001 begin\n    NOption(101, Node002, 4);\n    NMessage(102);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(SRC_T));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.text !== "@102"); // delete the terminal option
+        const out = applySSLDialogEdits(SRC_T, edited, original);
+        expect(out).not.toContain("NMessage(102)"); // actually spliced out
+        expect(out).toContain("NOption(101, Node002, 4)"); // the survivor is intact
+        expect(out).toContain("procedure Node001 begin\n    NOption(101, Node002, 4);\nend"); // no blank-line residue
+    });
+
     it("removes the last option and adds one in the same save without overlap", async () => {
         const original = modelFromSSL(await parseDialog(SRC2));
         const edited = structuredCloneModel(original);

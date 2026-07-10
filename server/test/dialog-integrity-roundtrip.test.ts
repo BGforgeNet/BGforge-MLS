@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
-import { addState, duplicateState } from "../../shared/dialog-edit-ops";
+import { addReply, addState, duplicateState, removeReply, setChoiceTarget } from "../../shared/dialog-edit-ops";
 import { writeText } from "../../client/src/dialog-editor/webview/inspector-edit";
 
 // End-to-end "what I see is what's saved" integrity guards for the dialogue editor: each scenario drives the
@@ -86,5 +86,34 @@ describe("dialogue editor view-vs-disk integrity round-trip", () => {
         expect(copyRef).not.toBeNull();
         expect(copyRef![1]).not.toBe("200");
         expect(edit.messages[copyRef![1]!]).toBe("The map is a forgery.");
+    });
+
+    it("BUG F: adding an option (defaults to EXIT) then deleting it splices the terminal back out", async () => {
+        const SRC = `procedure Node001 begin\n    Reply(100);\nend\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(SRC));
+        original.messages = { "100": "Hello." };
+
+        // EMIT 1: add an option (it defaults to EXIT, so the writer emits NMessage) and type its text.
+        const edited1 = structuredClone(original);
+        edited1.messages = { ...original.messages };
+        const n1 = stateOf(edited1, "Node001")!;
+        const opt = addReply(edited1, n1);
+        opt.text = "Leave.";
+        setChoiceTarget(n1, opt.id, { kind: "exit" });
+        const edit1 = computeDialogSourceEdit(SRC, edited1, original);
+        expect(edit1.newText).toContain("NMessage(");
+
+        // EMIT 2: the user deletes that just-saved terminal option. It must be spliced OUT (was a silent no-op).
+        const adopted = await adopt(edit1.newText!, edit1.messages);
+        const edited2 = structuredClone(adopted);
+        edited2.messages = { ...adopted.messages };
+        const n1b = stateOf(edited2, "Node001")!;
+        removeReply(n1b, n1b.choices.at(-1)!.id);
+        const edit2 = computeDialogSourceEdit(edit1.newText!, edited2, adopted);
+        expect(edit2.newText).not.toBeNull();
+        expect(edit2.newText).not.toContain("NMessage("); // the terminal is gone from the source
+        // Node001 is back to just its Reply - a clean round-trip, no husk left behind.
+        const final = await adopt(edit2.newText!, edit2.messages);
+        expect(stateOf(final, "Node001")!.choices).toHaveLength(0);
     });
 });

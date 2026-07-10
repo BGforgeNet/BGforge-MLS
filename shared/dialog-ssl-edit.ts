@@ -276,6 +276,19 @@ export function nodeOps(
         ops.push(removeStatementSplice(text, removeSpan));
     }
 
+    // REMOVE a TERMINAL option (NMessage/GMessage/BMessage: a `stmtRange` but no `callRange`). These are absent
+    // from origOpts/editedOpts (both callRange-based), so the callRange remove pass above never sees them and
+    // deleting one used to be a silent no-op - the option stayed on disk (the default target of a NEW option is
+    // EXIT -> NMessage, so "add an option then delete it" hit this). Splice out any flat source terminal whose id
+    // is gone from the edited node. A SURVIVING terminal (same id still present, incl. one retargeted to a node,
+    // handled by the terminal->node flip above) is skipped; a conditional terminal is left to Tier 3.
+    const editedChoiceIds = new Set(edited.choices.map((c) => c.id));
+    for (const oc of orig.choices) {
+        if (oc.condition || oc.callRange || !oc.stmtRange) continue; // only flat source terminals
+        if (editedChoiceIds.has(oc.id)) continue; // still present (or retargeted) -> not a removal
+        ops.push(removeStatementSplice(text, oc.stmtRange));
+    }
+
     // CONDITION EDITS (Tier 3c). Diff each surviving option's condition; emit splices for edit-text now,
     // wrap/unwrap in later tasks. `wrappedOrUnwrapped` ids are excluded from the survivor slots below
     // (their whole statement is rewritten, which would overlap a survivor callRange splice).
