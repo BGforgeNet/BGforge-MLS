@@ -880,10 +880,12 @@
     // Re-parse message from the host (production only): after it splices a self-edit into the source, the host
     // posts the faithful parse (`reparse:true`) so the tree becomes a pure view of source - real spans (F4
     // resolves), canonical ids. The ignore/adopt routing (stale-seq drop) is the pure kernel in
-    // reparse-decision.ts, unit-tested there. EVERY accepted reparse adopts - an open inline edit survives
-    // the replacement via adoptModel's draft overlay rather than blocking it, so the model is never left
-    // optimistic and stale-range/pending-state bookkeeping has nothing to track. The body reads no reactive
-    // state at registration, so the listener registers once.
+    // reparse-decision.ts, unit-tested there (its module doc records WHY this optimistic-model-plus-adopt
+    // shape is used instead of a pure text-authoritative projection - it turns on the async LSP parse
+    // boundary). EVERY accepted reparse adopts - an open inline edit survives the replacement via adoptModel's
+    // draft overlay rather than blocking it, so the model is never left optimistic and stale-range/pending-
+    // state bookkeeping has nothing to track. The body reads no reactive state at registration, so the
+    // listener registers once.
     $effect(() => {
         function onReparse(e: MessageEvent): void {
             const decision = decideReparse(e.data as ReparseMessage | null, localSeq);

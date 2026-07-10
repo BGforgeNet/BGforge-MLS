@@ -11,6 +11,20 @@
  *    the listener carries the input's live draft and caret across the model replacement as a small
  *    overlay (see adoptModel), which replaced the old "reconcile the optimistic model in place"
  *    branch and the allocation-stamping machinery it needed.
+ *
+ * Why an optimistic model exists at all (rather than a pure projection of the document - a
+ * "text-authoritative" editor holding no client-side model): the parse is an async LSP round-trip, not a
+ * synchronous call. A pure projection would have to either block the tree on that round-trip after every
+ * commit (per-edit latency) or hold an optimistic local projection to bridge the latency window - which is
+ * a client-side model again. So the model is kept but made self-correcting: every accepted reparse
+ * overwrites it wholesale, so it cannot drift from the document, and the rival-copy bug class (the retired
+ * reconcile/merge path) is gone by construction. VS Code's shared TextDocument stays the single source of
+ * truth across tabs/editors; an external same-file edit adopts through this same path. Going fully
+ * text-authoritative is deferred, not rejected on merit - it wins only if the parse becomes
+ * synchronous/client-side (e.g. tree-sitter in the webview), which removes the optimistic model's
+ * justification, or if a divergence the draft overlay cannot hold proves adopt-wholesale insufficient.
+ * Absent either it trades latency-or-equal-complexity for a parse-failure UX burden this design avoids by
+ * keeping a last-good model to fall back on.
  */
 
 import type { DialogModel } from "../../../../shared/dialog-model";
