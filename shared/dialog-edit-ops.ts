@@ -40,32 +40,43 @@ function stateIdsOf(model: DialogModel): string[] {
  * stays editable instead of showing a raw `@N`). It mutates in place and touches nothing else, so selection,
  * node positions, and any text the user is still typing survive. `allocations` maps an item id (option choice
  * id or new-node state id) to its `@N` text; `messages` is the id->text to merge.
+ *
+ * Returns whether anything was actually mutated. The caller arms its emit echo-suppression off this: a
+ * reconcile with nothing to stamp (a structural splice of an item whose text has no `@N` yet - e.g. an
+ * option still empty while its inline edit is open) triggers no reactive re-run, so a preemptively-armed
+ * flag would sit until the user's NEXT edit and swallow that emit instead (the commit that persists the
+ * typed text was lost exactly this way).
  */
 export function applyReconcile(
     model: DialogModel,
     allocations: Record<string, string>,
     messages: Record<string, string> | undefined,
-): void {
+): boolean {
+    let mutated = false;
     if (messages && Object.keys(messages).length > 0) {
         model.messages = { ...model.messages, ...messages };
+        mutated = true;
     }
-    if (Object.keys(allocations).length === 0) return;
+    if (Object.keys(allocations).length === 0) return mutated;
     for (const root of model.roots) {
         for (const state of root.states) {
             const sAlloc = allocations[state.id];
             if (sAlloc !== undefined) {
                 state.text = sAlloc;
                 state.committed = true;
+                mutated = true;
             }
             for (const c of state.choices) {
                 const cAlloc = allocations[c.id];
                 if (cAlloc !== undefined) {
                     c.text = cAlloc;
                     c.committed = true;
+                    mutated = true;
                 }
             }
         }
     }
+    return mutated;
 }
 
 function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][number] | undefined {

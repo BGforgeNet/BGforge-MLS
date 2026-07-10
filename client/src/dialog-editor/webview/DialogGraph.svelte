@@ -764,17 +764,19 @@
     // Re-parse message from the host (production only): after it splices a self-edit into the source, the host
     // posts the faithful parse (`reparse:true`) so the tree becomes a pure view of source - real spans (F4
     // resolves), canonical ids. The ignore/reconcile/adopt routing (stale-seq drop, editing-open draft
-    // preservation) is the pure kernel in reparse-decision.ts, unit-tested there. suppressEmit keeps either
-    // host-driven mutation from echoing back as an edit (adoptModel sets it itself on the adopt path). The
-    // body reads no reactive state at registration, so the listener registers once.
+    // preservation) is the pure kernel in reparse-decision.ts, unit-tested there. suppressEmit keeps a
+    // host-driven mutation from echoing back as an edit (adoptModel sets it itself on the adopt path) - but
+    // it is armed ONLY when the reconcile actually mutated: the flag is consumed by exactly one effect run,
+    // and a no-op reconcile (nothing allocated yet) triggers none, so a preemptively-armed flag would swallow
+    // the NEXT user edit's emit instead - the inline-edit commit that persists the typed text was lost
+    // exactly this way. The body reads no reactive state at registration, so the listener registers once.
     $effect(() => {
         function onReparse(e: MessageEvent): void {
             const editing = editingChoiceId !== null || editingStateId !== null || renamingStateId !== null;
             const decision = decideReparse(e.data as ReparseMessage | null, localSeq, editing);
             if (decision.kind === "ignore") return;
             if (decision.kind === "reconcile") {
-                suppressEmit = true;
-                ops.applyReconcile(editModel, decision.allocations, decision.messages);
+                if (ops.applyReconcile(editModel, decision.allocations, decision.messages)) suppressEmit = true;
                 void rebuild({ frame: "none" });
             } else {
                 adoptModel(decision.model, decision.allocations, decision.messages);

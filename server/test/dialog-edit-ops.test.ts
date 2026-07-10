@@ -701,5 +701,16 @@ describe("dialog-edit-ops (branch structural)", () => {
             expect(m.roots[0]!.states[0]!.choices[0]!.committed).toBeUndefined();
             expect(m.messages?.["300"]).toBe("extra");
         });
+
+        // The return value is the caller's echo-suppression gate: the webview arms suppressEmit only when the
+        // reconcile mutated (exactly one reactive re-run consumes the flag). Reporting true for a no-op would
+        // leave the flag armed and swallow the NEXT user edit's emit - the inline-edit commit was lost this way.
+        it("reports whether it mutated: false for a full no-op, true for stamps or message merges", () => {
+            expect(ops.applyReconcile(reconcileModel(), {}, undefined)).toBe(false);
+            expect(ops.applyReconcile(reconcileModel(), {}, {})).toBe(false);
+            expect(ops.applyReconcile(reconcileModel(), { "no-such-id": "@900" }, undefined)).toBe(false);
+            expect(ops.applyReconcile(reconcileModel(), {}, { "300": "extra" })).toBe(true);
+            expect(ops.applyReconcile(reconcileModel(), { "Node001#reply": "@201" }, undefined)).toBe(true);
+        });
     });
 });
