@@ -1,10 +1,10 @@
 /**
  * Edit round-trip driver: the PRODUCTION webview (real App via the real postMessage channel, driven in
  * Chromium) wired to the real host session core (DialogHostCore via fake-host.ts) over an in-memory
- * document - the full emit -> splice -> reparse -> reconcile/adopt -> .tra flush protocol, end to end.
+ * document - the full emit -> splice -> reparse -> adopt (+ editing overlay) -> .tra flush protocol.
  * This is the only automated tier that exercises that protocol at all (the render/edit-behavior drivers
  * run hostless), and it pins the once-live-only regression chain: a pending option's committed text must
- * reach the .d splice (fresh-parse range anchoring), its emit must not be swallowed by a no-op reconcile,
+ * reach the .d splice (fresh-parse range anchoring), its emit must never be swallowed,
  * and its minted `@N` must be APPENDED to the .tra, not just rewritten over existing entries.
  * e2e-tier: not part of `pnpm test`. Prereqs: Playwright + a Chromium browser on PATH.
  *
@@ -81,8 +81,8 @@ async function addOptionWithText(text: string): Promise<void> {
 }
 
 // --- The regression chain: + option -> type -> Enter -> the .d gains the spliced option and the .tra
-// gains the minted entry. The structural emit fires while the inline editor is OPEN (reconcile branch),
-// the text commit fires after (adopt branch) - the exact live sequence that once lost the text.
+// gains the minted entry. The structural emit fires while the inline editor is OPEN, the text commit
+// fires after - the exact live sequence that once lost the text.
 await addOptionWithText("Round trip works.");
 check(
     "committed option is spliced into the .d with a minted @N",

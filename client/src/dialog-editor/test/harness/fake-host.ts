@@ -3,7 +3,7 @@
  * (the session logic panel.ts runs in production) bound to an in-memory document and .tra instead
  * of the VS Code runtime and the LSP server. Parsing goes through the real server-side D parser,
  * splicing through the real computeDialogSourceEdit (inside the core), and the .tra write mirrors
- * the server's - so the emit -> splice -> reparse -> reconcile/adopt -> flush protocol runs whole
+ * the server's - so the emit -> splice -> reparse -> adopt -> flush protocol runs whole
  * under automated tests, which no other tier covers (the render drivers have no host at all).
  */
 

@@ -6,7 +6,7 @@ e2e-tier: run out of process, **not** part of `pnpm test` / `pnpm test:all`.
 Two host modes: the render/behavior drivers run **hostless** (`postToHost` no-ops, as in the old
 standalone harness), while `edit-roundtrip.mts` attaches the **real host session core**
 (`DialogHostCore`, the logic `panel.ts` runs in production) over an in-memory document via
-`fake-host.ts` - so the emit -> splice -> reparse -> reconcile/adopt -> `.tra` flush protocol is
+`fake-host.ts` - so the emit -> splice -> reparse -> adopt (+ editing overlay) -> `.tra` flush protocol is
 exercised under automation, not only in a live code-server drive.
 
 ## Why it mounts the real `App` (not `DialogGraph`)
