@@ -51,10 +51,6 @@ function uniqueId(taken: Set<string>, base: string): string {
     return `${base}_${i}`;
 }
 
-function uniqueStateId(model: DialogModel, base: string): string {
-    return uniqueId(new Set(stateIdsOf(model)), base);
-}
-
 /** Every choice id across the model - a thin projection over the shared `allChoices` flatten. */
 function allChoiceIds(model: DialogModel): Set<string> {
     return new Set(allChoices(model).map((c) => c.id));
@@ -177,7 +173,7 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     // oxlint-disable-next-line unicorn/prefer-structured-clone -- structuredClone throws DataCloneError on the $state proxy; that is the bug being fixed.
     const copy = JSON.parse(JSON.stringify(state)) as DialogState;
     const ssl = renderFamily(model.sourceLang) === "fallout-ssl";
-    copy.id = ssl ? nextSslNodeId(model) : uniqueStateId(model, `${state.id}_copy`);
+    copy.id = ssl ? nextSslNodeId(model) : nextDStateId(model);
     // Strip every source-span marker so the copy is a PENDING-NEW node, spliced in fresh rather than over
     // the original's bytes. D keys "pending" on the absent sourceRange; SSL on the absent procRange (the
     // other SSL markers would be stale for a node that isn't in the source yet). The @N text refs on the
@@ -239,6 +235,20 @@ function nextSslNodeId(model: DialogModel): string {
     return `Node${String(next).padStart(3, "0")}`;
 }
 
+/**
+ * Next free `StateNNN` id for a D model: the smallest number above every existing `StateNNN` state, zero-padded
+ * to 3 digits. The D analog of the SSL `nextSslNodeId` scheme - D state labels are a single namespace with no
+ * reserved sinks and no separate procedure names, so both of those exclusions drop out here.
+ */
+function nextDStateId(model: DialogModel): string {
+    const nums = stateIdsOf(model)
+        .map((id) => /^State(\d+)$/.exec(id)?.[1])
+        .filter((m): m is string => m !== undefined && m !== null)
+        .map((m) => Number.parseInt(m, 10));
+    const next = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+    return `State${String(next).padStart(3, "0")}`;
+}
+
 /** Resolve the root a new state would be added to: the caller's chosen root (active tab), else the first
  *  dialog root, else the first root. Undefined on a blank file (bootstrap - no roots yet). */
 function resolveTargetRoot(model: DialogModel, targetRoot?: DialogRoot): DialogRoot | undefined {
@@ -250,7 +260,7 @@ function resolveTargetRoot(model: DialogModel, targetRoot?: DialogRoot): DialogR
  * prompts for a manual node name (the "Auto node names" toggle is off). Pure: does not mutate the model.
  */
 export function suggestStateId(model: DialogModel): string {
-    return renderFamily(model.sourceLang) === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
+    return renderFamily(model.sourceLang) === "fallout-ssl" ? nextSslNodeId(model) : nextDStateId(model);
 }
 
 /**

@@ -114,7 +114,7 @@
         renamingStateId = sel.on === "rename" ? sel.state.id : null;
         highlightedBranchKey = sel.on === "branch" ? (sel.branchKey ?? null) : null;
     }
-    // "Auto node names" toggle (default on): keep auto-assigning NodeXXX / new_state ids when adding a node.
+    // "Auto node names" toggle (default on): keep auto-assigning NodeXXX / StateXXX ids when adding a node.
     // Off routes node creation through a prompt for the name (nameModal below).
     let autoNodeNames = $state(true);
     // Open manual-name prompt for a pending node creation (toggle off). `kind` selects which creation to run on
@@ -1347,7 +1347,7 @@
                     <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
                 {/if}
                 {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
-                    <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D new_state). Off: you're prompted for the name each time.">
+                    <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time.">
                         <input type="checkbox" bind:checked={autoNodeNames} />
                         Auto node names
                     </label>

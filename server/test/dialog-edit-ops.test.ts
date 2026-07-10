@@ -112,10 +112,10 @@ END
         const original = state(m, "hello");
         expect(original.sourceRange).toBeDefined();
         const copy = ops.duplicateState(m, original)!;
-        expect(copy.id).toBe("hello_copy");
+        expect(copy.id).toBe("State001"); // D duplicates take the next free StateNNN, mirroring SSL's NodeNNN
         expect(copy.sourceRange).toBeUndefined();
         // The copy must surface as a pending insert, never spliced over the original span.
-        expect(ops.duplicateState(m, original)!.id).toBe("hello_copy_1"); // unique on repeat
+        expect(ops.duplicateState(m, original)!.id).toBe("State002"); // next free on repeat
     });
 
     it("a duplicated state does not corrupt the original on surgical save", () => {
@@ -215,6 +215,27 @@ END
         };
         const s = ops.addState(m);
         expect(s!.id).toBe("Node004"); // max(Node001, Node003) + 1, zero-padded to 3
+    });
+
+    it("names a new D state StateNNN (next free), ignoring non-StateNNN labels", () => {
+        const m: DialogModel = {
+            sourceLang: "d",
+            editable: true,
+            roots: [
+                {
+                    id: "r",
+                    label: "r",
+                    kind: "dialog",
+                    states: [
+                        { id: "start", text: "", choices: [] }, // hand-authored label - not counted toward the number
+                        { id: "State001", text: "", choices: [] },
+                        { id: "State003", text: "", choices: [] },
+                    ],
+                },
+            ],
+        };
+        const s = ops.addState(m);
+        expect(s!.id).toBe("State004"); // max(State001, State003) + 1, zero-padded to 3
     });
 
     it("skips the reserved Node998/Node999 sink range when naming a new SSL node", () => {
