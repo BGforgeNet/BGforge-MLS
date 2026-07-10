@@ -470,6 +470,7 @@
         class="st"
         class:derived={st.derivedFrom}
         class:entry={st.isEntry}
+        class:pending={st.pending}
         class:sel={st.id === selectedId && !selectedChoiceId}
         class:searchhit={isHit(st.id)}
         class:searchcurrent={isCurrent(st.id)}
@@ -479,6 +480,7 @@
         aria-level={depth + 1}
         aria-selected={st.id === selectedId && !selectedChoiceId}
         aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
+        title={st.pending ? "Unsaved draft - this node isn't in the source file yet (it lands on the next save)" : undefined}
         tabindex={st.id === treeFocusId ? 0 : -1}
         onclick={() => onSelect(st.id)}
         oncontextmenu={(e) => (e.preventDefault(), onContext(st.id, e.clientX, e.clientY))}
@@ -690,6 +692,7 @@
     <div
         class="rep reprow"
         class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
+        class:pending={r.pending}
         class:branchhl={inBranch(r.branchKey)}
         class:searchhit={isHit(r.id)}
         class:searchcurrent={isCurrent(r.id)}
@@ -698,6 +701,7 @@
         data-choice={r.id}
         role="treeitem"
         aria-level={depth + 2}
+        title={r.pending ? "Unsaved draft - this option isn't in the source file yet (add its text; it lands on save)" : undefined}
         aria-selected={ownerId === selectedId && r.id === selectedChoiceId}
         tabindex={r.id === treeFocusId ? 0 : -1}
         onclick={() => onSelectReply(ownerId, r.id)}
@@ -830,6 +834,13 @@
     }
     .st.derived .who {
         color: #9aa0a6;
+    }
+    /* Unsaved-draft cue: an item in the webview's optimistic model that is not yet in the source parse - a
+       just-added node/option before the reparse adopts it, or an empty option awaiting its text. A 2px amber
+       left-accent marks it as unsaved without the alarm of red; the row title explains it. */
+    .st.pending,
+    .rep.pending {
+        box-shadow: inset 2px 0 0 #d97706;
     }
     .rep {
         padding-left: calc(var(--lvl) * 14px + 8px);

@@ -4,6 +4,7 @@
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
+    import { isPendingState } from "./inspector-edit";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
@@ -31,7 +32,8 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged}>
+    {@const pending = isPendingState(data.state)}
+    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged} class:pending>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
             <span class="who">{stateHeadLabel(data.state, data.sourceName)}</span>
@@ -42,6 +44,7 @@
             {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">entry</span>{/if}
             {#if data.state.isEntry}<span class="rmark start" title="Conversation start node: reached from talk_p_proc. Read-only - edit the .ssl to change the dialog's entry wiring.">start</span>{/if}
             {#if data.sharedText}<span class="rmark shared" title="Shared text: this state's line or an option uses the same .msg/.tra entry as another state - editing it here changes the other one too.">shared</span>{/if}
+            {#if pending}<span class="rmark unsaved" title="Unsaved draft: this node isn't in the source file yet - it lands on the next save.">unsaved</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -166,6 +169,22 @@
     .card.orphan {
         border-color: #b91c1c;
         border-style: dashed;
+    }
+    /* Unsaved-draft card: a node in the optimistic model not yet in the source parse (a just-added node before
+       the reparse adopts it). A dashed amber border + the "unsaved" badge mark it (the badge text, not colour
+       alone, carries the meaning). */
+    .card.pending {
+        border-color: #d97706;
+        border-style: dashed;
+    }
+    .hd .rmark.unsaved {
+        color: #fbbf24;
+        background: #2c2610;
+        border: 1px solid #d97706;
+        border-radius: 3px;
+        padding: 0 3px;
+        font-size: 8px;
+        font-weight: 700;
     }
     /* Derived (CHAIN/INTERJECT/EXTEND) states are read-only: a dashed, muted card and a
        construct badge mark them as not directly editable (the badge text, not color

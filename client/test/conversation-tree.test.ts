@@ -139,6 +139,30 @@ describe("buildConversationTree", () => {
         expect(roots[0]!.sayLines).toEqual(["Second line.", "Third."]);
     });
 
+    it("flags a pending (not-yet-in-source) state and option, and leaves a committed one unflagged", () => {
+        // A pending item is in the webview's optimistic model but has no source span yet (a just-added node/option
+        // before the reparse adopts it, or an empty option deferred until its text commits). The view marks it as
+        // an unsaved draft. A committed item carries a source span (procRange/sourceRange, callRange).
+        const r = root([
+            st(
+                "A",
+                "hi",
+                [ch("A#0", { kind: "state", stateId: "New" }, { text: "go", callRange: { start: 0, end: 1 } })],
+                {
+                    sourceRange: { start: 0, end: 10 },
+                },
+            ),
+            st("New", "a new line", [ch("New#0", { kind: "exit" }, { text: "" })]), // no source span -> pending
+        ]);
+        const { roots } = buildConversationTree(r, undefined, noJump);
+        const a = roots[0]!;
+        expect(a.pending).toBeUndefined(); // committed (has sourceRange)
+        expect(a.replies[0]!.pending).toBeUndefined(); // committed option (has callRange)
+        const newState = (a.replies[0]!.target as Extract<ConvTarget, { kind: "state" }>).node;
+        expect(newState.pending).toBe(true); // pending state (no source span)
+        expect(newState.replies[0]!.pending).toBe(true); // pending option (no source span)
+    });
+
     it("leaves sayLines absent for a single-say state", () => {
         const r = root([st("A", "@10", [ch("A#0", { kind: "exit" })])]);
         const { roots } = buildConversationTree(r, { "10": "Only line." }, noJump);

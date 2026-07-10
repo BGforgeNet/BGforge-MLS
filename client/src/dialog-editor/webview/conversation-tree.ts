@@ -24,7 +24,7 @@ import {
     type DialogRoot,
     type DialogState,
 } from "../../../../shared/dialog-model";
-import { textEditability } from "./inspector-edit";
+import { isPendingChoice, isPendingState, textEditability } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -54,6 +54,10 @@ export interface ConvReply {
     /** Whether this option's text can be edited inline in the tree - the same gate the inspector's text
         field uses (textEditability): false for a locked SSL @N or a read-only/derived node. */
     textEditable: boolean;
+    /** True for an option that exists in the webview's optimistic model but is not yet in the source parse - a
+        just-added option before the reparse adopts it, or an empty option deferred until its text commits. The
+        tree/card render it as an unsaved draft. Absent (not false) for a committed option. */
+    pending?: boolean;
     target: ConvTarget;
     /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
         site for a `call` transition; WeiDU D `sourceRange`), for "go to source". Absent for a pending/synthetic
@@ -122,6 +126,10 @@ export interface ConvState {
     /** Set for an SSL `structured` node (arbitrarily nested if/else): the recursive block the tree renders
         instead of the flat replies, so each condition shows once at its own nesting level. Read-only. */
     block?: ConvBlock;
+    /** True for a state that exists in the webview's optimistic model but is not yet in the source parse (a
+        just-added node before the reparse adopts it). The tree/card render it as an unsaved draft. Absent (not
+        false) for a committed state. */
+    pending?: boolean;
     /** True for a top-level state (no incoming same-file transition). */
     isEntry: boolean;
     /** Whether this state's NPC line can be edited inline in the tree - the same gate the inspector's NPC
@@ -225,6 +233,7 @@ export function buildConversationTree(
         reaction: c.reaction,
         lowIq: c.lowIq,
         textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO }).editable,
+        ...(isPendingChoice(c) ? { pending: true } : {}),
         target: buildTarget(c),
         // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
         // `sourceRange` (the SSL fields are absent for D), so F4 resolves on a D option too - parity with the
@@ -322,6 +331,7 @@ export function buildConversationTree(
             ...(branches ? { branches } : {}),
             ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
+            ...(isPendingState(s) ? { pending: true } : {}),
             textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO }).editable,
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };
