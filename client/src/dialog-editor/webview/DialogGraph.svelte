@@ -1710,9 +1710,12 @@
         flex-direction: column;
         gap: 4px;
     }
-    /* Extra breathing room between the beta notice and the buttons below it. */
+    /* Beta notice sits above a separator line, with breathing room, dividing it from the buttons below. The
+       #2b303a rule matches the toolbar's other divider (the keyboard-panel border-left). */
     .tbbeta {
+        padding-bottom: 6px;
         margin-bottom: 6px;
+        border-bottom: 1px solid #2b303a;
     }
     /* One horizontal line of the toolbar (feedback / buttons); wraps internally when too narrow. */
     .tbrow {
