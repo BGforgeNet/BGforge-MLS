@@ -965,6 +965,18 @@
         if (selectedChoiceId === choiceId) select({ on: "state", state: st });
         void rebuild({ frame: "none" });
     }
+    // Remove the currently-selected OPTION via the shared remove path, IF it is removable - the same gate its
+    // row `x` uses: a structurally-editable, flat (non-branch) node, and not a conditional SSL option (that sits
+    // in its own `if` the writer won't rewrite - optionRemoveLockReason). An unremovable or branch option is a
+    // no-op here, exactly like the disabled `x`, never a surprise delete of the parent node. Lets Del act on the
+    // selected option so the keyboard, the row `x`, and the context menu are one delete gesture.
+    function removeSelectedOption(): void {
+        if (!selected || !selectedChoiceId || selected.branches) return;
+        const choice = selected.choices.find((c) => c.id === selectedChoiceId);
+        if (!choice || !structEditable(selected)) return;
+        if (isSSL && choice.condition) return;
+        removeOption(selected, selectedChoiceId);
+    }
     // Tree inline "+ option": add an option to a state addressed by id (the row need not be the current
     // selection), through the shared add path.
     function addReplyToState(stateId: string): void {
@@ -1207,7 +1219,11 @@
         // field, and while the confirm modal is already open.
         if ((e.key === "Delete" || e.key === "Backspace") && selected && !confirmDelete && !isEditableTarget(e.target)) {
             e.preventDefault();
-            requestDeleteState(selected);
+            // Del acts on WHATEVER is selected, so the legend "Del delete" is honest: a selected OPTION is
+            // removed (or a no-op when it is locked/branch); with no option selected, the selected STATE is
+            // deleted through the guarded path (confirm + inbound-ref redirect).
+            if (selectedChoiceId) removeSelectedOption();
+            else requestDeleteState(selected);
         }
     }
 
