@@ -3,6 +3,12 @@
 Headless Playwright harness that loads the **production** dialog-editor webview in Chromium.
 e2e-tier: run out of process, **not** part of `pnpm test` / `pnpm test:all`.
 
+Two host modes: the render/behavior drivers run **hostless** (`postToHost` no-ops, as in the old
+standalone harness), while `edit-roundtrip.mts` attaches the **real host session core**
+(`DialogHostCore`, the logic `panel.ts` runs in production) over an in-memory document via
+`fake-host.ts` - so the emit -> splice -> reparse -> reconcile/adopt -> `.tra` flush protocol is
+exercised under automation, not only in a live code-server drive.
+
 ## Why it mounts the real `App` (not `DialogGraph`)
 
 `harness-main.ts` mounts the production root `App.svelte` and the driver delivers the model
@@ -33,12 +39,17 @@ Prereqs are environmental, not repo deps: Playwright + a Chromium browser on `PA
 
 ## Files
 
-- `harness-main.ts` - mounts `App.svelte` (the production root).
+- `harness-main.ts` - runs the production webview entry (`webview/main.ts`: mounts `App.svelte`, posts `ready`).
 - `build.mts` - bundles it to `app.html` (gitignored) with a production-shaped CSP.
-- `driver-util.ts` - shared driver plumbing: app.html resolution (fail-loud when unbuilt) + the check/report accumulator.
+- `driver-util.ts` - shared driver plumbing: app.html resolution (fail-loud when unbuilt), `.tra` parsing,
+  condition polling, and the check/report accumulator.
 - `render.mts` - the production-path driver (assertions + screenshot).
 - `render-search.mts` - the tree find-bar driver (find-as-you-type, navigation, node-id dim guard).
 - `edit-behavior.mts` - the selection/add/edit driver (the unified `select()` primitive + shared add/remove paths).
+- `fake-host.ts` - `DialogHostCore` bound to an in-memory document/`.tra` (real server-side D parse, real splice).
+- `edit-roundtrip.mts` - the host round-trip driver: injects `acquireVsCodeApi`, wires the webview to
+  `fake-host.ts`, and pins the protocol end to end (option commit reaches the `.d`, minted `@N` appends to the
+  `.tra`, no emit swallow, no echo loop, multi-invocation stability).
 - `sample-model.ts` - a small hand-built `DialogModel` (also used by the unit tests).
 - `real-model.ts` - frozen output of `modelFromD` on a real `.d` fixture; regenerate with
   `gen-real-model.ts` when the fixture or adapter changes.

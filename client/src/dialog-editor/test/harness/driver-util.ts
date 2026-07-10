@@ -29,6 +29,30 @@ export function harnessPaths(importMetaUrl: string): { appHtml: string; outDir: 
     return { appHtml, outDir };
 }
 
+/** Parse a WeiDU `.tra` (`@N = ~text~`, optional trailing `[SOUND]`) into a {N: text} map. */
+export function parseTra(text: string): Record<string, string> {
+    const messages: Record<string, string> = {};
+    const re = /@(\d+)\s*=\s*~([\s\S]*?)~/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+        messages[m[1]!] = m[2]!.trim();
+    }
+    return messages;
+}
+
+/**
+ * Poll `cond` until it returns true or `timeoutMs` elapses; returns the final outcome instead of
+ * throwing so a driver can feed it straight into a PASS/FAIL check line.
+ */
+export async function pollUntil(cond: () => boolean, timeoutMs = 5000, stepMs = 50): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (cond()) return true;
+        await new Promise((r) => setTimeout(r, stepMs));
+    }
+    return cond();
+}
+
 /**
  * PASS/FAIL accumulator shared by the drivers. `finish` prints every check line, appends any
  * collected page errors, and exits non-zero when anything failed.

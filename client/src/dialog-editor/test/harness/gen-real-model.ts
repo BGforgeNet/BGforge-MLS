@@ -7,22 +7,12 @@ import path from "node:path";
 import { initParser } from "../../../../../shared/parsers/weidu-d";
 import { parseDDialog } from "../../../../../server/src/weidu-d/dialog";
 import { modelFromD } from "../../../../../shared/dialog-model";
+import { parseTra } from "./driver-util";
 
 const here = __dirname;
 const repo = path.resolve(here, "../../../../..");
 const fixture = path.join(repo, "external/infinity-engine/BG1NPC/bg1npc/phase2/dlg/x#bri.d");
 const traFile = path.join(repo, "external/infinity-engine/BG1NPC/bg1npc/tra/english/x#bri.tra");
-
-/** Parse a WeiDU `.tra` (`@N = ~text~`, optional trailing `[SOUND]`) into a {N: text} map. */
-function parseTra(text: string): Record<string, string> {
-    const messages: Record<string, string> = {};
-    const re = /@(\d+)\s*=\s*~([\s\S]*?)~/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text)) !== null) {
-        messages[m[1]!] = m[2]!.trim();
-    }
-    return messages;
-}
 
 async function main(): Promise<void> {
     await initParser();
