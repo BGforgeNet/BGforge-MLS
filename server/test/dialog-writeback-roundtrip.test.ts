@@ -158,6 +158,130 @@ describe("write-back faithfulness: locality (a one-field edit reflows nothing el
     }
 });
 
+// One retargetable choice per backend, used by the D-family locality and the multi-invocation cases below.
+// Every pair is same-length where the assertion needs byte stability. `source` is per-case (not always the
+// backend's idempotence fixture): the D/TD cases need a fixture with a known retarget pair.
+const D_SEQ_FIXTURE = `BEGIN ~seq~
+IF ~~ THEN BEGIN aa
+  SAY ~A.~
+  IF ~~ THEN REPLY ~to b~ GOTO bb
+  IF ~~ THEN REPLY ~to c~ GOTO cc
+END
+IF ~~ THEN BEGIN bb
+  SAY ~B.~
+  IF ~~ THEN EXIT
+END
+IF ~~ THEN BEGIN cc
+  SAY ~C.~
+  IF ~~ THEN EXIT
+END
+END
+`;
+
+interface RetargetCase {
+    backend: Backend;
+    source: string;
+    nodeId: string;
+    /** Index of the choice to retarget (stable across reparses - the D fixture has two choices on `aa`,
+     *  so a find-by-target after step 1 would be ambiguous). */
+    choice: number;
+    from: string;
+    to: string;
+}
+
+const RETARGETS: RetargetCase[] = [
+    { backend: sslBackend, source: SSL_FIXTURE, nodeId: "Node001", choice: 0, from: "Node002", to: "Node003" },
+    { backend: tsslBackend, source: TSSL_FIXTURE, nodeId: "Node001", choice: 0, from: "Node002", to: "Node003" },
+    { backend: dBackend, source: D_SEQ_FIXTURE, nodeId: "aa", choice: 0, from: "bb", to: "cc" },
+    {
+        backend: tdBackend,
+        source: sample("botsmith.td"),
+        nodeId: "g_item_type",
+        choice: -1,
+        from: "g_weapon",
+        to: "g_armor",
+    },
+];
+
+/** Resolve the case's choice: by index, or (index -1) the first choice targeting `from`. */
+function caseChoice(state: DialogState, c: RetargetCase, from: string): number {
+    if (c.choice >= 0) return c.choice;
+    return state.choices.findIndex((ch) => ch.target.kind === "state" && ch.target.stateId === from);
+}
+
+/** A state's content stripped of source ranges: an edit earlier in the file legitimately shifts the byte
+ *  offsets of everything after it, so locality over the D family compares WHAT the untouched states say,
+ *  not where they sit. (The SSL/TSSL cases above keep full equality - their same-length surgical edits
+ *  leave ranges intact too.) */
+function semantic(state: DialogState | undefined): unknown {
+    if (!state) return undefined;
+    return {
+        text: state.text,
+        sayTexts: state.sayTexts,
+        choices: state.choices.map((ch) => ({ text: ch.text, target: ch.target })),
+    };
+}
+
+describe("write-back faithfulness: locality for the D family (content of untouched states)", () => {
+    for (const c of RETARGETS.filter((r) => r.backend === dBackend || r.backend === tdBackend)) {
+        it(`${c.backend.name}: retargeting one option leaves every other state's content unchanged`, async () => {
+            const original = await c.backend.parse(c.source);
+            const edited = clone(original);
+            const node = stateById(edited, c.nodeId)!;
+            const idx = caseChoice(node, c, c.from);
+            setChoiceTarget(node, node.choices[idx]!.id, { kind: "state", stateId: c.to });
+            const result = computeDialogSourceEdit(c.source, edited, original);
+            expect(result.newText).not.toBeNull();
+            const reparsed = await c.backend.parse(result.newText!);
+            expect((stateById(reparsed, c.nodeId)!.choices[idx]!.target as { stateId: string }).stateId).toBe(c.to);
+            for (const other of statesOf(original).filter((s) => s.id !== c.nodeId)) {
+                expect(semantic(stateById(reparsed, other.id))).toEqual(semantic(other));
+            }
+        });
+    }
+});
+
+describe("write-back faithfulness: multi-invocation (edit, reparse, edit again)", () => {
+    // The mid-edit reconcile sequence at the API surface the host actually calls: apply an edit, adopt the
+    // reparse as the NEW original (what the host's next applyEdit parses), then edit that carried-over state.
+    // The reverse retarget must restore the original source BYTE-FOR-BYTE - a writer that reflows, re-indents,
+    // or re-serializes anything beyond the retargeted token fails here, and so does stale-range anchoring
+    // (the second splice lands against the first splice's output, not the original bytes).
+    for (const c of RETARGETS) {
+        it(`${c.backend.name}: retarget ${c.from}->${c.to}, reparse, retarget back restores the source`, async () => {
+            const original = await c.backend.parse(c.source);
+            const e1 = clone(original);
+            const n1 = stateById(e1, c.nodeId)!;
+            const idx = caseChoice(n1, c, c.from);
+            setChoiceTarget(n1, n1.choices[idx]!.id, { kind: "state", stateId: c.to });
+            const r1 = computeDialogSourceEdit(c.source, e1, original);
+            expect(r1.newText).not.toBeNull();
+
+            const mid = r1.newText!;
+            const original2 = await c.backend.parse(mid);
+            const e2 = clone(original2);
+            const n2 = stateById(e2, c.nodeId)!;
+            setChoiceTarget(n2, n2.choices[idx]!.id, { kind: "state", stateId: c.from });
+            const r2 = computeDialogSourceEdit(mid, e2, original2);
+            expect(r2.newText).not.toBeNull();
+            if (c.backend === dBackend) {
+                // The D writer currently re-serializes the edited TRANSITION in canonical shorthand
+                // (`IF ~~ THEN REPLY ~x~ GOTO y` comes back as `++ ~x~ + y`), so the reverse retarget is
+                // semantically - not byte - identical. The structure must still round-trip in full; the
+                // byte assertion joins the surgical backends when the writer splices at token granularity.
+                const final = await c.backend.parse(r2.newText!);
+                for (const s of statesOf(original)) {
+                    expect(semantic(stateById(final, s.id))).toEqual(semantic(s));
+                }
+                // And the canonicalized result is a fixed point: a third parse/no-op emit changes nothing.
+                expect(computeDialogSourceEdit(r2.newText!, clone(final), final).newText).toBeNull();
+            } else {
+                expect(r2.newText).toBe(c.source);
+            }
+        });
+    }
+});
+
 describe("write-back faithfulness: multisay alternates survive an unrelated edit", () => {
     it("D: editing a multisay state's first line preserves its other SAY alternates", async () => {
         await initWeiduD();
