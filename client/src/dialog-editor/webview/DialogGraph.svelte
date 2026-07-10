@@ -66,6 +66,12 @@
     }
     let editModel = $state<DialogModel>(cloneModel(model));
 
+    // The GRAPH projection is imperative - rebuild() writes nodes/edges - while every other model
+    // projection here (treeData, tabs, issues, searchMatches, ...) is $derived and refreshes on any
+    // mutation with no per-path wiring. Deliberate asymmetry, not drift: the graph pipeline is async
+    // (elkjs layout) and stateful (per-tab position caches, live drag positions merged back in),
+    // neither of which a synchronous $derived can express - so a model mutation must call rebuild(),
+    // and only for the graph. $state.raw because Svelte Flow swaps/mutates the arrays internally.
     let nodes = $state.raw<XyNode[]>([]);
     let edges = $state.raw<XyEdge[]>([]);
     let selected = $state<DialogState | null>(null);
