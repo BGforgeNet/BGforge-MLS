@@ -41,6 +41,14 @@ describe("textFieldLocked", () => {
         expect(textFieldLocked({ text: "@200", messages, ssl: false, textRO: false })).toBe(false);
     });
 
+    it("D: an @N field whose .tra entry did NOT load is locked (BUG E: would silently drop the edit)", () => {
+        // The bug: D short-circuited to editable, but an unresolved @tra ref has no entry to write - the edit
+        // updated only the in-memory value, the tab read "saved", and nothing reached disk. Lock it like SSL.
+        expect(textFieldLocked({ text: "@999", messages, ssl: false, textRO: false })).toBe(true);
+        expect(textFieldLocked({ text: "@200", messages: {}, ssl: false, textRO: false })).toBe(true);
+        expect(textFieldLocked({ text: "@200", messages: undefined, ssl: false, textRO: false })).toBe(true);
+    });
+
     it("SSL: an @N field whose .msg entry resolved is editable", () => {
         expect(textFieldLocked({ text: "@200", messages, ssl: true, textRO: false })).toBe(false);
         // An empty-string entry is still a resolved entry - editable.
@@ -275,7 +283,7 @@ describe("textEditability (unified text gate - one decision both views consume)"
         expect(unresolved.reason).toContain("@999");
     });
 
-    it("D-family text is always editable (persisted via the .d splice) when the caller's textRO is false", () => {
+    it("D-family literal text is editable (persisted via the .d splice) when the caller's textRO is false", () => {
         expect(
             textEditability({
                 state: st({ text: "a literal D line" }),
@@ -288,6 +296,19 @@ describe("textEditability (unified text gate - one decision both views consume)"
             editable: true,
             reason: "",
         });
+    });
+
+    it("D-family unresolved @N is locked with a .tra reason (BUG E: no silent 'saved' on a dropped write)", () => {
+        const r = textEditability({
+            state: st({ text: "@999", sourceRange: { start: 0, end: 9 } }),
+            choice: null,
+            messages,
+            ssl: false,
+            textRO: false,
+        });
+        expect(r.editable).toBe(false);
+        expect(r.reason).toContain("@999");
+        expect(r.reason).toContain(".tra");
     });
 
     it("passes the caller's textRO straight through (the tree can lock text the inspector leaves open)", () => {

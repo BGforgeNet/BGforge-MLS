@@ -63,15 +63,17 @@ export function npcLineAuthorable(s: DialogState): boolean {
  * Whether a dialog text field (NPC line or player reply) must render read-only.
  *
  * - A read-only state (`textRO`) locks everything.
- * - WeiDU D persists literal text via the `.d` splice, so a D field is otherwise always editable.
- * - Fallout SSL save only rewrites RESOLVABLE `.msg` entries: a literal (no `@N`) or an `@N` whose
- *   `.msg` line never loaded (translation dir misconfigured, or indexing not done) has nowhere to
- *   write, so an edit would be silently dropped on save. Lock it instead - fail visibly (a disabled
- *   field) rather than accept an edit that vanishes. An entry that resolved to an empty string is
- *   still a real entry and stays editable.
- * - A PENDING-NEW field (`isNew`) - a just-added option or node - has no `.msg` entry yet by definition,
- *   so it stays editable for the user to type the initial line (allocated an `@id` at save). Without this,
- *   add-option / add-node are unusable for SSL. A read-only state (`textRO`) still wins over it.
+ * - A PENDING-NEW field (`isNew`) - a just-added option or node - has no `.msg`/`.tra` entry yet by
+ *   definition, so it stays editable for the user to type the initial line (allocated an `@id` at save).
+ *   Without this, add-option / add-node are unusable. A read-only state (`textRO`) still wins over it.
+ * - A LITERAL line (no `@N`): WeiDU D persists it via the `.d` splice (editable); SSL save only rewrites
+ *   `.msg` entries, so an SSL literal has nowhere to write and is locked.
+ * - A bare `@N` line: editable only when its `.msg`/`.tra` entry actually LOADED (there is a line to
+ *   rewrite). An `@N` whose entry never loaded (translation dir misconfigured, or indexing not done) has
+ *   nowhere to write, so an edit would be silently dropped on save - lock it for BOTH families and fail
+ *   visibly (a disabled field) rather than accept an edit that vanishes (BUG E: the D family previously
+ *   left it editable, so the tab read "saved" while nothing reached disk). An entry that resolved to an
+ *   empty string is still a real entry and stays editable.
  */
 export function textFieldLocked(opts: {
     text: string | undefined;
@@ -82,10 +84,10 @@ export function textFieldLocked(opts: {
 }): boolean {
     const { text, messages, ssl, textRO, isNew } = opts;
     if (textRO) return true;
-    if (!ssl) return false;
     if (isNew) return false;
     const ref = msgRef(text);
-    return ref === null || messages?.[ref] === undefined;
+    if (ref === null) return ssl; // literal: SSL can't persist it (locked); D splices it into the .d (editable)
+    return messages?.[ref] === undefined; // @N: editable iff its entry loaded, for D and SSL alike
 }
 
 // -----------------------------------------------------------------------------
@@ -136,11 +138,14 @@ export function textLockReason(opts: {
     if (!textFieldLocked(opts)) return "";
     const { text, ssl, textRO, derivedFrom } = opts;
     if (textRO) return stateReadOnlyReason(derivedFrom);
-    if (!ssl) return ""; // unreachable: a locked non-SSL field is always textRO
     const ref = msgRef(text);
     if (ref === null)
+        // Only reachable for SSL (a D literal is editable): a literal/computed SSL line has no .msg entry.
         return "This line has no plain @N message id (it's a literal or computed value), so there's no .msg entry to edit here - change it in the source file.";
-    return `This line's @${ref} message isn't loaded, so there's no entry to edit. Point translation.directory in .bgforge.yml at the folder holding this .msg (or edit the .msg directly).`;
+    // An unresolved @N ref, for either family. The backing file differs: SSL reads .msg, the D family reads .tra.
+    const kind = ssl ? "message" : "string";
+    const file = ssl ? ".msg" : ".tra";
+    return `This line's @${ref} ${kind} isn't loaded, so there's no entry to edit. Point translation.directory in .bgforge.yml at the folder holding this ${file} (or edit the ${file} directly).`;
 }
 
 /**
