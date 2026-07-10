@@ -116,17 +116,27 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
  * States that carry a `sourceRange` are spliced in place; states without one (and not derived) are
  * inserted after the last ranged state of their root.
  *
- * - An edited state that DIFFERS from its original (matched by `sourceRange`) ->
- *   its source span is replaced with the re-serialized block for that state.
+ * - An edited state that DIFFERS from its original -> the ORIGINAL's source span is
+ *   replaced with the re-serialized block (or a per-field splice) for that state.
  * - An edited state UNCHANGED from its original -> left byte-for-byte (no splice).
  *   This is the locality guarantee: a one-field edit to one state never reflows
  *   any other state's `@N` refs, shorthand, comments, or whitespace.
- * - An original-range span that is ABSENT from `editedModel` -> its source span
- *   is replaced with an empty string (deletion). Detecting both the unchanged and
- *   deleted cases needs the original states, so the caller supplies `originalModel`:
- *   the parse of `originalText` BEFORE the webview's edits. If omitted, every edited
- *   ranged state is re-serialized and no deletion is applied (conservative legacy
- *   behavior - correct, but it reformats untouched states).
+ * - An original-range span no edited state matched -> its source span is replaced
+ *   with an empty string (deletion). Detecting the unchanged and deleted cases
+ *   needs the original states, so the caller supplies `originalModel`: the parse
+ *   of `originalText` BEFORE the webview's edits. If omitted, every edited ranged
+ *   state is re-serialized over its own range and no deletion is applied
+ *   (conservative legacy behavior - correct, but it reformats untouched states).
+ *
+ * Matching an edited state to its original: exact source-range key first, then state id within the
+ * same root. The id fallback exists because the edited model's ranges can be STALE: while an inline
+ * edit is open the webview keeps its optimistic copy through the host's re-parse (adopting would drop
+ * the user's draft), so a commit after a structural splice emits a model whose ranges predate the last
+ * document revision. Ranges are therefore only ever a MATCHING key on the edited side - every splice
+ * anchors on the ORIGINAL side's ranges, which are valid in `originalText` by construction; splicing at
+ * an edited-side range corrupted the file or tripped the overlap guard whenever the ranges had shifted.
+ * The id fallback is scoped to the state's own root: D state labels are only unique per BEGIN block,
+ * not per file (the same duplicate-label hazard `classifyReachability` guards against).
  *
  * Splices are applied from the highest byte offset to the lowest so that earlier
  * offsets remain valid while later ones are being substituted.
@@ -138,94 +148,105 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
         throw new Error("applyDDialogEdits: only weidu-d models are supported");
     }
 
-    // Collect all states across all roots in the edited model.
-    const allEditedStates: DialogState[] = editedModel.roots.flatMap((r) => r.states);
-
-    // Index the original states by source-range key, so each edited state can be
-    // compared against the exact bytes it came from (unchanged -> skip) and so
-    // deletions (original keys absent from the edit) can be detected.
+    const haveOriginal = originalModel !== undefined;
     const originalStates = (originalModel?.roots.flatMap((r) => r.states) ?? []).filter((s) => s.sourceRange);
     const originalByKey = new Map<string, DialogState>();
     for (const s of originalStates) {
         originalByKey.set(`${s.sourceRange!.start}:${s.sourceRange!.end}`, s);
     }
-
-    // Build a set of source range keys present in the edited model
-    // (keyed as "start:end" for O(1) lookup).
-    const survivingRangeKeys = new Set<string>();
-    for (const state of allEditedStates) {
-        if (state.sourceRange) {
-            survivingRangeKeys.add(`${state.sourceRange.start}:${state.sourceRange.end}`);
-        }
+    // Per-root id index for the stale-range fallback (see the matching rules in the doc comment).
+    const originalByRootAndId = new Map<string, Map<string, DialogState>>();
+    for (const root of originalModel?.roots ?? []) {
+        const byId = new Map<string, DialogState>();
+        for (const s of root.states) if (s.sourceRange) byId.set(s.id, s);
+        originalByRootAndId.set(root.id, byId);
     }
 
     const ops: SpliceOp[] = [];
-    const seenRangeKeys = new Set<string>();
+    // Original-range keys an edited state claimed - the complement is deleted below.
+    const matchedKeys = new Set<string>();
+    // Edited states with no trustworthy in-place anchor: genuinely new, or unmatchable with stale ranges.
+    const toInsert = new Set<DialogState>();
 
     // Build splice ops only for edited states that ACTUALLY CHANGED. An unchanged
     // state is left untouched so its original bytes survive verbatim.
-    for (const state of allEditedStates) {
-        if (!state.sourceRange) {
-            // No source range -> a newly-added state. It is not spliced in place here (there is no span to
-            // replace); the insert loop near the end of this function serializes it after the last existing
-            // state of its root.
-            continue;
-        }
-        const key = `${state.sourceRange.start}:${state.sourceRange.end}`;
-        if (seenRangeKeys.has(key)) {
-            // Two edited states referencing the same source range; take the first.
-            // A well-formed model should not produce this.
-            continue;
-        }
-        seenRangeKeys.add(key);
-
-        const original = originalByKey.get(key);
-        if (original && stateUnchanged(original, state)) {
-            // Identical to its source - leave the original bytes in place.
-            continue;
-        }
-
-        // Prefer a per-field splice (changes only the edited field's span, preserving the
-        // rest of the state verbatim); fall back to a whole-state re-serialize otherwise.
-        const fieldOps = original ? fieldEditOps(original, state) : null;
-        if (fieldOps) {
-            ops.push(...fieldOps);
-            continue;
-        }
-
-        const replacement = serializeState(state).join("\n");
-        ops.push({
-            start: state.sourceRange.start,
-            end: state.sourceRange.end,
-            replacement,
-        });
-    }
-
-    // Build splice ops for deleted states (original ranges absent from the edited model).
-    for (const range of originalStates) {
-        const key = `${range.sourceRange!.start}:${range.sourceRange!.end}`;
-        if (!survivingRangeKeys.has(key)) {
-            // This original range is gone from the edited model -> delete it.
-            // Guard against duplicate entries.
-            if (!seenRangeKeys.has(key)) {
-                seenRangeKeys.add(key);
-                ops.push({ start: range.sourceRange!.start, end: range.sourceRange!.end, replacement: "" });
-            }
-        }
-    }
-
-    // Insert newly-added states (no sourceRange) right after the last existing
-    // (ranged) state of their root, so a new state lands among its siblings. If the
-    // root has no ranged state to anchor to, append at the end of the file. This is
-    // a zero-width op (start === end), so it composes with the replacements above.
     for (const root of editedModel.roots) {
-        // A derived state (CHAIN/INTERJECT/EXTEND link) also lacks a sourceRange, but it is
-        // NOT a new state - its bytes live inside the construct that produced it, which is
-        // preserved untouched. Re-emitting it here would duplicate it as a standalone block.
-        const fresh = root.states.filter((s) => !s.sourceRange && !s.derivedFrom);
+        for (const state of root.states) {
+            // A derived state (CHAIN/INTERJECT/EXTEND link) has no own span - its bytes live inside the
+            // construct that produced it, which is preserved untouched. Never spliced, never inserted.
+            if (state.derivedFrom) continue;
+
+            let original: DialogState | undefined;
+            if (state.sourceRange) {
+                original = originalByKey.get(`${state.sourceRange.start}:${state.sourceRange.end}`);
+            }
+            if (!original && haveOriginal) {
+                original = originalByRootAndId.get(root.id)?.get(state.id);
+            }
+
+            if (!original) {
+                if (!haveOriginal && state.sourceRange) {
+                    // Legacy no-original path: nothing to compare against - re-serialize in place over
+                    // the edited range (the only range there is).
+                    const replacement = serializeState(state).join("\n");
+                    ops.push({ start: state.sourceRange.start, end: state.sourceRange.end, replacement });
+                } else {
+                    // Newly added (or unmatchable behind stale ranges): serialized by the insert loop
+                    // below. A stale edited range is never a splice target.
+                    toInsert.add(state);
+                }
+                continue;
+            }
+
+            const key = `${original.sourceRange!.start}:${original.sourceRange!.end}`;
+            if (matchedKeys.has(key)) {
+                // Two edited states resolving to the same source block; take the first.
+                // A well-formed model should not produce this.
+                continue;
+            }
+            matchedKeys.add(key);
+
+            if (stateUnchanged(original, state)) {
+                // Identical to its source - leave the original bytes in place.
+                continue;
+            }
+
+            // Prefer a per-field splice (changes only the edited field's span, preserving the
+            // rest of the state verbatim); fall back to a whole-state re-serialize otherwise.
+            const fieldOps = fieldEditOps(original, state);
+            if (fieldOps) {
+                ops.push(...fieldOps);
+                continue;
+            }
+            const replacement = serializeState(state).join("\n");
+            ops.push({ start: original.sourceRange!.start, end: original.sourceRange!.end, replacement });
+        }
+    }
+
+    // Build splice ops for deleted states (original blocks no edited state claimed).
+    for (const s of originalStates) {
+        const key = `${s.sourceRange!.start}:${s.sourceRange!.end}`;
+        if (!matchedKeys.has(key)) {
+            matchedKeys.add(key);
+            ops.push({ start: s.sourceRange!.start, end: s.sourceRange!.end, replacement: "" });
+        }
+    }
+
+    // Insert newly-added states right after the last existing (ranged) state of their
+    // root, so a new state lands among its siblings. If the root has no ranged state
+    // to anchor to, append at the end of the file. This is a zero-width op
+    // (start === end), so it composes with the replacements above.
+    for (const root of editedModel.roots) {
+        const fresh = root.states.filter((s) => toInsert.has(s));
         if (fresh.length === 0) continue;
+        // The anchor must be an offset valid in `originalText`: use the fresh parse's ranges when
+        // available (the edited model's can be stale - see the matching rules above); the edited
+        // ranges are only the legacy no-original fallback.
         let anchor = -1;
-        for (const s of root.states) {
+        const anchorStates = haveOriginal
+            ? (originalModel.roots.find((r) => r.id === root.id)?.states ?? [])
+            : root.states;
+        for (const s of anchorStates) {
             if (s.sourceRange) anchor = Math.max(anchor, s.sourceRange.end);
         }
         const at = anchor >= 0 ? anchor : originalText.length;

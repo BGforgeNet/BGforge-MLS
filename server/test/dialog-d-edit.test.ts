@@ -551,3 +551,55 @@ END
         expect(out).toContain("SAY ~Edited first line.~ = ~Second line.~ = ~Third line.~");
     });
 });
+
+describe("applyDDialogEdits - stale-range edited model (mid-edit reconcile sequence)", () => {
+    beforeAll(async () => {
+        await initParser();
+    });
+
+    // The live sequence this pins: "+ option" splices `++ ~~ EXIT` into the source (emit 1) and the host
+    // re-parses, but the webview keeps its optimistic model because an inline edit is open - so that model's
+    // sourceRanges still point at the PRE-splice document. Committing the typed text then emits against the
+    // NEW document (emit 2). The writer must anchor every splice on the fresh parse (whose ranges are valid
+    // in the text being edited), never on the edited model's stale ranges: a range-key-only match finds
+    // nothing for the shifted state, and splicing at the stale offsets overlaps the fresh block's deletion,
+    // so applySplices throws and the commit is silently lost.
+    it("splices a pending option's committed text using the fresh parse's ranges", () => {
+        const m1 = modelFromD(parseDDialog(FIXTURE));
+        const edited = structuredClone(m1);
+        const details = edited.roots.flatMap((r) => r.states).find((s) => s.id === "details")!;
+        // Mimic ops.addReply: a pending choice - client-side id, no sourceRange.
+        details.choices.push({ id: "details#reply", text: "", target: { kind: "exit" } });
+        const doc2 = applyDDialogEdits(FIXTURE, edited, m1);
+        expect(doc2).toContain("++ ~~ EXIT");
+
+        // Emit 2: the host parses doc2 fresh; the edited model still carries doc1 ranges + the typed text.
+        const m2 = modelFromD(parseDDialog(doc2));
+        details.choices[details.choices.length - 1]!.text = "A committed line.";
+        const doc3 = applyDDialogEdits(doc2, edited, m2);
+        expect(doc3).toContain("~A committed line.~");
+        expect(doc3.match(/A committed line\./g)).toHaveLength(1);
+        // Locality: the sibling option, the other state, and the patch block survive.
+        expect(doc3).toContain("~Thanks.~");
+        expect(doc3).toContain("~Hello, traveller.~");
+        expect(doc3).toContain("ALTER_TRANS");
+    });
+
+    it("does not re-insert a pending state the source already gained (matched by id on the fresh parse)", () => {
+        const m1 = modelFromD(parseDDialog(FIXTURE));
+        const edited = structuredClone(m1);
+        const root = edited.roots.find((r) => r.kind === "dialog")!;
+        // Mimic ops.addState: a pending state - no sourceRange.
+        root.states.push({ id: "new_state", text: "", choices: [] });
+        const doc2 = applyDDialogEdits(FIXTURE, edited, m1);
+        expect(doc2).toContain("BEGIN new_state");
+
+        // Emit 2 with the still-unadopted model: the state now exists in the source; typing its NPC line
+        // must edit that block, not append a duplicate.
+        const m2 = modelFromD(parseDDialog(doc2));
+        root.states.find((s) => s.id === "new_state")!.text = "A new line.";
+        const doc3 = applyDDialogEdits(doc2, edited, m2);
+        expect(doc3.match(/BEGIN new_state/g)).toHaveLength(1);
+        expect(doc3).toContain("~A new line.~");
+    });
+});
