@@ -79,9 +79,9 @@ function newNodeMsgIds(s: DialogState): NodeMsgIds {
  * An SSL node the editor created locally: no source procedure (`procRange`) yet, and not a derived
  * (CHAIN/INTERJECT) view or a renamed existing node. Such a node is fully known and safely editable by
  * construction, so the webview treats it as structurally editable immediately - before any save round-trip
- * gives it a `faithful` flag (only the parser sets that). It is also the node the ADD-node splicer serializes
- * into the file, gated additionally on `!committed` there so a node already spliced on a prior save is not
- * re-emitted; this predicate deliberately still accepts a committed node, which remains ours to edit.
+ * gives it a `faithful` flag (only the parser sets that). It is also the node the ADD-node splicer
+ * serializes into the file; a node never lingers span-less after its splice, because the webview adopts
+ * the host's re-parse (which assigns the real `procRange`), so this predicate cannot re-match it later.
  */
 export function isLocalNewSSLNode(s: DialogState): boolean {
     return !s.procRange && !s.derivedFrom && !s.renamedFrom;
@@ -390,9 +390,10 @@ export function nodeOps(
 
 /**
  * Splice the node's OWN reply (NPC line) into an existing procedure when the edit ADDED one the source lacks.
- * A from-scratch scaffold emits an empty entry node; typing its NPC line allocates an `@N`, and once the node is
- * committed (no longer re-emitted whole) the `Reply(@N);` must be spliced into the existing procedure or the line
- * is dropped. Only the ADD case is handled here: a reply-text CHANGE where both sides already have a reply is a
+ * A from-scratch scaffold emits an empty entry node; after the webview adopts the re-parse the node is
+ * source-present (real `procRange`), so typing its NPC line allocates an `@N` (the reply-less existing-node
+ * arm of allocateNodeIds) and the `Reply(@N);` must be spliced into the existing procedure or the line is
+ * dropped. Only the ADD case is handled here: a reply-text CHANGE where both sides already have a reply is a
  * `.msg` edit (the `@N` ref is unchanged), and REMOVING a reply is not a graph gesture. Inserted at the node's
  * body anchor, before options (the parser sets the anchor to the empty body for a reply-less procedure). Bails if
  * the node has no anchor (no editable body position captured).
@@ -838,10 +839,9 @@ export function applyFalloutFamilyEdits(
     // text (allocated at save), so derive the per-node id map from that text. The inbound option that targets
     // the new node is rewritten by the survivor logic above (the new node's id is a valid state target).
     const anchor = edited.newProcAnchor ?? original.newProcAnchor;
-    // The new nodes to emit (both branches below): local, never-spliced additions. `committed` marks a node
-    // already spliced on a prior save (still without a procRange in the webview copy); excluding it stops its
-    // procedure being re-emitted (duplicated) on later saves.
-    const newNodes = allStates(edited).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
+    // The new nodes to emit (both branches below): local, never-spliced additions (a spliced node comes
+    // back from the adopted re-parse with a real procRange, so it can never re-match here).
+    const newNodes = allStates(edited).filter((s) => isLocalNewSSLNode(s)); // existing/derived/renamed are not new
     if (anchor !== undefined) {
         const blocks = newNodes.map((s) => variant.serializeProcedure(s, "    "));
         if (blocks.length > 0) {

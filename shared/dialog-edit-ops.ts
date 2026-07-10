@@ -26,59 +26,6 @@ function stateIdsOf(model: DialogModel): string[] {
     return allStates(model).map((s) => s.id);
 }
 
-/**
- * Reconcile pending items the host just committed to the source, in place on the webview's working copy.
- *
- * After a structural self-edit the host splices new options/nodes and allocates their `@N` ids, but the
- * webview copy still holds them as PENDING (literal text, no source span) because the echo guard suppresses
- * the re-project that would give them a real span - it must, to keep the user's selection and in-progress
- * text. Left stale, the NEXT save re-splices them: the re-parse cannot match a pending choice (id
- * `Node#reply`) to the option it already became (id `Node#optN`), so it re-adds it and duplicates the option.
- *
- * This stamps each committed item's allocated `@N` text and marks it `committed` (so the splicer treats it as
- * existing, not new) and merges the allocated `.msg` text into `model.messages` (so the field resolves and
- * stays editable instead of showing a raw `@N`). It mutates in place and touches nothing else, so selection,
- * node positions, and any text the user is still typing survive. `allocations` maps an item id (option choice
- * id or new-node state id) to its `@N` text; `messages` is the id->text to merge.
- *
- * Returns whether anything was actually mutated. The caller arms its emit echo-suppression off this: a
- * reconcile with nothing to stamp (a structural splice of an item whose text has no `@N` yet - e.g. an
- * option still empty while its inline edit is open) triggers no reactive re-run, so a preemptively-armed
- * flag would sit until the user's NEXT edit and swallow that emit instead (the commit that persists the
- * typed text was lost exactly this way).
- */
-export function applyReconcile(
-    model: DialogModel,
-    allocations: Record<string, string>,
-    messages: Record<string, string> | undefined,
-): boolean {
-    let mutated = false;
-    if (messages && Object.keys(messages).length > 0) {
-        model.messages = { ...model.messages, ...messages };
-        mutated = true;
-    }
-    if (Object.keys(allocations).length === 0) return mutated;
-    for (const root of model.roots) {
-        for (const state of root.states) {
-            const sAlloc = allocations[state.id];
-            if (sAlloc !== undefined) {
-                state.text = sAlloc;
-                state.committed = true;
-                mutated = true;
-            }
-            for (const c of state.choices) {
-                const cAlloc = allocations[c.id];
-                if (cAlloc !== undefined) {
-                    c.text = cAlloc;
-                    c.committed = true;
-                    mutated = true;
-                }
-            }
-        }
-    }
-    return mutated;
-}
-
 function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][number] | undefined {
     return model.roots.find((r) => r.states.includes(state));
 }
@@ -227,10 +174,6 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     delete copy.nameRange;
     delete copy.forwardDeclRange;
     delete copy.insertAnchor;
-    // `committed` marks an item the host already spliced on a prior save; a fresh copy has been spliced nowhere,
-    // and inheriting it would make the SSL/TSSL/TD `!committed` new-node filters skip the copy - silently dropping
-    // it on save (it also has no source span, so it would never be emitted). Strip it here and on each choice below.
-    delete copy.committed;
     // A copy is an orphan to wire deliberately, not a silent second conversation entry: don't inherit the
     // source's entry status (which would auto-splice a `call <copy>;` into talk_p_proc on save). The parser
     // keeps unreachable dialog nodes visible, so the un-wired copy still shows in the graph.
@@ -242,10 +185,7 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     delete copy.branches;
     delete copy.block;
     delete copy.bundleFaithful;
-    copy.choices = copy.choices.map((c, i) => {
-        const { committed: _committed, ...rest } = c;
-        return { ...rest, id: `${copy.id}#${i}` };
-    });
+    copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
     root.states.push(copy);
     return copy;
 }

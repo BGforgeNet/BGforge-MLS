@@ -11,7 +11,7 @@ import { DialogHostCore, type DialogHostIO } from "../../host-core";
 import { initParser } from "../../../../../shared/parsers/weidu-d";
 import { parseDDialog } from "../../../../../server/src/weidu-d/dialog";
 import { appendTraEntries, rewriteTraEntries } from "../../../../../shared/dialog-tra-edit";
-import type { DialogMessages } from "../../../../../shared/dialog-model";
+import { modelFromD, type DialogMessages, type DialogModel } from "../../../../../shared/dialog-model";
 import { parseTra } from "./driver-util";
 
 export interface FakeHost {
@@ -62,4 +62,16 @@ export async function createFakeHost(opts: {
         },
     };
     return { core: new DialogHostCore(io, opts.documentPath), doc, tra, errors, posted };
+}
+
+/**
+ * The DialogModel a plain (non-reparse) host post would carry for the CURRENT in-memory document - what
+ * the production host sends on an external text-side edit. `sourceName` must match the open model's for
+ * the webview's same-file adopt branch to engage (the core derives it from the document path).
+ */
+export function currentModel(host: FakeHost, sourceName: string): DialogModel {
+    const model = { ...modelFromD(parseDDialog(host.doc.text)), sourceLang: "d" as const };
+    model.messages = { ...model.messages, ...parseTra(host.tra.text) };
+    model.sourceName = sourceName;
+    return model;
 }

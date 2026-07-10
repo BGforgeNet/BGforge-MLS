@@ -561,23 +561,23 @@ describe("applyDDialogEdits - stale-range edited model (mid-edit reconcile seque
         await initParser();
     });
 
-    // The live sequence this pins: "+ option" splices `++ ~~ EXIT` into the source (emit 1) and the host
-    // re-parses, but the webview keeps its optimistic model because an inline edit is open - so that model's
-    // sourceRanges still point at the PRE-splice document. Committing the typed text then emits against the
-    // NEW document (emit 2). The writer must anchor every splice on the fresh parse (whose ranges are valid
-    // in the text being edited), never on the edited model's stale ranges: a range-key-only match finds
-    // nothing for the shifted state, and splicing at the stale offsets overlaps the fresh block's deletion,
-    // so applySplices throws and the commit is silently lost.
-    it("splices a pending option's committed text using the fresh parse's ranges", () => {
+    // The live sequence this pins: "+ option" emits a pending option with EMPTY text (emit 1) - a
+    // deliberate NO-OP splice (the writer defers empty pending options, so no `++ ~~ EXIT` husk lands in
+    // the file). Committing the typed text then emits against the same document (emit 2), and the splice
+    // must land exactly once, anchored on the fresh parse. Also covers the stale-range shape the old
+    // reconcile flow produced: the edited model's ranges predate any intermediate revision, so every
+    // splice anchors on the fresh parse's ranges, never the edited model's.
+    it("defers an empty pending option, then splices its committed text exactly once", () => {
         const m1 = modelFromD(parseDDialog(FIXTURE));
         const edited = structuredClone(m1);
         const details = edited.roots.flatMap((r) => r.states).find((s) => s.id === "details")!;
-        // Mimic ops.addReply: a pending choice - client-side id, no sourceRange.
+        // Mimic ops.addReply: a pending choice - client-side id, no sourceRange, no text yet.
         details.choices.push({ id: "details#reply", text: "", target: { kind: "exit" } });
         const doc2 = applyDDialogEdits(FIXTURE, edited, m1);
-        expect(doc2).toContain("++ ~~ EXIT");
+        // Emit 1 is a no-op: an empty pending option is webview-only until its text commits.
+        expect(doc2).toBe(FIXTURE);
 
-        // Emit 2: the host parses doc2 fresh; the edited model still carries doc1 ranges + the typed text.
+        // Emit 2: the user committed the text; the still-pending option now splices, once.
         const m2 = modelFromD(parseDDialog(doc2));
         details.choices[details.choices.length - 1]!.text = "A committed line.";
         const doc3 = applyDDialogEdits(doc2, edited, m2);

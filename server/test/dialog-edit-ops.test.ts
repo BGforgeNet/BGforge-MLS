@@ -118,20 +118,6 @@ END
         expect(ops.duplicateState(m, original)!.id).toBe("hello_copy_1"); // unique on repeat
     });
 
-    it("a duplicated state is not marked committed (so the writer emits it, never skips it)", () => {
-        const m = model();
-        const hello = state(m, "hello");
-        // Simulate a prior save: reconcile stamps `committed` on the state and its options.
-        ops.applyReconcile(m, { [hello.id]: "@100", [hello.choices[0]!.id]: "@101" }, { "100": "Hi.", "101": "more" });
-        expect(hello.committed).toBe(true);
-        expect(hello.choices[0]!.committed).toBe(true);
-        // Duplicating a committed state must produce a pending-new copy: carrying `committed` would make the
-        // SSL/TSSL/TD `!committed` new-node filters skip it, silently dropping the duplicate on the next save.
-        const copy = ops.duplicateState(m, hello)!;
-        expect(copy.committed).toBeFalsy();
-        expect(copy.choices.every((c) => !c.committed)).toBe(true);
-    });
-
     it("a duplicated state does not corrupt the original on surgical save", () => {
         const m = model();
         ops.duplicateState(m, state(m, "hello"));
@@ -650,68 +636,5 @@ describe("dialog-edit-ops (branch structural)", () => {
         expect(st.branches![0]!.kind).toBe("if");
         expect(st.choices.find((c) => c.id === "Node001#opt0")).toBeDefined();
         expect(st.choices.find((c) => c.id === "Node001#opt1")).toBeUndefined();
-    });
-
-    describe("applyReconcile", () => {
-        function reconcileModel(): DialogModel {
-            return {
-                sourceLang: "ssl",
-                editable: false,
-                messages: { "100": "npc" },
-                roots: [
-                    {
-                        id: "dialog",
-                        label: "dialog",
-                        kind: "dialog",
-                        states: [
-                            {
-                                id: "Node001",
-                                text: "@100",
-                                choices: [{ id: "Node001#reply", text: "typed literal", target: { kind: "exit" } }],
-                            },
-                            { id: "Node050", text: "new node line", choices: [] },
-                        ],
-                    },
-                ],
-            };
-        }
-
-        it("stamps a committed option's @N text and merges its .msg entry", () => {
-            const m = reconcileModel();
-            ops.applyReconcile(m, { "Node001#reply": "@201" }, { "201": "typed literal" });
-            const c = m.roots[0]!.states[0]!.choices[0]!;
-            expect(c.text).toBe("@201");
-            expect(c.committed).toBe(true);
-            expect(m.messages).toEqual({ "100": "npc", "201": "typed literal" });
-            // The untouched node stays pending (no committed flag).
-            expect(m.roots[0]!.states[1]!.committed).toBeUndefined();
-        });
-
-        it("stamps a committed new node's reply @N and merges .msg", () => {
-            const m = reconcileModel();
-            ops.applyReconcile(m, { Node050: "@202" }, { "202": "new node line" });
-            const s = m.roots[0]!.states[1]!;
-            expect(s.text).toBe("@202");
-            expect(s.committed).toBe(true);
-            expect(m.messages?.["202"]).toBe("new node line");
-        });
-
-        it("is a no-op on empty allocations (still merges messages)", () => {
-            const m = reconcileModel();
-            ops.applyReconcile(m, {}, { "300": "extra" });
-            expect(m.roots[0]!.states[0]!.choices[0]!.committed).toBeUndefined();
-            expect(m.messages?.["300"]).toBe("extra");
-        });
-
-        // The return value is the caller's echo-suppression gate: the webview arms suppressEmit only when the
-        // reconcile mutated (exactly one reactive re-run consumes the flag). Reporting true for a no-op would
-        // leave the flag armed and swallow the NEXT user edit's emit - the inline-edit commit was lost this way.
-        it("reports whether it mutated: false for a full no-op, true for stamps or message merges", () => {
-            expect(ops.applyReconcile(reconcileModel(), {}, undefined)).toBe(false);
-            expect(ops.applyReconcile(reconcileModel(), {}, {})).toBe(false);
-            expect(ops.applyReconcile(reconcileModel(), { "no-such-id": "@900" }, undefined)).toBe(false);
-            expect(ops.applyReconcile(reconcileModel(), {}, { "300": "extra" })).toBe(true);
-            expect(ops.applyReconcile(reconcileModel(), { "Node001#reply": "@201" }, undefined)).toBe(true);
-        });
     });
 });

@@ -327,7 +327,9 @@ function parseTransitionFull(node: SyntaxNode): DDialogTransition {
 
     return {
         line: node.startPosition.row + 1,
-        replyText: replyText || undefined,
+        // An EMPTY reply (`REPLY ~~`) stays "" - the author wrote a reply form, so it must round-trip as
+        // a (blank) player option, not degrade to a bare transition. Only a MISSING reply is undefined.
+        replyText,
         trigger: trigger || undefined,
         action: action || undefined,
         target,
@@ -350,7 +352,9 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
 
     return {
         line: node.startPosition.row + 1,
-        replyText: replyText || undefined,
+        // As in parseTransitionFull: an EMPTY `++ ~~` reply stays "" (a blank player option, e.g. one the
+        // editor just spliced before its text was typed); only a missing reply node is undefined.
+        replyText,
         trigger: trigger || undefined,
         action: action || undefined,
         target,

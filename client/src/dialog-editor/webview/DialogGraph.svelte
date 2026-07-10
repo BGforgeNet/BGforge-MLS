@@ -18,7 +18,7 @@
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, childStates, type ConvState } from "./conversation-tree";
     import { collectMatches } from "./tree-search";
-    import { writeText } from "./inspector-edit";
+    import { isPendingChoice, writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { translationHint, unresolvedRefCount } from "./translation-status";
@@ -405,6 +405,7 @@
     // literal, or a just-added option - updates the choice's own text, allocated an @id at save). Then leave
     // edit mode (option stays selected) and reproject.
     function commitEditReply(stateId: string, choiceId: string, value: string): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         const s = findState(stateId);
         const c = s?.choices.find((ch) => ch.id === choiceId);
         if (!s) return;
@@ -415,6 +416,7 @@
     }
     // Abandon an inline edit (Escape) - discard the draft, leave edit mode, keep the option selected.
     function cancelEditReply(): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         if (selected)
             select(selectedChoiceId ? { on: "option", state: selected, choiceId: selectedChoiceId } : { on: "state", state: selected });
     }
@@ -430,6 +432,7 @@
     // - or a just-added state - updates the state's own text, allocated an @id at save). Mirrors
     // commitEditReply. Then leave edit mode (state stays selected) and reproject.
     function commitEditState(stateId: string, value: string): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         const s = findState(stateId);
         if (!s) return;
         select({ on: "state", state: s });
@@ -438,6 +441,7 @@
     }
     // Abandon an inline NPC-line edit (Escape) - discard the draft, keep the state selected.
     function cancelEditState(): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         if (selected) select({ on: "state", state: selected });
     }
 
@@ -452,6 +456,7 @@
     // A rejected id (empty, unchanged, or a duplicate) leaves the model as-is and the row reverts to the old id
     // on reproject. Leave rename mode either way (the renamed - or unchanged - node stays selected).
     function commitRenameState(stateId: string, value: string): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         const s = findState(stateId);
         if (s && ops.renameState(editModel, s, value)) {
             select({ on: "state", state: s }); // keep the just-renamed node selected (its id changed)
@@ -462,6 +467,7 @@
     }
     // Abandon an inline rename (Escape) - discard the draft, keep the state selected under its current id.
     function cancelRenameState(): void {
+        if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         if (selected) select({ on: "state", state: selected });
     }
 
@@ -674,24 +680,73 @@
         else if ((opts.frame ?? "entry") === "entry") focusEntry();
     }
 
+    // The inline-edit sub-mode open at adopt time, so the same edit reopens on the adopted model.
+    type EditMode = "option-edit" | "line-edit" | "rename" | null;
+
     // Re-select the same logical target after adopting a freshly-parsed model in place: the state by id, and its
     // option by id - remapped through `allocations` for a just-added option, whose id changes across the parse
-    // (see remapChoiceId). Falls back to a whole-state selection (or nothing) when the target is gone from the
-    // new parse (e.g. deleted in the source). Only reached with no inline edit open (adoptModel gates on that),
-    // so the rename/line-edit sub-modes never need restoring here.
+    // (see remapChoiceId). An open inline edit re-enters the same sub-mode on the remapped target (its live
+    // draft/caret are restored separately - see adoptModel's overlay). Falls back to a whole-state selection
+    // (or nothing) when the target is gone from the new parse (e.g. deleted in the source).
     function reselectAfterAdopt(
-        keep: { id: string; choiceId: string | null; branchKey: string | null } | null,
+        keep: {
+            id: string;
+            choiceId: string | null;
+            choiceIndex: number;
+            choiceCount: number;
+            branchKey: string | null;
+            mode: EditMode;
+        } | null,
         allocations: Record<string, string> | undefined,
     ): void {
         if (!keep) return select({ on: "state", state: null });
         const s = findState(keep.id);
         if (!s) return select({ on: "state", state: null }); // the selected node vanished from the source
         if (keep.choiceId !== null) {
-            const cid = remapChoiceId(keep.choiceId, s, allocations);
+            let cid = remapChoiceId(keep.choiceId, s, allocations);
+            // Positional fallback: a pending option with EMPTY text gets no `@N` (the allocator skips empty
+            // text), so neither its old id nor an allocation can find it in the adopted parse - exactly the
+            // "+ option, reparse lands before the first keystroke commits" window. Splices and parses both
+            // preserve choice order, so with an UNCHANGED choice count the option's index identifies it.
+            if (cid === null && keep.choiceIndex >= 0 && s.choices.length === keep.choiceCount) {
+                cid = s.choices[keep.choiceIndex]?.id ?? null;
+            }
+            if (cid !== null && keep.mode === "option-edit") return select({ on: "option-edit", state: s, choiceId: cid });
             return select(cid !== null ? { on: "option", state: s, choiceId: cid } : { on: "state", state: s });
         }
+        if (keep.mode === "line-edit") return select({ on: "line-edit", state: s });
+        if (keep.mode === "rename") return select({ on: "rename", state: s });
         if (keep.branchKey !== null) return select({ on: "branch", state: s, branchKey: keep.branchKey });
         select({ on: "state", state: s });
+    }
+
+    // The inline-edit inputs are UNCONTROLLED - the DOM holds the draft until a blur commits it - so
+    // replacing editModel re-renders the input from the MODEL's text and would drop what the user has
+    // typed. Capture the live draft + caret from the focused input before the adopt, and re-seed the
+    // (possibly recreated) input after the render flush. This overlay is what lets an authoritative
+    // reparse land mid-typing without data loss - the job the old "reconcile the optimistic model in
+    // place" branch existed for, at a fraction of its machinery.
+    function captureEditDraft(): { draft: string; selStart: number | null; selEnd: number | null } | null {
+        const el = document.activeElement;
+        if (!(el instanceof HTMLInputElement)) return null;
+        return { draft: el.value, selStart: el.selectionStart, selEnd: el.selectionEnd };
+    }
+    // True while an adopt is re-mounting the inline-edit input. The DOM churn of replacing the model blurs
+    // the OLD input (the fresh one steals focus via autofocusSelect), and that blur runs the commit/cancel
+    // handlers - which would exit the just-restored edit mode and unmount the input. A blur inside this
+    // window is the adopt's own artifact, not a user gesture, so the handlers no-op on the flag.
+    let adoptRestoreInFlight = false;
+    async function restoreEditDraft(d: { draft: string; selStart: number | null; selEnd: number | null }): Promise<void> {
+        try {
+            await tick(); // the re-entered edit mode mounts (or re-renders) its input on this flush
+            const el = document.querySelector<HTMLInputElement>("input.rtextedit, input.lineedit, input.nameedit");
+            if (!el) return; // the target lost its editability in the new parse - nothing to re-seed
+            el.value = d.draft;
+            el.focus();
+            if (d.selStart !== null && d.selEnd !== null) el.setSelectionRange(d.selStart, d.selEnd);
+        } finally {
+            adoptRestoreInFlight = false;
+        }
     }
 
     // Adopt an authoritative parsed model IN PLACE for the current file: replace the working copy with it but
@@ -701,7 +756,46 @@
     // written yet, so a just-typed line renders as text, not a raw `@N`. Building the merged model before the
     // single `editModel =` assignment keeps the emit effect to one (suppressed) run.
     function adoptModel(next: DialogModel, allocations?: Record<string, string>, messages?: DialogMessages): void {
-        const keep = selected ? { id: selected.id, choiceId: selectedChoiceId, branchKey: highlightedBranchKey } : null;
+        const mode: EditMode =
+            editingChoiceId !== null
+                ? "option-edit"
+                : editingStateId !== null
+                  ? "line-edit"
+                  : renamingStateId !== null
+                    ? "rename"
+                    : null;
+        const keep = selected
+            ? {
+                  id: selected.id,
+                  choiceId: selectedChoiceId,
+                  choiceIndex: selectedChoiceId
+                      ? selected.choices.findIndex((c) => c.id === selectedChoiceId)
+                      : -1,
+                  choiceCount: selected.choices.length,
+                  branchKey: highlightedBranchKey,
+                  mode,
+              }
+            : null;
+        const draft = mode !== null ? captureEditDraft() : null;
+        // Pending options with EMPTY reply text exist only in this webview - the writers defer their
+        // splice until the text commits (see dialog-d-edit's spliceableView / the SSL family's
+        // isAllocatedNewOption), so the adopted parse can never contain them. Carry them over at their
+        // positions, or a reparse landing right after "+ option" silently removes the row mid-edit.
+        const pendingEmpty: { rootId: string; stateId: string; index: number; choice: DialogChoice }[] = [];
+        for (const r of editModel.roots) {
+            for (const s of r.states) {
+                s.choices.forEach((c, i) => {
+                    if (c.text !== undefined && c.text.trim() === "" && isPendingChoice(c)) {
+                        pendingEmpty.push({
+                            rootId: r.id,
+                            stateId: s.id,
+                            index: i,
+                            choice: $state.snapshot(c) as DialogChoice,
+                        });
+                    }
+                });
+            }
+        }
         const merged = cloneModel(next);
         if (messages && Object.keys(messages).length > 0) merged.messages = { ...merged.messages, ...messages };
         suppressEmit = true;
@@ -709,7 +803,23 @@
         if (!editModel.roots.some((r) => r.id === activeFile)) {
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
         }
+        for (const p of pendingEmpty) {
+            const s = editModel.roots.find((r) => r.id === p.rootId)?.states.find((st) => st.id === p.stateId);
+            if (s && !s.choices.some((c) => c.id === p.choice.id)) {
+                s.choices.splice(Math.min(p.index, s.choices.length), 0, p.choice);
+            }
+        }
+        // A pending delete-confirmation holds a state REFERENCE into the replaced model; re-resolve it in
+        // the adopted one (by id) so confirming operates on live objects, or close it if the state is gone.
+        if (confirmDelete) {
+            const again = findState(confirmDelete.state.id);
+            confirmDelete = again ? { state: again, refCount: confirmDelete.refCount } : null;
+        }
         reselectAfterAdopt(keep, allocations);
+        if (draft) {
+            adoptRestoreInFlight = true;
+            void restoreEditDraft(draft);
+        }
         void rebuild({ frame: "none" });
     }
 
@@ -769,24 +879,16 @@
 
     // Re-parse message from the host (production only): after it splices a self-edit into the source, the host
     // posts the faithful parse (`reparse:true`) so the tree becomes a pure view of source - real spans (F4
-    // resolves), canonical ids. The ignore/reconcile/adopt routing (stale-seq drop, editing-open draft
-    // preservation) is the pure kernel in reparse-decision.ts, unit-tested there. suppressEmit keeps a
-    // host-driven mutation from echoing back as an edit (adoptModel sets it itself on the adopt path) - but
-    // it is armed ONLY when the reconcile actually mutated: the flag is consumed by exactly one effect run,
-    // and a no-op reconcile (nothing allocated yet) triggers none, so a preemptively-armed flag would swallow
-    // the NEXT user edit's emit instead - the inline-edit commit that persists the typed text was lost
-    // exactly this way. The body reads no reactive state at registration, so the listener registers once.
+    // resolves), canonical ids. The ignore/adopt routing (stale-seq drop) is the pure kernel in
+    // reparse-decision.ts, unit-tested there. EVERY accepted reparse adopts - an open inline edit survives
+    // the replacement via adoptModel's draft overlay rather than blocking it, so the model is never left
+    // optimistic and stale-range/pending-state bookkeeping has nothing to track. The body reads no reactive
+    // state at registration, so the listener registers once.
     $effect(() => {
         function onReparse(e: MessageEvent): void {
-            const editing = editingChoiceId !== null || editingStateId !== null || renamingStateId !== null;
-            const decision = decideReparse(e.data as ReparseMessage | null, localSeq, editing);
+            const decision = decideReparse(e.data as ReparseMessage | null, localSeq);
             if (decision.kind === "ignore") return;
-            if (decision.kind === "reconcile") {
-                if (ops.applyReconcile(editModel, decision.allocations, decision.messages)) suppressEmit = true;
-                void rebuild({ frame: "none" });
-            } else {
-                adoptModel(decision.model, decision.allocations, decision.messages);
-            }
+            adoptModel(decision.model, decision.allocations, decision.messages);
         }
         window.addEventListener("message", onReparse);
         return () => window.removeEventListener("message", onReparse);

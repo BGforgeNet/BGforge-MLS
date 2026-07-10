@@ -140,6 +140,22 @@ function serializeStateInPlace(state: DialogState): string {
 }
 
 /**
+ * The view of a state this writer serializes and compares: a PENDING option with EMPTY reply text is
+ * excluded. Such an option exists only in the webview until its text commits - splicing it would write a
+ * `++ ~~ EXIT` husk the author never typed (and an abandoned add would leave it behind), and once spliced
+ * its later text commit reads as an existing-literal edit instead of minting the `@N` a tra-managed dialog
+ * expects. The SSL-family writers already defer exactly this way (isAllocatedNewOption requires an
+ * allocated `@N`); the webview carries the deferred option across adopts (see DialogGraph's adoptModel).
+ * A pending BARE transition (text undefined) is real content - a target - and still splices.
+ */
+function spliceableView(state: DialogState): DialogState {
+    const choices = state.choices.filter(
+        (c) => !(c.sourceRange === undefined && c.text !== undefined && c.text.trim() === ""),
+    );
+    return choices.length === state.choices.length ? state : { ...state, choices };
+}
+
+/**
  * Apply all edits from `editedModel` back into `originalText`.
  *
  * States that carry a `sourceRange` are spliced in place; states without one (and not derived) are
@@ -228,14 +244,15 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
             }
             matchedKeys.add(key);
 
-            if (stateUnchanged(original, state)) {
+            const view = spliceableView(state);
+            if (stateUnchanged(original, view)) {
                 // Identical to its source - leave the original bytes in place.
                 continue;
             }
 
             // Prefer a per-field splice (changes only the edited field's span, preserving the
             // rest of the state verbatim); fall back to a whole-state re-serialize otherwise.
-            const fieldOps = fieldEditOps(original, state);
+            const fieldOps = fieldEditOps(original, view);
             if (fieldOps) {
                 ops.push(...fieldOps);
                 continue;
@@ -243,7 +260,7 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
             ops.push({
                 start: original.sourceRange!.start,
                 end: original.sourceRange!.end,
-                replacement: serializeStateInPlace(state),
+                replacement: serializeStateInPlace(view),
             });
         }
     }
@@ -280,10 +297,10 @@ export function applyDDialogEdits(originalText: string, editedModel: DialogModel
         if (needsBlock) {
             const resref = editedModel.sourceName || root.label || "new_dialog";
             const lead = originalText.length === 0 || originalText.endsWith("\n") ? "" : "\n";
-            const states = fresh.map((s) => serializeState(s).join("\n")).join("\n\n");
+            const states = fresh.map((s) => serializeState(spliceableView(s)).join("\n")).join("\n\n");
             ops.push({ start: at, end: at, replacement: `${lead}BEGIN ~${resref}~\n\n${states}\n` });
         } else {
-            const block = fresh.map((s) => "\n" + serializeState(s).join("\n")).join("");
+            const block = fresh.map((s) => "\n" + serializeState(spliceableView(s)).join("\n")).join("");
             ops.push({ start: at, end: at, replacement: block });
         }
     }

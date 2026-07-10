@@ -2,22 +2,17 @@ import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
-import { addReply, addState, applyReconcile, setChoiceTarget } from "../../shared/dialog-edit-ops";
+import { addReply, addState, setChoiceTarget } from "../../shared/dialog-edit-ops";
 import { applySSLDialogEdits } from "../../shared/dialog-ssl-edit";
 
 // "Add an option, then keep editing it" must not duplicate the option.
 //
 // The webview holds a working copy (editModel) and emits it to the host on any mutation. The host splices
-// the change into the .ssl and, because the echo guard suppresses the re-project that would give a freshly-
-// added option its real source span (to keep selection/in-progress text), it instead posts a `reconcile`
-// message carrying the allocated `@N` ids. The webview applies it via `applyReconcile`, marking the pending
-// option `committed`.
-//
-// Without that reconcile a second emit is computed against a STALE model plus a re-parse of the now-changed
-// source: the pending choice's id never matches the re-parsed option's id, so the splicer re-adds it - and
-// a terminal NMessage (EXIT target, the addReply default) carries no callRange, so it is invisible to the
-// remove/survivor logic and cannot be matched, duplicating the option on every keystroke-emit. This test
-// pins the reconciled flow: the committed option stays a single, stable option across further edits.
+// the change into the .ssl and posts the faithful re-parse back, which the webview ADOPTS wholesale (an open
+// inline edit survives via the draft overlay - see DialogGraph's adoptModel). The next emit is therefore
+// computed from the adopted parse, where the just-added option carries its real source span - so the splicer
+// treats it as existing and never re-adds it. These tests emulate that adopt step the way production runs it:
+// re-parse the spliced source and merge the posted messages.
 describe("SSL add-option then keep-editing round-trip", () => {
     const SRC0 = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
 
@@ -32,7 +27,14 @@ describe("SSL add-option then keep-editing round-trip", () => {
         return m;
     }
 
-    it("keeps one stable, committed option (no duplication) when the new option is edited after reconcile", async () => {
+    /** The webview's adopt step: the faithful parse of the spliced source, with the posted messages merged. */
+    async function adopt(src: string, messages: Record<string, string>): Promise<DialogModel> {
+        const adopted = modelFromSSL(await parseDialog(src));
+        adopted.messages = { ...adopted.messages, ...messages };
+        return adopted;
+    }
+
+    it("keeps one stable option (no duplication) when the new option is edited after the adopt", async () => {
         const original0 = modelFromSSL(await parseDialog(SRC0));
 
         // EMIT 1: the user added an option and typed "Ask about the map".
@@ -40,44 +42,38 @@ describe("SSL add-option then keep-editing round-trip", () => {
         const r1 = computeDialogSourceEdit(SRC0, editModel, original0);
         const src1 = r1.newText ?? SRC0;
 
-        // Exactly one new terminal option was spliced, and the allocation is reported for the reconcile.
+        // Exactly one new terminal option was spliced, and the allocation is reported for the selection remap.
         expect((src1.match(/NMessage\(/g) ?? []).length).toBe(1);
         const id1 = Object.keys(r1.messages).find((k) => r1.messages[k] === "Ask about the map")!;
         expect(src1).toContain(`NMessage(${id1});`);
         expect(r1.allocations).toEqual({ "Node001#reply": `@${id1}` });
 
-        // RECONCILE: what the webview does on the host's reconcile message - stamp the option committed IN
-        // PLACE (the same working copy, so selection/positions survive), and merge the .msg text.
-        applyReconcile(editModel, r1.allocations, r1.messages);
-        const committed = editModel.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
-            (c) => c.id === "Node001#reply",
+        // ADOPT: the webview replaces its working copy with the re-parse; the option now has a real span.
+        const adopted = await adopt(src1, r1.messages);
+        const option = adopted.roots[0]!.states.find((s) => s.id === "Node001")!.choices.find(
+            (c) => c.text === `@${id1}`,
         )!;
-        expect(committed.text).toBe(`@${id1}`);
-        expect(committed.committed).toBe(true);
-        expect(editModel.messages?.[id1]).toBe("Ask about the map");
+        expect(option.stmtRange).toBeDefined(); // existing in source, no longer pending
+        expect(adopted.messages?.[id1]).toBe("Ask about the map");
 
-        // EMIT 2: the user keeps typing - a bare `@N` message-text edit goes to the .msg, so editModel.messages
-        // changes but the option is unchanged. The re-parse of emit 1's output is the current `original`.
-        editModel.messages![id1] = "Ask about the map, please";
+        // EMIT 2: the user keeps typing - a bare `@N` message-text edit goes to the .msg, so messages change
+        // but the option is unchanged. The re-parse of emit 1's output is the current `original`.
+        adopted.messages![id1] = "Ask about the map, please";
         const original1 = modelFromSSL(await parseDialog(src1));
-        const r2 = computeDialogSourceEdit(src1, editModel, original1);
+        const r2 = computeDialogSourceEdit(src1, adopted, original1);
 
-        // A committed option is NOT re-spliced: the source is unchanged (text-only edit -> no WorkspaceEdit),
+        // An adopted option is NOT re-spliced: the source is unchanged (text-only edit -> no WorkspaceEdit),
         // so there is still exactly one new option and no duplicate.
         expect(r2.newText).toBeNull();
         expect((src1.match(/NMessage\(/g) ?? []).length).toBe(1);
         expect(r2.allocations).toEqual({});
     });
-});
 
-// "Add a state, then add more options to it" - the reported creation flow. A freshly-added SSL node is now
-// structurally editable at once (isLocalNewSSLNode), so the user can add options before any save. This pins
-// the full path: the new procedure is spliced once; a second option added after the reconcile lands in that
-// same procedure without re-emitting (duplicating) it.
-describe("SSL add-state then add-more-options round-trip", () => {
-    const SRC0 = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
-
-    it("splices the new node once, and a second option added after reconcile does not duplicate the procedure", async () => {
+    // "Add a state, then add more options to it" - the reported creation flow. A freshly-added SSL node is
+    // structurally editable at once (isLocalNewSSLNode), so the user can add options before any save. This pins
+    // the full path: the new procedure is spliced once; a second option added after the adopt lands in that
+    // same procedure without re-emitting (duplicating) it.
+    it("splices the new node once, and a second option added after the adopt does not duplicate it", async () => {
         const original0 = modelFromSSL(await parseDialog(SRC0));
 
         // EMIT 1: the user added a state (Node003), typed its NPC line and one option, and wired Node001's
@@ -98,28 +94,25 @@ describe("SSL add-state then add-more-options round-trip", () => {
         expect(src1).not.toBeNull();
         expect((src1.match(/procedure Node003\b/g) ?? []).length).toBe(1); // spliced exactly once
         expect(src1).toContain("NOption(101, Node003, 4)"); // inbound option retargeted to the new node
-        // Both the node line and its option were allocated `@N` ids and reported for the reconcile.
+        // Both the node line and its option were allocated `@N` ids and reported for the selection remap.
         expect(r1.allocations[newState.id]).toMatch(/^@\d+$/);
         expect(r1.allocations[opt1.id]).toMatch(/^@\d+$/);
 
-        // RECONCILE: the node and its option are stamped committed in place.
-        applyReconcile(editModel, r1.allocations, r1.messages);
-        expect(newState.committed).toBe(true);
-        expect(opt1.committed).toBe(true);
-
-        // EMIT 2: the user adds a SECOND option to the (committed, still procRange-less) new node.
-        const opt2 = addReply(editModel, newState);
+        // ADOPT, then EMIT 2: the user adds a SECOND option to the (now source-present) new node.
+        const adopted = await adopt(src1, r1.messages);
+        const node3 = adopted.roots[0]!.states.find((s) => s.id === "Node003")!;
+        expect(node3.procRange).toBeDefined(); // adopted with its real span
+        const opt2 = addReply(adopted, node3);
         opt2.text = "Second option";
         const original1 = modelFromSSL(await parseDialog(src1));
-        const r2 = computeDialogSourceEdit(src1, editModel, original1);
+        const r2 = computeDialogSourceEdit(src1, adopted, original1);
         const src2 = r2.newText!;
 
         expect(src2).not.toBeNull();
-        // The procedure is NOT re-emitted (committed) - it stays a single Node003, now carrying BOTH options.
+        // The procedure is NOT re-emitted - it stays a single Node003, now carrying BOTH options.
         expect((src2.match(/procedure Node003\b/g) ?? []).length).toBe(1);
         expect((src2.match(/NMessage\(/g) ?? []).length).toBe(2); // first + second option, no duplicate
-        expect(r2.allocations[opt2.id]).toMatch(/^@\d+$/); // only the second option is newly committed
-        expect(r2.allocations[opt1.id]).toBeUndefined();
+        expect(r2.allocations[opt2.id]).toMatch(/^@\d+$/); // only the second option is newly spliced
     });
 });
 
@@ -244,10 +237,10 @@ describe("SSL from-scratch dialog scaffold", () => {
     });
 
     it("scaffold then edit the entry node: procedure is NOT duplicated, and the reply lands", async () => {
-        // The reconcile-gap regression: a from-scratch scaffold emits an EMPTY entry node (no @N yet), so the
-        // reconcile never marked it committed and every SUBSEQUENT edit re-emitted the whole procedure ->
-        // duplicate `procedure Node001` blocks (a corrupt, uncompilable .ssl). Pins the full flow: scaffold ->
-        // reconcile -> type an NPC line -> re-save, exactly one procedure, and the reply is spliced in.
+        // A from-scratch scaffold emits an EMPTY entry node (no @N yet). The webview then adopts the re-parse,
+        // so the node the user keeps editing is the SOURCE-PRESENT one (real procRange) - re-emitting it as new
+        // is impossible by construction. Pins the full flow: scaffold -> adopt -> type an NPC line -> re-save,
+        // exactly one procedure, and the reply is spliced in.
         const original0 = modelFromSSL(await parseDialog(""));
         const editModel = structuredClone(original0);
         const entry = editModel.roots.length > 0 ? undefined : addState(editModel); // bootstrap Node001 (empty)
@@ -257,12 +250,19 @@ describe("SSL from-scratch dialog scaffold", () => {
         const r1 = computeDialogSourceEdit("", editModel, original0);
         const src1 = r1.newText!;
         expect((src1.match(/procedure Node001 begin/g) ?? []).length).toBe(1);
-        applyReconcile(editModel, r1.allocations, r1.messages);
 
-        // Save 2: the user typed the NPC line on the (now source-present) entry node.
-        entry!.text = "Greetings, wanderer.";
+        // ADOPT: the entry node comes back source-present (procRange set), and stays in the model even
+        // though its body is still empty - the router's call keeps it projected.
+        const adopted = modelFromSSL(await parseDialog(src1));
+        adopted.messages = { ...adopted.messages, ...r1.messages };
+        const adoptedEntry = adopted.roots.flatMap((r) => r.states).find((s) => s.id === "Node001")!;
+        expect(adoptedEntry).toBeDefined();
+        expect(adoptedEntry.procRange).toBeDefined();
+
+        // Save 2: the user typed the NPC line on the adopted entry node.
+        adoptedEntry.text = "Greetings, wanderer.";
         const original1 = modelFromSSL(await parseDialog(src1));
-        const r2 = computeDialogSourceEdit(src1, editModel, original1);
+        const r2 = computeDialogSourceEdit(src1, adopted, original1);
         const src2 = r2.newText ?? src1;
 
         expect((src2.match(/procedure Node001 begin/g) ?? []).length).toBe(1); // NOT duplicated

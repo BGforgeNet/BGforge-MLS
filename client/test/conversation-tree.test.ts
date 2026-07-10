@@ -175,10 +175,10 @@ describe("buildConversationTree", () => {
     it("SSL: an option backed by a resolvable @N is editable; a non-resolvable one is locked", () => {
         const r = root([
             st("A", "a", [
-                // committed: these are existing (not pending-new) options, so the @N-resolvability gate
-                // applies rather than the pending-new exemption.
-                ch("A#0", { kind: "exit" }, { text: "@10", committed: true }), // resolves in messages
-                ch("A#1", { kind: "exit" }, { text: "@99", committed: true }), // no .msg entry - nowhere to write
+                // stmtRange marks these existing-in-source (not pending-new), so the @N-resolvability
+                // gate applies rather than the pending-new exemption.
+                ch("A#0", { kind: "exit" }, { text: "@10", stmtRange: { start: 0, end: 1 } }), // resolves in messages
+                ch("A#1", { kind: "exit" }, { text: "@99", stmtRange: { start: 2, end: 3 } }), // no .msg entry - nowhere to write
             ]),
         ]);
         const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, fieldEditable: () => false });
@@ -214,9 +214,9 @@ describe("buildConversationTree", () => {
 
     it("SSL: an NPC line backed by a resolvable @N is editable; a non-resolvable one is locked", () => {
         const r = root([
-            // committed: existing (not pending-new) states, so the @N-resolvability gate applies.
-            st("Node001", "@10", [], { committed: true }), // resolves in messages
-            st("Node002", "@99", [], { committed: true }), // no .msg entry - nowhere to write
+            // procRange marks these existing-in-source (not pending-new), so the @N-resolvability gate applies.
+            st("Node001", "@10", [], { procRange: { start: 0, end: 1 } }), // resolves in messages
+            st("Node002", "@99", [], { procRange: { start: 2, end: 3 } }), // no .msg entry - nowhere to write
         ]);
         const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, fieldEditable: () => false });
         const byId = new Map(roots.map((n) => [n.id, n]));

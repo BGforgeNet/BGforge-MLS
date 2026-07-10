@@ -14,9 +14,9 @@ export interface DialogSourceEdit {
     /**
      * Item-id -> allocated `@N` text for each PENDING item (option choice or new node) that this edit just
      * committed to the source. Empty unless `newText` is non-null (nothing was spliced otherwise). The host
-     * posts this back to the webview so it can mark those items `committed` and stop treating them as pending
-     * new content - without which the next save re-splices them and duplicates the option. See panel.ts /
-     * dialog-edit-ops.ts `applyReconcile`.
+     * posts this back to the webview with the re-parse so it can remap the pending item's selection and any
+     * open inline edit onto the item's canonical identity in the adopted model (see DialogGraph's
+     * reselectAfterAdopt / remapChoiceId).
      */
     allocations: Record<string, string>;
 }
@@ -43,7 +43,12 @@ export function computeDialogSourceEdit(
     // options against the merged set, matching the original save() ordering, so a node's own new options
     // never collide with the node's own newly-assigned id.
     if (renderFamily(edited.sourceLang) === "fallout-ssl" && original) {
-        const node = allocateNodeIds(edited, original.messages ?? {});
+        // States whose SOURCE has no Reply statement: a typed literal on one of these mints an id too
+        // (the writer splices `Reply(@N);` in), where any other existing node's line lives in the .msg.
+        const replyless = new Set(
+            original.roots.flatMap((r) => r.states.filter((s) => s.text.trim() === "").map((s) => s.id)),
+        );
+        const node = allocateNodeIds(edited, original.messages ?? {}, replyless);
         const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
         messages = { ...messages, ...node.newMessages, ...opt };
         edited.messages = messages;
@@ -79,35 +84,32 @@ export function computeDialogSourceEdit(
         }
     }
     const newText = spliced !== text ? spliced : null;
-    // When something was spliced, report the pending items THIS edit just spliced so the webview can mark them
-    // committed. A pending item lacks a source span (option: no callRange/stmtRange; node: no procRange) and is
-    // not yet committed. Already-`committed` items were reconciled by a PRIOR edit and are excluded - otherwise a
-    // save that splices a NEW item alongside them (e.g. a second option on a just-created node) would re-report
-    // the earlier ones every time. Empty when nothing was spliced.
+    // When something was spliced, report the pending items THIS edit just spliced, keyed by their (local)
+    // model ids: the webview uses the map to remap selection and an open inline edit onto the items'
+    // canonical identities when it adopts the re-parse. Empty when nothing was spliced.
     //
-    // A NODE is reported even when its reply text is empty ("" rather than a bare `@N`): a from-scratch scaffold
-    // emits an EMPTY entry node, and if it is not committed here it is re-emitted (a DUPLICATE `procedure`) on
-    // every later save. It reports "" (commit-only - no `.msg` entry, which travels in `messages`, not here);
-    // its reply, once typed, splices into the now-committed procedure. An OPTION still needs its `@N` (a terminal
-    // option carries no source span, so the id is the only thing that distinguishes a committed one from new).
+    // A NODE is reported even when its reply text is empty ("" rather than a bare `@N`): a from-scratch
+    // scaffold emits an EMPTY entry node, and its selection still needs the remap. An OPTION reports its
+    // `@N` (a terminal option carries no source span, so the allocated id is what identifies it across
+    // the parse - see remapChoiceId).
     //
     // The "pending new item" marker is family-specific: SSL keys it on the absent `procRange`/`callRange` (its
     // source-span fields), the WeiDU D family (`.d`/`.td`) on the absent `sourceRange`. Using the wrong family's
     // marker would mis-report every existing item (D/TD states never carry a `procRange`, so the SSL marker
-    // treats them all as new), re-marking them committed every save.
+    // treats them all as new).
     const dFamily = renderFamily(edited.sourceLang) === "weidu-d";
     const allocations: Record<string, string> = {};
     if (newText !== null) {
         for (const state of edited.roots.flatMap((r) => r.states)) {
             const stateIsNew = dFamily ? state.sourceRange === undefined : state.procRange === undefined;
-            if (stateIsNew && !state.derivedFrom && !state.committed) {
+            if (stateIsNew && !state.derivedFrom) {
                 allocations[state.id] = state.text;
             }
             for (const c of state.choices) {
                 const choiceIsNew = dFamily
                     ? c.sourceRange === undefined
                     : c.callRange === undefined && c.stmtRange === undefined;
-                if (choiceIsNew && !c.committed && isBareRef(c.text)) {
+                if (choiceIsNew && isBareRef(c.text)) {
                     allocations[c.id] = c.text!;
                 }
             }

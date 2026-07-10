@@ -293,13 +293,6 @@ export interface DialogState {
     block?: DialogBlock;
     /** SSL only: true when the flat projection is an approximation (see SSLDialogNode.approximate). Drives an "approximate - see source" signal. */
     approximate?: boolean;
-    /**
-     * Webview-only, transient: as `DialogChoice.committed`, for a just-added NODE. Marks a pending new node
-     * (still without a `procRange`) as already spliced into the source so the next save does not re-emit its
-     * procedure. Set only by `applyReconcile` (dialog-edit-ops.ts), which the webview runs on the host's
-     * re-parse ONLY while an inline edit is open; never by the adapter.
-     */
-    committed?: boolean;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -372,15 +365,6 @@ export interface DialogChoice {
      * re-time those too, so its condition stays source-only. Set by the SSL adapter; the inspector gates on it.
      */
     conditionEditable?: boolean;
-    /**
-     * Webview-only, transient: set by `applyReconcile` (dialog-edit-ops.ts) after a just-added option was
-     * spliced into the source and allocated its `@N` id. The webview runs it on the host's re-parse ONLY while
-     * an inline edit is open (it keeps the draft instead of adopting the parse); it marks a PENDING choice
-     * (still without a `callRange`/`stmtRange` in the working copy) as already committed to source, so the next
-     * save does not re-splice it as new (which duplicates the option). Never set by the parser/adapter and never
-     * present on an adopted parse - adopting gives the option a real source span instead.
-     */
-    committed?: boolean;
 }
 
 export type DialogTarget =

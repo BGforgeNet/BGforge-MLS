@@ -32,23 +32,18 @@ export function writeText(target: { text?: string }, messages: DialogMessages | 
  * `allocateOptionIds` turns it into an `@id` at save.
  */
 export function isPendingChoice(c: DialogChoice): boolean {
-    // A `committed` option was already spliced to source and now carries a resolvable `@N` (the reconcile
-    // merged its .msg text), so it is no longer pending - it locks/unlocks like any existing `@N` option.
     // `sourceRange` is D's span (the SSL fields are always absent for D): without it an existing D option
     // would read as pending, which is harmless today (textFieldLocked short-circuits for D) but a trap for any
-    // future consumer - so gate on it too.
+    // future consumer - so gate on it too. A spliced option never lingers span-less in the working copy: the
+    // webview adopts the host's re-parse after every splice, which assigns the real span.
     return (
-        !c.committed &&
-        c.callRange === undefined &&
-        c.stmtRange === undefined &&
-        !c.callSites?.length &&
-        c.sourceRange === undefined
+        c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length && c.sourceRange === undefined
     );
 }
 
 /** A state the user just added (pending insert): no source span yet - neither SSL `procRange` nor D `sourceRange`. */
 export function isPendingState(s: DialogState): boolean {
-    return !s.committed && s.procRange === undefined && s.sourceRange === undefined;
+    return s.procRange === undefined && s.sourceRange === undefined;
 }
 
 /**

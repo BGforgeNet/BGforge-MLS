@@ -42,20 +42,18 @@ export function nextIdSeed(existingMessages: Record<string, string>): number {
 }
 
 /**
- * An SSL-family (SSL / TSSL) new option READY TO SPLICE: no source span (`callRange`/`stmtRange` absent), text
- * already an ALLOCATED bare `@N`, and not `committed`. Distinct from `dialog-ssl-ids.ts`'s pre-allocation
- * `isNewOption` (literal text, before an id is assigned) - this is the post-allocation splicing marker, hence
- * the `Allocated` in the name. `committed` marks an option the host already spliced on a prior save (the webview
- * copy still lacks a callRange - the guard suppresses the re-project that would give it one); excluding it stops
- * a still-pending, already-committed option being re-added (duplicated) every later save. The `stmtRange` check
- * also separates a new option from an EXISTING terminal message (`NMessage`/`GMessage`/`BMessage`): a message
- * carries no `callRange` (no target node) but the parser DID record its `stmtRange`, so without it an existing
- * message would be misread as new and re-appended every structural save.
+ * An SSL-family (SSL / TSSL) new option READY TO SPLICE: no source span (`callRange`/`stmtRange` absent) and
+ * text already an ALLOCATED bare `@N`. Distinct from `dialog-ssl-ids.ts`'s pre-allocation `isNewOption`
+ * (literal text, before an id is assigned) - this is the post-allocation splicing marker, hence the
+ * `Allocated` in the name. A spliced option never lingers span-less in the working copy: the webview adopts
+ * the host's re-parse after every splice, which gives the option its real source span (so no extra flag is
+ * needed to keep it from being re-added on a later save). The `stmtRange` check separates a new option from
+ * an EXISTING terminal message (`NMessage`/`GMessage`/`BMessage`): a message carries no `callRange` (no
+ * target node) but the parser DID record its `stmtRange`, so without it an existing message would be misread
+ * as new and re-appended every structural save.
  */
 export function isAllocatedNewOption(c: DialogChoice): boolean {
-    return (
-        !c.committed && c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim())
-    );
+    return c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
 }
 
 /** The leading whitespace of the line containing `offset` - reused as the indent for an inserted statement. */

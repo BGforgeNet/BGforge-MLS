@@ -86,7 +86,7 @@ describe("computeDialogSourceEdit", () => {
         expect(() => computeDialogSourceEdit(D_SRC, edited, null)).toThrow(/sourceLang/);
     });
 
-    it("allocates a tra id for a NEW D state's literal say, splices its block, and reports it committed", () => {
+    it("allocates a tra id for a NEW D state's literal say, splices its block, and reports its allocation", () => {
         // The on-disk .tra the client loaded: @0/@1 already exist, so the first free id is 2.
         const original = buildModel();
         original.messages = { "0": "hello line", "1": "more line" };

@@ -240,13 +240,13 @@ export function applyTDDialogEdits(originalText: string, edited: DialogModel, or
             ops.push({ start: ref.callRange.start, end: ref.callRange.end, replacement: "exit()" });
         }
     }
-    // Structural: ADD node - a locally-new state (no sourceRange, not derived/committed) -> serialize a whole
+    // Structural: ADD node - a locally-new state (no sourceRange, not derived) -> serialize a whole
     // `function <id>() { ... }` before the primary wiring statement and append its id to that state list. All new
     // functions coalesce into one insert at the anchor (and one id-list insert) so their order is deterministic
     // and no two zero-width ops contend for the same offset. A file with no append/begin list (no anchor) cannot
     // wire a new node, so it is left unserialized - a from-scratch scaffold is out of scope for this writer.
     const wiring = original.tdWiring;
-    const newStates = allStates(edited).filter((s) => s.sourceRange === undefined && !s.derivedFrom && !s.committed);
+    const newStates = allStates(edited).filter((s) => s.sourceRange === undefined && !s.derivedFrom);
     if (newStates.length > 0 && wiring?.newFnAnchor !== undefined) {
         const fns = newStates.map((s) => `${serializeTDState(s)}\n\n`).join("");
         ops.push({ start: wiring.newFnAnchor, end: wiring.newFnAnchor, replacement: fns });

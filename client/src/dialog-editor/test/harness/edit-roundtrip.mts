@@ -12,7 +12,7 @@
  */
 import { chromium } from "playwright";
 import type { DialogModel } from "../../../../../shared/dialog-model";
-import { createFakeHost } from "./fake-host";
+import { createFakeHost, currentModel } from "./fake-host";
 import { harnessPaths, makeChecker, pollUntil } from "./driver-util";
 
 const { appHtml } = harnessPaths(import.meta.url);
@@ -113,6 +113,48 @@ check(
     "first option is spliced exactly once (no pending re-splice duplicate)",
     (host.doc.text.match(/\+\+ @1 EXIT/g) ?? []).length === 1,
     JSON.stringify(host.doc.text),
+);
+
+// --- The editing overlay: an adopt lands while the inline editor is open with an uncommitted draft.
+// The pending option has EMPTY model text, so its structural emit is a deliberate no-op splice (the
+// writer defers empty pending options - no `++ ~~ EXIT` husk) and the adopted parse cannot contain it:
+// the webview must carry the row AND the DOM draft across the adopt (the job the old reconcile branch
+// existed for). The adopt is driven the external-edit way (a plain same-file model post through App).
+await page.locator(".st[data-sid]").first().click({ button: "right" });
+await page.waitForSelector(".ctxitem", { timeout: 5000 });
+await page.locator(".ctxitem", { hasText: "Add option" }).first().click();
+const overlayInput = page.locator("input.rtextedit").first();
+await overlayInput.waitFor({ timeout: 5000 });
+await overlayInput.fill("Overlay draft");
+// Let the structural emit fire (250ms debounce) and round-trip: it must NOT splice a husk.
+await new Promise((r) => setTimeout(r, 700));
+check("an empty pending option does not splice a `++ ~~` husk", !host.doc.text.includes("~~ EXIT"), host.doc.text);
+// External same-file adopt while the draft is open (what a text-side edit does in production).
+await page.evaluate((m) => window.postMessage({ type: "model", model: m }, "*"), currentModel(host, "roundtrip"));
+await new Promise((r) => setTimeout(r, 400));
+check(
+    "inline editor survives the adopt with its draft intact",
+    (await page.locator("input.rtextedit").count()) === 1 &&
+        (await page.locator("input.rtextedit").inputValue()) === "Overlay draft",
+    `value=${JSON.stringify(
+        await page
+            .locator("input.rtextedit")
+            .inputValue()
+            .catch(() => "(gone)"),
+    )}`,
+);
+check(
+    "the draft input keeps focus across the adopt",
+    await page.evaluate(() => document.activeElement?.classList.contains("rtextedit") ?? false),
+);
+await page.locator("input.rtextedit").first().press("End");
+await page.keyboard.type(" survives.");
+await page.locator("input.rtextedit").first().press("Enter");
+check(
+    "the draft commits after the adopt: .d gains the option, .tra its text",
+    (await pollUntil(() => /\+\+ @3 EXIT/.test(host.doc.text))) &&
+        (await pollUntil(() => host.tra.text.includes("@3 = ~Overlay draft survives.~"))),
+    JSON.stringify(host.tra.text),
 );
 
 // --- Emit hygiene: once everything settles, no further edits may fire (an echo loop would keep the

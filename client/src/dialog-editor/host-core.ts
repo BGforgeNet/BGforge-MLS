@@ -246,9 +246,8 @@ export class DialogHostCore {
                 // spans -> F4 resolves; the tree stays a pure view of source). The `seq` lets the webview drop a
                 // stale re-parse that a newer optimistic edit has already superseded; `allocations`/`messages`
                 // let it remap a just-added option's selection (its id changes across the parse) and render the
-                // freshly-typed text before the debounced .tra flush. While the user is mid inline-edit the
-                // webview keeps its draft and only stamps the `@N` in place from these same fields (see
-                // DialogGraph's re-parse listener) - the enriched post serves both cases.
+                // freshly-typed text before the debounced .tra flush. An open inline edit survives the adopt
+                // via the webview's draft overlay (see DialogGraph's adoptModel).
                 await this.postModel({ seq, allocations, messages });
             }
         }

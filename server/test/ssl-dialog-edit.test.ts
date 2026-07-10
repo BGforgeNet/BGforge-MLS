@@ -360,12 +360,6 @@ describe("isLocalNewSSLNode", () => {
         expect(isLocalNewSSLNode({ id: "Node050", text: "", choices: [] })).toBe(true);
     });
 
-    it("still counts a committed new node (spliced once, no procRange yet) as locally-new and editable", () => {
-        // `committed` suppresses RE-splicing on the next save; it does not make the node uneditable - it is
-        // still ours to edit and delete before any re-parse gives it a real procRange.
-        expect(isLocalNewSSLNode({ id: "Node050", text: "@1", choices: [], committed: true })).toBe(true);
-    });
-
     it("rejects a parsed node (has a procRange), a derived node, and a renamed node", () => {
         expect(isLocalNewSSLNode({ id: "Node001", text: "@1", choices: [], procRange: { start: 0, end: 1 } })).toBe(
             false,
