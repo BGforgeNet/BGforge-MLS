@@ -33,6 +33,7 @@
         "themes/bgforge-monokai.json",
         "themes/bgforge-icon-theme.json",
         "binary-editor/test/harness/*.html",
-        "client/src/dialog-editor/test/harness/app.html"
+        "client/src/dialog-editor/test/harness/app.html",
+        "client/src/dialog-editor/test/harness/real-model.ts"
     ]
 }
