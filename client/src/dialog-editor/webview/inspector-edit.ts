@@ -20,9 +20,15 @@ export function msgRef(text: string | undefined): string | null {
  * DialogChoice that owns the text. (Was copy-pasted at four sites - see coding.md *Share, don't duplicate*.)
  */
 export function writeText(target: { text?: string }, messages: DialogMessages | undefined, value: string): void {
+    // A `.msg`/`.tra` entry is single-line by format, but the inspector's NPC/option fields are textareas, so
+    // Enter (or a multi-line paste) can put a newline into the value. Fold every CR/LF/CRLF to ONE space so the
+    // stored line never breaks the file (BUG D). Newlines only - NOT a trim: writeText runs on every keystroke,
+    // and trimming would strip a trailing space the moment the user types it. Enter-to-commit on the fields
+    // keeps a stray newline from arising in the first place; this is the write-side guard for a paste.
+    const single = value.replaceAll(/\r\n?|\n/g, " ");
     const ref = msgRef(target.text);
-    if (ref !== null && messages) messages[ref] = value;
-    else target.text = value;
+    if (ref !== null && messages) messages[ref] = single;
+    else target.text = single;
 }
 
 /**

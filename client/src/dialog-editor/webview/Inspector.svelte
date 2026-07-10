@@ -71,6 +71,17 @@
         writeText(c, messages, v);
     }
 
+    // A `.msg`/`.tra` line is single-line, but these fields are <textarea>s (they wrap/autosize long lines for
+    // reading). Enter commits (blur) rather than inserting a newline - parity with the tree's inline <input>,
+    // and it keeps a stray newline from ever entering the value. Shift+Enter is left to the browser as an
+    // escape hatch; writeText folds any newline out on write, so even that can't break the single-line entry.
+    function commitOnEnter(e: KeyboardEvent): void {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            (e.currentTarget as HTMLTextAreaElement).blur();
+        }
+    }
+
     function targetValue(t: DialogTarget): string {
         if (t.kind === "state") {
             // SSL: a Node998/Node999 target is presented as the Combat/Exit picker value, not a raw state id
@@ -303,7 +314,7 @@
              reply field would duplicate it (and only the first branch's line), so omit it for branch nodes. -->
         <div class="ik">NPC line</div>
         {@const npc = textEdit(null)}
-        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
     {/if}
 
     {#if ssl}
@@ -386,7 +397,7 @@
                 {/if}
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->

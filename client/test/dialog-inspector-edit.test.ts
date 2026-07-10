@@ -11,9 +11,30 @@ import {
     textEditability,
     textFieldLocked,
     textLockReason,
+    writeText,
 } from "../src/dialog-editor/webview/inspector-edit";
 import { modelFromSSL, type DialogChoice, type DialogState } from "../../shared/dialog-model";
 import type { SSLDialogData } from "../../shared/dialog-types";
+
+describe("writeText (single-line normalization)", () => {
+    it("replaces baked newlines with a space so the .msg/.tra line stays single-line (both @N and literal paths)", () => {
+        // BUG D: the inspector NPC field is a textarea, so Enter (or a multi-line paste) put a newline into the
+        // value that the write-through persisted - the .msg/.tra line is single-line by format, so the write
+        // must fold newlines out. Each CR/LF/CRLF becomes ONE space (never a line break in the stored value).
+        const messages: Record<string, string> = { "104": "old" };
+        writeText({ text: "@104" }, messages, "line one\nline two");
+        expect(messages["104"]).toBe("line one line two");
+        const literal = { text: "seed" };
+        writeText(literal, undefined, "a\r\nb\rc");
+        expect(literal.text).toBe("a b c");
+    });
+
+    it("preserves other whitespace (writeText runs on every keystroke; trimming would fight live typing)", () => {
+        const literal = { text: "seed" };
+        writeText(literal, undefined, "hello ");
+        expect(literal.text).toBe("hello "); // a trailing space the user is mid-typing survives
+    });
+});
 
 describe("msgRef", () => {
     it("parses a bare @N line to its numeric id", () => {
