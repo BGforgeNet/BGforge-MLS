@@ -138,7 +138,23 @@ const sidChip = page
     .locator(".jump-link");
 check("the deep-linked script exposes a SID jump chip", (await sidChip.count()) > 0, deep.scriptLabel);
 await sidChip.first().click();
-await page.waitForTimeout(300);
+
+// A deep jump is two async round-trips: locateEntry fetches the full object list to resolve the selection
+// (the target sits past the bounded window), THEN the detail pane fetches and renders the landed object's
+// fields. Poll for the object's SID field to render rather than racing a fixed sleep - the old 300ms sleep
+// read the still-empty detail pane and saw null even though the jump had landed correctly.
+await page
+    .waitForFunction(
+        () => {
+            const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
+                (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+            );
+            const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
+            return input !== null && input.value.length > 0;
+        },
+        { timeout: 5000 },
+    )
+    .catch(() => undefined); // let the assertions below report the concrete failure rather than a poll timeout
 
 const tabAfter = (await activePrimaryTab()).trim();
 check("jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);
