@@ -89,8 +89,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2(picomatch@4.0.5)(svelte@5.56.4)(typescript@5.9.3)
       tree-sitter-cli:
-        specifier: 0.26.9
-        version: 0.26.9
+        specifier: 0.26.10
+        version: 0.26.10
       tsx:
         specifier: ^4.23.0
         version: 4.23.0
@@ -4037,8 +4037,8 @@ packages:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
 
-  tree-sitter-cli@0.26.9:
-    resolution: {integrity: sha512-7l+U1RmazPVe+yA/JiX80GFOILnL/j24GbawamIzNQC8UlINrcyECbaWGaG1wuq4j/m0DQTx7Uu4r0iW9Ao1BQ==}
+  tree-sitter-cli@0.26.10:
+    resolution: {integrity: sha512-RTse32x5YWOrEtH7wos8ODt3yyB7SKgmGN70jC7R+WcnDA64vrpYU98+LnwrwdXMlxgr0LGQdezZz85DN8Wv0w==}
     engines: {node: '>=12.0.0'}
     hasBin: true
 
@@ -8176,7 +8176,7 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
-  tree-sitter-cli@0.26.9: {}
+  tree-sitter-cli@0.26.10: {}
 
   tree-sitter@0.21.1:
     dependencies:
