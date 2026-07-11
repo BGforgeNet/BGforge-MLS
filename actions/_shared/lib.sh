@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Shared helpers for the actions/* composite-action scripts. SOURCE this file
 # (do not execute it): each action's list-changed.sh / commit-and-push.sh sources
 # it via "${GITHUB_ACTION_PATH}/../_shared/lib.sh". This works because a remote
