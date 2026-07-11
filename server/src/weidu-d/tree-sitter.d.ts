@@ -290,6 +290,7 @@ export type UnnamedType =
   | "BEGIN"
   | "BRANCH"
   | "CHAIN"
+  | "CHAIN3"
   | "COPY_TRANS"
   | "COPY_TRANS_LATE"
   | "DO"
@@ -409,6 +410,7 @@ export type SyntaxNode =
   | UnnamedNode<"BEGIN">
   | UnnamedNode<"BRANCH">
   | UnnamedNode<"CHAIN">
+  | UnnamedNode<"CHAIN3">
   | UnnamedNode<"COPY_TRANS">
   | UnnamedNode<"COPY_TRANS_LATE">
   | UnnamedNode<"DO">
@@ -511,6 +513,7 @@ export interface BeginActionNode extends NamedNodeBase {
 export interface ChainActionNode extends NamedNodeBase {
   type: SyntaxType.ChainAction;
   fileNode: IdentifierNode | StringNode | VariableRefNode;
+  keywordNode: UnnamedNode<"CHAIN"> | UnnamedNode<"CHAIN3">;
   labelNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   triggerNode?: StringNode;
 }

@@ -108,7 +108,7 @@ export default grammar({
         // CHAIN [IF [WEIGHT #weight] trigger THEN] [IF_FILE_EXISTS] entryFile entryLabel chainText chainEpilogue
         chain_action: ($) =>
             seq(
-                "CHAIN",
+                field("keyword", choice("CHAIN", "CHAIN3")),
                 optional(
                     seq("IF", optional(seq("WEIGHT", $._weight_value)), field("trigger", $.string), optional("THEN")),
                 ),

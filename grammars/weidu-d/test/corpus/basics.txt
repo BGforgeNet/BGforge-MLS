@@ -233,3 +233,22 @@ IF ~~ THEN BEGIN KHPC1.1 SAY ~hi~ IF ~~ THEN GOTO KHPC1.1 END
           trigger: (string (tilde_string))
           (goto_next
             label: (state_label_alnum)))))))
+
+================================================================================
+CHAIN3 (chain variant keyword)
+================================================================================
+
+CHAIN3 myfile mylabel
+@0
+EXIT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (chain_action
+    file: (identifier)
+    label: (state_label_alnum)
+    (chain_text
+      (say_text
+        (tra_ref)))
+    (chain_epilogue)))
