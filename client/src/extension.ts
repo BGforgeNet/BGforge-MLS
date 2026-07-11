@@ -13,20 +13,17 @@ import { type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languag
 import {
     LSP_COMMAND_COMPILE,
     VSCODE_COMMAND_COMPILE,
-    VSCODE_COMMAND_DIALOG_PREVIEW,
     WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
     type WorkspaceSymbolScopedLanguage,
     lspWorkspaceSymbolsCommand,
 } from "../../shared/protocol";
 import { registerBinaryEditor } from "./binary-editor/register";
-import { registerDialogTree } from "./dialog-tree/dialogTree";
-import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
+import { registerDialogEditor } from "./dialog-editor/panel";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
 const cmd_compile = VSCODE_COMMAND_COMPILE;
-const cmd_dialogPreview = VSCODE_COMMAND_DIALOG_PREVIEW;
 
 function getWorkspaceSymbolScopeLanguageId(): WorkspaceSymbolScopedLanguage | undefined {
     const document = vscode.window.activeTextEditor?.document;
@@ -129,25 +126,7 @@ export async function activate(context: ExtensionContext) {
     await client.start();
     conlog("BGforge MLS client started");
 
-    const sslDialogPreview = registerDialogTree(context, client);
-    const dDialogPreview = registerDDialogTree(context, client);
-    context.subscriptions.push(
-        vscode.commands.registerCommand(cmd_dialogPreview, async () => {
-            const document = vscode.window.activeTextEditor?.document;
-            if (!document) {
-                return;
-            }
-            if (sslDialogPreview.matchesDocument(document)) {
-                await sslDialogPreview.openPreview();
-                return;
-            }
-            if (dDialogPreview.matchesDocument(document)) {
-                await dDialogPreview.openPreview();
-                return;
-            }
-            vscode.window.showWarningMessage("Open a Fallout SSL, TSSL, D, or TD file to preview dialog");
-        }),
-    );
+    context.subscriptions.push(registerDialogEditor(context, client));
 }
 
 export async function deactivate(): Promise<void> {

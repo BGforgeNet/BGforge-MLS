@@ -310,6 +310,9 @@
 "FORBID_COMPONENT" @keyword.modifier
 "REQUIRE_COMPONENT" @keyword.modifier
 "REQUIRE_PREDICATE" @keyword.modifier
+"FORBID_PREDICATE" @keyword.modifier
+"REQUIRE_FILE" @keyword.modifier
+"FORBID_FILE" @keyword.modifier
 "MANAGED" @keyword.modifier
 "TITLE" @keyword.modifier
 "BUT_ONLY" @keyword.modifier

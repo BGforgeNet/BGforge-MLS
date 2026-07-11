@@ -266,9 +266,21 @@
             // `document.getElementById` is clearer and faster than
             // `.querySelector('#id')`; the rule's premise doesn't hold.
             // Webview scripts are the only DOM consumers in the codebase.
-            "files": ["client/src/**/*-webview*.ts"],
+            "files": ["client/src/**/*-webview*.ts", "client/src/dialog-editor/webview/**"],
             "rules": {
                 "unicorn/prefer-query-selector": "off"
+            }
+        },
+        {
+            // Svelte 5 runes require `let`: `let x = $state(...)` and
+            // `let { ... } = $props()` are reassigned by the compiler's reactivity,
+            // which oxlint cannot see - it reports them as never-reassigned. `sort-vars`
+            // likewise fights the rune/prop declaration order. Scope: the dialog editor's
+            // Svelte webview components.
+            "files": ["client/src/dialog-editor/webview/**/*.svelte"],
+            "rules": {
+                "prefer-const": "off",
+                "sort-vars": "off"
             }
         },
         {
@@ -278,9 +290,9 @@
             // `window.postMessage`; none take a `targetOrigin`.
             "files": [
                 "client/src/editors/**",
-                "client/src/dialog-tree/**",
                 "client/src/webview-utils.ts",
-                "client/src/binary-editor/**"
+                "client/src/binary-editor/**",
+                "client/src/dialog-editor/**"
             ],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
@@ -366,6 +378,7 @@
         "**/out/**",
         "**/*.d.ts",
         "server/src/user-messages.ts",
-        "binary-editor/test/harness/**"
+        "binary-editor/test/harness/**",
+        "client/src/dialog-editor/test/harness/**"
     ]
 }

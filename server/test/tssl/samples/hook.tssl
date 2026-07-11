@@ -1,0 +1,22 @@
+// Authored fixture (SSL-in-TS). Node inclusion parity with the SSL parser: a reachable node (wired from
+// talk_p_proc), an ORPHAN dialog node (authored, has dialog calls, not yet wired - kept visible, an
+// in-progress node), and an engine lifecycle HOOK (`*_p_proc`) that happens to contain a dialog call but is
+// never a dialog node. The 3-tier parser pushed every top-level function, so `look_at_p_proc` surfaced as a
+// spurious empty dialog node; SSL excludes it while keeping the orphan.
+function Node001() {
+    Reply(100);
+    NMessage(101);
+}
+
+function Node099() {
+    Reply(900);
+    NMessage(901);
+}
+
+function look_at_p_proc() {
+    Reply(500);
+}
+
+function talk_p_proc() {
+    Node001();
+}

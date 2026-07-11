@@ -1,8 +1,8 @@
 /**
- * Shared helpers for the in-webview bundles (dialog-tree preview + binary
- * editor). These run in the webview's browser context, so the module must stay
+ * Shared helpers for the in-webview bundles (binary editor + dialog editor).
+ * These run in the webview's browser context, so the module must stay
  * free of Node and vscode-host APIs; esbuild inlines it into each webview
- * bundle (same as the `escapeHtml` import from `./utils`).
+ * bundle.
  */
 
 /** Minimal view of the `acquireVsCodeApi()` handle the helpers here need. */

@@ -77,6 +77,7 @@
         "test:scripts": "vitest run --config scripts/vitest.config.ts",
         "lint:scripts": "./scripts/lint-scripts.sh",
         "lint:shell": "./scripts/lint-shell.sh",
+        "typecheck:svelte": "svelte-check --tsconfig ./client/tsconfig.json",
         "knip": "knip",
         "knip:prod": "knip --production --workspace server --include files",
         "publish:binary": "./scripts/publish-binary.sh",
@@ -106,10 +107,12 @@
         "mocha": "^11.7.6",
         "oxfmt": "^0.53.0",
         "oxlint": "1.68.0",
+        "playwright": "1.61.1",
         "quick-lru": "^7.3.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "svelte": "^5.56.1",
+        "svelte-check": "^4.7.2",
         "tree-sitter-cli": "0.26.9",
         "tsx": "^4.22.4",
         "typescript": "^5.9.3",
@@ -401,9 +404,9 @@
                 "title": "BGforge MLS: compile"
             },
             {
-                "command": "extension.bgforge.dialogPreview",
-                "title": "BGforge MLS: Dialog Preview",
-                "icon": "$(open-preview)"
+                "command": "extension.bgforge.dialogEditor",
+                "title": "BGforge MLS: Dialog Editor",
+                "icon": "$(type-hierarchy)"
             }
         ],
         "menus": {},
@@ -432,6 +435,25 @@
                     }
                 ],
                 "priority": "default"
+            },
+            {
+                "viewType": "bgforge.dialogEditor",
+                "displayName": "BGforge Dialog Editor",
+                "selector": [
+                    {
+                        "filenamePattern": "*.d"
+                    },
+                    {
+                        "filenamePattern": "*.ssl"
+                    },
+                    {
+                        "filenamePattern": "*.td"
+                    },
+                    {
+                        "filenamePattern": "*.tssl"
+                    }
+                ],
+                "priority": "option"
             }
         ],
         "grammars": [
@@ -625,7 +647,7 @@
                 "key": "ctrl+r"
             },
             {
-                "command": "extension.bgforge.dialogPreview",
+                "command": "extension.bgforge.dialogEditor",
                 "key": "ctrl+shift+v",
                 "when": "editorLangId == fallout-ssl || resourceExtname == .tssl || editorLangId == weidu-d || resourceExtname == .td"
             }

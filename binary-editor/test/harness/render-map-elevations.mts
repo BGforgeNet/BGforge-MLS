@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/artemple.map");
@@ -52,7 +53,13 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Objects" }).first().click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => document.querySelectorAll('.layout-root .bb-tabs.secondary button[role="tab"]').length >= 3,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 // Read the elevation subtab strip: label + disabled state.
 const subs = await page.evaluate(() =>
@@ -76,7 +83,7 @@ check(
     JSON.stringify(byLabel("Elevation 2")),
 );
 
-await page.screenshot({ path: path.join(here, "shot-map-elevations.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-elevations.png"), fullPage: true });
 await browser.close();
 
 console.log("\n=== MAP elevation-tab harness results ===");

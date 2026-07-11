@@ -11,18 +11,23 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { conlog } from "../logger";
 import { SyntaxType } from "./syntax-type";
 import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
 import {
     extractSayText,
+    extractSayTexts,
     extractSayTextContent,
     extractChainText,
+    extractChainTexts,
     extractChainTextTrigger,
     extractTrigger,
+    extractWeight,
     extractTransitionTrigger,
     extractDoAction,
     extractReplyText,
     extractTarget,
+    extractTargetLabelRange,
     getNodeFieldText,
 } from "./dialog-utils";
 import {
@@ -46,11 +51,16 @@ import {
  * Parse dialog structure from D file text using tree-sitter.
  */
 export function parseDDialog(text: string): DDialogData {
+    // Both guards deliberately degrade to an empty model so the editor shows a blank dialog rather than throwing
+    // the request - but log at warn (operator-visible output channel) so the degrade is diagnosable instead of
+    // silently indistinguishable from a genuinely empty file.
     if (!isInitialized()) {
+        conlog("parseDDialog: weidu-d parser not initialized; returning empty dialog", "warn");
         return { blocks: [], states: [] };
     }
     const tree = parseWithCache(text);
     if (!tree) {
+        conlog("parseDDialog: weidu-d parse produced no tree; returning empty dialog", "warn");
         return { blocks: [], states: [] };
     }
 
@@ -167,7 +177,7 @@ function parseChainAction(node: SyntaxNode, blocks: DDialogBlock[], states: DDia
         label,
     });
 
-    flattenChain(node, file, label, states);
+    flattenChain(node, file, label, states, "CHAIN");
 }
 
 function parseExtendAction(node: SyntaxNode, blocks: DDialogBlock[], states: DDialogState[]): void {
@@ -199,9 +209,13 @@ function parseExtendAction(node: SyntaxNode, blocks: DDialogBlock[], states: DDi
             line,
             sayText: "",
             speaker: file,
+            blockFile: file,
             transitions,
             // Tag with blockLabel so getBlockStates doesn't mix with APPEND states
             blockLabel: `extend_${line}`,
+            // EXTEND adds transitions to an existing state elsewhere; this pseudo-state has
+            // no standalone source block here, so the editor renders it read-only.
+            derivedFrom: "EXTEND",
         });
     }
 }
@@ -221,7 +235,7 @@ function parseInterjectAction(node: SyntaxNode, blocks: DDialogBlock[], states: 
     });
 
     // Interjects may contain chain-like text sequences
-    flattenChain(node, file, label, states);
+    flattenChain(node, file, label, states, "INTERJECT");
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +248,9 @@ function parseState(node: SyntaxNode, speaker: string): DDialogState | undefined
 
     const label = labelNode.text;
     const sayText = extractSayText(node);
+    const sayTexts = extractSayTexts(node);
     const trigger = extractTrigger(node);
+    const weight = extractWeight(node);
     const transitions: DDialogTransition[] = [];
 
     for (const child of node.children) {
@@ -243,13 +259,24 @@ function parseState(node: SyntaxNode, speaker: string): DDialogState | undefined
         }
     }
 
+    // Field ranges for per-field surgical edits: the SAY value node (the `say` field,
+    // covering the value after the SAY keyword) and the trigger string node.
+    const sayNode = node.childForFieldName("say");
+    const triggerNode = node.childForFieldName("trigger");
+
     return {
         label,
         line: node.startPosition.row + 1,
         sayText,
+        sayTexts,
         trigger: trigger || undefined,
+        weight,
         speaker,
+        blockFile: speaker,
         transitions,
+        range: { start: node.startIndex, end: node.endIndex },
+        sayRange: sayNode ? { start: sayNode.startIndex, end: sayNode.endIndex } : undefined,
+        triggerRange: triggerNode ? { start: triggerNode.startIndex, end: triggerNode.endIndex } : undefined,
     };
 }
 
@@ -300,16 +327,24 @@ function parseTransitionFull(node: SyntaxNode): DDialogTransition {
 
     return {
         line: node.startPosition.row + 1,
-        replyText: replyText || undefined,
+        // An EMPTY reply (`REPLY ~~`) stays "" - the author wrote a reply form, so it must round-trip as
+        // a (blank) player option, not degrade to a bare transition. Only a MISSING reply is undefined.
+        replyText,
         trigger: trigger || undefined,
         action: action || undefined,
         target,
+        range: { start: node.startIndex, end: node.endIndex },
+        targetRange: extractTargetLabelRange(node),
     };
 }
 
 function parseTransitionShort(node: SyntaxNode): DDialogTransition {
     const replyNode = node.childForFieldName("reply");
     const replyText = replyNode ? extractSayTextContent(replyNode) : undefined;
+    // The grammar's transition_short carries an optional inline trigger between its two
+    // `+` markers, in the same "trigger" field transition_full uses. Extract it so a
+    // conditional short reply (`+ ~cond~ + reply`) keeps its condition on parse.
+    const trigger = extractTransitionTrigger(node);
     const action = extractDoAction(node);
 
     // Short transitions use short_goto for target
@@ -317,9 +352,14 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
 
     return {
         line: node.startPosition.row + 1,
-        replyText: replyText || undefined,
+        // As in parseTransitionFull: an EMPTY `++ ~~` reply stays "" (a blank player option, e.g. one the
+        // editor just spliced before its text was typed); only a missing reply node is undefined.
+        replyText,
+        trigger: trigger || undefined,
         action: action || undefined,
         target,
+        range: { start: node.startIndex, end: node.endIndex },
+        targetRange: extractTargetLabelRange(node),
     };
 }
 
@@ -331,6 +371,7 @@ function parseCopyTrans(node: SyntaxNode): DDialogTransition {
     return {
         line: node.startPosition.row + 1,
         target: { kind: "copy_trans", file, label },
+        range: { start: node.startIndex, end: node.endIndex },
     };
 }
 
@@ -346,46 +387,66 @@ function flattenChain(
     initialSpeaker: string,
     chainLabel: string | undefined,
     states: DDialogState[],
+    derivedFrom: "CHAIN" | "INTERJECT",
 ): void {
     const syntheticStates: DDialogState[] = [];
     let currentSpeaker = initialSpeaker;
     let stateIndex = 0;
 
+    const pushChainState = (child: SyntaxNode): void => {
+        // Record the FULL multisay list (parity with parseState); sayText stays the first for the flat display.
+        const sayTexts = extractChainTexts(child);
+        const sayText = sayTexts[0]?.text ?? extractChainText(child);
+        const trigger = extractChainTextTrigger(child);
+        const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
+        syntheticStates.push({
+            label,
+            line: child.startPosition.row + 1,
+            sayText,
+            ...(sayTexts.length > 0 ? { sayTexts } : {}),
+            trigger: trigger || undefined,
+            speaker: currentSpeaker,
+            // Owning dialog is the chain's target file, never the per-line switched speaker.
+            blockFile: initialSpeaker,
+            transitions: [],
+            blockLabel: chainLabel,
+            // Synthetic: a CHAIN/INTERJECT link has no standalone source block, so the
+            // editor renders it read-only (no range to splice an edit back into).
+            derivedFrom,
+        });
+        stateIndex++;
+    };
+
+    const attachToLast = (transitions: DDialogTransition[]): void => {
+        if (syntheticStates.length > 0) {
+            syntheticStates[syntheticStates.length - 1]!.transitions.push(...transitions);
+        }
+    };
+
     for (const child of node.children) {
         if (child.type === SyntaxType.ChainText) {
-            const sayText = extractChainText(child);
-            const trigger = extractChainTextTrigger(child);
-            const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
-
-            syntheticStates.push({
-                label,
-                line: child.startPosition.row + 1,
-                sayText,
-                trigger: trigger || undefined,
-                speaker: currentSpeaker,
-                transitions: [],
-                blockLabel: chainLabel,
-            });
-            stateIndex++;
-        } else if (child.type === SyntaxType.ChainSpeaker) {
-            const speakerFile = getNodeFieldText(child, "file");
-            if (speakerFile) {
-                currentSpeaker = speakerFile;
+            // The grammar nests the whole screenplay inside one chain_text: its own
+            // say_text is the entry line, and each `== ~file~ @text` speaker line is a
+            // nested chain_speaker. Both produce states (a speaker line also switches the
+            // speaking actor). Previously only the entry line was captured, collapsing
+            // every chain to a single node with no body or links.
+            pushChainState(child);
+            for (const sub of child.children) {
+                if (sub.type === SyntaxType.ChainSpeaker) {
+                    const speakerFile = getNodeFieldText(sub, "file");
+                    if (speakerFile) {
+                        currentSpeaker = speakerFile;
+                    }
+                    pushChainState(sub);
+                } else if (sub.type === SyntaxType.ChainBranch) {
+                    attachToLast(parseChainBranch(sub));
+                }
             }
         } else if (child.type === SyntaxType.ChainEpilogue) {
-            // Epilogue contains the final transition(s) for the chain
-            const transitions = parseChainEpilogue(child);
-            if (syntheticStates.length > 0) {
-                const lastState = syntheticStates[syntheticStates.length - 1]!;
-                lastState.transitions.push(...transitions);
-            }
+            // Epilogue holds the chain's terminal transition(s) (GOTO/EXTERN/EXIT).
+            attachToLast(parseChainEpilogue(child));
         } else if (child.type === SyntaxType.ChainBranch) {
-            // Branch: conditional transitions within a chain
-            const transitions = parseChainBranch(child);
-            if (syntheticStates.length > 0) {
-                const lastState = syntheticStates[syntheticStates.length - 1]!;
-                lastState.transitions.push(...transitions);
-            }
+            attachToLast(parseChainBranch(child));
         }
     }
 

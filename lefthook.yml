@@ -21,6 +21,9 @@ pre-commit:
       run: pnpm exec tsc --noEmit --project server/tsconfig.json
     typecheck-client:
       run: pnpm exec tsc --noEmit --project client/tsconfig.json
+    typecheck-svelte:
+      # tsc skips .svelte files entirely; svelte-check type-checks the webview components (both editors).
+      run: pnpm typecheck:svelte
     typecheck-binary:
       run: pnpm exec tsc --noEmit --project binary/tsconfig.json
     typecheck-binary-editor:

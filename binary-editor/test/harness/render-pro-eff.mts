@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { WebviewToHost, HostToWebview } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -85,7 +86,9 @@ currentOpenResult = proOpen.result;
 await page.goto("file://" + path.join(here, "app.html"));
 // PRO renders as a single dense page via the declarative layout (every object/sub type has a variant).
 await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".layout-root .field").length > 0, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 check(
     "pro: resolves an item layout variant",
@@ -99,7 +102,7 @@ const proDom = await page.evaluate(() => ({
 check("pro: layout fields render (> 0)", proDom.fields > 0, `count=${proDom.fields}`);
 check("pro: no section tabs (single page)", proDom.tabs === 0, `count=${proDom.tabs}`);
 
-await page.screenshot({ path: path.join(here, "shot-pro.png") });
+await page.screenshot({ path: shotPath("shot-pro.png") });
 
 // ---- EFF pass: reload the same page with a fresh hostUp binding pointing at effOpen ----
 // We need to rebind __hostUp before navigating. The easiest way in Playwright is to expose a new page,
@@ -116,7 +119,9 @@ await page2.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page2.goto("file://" + path.join(here, "app.html"));
 await page2.waitForSelector(".layout-root", { timeout: 5000 });
-await page2.waitForTimeout(200);
+await page2
+    .waitForFunction(() => document.querySelectorAll(".layout-root .field").length > 20, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 check(
     "eff: resolves the 'effect' layout variant",
@@ -154,7 +159,7 @@ check("eff: no plain Select remains", effDom.selects === 0, `count=${effDom.sele
 check("eff: flags render (saveType + resistance)", effDom.flagCols >= 2, `count=${effDom.flagCols}`);
 check("eff: no section tabs (single page)", effDom.tabs === 0, `count=${effDom.tabs}`);
 
-await page2.screenshot({ path: path.join(here, "shot-eff.png") });
+await page2.screenshot({ path: shotPath("shot-eff.png") });
 
 await browser.close();
 

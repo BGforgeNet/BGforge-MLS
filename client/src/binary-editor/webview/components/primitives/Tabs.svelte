@@ -56,12 +56,15 @@
         const step = (from: number, dir: 1 | -1): number => {
             for (let i = 1; i <= tabs.length; i++) {
                 const j = (from + dir * i + tabs.length * i) % tabs.length;
-                if (!tabs[j].disabled) return j;
+                if (!tabs[j]?.disabled) return j;
             }
             return from;
         };
         const firstEnabled = (): number => tabs.findIndex((t) => !t.disabled);
-        const lastEnabled = (): number => tabs.findLastIndex((t) => !t.disabled);
+        const lastEnabled = (): number => {
+            for (let i = tabs.length - 1; i >= 0; i--) if (!tabs[i]?.disabled) return i;
+            return -1;
+        };
 
         if (event.key === prev) {
             nextIndex = step(activeIndex, -1);
@@ -76,8 +79,9 @@
         }
 
         event.preventDefault();
-        if (nextIndex < 0 || tabs[nextIndex].disabled) return;
-        onselect(tabs[nextIndex].id);
+        const target = tabs[nextIndex];
+        if (nextIndex < 0 || !target || target.disabled) return;
+        onselect(target.id);
         // Move focus to the newly-selected tab. The keydown fires on the container div; currentTarget
         // is that div. querySelectorAll returns buttons in DOM order matching the tabs array order,
         // so nextIndex is stable. Programmatic focus works regardless of tabindex value.

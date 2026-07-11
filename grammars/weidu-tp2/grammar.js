@@ -69,7 +69,7 @@ const caseConvert = (keyword) => ($) => seq(keyword, field("var", $.identifier))
 /** CRE/store item patch: KEYWORD values... */
 const itemPatch = (keyword) => ($) => seq(keyword, repeat1($.value));
 
-/** EXTEND action: KEYWORD existing new_file [EVAL] patches... */
+/** EXTEND action: KEYWORD existing new_file [EVAL] [USING tra...] patches... */
 const extendAction = (keyword) => ($) =>
     prec.right(
         seq(
@@ -77,6 +77,7 @@ const extendAction = (keyword) => ($) =>
             field("existing", $.value),
             field("new_file", $.value),
             optional(choice("EVALUATE_BUFFER", "EVAL")),
+            optional(seq("USING", repeat1(field("tra", $.value)))),
             repeat($._patch),
         ),
     );
@@ -665,6 +666,7 @@ export default grammar({
                 // CRE item operations
                 $.patch_replace_cre_item,
                 $.patch_remove_cre_item,
+                $.patch_remove_cre_items,
                 $.patch_add_cre_item,
                 $.patch_add_memorized_spell,
                 $.patch_remove_memorized_spell,
@@ -976,6 +978,9 @@ export default grammar({
 
         patch_replace_cre_item: itemPatch("REPLACE_CRE_ITEM"),
         patch_remove_cre_item: itemPatch("REMOVE_CRE_ITEM"),
+        // REMOVE_CRE_ITEMS (plural, no argument) strips every item from the CRE, unlike the
+        // singular REMOVE_CRE_ITEM ~resref~ which removes one named item.
+        patch_remove_cre_items: ($) => "REMOVE_CRE_ITEMS",
         patch_add_cre_item: itemPatch("ADD_CRE_ITEM"),
 
         patch_add_memorized_spell: ($) =>
@@ -1628,8 +1633,11 @@ export default grammar({
                 $.subcomponent_flag,
                 $.group_flag,
                 $.require_predicate_flag,
+                $.forbid_predicate_flag,
                 $.require_component_flag,
                 $.forbid_component_flag,
+                $.require_file_flag,
+                $.forbid_file_flag,
                 $.label_flag,
             ),
 
@@ -1639,10 +1647,17 @@ export default grammar({
         group_flag: ($) => seq("GROUP", field("name", $.value)),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
         require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
+        forbid_predicate_flag: ($) => seq("FORBID_PREDICATE", field("predicate", $.value), field("message", $.value)),
         require_component_flag: ($) =>
             seq("REQUIRE_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
         forbid_component_flag: ($) =>
             seq("FORBID_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
+        // REQUIRE_FILE / FORBID_FILE take a file and an error message. WeiDU treats the message as optional,
+        // but the sibling *_component / *_predicate flags above all model it as required and the real corpus
+        // never omits it; matching them keeps the message field required and avoids a trailing-optional-$.value
+        // ambiguity against the next flag.
+        require_file_flag: ($) => seq("REQUIRE_FILE", field("file", $.value), field("message", $.value)),
+        forbid_file_flag: ($) => seq("FORBID_FILE", field("file", $.value), field("message", $.value)),
 
         always_block: ($) => seq("ALWAYS", repeat($._action), "END"),
 

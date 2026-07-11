@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/arcaves.map");
@@ -51,7 +52,9 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelector(".banner.warning") !== null, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 const banner = await page.evaluate(() => {
     const b = document.querySelector(".banner.warning");
@@ -72,7 +75,7 @@ if (banner) {
     );
 }
 
-await page.screenshot({ path: path.join(here, "shot-map-banner.png"), fullPage: false });
+await page.screenshot({ path: shotPath("shot-map-banner.png"), fullPage: false });
 await browser.close();
 
 console.log("\n=== MAP banner harness results ===");

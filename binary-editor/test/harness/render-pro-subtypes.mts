@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PROTO = path.join(here, "../../../external/fallout/Fallout2_Restoration_Project/data/proto");
@@ -75,7 +76,11 @@ for (const c of CASES) {
     // DOM: render the real webview, assert no tabs + positive label/value gap.
     await page.goto("file://" + path.join(here, "app.html"));
     await page.waitForSelector(".layout-root", { timeout: 5000 });
-    await page.waitForTimeout(120);
+    await page
+        .waitForFunction(() => document.querySelectorAll(".layout-root .panel").length >= 2, undefined, {
+            timeout: 5000,
+        })
+        .catch(() => undefined);
     const dom = await page.evaluate(() => {
         const tabs = document.querySelectorAll(".bb-tabs").length;
         const panels = document.querySelectorAll(".layout-root .panel").length;
@@ -94,7 +99,7 @@ for (const c of CASES) {
     check(`${c.variant}: label/value gap positive`, dom.minGap >= 4, `minGap=${dom.minGap}px`);
 
     // One screenshot per subtype (the single end-of-loop shot only captured the last case).
-    await page.screenshot({ path: path.join(here, `shot-pro-${c.variant.replace(".", "-")}.png`), fullPage: true });
+    await page.screenshot({ path: shotPath(`shot-pro-${c.variant.replace(".", "-")}.png`), fullPage: true });
 }
 
 await browser.close();

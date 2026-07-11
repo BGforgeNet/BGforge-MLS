@@ -25,7 +25,7 @@ vi.mock("../src/server", () => ({
 }));
 
 import { Translation } from "../src/translation";
-import type { ProjectTraSettings } from "../src/settings";
+import { project as loadProjectSettings, type ProjectTraSettings } from "../src/settings";
 
 describe("Translation", () => {
     let tempDir: string;
@@ -69,6 +69,114 @@ describe("Translation", () => {
         it("loads .msg and .tra files from directory", async () => {
             await translation.init();
             expect(translation.initialized).toBe(true);
+        });
+    });
+
+    describe("writeMessages (.msg format)", () => {
+        it("persists a .msg text edit to disk via the format-aware writer", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra test.msg */\nconst x = mstr(100);`;
+
+            const result = translation.writeMessages(uri, text, "typescript", { "100": "Edited msg!" });
+
+            // Before the format-aware fix this used the .tra rewriter, which never matches a
+            // {id}{sound}{text} line, so the write silently no-op'd (changed=false, file intact).
+            expect(result.changed).toBe(true);
+            const onDisk = fs.readFileSync(path.join(tempDir, "test.msg"), "utf8");
+            expect(onDisk).toContain("{100}{}{Edited msg!}");
+            // Untouched entries stay byte-for-byte.
+            expect(onDisk).toContain("{101}{}{ Message 101 }");
+        });
+
+        it("appends a new .msg id while rewriting an existing one", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra test.msg */\nconst x = mstr(100);`;
+
+            // 100 already exists (rewrite); 500 is new (append).
+            const result = translation.writeMessages(uri, text, "typescript", { "100": "Edited!", "500": "Brand new" });
+
+            expect(result.changed).toBe(true);
+            const onDisk = fs.readFileSync(path.join(tempDir, "test.msg"), "utf8");
+            expect(onDisk).toContain("{100}{}{Edited!}"); // existing id rewritten
+            expect(onDisk).toContain("{500}{}{Brand new}"); // new id appended
+            expect(onDisk).toContain("{101}{}{ Message 101 }"); // untouched entry intact
+        });
+
+        it("creates the .msg when it does not exist yet (from-scratch dialog persistence)", async () => {
+            // A from-scratch dialog references @N ids whose .msg has never been written. writeMessages must
+            // CREATE it (was: readFileSync ENOENT -> NO_WRITE, silently dropping the text) in the resolved tra
+            // dir, which exists here.
+            await translation.init();
+            const uri = `file://${tempDir}/scratch.tssl`;
+            const text = `/** @tra scratch.msg */\nconst x = mstr(100);`;
+            const msgPath = path.join(tempDir, "scratch.msg");
+            expect(fs.existsSync(msgPath)).toBe(false);
+
+            const result = translation.writeMessages(uri, text, "typescript", {
+                "100": "First line",
+                "101": "An option",
+            });
+
+            expect(result.changed).toBe(true);
+            expect(fs.existsSync(msgPath)).toBe(true);
+            const onDisk = fs.readFileSync(msgPath, "utf8");
+            expect(onDisk).toContain("{100}{}{First line}");
+            expect(onDisk).toContain("{101}{}{An option}");
+        });
+
+        it("bootstraps data/text/english/dialog + .bgforge.yml for a from-scratch SSL dialog with no tra dir", async () => {
+            // With no existing tra dir, an SSL dialog's .msg must land where the loader will scan it on reopen -
+            // the Fallout dialog convention path - and .bgforge.yml is written recording that dir (a sibling next
+            // to the .ssl would never be scanned; see getMessages/loadDir).
+            const t = new Translation({ directory: path.join(tempDir, "no-such-tra"), auto_tra: true }, tempDir);
+            await t.init();
+            const uri = `file://${tempDir}/lonely.tssl`;
+            const text = `const x = mstr(100);`; // no @tra comment -> auto_tra basename -> lonely.msg
+
+            const result = t.writeMessages(uri, text, "typescript", { "100": "Dialog text" });
+
+            expect(result.changed).toBe(true);
+            const msgPath = path.join(tempDir, "data/text/english/dialog", "lonely.msg");
+            expect(fs.existsSync(msgPath)).toBe(true);
+            expect(fs.readFileSync(msgPath, "utf8")).toContain("{100}{}{Dialog text}");
+            // .bgforge.yml created, recording the directory so the next session's loadDir scans it.
+            const cfg = path.join(tempDir, ".bgforge.yml");
+            expect(fs.existsSync(cfg)).toBe(true);
+            expect(fs.readFileSync(cfg, "utf8")).toContain("data/text/english/dialog");
+        });
+
+        it("does not overwrite an existing .bgforge.yml when bootstrapping the dialog dir", async () => {
+            // ensureTraConfig only CREATES a missing config; a project's existing .bgforge.yml is left intact.
+            const cfg = path.join(tempDir, ".bgforge.yml");
+            fs.writeFileSync(cfg, "mls:\n  validate: true\n");
+            const t = new Translation({ directory: path.join(tempDir, "no-such-tra"), auto_tra: true }, tempDir);
+            await t.init();
+            const uri = `file://${tempDir}/lonely.tssl`;
+            t.writeMessages(uri, `const x = mstr(100);`, "typescript", { "100": "Dialog text" });
+
+            expect(fs.readFileSync(cfg, "utf8")).toBe("mls:\n  validate: true\n"); // untouched
+            expect(fs.existsSync(path.join(tempDir, "data/text/english/dialog", "lonely.msg"))).toBe(true); // msg still written
+        });
+
+        it("round-trips on reopen: a fresh service reads the written .bgforge.yml and resolves @N", async () => {
+            // The reopen-resolution guarantee: after a from-scratch save writes the .msg + records the dir in
+            // .bgforge.yml, a NEW service configured from that same config (settings.project reads it) loads the
+            // dir via loadDir and getMessages - the one path shared by the dialog editor / hover / inlay -
+            // resolves the text. This is the end-to-end proof that the bootstrapped dir is discoverable.
+            const t1 = new Translation({ directory: path.join(tempDir, "no-such-tra"), auto_tra: true }, tempDir);
+            await t1.init();
+            const uri = `file://${tempDir}/greeter.tssl`;
+            const text = `const x = mstr(100);`;
+            t1.writeMessages(uri, text, "typescript", { "100": "Hello there." });
+
+            // Reopen: settings.project reads the .bgforge.yml the save just wrote (directory -> data/text/english/dialog).
+            const settings = loadProjectSettings(tempDir);
+            expect(settings.translation.directory).toBe("data/text/english/dialog");
+            const t2 = new Translation(settings.translation, tempDir);
+            await t2.init();
+            expect(t2.getMessages(uri, text, "typescript")["100"]).toBe("Hello there.");
         });
     });
 

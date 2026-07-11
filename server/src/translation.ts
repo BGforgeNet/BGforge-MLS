@@ -9,6 +9,7 @@ import * as fs from "fs";
 import pLimit from "p-limit";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import * as yaml from "yaml";
 import {
     type Hover,
     type InlayHint,
@@ -20,6 +21,13 @@ import {
 } from "vscode-languageserver/node";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
+import {
+    appendMsgEntries,
+    appendTraEntries,
+    rewriteMsgEntries,
+    rewriteTraEntries,
+    siblingTraCandidates,
+} from "../../shared/dialog-tra-edit";
 import {
     findFiles,
     isDirectory,
@@ -80,6 +88,29 @@ type TraExt = "msg" | "tra";
 
 /** Languages that contain translation strings (msg/tra files) */
 const languages = TRANSLATION_FILE_LANGUAGES;
+
+/**
+ * Result of `writeMessages`: whether the active `.tra` changed, plus any sibling-language
+ * `.tra` files (a `tra/<language>/` layout) that now hold stale, pre-edit text and need
+ * updating. `staleSiblingLanguages` is the list of those sibling language directory names.
+ */
+export interface WriteMessagesResult {
+    changed: boolean;
+    staleSiblingLanguages: string[];
+}
+const NO_WRITE: WriteMessagesResult = { changed: false, staleSiblingLanguages: [] };
+
+/**
+ * Where a from-scratch dialog's translation file is bootstrapped when no tra directory is configured. Fallout
+ * SSL (`.msg`) uses the engine's English dialog path; WeiDU D (`.tra`) uses the plain `tra` default (the WeiDU
+ * convention, same as the settings default). The editor creates the dir AND records it in `.bgforge.yml`, so the
+ * loader (`resolveTraDir` -> `loadDir`) scans it on reopen and hover/inlay/the dialog editor (one path via
+ * `getMessages`) all resolve `@N`. A sibling next to the source would not be scanned; these are the working
+ * locations. (WeiDU D writes new text inline in the `.d` rather than allocating `@N`, so its `.tra` bootstrap is
+ * rarely exercised - see dialog-tra-edit.ts - but the location stays correct when it is.)
+ */
+const DEFAULT_SSL_DIALOG_DIR = "data/text/english/dialog";
+const DEFAULT_D_TRA_DIR = "tra";
 
 /** Languages that can have translation references */
 const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ...MSG_LANGUAGES]);
@@ -363,6 +394,108 @@ export class Translation {
             messages[id] = entry.source;
         }
         return messages;
+    }
+
+    /**
+     * Persist edited message strings to the resolved .tra, rewriting only the
+     * changed entries in place (comments, ordering, formatting, and untouched
+     * entries are preserved). Returns true if the file changed. Used by the dialog
+     * editor's save path; the .tra is the document of record for @N text.
+     */
+    writeMessages(uri: string, text: string, langId: string, messages: Record<string, string>): WriteMessagesResult {
+        if (!this.initialized) return NO_WRITE;
+        const filePath = this.uriToPath(uri);
+        const ext = this.getTraExt(langId, filePath, text);
+        const fileKey = this.resolveTraFileKey(filePath, text, langId);
+        if (!ext || !fileKey) return NO_WRITE;
+        // The `.msg`/`.tra` must land where `loadDir` scans (`resolveTraDir`), or nothing resolves `@N` on
+        // reopen - the dialog editor, hover, and inlay are ONE path (getMessages/resolveEntry -> this.data
+        // keyed by resolveTraFileKey), so a file the loader never scans is invisible to all three. Three cases:
+        //  - the configured tra dir EXISTS -> write there (a real project with its tra/ or dialog dir);
+        //  - from-scratch with a workspace -> bootstrap the format's convention dir (SSL .msg -> the Fallout
+        //    data/text/english/dialog path; D .tra -> the plain `tra` default), create it, RECORD it in
+        //    .bgforge.yml so the next session's loadDir scans it, and write there. This session resolves via the
+        //    this.data.set below; the config makes it survive a reopen;
+        //  - no workspace root -> a sibling of the source, so text is not silently lost (last resort).
+        // (resolveTraDir returns the path even when the dir is absent, so directory EXISTENCE is the test.)
+        const configured = this.resolveAbsolutePath(fileKey);
+        let absPath: string;
+        if (configured && fs.existsSync(path.dirname(configured))) {
+            absPath = configured;
+        } else if (this.workspaceRoot) {
+            const relDir = ext === "msg" ? DEFAULT_SSL_DIALOG_DIR : DEFAULT_D_TRA_DIR;
+            const dir = path.join(this.workspaceRoot, relDir);
+            fs.mkdirSync(dir, { recursive: true });
+            this.ensureTraConfig(relDir);
+            absPath = path.join(dir, fileKey);
+        } else {
+            absPath = path.join(path.dirname(filePath), fileKey);
+        }
+        let original: string;
+        try {
+            original = fs.readFileSync(absPath, "utf8");
+        } catch (error) {
+            // ENOENT -> the file does not exist yet, so create it (the from-scratch case: an SSL dialog's text
+            // has nowhere to land until its `.msg` is written). Any OTHER read error (permissions, a directory
+            // in the way) must NOT proceed to a write that could clobber an existing-but-unreadable file.
+            if ((error as NodeJS.ErrnoException).code !== "ENOENT") return NO_WRITE;
+            original = "";
+        }
+        // Each format needs its own rewriter: a .tra is `@N = ~text~`, a .msg is
+        // `{id}{sound}{text}`, and either rewriter is a silent no-op on the other's syntax.
+        // Both rewrite existing entries then append brand-new ones: a newly-added option's or state's text
+        // has no entry yet (the D-family allocator mints its `@N` at save time, like the SSL allocator does
+        // for `.msg` ids), and a rewrite-only path silently drops that text from the translation file.
+        const updated =
+            ext === "msg"
+                ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
+                : appendTraEntries(rewriteTraEntries(original, messages), messages);
+        if (updated === original) return NO_WRITE;
+        fs.writeFileSync(absPath, updated);
+        // Refresh the cached entries that getMessages/inlay hints read for this file.
+        this.data.set(fileKey, this.parseEntries(updated, ext));
+        return { changed: true, staleSiblingLanguages: this.staleSiblingLanguages(absPath) };
+    }
+
+    /**
+     * Bootstrap `.bgforge.yml` for a from-scratch dialog so the tra directory the editor just wrote to is
+     * RECORDED - the next session's `loadDir` then scans it (this session already resolves via the in-memory
+     * `this.data.set` above). Only CREATES the file when absent - never clobbers an existing project config.
+     * Fail-soft: a write failure is logged, not thrown, since the `.msg` already persisted; only reopen-time
+     * resolution would be affected. Shape matches settings.ts's reader (`mls.translation.directory`).
+     */
+    private ensureTraConfig(relDir: string): void {
+        if (!this.workspaceRoot) return;
+        const configPath = path.join(this.workspaceRoot, ".bgforge.yml");
+        if (fs.existsSync(configPath)) return;
+        try {
+            fs.writeFileSync(configPath, yaml.stringify({ mls: { translation: { directory: relDir } } }));
+            conlog(`Translation: created .bgforge.yml (translation.directory: ${relDir})`);
+        } catch (error) {
+            conlog(`Translation: could not create .bgforge.yml: ${errorMessage(error)}`, "warn");
+        }
+    }
+
+    /**
+     * Sibling-language `.tra` files (a `tra/<language>/<file>.tra` layout) that exist on
+     * disk beside the one just written - they still hold the pre-edit text, so the save
+     * path can warn that they diverged. Returns the sibling language directory names.
+     * Empty for a flat / single-language layout (no same-named file in a sibling dir).
+     */
+    private staleSiblingLanguages(absPath: string): string[] {
+        const langParent = path.dirname(path.dirname(absPath));
+        let subdirs: string[];
+        try {
+            subdirs = fs
+                .readdirSync(langParent, { withFileTypes: true })
+                .filter((d) => d.isDirectory())
+                .map((d) => d.name);
+        } catch {
+            return [];
+        }
+        return siblingTraCandidates(absPath, subdirs)
+            .filter((p) => fs.existsSync(p))
+            .map((p) => path.basename(path.dirname(p)));
     }
 
     // =========================================================================

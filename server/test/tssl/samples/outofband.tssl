@@ -1,0 +1,15 @@
+// Authored fixture (SSL-in-TS). A `force_dialog_start(Node)` reached from OUTSIDE talk_p_proc (a map-enter
+// handler) starts the conversation out of band; its target identifier span must be captured so a node rename
+// rewrites it, or the saved file dangles at the old name. Mirrors the SSL parser's outOfBandCalls.
+function Node001() {
+    Reply(100);
+    NMessage(101);
+}
+
+function talk_p_proc() {
+    Node001();
+}
+
+function on_map_enter() {
+    force_dialog_start(Node001);
+}

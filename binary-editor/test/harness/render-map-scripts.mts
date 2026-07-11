@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/newr2.map");
@@ -55,7 +56,18 @@ await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 
 // Primary tab -> Scripts.
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Scripts" }).first().click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () =>
+            Array.from(document.querySelectorAll('.layout-root .bb-tabs button[role="tab"]')).some((b) =>
+                ["System", "Spatial", "Timer", "Item", "Critter"].some((t) =>
+                    (b.textContent ?? "").trim().startsWith(t),
+                ),
+            ),
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 // Pick the first script subtab that has list rows.
 const subtabs = page.locator('.layout-root .bb-tabs button[role="tab"]');
@@ -66,7 +78,11 @@ for (let i = 0; i < subCount; i++) {
     const label = (await subtabs.nth(i).innerText()).trim();
     if (!["System", "Spatial", "Timer", "Item", "Critter"].some((s) => label.startsWith(s))) continue;
     await subtabs.nth(i).click();
-    await page.waitForTimeout(150);
+    await page
+        .waitForFunction(() => document.querySelectorAll(".layout-root .vlist .vrow").length > 0, undefined, {
+            timeout: 5000,
+        })
+        .catch(() => undefined);
     const rows = page.locator(".layout-root .vlist .vrow");
     if ((await rows.count()) > 0) {
         selected = rows;
@@ -85,7 +101,16 @@ if (selected) {
     );
 
     await selected.first().click();
-    await page.waitForTimeout(150);
+    await page
+        .waitForFunction(
+            () =>
+                Array.from(document.querySelectorAll(".layout-root .field")).some(
+                    (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+                ),
+            undefined,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
 
     // SID field in the selected script's detail: a hex control (`.hex-input` = static "0x" prefix + digit
     // input) whose digits are not clipped. The label is the stripped "SID" (no "Entry N" prefix).
@@ -116,7 +141,7 @@ if (selected) {
     );
     check("extent paging fields are hidden", extentLabels === 0, `count=${extentLabels}`);
 
-    await page.screenshot({ path: path.join(here, "shot-map-scripts.png"), fullPage: true });
+    await page.screenshot({ path: shotPath("shot-map-scripts.png"), fullPage: true });
 }
 
 await browser.close();

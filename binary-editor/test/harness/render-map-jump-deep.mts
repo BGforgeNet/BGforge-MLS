@@ -18,6 +18,7 @@ import { dispatch } from "../../src/index";
 import type { FlatNode } from "../../src/model";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/denbus1.map");
@@ -122,13 +123,21 @@ const fieldHex = (label: string) =>
 
 // Open the linked script: Scripts tab -> its type subtab -> filter to its exact label -> click it.
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Scripts" }).first().click();
-await page.waitForTimeout(150);
 await page.locator('.layout-root .bb-tabs button[role="tab"]').filter({ hasText: deep.scriptType }).first().click();
-await page.waitForTimeout(150);
 await page.locator(".layout-root .list-filter-input").first().fill(deep.scriptLabel);
-await page.waitForTimeout(200);
 await page.locator(".layout-root .vlist .vrow").filter({ hasText: deep.scriptLabel }).first().click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
+                (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+            );
+            return field !== undefined && field.querySelector(".jump-link") !== null;
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 const sidChip = page
     .locator(".layout-root .field")
@@ -137,7 +146,24 @@ const sidChip = page
     .locator(".jump-link");
 check("the deep-linked script exposes a SID jump chip", (await sidChip.count()) > 0, deep.scriptLabel);
 await sidChip.first().click();
-await page.waitForTimeout(300);
+
+// A deep jump is two async round-trips: locateEntry fetches the full object list to resolve the selection
+// (the target sits past the bounded window), THEN the detail pane fetches and renders the landed object's
+// fields. Poll for the object's SID field to render rather than racing a fixed sleep - the old 300ms sleep
+// read the still-empty detail pane and saw null even though the jump had landed correctly.
+await page
+    .waitForFunction(
+        () => {
+            const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
+                (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+            );
+            const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
+            return input !== null && input.value.length > 0;
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined); // let the assertions below report the concrete failure rather than a poll timeout
 
 const tabAfter = (await activePrimaryTab()).trim();
 check("jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);
@@ -148,7 +174,7 @@ check(
     landedSid !== null && (parseInt(landedSid, 16) | 0) === (deep.objSid | 0),
     `landed=0x${landedSid} expected=0x${objSidHex} targetIdx=${deep.objIndex}`,
 );
-await page.screenshot({ path: path.join(here, "shot-map-jump-deep.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-jump-deep.png"), fullPage: true });
 
 await browser.close();
 console.log("\n=== MAP deep-jump harness results ===");

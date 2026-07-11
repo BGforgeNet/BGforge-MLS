@@ -1,0 +1,16 @@
+// Authored fixture (no real .tssl dialogs exist in-repo; SSL-in-TS convention). A `function NodeNNN`
+// becomes `procedure NodeNNN`; Reply/NOption/NMessage are engine builtins; a bare user-function call
+// (Node001()) becomes `call Node001;`; an option's target node is referenced by its identifier.
+function Node001() {
+    Reply(100);
+    NOption(101, Node002, 4);
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function talk_p_proc() {
+    Node001();
+}

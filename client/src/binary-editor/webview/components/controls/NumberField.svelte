@@ -37,7 +37,7 @@
         <input
             class="hex-digits"
             type="text"
-            inputmode="latin"
+            inputmode="text"
             spellcheck="false"
             value={hexDigits}
             disabled={!row.editable}

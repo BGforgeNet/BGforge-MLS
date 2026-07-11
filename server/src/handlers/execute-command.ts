@@ -1,14 +1,16 @@
 import { conlog } from "../logger";
 import { COMMAND_compile, compile } from "../compile";
-import { showInfo } from "../user-messages";
+import { showInfo, showWarning } from "../user-messages";
 import { parseDialog } from "../dialog";
-import { parseTDDialog } from "../td/dialog";
-import { parseTSSLDialog } from "../tssl/dialog";
+import { getSSLSideEffectFunctions } from "../fallout-ssl/side-effects";
+import { parseTDSource } from "../td/dialog-source";
+import { parseTSSLSource } from "../tssl/dialog-source";
 import { parseDDialog } from "../weidu-d/dialog";
 import { getServerContext } from "../server-context";
 import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
 import {
     LSP_COMMAND_PARSE_DIALOG,
+    LSP_COMMAND_SAVE_TRA,
     LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
     VSCODE_COMMAND_COMPILE,
 } from "../../../shared/protocol";
@@ -20,7 +22,7 @@ import type { HandlerContext } from "./context";
 const dialogHandlers = [
     {
         match: (langId: string, _uri: string) => langId === LANG_FALLOUT_SSL,
-        parse: (_uri: string, text: string) => parseDialog(text),
+        parse: (_uri: string, text: string) => parseDialog(text, getSSLSideEffectFunctions()),
         translationLangId: LANG_FALLOUT_SSL,
     },
     {
@@ -30,12 +32,13 @@ const dialogHandlers = [
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TD),
-        parse: (uri: string, text: string) => parseTDDialog(uri, text),
+        // Source-native parse (ranges into the .td), not transpile-then-parse - so edits round-trip to source.
+        parse: (_uri: string, text: string) => Promise.resolve(parseTDSource(text)),
         translationLangId: LANG_WEIDU_D,
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TSSL),
-        parse: (uri: string, text: string) => parseTSSLDialog(uri, text),
+        parse: (_uri: string, text: string) => Promise.resolve(parseTSSLSource(text, getSSLSideEffectFunctions())),
         translationLangId: LANG_FALLOUT_SSL,
     },
 ];
@@ -62,9 +65,17 @@ export function register(ctx: HandlerContext): void {
 
         // Handle parseDialog command
         if (command === LSP_COMMAND_PARSE_DIALOG) {
+            // Validate the webview-supplied uri like the compile branch below (args[0] may be absent, and
+            // reading `.uri` off it would throw). No user-facing message - this is an internal editor command,
+            // not a user-invoked one, so a bad uri is a programming error to log, not to surface.
+            if (typeof args?.uri !== "string") {
+                conlog(`parseDialog: invalid uri '${String(args?.uri)}'`, "warn");
+                return null;
+            }
             const uri: string = args.uri;
             const textDoc = ctx.documents.get(uri);
             if (!textDoc) {
+                conlog(`parseDialog: NO open document for ${uri} (not synced to the server)`, "warn");
                 return null;
             }
             try {
@@ -74,6 +85,7 @@ export function register(ctx: HandlerContext): void {
 
                 const handler = dialogHandlers.find((h) => h.match(langId, lowerUri));
                 if (!handler) {
+                    conlog(`parseDialog: NO handler for languageId='${langId}'`, "warn");
                     return null;
                 }
                 const dialogData = await handler.parse(uri, text);
@@ -87,6 +99,33 @@ export function register(ctx: HandlerContext): void {
                 }
                 return null;
             }
+        }
+
+        // Persist edited @N dialogue strings to the resolved .tra (dialog editor save).
+        if (command === LSP_COMMAND_SAVE_TRA) {
+            if (typeof args?.uri !== "string") {
+                conlog(`saveTra: invalid uri '${String(args?.uri)}'`, "warn");
+                return null;
+            }
+            const uri: string = args.uri;
+            const messages = args.messages as Record<string, string> | undefined;
+            const textDoc = ctx.documents.get(uri);
+            if (!textDoc || !messages) {
+                return null;
+            }
+            const handler = dialogHandlers.find((h) => h.match(textDoc.languageId, uri.toLowerCase()));
+            const translationLangId = handler?.translationLangId ?? LANG_WEIDU_D;
+            const serverCtx = await getServerContext();
+            const result = serverCtx.translation.writeMessages(uri, textDoc.getText(), translationLangId, messages);
+            // An @N edit rewrites only the active language's .tra. If sibling-language .tra
+            // files exist, they now hold the old text - warn rather than diverge silently.
+            if (result.staleSiblingLanguages.length > 0) {
+                showWarning(
+                    `Saved @N translation edits to the active language only. These other language(s) ` +
+                        `still have the previous text and need updating: ${result.staleSiblingLanguages.join(", ")}.`,
+                );
+            }
+            return { changed: result.changed };
         }
 
         if (command !== COMMAND_compile && command !== VSCODE_COMMAND_COMPILE) {

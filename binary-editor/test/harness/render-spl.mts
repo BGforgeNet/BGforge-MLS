@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { splParser } from "../../../binary/src/spl/index";
 import { getSplCanonicalDocument, rebuildSplCanonicalDocument } from "../../../binary/src/spl/canonical-reader";
 import { serializeSplCanonicalDocument } from "../../../binary/src/spl/canonical-writer";
@@ -109,11 +110,11 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+// Layout/paint settle after initial mount - no crisp DOM condition distinguishes "painted" from "attached".
 await page.waitForTimeout(200);
-await page.screenshot({ path: path.join(here, "shot-spl.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-spl.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
 }
 
 // ---- Layout assertions (General tab) ----
@@ -168,7 +169,6 @@ check("baseline: 3 effects", sectionKids(effectsNodeId) === 3, `total=${sectionK
 // ---- Abilities & Effects tree tab ----
 await clickTab("Abilities & Effects");
 await page.waitForSelector(".eff-tree .eff-tree-vrow", { timeout: 5000 });
-await page.waitForTimeout(200);
 
 const treeTabText = (
     (await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').textContent()) ?? ""
@@ -248,7 +248,7 @@ check(
     !abilityText.includes("Unused") && !abilityText.includes("Feature Blocks"),
     `hasUnused=${abilityText.includes("Unused")} hasFeatureBlocks=${abilityText.includes("Feature Blocks")}`,
 );
-await page.screenshot({ path: path.join(here, "shot-spl-tree.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-spl-tree.png"), fullPage: true });
 
 // ---- Regression: casting-free SPL remove-first-effect (dispatch-level) ----
 {

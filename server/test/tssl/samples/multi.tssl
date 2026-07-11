@@ -1,0 +1,20 @@
+// Authored fixture (SSL-in-TS): a node with two flat player options, for the option-reorder tier.
+function Node001() {
+    Reply(100);
+    NOption(101, Node002, 4);
+    NOption(102, Node003, 4);
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function Node003() {
+    Reply(300);
+    NMessage(301);
+}
+
+function talk_p_proc() {
+    Node001();
+}

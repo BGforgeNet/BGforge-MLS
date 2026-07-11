@@ -30,6 +30,41 @@ All settings are under the `bgforge` namespace.
 | `bgforge.weidu.path`     | `weidu` | Path to WeiDU binary (or add to system PATH)                      |
 | `bgforge.weidu.gamePath` | `""`    | Absolute path to IE game directory (needed for BAF/D diagnostics) |
 
+## Translations (`@N` message text)
+
+`@N` references in Fallout SSL/MSG and WeiDU D/TRA resolve to their text - shown in hover, inlay hints, and the
+dialog editor - from a `.tra`/`.msg` file. When resolution fails, every `@N` renders as its raw ref (the dialog
+editor shows a banner saying so). Resolution is configured per project in a `.bgforge.yml` at the workspace root,
+plus an optional per-file directive:
+
+| Key                     | Default | Description                                                                                                                  |
+| ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `translation.directory` | `tra`   | Directory scanned for `.tra`/`.msg`, relative to the workspace root (a path resolving outside it is ignored with a warning). |
+| `translation.auto_tra`  | `true`  | Match a source file to `<basename>.tra`/`.msg` within `directory` (e.g. `x#viconia.d` -> `x#viconia.tra`).                   |
+
+For a per-language layout such as `tra/english/x#viconia.tra`, point `translation.directory` at the language
+subdirectory: `auto_tra` matches by basename _within_ `directory`, so a bare `tra` never finds a file nested under
+`tra/<language>/`, and every `@N` stays unresolved.
+
+The keys nest under a top-level `mls:` block (a bare top-level `translation:` is not read):
+
+```yaml
+# .bgforge.yml (workspace root)
+mls:
+  translation:
+    directory: tra/english
+```
+
+To override resolution for a single file, put a directive on its **first line** (it takes precedence over
+`auto_tra`):
+
+```
+/** @tra myfile.tra */
+```
+
+The directive names a word-character file only (`[A-Za-z0-9_]`); for a name containing other characters (e.g. the
+`#` in `x#viconia`), use `translation.directory` instead.
+
 ## How to Pass Settings
 
 Depends on the editor. See the editor-specific pages for examples:

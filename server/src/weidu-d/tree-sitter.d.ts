@@ -290,6 +290,7 @@ export type UnnamedType =
   | "BEGIN"
   | "BRANCH"
   | "CHAIN"
+  | "CHAIN3"
   | "COPY_TRANS"
   | "COPY_TRANS_LATE"
   | "DO"
@@ -307,6 +308,10 @@ export type UnnamedType =
   | "INTERJECT_COPY_TRANS2"
   | "INTERJECT_COPY_TRANS3"
   | "INTERJECT_COPY_TRANS4"
+  | "I_C_T"
+  | "I_C_T2"
+  | "I_C_T3"
+  | "I_C_T4"
   | "JOURNAL"
   | "REPLACE"
   | "REPLACE_ACTION_TEXT"
@@ -360,6 +365,7 @@ export type SyntaxNode =
   | GotoNextNode
   | InterjectActionNode
   | InterjectCopyTransNode
+  | InterpolatedNameNode
   | JournalFeatureNode
   | LineCommentNode
   | MacroExpansionNode
@@ -405,6 +411,7 @@ export type SyntaxNode =
   | UnnamedNode<"BEGIN">
   | UnnamedNode<"BRANCH">
   | UnnamedNode<"CHAIN">
+  | UnnamedNode<"CHAIN3">
   | UnnamedNode<"COPY_TRANS">
   | UnnamedNode<"COPY_TRANS_LATE">
   | UnnamedNode<"DO">
@@ -422,6 +429,10 @@ export type SyntaxNode =
   | UnnamedNode<"INTERJECT_COPY_TRANS2">
   | UnnamedNode<"INTERJECT_COPY_TRANS3">
   | UnnamedNode<"INTERJECT_COPY_TRANS4">
+  | UnnamedNode<"I_C_T">
+  | UnnamedNode<"I_C_T2">
+  | UnnamedNode<"I_C_T3">
+  | UnnamedNode<"I_C_T4">
   | UnnamedNode<"JOURNAL">
   | UnnamedNode<"REPLACE">
   | UnnamedNode<"REPLACE_ACTION_TEXT">
@@ -458,7 +469,7 @@ export type SyntaxNode =
 
 export interface AddStateTriggerNode extends NamedNodeBase {
   type: SyntaxType.AddStateTrigger;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   triggerNode: StringNode;
 }
@@ -466,19 +477,19 @@ export interface AddStateTriggerNode extends NamedNodeBase {
 export interface AddTransActionNode extends NamedNodeBase {
   type: SyntaxType.AddTransAction;
   actionNode: StringNode;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
 }
 
 export interface AddTransTriggerNode extends NamedNodeBase {
   type: SyntaxType.AddTransTrigger;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   triggerNode: StringNode;
 }
 
 export interface AlterTransNode extends NamedNodeBase {
   type: SyntaxType.AlterTrans;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
 }
 
 export interface AlterTransChangeNode extends NamedNodeBase {
@@ -487,7 +498,7 @@ export interface AlterTransChangeNode extends NamedNodeBase {
 
 export interface AppendActionNode extends NamedNodeBase {
   type: SyntaxType.AppendAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
 }
 
 export interface AtVarRefNode extends NamedNodeBase {
@@ -496,13 +507,14 @@ export interface AtVarRefNode extends NamedNodeBase {
 
 export interface BeginActionNode extends NamedNodeBase {
   type: SyntaxType.BeginAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   non_pausingNode?: NumberNode;
 }
 
 export interface ChainActionNode extends NamedNodeBase {
   type: SyntaxType.ChainAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
+  keywordNode: UnnamedNode<"CHAIN"> | UnnamedNode<"CHAIN3">;
   labelNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   triggerNode?: StringNode;
 }
@@ -514,13 +526,13 @@ export interface ChainBranchNode extends NamedNodeBase {
 
 export interface ChainEpilogueNode extends NamedNodeBase {
   type: SyntaxType.ChainEpilogue;
-  fileNode?: IdentifierNode | StringNode | VariableRefNode;
+  fileNode?: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   labelNode?: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
 }
 
 export interface ChainSpeakerNode extends NamedNodeBase {
   type: SyntaxType.ChainSpeaker;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   triggerNode?: StringNode;
 }
 
@@ -535,7 +547,7 @@ export interface CommentNode extends NamedNodeBase {
 
 export interface CopyTransNode extends NamedNodeBase {
   type: SyntaxType.CopyTrans;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
 }
 
@@ -559,13 +571,13 @@ export interface ExitNextNode extends NamedNodeBase {
 
 export interface ExtendActionNode extends NamedNodeBase {
   type: SyntaxType.ExtendAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   statesNodes: (IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode)[];
 }
 
 export interface ExternNextNode extends NamedNodeBase {
   type: SyntaxType.ExternNext;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   labelNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
 }
 
@@ -580,16 +592,20 @@ export interface GotoNextNode extends NamedNodeBase {
 
 export interface InterjectActionNode extends NamedNodeBase {
   type: SyntaxType.InterjectAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   global_varNode: IdentifierNode;
   labelNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
 }
 
 export interface InterjectCopyTransNode extends NamedNodeBase {
   type: SyntaxType.InterjectCopyTrans;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   global_varNode: IdentifierNode;
   labelNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
+}
+
+export interface InterpolatedNameNode extends NamedNodeBase {
+  type: SyntaxType.InterpolatedName;
 }
 
 export interface JournalFeatureNode extends NamedNodeBase {
@@ -607,19 +623,19 @@ export interface MacroExpansionNode extends NamedNodeBase {
 
 export interface ReplaceActionNode extends NamedNodeBase {
   type: SyntaxType.ReplaceAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
 }
 
 export interface ReplaceActionTextNode extends NamedNodeBase {
   type: SyntaxType.ReplaceActionText;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   new_textNode: StringNode;
   old_textNode: StringNode;
 }
 
 export interface ReplaceActionTextProcessNode extends NamedNodeBase {
   type: SyntaxType.ReplaceActionTextProcess;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   new_textNode: StringNode;
   old_textNode: StringNode;
 }
@@ -633,35 +649,35 @@ export interface ReplaceActionTextRegexpNode extends NamedNodeBase {
 
 export interface ReplaceSayNode extends NamedNodeBase {
   type: SyntaxType.ReplaceSay;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   textNode: AtVarRefNode | StringNode | TlkRefNode | TraRefNode;
 }
 
 export interface ReplaceStateTriggerNode extends NamedNodeBase {
   type: SyntaxType.ReplaceStateTrigger;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   triggerNode: StringNode;
 }
 
 export interface ReplaceTransActionNode extends NamedNodeBase {
   type: SyntaxType.ReplaceTransAction;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   new_textNode: StringNode;
   old_textNode: StringNode;
 }
 
 export interface ReplaceTransTriggerNode extends NamedNodeBase {
   type: SyntaxType.ReplaceTransTrigger;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   new_textNode: StringNode;
   old_textNode: StringNode;
 }
 
 export interface ReplaceTriggerTextNode extends NamedNodeBase {
   type: SyntaxType.ReplaceTriggerText;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   new_textNode: StringNode;
   old_textNode: StringNode;
 }
@@ -684,7 +700,7 @@ export interface SayTextNode extends NamedNodeBase {
 
 export interface SetWeightNode extends NamedNodeBase {
   type: SyntaxType.SetWeight;
-  fileNode: IdentifierNode | StringNode | VariableRefNode;
+  fileNode: IdentifierNode | InterpolatedNameNode | StringNode | VariableRefNode;
   stateNode: IdentifierNode | StateLabelAlnumNode | StringNode | VariableRefNode;
   weightNodes: (UnnamedNode<"#"> | UnnamedNode<"-"> | NumberNode)[];
 }

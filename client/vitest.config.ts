@@ -45,12 +45,7 @@ export default defineConfig({
                 // VSCode extension entry point: activate/deactivate require the live vscode
                 // runtime; there is no meaningful unit surface to test here.
                 "client/src/extension.ts",
-                // Panel lifecycle management is built entirely around vscode.WebviewPanel,
-                // vscode.workspace, and vscode.window APIs; mocking them would recreate the
-                // framework rather than test behaviour.
-                "client/src/dialog-tree/shared.ts",
                 // Webview bundle entry points that only run inside the webview context.
-                "client/src/dialog-tree/dialogTree-webview.ts",
                 "client/src/binary-editor/webview/main.ts",
                 // worker_threads entry: runs only inside a spawned worker. Its behaviour is
                 // covered by the spawned-worker integration test (which bundles it through
@@ -74,6 +69,26 @@ export default defineConfig({
                 // (a harness would only re-assert that Svelte stores and returns the value). Exercised
                 // in-context by the components that provide/consume the jump callback.
                 "client/src/binary-editor/webview/state/jump-context.ts",
+                // Dialog editor: the render harness (mounts the real App in Chromium via Playwright,
+                // delivers the model through the real postMessage channel) is e2e-tier and run out of
+                // process, not under in-process vitest. Same category as client/src/test/**.
+                "client/src/dialog-editor/test/**",
+                // Dialog editor panel lifecycle: built entirely around vscode.WebviewPanel,
+                // vscode.workspace, and the LanguageClient request channel - mocking them would recreate
+                // the framework. Its one pure piece (HTML/CSP assembly) is extracted to
+                // dialog-webview-html.ts and unit-tested (dialog-panel-html.test.ts). Mirrors the
+                // binary-editor provider.ts/document.ts/register.ts exclusions.
+                "client/src/dialog-editor/panel.ts",
+                // Webview bundle entry + the acquireVsCodeApi host channel: run only inside the VS Code
+                // webview context, not in vitest. Mirrors binary-editor/webview/main.ts and the webview
+                // host helpers above.
+                "client/src/dialog-editor/webview/main.ts",
+                "client/src/dialog-editor/webview/host.ts",
+                // Svelte textarea-autosize action: its whole job is measuring laid-out DOM (scrollHeight),
+                // which no in-process test environment lays out - a unit test could only re-assert its own
+                // stub. Exercised by the harness drivers and the live editor. Same category as
+                // jump-context.ts above.
+                "client/src/dialog-editor/webview/autosize.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach.

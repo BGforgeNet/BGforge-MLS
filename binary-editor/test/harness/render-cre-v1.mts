@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { creParser } from "../../../binary/src/cre/index";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../../../binary/src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../../../binary/src/cre/canonical-writer";
@@ -98,17 +99,19 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
-await page.waitForTimeout(200);
 
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]')
+        .filter({ hasText: label })
+        .first()
+        .waitFor({ timeout: 5000 });
 }
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Effects$/ }) });
 async function selectRow(scope: Locator, idx: number): Promise<void> {
     await scope.locator(".vlist .vrow").nth(idx).click();
     await scope.locator(".row-actions").first().waitFor({ timeout: 3000 });
-    await page.waitForTimeout(100);
 }
 
 await clickTab("Effects");
@@ -142,7 +145,7 @@ check(
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("v1: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
-await page.screenshot({ path: path.join(here, "shot-cre-effects-v1.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-cre-effects-v1.png"), fullPage: true });
 
 await browser.close();
 

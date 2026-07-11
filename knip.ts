@@ -19,9 +19,9 @@ const config: KnipConfig = {
             entry: [
                 // esbuild entry points (moved from package.json to scripts/*.sh)
                 "src/extension.ts",
-                "src/dialog-tree/dialogTree-webview.ts",
                 "src/binary-editor/worker.ts",
                 "src/binary-editor/webview/main.ts",
+                "src/dialog-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
@@ -29,6 +29,10 @@ const config: KnipConfig = {
                 // vitest unit tests (run via client/vitest.config.ts)
                 "test/**/*.test.ts",
             ],
+            // The dialog-editor render harness is environment-only (Playwright + browser
+            // globals), run via `pnpm exec tsx`, not imported by the build or tests - same
+            // treatment as binary-editor/test/harness. Keep it out of knip's analysis.
+            ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
             // vitest.mutation.config.ts is referenced from stryker.conf.json
@@ -123,7 +127,7 @@ const config: KnipConfig = {
         "scripts/**",
     ],
     ignoreDependencies: [
-        // icon font used via CSS classes in dialogTree.ts (e.g. "codicon codicon-references")
+        // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",
         // invoked via pnpm exec in scripts
         "oxfmt",

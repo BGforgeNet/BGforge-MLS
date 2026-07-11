@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { itmParser } from "../../../binary/src/itm/index";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../../../binary/src/itm/canonical-reader";
 import { serializeItmCanonicalDocument } from "../../../binary/src/itm/canonical-writer";
@@ -118,18 +119,25 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page.waitForSelector(".layout-root .panel h3", { timeout: 5000 });
 // Default tab is General; capture it, then navigate to the tree tab below.
-await page.screenshot({ path: path.join(here, "shot-itm.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-itm.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]')
+        .filter({ hasText: label })
+        .first()
+        .waitFor({ timeout: 5000 });
 }
 // Undo a structure op and refresh the webview (the host pushes the op onto the undo stack; "invalidated"
 // makes the tree re-fetch), so each op test runs from the same baseline.
 async function doUndo(): Promise<void> {
     dispatch({ type: "undo", sessionId });
     await page.evaluate((rr) => window.postMessage(rr, "*"), { type: "invalidated" } as HostToWebview);
+    // The invalidation triggers an async version-bump -> re-fetch round trip inside the webview with no single
+    // DOM-observable completion signal generic across every call site (dispatch-level checks, tree re-renders,
+    // and RowActions targets all key off it differently) - bounded settle, not a condition poll.
     await page.waitForTimeout(200);
 }
 
@@ -227,7 +235,19 @@ const boxCounts = async (): Promise<{ total: number; checked: number }> => ({
     checked: await unusablePanel.locator('[role="checkbox"][aria-checked="true"]').count(),
 });
 await unusablePanel.getByRole("button", { name: "Select all", exact: true }).click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => {
+            const panel = Array.from(document.querySelectorAll(".panel")).find(
+                (p) => p.querySelector("h3")?.textContent === "Unusable By",
+            );
+            const boxes = panel?.querySelectorAll('[role="checkbox"]') ?? [];
+            return boxes.length > 0 && Array.from(boxes).every((b) => b.getAttribute("aria-checked") === "true");
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const afterSelect = await boxCounts();
 check(
     "bulk: Select all checks every flag in the panel",
@@ -235,7 +255,19 @@ check(
     `${afterSelect.checked}/${afterSelect.total}`,
 );
 await unusablePanel.getByRole("button", { name: "Deselect all", exact: true }).click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => {
+            const panel = Array.from(document.querySelectorAll(".panel")).find(
+                (p) => p.querySelector("h3")?.textContent === "Unusable By",
+            );
+            const boxes = panel?.querySelectorAll('[role="checkbox"]') ?? [];
+            return boxes.length > 0 && Array.from(boxes).every((b) => b.getAttribute("aria-checked") !== "true");
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 check("bulk: Deselect all clears every flag in the panel", (await boxCounts()).checked === 0, "");
 
 // ============================================================
@@ -249,7 +281,16 @@ check("baseline: 3 effects", sectionKids(effectsNodeId).total === 3, `total=${se
 // ============================================================
 await clickTab("Abilities & Effects");
 await page.waitForSelector(".eff-tree .eff-tree-vrow", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const tab = document.querySelector('.bb-tabs.primary button[role="tab"][aria-selected="true"]');
+            return !!tab && (tab.textContent ?? "").includes("2/3");
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 const treeTabText = (
     (await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').textContent()) ?? ""
@@ -307,7 +348,18 @@ const ab2Head = page
     .locator(".eff-tree-head")
     .filter({ has: page.locator(".eff-tree-head-label", { hasText: "Ability 2" }) });
 await ab2Head.locator(".eff-tree-head-label").hover();
-await page.waitForTimeout(120);
+await page
+    .waitForFunction(
+        () => {
+            const labels = Array.from(document.querySelectorAll(".eff-tree-head-label"));
+            const label = labels.find((l) => (l.textContent ?? "").includes("Ability 2"));
+            const head = label?.closest(".eff-tree-head") as HTMLElement | null;
+            return !!head && getComputedStyle(head).backgroundColor !== "rgba(0, 0, 0, 0)";
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const hoverColors = await ab2Head.evaluate((head) => ({
     row: getComputedStyle(head).backgroundColor,
     label: getComputedStyle(head.querySelector(".eff-tree-head-label")!).backgroundColor,
@@ -400,7 +452,6 @@ check(
 // at a deliberately narrow viewport (the 1280 default has enough slack to hide the bug) that no col-2 label
 // whose row-band intersects the combobox has its left edge under the combobox.
 await page.setViewportSize({ width: 1000, height: 900 });
-await page.waitForTimeout(120);
 const narrowOverlap = await page.evaluate(() => {
     const combo = document.querySelector(".eff-tree .detail .bb-combobox-input") as HTMLElement | null;
     if (!combo) return { ok: false, detail: "no combobox" };
@@ -419,14 +470,22 @@ check(
     narrowOverlap.detail,
 );
 await page.setViewportSize({ width: 1280, height: 900 });
-await page.waitForTimeout(120);
 
 // Stable-columns guard: the col-2 "Timing" control's left edge must coincide across all three effects
 // (different opcodes relabel parameter1/parameter2, but the fixed label column keeps the values put).
 const timingLefts: number[] = [];
 for (let i = 0; i < 3; i++) {
     await page.locator(".eff-tree-effect").nth(i).click();
-    await page.waitForTimeout(80);
+    await page
+        .waitForFunction(
+            (idx) => {
+                const rows = Array.from(document.querySelectorAll(".eff-tree-effect"));
+                return rows[idx]?.classList.contains("eff-tree-selected") ?? false;
+            },
+            i,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
     const left = await page
         .locator('.eff-tree .detail .bb-combobox-input[aria-label="Timing"]')
         .first()
@@ -504,14 +563,23 @@ check(
         ddWidths.attack!.w < ddWidths.damage!.w,
     JSON.stringify(ddWidths),
 );
-await page.screenshot({ path: path.join(here, "shot-itm-tree.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
 
 // ============================================================
 // Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)
 // ============================================================
 // + ability (section-level add)
 await page.locator(".eff-tree-toolbar .eff-tree-toolbtn").click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () =>
+            Array.from(document.querySelectorAll(".eff-tree-head-label")).filter((l) =>
+                (l.textContent ?? "").startsWith("Ability"),
+            ).length === 3,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 check(
     "ops: + ability adds an ability",
     sectionKids(abilitiesNodeId).total === 3,
@@ -529,7 +597,9 @@ const ability1Head = page
     .locator(".eff-tree-head")
     .filter({ has: page.locator(".eff-tree-head-label", { hasText: "Ability 1" }) });
 await ability1Head.locator(".eff-tree-add").click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 4, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "ops: + effect on Ability 1 adds an effect",
     sectionKids(effectsNodeId).total === 4,
@@ -542,7 +612,9 @@ check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `$
 await page.locator(".eff-tree-effect").first().click();
 await page.locator(".eff-tree .detail .row-actions").first().waitFor({ timeout: 3000 });
 await page.locator('.eff-tree .detail .row-actions button[aria-label="Delete"]').click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 2, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "ops: delete effect via RowActions removes it",
     sectionKids(effectsNodeId).total === 2,
@@ -553,7 +625,16 @@ await doUndo();
 await page.locator(".eff-tree-head-label", { hasText: "Ability 1" }).first().click();
 await page.locator(".eff-tree .detail .row-actions").first().waitFor({ timeout: 3000 });
 await page.locator('.eff-tree .detail .row-actions button[aria-label="Add below"]').click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () =>
+            Array.from(document.querySelectorAll(".eff-tree-head-label")).filter((l) =>
+                (l.textContent ?? "").startsWith("Ability"),
+            ).length === 3,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 check(
     "ops: ability RowActions Add below inserts an ability",
     sectionKids(abilitiesNodeId).total === 3,
@@ -563,7 +644,9 @@ await doUndo();
 
 // Add global (equipping) effect: the Global group's + appends to the equipping range (section-level add).
 await page.locator('.eff-tree-add[aria-label="Add global effect"]').click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 4, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "ops: + global effect grows the effect count",
     sectionKids(effectsNodeId).total === 4,
@@ -576,7 +659,11 @@ check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `$
 // Filter: typing narrows the tree to matching effects (+ their owning headers), forcing groups expanded.
 // ============================================================
 await page.locator(".eff-tree-toolbar input.list-filter-input").fill("op 21");
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect-label").length === 1, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const filtered = await page.evaluate(() => ({
     effects: Array.from(document.querySelectorAll(".eff-tree-effect-label")).map((e) => (e.textContent ?? "").trim()),
     heads: Array.from(document.querySelectorAll(".eff-tree-head-label")).map((e) => (e.textContent ?? "").trim()),
@@ -590,7 +677,9 @@ check(
     JSON.stringify(filtered),
 );
 await page.locator(".eff-tree-toolbar .list-filter-clear").click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 3, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "filter: clearing restores all three effects",
     (await page.locator(".eff-tree-effect").count()) === 3,
@@ -599,14 +688,18 @@ check(
 
 // Collapse all / expand all: collapsing hides every nested effect row (headers remain); expanding restores them.
 await page.locator('.eff-tree-iconbtn[aria-label="Collapse all"]').click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 0, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "tree: collapse all hides every effect row",
     (await page.locator(".eff-tree-effect").count()) === 0,
     `${await page.locator(".eff-tree-effect").count()}`,
 );
 await page.locator('.eff-tree-iconbtn[aria-label="Expand all"]').click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 3, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 check(
     "tree: expand all restores every effect row",
     (await page.locator(".eff-tree-effect").count()) === 3,
@@ -629,7 +722,16 @@ check(
     } else {
         sessionId = r.result.sessionId;
         await page.evaluate((rr) => window.postMessage(rr, "*"), { type: "init", open: r.result } as HostToWebview);
-        await page.waitForTimeout(300);
+        await page
+            .waitForFunction(
+                () => {
+                    const spacer = document.querySelector(".eff-tree-spacer") as HTMLElement | null;
+                    return !!spacer && spacer.getBoundingClientRect().height > 3000;
+                },
+                undefined,
+                { timeout: 5000 },
+            )
+            .catch(() => undefined);
         const mounted = await page.locator(".eff-tree-vrow").count();
         const spacerH = await page
             .locator(".eff-tree-spacer")

@@ -5,7 +5,7 @@ const dev = process.argv.includes("--sourcemap");
 const minify = process.argv.includes("--minify");
 
 await build({
-    entryPoints: ["./client/src/dialog-tree/dialogTree-webview.ts", "./client/src/binary-editor/webview/main.ts"],
+    entryPoints: ["./client/src/binary-editor/webview/main.ts", "./client/src/dialog-editor/webview/main.ts"],
     outdir: "client/out",
     bundle: true,
     format: "iife",

@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/arcaves.map");
@@ -69,7 +70,18 @@ check(
 );
 
 await varTabBtn.click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const btn = Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]')).find((b) =>
+                (b.textContent ?? "").includes("Variables"),
+            );
+            return btn !== undefined && /Variables\s*\(\s*21\s*\)/.test(btn.textContent ?? "");
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 // Variables tab button should show a count badge (21 from arcaves).
 const varTabLabel = await varTabBtn.innerText();
@@ -92,7 +104,7 @@ const rows = page.locator(".layout-root .vlist .vrow");
 const rowCount = await rows.count();
 check("Global subtab shows variable list rows (>0)", rowCount > 0, `rows=${rowCount}`);
 
-await page.screenshot({ path: path.join(here, "shot-map-vars.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-vars.png"), fullPage: true });
 
 await browser.close();
 console.log("\n=== MAP variables tab harness results ===");

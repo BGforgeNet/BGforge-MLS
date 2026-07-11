@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { mapParser } from "../../../binary/src/map/index";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -101,10 +102,21 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelector(".layout-root .panel > h3") !== null, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .waitForFunction(
+            (lbl) => {
+                const active = document.querySelector('.bb-tabs.primary button[role="tab"][aria-selected="true"]');
+                return active !== null && (active.textContent ?? "").includes(lbl);
+            },
+            label,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
 }
 // Guard against the "captured the wrong tab" regression: each per-tab screenshot must be taken while that
 // tab is actually the selected one. Returns the active primary tab's label (includes its count badge text).
@@ -118,7 +130,7 @@ check(
     (await activeTabLabel()).includes("Header"),
     await activeTabLabel(),
 );
-await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map.png"), fullPage: true });
 
 // ============================================================
 // Layout assertions
@@ -184,13 +196,17 @@ check("layout: objects tab renders an elevation object list", elevMd >= 1, `coun
 // Select the first object so the detail pane renders (otherwise the shot is just an empty "Select an entry." pane).
 await objectsMd.locator(".vlist .vrow").first().waitFor({ timeout: 5000 });
 await objectsMd.locator(".vlist .vrow").first().click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelector(".master-detail .detail .detail-tabs") !== null, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 check(
     "screenshot: Objects tab active for shot-map-objects",
     (await activeTabLabel()).includes("Objects"),
     await activeTabLabel(),
 );
-await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-objects.png"), fullPage: true });
 
 // The object detail splits into "Details" + "Inventory" tabs; the engine Inventory Header bookkeeping group is
 // hidden, so it must NOT appear as a form sub-tab. Open the Inventory tab to reach the mini-list.
@@ -208,7 +224,9 @@ check(
     "",
 );
 await detailTabs.locator('button[role="tab"]').filter({ hasText: "Inventory" }).first().click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelector(".child-list") !== null, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 // Inventory mini-list (interactive): cave6's first object has no inventory, so the list opens on its empty
 // state. Add two items through the "+ add item" button (real addChild dispatch -> changeSet refresh), expand
@@ -224,9 +242,12 @@ check(
         .catch(() => "")) ?? "",
 );
 await inventoryList.locator(".child-list-add").click();
-await page.waitForTimeout(150);
 await inventoryList.locator(".child-list-add").click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelectorAll(".child-list .child-row").length >= 2, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const invRows = await inventoryList.locator(".child-row").count();
 check("inventory: + add item grew the list to two rows", invRows === 2, `rows=${invRows}`);
 const invTabText =
@@ -242,7 +263,11 @@ check(
     `label="${invTabText.trim()}"`,
 );
 await inventoryList.locator(".child-row .child-row-label").first().click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelector(".child-list .child-row-detail .form") !== null, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 // The row label is the item's identity (PID) + quantity, not the bare "Inventory Entry N" group name.
 const firstRowLabel = (await inventoryList.locator(".child-row .child-row-label").first().textContent()) ?? "";
 check(
@@ -255,7 +280,7 @@ check(
     (await inventoryList.locator(".child-row-detail .form").count()) >= 1,
     "",
 );
-await page.screenshot({ path: path.join(here, "shot-map-inventory.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-inventory.png"), fullPage: true });
 
 // ============================================================
 // Baseline + structure ops (dispatch-level; the interactive DOM path is covered by ITM/CRE)

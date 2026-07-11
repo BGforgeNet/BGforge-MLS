@@ -18,27 +18,38 @@ export function extractSayText(stateNode: SyntaxNode): string {
     return extractSayTextContent(sayNode);
 }
 
+// The `_text` alternatives a say_text node holds (one per multisay entry). Membership set so the same
+// list drives both first-text extraction and the full multisay list.
+const SAY_TEXT_KINDS: ReadonlySet<string> = new Set<string>([
+    SyntaxType.TildeString,
+    SyntaxType.String,
+    SyntaxType.TraRef,
+    SyntaxType.TlkRef,
+    SyntaxType.AtVarRef,
+    SyntaxType.DoubleString,
+]);
+
 /**
  * Extract text from a say_text node, which may contain tilde_string, tra_ref, tlk_ref, or at_var_ref.
+ * Returns the FIRST text of a multisay (`@a = @b`); use `extractSayTexts` for the whole list.
  */
 export function extractSayTextContent(sayTextNode: SyntaxNode): string {
     for (const child of sayTextNode.children) {
-        switch (child.type) {
-            case SyntaxType.TildeString:
-                return extractTildeContent(child);
-            case SyntaxType.String:
-                return extractStringContent(child);
-            case SyntaxType.TraRef:
-                return child.text;
-            case SyntaxType.TlkRef:
-                return child.text;
-            case SyntaxType.AtVarRef:
-                return child.text;
-            case SyntaxType.DoubleString:
-                return extractDoubleContent(child);
-        }
+        if (SAY_TEXT_KINDS.has(child.type)) return extractTextContent(child);
     }
     return sayTextNode.text.trim();
+}
+
+/**
+ * Every text of a state's SAY, in source order, each with its byte range. A multisay
+ * (`SAY @a = @b = @c`) yields one entry per text; a single SAY yields one entry.
+ */
+export function extractSayTexts(stateNode: SyntaxNode): Array<{ text: string; range: { start: number; end: number } }> {
+    const sayNode = stateNode.childForFieldName("say");
+    if (!sayNode) return [];
+    return sayNode.children
+        .filter((c) => SAY_TEXT_KINDS.has(c.type))
+        .map((c) => ({ text: extractTextContent(c), range: { start: c.startIndex, end: c.endIndex } }));
 }
 
 function extractTildeContent(node: SyntaxNode): string {
@@ -122,6 +133,26 @@ export function extractChainText(chainTextNode: SyntaxNode): string {
     return chainTextNode.text.trim();
 }
 
+/**
+ * Every text of a chain line's SAY, in source order with byte ranges - the multisay-aware analog of the
+ * take-first `extractChainText`. A chain line's texts live in its `say_text` child (or, without one, directly
+ * on the chain_text), so a `@a = @b = @c` chain entry yields one entry per text instead of dropping all but
+ * the first. Mirrors `extractSayTexts` for the state case.
+ */
+export function extractChainTexts(
+    chainTextNode: SyntaxNode,
+): Array<{ text: string; range: { start: number; end: number } }> {
+    const sayTextNode = chainTextNode.children.find((c) => c.type === SyntaxType.SayText);
+    const scope = sayTextNode ?? chainTextNode;
+    const texts = scope.children
+        .filter((c) => SAY_TEXT_KINDS.has(c.type))
+        .map((c) => ({ text: extractTextContent(c), range: { start: c.startIndex, end: c.endIndex } }));
+    if (texts.length > 0) return texts;
+    // No typed text child (an untyped/wrapper say_text): fall back to the take-first content as a single entry.
+    const text = extractChainText(chainTextNode);
+    return text ? [{ text, range: { start: chainTextNode.startIndex, end: chainTextNode.endIndex } }] : [];
+}
+
 export function extractChainTextTrigger(chainTextNode: SyntaxNode): string | undefined {
     const triggerNode = chainTextNode.childForFieldName("trigger");
     if (!triggerNode) return undefined;
@@ -135,6 +166,31 @@ export function extractTrigger(stateNode: SyntaxNode): string | undefined {
     // Empty trigger (~~ or "") is not meaningful
     if (!content.trim()) return undefined;
     return content;
+}
+
+export function extractWeight(stateNode: SyntaxNode): number | undefined {
+    // The grammar's `_weight_value` (`# [-] number`) is a hidden rule, so its tokens
+    // inline as direct children of the state: `WEIGHT`, `#`, optional `-`, `number`.
+    // The `weight` field resolves to the `#` token, not the number, so walk instead.
+    // (`WEIGHT`/`#`/`-` are anonymous tokens with no SyntaxType member.)
+    let sawWeight = false;
+    let negative = false;
+    for (const child of stateNode.children) {
+        if (child.type === "WEIGHT") {
+            sawWeight = true;
+        } else if (!sawWeight) {
+            continue;
+        } else if (child.type === "-") {
+            negative = true;
+        } else if (child.type === SyntaxType.Number) {
+            const value = parseInt(child.text, 10);
+            if (Number.isNaN(value)) return undefined;
+            return negative ? -value : value;
+        } else if (child.type !== "#") {
+            break; // reached the trigger/body without a number: malformed
+        }
+    }
+    return undefined;
 }
 
 export function extractTransitionTrigger(transitionNode: SyntaxNode): string | undefined {
@@ -212,6 +268,25 @@ export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
 
         // Recurse into transition containers
         const nested = extractTarget(child);
+        if (nested) return nested;
+    }
+    return undefined;
+}
+
+/**
+ * Byte span of a transition's target STATE label - the `label` of a `GOTO label` (goto_next) or
+ * `+ label` (short_goto) - for a token-splice retarget that leaves the rest of the transition
+ * byte-identical (see dialog-d-edit's fieldEditOps). Only state targets are spliceable this way;
+ * EXIT/EXTERN/COPY_TRANS retargets change the clause's shape, so they return undefined and the
+ * writer falls back to re-serializing the transition.
+ */
+export function extractTargetLabelRange(node: SyntaxNode): { start: number; end: number } | undefined {
+    for (const child of node.children) {
+        if (child.type === SyntaxType.GotoNext || child.type === SyntaxType.ShortGoto) {
+            const labelNode = child.childForFieldName("label");
+            if (labelNode) return { start: labelNode.startIndex, end: labelNode.endIndex };
+        }
+        const nested = extractTargetLabelRange(child);
         if (nested) return nested;
     }
     return undefined;

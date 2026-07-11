@@ -6,6 +6,12 @@
 /** Standard LSP workspace/executeCommand identifiers exposed by the server. */
 export const LSP_COMMAND_COMPILE = "bgforge.compile";
 export const LSP_COMMAND_PARSE_DIALOG = "bgforge.parseDialog";
+/**
+ * Persist edited translation strings to the resolved `.tra`/`.msg` for a dialog.
+ * Argument: `{ uri: string, messages: Record<string, string> }`. The server
+ * resolves the consumer's translation file and rewrites only the changed entries.
+ */
+export const LSP_COMMAND_SAVE_TRA = "bgforge.saveDialogTra";
 
 /**
  * Prefix for per-language workspace-symbol executeCommand IDs.
@@ -32,4 +38,3 @@ export function lspWorkspaceSymbolsCommand(languageId: WorkspaceSymbolScopedLang
 
 /** VS Code extension command identifiers. These are client-side wrappers, not LSP commands. */
 export const VSCODE_COMMAND_COMPILE = "extension.bgforge.compile";
-export const VSCODE_COMMAND_DIALOG_PREVIEW = "extension.bgforge.dialogPreview";

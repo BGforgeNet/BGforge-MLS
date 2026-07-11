@@ -108,7 +108,7 @@ export default grammar({
         // CHAIN [IF [WEIGHT #weight] trigger THEN] [IF_FILE_EXISTS] entryFile entryLabel chainText chainEpilogue
         chain_action: ($) =>
             seq(
-                "CHAIN",
+                field("keyword", choice("CHAIN", "CHAIN3")),
                 optional(
                     seq("IF", optional(seq("WEIGHT", $._weight_value)), field("trigger", $.string), optional("THEN")),
                 ),
@@ -138,6 +138,12 @@ export default grammar({
                     "INTERJECT_COPY_TRANS2",
                     "INTERJECT_COPY_TRANS3",
                     "INTERJECT_COPY_TRANS4",
+                    // I_C_T[2-4] are WeiDU's documented shorthand aliases for the
+                    // INTERJECT_COPY_TRANS[2-4] keywords above (same construct).
+                    "I_C_T",
+                    "I_C_T2",
+                    "I_C_T3",
+                    "I_C_T4",
                 ),
                 optional("SAFE"),
                 field("file", $._filename),
@@ -211,7 +217,9 @@ export default grammar({
                 "END",
             ),
 
-        alter_trans_change: ($) => seq($.double_string, $.string),
+        // A change is `field value`, where field is a WeiDU trans field. It is usually a bareword
+        // (ACTION, TRIGGER, EPILOGUE, ...) but a quoted "field" form is also accepted.
+        alter_trans_change: ($) => seq(choice($.double_string, $.identifier), $.string),
 
         // Trans replacement actions (using helper)
         replace_trans_trigger: replaceTransAction("REPLACE_TRANS_TRIGGER"),
@@ -295,6 +303,8 @@ export default grammar({
                 $._trans_number_list,
                 optional($.d_action_when),
                 field("action", $.string),
+                // The IF/UNLESS guard may also trail the action string (WeiDU accepts both positions).
+                optional($.d_action_when),
             ),
 
         // dActionWhen - conditional for D actions
@@ -373,15 +383,32 @@ export default grammar({
         // + stateLabel (shorthand for GOTO)
         short_goto: ($) => seq("+", field("label", $._state_label)),
 
-        // Filename can be identifier, string, or variable ref
-        _filename: ($) => choice($.identifier, $.string, $.variable_ref),
+        // Filename can be identifier, string, variable ref, or a %var%-interpolated name
+        _filename: ($) => choice($.identifier, $.string, $.variable_ref, $.interpolated_name),
+
+        // A name assembled at COMPILE time by concatenating %var% substitutions with abutting
+        // literal text, e.g. %tutu_var%KELDDA (the value of tutu_var, then "KELDDA") or
+        // TAZOK%eet_var%. WeiDU treats the pieces as one identifier; token.immediate on the
+        // continuation keeps them from combining across whitespace (so `%var% NAME` stays two tokens).
+        interpolated_name: ($) =>
+            seq(
+                choice($.variable_ref, $.identifier),
+                repeat1(
+                    choice(
+                        alias(token.immediate(/[A-Za-z_][A-Za-z0-9_#]*/), $.identifier),
+                        alias(token.immediate(seq("%", /[A-Za-z_][A-Za-z0-9_#]*/, "%")), $.variable_ref),
+                    ),
+                ),
+            ),
 
         // State label can be number, identifier, alphanumeric (like 4a), variable ref, or string (like ~13~)
         _state_label: ($) => choice($.state_label_alnum, $.identifier, $.variable_ref, $.string),
 
         // Alphanumeric state label (can start with digit, like "4a", "100", "foo")
-        // WeiDU allows # in state labels (e.g., RR#ZA00) but not at start (conflicts with #weight syntax)
-        state_label_alnum: ($) => /[A-Za-z0-9_][A-Za-z0-9_#]*/,
+        // WeiDU allows # in state labels (e.g., RR#ZA00) but not at start (conflicts with #weight syntax).
+        // Dots are valid in labels too (e.g., KHPC1.1, SHRO6.16); `number` is integer-only, so a dotted
+        // run is unambiguously a label here, never a float. Hyphens also occur (e.g., Quayle_Shar-Teel_1).
+        state_label_alnum: ($) => /[A-Za-z0-9_][A-Za-z0-9_#.-]*/,
 
         // Weight value: #[-]number
         _weight_value: ($) => seq("#", optional("-"), $.number),

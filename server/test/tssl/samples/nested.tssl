@@ -1,0 +1,19 @@
+// Authored fixture (SSL-in-TS). A nested `if` (multi-level gate) is the structured tier: the graph can
+// display it faithfully but not round-trip the composite condition to a single `if`, so it is read-only.
+function Node001() {
+    Reply(100);
+    if (global_var(GVAR_X) == 1) {
+        if (global_var(GVAR_Y) == 1) {
+            NOption(101, Node002, 4);
+        }
+    }
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function talk_p_proc() {
+    Node001();
+}

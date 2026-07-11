@@ -1,0 +1,22 @@
+// Authored fixture (SSL-in-TS). A top-level Reply plus a single `if` whose branch mixes a preservable simple
+// statement (an assignment) with a dialog call. The top-level non-`if` Reply keeps it out of the BUNDLE tier
+// (bundle requires the body to be only `if`s), so it is STRUCTURED: read-only, faithfully displayed, the
+// assignment preserved as an opaque block item. The 3-tier parser demoted this to lossy `approximate` because
+// its structured gate rejected any statement that was not a call; SSL keeps it structured (assignment = a
+// preservable simple statement).
+function Node001() {
+    Reply(100);
+    if (global_var(GVAR_X) == 1) {
+        game_global_var = 5;
+        NOption(101, Node002, 4);
+    }
+}
+
+function Node002() {
+    Reply(200);
+    NMessage(201);
+}
+
+function talk_p_proc() {
+    Node001();
+}

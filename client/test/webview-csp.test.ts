@@ -31,8 +31,8 @@ describe("webview script inlining", () => {
     });
 
     it("binary-editor bundle installs the fatal runtime-error handler", () => {
-        // Symmetric to dialogTree-webview-bundle.test.ts: a webview that throws with no error hook leaves a
-        // silently blank panel and nothing in the output channel. Guard that the hooks stay wired.
+        // A webview that throws with no error hook leaves a silently blank panel and nothing in the output
+        // channel. Guard that the hooks stay wired.
         const built = path.resolve("client/out/binary-editor/webview/main.js");
         if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
         const out = fs.readFileSync(built, "utf8");
@@ -60,14 +60,5 @@ describe("webview CSP", () => {
     it("binary editor CSP allows codicon font via cspSource", () => {
         const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).toContain("font-src {{cspSource}}");
-    });
-
-    it("dialog tree template declares a nonce-based CSP", () => {
-        const html = fs.readFileSync(path.resolve("client/src/dialog-tree/dialogTree.html"), "utf8");
-        expect(html).not.toContain("'unsafe-inline'");
-        expect(html).toContain('http-equiv="Content-Security-Policy"');
-        expect(html).toContain("default-src 'none'");
-        expect(html).toContain("'nonce-{{nonce}}'");
-        expect(html).toContain("{{cspSource}}");
     });
 });
