@@ -87,22 +87,31 @@ function isNextFeature(node: SyntaxNode): boolean {
     );
 }
 
-// Normalize transition text: collapse whitespace in code, preserve strings and block comments exactly
+// True when a `~`/`"` string delimiter directly abuts a word character (in either order). That is the
+// spot that renders as `~trigger~THEN` from a no-space source and reformats to `~trigger~ THEN`,
+// breaking idempotency. `%` is deliberately excluded: %var%-interpolated names (%tutu_var%KELDDA,
+// TAZOK%eet_var%) abut literal text on purpose and must never be split by a space.
+function needsBoundarySpace(prev: string, next: string): boolean {
+    const isTildeOrQuote = (c: string): boolean => c === "~" || c === '"';
+    const isWord = (c: string): boolean => /\w/.test(c);
+    return (isTildeOrQuote(prev) && isWord(next)) || (isWord(prev) && isTildeOrQuote(next));
+}
+
+// Normalize transition text: collapse whitespace in code, preserve strings and block comments exactly,
+// and insert a separating space where a ~/"-string abuts a word with none (so `~..~THEN` is stable).
 function normalizeTransitionText(text: string): string {
     const tokens = tokenizeWeidu(text);
-    const parts: string[] = [];
+    let result = "";
 
     for (const token of tokens) {
-        if (token.type === WeiduTokenType.Code) {
-            // Collapse whitespace in code parts
-            parts.push(token.text.replaceAll(/\s+/g, " "));
-        } else {
-            // Preserve strings and comments exactly as-is
-            parts.push(token.text);
+        const part = token.type === WeiduTokenType.Code ? token.text.replaceAll(/\s+/g, " ") : token.text;
+        if (part.length > 0 && result.length > 0 && needsBoundarySpace(result[result.length - 1]!, part[0]!)) {
+            result += " ";
         }
+        result += part;
     }
 
-    return parts.join("").trim();
+    return result.trim();
 }
 
 // Get line length excluding comment

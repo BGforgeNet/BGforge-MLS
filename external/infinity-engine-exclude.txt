@@ -210,6 +210,3 @@ BG1NPC/bg1npc/phase2/tpa/bg1npc_xzarqst.tpa
 # BG1NPC malformed D file (weidu rejects it; unresolvable %macro% used as standalone CHAIN content)
 BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d
 
-# BG1NPC valid dialog parked for a pre-existing formatter idempotency bug (not malformed):
-# ~string~ abutting THEN with no source space normalizes inconsistently. Tracked separately; unpark after fixing normalizeTransitionText.
-BG1NPC/bg1npc/phase2/dlg/x#faint.d

@@ -353,4 +353,22 @@ describe("format CLI integration", () => {
             expect(code).toBe(0);
         });
     });
+
+    describe("weidu-d transition idempotence", () => {
+        // Regression: a ~trigger~ string abutting THEN with no source space (valid WeiDU) rendered as
+        // ~..~THEN on the first pass but ~..~ THEN once the broken transition line was reparsed, so the
+        // formatter was not idempotent. A separating space is now inserted at a ~/"-string<->word
+        // boundary (never a %var% one, so interpolated names stay abutted).
+        it("adds a stable space between a ~trigger~ and an abutting THEN across a line break", () => {
+            const input =
+                "EXTEND_BOTTOM ~%tutu_var%CORSON~ 6\n" +
+                'IF ~InParty("faldorn") InMyArea("faldorn") !StateCheck("faldorn",CD_STATE_NOTVALID)~THEN EXTERN ~%FALDORN_JOINED%~ FaldornCorsone\n' +
+                "END\n";
+            const file = path.join(tmpDir, "trans.d");
+            fs.writeFileSync(file, input);
+            const { code, stderr } = run(file, "--save-and-check");
+            expect(stderr).not.toContain("Formatter not idempotent");
+            expect(code).toBe(0);
+        });
+    });
 });
