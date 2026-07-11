@@ -1,8 +1,11 @@
 /**
- * Shared helpers for the in-webview bundles (binary editor + dialog editor).
- * These run in the webview's browser context, so the module must stay
- * free of Node and vscode-host APIs; esbuild inlines it into each webview
- * bundle.
+ * Shared helpers for the in-webview bundles (binary editor + dialog editor):
+ * `installFatalErrorHandler` (global error/rejection reporting),
+ * `installInitTimeout` + `DEFAULT_INIT_TIMEOUT_MS` (bounded host-reply wait),
+ * and `isBenignWebviewError` (ResizeObserver-notice filtering, also used
+ * directly by tests). These run in the webview's browser context, so the
+ * module must stay free of Node and vscode-host APIs; esbuild inlines it
+ * into each webview bundle.
  */
 
 /** Minimal view of the `acquireVsCodeApi()` handle the helpers here need. */
@@ -102,29 +105,4 @@ export function installInitTimeout(options: InitTimeoutOptions): () => void {
         if (!isResolved()) onTimeout();
     }, ms);
     return () => clearTimeout(timer);
-}
-
-/**
- * Set the search box placeholder to the platform-appropriate hint. The dialog
- * and binary-editor webviews gate the "Cmd" vs "Ctrl" wording on the same UA
- * test.
- */
-export function setSearchPlaceholder(input: HTMLInputElement): void {
-    const isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
-    input.placeholder = isMac ? "Cmd+F or / to search" : "Ctrl+F or / to search";
-}
-
-/**
- * Trailing-edge debounce: collapse a burst of calls into a single invocation
- * `ms` after the last one. Used for the search inputs in both webviews.
- */
-export function debounce<T extends (..._args: unknown[]) => void>(fn: T, ms: number): T {
-    let timeout: ReturnType<typeof setTimeout>;
-    // cast: the returned closure has the same call signature as T, but TS can't
-    // infer that a variadic `(...args: unknown[])` wrapper is assignable to the
-    // generic T; the parameters are forwarded unchanged.
-    return ((...args: unknown[]) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), ms);
-    }) as T;
 }
