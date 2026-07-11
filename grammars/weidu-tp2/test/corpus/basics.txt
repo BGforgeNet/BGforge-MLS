@@ -288,3 +288,49 @@ BEGIN @1
       message: (value
         (tra_ref)))))
 
+================================================================================
+EXTEND_TOP with EVALUATE_BUFFER and USING tra
+================================================================================
+
+EXTEND_TOP ~a.bcs~ ~b.baf~ EVALUATE_BUFFER USING ~c.tra~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_extend_top
+    existing: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    new_file: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    tra: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+REMOVE_CRE_ITEMS (plural, no argument)
+================================================================================
+
+COPY_EXISTING ~a.cre~ ~override~
+  REMOVE_CRE_ITEMS
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy_existing
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_remove_cre_items))))
+

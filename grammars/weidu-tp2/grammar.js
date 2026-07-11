@@ -69,7 +69,7 @@ const caseConvert = (keyword) => ($) => seq(keyword, field("var", $.identifier))
 /** CRE/store item patch: KEYWORD values... */
 const itemPatch = (keyword) => ($) => seq(keyword, repeat1($.value));
 
-/** EXTEND action: KEYWORD existing new_file [EVAL] patches... */
+/** EXTEND action: KEYWORD existing new_file [EVAL] [USING tra...] patches... */
 const extendAction = (keyword) => ($) =>
     prec.right(
         seq(
@@ -77,6 +77,7 @@ const extendAction = (keyword) => ($) =>
             field("existing", $.value),
             field("new_file", $.value),
             optional(choice("EVALUATE_BUFFER", "EVAL")),
+            optional(seq("USING", repeat1(field("tra", $.value)))),
             repeat($._patch),
         ),
     );
@@ -665,6 +666,7 @@ export default grammar({
                 // CRE item operations
                 $.patch_replace_cre_item,
                 $.patch_remove_cre_item,
+                $.patch_remove_cre_items,
                 $.patch_add_cre_item,
                 $.patch_add_memorized_spell,
                 $.patch_remove_memorized_spell,
@@ -976,6 +978,9 @@ export default grammar({
 
         patch_replace_cre_item: itemPatch("REPLACE_CRE_ITEM"),
         patch_remove_cre_item: itemPatch("REMOVE_CRE_ITEM"),
+        // REMOVE_CRE_ITEMS (plural, no argument) strips every item from the CRE, unlike the
+        // singular REMOVE_CRE_ITEM ~resref~ which removes one named item.
+        patch_remove_cre_items: ($) => "REMOVE_CRE_ITEMS",
         patch_add_cre_item: itemPatch("ADD_CRE_ITEM"),
 
         patch_add_memorized_spell: ($) =>

@@ -284,6 +284,7 @@ export enum SyntaxType {
   PatchDecompileDlgToD = "patch_decompile_dlg_to_d",
   PatchPrettyPrint_2da = "patch_pretty_print_2da",
   PatchRemoveCreEffects = "patch_remove_cre_effects",
+  PatchRemoveCreItems = "patch_remove_cre_items",
   PatchRemoveKnownSpells = "patch_remove_known_spells",
   PatchRemoveMemorizedSpells = "patch_remove_memorized_spells",
   PatchReraise = "patch_reraise",
