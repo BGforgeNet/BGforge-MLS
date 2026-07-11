@@ -121,19 +121,24 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
             child.type === SyntaxType.GroupFlag ||
             child.type === SyntaxType.LabelFlag ||
             child.type === SyntaxType.RequirePredicateFlag ||
+            child.type === SyntaxType.ForbidPredicateFlag ||
             child.type === SyntaxType.RequireComponentFlag ||
-            child.type === SyntaxType.ForbidComponentFlag
+            child.type === SyntaxType.ForbidComponentFlag ||
+            child.type === SyntaxType.RequireFileFlag ||
+            child.type === SyntaxType.ForbidFileFlag
         ) {
             if (beginLine) {
                 lines.push(beginLine);
                 beginLine = "";
             }
-            if (child.type === SyntaxType.RequirePredicateFlag) {
+            if (child.type === SyntaxType.RequirePredicateFlag || child.type === SyntaxType.ForbidPredicateFlag) {
                 // Split long predicate conditions at OR/AND boundaries
+                const keyword =
+                    child.type === SyntaxType.RequirePredicateFlag ? "REQUIRE_PREDICATE" : "FORBID_PREDICATE";
                 const predicate = child.childForFieldName("predicate");
                 const message = child.childForFieldName("message");
                 const contIndent = ctx.indent;
-                const condLines = formatCondition(predicate, "REQUIRE_PREDICATE", "", contIndent, ctx.lineLimit);
+                const condLines = formatCondition(predicate, keyword, "", contIndent, ctx.lineLimit);
                 if (message) {
                     condLines[condLines.length - 1] += " " + normalizeWhitespace(message.text);
                 }

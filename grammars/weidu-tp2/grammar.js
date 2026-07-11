@@ -1628,8 +1628,11 @@ export default grammar({
                 $.subcomponent_flag,
                 $.group_flag,
                 $.require_predicate_flag,
+                $.forbid_predicate_flag,
                 $.require_component_flag,
                 $.forbid_component_flag,
+                $.require_file_flag,
+                $.forbid_file_flag,
                 $.label_flag,
             ),
 
@@ -1639,10 +1642,17 @@ export default grammar({
         group_flag: ($) => seq("GROUP", field("name", $.value)),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
         require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
+        forbid_predicate_flag: ($) => seq("FORBID_PREDICATE", field("predicate", $.value), field("message", $.value)),
         require_component_flag: ($) =>
             seq("REQUIRE_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
         forbid_component_flag: ($) =>
             seq("FORBID_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
+        // REQUIRE_FILE / FORBID_FILE take a file and an error message. WeiDU treats the message as optional,
+        // but the sibling *_component / *_predicate flags above all model it as required and the real corpus
+        // never omits it; matching them keeps the message field required and avoids a trailing-optional-$.value
+        // ambiguity against the next flag.
+        require_file_flag: ($) => seq("REQUIRE_FILE", field("file", $.value), field("message", $.value)),
+        forbid_file_flag: ($) => seq("FORBID_FILE", field("file", $.value), field("message", $.value)),
 
         always_block: ($) => seq("ALWAYS", repeat($._action), "END"),
 
