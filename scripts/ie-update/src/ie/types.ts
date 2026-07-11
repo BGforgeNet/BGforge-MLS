@@ -77,21 +77,6 @@ export interface ItemTypeRaw {
     readonly id?: string;
 }
 
-/** A processed item type with generated id */
-export interface ItemType {
-    readonly id: string;
-    readonly desc: string;
-    /** Hex string from source YAML (e.g. "0x01"), kept as-is for output compatibility */
-    readonly value: string;
-}
-
-/** An opcode entry parsed from IESDP opcode HTML frontmatter */
-export interface OpcodeEntry {
-    readonly n: number;
-    readonly bg2: number;
-    readonly opname: string;
-}
-
 /** Processed IESDP data, categorized by offset type */
 export interface ProcessedIESDPData {
     readonly chars: readonly CompletionItem[];
