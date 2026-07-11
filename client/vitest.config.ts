@@ -64,6 +64,12 @@ export default defineConfig({
                 // binary-editor/webview/messages.ts is a types-only file with no executable
                 // branches; its surface is exercised transitively via the worker protocol types.
                 "client/src/binary-editor/webview/messages.ts",
+                // dialog-editor/webview/dialog-actions.ts is a types-only file (one interface,
+                // no executable branches) shared between DialogGraph.svelte (builder) and
+                // Inspector.svelte (consumer) so their action-prop shapes cannot drift; its
+                // surface is exercised transitively through those components. Same category as
+                // messages.ts above.
+                "client/src/dialog-editor/webview/dialog-actions.ts",
                 // Thin wrapper over Svelte's getContext/setContext, which only work during component
                 // initialisation and throw outside one; there is no non-component surface to unit-test
                 // (a harness would only re-assert that Svelte stores and returns the value). Exercised
