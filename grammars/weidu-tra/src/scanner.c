@@ -9,15 +9,23 @@
  * single tildes (corpus case @500 = ~~~~~text with ~ tildes~~~~~). A tree-sitter
  * regex token cannot match a balanced 5-tilde delimiter with embedded tildes
  * (the grammar DSL has no lookahead), so this scanner handles both the ~text~
- * and the 5-tilde forms. Compiled only for native builds (see #ifndef
- * TREE_SITTER_WASM below).
+ * and the 5-tilde forms.
+ *
+ * Compiled unconditionally. The grammar declares `externals: [$.tilde_string]`,
+ * so this scanner must be linked into EVERY build - native and WASM alike, or
+ * the grammar cannot tokenize a single tilde string. Do not re-wrap the body in
+ * `#ifndef TREE_SITTER_WASM`: `tree-sitter build --wasm` does not define that
+ * macro, so the guard never fires (verified - the scanner symbols are present in
+ * the built tree-sitter-weidu_tra.wasm and web-tree-sitter parses the 5-tilde
+ * form through it); were it ever defined, the guard would silently strip the
+ * scanner and break all tilde-string parsing in the LSP (WASM) path. The code is
+ * plain C - create returns NULL, no allocation, no C++ - so nothing here is
+ * WASM-incompatible.
  */
 
 #include "tree_sitter/parser.h"
 
 enum TokenType { TILDE_STRING };
-
-#ifndef TREE_SITTER_WASM
 
 void *tree_sitter_weidu_tra_external_scanner_create(void) { return NULL; }
 void tree_sitter_weidu_tra_external_scanner_destroy(void *payload) {}
@@ -97,5 +105,3 @@ bool tree_sitter_weidu_tra_external_scanner_scan(void *payload, TSLexer *lexer,
   }
   return false;
 }
-
-#endif
