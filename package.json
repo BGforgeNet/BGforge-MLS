@@ -28,6 +28,7 @@
     "main": "./client/out/extension.js",
     "scripts": {
         "vscode:prepublish": "./scripts/prepublish.sh",
+        "prepare": "lefthook install",
         "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary",
         "build:dev": "./scripts/build-dev.sh",
         "dev:web": "./scripts/dev-web.sh",
@@ -104,6 +105,7 @@
         "esbuild-svelte": "^0.9.5",
         "jsonc-parser": "^3.3.1",
         "knip": "^6.25.0",
+        "lefthook": "^2.1.10",
         "mocha": "^11.7.6",
         "oxfmt": "^0.53.0",
         "oxlint": "1.68.0",

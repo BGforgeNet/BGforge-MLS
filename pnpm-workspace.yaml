@@ -14,13 +14,16 @@ packages:
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
 # `@vscode/vsce` dep no longer used since vsce 3. `@vscode/vsce-sign` only matters
-# when signing the VSIX, which is not done in this build.
+# when signing the VSIX, which is not done in this build. `lefthook`'s postinstall
+# downloads the platform binary used by `pnpm exec lefthook install` (wired via the
+# root `prepare` script).
 allowBuilds:
   esbuild: true
   tree-sitter-cli: true
   "@vscode/vsce-sign": false
   keytar: false
   tree-sitter: false
+  lefthook: true
 
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version

@@ -12,6 +12,9 @@ pnpm watch:server
 
 **Note:** This project uses `pnpm` exclusively. Use `pnpm exec <command>` instead of `npx <command>`.
 
+**Note:** `pnpm install` runs the `prepare` script, which installs the [lefthook](https://lefthook.dev) pre-commit
+git hooks automatically. Run the hooks manually with `pnpm exec lefthook run pre-commit`.
+
 ## Documentation
 
 | Document                                                       | Contents                                                                                      |
