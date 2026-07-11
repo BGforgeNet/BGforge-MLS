@@ -252,3 +252,80 @@ EXIT
       (say_text
         (tra_ref)))
     (chain_epilogue)))
+
+================================================================================
+%var%-interpolated filename
+================================================================================
+
+ADD_STATE_TRIGGER %v%KELDDA 6 ~Dead("x")~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (add_state_trigger
+    file: (interpolated_name
+      (variable_ref)
+      (identifier))
+    state: (state_label_alnum)
+    trigger: (string
+      (tilde_string
+        (tilde_content)))))
+
+================================================================================
+Hyphenated state label
+================================================================================
+
+BEGIN file
+IF ~~ THEN BEGIN My-Label SAY ~hi~ IF ~~ THEN EXIT END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text (string (tilde_string (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string (tilde_string))
+          (exit_next))))))
+
+================================================================================
+ALTER_TRANS with bareword change field
+================================================================================
+
+ALTER_TRANS myfile BEGIN 1 END BEGIN END BEGIN ACTION ~SetGlobal("a","b",1)~ END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (alter_trans
+    file: (identifier)
+    (state_label_alnum)
+    (alter_trans_change
+      (identifier)
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+ADD_TRANS_ACTION with trailing UNLESS guard
+================================================================================
+
+ADD_TRANS_ACTION myfile BEGIN 1 END BEGIN END ~SetGlobal("a","b",1)~ UNLESS ~x~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (add_trans_action
+    file: (identifier)
+    (state_label_alnum)
+    action: (string
+      (tilde_string
+        (tilde_content)))
+    (d_action_when
+      condition: (string
+        (tilde_string
+          (tilde_content))))))

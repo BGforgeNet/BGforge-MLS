@@ -27,6 +27,7 @@ export enum SyntaxType {
   GotoNext = "goto_next",
   InterjectAction = "interject_action",
   InterjectCopyTrans = "interject_copy_trans",
+  InterpolatedName = "interpolated_name",
   JournalFeature = "journal_feature",
   LineComment = "line_comment",
   MacroExpansion = "macro_expansion",
