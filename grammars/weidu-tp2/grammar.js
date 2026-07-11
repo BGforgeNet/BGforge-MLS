@@ -555,14 +555,7 @@ export default grammar({
         defined_as_inlined_expr: checkExpr("DEFINED_AS_INLINED", "var"),
 
         mod_is_installed_expr: ($) =>
-            prec.right(
-                3,
-                seq(
-                    choice("MOD_IS_INSTALLED", "COMPONENT_IS_INSTALLED"),
-                    field("mod", $.value),
-                    field("component", $.simple_value),
-                ),
-            ),
+            prec.right(3, seq("MOD_IS_INSTALLED", field("mod", $.value), field("component", $.simple_value))),
 
         id_of_label_expr: ($) => seq("ID_OF_LABEL", field("tp2", $.value), field("label", $.value)),
 
@@ -1633,7 +1626,6 @@ export default grammar({
                 $.subcomponent_flag,
                 $.group_flag,
                 $.require_predicate_flag,
-                $.forbid_predicate_flag,
                 $.require_component_flag,
                 $.forbid_component_flag,
                 $.require_file_flag,
@@ -1647,7 +1639,6 @@ export default grammar({
         group_flag: ($) => seq("GROUP", field("name", $.value)),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
         require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
-        forbid_predicate_flag: ($) => seq("FORBID_PREDICATE", field("predicate", $.value), field("message", $.value)),
         require_component_flag: ($) =>
             seq("REQUIRE_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
         forbid_component_flag: ($) =>

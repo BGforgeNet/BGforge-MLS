@@ -247,13 +247,12 @@ END
               (tilde_content))))))))
 
 ================================================================================
-Component flags: REQUIRE_FILE / FORBID_FILE / FORBID_PREDICATE
+Component flags: REQUIRE_FILE / FORBID_FILE
 ================================================================================
 
 BEGIN @1
   REQUIRE_FILE ~override/x.itm~ @2
   FORBID_FILE ~override/y.itm~ @3
-  FORBID_PREDICATE (!GAME_IS ~bgee~) @4
 
 --------------------------------------------------------------------------------
 
@@ -274,17 +273,6 @@ BEGIN @1
         (string
           (tilde_string
             (tilde_content))))
-      message: (value
-        (tra_ref)))
-    (forbid_predicate_flag
-      predicate: (value
-        (paren_expr
-          (unary_expr
-            operand: (game_is_expr
-              games: (value
-                (string
-                  (tilde_string
-                    (tilde_content))))))))
       message: (value
         (tra_ref)))))
 

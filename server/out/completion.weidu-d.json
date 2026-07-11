@@ -150,6 +150,46 @@
         }
     },
     {
+        "label": "I_C_T",
+        "kind": 3,
+        "source": "builtin",
+        "category": "actions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS."
+        }
+    },
+    {
+        "label": "I_C_T2",
+        "kind": 3,
+        "source": "builtin",
+        "category": "actions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T2 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS2."
+        }
+    },
+    {
+        "label": "I_C_T3",
+        "kind": 3,
+        "source": "builtin",
+        "category": "actions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T3 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS3."
+        }
+    },
+    {
+        "label": "I_C_T4",
+        "kind": 3,
+        "source": "builtin",
+        "category": "actions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T4 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS4."
+        }
+    },
+    {
         "label": "REPLACE",
         "kind": 3,
         "source": "builtin",

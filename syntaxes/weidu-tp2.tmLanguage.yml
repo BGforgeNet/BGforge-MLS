@@ -89,11 +89,16 @@ repository:
       - match: \b(ASK_EVERY_COMPONENT)\b
       - match: \b(AUTO_EVAL_STRINGS)\b
       - match: \b(AUTO_TRA)\b
+      - match: \b(EXISTING)\b
+      - match: \b(KEEP_CRLF)\b
+      - match: \b(MANAGED)\b
       - match: \b(MODDER)\b
       - match: \b(NO_IF_EVAL_BUG)\b
+      - match: \b(NULL)\b
       - match: \b(QUICK_MENU)\b
       - match: \b(README)\b
       - match: \b(SCRIPT_STYLE)\b
+      - match: \b(TITLE)\b
       - match: \b(UNINSTALL_ORDER)\b
       - match: \b(VERSION)\b
 
@@ -673,7 +678,7 @@ repository:
     patterns:
       - match: (\=\>|\+|-|\*|\/|=|\*|!|>|<|\?|:)
       - match: (&&?|\|(\|)?|\^\^|`)
-      - match: \b(MODULO|REM|NOT|OR|AND|BAND|BOR|BXOR|BNOT|BLSL|BLSR|BASR|EVAL|GLOBAL)\b
+      - match: \b(MODULO|REM|NOT|OR|AND|BAND|BOR|BXOR|BNOT|BLSL|BLSR|BASR|EVAL|GLOBAL|ABS|EQUALS)\b
 
   weidu-tp2-values:
     # Auto-generated from weidu-tp2-base.yml - do not edit manually.
@@ -736,7 +741,7 @@ repository:
   weidu-keywords:
     name: keyword.control.weidu-tp2
     patterns:
-      - match: \b(AS|BEGIN|DEFAULT|END|THEN|IN|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\b
+      - match: \b(AS|BEGIN|DEFAULT|END|THEN|IN|FROM|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\b
       - match: \b(AFTER|BEFORE|LAST|FIRST|AT|S?THIS)\b
       - match: \b(INT_VAR|STR_VAR|RET|RET_ARRAY)\b
 

@@ -89,6 +89,30 @@
             "value": "```weidu-d-tooltip\nINTERJECT_COPY_TRANS4 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nThis is either INTERJECT_COPY_TRANS3 with INTERJECT_COPY_TRANS2-style action handling, or INTERJECT_COPY_TRANS2 with the extended INTERJECT_COPY_TRANS3 state creation rules, depending at how you look at it."
         }
     },
+    "I_C_T": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS."
+        }
+    },
+    "I_C_T2": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T2 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS2."
+        }
+    },
+    "I_C_T3": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T3 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS3."
+        }
+    },
+    "I_C_T4": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-d-tooltip\nI_C_T4 [ SAFE ] entryFilename entryLabel globalVariable chainText list\n```\nShortcut for INTERJECT_COPY_TRANS4."
+        }
+    },
     "REPLACE": {
         "contents": {
             "kind": "markdown",

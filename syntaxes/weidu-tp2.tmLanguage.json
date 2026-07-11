@@ -205,11 +205,27 @@
           "name": "keyword.other.weidu-tp2"
         },
         {
+          "match": "\\b(EXISTING)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
+          "match": "\\b(KEEP_CRLF)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
+          "match": "\\b(MANAGED)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
           "match": "\\b(MODDER)\\b",
           "name": "keyword.other.weidu-tp2"
         },
         {
           "match": "\\b(NO_IF_EVAL_BUG)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
+          "match": "\\b(NULL)\\b",
           "name": "keyword.other.weidu-tp2"
         },
         {
@@ -222,6 +238,10 @@
         },
         {
           "match": "\\b(SCRIPT_STYLE)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
+          "match": "\\b(TITLE)\\b",
           "name": "keyword.other.weidu-tp2"
         },
         {
@@ -1863,7 +1883,7 @@
           "name": "keyword.control.value.weidu-tp2"
         },
         {
-          "match": "\\b(MODULO|REM|NOT|OR|AND|BAND|BOR|BXOR|BNOT|BLSL|BLSR|BASR|EVAL|GLOBAL)\\b",
+          "match": "\\b(MODULO|REM|NOT|OR|AND|BAND|BOR|BXOR|BNOT|BLSL|BLSR|BASR|EVAL|GLOBAL|ABS|EQUALS)\\b",
           "name": "keyword.control.value.weidu-tp2"
         }
       ]
@@ -2089,7 +2109,7 @@
       "name": "keyword.control.weidu-tp2",
       "patterns": [
         {
-          "match": "\\b(AS|BEGIN|DEFAULT|END|THEN|IN|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\\b",
+          "match": "\\b(AS|BEGIN|DEFAULT|END|THEN|IN|FROM|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\\b",
           "name": "keyword.control.weidu-tp2"
         },
         {

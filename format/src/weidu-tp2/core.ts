@@ -121,7 +121,6 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
             child.type === SyntaxType.GroupFlag ||
             child.type === SyntaxType.LabelFlag ||
             child.type === SyntaxType.RequirePredicateFlag ||
-            child.type === SyntaxType.ForbidPredicateFlag ||
             child.type === SyntaxType.RequireComponentFlag ||
             child.type === SyntaxType.ForbidComponentFlag ||
             child.type === SyntaxType.RequireFileFlag ||
@@ -131,10 +130,9 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
                 lines.push(beginLine);
                 beginLine = "";
             }
-            if (child.type === SyntaxType.RequirePredicateFlag || child.type === SyntaxType.ForbidPredicateFlag) {
+            if (child.type === SyntaxType.RequirePredicateFlag) {
                 // Split long predicate conditions at OR/AND boundaries
-                const keyword =
-                    child.type === SyntaxType.RequirePredicateFlag ? "REQUIRE_PREDICATE" : "FORBID_PREDICATE";
+                const keyword = "REQUIRE_PREDICATE";
                 const predicate = child.childForFieldName("predicate");
                 const message = child.childForFieldName("message");
                 const contIndent = ctx.indent;

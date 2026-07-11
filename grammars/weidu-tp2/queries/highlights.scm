@@ -310,7 +310,6 @@
 "FORBID_COMPONENT" @keyword.modifier
 "REQUIRE_COMPONENT" @keyword.modifier
 "REQUIRE_PREDICATE" @keyword.modifier
-"FORBID_PREDICATE" @keyword.modifier
 "REQUIRE_FILE" @keyword.modifier
 "FORBID_FILE" @keyword.modifier
 "MANAGED" @keyword.modifier
@@ -365,7 +364,6 @@
 "VARIABLE_IS_SET" @function.builtin
 "VARIABLE_IS_IN_ARRAY" @function.builtin
 "MOD_IS_INSTALLED" @function.builtin
-"COMPONENT_IS_INSTALLED" @function.builtin
 "STATE_WHICH_SAYS" @function.builtin
 "TRA_ENTRY_EXISTS" @function.builtin
 "ID_OF_LABEL" @function.builtin

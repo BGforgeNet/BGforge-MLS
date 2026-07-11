@@ -54,6 +54,10 @@ repository:
       - match: \b(INTERJECT_COPY_TRANS2)\b
       - match: \b(INTERJECT_COPY_TRANS3)\b
       - match: \b(INTERJECT_COPY_TRANS4)\b
+      - match: \b(I_C_T)\b
+      - match: \b(I_C_T2)\b
+      - match: \b(I_C_T3)\b
+      - match: \b(I_C_T4)\b
       - match: \b(REPLACE)\b
       - match: \b(REPLACE_ACTION_TEXT)\b
       - match: \b(REPLACE_ACTION_TEXT_PROCESS)\b

@@ -560,7 +560,7 @@ repository:
       - match: \b(?i)(while)\b
   operators:
     patterns:
-      - match: (\b(?i)(and|or|not|band|bwor|bnot|bwxor|bwand)\b)
+      - match: (\b(?i)(and|or|not|band|bwor|bnot|bwxor|bwand|andalso|orelse)\b)
         name: keyword.control.fallout-ssl
       - match: (=|:|>|<|\+\+|\-|\+|;|!|%|\^)
         name: keyword.control.fallout-ssl

@@ -2432,6 +2432,36 @@
         }
     },
     {
+        "label": "EXISTING",
+        "kind": 14,
+        "source": "builtin",
+        "category": "flag",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list\n```\nFlag for the ADD_JOURNAL action; adds the entries to an existing quest rather than creating a new one."
+        }
+    },
+    {
+        "label": "KEEP_CRLF",
+        "kind": 14,
+        "source": "builtin",
+        "category": "flag",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nAPPEND optNoBackup filename newText when list [ KEEP_CRLF ]\n```\nFlag for file-append actions; when absent, double newlines in the appended file are collapsed."
+        }
+    },
+    {
+        "label": "MANAGED",
+        "kind": 14,
+        "source": "builtin",
+        "category": "flag",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list\n```\nFlag for the ADD_JOURNAL action (EE games only)."
+        }
+    },
+    {
         "label": "MODDER",
         "kind": 14,
         "source": "builtin",
@@ -2449,6 +2479,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nNO_IF_EVAL_BUG\n```\nThis action solves a long-standing bug with the IF_EVAL action. Since solving it is not directly possible without damaging backwards compatibility, you have to use this action (preferably in an ALWAYS statement) to solve the bug for yourself. IF_EVAL will not work with this action in the TP2 - use PATCH_IF and BUT_ONLY_IF_IT_CHANGES instead."
+        }
+    },
+    {
+        "label": "NULL",
+        "kind": 14,
+        "source": "builtin",
+        "category": "flag",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nREAD_ASCII offset variable [ ELSE string ] [ ( value ) [ NULL ] ]\n```\nFlag for READ_ASCII; reads a fixed-length string that may contain embedded nul bytes."
         }
     },
     {
@@ -2479,6 +2519,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nSCRIPT_STYLE style\n```\nThis flag determines how WeiDU will read in BAF and BCS files and write out BAF and BCS files. Possible options for \"style\" include BG (the default), IWD1, IWD2, and PST. See the Scripting Styles tutorial."
+        }
+    },
+    {
+        "label": "TITLE",
+        "kind": 14,
+        "source": "builtin",
+        "category": "flag",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list\n```\nFlag for the ADD_JOURNAL action; sets the quest title."
         }
     },
     {

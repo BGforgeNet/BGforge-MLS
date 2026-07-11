@@ -88,11 +88,7 @@ const GRAMMARS: GrammarCfg[] = [
         data: "fallout-ssl-base.yml",
         checkDataSubset: true,
         caseInsensitive: true,
-        textmateAbsenceAllow: {
-            andalso:
-                "short-circuit AND operator (grammar alias token); no TextMate keyword literal - pre-existing highlighting gap, not a regression",
-            orelse: "short-circuit OR operator (grammar alias token); no TextMate keyword literal - pre-existing highlighting gap, not a regression",
-        },
+        textmateAbsenceAllow: {},
     },
     {
         id: "weidu-tp2",
@@ -100,22 +96,7 @@ const GRAMMARS: GrammarCfg[] = [
         data: "weidu-tp2-base.yml",
         checkDataSubset: true,
         caseInsensitive: false,
-        textmateAbsenceAllow: {
-            // Bare tokens that only occur inside compound keywords the TextMate grammar already highlights whole.
-            EXISTING:
-                "only occurs within COPY_EXISTING / COPY_EXISTING_REGEXP, which TextMate highlights as whole compounds",
-            FROM: "only occurs within DISABLE_FROM_KEY, which TextMate highlights as a whole compound",
-            // Grammar-reserved tokens with no TextMate keyword literal - pre-existing highlighting gaps, not regressions.
-            ABS: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-            COMPONENT_IS_INSTALLED:
-                "grammar-reserved predicate; no TextMate keyword literal - pre-existing highlighting gap",
-            EQUALS: "grammar-reserved predicate; no TextMate keyword literal - pre-existing highlighting gap",
-            FORBID_PREDICATE: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-            KEEP_CRLF: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-            MANAGED: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-            NULL: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-            TITLE: "grammar-reserved; no TextMate keyword literal - pre-existing highlighting gap",
-        },
+        textmateAbsenceAllow: {},
     },
     {
         id: "weidu-baf",
@@ -133,9 +114,7 @@ const GRAMMARS: GrammarCfg[] = [
         // data.keywords includes GLOBAL/LOCALS/MYAREA/nonPausing/OR/RESPONSE, none of which are grammar tokens.
         checkDataSubset: false,
         caseInsensitive: false,
-        textmateAbsenceAllow: {
-            I_C_T: "WeiDU dialog action shorthand (I_C_T / I_C_T2-4); no standalone TextMate keyword literal - pre-existing highlighting gap, not a regression",
-        },
+        textmateAbsenceAllow: {},
     },
 ];
 

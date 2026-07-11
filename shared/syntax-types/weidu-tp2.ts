@@ -112,7 +112,6 @@ export enum SyntaxType {
   FiveTildeString = "five_tilde_string",
   ForbidComponentFlag = "forbid_component_flag",
   ForbidFileFlag = "forbid_file_flag",
-  ForbidPredicateFlag = "forbid_predicate_flag",
   GameIncludesExpr = "game_includes_expr",
   GameIsExpr = "game_is_expr",
   GroupFlag = "group_flag",

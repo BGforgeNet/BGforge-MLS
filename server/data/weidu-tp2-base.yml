@@ -1238,6 +1238,26 @@ dimorphic_functions:
 flag:
   type: 14 #keyword
   items:
+    - name: EXISTING
+      detail: ADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list
+      doc: Flag for the ADD_JOURNAL action; adds the entries to an existing quest rather than creating a new one.
+
+    - name: MANAGED
+      detail: ADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list
+      doc: Flag for the ADD_JOURNAL action (EE games only).
+
+    - name: TITLE
+      detail: ADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list
+      doc: Flag for the ADD_JOURNAL action; sets the quest title.
+
+    - name: KEEP_CRLF
+      detail: APPEND optNoBackup filename newText when list [ KEEP_CRLF ]
+      doc: Flag for file-append actions; when absent, double newlines in the appended file are collapsed.
+
+    - name: "NULL" # quoted: bare NULL is a YAML null literal
+      detail: READ_ASCII offset variable [ ELSE string ] [ ( value ) [ NULL ] ]
+      doc: Flag for READ_ASCII; reads a fixed-length string that may contain embedded nul bytes.
+
     - name: ALLOW_MISSING
       detail: ALLOW_MISSING file list
       doc: |-

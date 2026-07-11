@@ -141,6 +141,22 @@
           "name": "support.function.weidu-baf.action"
         },
         {
+          "match": "\\b(I_C_T)\\b",
+          "name": "support.function.weidu-baf.action"
+        },
+        {
+          "match": "\\b(I_C_T2)\\b",
+          "name": "support.function.weidu-baf.action"
+        },
+        {
+          "match": "\\b(I_C_T3)\\b",
+          "name": "support.function.weidu-baf.action"
+        },
+        {
+          "match": "\\b(I_C_T4)\\b",
+          "name": "support.function.weidu-baf.action"
+        },
+        {
           "match": "\\b(REPLACE)\\b",
           "name": "support.function.weidu-baf.action"
         },

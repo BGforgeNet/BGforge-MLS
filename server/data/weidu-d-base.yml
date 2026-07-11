@@ -66,6 +66,22 @@ actions:
       detail: INTERJECT_COPY_TRANS4 [ SAFE ] entryFilename entryLabel globalVariable chainText list
       doc: This is either INTERJECT_COPY_TRANS3 with INTERJECT_COPY_TRANS2-style action handling, or INTERJECT_COPY_TRANS2 with the extended INTERJECT_COPY_TRANS3 state creation rules, depending at how you look at it.
 
+    - name: I_C_T
+      detail: I_C_T [ SAFE ] entryFilename entryLabel globalVariable chainText list
+      doc: Shortcut for INTERJECT_COPY_TRANS.
+
+    - name: I_C_T2
+      detail: I_C_T2 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+      doc: Shortcut for INTERJECT_COPY_TRANS2.
+
+    - name: I_C_T3
+      detail: I_C_T3 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+      doc: Shortcut for INTERJECT_COPY_TRANS3.
+
+    - name: I_C_T4
+      detail: I_C_T4 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+      doc: Shortcut for INTERJECT_COPY_TRANS4.
+
     - name: REPLACE
       detail: REPLACE filename state list END
       doc: This instructs WeiDU to load filename.DLG and replace some of its states with the new ones described in the state list. All of the states should have numeric stateLabels (e.g., "5" or "67"). A new state with label X will replace the old state number X.
@@ -165,8 +181,6 @@ keywords:
 
     - name: MYAREA
 
-    - name: nonPausing
-
     - name: OR
 
     - name: RESPONSE
@@ -176,6 +190,8 @@ keywords:
     - name: THEN
 
     - name: WEIGHT
+
+    - name: nonPausing
 
 # D format is quirky, it's hard to figure out the context.
 # Items with same label and different usages are temporarily placed here, their docs joined.
