@@ -18,11 +18,10 @@ export default defineConfig({
             // Floor reflects the unit-test slice only. The transpilers' larger
             // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
             // and the test/td + test/tbaf fixture-driven integration suites in
-            // scripts/test.sh - not by this vitest project. Stryker
-            // (stryker.conf.json) provides the higher mutation-aware bar for the
-            // same code. Threshold values are deliberately at the unit-only floor;
-            // raise them as standalone unit tests are added. See
-            // docs/architecture.md "Coverage thresholds" for the full layering.
+            // scripts/test.sh - not by this vitest project. Threshold values are
+            // deliberately at the unit-only floor; raise them as standalone unit
+            // tests are added. See docs/architecture.md "Coverage thresholds" for
+            // the full layering.
             thresholds: {
                 lines: 15,
                 functions: 25,

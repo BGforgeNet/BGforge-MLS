@@ -1,7 +1,7 @@
 /**
  * Shared static data loading utilities.
  * Loads pre-generated JSON files for completion, hover, and signature data.
- * JSON files are generated from YAML by scripts/generate_data.py at build time.
+ * JSON files are generated from YAML by scripts/generate-data.sh (via generate-data.ts) at build time.
  */
 
 import { readFileSync } from "fs";

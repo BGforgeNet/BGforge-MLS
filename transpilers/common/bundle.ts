@@ -1,7 +1,8 @@
 /**
- * TBAF Bundler
+ * Shared Transpiler Bundler
  *
- * Delegates to the shared esbuild bundler with TBAF-specific plugins:
+ * Delegates to the shared esbuild bundler with these plugins, and is imported by
+ * both @bgforge/tbaf and @bgforge/td:
  * - tbaf-resolver: resolves and loads .tbaf imports as TypeScript
  * - ts-extension-resolver: resolves extensionless imports to .d.ts/.ts/index.ts
  *
