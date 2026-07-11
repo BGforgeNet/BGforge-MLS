@@ -129,8 +129,6 @@ const config: KnipConfig = {
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",
-        // invoked via pnpm exec in scripts
-        "oxfmt",
         // invoked via pnpm vsce in scripts/package.sh
         "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported
