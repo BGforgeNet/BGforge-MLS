@@ -1268,6 +1268,8 @@
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
         <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
     </span>
+    <!-- `editable` is the blanket-editable flag (true only for D); ssl/td/tssl leave it false but are
+         per-node editable (see shared/dialog-model.ts), so add-state is offered for every editable family. -->
     {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
         <button class="toolbtn" onclick={addState}>+ State</button>
     {/if}
@@ -1346,6 +1348,8 @@
                     <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
                     <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
                 {/if}
+                <!-- Same blanket-editable caveat as the "+ State" gate above: ssl/td/tssl are per-node
+                     editable though `editable` is false, so this toggle shows for every editable family. -->
                 {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
                     <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time.">
                         <input type="checkbox" bind:checked={autoNodeNames} />

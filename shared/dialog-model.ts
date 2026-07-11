@@ -49,7 +49,13 @@ export type DialogMessages = Record<string, string>;
 
 export interface DialogModel {
     sourceLang: SourceLang;
-    /** Whether this source language's adapter can serialize edits back (D yes, SSL view-only in v1). */
+    /**
+     * Blanket-editable flag: true only for WeiDU D, where every state is freely editable. SSL, TD, and TSSL
+     * leave this false and gate editing PER NODE via `nodeEditable` (faithful/bundleFaithful) - they are
+     * editable, just not blanket-editable. This drives the inspector's `readOnly`, so it is load-bearing,
+     * not a "supports editing at all" flag; UI that needs that broader meaning must also check `sourceLang`.
+     * See `shared/dialog-editability.ts`.
+     */
     editable: boolean;
     /**
      * Dialog file base name (no extension), e.g. `tribec7` for `tribec7.ssl`. Set by the host from the
@@ -630,7 +636,7 @@ export function modelFromD(data: DDialogData): DialogModel {
     };
 }
 
-// --- Fallout SSL adapter (view-only) ---------------------------------------
+// --- Fallout SSL adapter (editing gated per node, not view-only; see shared/dialog-editability.ts) ---
 
 const REACTION_BY_PREFIX: Record<string, DialogReaction> = { N: "neutral", G: "good", B: "bad" };
 
@@ -804,6 +810,8 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
     }
     return {
         sourceLang: "ssl",
+        // Blanket-editable is false for SSL: editing is gated per node (faithful/bundleFaithful via
+        // nodeEditable), not blanket like D. See the `editable` field doc on DialogModel above.
         editable: false,
         roots: states.length > 0 ? [{ id: "dialog", label: "dialog", kind: "dialog", states }] : [],
         messages: data.messages,
