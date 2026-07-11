@@ -5,8 +5,12 @@
  * Tree-sitter calls the external scanner before consuming extras (whitespace).
  * We skip whitespace manually, then look for ~.
  *
- * Note: External scanners are not supported in WASM builds.
- * TODO: Investigate if this scanner is actually needed - test if parsing works without it.
+ * REQUIRED for the 5-tilde form ~~~~~text~~~~~, whose text may itself contain
+ * single tildes (corpus case @500 = ~~~~~text with ~ tildes~~~~~). A tree-sitter
+ * regex token cannot match a balanced 5-tilde delimiter with embedded tildes
+ * (the grammar DSL has no lookahead), so this scanner handles both the ~text~
+ * and the 5-tilde forms. Compiled only for native builds (see #ifndef
+ * TREE_SITTER_WASM below).
  */
 
 #include "tree_sitter/parser.h"
