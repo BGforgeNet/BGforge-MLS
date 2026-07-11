@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Requirements
+
+- Minimum supported VS Code is now 1.91 (was 1.73), following an update of the underlying language-server protocol stack.
+
 ### WeiDU
 
 - Fixed: in TP2 hover tooltips, `buffString` and `ascString` parameter names were not highlighted because of an unreachable pattern branch.
