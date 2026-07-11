@@ -514,14 +514,15 @@ COPY optNoBackup optGlob ~fromFile~ ~toFile~ [~from2~ ~to2~ ...]
 Copies files with optional patches. Sets `SOURCE_*` and `DEST_*` variables.
 
 **when** (node type: `when`) - optional conditions after patches. All conditions may appear in any order, multiple IF/UNLESS allowed:
-| Syntax | Description |
-|--------|-------------|
-| `IF_SIZE_IS fileSize` | Only if file has exact size |
-| `IF regexp` | Only if filename matches regexp (can repeat) |
-| `UNLESS regexp` | Only if filename doesn't match regexp (can repeat) |
-| `BUT_ONLY_IF_IT_CHANGES` | Only write if content changed |
-| `BUT_ONLY` | Alias for BUT_ONLY_IF_IT_CHANGES |
-| `IF_EXISTS` | Only if source file exists |
+
+| Syntax                   | Description                                        |
+| ------------------------ | -------------------------------------------------- |
+| `IF_SIZE_IS fileSize`    | Only if file has exact size                        |
+| `IF regexp`              | Only if filename matches regexp (can repeat)       |
+| `UNLESS regexp`          | Only if filename doesn't match regexp (can repeat) |
+| `BUT_ONLY_IF_IT_CHANGES` | Only write if content changed                      |
+| `BUT_ONLY`               | Alias for BUT_ONLY_IF_IT_CHANGES                   |
+| `IF_EXISTS`              | Only if source file exists                         |
 
 #### COPY_EXISTING
 
