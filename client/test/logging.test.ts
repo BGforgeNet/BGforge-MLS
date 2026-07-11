@@ -59,7 +59,7 @@ describe("logging", () => {
 
             const channel = initOutputChannel(context);
 
-            expect(createOutputChannelMock).toHaveBeenCalledWith("BGforge MLS");
+            expect(createOutputChannelMock).toHaveBeenCalledWith("BGforge MLS", { log: true });
             expect(subscriptions).toHaveLength(1);
             expect(subscriptions[0]).toBe(channel);
         });
