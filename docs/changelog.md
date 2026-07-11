@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Performance
+
+- Fixed: on large mod workspaces the language server could use excessive memory while indexing at startup. It now skips `node_modules` and dotfile directories and limits how many files it reads at once.
+
 ## 3.9.1
 
 ### Binary editor

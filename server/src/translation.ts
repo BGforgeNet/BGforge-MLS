@@ -35,6 +35,7 @@ import {
     isSubpathFullyResolved,
     isSubpathResolved,
     tryRealpathSync,
+    WORKSPACE_SCAN_CONCURRENCY,
 } from "./path-utils";
 import { pathToUri } from "./uri-utils";
 import {
@@ -116,9 +117,6 @@ const DEFAULT_D_TRA_DIR = "tra";
 const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ...MSG_LANGUAGES]);
 
 const extensions: Array<TraExt> = ["msg", "tra"];
-
-/** Max concurrent file reads when loading translation files. */
-const SCAN_CONCURRENCY = 4;
 
 /** Resolve a path's realpath, returning undefined on failure or missing input. */
 function resolveRealpath(p: string | undefined): string | undefined {
@@ -221,7 +219,7 @@ export class Translation {
         // gates the load path the same way it gates the lookup path.
         const traDir = this.resolveTraDir();
         this.data = traDir ? await this.loadDir(traDir) : new Map();
-        this.buildConsumerIndex();
+        await this.buildConsumerIndex();
         this.initialized = true;
         conlog("Translation: initialized");
     }
@@ -595,9 +593,10 @@ export class Translation {
         }
 
         for (const ext of extensions) {
-            const traFiles = findFiles(traDir, ext);
             // Sequential per extension is intentional: later extensions can
             // override entries from earlier ones, so ordering matters.
+            // eslint-disable-next-line no-await-in-loop
+            const traFiles = await findFiles(traDir, ext);
             // eslint-disable-next-line no-await-in-loop
             const { results, errors } = await this.loadFiles(traDir, traFiles, ext);
             if (errors.length > 0) {
@@ -620,7 +619,7 @@ export class Translation {
         files: string[],
         ext: TraExt,
     ): Promise<{ results: TraData[]; errors: unknown[] }> {
-        const limit = pLimit(SCAN_CONCURRENCY);
+        const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
         const results: TraData[] = [];
         const errors: unknown[] = [];
         await Promise.all(
@@ -989,7 +988,7 @@ export class Translation {
      * Scans the workspace for files with consumer extensions, reads first line
      * to check for @tra comment, falls back to basename matching.
      */
-    private buildConsumerIndex(): void {
+    private async buildConsumerIndex(): Promise<void> {
         const wsRoot = this.workspaceRoot;
         if (!wsRoot) return;
 
@@ -1012,7 +1011,8 @@ export class Translation {
         const uniqueExts = [...new Set(extsToScan)];
 
         for (const ext of uniqueExts) {
-            const files = findFiles(wsRoot, ext);
+            // eslint-disable-next-line no-await-in-loop
+            const files = await findFiles(wsRoot, ext);
             for (const relFile of files) {
                 const absPath = path.join(wsRoot, relFile);
                 this.indexConsumerFile(absPath, relFile);

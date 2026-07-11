@@ -77,14 +77,56 @@ export function isDirectory(fsPath: string): boolean {
 }
 
 /**
+ * Shared exclusion set for all workspace file discovery. Fixed minimal excludes
+ * matching the pyright/tsserver convention (pyright's documented defaults are
+ * node_modules, __pycache__, and dotfile/dot-directory paths). Deliberately NOT
+ * gitignore-aware: mod workspaces routinely gitignore generated .d/.tra/header
+ * files that must still be indexed, so honoring gitignore would silently drop
+ * indexable sources.
+ */
+export const WORKSPACE_SCAN_IGNORE = ["**/node_modules/**", "**/.*/**"];
+
+/**
+ * Concurrency bound for reading discovered workspace files. One definition shared
+ * by every read fan-out (startup scan, translation loads) so a single number
+ * governs the whole indexing pass instead of each call site minting its own.
+ */
+export const WORKSPACE_SCAN_CONCURRENCY = 4;
+
+/**
  * Find files by a single extension, returning paths relative to `dirName`
  * (fast-glob semantics). Deliberately distinct from `shared/cli/cli-utils.ts`'s
  * `findFiles`, which takes an extension array and returns absolute paths via
  * manual recursion: server callers want cwd-relative single-extension results,
  * the CLIs want absolute multi-extension results. Different contracts, not
- * unified.
+ * unified. Applies `WORKSPACE_SCAN_IGNORE` and `suppressErrors` so a dependency
+ * tree or an unreadable subtree cannot bloat or abort discovery.
  */
-export function findFiles(dirName: string, extension: string) {
-    const entries = fg.sync(`**/*.${extension}`, { cwd: dirName, caseSensitiveMatch: false });
-    return entries;
+export async function findFiles(dirName: string, extension: string): Promise<string[]> {
+    return fg.async(`**/*.${extension}`, {
+        cwd: dirName,
+        caseSensitiveMatch: false,
+        ignore: WORKSPACE_SCAN_IGNORE,
+        suppressErrors: true,
+    });
+}
+
+/**
+ * Like `findFiles`, but matches any of several extensions in ONE walk, so the
+ * workspace tree is traversed a single time regardless of how many extensions
+ * the providers collectively index. Same cwd-relative, case-insensitive,
+ * excluded contract as `findFiles`. Returns `[]` for an empty extension list
+ * without walking.
+ */
+export async function findFilesByExtensions(dirName: string, extensions: string[]): Promise<string[]> {
+    if (extensions.length === 0) {
+        return [];
+    }
+    const pattern = extensions.length === 1 ? `**/*.${extensions[0]}` : `**/*.{${extensions.join(",")}}`;
+    return fg.async(pattern, {
+        cwd: dirName,
+        caseSensitiveMatch: false,
+        ignore: WORKSPACE_SCAN_IGNORE,
+        suppressErrors: true,
+    });
 }

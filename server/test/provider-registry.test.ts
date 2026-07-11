@@ -36,7 +36,9 @@ vi.mock("../src/diagnostics", () => ({
 }));
 
 vi.mock("../src/path-utils", () => ({
-    findFiles: vi.fn().mockReturnValue([]),
+    findFiles: vi.fn().mockResolvedValue([]),
+    findFilesByExtensions: vi.fn().mockResolvedValue([]),
+    WORKSPACE_SCAN_CONCURRENCY: 4,
 }));
 
 vi.mock("../src/uri-utils", () => ({
@@ -795,13 +797,13 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            // Mock findFiles to return test files
-            const { findFiles } = await import("../src/path-utils");
-            vi.mocked(findFiles).mockReturnValue(["lib/utils.tph", "lib/other.tph"]);
+            // Mock the single-walk discovery to return test files.
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            vi.mocked(findFilesByExtensions).mockResolvedValue(["lib/utils.tph", "lib/other.tph"]);
 
             await registry.scanWorkspaceFiles("/test/workspace");
 
-            expect(findFiles).toHaveBeenCalledWith("/test/workspace", "tph");
+            expect(findFilesByExtensions).toHaveBeenCalledWith("/test/workspace", ["tph"]);
             expect(mockReload).toHaveBeenCalledTimes(2);
         });
 
@@ -830,13 +832,14 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/path-utils");
-            vi.mocked(findFiles).mockClear(); // Clear any previous calls
-            vi.mocked(findFiles).mockReturnValue([]);
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            vi.mocked(findFilesByExtensions).mockClear(); // Clear any previous calls
+            vi.mocked(findFilesByExtensions).mockResolvedValue([]);
 
             await registry.scanWorkspaceFiles("/test/workspace");
 
-            expect(findFiles).not.toHaveBeenCalled();
+            // No indexable extensions -> the tree is never walked.
+            expect(findFilesByExtensions).not.toHaveBeenCalled();
             expect(mockReload).not.toHaveBeenCalled();
         });
 
@@ -849,14 +852,14 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/path-utils");
-            vi.mocked(findFiles).mockReturnValue(["file.tph"]);
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            vi.mocked(findFilesByExtensions).mockResolvedValue(["file.tph"]);
 
             // Should not throw
             await registry.scanWorkspaceFiles("/test/workspace");
         });
 
-        it("should handle multiple providers with different extensions", async () => {
+        it("walks once for the union of extensions and dispatches each file to its provider", async () => {
             const registry = await createRegistry();
             const mockReload1 = vi.fn();
             const mockReload2 = vi.fn();
@@ -873,13 +876,15 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/path-utils");
-            vi.mocked(findFiles)
-                .mockReturnValueOnce(["lib/a.tph"]) // First call for .tph
-                .mockReturnValueOnce(["lib/b.h"]); // Second call for .h
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            // ONE walk over the union of extensions; the scanner dispatches each
+            // hit to the right provider by its file extension.
+            vi.mocked(findFilesByExtensions).mockResolvedValue(["lib/a.tph", "lib/b.h"]);
 
             await registry.scanWorkspaceFiles("/test/workspace");
 
+            expect(findFilesByExtensions).toHaveBeenCalledTimes(1);
+            expect(findFilesByExtensions).toHaveBeenCalledWith("/test/workspace", ["tph", "h"]);
             expect(mockReload1).toHaveBeenCalledTimes(1);
             expect(mockReload2).toHaveBeenCalledTimes(1);
         });
