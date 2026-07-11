@@ -27,6 +27,7 @@ export const serializeItmCanonicalDocument = createIeAbilityEffectsWriter<
     headerSchema: itmHeaderSchema,
     abilitySchema: itmAbilitySchema,
     headerSpec: itmHeaderSpecAnnotated,
+    formatId: "itm",
 });
 
 export function serializeItmCanonicalSnapshot(snapshot: ItmCanonicalSnapshot): Uint8Array {

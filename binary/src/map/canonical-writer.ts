@@ -21,6 +21,7 @@ import {
 import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "./specs/object";
 import { hasElevation } from "./types";
 import type { ParseOpaqueRange } from "../types";
+import { MAX_FILE_SIZES } from "../max-file-sizes";
 import {
     type mapHeaderSchema,
     type mapTileElevationSchema,
@@ -366,7 +367,25 @@ export function serializeMapCanonicalDocument(
         scriptSectionLength(document.scripts) +
         objectsSerializedLength(document.objects);
     const opaqueEnd = Math.max(0, ...(opaqueRanges ?? []).map((range) => range.offset + range.size));
-    const bytes = new Uint8Array(Math.max(computedLength, opaqueEnd));
+    const totalSize = Math.max(computedLength, opaqueEnd);
+
+    // Bound the snapshot's projected expansion to MAP's real-world size envelope BEFORE
+    // allocating the output buffer. `computedLength` is driven directly by the JSON
+    // snapshot's declared array lengths (variables, scripts, objects incl. nested
+    // inventory) and carries no other cap - see max-file-sizes.ts. opaqueRanges' own
+    // offset/size fields are separately bounded in shared-schemas.ts.
+    const budget = MAX_FILE_SIZES.map;
+    if (budget !== undefined && totalSize > budget) {
+        const objectCount = document.objects.elevations.reduce((sum, elev) => sum + elev.objects.length, 0);
+        throw new Error(
+            `map snapshot would expand to ${totalSize} bytes ` +
+                `(globalVariables: ${document.globalVariables.length}, localVariables: ${document.localVariables.length}, ` +
+                `scripts: ${document.scripts.length}, top-level objects: ${objectCount}), exceeding the format's ` +
+                `${budget} byte budget; refusing to allocate`,
+        );
+    }
+
+    const bytes = new Uint8Array(totalSize);
 
     serializeHeader(bytes, document.header, document.globalVariables, document.localVariables);
     let offset = serializeVariables(bytes, document.globalVariables, document.localVariables);

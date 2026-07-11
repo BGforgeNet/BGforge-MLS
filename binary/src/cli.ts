@@ -26,26 +26,23 @@ import {
     safeProcess,
     reportDiff,
 } from "../../shared/cli/cli-utils";
+import { MAX_FILE_SIZES } from "./max-file-sizes";
 
 const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 
-// Per-format maximum input file size, applied via stat() before allocating a
-// Buffer. Caps a malicious or accidentally-truncated file from triggering a
-// multi-GB allocation prior to header validation. Real-world files stay well
-// below these (largest published Fallout MAPs are ~250 KB; ITM/SPL/EFF are
-// in the low KB range; CRE embeds inventory/spell/effect lists so it runs
-// larger but stays in the low tens of KB; PRO has a 1 KB hard limit enforced
-// inside its parser). Every registry extension must have an entry here.
-// Override by editing this map, not by passing a flag - there is no
-// legitimate use case for parsing files at the cap.
-const MAX_FILE_SIZES: Record<string, number> = {
-    map: 16 * 1024 * 1024, // 16 MB
-    pro: 1024,
-    itm: 256 * 1024,
-    spl: 256 * 1024,
-    eff: 64 * 1024,
-    cre: 256 * 1024,
-};
+// Generous cap on a --load JSON snapshot's own input file size, applied via
+// stat() before reading it into memory. This is defense-in-depth alongside
+// the per-format expansion bound the canonical writers enforce (see
+// max-file-sizes.ts): that bound rejects a snapshot whose declared array
+// lengths would expand past the format's real-world size envelope, but does
+// so only after the JSON text has already been read and parsed. A single
+// generous global constant (not per-format, since the cap here is about raw
+// input bytes, not the format-specific expanded output) stops a pathological
+// multi-GB snapshot file from being read into a string at all. 100 MB is far
+// beyond any legitimate snapshot (the largest real binary files this CLI
+// parses top out at 16 MB, and JSON text is typically several times a
+// binary file's size for the same data).
+const MAX_JSON_SNAPSHOT_INPUT_BYTES = 100 * 1024 * 1024;
 
 /**
  * Builds per-file ParseOptions for the CLI: file-derived options come from
@@ -201,6 +198,23 @@ Examples:
  * Validation and semantic round-trip checks happen inside the shared snapshot loader.
  */
 function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
+    let stat: fs.Stats;
+    try {
+        stat = fs.statSync(jsonPath);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            console.error(`Not found: ${jsonPath}`);
+            process.exit(1);
+        }
+        throw error;
+    }
+    if (stat.size > MAX_JSON_SNAPSHOT_INPUT_BYTES) {
+        console.error(
+            `File too large: ${stat.size} bytes (snapshot input cap is ${MAX_JSON_SNAPSHOT_INPUT_BYTES}); refusing to read ${jsonPath}`,
+        );
+        process.exit(1);
+    }
+
     let jsonText: string;
     try {
         // Read with try/catch instead of existsSync->readFileSync to avoid

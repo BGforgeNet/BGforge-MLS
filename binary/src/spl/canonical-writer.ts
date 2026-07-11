@@ -24,6 +24,7 @@ export const serializeSplCanonicalDocument = createIeAbilityEffectsWriter<
     headerSchema: splHeaderSchema,
     abilitySchema: splAbilitySchema,
     headerSpec: splHeaderSpecAnnotated,
+    formatId: "spl",
 });
 
 export function serializeSplCanonicalSnapshot(snapshot: SplCanonicalSnapshot): Uint8Array {

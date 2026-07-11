@@ -2,6 +2,12 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## Unreleased
+
+### Changed
+
+- Oversized JSON snapshots (crafted to inflate array lengths) are now rejected before allocation.
+
 ## 0.2.0
 
 ### Added

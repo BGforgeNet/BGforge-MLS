@@ -36,6 +36,7 @@ import {
 } from "./schemas";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { enforceDerivedFields } from "../spec/types";
+import { MAX_FILE_SIZES } from "../max-file-sizes";
 
 function writerAt(out: Uint8Array, offset: number): BufferWriter {
     return new BufferWriter(out.buffer, { byteOffset: out.byteOffset + offset });
@@ -77,6 +78,20 @@ export function serializeCreCanonicalDocument(document: CreCanonicalDocument): U
         },
         sectionOffsets,
     });
+
+    // Bound the snapshot's projected expansion to CRE's real-world size envelope BEFORE
+    // allocating the output buffer. `totalSize` is driven directly by the JSON snapshot's
+    // declared array lengths (knownSpells/spellMemInfo/memorizedSpells/effects/items) and
+    // carries no other cap - see max-file-sizes.ts.
+    const budget = MAX_FILE_SIZES.cre;
+    if (budget !== undefined && totalSize > budget) {
+        throw new Error(
+            `cre snapshot would expand to ${totalSize} bytes (knownSpells: ${knownSpells.length}, ` +
+                `spellMemInfo: ${spellMemInfo.length}, memorizedSpells: ${memorizedSpells.length}, ` +
+                `effects: ${effects.records.length}, items: ${items.length}), exceeding the format's ` +
+                `${budget} byte budget; refusing to allocate`,
+        );
+    }
 
     const out = new Uint8Array(totalSize);
 
