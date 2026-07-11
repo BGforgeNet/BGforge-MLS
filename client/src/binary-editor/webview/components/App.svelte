@@ -4,6 +4,7 @@
     import type { HostToWebview } from "../messages";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import { clearSelectionMemory } from "../state/list-selection-memory";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import Icon from "./Icon.svelte";
 
@@ -12,6 +13,10 @@
     let open = $state<OpenResult | undefined>();
     let diagnostics = $state<Diagnostic[]>([]);
     let version = $state(0);
+    // If the host never posts "init" (a dropped/failed open, a stalled worker), surface it rather than
+    // sit on "Loading..." forever. Timer mechanics shared with the dialog editor's App.svelte via
+    // installInitTimeout (webview-utils.ts).
+    let initTimedOut = $state(false);
     // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
     let selection = $state<NodeId | undefined>();
     // Last operation error that carried no pending request to reject (a failed edit/structure/spellbook op).
@@ -78,11 +83,32 @@
         };
     });
 
+    $effect(() => {
+        const clearInitTimeout = installInitTimeout({
+            ms: DEFAULT_INIT_TIMEOUT_MS,
+            isResolved: () => open !== undefined,
+            onTimeout: () => {
+                initTimedOut = true;
+            },
+        });
+        return clearInitTimeout;
+    });
+
     const edit = (id: string, v: number | string) => bridge.editField(id, v);
 </script>
 
 {#if !open}
-    <p class="placeholder">Loading...</p>
+    {#if initTimedOut}
+        <div class="error-state">
+            <h2>No response from the host</h2>
+            <p>
+                No response from the host within {DEFAULT_INIT_TIMEOUT_MS / 1000}s - the file did not open. Check the
+                "BGforge MLS" output channel.
+            </p>
+        </div>
+    {:else}
+        <p class="placeholder">Loading...</p>
+    {/if}
 {:else if open.errors.length > 0}
     <div class="error-state">
         <h2>Could not open file</h2>

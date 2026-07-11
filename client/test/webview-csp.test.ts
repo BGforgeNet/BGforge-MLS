@@ -39,6 +39,14 @@ describe("webview script inlining", () => {
         expect(out).toContain("runtimeError");
         expect(out).toContain("unhandledrejection");
     });
+
+    it("dialog-editor bundle installs the fatal runtime-error handler (parity with the binary editor)", () => {
+        const built = path.resolve("client/out/dialog-editor/webview/main.js");
+        if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
+        const out = fs.readFileSync(built, "utf8");
+        expect(out).toContain("runtimeError");
+        expect(out).toContain("unhandledrejection");
+    });
 });
 
 describe("webview CSP", () => {

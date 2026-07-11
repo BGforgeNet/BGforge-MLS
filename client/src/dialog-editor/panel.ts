@@ -16,11 +16,13 @@
  * webview HTML, the reveal-source command, and notification routing.
  */
 
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
+import { surfaceWebviewRuntimeError } from "../webview-error";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 
@@ -108,6 +110,8 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 text?: string;
                 level?: string;
                 seq?: number;
+                message?: string;
+                stack?: string;
             }) => {
                 if (msg?.type === "ready") core.handleReady();
                 // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
@@ -124,6 +128,18 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 // applies them (see host-core.ts).
                 else if (msg?.type === "edit" && msg.model) {
                     core.handleEdit(msg.model, msg.seq ?? 0);
+                }
+                // A fatal error caught by the webview's installFatalErrorHandler (see main.ts). Parity with
+                // the binary editor's "runtimeError" case (provider.ts): surface through the same
+                // operator-visible channels (output channel + toast) instead of leaving a silently blank panel.
+                else if (msg?.type === "runtimeError" && typeof msg.message === "string") {
+                    const file = path.basename(document.uri.fsPath);
+                    surfaceWebviewRuntimeError({
+                        label: `Dialog editor for ${file}`,
+                        userFacingFile: file,
+                        message: msg.message,
+                        stack: msg.stack,
+                    });
                 }
             },
         );

@@ -24,6 +24,20 @@ export interface FatalErrorHandlerOptions {
 }
 
 /**
+ * Chromium fires a window `error` event for "ResizeObserver loop completed with undelivered
+ * notifications" (and the older-Chromium spelling "ResizeObserver loop limit exceeded") whenever many
+ * ResizeObserver callbacks land in one animation frame - a scheduling notice, not an application failure;
+ * the page keeps running correctly. Treating it as fatal blanks the webview on ordinary layout churn
+ * (observed live: it fired during the dialog editor render harness's Duplicate-state flow, which
+ * triggers Tree.svelte's tooltip-clip ResizeObserver). Matched by exact message so a real error that
+ * merely mentions "ResizeObserver" is never swallowed.
+ */
+export function isBenignWebviewError(message: string): boolean {
+    // Chromium's actual wording carries a trailing period; the pre-Chrome-64 wording did not - accept both.
+    return /^ResizeObserver loop (limit exceeded|completed with undelivered notifications)\.?$/.test(message);
+}
+
+/**
  * Wire the webview's global `error` + `unhandledrejection` handlers to a
  * one-shot fatal-error reporter: log to the console, forward to the host as a
  * `runtimeError` message, then hand the formatted detail to `render` for the
@@ -51,7 +65,9 @@ export function installFatalErrorHandler(options: FatalErrorHandlerOptions): voi
     };
 
     globalThis.addEventListener("error", (event) => {
-        showFatalError(event.message || `Unhandled ${lower} error`, event.error);
+        const message = event.message || `Unhandled ${lower} error`;
+        if (isBenignWebviewError(message)) return;
+        showFatalError(message, event.error);
     });
 
     globalThis.addEventListener("unhandledrejection", (event) => {
@@ -59,6 +75,33 @@ export function installFatalErrorHandler(options: FatalErrorHandlerOptions): voi
         const message = reason instanceof Error ? reason.message : String(reason);
         showFatalError(message || `Unhandled ${lower} promise rejection`, reason);
     });
+}
+
+/** Bounded wait for the host's initial reply, shared by the dialog and binary-editor webviews. */
+export const DEFAULT_INIT_TIMEOUT_MS = 8000;
+
+export interface InitTimeoutOptions {
+    /** Deadline in milliseconds. */
+    readonly ms: number;
+    /** Checked at the deadline: true means the expected reply already arrived, so onTimeout is skipped. */
+    readonly isResolved: () => boolean;
+    /** Called once, only if isResolved() is still false when the deadline hits. */
+    readonly onTimeout: () => void;
+}
+
+/**
+ * Start a one-shot bounded wait: if `isResolved()` is still false when `ms` elapses, call `onTimeout()`.
+ * A loading state that waits on an out-of-process reply (host/LSP round-trip) must fail visibly rather
+ * than hang forever - this is the timer mechanics both webview roots (dialog App.svelte, binary App.svelte)
+ * wire into their own reactive state. Returns a cleanup that cancels the pending timer (call on
+ * unmount/dispose, or once the wait resolves early).
+ */
+export function installInitTimeout(options: InitTimeoutOptions): () => void {
+    const { ms, isResolved, onTimeout } = options;
+    const timer = setTimeout(() => {
+        if (!isResolved()) onTimeout();
+    }, ms);
+    return () => clearTimeout(timer);
 }
 
 /**

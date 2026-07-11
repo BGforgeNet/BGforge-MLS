@@ -3,6 +3,7 @@
     import type { DialogModel } from "../../../../shared/dialog-model";
     import { hasHost } from "./host";
     import { reduceDialogView, shouldTimeOut } from "./app-messages";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../webview-utils";
 
     // Production webview root: the extension host posts a DialogModel; on each
     // message (initial load and live file edits) the model updates reactively and
@@ -24,13 +25,18 @@
         window.addEventListener("message", onMessage);
         // If neither a model nor an error arrives, the host->server round-trip stalled
         // (or the "ready" handshake never reached the host). Surface it rather than sit
-        // on "Parsing dialog..." forever.
-        const t = setTimeout(() => {
-            if (shouldTimeOut({ model, error })) timedOut = true;
-        }, 8000);
+        // on "Parsing dialog..." forever. The timer mechanics are shared with the binary
+        // editor's App.svelte via installInitTimeout (webview-utils.ts).
+        const clearInitTimeout = installInitTimeout({
+            ms: DEFAULT_INIT_TIMEOUT_MS,
+            isResolved: () => !shouldTimeOut({ model, error }),
+            onTimeout: () => {
+                timedOut = true;
+            },
+        });
         return () => {
             window.removeEventListener("message", onMessage);
-            clearTimeout(t);
+            clearInitTimeout();
         };
     });
 </script>
@@ -41,7 +47,7 @@
     <div class="empty err">{error}</div>
 {:else if timedOut}
     <div class="empty err">
-        No response from the language server within 8s - the dialog parse did not return.
+        No response from the language server within {DEFAULT_INIT_TIMEOUT_MS / 1000}s - the dialog parse did not return.
         {#if !hasHost()}
             The webview could not connect to the editor host (acquireVsCodeApi unavailable).
         {/if}

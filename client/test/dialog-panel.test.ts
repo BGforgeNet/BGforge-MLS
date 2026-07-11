@@ -76,7 +76,7 @@ function makePanel() {
 }
 
 const document = {
-    uri: { toString: () => "file:///x.d", path: "/x.d" },
+    uri: { toString: () => "file:///x.d", path: "/x.d", fsPath: "/x.d" },
     getText: () => "BEGIN ~x~ END",
     positionAt: (n: number) => ({ n }),
 } as unknown as vscode.TextDocument;
@@ -172,5 +172,21 @@ describe("DialogEditorProvider - session wiring", () => {
         expect(showErrorMessageMock).toHaveBeenCalledTimes(1);
         expect(computeDialogSourceEditMock).not.toHaveBeenCalled(); // not computed against a null original
         expect(applyEditMock).not.toHaveBeenCalled(); // and never applied to the document
+    });
+
+    it("surfaces a webview runtimeError via the shared surfaceWebviewRuntimeError channel", async () => {
+        // Parity with the binary editor's "runtimeError" case in provider.ts: a fatal error caught by the
+        // webview's installFatalErrorHandler posts {type:"runtimeError", message, stack} up to the host, which
+        // must surface it through the same operator-visible channels (conlog + showErrorMessage toast) instead
+        // of dropping it silently.
+        const sendRequest = vi.fn().mockResolvedValue(OK_PARSE);
+        const h = await mountEditor(sendRequest);
+
+        h.fireMessage({ type: "runtimeError", message: "boom", stack: "Error: boom\n  at x.ts:1:1" });
+
+        expect(showErrorMessageMock).toHaveBeenCalledTimes(1);
+        const toast = showErrorMessageMock.mock.calls[0]?.[0] as string;
+        expect(toast).toContain("boom");
+        expect(toast).toContain("x.d");
     });
 });
