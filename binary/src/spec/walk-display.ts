@@ -317,7 +317,10 @@ function fieldFor(
         // `"EFF"`. Interior NULs (rare, in unused/garbage fields) stay
         // verbatim so the display reflects the actual byte content.
         const raw = typeof value === "string" ? value : String(value);
-        const trimmed = raw.replace(/ +$/, "");
+        // Trim trailing NULs without a regex control-character literal (oxlint no-control-regex).
+        let trimEnd = raw.length;
+        while (trimEnd > 0 && raw.codePointAt(trimEnd - 1) === 0) trimEnd--;
+        const trimmed = raw.slice(0, trimEnd);
         return withHidden({ name: label, value: trimmed, offset, size, type: "string" }, fs);
     }
 
