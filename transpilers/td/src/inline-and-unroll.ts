@@ -87,6 +87,10 @@ export function unrollFor(forStmt: ForStatement, vars: VarsContext, onStatement:
     }
 
     const decls = initializer.getDeclarations();
+    if (decls.length !== 1) {
+        throw new TranspileError("Cannot unroll for loop: multi-variable initializer");
+    }
+
     const firstDecl = decls[0];
     if (!firstDecl) {
         throw new TranspileError("Cannot unroll for loop: no variable declaration");
