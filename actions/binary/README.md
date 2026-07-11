@@ -102,8 +102,11 @@ input (default `latest`), so set `version` too if you need the binary parser pin
   so the default `GITHUB_TOKEN` can push. **Check mode** does not push and needs no extra permissions; in that mode
   the `changed` / `changed-files` outputs are empty.
 - Pushes made with the default `GITHUB_TOKEN` do not retrigger workflows, so there is no infinite-loop risk.
-- The action exits with an error on `pull_request` events from forks: the token is read-only and the push would
-  fail. Run the action on `push` events to your own branches.
+- The action exits with an error on `pull_request` and `pull_request_target` events from forks: the token is
+  read-only (or, for `pull_request_target`, base-scoped) and cannot push to the fork's head branch, and running
+  the CLI over fork-controlled files under `pull_request_target` is itself a risk. Run the action on `push`
+  events to your own branches. The guard is skipped in **check mode**, since check mode never pushes -
+  fork-PR check runs (this action's documented check-mode use case) proceed normally.
 - For `pull_request` triggers within your own repo, your `actions/checkout` step must specify
   `ref: ${{ github.head_ref }}` so the snapshot commit lands on the PR head, not on a detached merge ref.
 - Concurrent pushes to the same branch may cause the rebase-and-push step to fail; wrap the consumer job in a

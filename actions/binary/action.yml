@@ -40,6 +40,7 @@ runs:
   using: "composite"
   steps:
     - name: Guard against fork pull_request (read-only token cannot push)
+      if: inputs.check != 'true'
       shell: bash
       env:
         EVENT_NAME: ${{ github.event_name }}

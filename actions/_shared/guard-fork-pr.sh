@@ -7,7 +7,7 @@
 # Inputs (env): EVENT_NAME, IS_FORK
 set -euo pipefail
 
-if [[ "$EVENT_NAME" == "pull_request" && "$IS_FORK" == "true" ]]; then
+if [[ ("$EVENT_NAME" == "pull_request" || "$EVENT_NAME" == "pull_request_target") && "$IS_FORK" == "true" ]]; then
     echo "::error::This action cannot push to fork PR branches (read-only GITHUB_TOKEN)."
     exit 1
 fi
