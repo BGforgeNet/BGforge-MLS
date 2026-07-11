@@ -61,6 +61,31 @@ themes/vs-seti-icon-theme.json
 # READMEs in subdirectories (root README auto-included by vsce)
 **/README.md
 
+# Binary library dev files (src/data are esbuild-bundled into client/out and
+# server/out at build time, so nothing here is read from disk at runtime)
+binary/src/
+binary/test/
+binary/data/
+binary/out/
+binary/tsconfig*.json
+binary/vitest.config.ts
+binary/tsdown.config.ts
+
+# Binary-editor library dev files (esbuild-bundled into client/out at build time)
+binary-editor/src/
+binary-editor/test/
+binary-editor/tsconfig*.json
+binary-editor/vitest.config.ts
+
+# Format library dev files (esbuild-bundled into server/out at build time)
+format/src/
+format/test/
+format/coverage/
+format/out/
+format/tsconfig*.json
+format/vitest.config.ts
+format/tsdown.config.ts
+
 # Client dev files (keep HTML/CSS webview assets in client/src/)
 client/src/**/*.ts
 client/test/
