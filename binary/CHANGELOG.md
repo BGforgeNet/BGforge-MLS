@@ -9,6 +9,11 @@ Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-e
 - Oversized JSON snapshots (crafted to inflate array lengths) are now rejected before allocation.
 - Registering two parsers or format adapters under the same id now throws instead of silently overwriting.
 
+### Fixed
+
+- Trailing-NUL trimming no longer leaves a literal NUL byte at the end of a trimmed value.
+- CRE: an empty section whose offset a shrinking edit pushed past end-of-file is now recomputed correctly on save.
+
 ## 0.2.0
 
 ### Added

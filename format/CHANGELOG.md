@@ -2,6 +2,17 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## Unreleased
+
+### Added
+
+- The WeiDU TP2 formatter recognizes the `REQUIRE_FILE` / `FORBID_FILE` / `FORBID_PREDICATE` component flags.
+
+### Fixed
+
+- The WeiDU D formatter is now idempotent when a `~string~` immediately follows a keyword.
+- Corrected the WeiDU TP2 formatter's keyword set (dropped keywords the grammar never matched).
+
 ## 0.1.1
 
 Maintenance release.

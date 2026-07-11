@@ -2,13 +2,20 @@
 
 ## Unreleased
 
+### Dialog editor
+
+- New interactive Dialog Editor for D, TD, SSL, TSSL dialogue.
+
 ### Requirements
 
-- Minimum supported VS Code is now 1.91 (was 1.73), following an update of the underlying language-server protocol stack.
+- Minimum supported VS Code is now 1.91 (was 1.73).
 
 ### WeiDU
 
+- Added parsing and highlighting for more WeiDU constructs: TP2 `REQUIRE_FILE` / `FORBID_FILE` / `FORBID_PREDICATE` component flags, `EXTEND_TOP` / `EXTEND_BOTTOM ... USING`, and `REMOVE_CRE_ITEMS`; D `CHAIN3` and `%var%`-interpolated names.
 - Fixed: in TP2 hover tooltips, `buffString` and `ascString` parameter names were not highlighted because of an unreachable pattern branch.
+- Fixed: dropped several phantom TP2 keywords the grammar never matched, and corrected highlighting of the real ones.
+- Fixed: the WeiDU D formatter was not idempotent when a `~string~` immediately followed a keyword.
 
 ### Performance
 
