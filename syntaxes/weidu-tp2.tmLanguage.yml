@@ -39,7 +39,6 @@ patterns:
   - include: '#weidu-tp2-value-operators'
   - include: '#array-construct'
   - include: '#vars-declaration'
-  - include: '#numbers'
 
 repository:
   docstring:
@@ -61,16 +60,6 @@ repository:
       - begin: /\*
         end: \*/
         name: comment.block.weidu-tp2
-
-  action-functions:
-    patterns:
-      - match: \b(\w+)\b
-        name: support.function.weidu-tp2.action_function
-
-  patch-functions:
-    patterns:
-      - match: \b(\w+)\b
-        name: entity.name.class.weidu-tp2.patch-function-name
 
   weidu-tp2-file:
     # Auto-generated from weidu-tp2-base.yml - do not edit manually.
