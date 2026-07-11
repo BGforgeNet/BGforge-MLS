@@ -8,7 +8,7 @@ YAML is easier to maintain, because it's less verbose and allows comments.
 
 Three categories of grammars:
 
-- **11 primary language grammars** - syntax highlighting for each supported language
+- **12 primary language grammars** - syntax highlighting for each supported language
 - **4 tooltip grammars** - hover rendering (used by VSCode tooltip panels)
 - **3 injection grammars** - comments, strings, docstrings (injected into primary grammars)
 

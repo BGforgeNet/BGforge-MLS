@@ -235,16 +235,16 @@ Format-on-save is automatic when enabled. Or use `Shift+Alt+F` / `Format Documen
 
 ```bash
 # Format single file to stdout
-node format-cli.js file.ssl
+fgfmt file.ssl
 
 # Format and save
-node format-cli.js file.ssl --save
+fgfmt file.ssl --save
 
 # Format directory recursively
-node format-cli.js path/to/dirs -r --save
+fgfmt path/to/dirs -r --save
 
 # Check formatting (exit 1 if not formatted)
-node format-cli.js file.ssl --check
+fgfmt file.ssl --check
 ```
 
 ## Configuration

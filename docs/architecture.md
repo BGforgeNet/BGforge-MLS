@@ -588,18 +588,27 @@ Four test layers:
 ### Coverage thresholds
 
 Per-package vitest coverage thresholds reflect the slice of behaviour each package's
-unit tests are responsible for, not the package's full execution surface. Two
-packages run intentionally low floors because their broader behaviour is verified
-by other layers:
+unit tests are responsible for, not the package's full execution surface. The
+authoritative threshold values live in each package's own `vitest.config.ts`
+(`coverage.thresholds` block) - this doc intentionally does not restate the numbers,
+so they cannot drift out of sync as thresholds are ratcheted. Two packages run
+intentionally low floors because their broader behaviour is verified by other layers:
 
-- **`@bgforge/format`** (`format/vitest.config.ts`): 82/86/75/81 (lines/functions/branches/statements). The tree-sitter-driven formatters (`src/{fallout-ssl,weidu-baf,weidu-d,weidu-tp2}/`) are exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`, so they are excluded from this gate's coverage scope; the threshold measures only the standalone unit slice (the pure formatters, utilities, helpers, dispatch) it actually covers.
-- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 70% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
+- **`@bgforge/format`** (`format/vitest.config.ts`): the tree-sitter-driven formatters (`src/{fallout-ssl,weidu-baf,weidu-d,weidu-tp2}/`) are exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`, so they are excluded from this gate's coverage scope; the threshold measures only the standalone unit slice (the pure formatters, utilities, helpers, dispatch) it actually covers.
+- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): the bulk of transpiler correctness is enforced by the TD/TBAF fixture-driven integration suites in `scripts/test.sh` (`api.test.ts`, `transpile-cli.test.ts`, and the `test/td` + `test/tbaf` fixture suites). The vitest project here covers only the public API and shared helpers; Stryker mutation testing does not reach this package (it mutates `server/src/core` only - see below), so the per-language transformer surface is exercised solely through those integration suites.
 
-The mutation `break` threshold sits at 70 (with `high` at 80, `low` at 70) because the current scoped score is 70.09 - `normalized-uri.ts` mutates at 100%, `provider-registry.ts` at 84.3%, and `symbol-index.ts` at 65.2% with ~40 surviving mutants and ~22 no-coverage mutants pulling the file average down. Raising the threshold to 80 would require landing additional `symbol-index.ts` test coverage first; until that work is done, keep the threshold tracking actual current state rather than aspirational state, so a routine refactor cannot trip the gate without a real regression.
+Stryker (`stryker.conf.json`) mutates exactly three `server/src/core` files -
+`normalized-uri.ts`, `symbol-index.ts`, and `provider-registry.ts` - not the
+transpilers or any other package. The `break` threshold sits at 70 (`high` 80,
+`low` 70); run `pnpm exec stryker run` locally for the current per-file scoped
+score (report at `tmp/mutation/report.html`), since the figure moves as those
+files' tests change and a snapshot pinned to one run's date would go stale here
+the same way the coverage numbers above did.
 
 The other workspaces - `server`, `client`, `binary`, `shared`, `scripts`, and the
-two TypeScript plugins - run at 90/80/90/90 (or higher for the plugins) because
-their unit suites are responsible for the bulk of their own behaviour. `server`
+two TypeScript plugins - run substantially higher floors (see each package's own
+`vitest.config.ts`) because their unit suites are responsible for the bulk of
+their own behaviour. `server`
 additionally excludes `src/fallout-ssl/provider.ts` and `src/weidu-tp2/provider.ts`
 (LSP dispatcher glue verified by the integration tests under `server/test/integration/`)
 and `src/**/format/**/*.ts` (per-language tree-sitter formatters covered by

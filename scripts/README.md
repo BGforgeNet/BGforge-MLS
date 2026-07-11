@@ -11,7 +11,7 @@ See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs
 | `pnpm test`          | Default repo-wide test suite from `test.sh` (excludes grammar and E2E suites) |
 | `pnpm test:all`      | Full test suite: `pnpm test` plus grammar and external transpile suites       |
 | `pnpm test:e2e`      | E2E tests (requires `pnpm build` first and host Electron libraries)           |
-| `pnpm test:grammars` | Grammar tests (generate, lint, corpus, parse, format)                         |
+| `pnpm test:grammars` | Grammar tests (generate, lint, corpus, highlight, parse, format)              |
 | `pnpm package`       | Create VSIX package                                                           |
 | `pnpm dev:web`       | Run the extension in VS Code for the Web (code-server) for fast change review |
 
@@ -117,6 +117,14 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
   (e.g. sort `patterns` inside all `repository` stanzas of a TextMate grammar without reordering stanzas).
   It preserves comments and formatting by moving raw source slices instead of fully parsing and re-stringifying the file.
   Use this for manual data-file cleanup when you want deterministic ordering without YAML emitter churn.
+
+- `scripts/utils/src/update-fallout-base-functions-highlight.ts`
+  Generates TextMate highlight patterns for the `fallout-base-functions` stanza in `syntaxes/fallout-ssl.tmLanguage.yml`
+  from active function stanzas in `server/data/fallout-ssl-base.yml`. Called by `generate-data.sh`.
+
+- `scripts/utils/src/update-sfall-highlight.ts`
+  Generates TextMate highlight patterns for the `sfall_functions` and `hooks` stanzas in `syntaxes/fallout-ssl.tmLanguage.yml`
+  from `server/data/fallout-ssl-sfall.yml`. Called by `generate-data.sh`.
 
 - `scripts/utils/src/update-tp2-highlight.ts`
   Generates TextMate highlight patterns for 19 TP2 stanzas (actions, patches, flags, options, values, constants, callables, vars, etc.) from `server/data/weidu-tp2-base.yml`.

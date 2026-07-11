@@ -163,7 +163,7 @@ Grammar files (`grammars/**/*.js`) need these globals: `grammar`, `seq`, `choice
 
 ### Custom rule
 
-The project has a custom oxlint plugin (`.oxlint/oxlint-plugin-no-showmessage.ts`) that bans direct `connection.window.showMessage` calls in server code. Use the wrapper functions from `user-messages.ts` instead.
+The project has a custom oxlint plugin (`.oxlint/oxlint-plugin-no-showmessage.mjs`) that bans direct `connection.window.showMessage` calls in server code. Use the wrapper functions from `user-messages.ts` instead.
 
 ## Grammar .gitignore files
 
