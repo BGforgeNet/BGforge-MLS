@@ -1,6 +1,6 @@
 # WeiDU D Formatter
 
-The WeiDU D formatter preserves comments exactly while normalizing code whitespace. It is used by both the LSP server (for format-on-save) and the standalone CLI (`format-cli.js`).
+The WeiDU D formatter preserves comments exactly while normalizing code whitespace. It is used by both the LSP server (for format-on-save) and the standalone CLI (`fgfmt`).
 
 **Implementation:** [`../../format/src/weidu-d/core.ts`](../../format/src/weidu-d/core.ts)
 
@@ -102,16 +102,16 @@ Format-on-save is automatic when enabled in settings. Or use `Shift+Alt+F` / `Fo
 
 ```bash
 # Format single file to stdout
-node format-cli.js file.d
+fgfmt file.d
 
 # Format and save
-node format-cli.js file.d --save
+fgfmt file.d --save
 
 # Format directory recursively
-node format-cli.js path/to/dirs -r --save
+fgfmt path/to/dirs -r --save
 
 # Check formatting (exit 1 if not formatted)
-node format-cli.js file.d --check
+fgfmt file.d --check
 ```
 
 ## Related

@@ -124,16 +124,16 @@ Format-on-save is automatic when enabled. Or use `Shift+Alt+F` / `Format Documen
 
 ```bash
 # Format single file to stdout
-node format-cli.js file.baf
+fgfmt file.baf
 
 # Format and save
-node format-cli.js file.baf --save
+fgfmt file.baf --save
 
 # Format directory recursively
-node format-cli.js path/to/dirs -r --save
+fgfmt path/to/dirs -r --save
 
 # Check formatting (exit 1 if not formatted)
-node format-cli.js file.baf --check
+fgfmt file.baf --check
 ```
 
 ## Configuration
