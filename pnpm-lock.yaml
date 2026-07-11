@@ -335,6 +335,10 @@ importers:
         version: 0.22.4(oxc-resolver@11.21.3)(tsx@4.23.0)(typescript@5.9.3)
 
   transpilers/common:
+    dependencies:
+      quick-lru:
+        specifier: ^7.3.0
+        version: 7.3.0
     devDependencies:
       esbuild-wasm:
         specifier: ^0.28.1
