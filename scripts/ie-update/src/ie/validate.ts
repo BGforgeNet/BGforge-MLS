@@ -13,6 +13,13 @@ import {
     optionalBoolean,
     optionalString,
     requireString,
+} from "../../../utils/src/validate-helpers.ts";
+export {
+    assertArray,
+    assertObject,
+    optionalBoolean,
+    optionalString,
+    requireString,
     validateArray,
 } from "../../../utils/src/validate-helpers.ts";
 import type {
@@ -26,8 +33,6 @@ import type {
     OffsetItem,
     TypeEntry,
 } from "./types.ts";
-
-export { assertArray, assertObject, optionalBoolean, optionalString, requireString, validateArray };
 
 /**
  * Validates that a field is a number. Throws with field name and context on failure.

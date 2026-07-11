@@ -16,6 +16,9 @@ import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStm
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 import { throwOnParseError, normalizeComment } from "@bgforge/format";
+// Comment normalization is shared across all formatters; re-export the imported
+// binding so existing `./core` importers (e.g. control-flow) keep their path.
+export { normalizeComment } from "@bgforge/format";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
 // Shared format-pipeline helper; re-export so `./core` importers (expressions) keep their path.
@@ -121,10 +124,6 @@ function normalizePreprocessor(text: string): string {
     if (text.endsWith("\n")) return text.slice(0, -1);
     return text;
 }
-
-// Comment normalization is shared across all formatters; re-export the imported
-// binding so existing `./core` importers (e.g. control-flow) keep their path.
-export { normalizeComment };
 
 export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAULT_OPTIONS): FormatResult {
     throwOnParseError(node);

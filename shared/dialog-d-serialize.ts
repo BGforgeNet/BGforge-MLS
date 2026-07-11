@@ -75,8 +75,7 @@ export function serializeState(state: DialogState): string[] {
     // Build the IF header: optional WEIGHT, trigger, state id
     const weight = state.weight != null ? `WEIGHT #${state.weight} ` : "";
     const trigger = state.trigger ?? "";
-    lines.push(`  IF ${weight}~${trigger}~ THEN BEGIN ${state.id}`);
-    lines.push(`    SAY ${serializeSayValue(state)}`);
+    lines.push(`  IF ${weight}~${trigger}~ THEN BEGIN ${state.id}`, `    SAY ${serializeSayValue(state)}`);
 
     for (const choice of state.choices) {
         lines.push(`    ${serializeChoice(choice)}`);
@@ -97,8 +96,7 @@ export function serializeChoice(choice: DialogChoice): string {
         // parser reads it back from a transition_short (see parseTransitionShort), so the
         // condition round-trips.
         const cond = choice.condition ?? "";
-        parts.push(cond === "" ? "++" : `+ ~${cond}~ +`);
-        parts.push(serializeTextValue(choice.text));
+        parts.push(cond === "" ? "++" : `+ ~${cond}~ +`, serializeTextValue(choice.text));
         if (choice.action != null) {
             parts.push(`DO ~${choice.action}~`);
         }

@@ -95,8 +95,6 @@ function buildFoldingRules(pairs: readonly (readonly [string, string])[]): strin
         const region = `fold${i + 1}`;
         lines.push(
             `        <WordDetect attribute="Keyword" context="#stay" String="${escapeXml(open)}" beginRegion="${region}"/>`,
-        );
-        lines.push(
             `        <WordDetect attribute="Keyword" context="#stay" String="${escapeXml(close)}" endRegion="${region}"/>`,
         );
     }

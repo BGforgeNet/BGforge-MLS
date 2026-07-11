@@ -4,8 +4,7 @@
 
 import type { ParsedField, ParsedFieldType, ParsedGroup } from "../types";
 import { stringifyKeys } from "../presentation-schema-types";
-import { HEADER_SIZE } from "./schemas";
-
+export { HEADER_SIZE as HEADER_OPAQUE_END } from "./schemas";
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
 export const STRICT_MAP_SCRIPT_TYPE_COUNT = 4;
@@ -17,7 +16,6 @@ const FIRST_EXIT_GRID_PID = 0x5000010;
 const LAST_EXIT_GRID_PID = 0x5000017;
 export const HEADER_PADDING_OFFSET = 0x3c;
 export const HEADER_PADDING_SIZE = 176;
-export const HEADER_OPAQUE_END = HEADER_SIZE;
 
 export function field(
     name: string,

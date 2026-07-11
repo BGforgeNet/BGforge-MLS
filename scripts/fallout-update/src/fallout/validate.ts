@@ -13,11 +13,16 @@ import {
     optionalBoolean,
     optionalString,
     requireString,
+} from "../../../utils/src/validate-helpers.ts";
+export {
+    assertArray,
+    assertObject,
+    optionalBoolean,
+    optionalString,
+    requireString,
     validateArray,
 } from "../../../utils/src/validate-helpers.ts";
 import type { FalloutArg, SfallCategory, SfallFunction, SfallHook } from "./types.ts";
-
-export { assertArray, assertObject, optionalBoolean, optionalString, requireString, validateArray };
 
 /**
  * Returns a field as string or number if present, undefined otherwise. Throws if present but wrong type.

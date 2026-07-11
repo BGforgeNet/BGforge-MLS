@@ -21,7 +21,8 @@
  * "new ability" workflow.
  */
 
-import { ABILITIES_SECTION, createIeStructureOps, defaultIeEffect, EFFECTS_SECTION } from "../ie-common/structure-ops";
+import { createIeStructureOps, defaultIeEffect } from "../ie-common/structure-ops";
+export { ABILITIES_SECTION, EFFECTS_SECTION } from "../ie-common/structure-ops";
 import { createEffectPartition, type IeEffectRangeFields } from "../ie-common/effect-partition";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "./canonical-reader";
 import { serializeItmCanonicalDocument } from "./canonical-writer";
@@ -31,8 +32,6 @@ import type { ItmCanonicalDocument } from "./canonical-schemas";
 // Using the structural array element type directly avoids importing the spec
 // annotation just to re-derive what the type already expresses.
 type ItmAbility = ItmCanonicalDocument["abilities"][number];
-
-export { ABILITIES_SECTION, EFFECTS_SECTION };
 
 /**
  * Returns a valid default ITM ability with no owned effects.
@@ -79,7 +78,7 @@ export function defaultItmAbility(): ItmAbility {
 }
 
 // defaultItmEffect is now the shared default; keep the name for existing importers.
-export const defaultItmEffect = defaultIeEffect;
+export { defaultIeEffect as defaultItmEffect } from "../ie-common/structure-ops";
 
 export const ITM_FIELDS: IeEffectRangeFields = {
     headerStart: "featureBlocksIndex",

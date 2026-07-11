@@ -18,8 +18,7 @@ import { parseArgs } from "node:util";
 import { type Document, isMap, isScalar, isSeq } from "yaml";
 import { type DataFile, loadData } from "./generate-data.ts";
 import { type HighlightPattern, cmpStr, YAML_DUMP_OPTIONS, parseYamlDocStrict } from "./yaml-helpers.ts";
-
-export type { HighlightPattern };
+export { type HighlightPattern } from "./yaml-helpers.ts";
 
 /**
  * Matches identifiers already caught by the upper-case-constants catch-all rule

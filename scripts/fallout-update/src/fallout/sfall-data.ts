@@ -8,11 +8,10 @@
 import fs from "node:fs";
 import YAML from "yaml";
 import { cmpStr, litscal } from "../../../utils/src/yaml-helpers.ts";
+export { litscal } from "../../../utils/src/yaml-helpers.ts";
 import { findFile } from "./header-defines.ts";
 import type { FalloutCompletionItem, SfallCategory } from "./types.ts";
 import { validateArray, validateSfallCategory, validateSfallHook } from "./validate.ts";
-
-export { litscal };
 
 const FUNCTIONS_YAML = "functions.yml";
 const HOOKS_YAML = "hooks.yml";

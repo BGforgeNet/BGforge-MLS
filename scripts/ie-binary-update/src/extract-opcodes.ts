@@ -214,8 +214,7 @@ export function emitOpcodeRelationshipsModule(
         }
         lines.push(`    ${n}: { ${parts.join(", ")} },`);
     }
-    lines.push("};");
-    lines.push("");
+    lines.push("};", "");
     return lines.join("\n");
 }
 
@@ -235,7 +234,6 @@ export function emitOpcodesModule(opcodes: ReadonlyMap<number, string>, sourceRe
         const escaped = name.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
         lines.push(`    ${n}: "${escaped}",`);
     }
-    lines.push("};");
-    lines.push("");
+    lines.push("};", "");
     return lines.join("\n");
 }

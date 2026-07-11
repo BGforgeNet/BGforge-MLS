@@ -21,9 +21,7 @@ import { getDocumentSettings } from "./settings-service";
 // bundles it into the server rather than treating it as an external npm dependency.
 import { tssl, tbaf, td, outputPathFor } from "../../transpilers/src/index";
 import * as weidu from "./weidu-compile";
-import { LSP_COMMAND_COMPILE } from "../../shared/protocol";
-
-export const COMMAND_compile = LSP_COMMAND_COMPILE;
+export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
 
 /**
  * Copies files to tmpdir and parses it there, then send diagnostic to the real file.

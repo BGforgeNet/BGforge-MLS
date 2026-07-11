@@ -58,6 +58,7 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(disposable);
 
     // Register binary file editor
+    // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
     context.subscriptions.push(registerBinaryEditor(context));
 
     // If the extension is launched in debug mode then the debug server options are used

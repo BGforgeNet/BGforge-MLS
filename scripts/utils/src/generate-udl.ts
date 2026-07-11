@@ -46,13 +46,17 @@ function buildDelimitersLine(delimiters: readonly (readonly [string, string])[])
         if (i < sorted.length) {
             // Bounds-checked above: i < sorted.length
             const [open, close] = sorted[i]!;
-            parts.push(`${String(slotBase).padStart(2, "0")}${escapeXml(open)}`);
-            parts.push(`${String(slotBase + 1).padStart(2, "0")}`);
-            parts.push(`${String(slotBase + 2).padStart(2, "0")}${escapeXml(close)}`);
+            parts.push(
+                `${String(slotBase).padStart(2, "0")}${escapeXml(open)}`,
+                `${String(slotBase + 1).padStart(2, "0")}`,
+                `${String(slotBase + 2).padStart(2, "0")}${escapeXml(close)}`,
+            );
         } else {
-            parts.push(`${String(slotBase).padStart(2, "0")}`);
-            parts.push(`${String(slotBase + 1).padStart(2, "0")}`);
-            parts.push(`${String(slotBase + 2).padStart(2, "0")}`);
+            parts.push(
+                `${String(slotBase).padStart(2, "0")}`,
+                `${String(slotBase + 1).padStart(2, "0")}`,
+                `${String(slotBase + 2).padStart(2, "0")}`,
+            );
         }
     }
     return parts.join(" ");

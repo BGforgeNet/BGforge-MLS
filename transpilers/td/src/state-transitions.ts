@@ -36,7 +36,8 @@ import {
 } from "./parse-helpers";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
-import { processTransitionCall, processTransitionStatement, processExtendStatements } from "./transition-calls";
+import { processTransitionCall, processTransitionStatement } from "./transition-calls";
+export { processExtendStatements } from "./transition-calls";
 import { unrollForOf, unrollFor } from "./inline-and-unroll";
 
 /** Function info including optional entry trigger from if-wrapping */
@@ -370,4 +371,4 @@ function inlineUserFunction(
     }
 }
 
-export { transformFunctionToState, processExtendStatements, processStateStatement, type FuncsContext };
+export { transformFunctionToState, processStateStatement, type FuncsContext };

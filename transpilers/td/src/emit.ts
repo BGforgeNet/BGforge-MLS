@@ -524,8 +524,7 @@ function emitReplaceStates(op: import("./types").TDReplaceStates): string {
         .sort(([a], [b]) => a - b)
         .map(([_, state]) => indentBlock(emitState(state)));
 
-    lines.push(...states.flatMap((s) => s.split("\n")));
-    lines.push("END");
+    lines.push(...states.flatMap((s) => s.split("\n")), "END");
 
     return lines.join("\n");
 }

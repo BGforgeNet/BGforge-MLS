@@ -201,8 +201,7 @@ export function formatReplaceBcsBlock(
             hasOnMismatch = true;
             inOnMismatch = true;
             // Output header first, then ON_MISMATCH
-            lines.push(indent + headerParts.join(" "));
-            lines.push(indent + "ON_MISMATCH");
+            lines.push(indent + headerParts.join(" "), indent + "ON_MISMATCH");
             lastEndRow = child.startPosition.row;
             continue;
         }

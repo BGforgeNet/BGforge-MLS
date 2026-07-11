@@ -803,10 +803,13 @@ export function applyFalloutFamilyEdits(
             );
             // Add the node's own reply (NPC line) when the edit introduced one the procedure lacks - the
             // from-scratch scaffold path, where the entry node was emitted empty then given a line.
+            // oxlint-disable-next-line unicorn/prefer-single-call -- each push is independently commented above.
             ops.push(...replyOps(state, orig));
         }
-        ops.push(...branchConditionOps(originalText, state, orig));
-        ops.push(...branchStructureOps(originalText, state, orig, variant.serializeBranch));
+        ops.push(
+            ...branchConditionOps(originalText, state, orig),
+            ...branchStructureOps(originalText, state, orig, variant.serializeBranch),
+        );
     }
 
     // DELETE: an original node missing from the edited model -> remove its whole procedure span (and the

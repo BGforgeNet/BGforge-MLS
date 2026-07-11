@@ -305,8 +305,10 @@ function getWeiduParamTable(item: DataItem): string {
     const sections: VarSection[] = [];
 
     if (item.args !== undefined && item.args.length > 0) {
-        sections.push({ label: "INT vars", rows: mapArgsToRows(item.args, "int") });
-        sections.push({ label: "STR vars", rows: mapArgsToRows(item.args, "str") });
+        sections.push(
+            { label: "INT vars", rows: mapArgsToRows(item.args, "int") },
+            { label: "STR vars", rows: mapArgsToRows(item.args, "str") },
+        );
     }
 
     if (item.rets !== undefined && item.rets.length > 0) {

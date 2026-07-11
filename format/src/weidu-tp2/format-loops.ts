@@ -311,8 +311,7 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
     }
 
     const entryLines = outputAlignedAssignments(items, "", indent, bodyIndent, " => ");
-    lines.push(...entryLines);
-    lines.push(indent + KW_END);
+    lines.push(...entryLines, indent + KW_END);
 
     return lines.join("\n");
 }

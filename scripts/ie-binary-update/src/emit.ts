@@ -39,17 +39,20 @@ export function emitSpecModule(input: EmitInput): string {
         lines.push(`import { ${typedBinary.join(", ")} } from "typed-binary";`);
     }
     const specImports = [...specTypes, "type FieldSpec", "type SpecData"];
-    lines.push(`import { ${specImports.join(", ")} } from "../../spec/types";`);
-    lines.push("");
-
-    lines.push(`export const ${input.specConst} = {`);
+    lines.push(
+        `import { ${specImports.join(", ")} } from "../../spec/types";`,
+        "",
+        `export const ${input.specConst} = {`,
+    );
     for (const field of input.struct.fields) {
         lines.push(`    ${field.name}: ${field.fieldSource},`);
     }
-    lines.push(`} satisfies Record<string, FieldSpec>;`);
-    lines.push("");
-    lines.push(`export type ${input.dataType} = SpecData<typeof ${input.specConst}>;`);
-    lines.push("");
+    lines.push(
+        `} satisfies Record<string, FieldSpec>;`,
+        "",
+        `export type ${input.dataType} = SpecData<typeof ${input.specConst}>;`,
+        "",
+    );
 
     return lines.join("\n");
 }

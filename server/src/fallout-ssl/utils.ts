@@ -7,6 +7,8 @@ import type { Node } from "web-tree-sitter";
 import { type Position, CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { containsPosition, makeRange } from "../core/position-utils";
+// Re-export for existing consumers
+export { makeRange } from "../core/position-utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import {
     type CallableSymbol,
@@ -29,9 +31,6 @@ import {
     buildSignatureHelp,
 } from "./macro-utils";
 import { SyntaxType } from "./syntax-type";
-
-// Re-export for existing consumers
-export { makeRange };
 
 /** Parameter data extracted from AST. */
 interface ParamInfo {

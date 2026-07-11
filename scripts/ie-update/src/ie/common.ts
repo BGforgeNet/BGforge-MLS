@@ -6,10 +6,9 @@
  */
 
 import { type Document, YAMLMap, YAMLSeq } from "yaml";
-import { cmpStr, findFiles, litscal, makeBlockScalar } from "../../../utils/src/yaml-helpers.ts";
+import { makeBlockScalar } from "../../../utils/src/yaml-helpers.ts";
+export { cmpStr, findFiles, litscal } from "../../../utils/src/yaml-helpers.ts";
 import { type CompletionItem } from "./types.ts";
-
-export { cmpStr, findFiles, litscal };
 
 const HTML_ENTITY_MAP: Readonly<Record<string, string>> = {
     nbsp: " ",

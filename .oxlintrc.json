@@ -24,13 +24,14 @@
         "sort-keys": "off",
 
         // Arbitrary numeric caps - block-count, file length, param count,
-        // identifier length. No evidence any instance is actually a problem;
-        // the cap is the problem.
+        // identifier length, call-nesting depth. No evidence any instance is
+        // actually a problem; the cap is the problem.
         "max-statements": "off",
         "max-lines-per-function": "off",
         "max-lines": "off",
         "max-params": "off",
         "id-length": "off",
+        "unicorn/max-nested-calls": "off",
 
         // Pure style preference; no correctness value.
         "func-style": "off",
@@ -218,7 +219,17 @@
         // signatures idiomatically. Converting the call sites is churn out of
         // scope for a lint upgrade, same as the other `typescript/` style
         // rules disabled above (`array-type`, `consistent-type-definitions`).
-        "typescript/method-signature-style": "off"
+        "typescript/method-signature-style": "off",
+
+        // Newly enabled by oxlint 1.73. `parseInt(x, 10)` and
+        // `Math.trunc(Number(x))` are NOT behaviorally equivalent: parseInt
+        // parses the longest valid numeric prefix and ignores trailing junk
+        // ("3abc" -> 3), while Number() is strict and yields NaN for the same
+        // input. Call sites here parse WeiDU/sslc diagnostic output, tree-sitter
+        // node text, and an env var (BGFORGE_LSP_SLOW_MS) - swapping to the
+        // stricter form at 30+ sites is a behavior change out of scope for a
+        // lint-tool upgrade, same rationale as `prefer-named-capture-group`.
+        "unicorn/prefer-number-coercion": "off"
     },
     "overrides": [
         {

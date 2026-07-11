@@ -569,8 +569,7 @@ export function formatMatchCase(
         if (isKeyword(child, KW_BEGIN)) {
             const header = normalizeWhitespace(headerParts.join(" "));
             if (header.includes("//")) {
-                lines.push(indent + header);
-                lines.push(indent + KW_BEGIN);
+                lines.push(indent + header, indent + KW_BEGIN);
             } else {
                 lines.push(indent + header + " " + KW_BEGIN);
             }

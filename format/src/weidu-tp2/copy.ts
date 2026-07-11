@@ -118,12 +118,10 @@ function parseWhenNode(node: SyntaxNode): string[] {
             const valueChild = children[valueIdx];
             if (valueChild && isValueType(valueChild.type)) {
                 // Output keyword with value, then any intervening comments
-                result.push(text + " " + valueChild.text);
-                result.push(...commentsBetween);
+                result.push(text + " " + valueChild.text, ...commentsBetween);
                 i = valueIdx; // Skip to after the value
             } else {
-                result.push(text);
-                result.push(...commentsBetween);
+                result.push(text, ...commentsBetween);
             }
         }
     }
@@ -274,8 +272,7 @@ function formatCopyHeader(parts: CopyActionParts, indent: string, patchIndent: s
         if (totalLen <= lineLimit || parts.filePairs.length === 0) {
             lines.push(indent + header);
         } else {
-            lines.push(indent + parts.keyword);
-            lines.push(patchIndent + firstPair);
+            lines.push(indent + parts.keyword, patchIndent + firstPair);
         }
     } else {
         lines.push(indent + parts.keyword);
