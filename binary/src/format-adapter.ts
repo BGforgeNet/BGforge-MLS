@@ -211,7 +211,10 @@ class FormatAdapterRegistry {
 
     register(adapter: BinaryFormatAdapter): void {
         if (this.adapters.has(adapter.formatId)) {
-            console.warn(`Format adapter "${adapter.formatId}" already registered, overwriting`);
+            // Same rationale as ParserRegistry.register: a silent overwrite here would leave the
+            // shadowed adapter's presentation/layout/structural-edit behaviour unreachable with no
+            // signal to the consumer that registered it.
+            throw new Error(`Format adapter "${adapter.formatId}" is already registered`);
         }
         this.adapters.set(adapter.formatId, adapter);
     }

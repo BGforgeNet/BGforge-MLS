@@ -12,6 +12,12 @@ class ParserRegistry {
      * Register a parser
      */
     register(parser: BinaryParser): void {
+        if (this.parsers.has(parser.id)) {
+            // Silent last-wins would let a duplicate id shadow the first registration for every
+            // subsequent lookup by id or extension; a library consumer needs that to fail loudly
+            // rather than losing a parser without any indication why.
+            throw new Error(`Parser "${parser.id}" is already registered`);
+        }
         if (parser.extensions.length === 0) {
             console.warn(`Parser "${parser.id}" has no extensions registered`);
         }

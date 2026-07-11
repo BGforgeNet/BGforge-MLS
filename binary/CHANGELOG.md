@@ -7,6 +7,7 @@ Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-e
 ### Changed
 
 - Oversized JSON snapshots (crafted to inflate array lengths) are now rejected before allocation.
+- Registering two parsers or format adapters under the same id now throws instead of silently overwriting.
 
 ## 0.2.0
 
