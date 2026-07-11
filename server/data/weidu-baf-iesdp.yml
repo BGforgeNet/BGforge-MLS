@@ -1425,7 +1425,7 @@ actions:
     - name: GiveOrder
       detail: GiveOrder(O:Object, I:Order)
       doc: |-
-        This action is used in conjunction with the ReceivedOrder trigger, and works in a similar way to a global shout. The action passes a numeric order to the specified creature. Only one creature at a time responds to an order, and creatures to not detect their own orders.
+        This action is used in conjunction with the ReceivedOrder trigger, and works in a similar way to a global shout. The action passes a numeric order to the specified creature. Only one creature at a time responds to an order, and creatures to not detect their own orders. It also sets the LastCommandedBy object to point to the target.
         ```
         IF
           See([EVILCUTOFF])
@@ -2477,8 +2477,10 @@ actions:
         This action acts as a shortcut for SetGlobal(). The action can only set global variables.
     - name: SaveGame
       detail: SaveGame(I:Slot)
-      doc: |-
+      doc: |
         This action saves the game in the specified save slot.
+
+        This action is queued internally and runs only after the current script round has finished. Game states that are updated in the same script round will be included in the saved game.
     - name: SaveLocation
       detail: SaveLocation(S:Scope, S:Global, P:Point)
       doc: |-

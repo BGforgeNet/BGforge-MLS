@@ -21,6 +21,10 @@
 
 - Fixed: on large mod workspaces the language server could use excessive memory while indexing at startup. It now skips `node_modules` and dotfile directories and limits how many files it reads at once.
 
+### Data
+
+- Refreshed Infinity Engine BAF documentation from IESDP (2026-07-11).
+
 ## 3.9.1
 
 ### Binary editor
