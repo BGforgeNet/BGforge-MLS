@@ -465,11 +465,17 @@ export class Translation {
     private ensureTraConfig(relDir: string): void {
         if (!this.workspaceRoot) return;
         const configPath = path.join(this.workspaceRoot, ".bgforge.yml");
-        if (fs.existsSync(configPath)) return;
         try {
-            fs.writeFileSync(configPath, yaml.stringify({ mls: { translation: { directory: relDir } } }));
+            // `flag: "wx"` creates the file only if it does not already exist and fails with EEXIST
+            // otherwise, so an existing project config is never clobbered - atomically, with no
+            // existsSync->writeFileSync TOCTOU window.
+            fs.writeFileSync(configPath, yaml.stringify({ mls: { translation: { directory: relDir } } }), {
+                flag: "wx",
+            });
             conlog(`Translation: created .bgforge.yml (translation.directory: ${relDir})`);
         } catch (error) {
+            // File already present: the config exists, nothing to create - not a failure.
+            if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
             conlog(`Translation: could not create .bgforge.yml: ${errorMessage(error)}`, "warn");
         }
     }

@@ -198,34 +198,32 @@ Examples:
  * Validation and semantic round-trip checks happen inside the shared snapshot loader.
  */
 function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
-    let stat: fs.Stats;
+    // Open once, then fstat and read through the SAME descriptor so the size check and the read
+    // operate on one inode. A statSync->readFileSync pair on the path leaves a TOCTOU window
+    // (CodeQL js/file-system-race) where a file swapped after the check could bypass the input cap.
+    let fd: number;
     try {
-        stat = fs.statSync(jsonPath);
+        fd = fs.openSync(jsonPath, "r");
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
             console.error(`Not found: ${jsonPath}`);
             process.exit(1);
         }
         throw error;
-    }
-    if (stat.size > MAX_JSON_SNAPSHOT_INPUT_BYTES) {
-        console.error(
-            `File too large: ${stat.size} bytes (snapshot input cap is ${MAX_JSON_SNAPSHOT_INPUT_BYTES}); refusing to read ${jsonPath}`,
-        );
-        process.exit(1);
     }
 
     let jsonText: string;
     try {
-        // Read with try/catch instead of existsSync->readFileSync to avoid
-        // the TOCTOU window CodeQL js/file-system-race flags.
-        jsonText = fs.readFileSync(jsonPath, "utf-8");
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-            console.error(`Not found: ${jsonPath}`);
+        const size = fs.fstatSync(fd).size;
+        if (size > MAX_JSON_SNAPSHOT_INPUT_BYTES) {
+            console.error(
+                `File too large: ${size} bytes (snapshot input cap is ${MAX_JSON_SNAPSHOT_INPUT_BYTES}); refusing to read ${jsonPath}`,
+            );
             process.exit(1);
         }
-        throw error;
+        jsonText = fs.readFileSync(fd, "utf-8");
+    } finally {
+        fs.closeSync(fd);
     }
 
     const loaded = loadBinaryJsonSnapshot(jsonText, parseOptions);
