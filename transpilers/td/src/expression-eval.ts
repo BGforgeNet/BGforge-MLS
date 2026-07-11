@@ -92,13 +92,6 @@ function collectOrConditions(expr: Expression, vars: VarsContext): string[] {
 }
 
 /**
- * Convert an expression to an action string.
- */
-function expressionToAction(expr: Expression, vars: VarsContext): string {
-    return expressionToActionString(expr, vars);
-}
-
-/**
  * Convert an expression to TDText.
  */
 function expressionToText(expr: Expression, vars: VarsContext): TDText {
@@ -189,4 +182,4 @@ function expressionToText(expr: Expression, vars: VarsContext): TDText {
     };
 }
 
-export { expressionToTrigger, expressionToAction, expressionToText };
+export { expressionToTrigger, expressionToText };

@@ -6,7 +6,7 @@
  * which needs to be converted to CNF using the distributive law.
  */
 
-import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
+import { isOrGroup, type BAFCondition, type BAFTopCondition } from "./ir";
 import { TranspileError } from "../../common/transpile-error";
 
 /** Maximum clauses to generate before erroring (prevents exponential blowup) */
@@ -132,11 +132,4 @@ function deduplicateAtoms(atoms: BAFCondition[]): BAFCondition[] {
     }
 
     return result;
-}
-
-/**
- * Type guard for BAFOrGroup.
- */
-function isOrGroup(cond: BAFTopCondition): cond is BAFOrGroup {
-    return "conditions" in cond;
 }

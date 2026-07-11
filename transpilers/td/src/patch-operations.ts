@@ -25,9 +25,16 @@ import {
 } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr, parseStateList, parseNumberArray, parseUnless, getCallArg } from "./parse-helpers";
+import {
+    resolveStringExpr,
+    parseStateList,
+    parseNumberArray,
+    parseUnless,
+    getCallArg,
+    expressionToActionString,
+} from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { expressionToTrigger, expressionToAction, expressionToText } from "./expression-eval";
+import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { type FuncsContext, transformFunctionToState } from "./state-transitions";
 
 /**
@@ -64,7 +71,7 @@ function transformAlterTrans(call: CallExpression, vars: VarsContext): TDConstru
                     changes.trigger = expressionToTrigger(value, vars);
                 }
             } else if (propName === "action") {
-                changes.action = expressionToAction(value, vars);
+                changes.action = expressionToActionString(value, vars);
             } else if (propName === "reply") {
                 changes.reply = expressionToText(value, vars);
             }
@@ -167,7 +174,7 @@ function transformAddTransAction(call: CallExpression, vars: VarsContext): TDCon
     const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
     const states = parseStateList(getCallArg(args, 1, call), vars);
     const transitions = parseNumberArray(getCallArg(args, 2, call));
-    const action = expressionToAction(getCallArg(args, 3, call), vars);
+    const action = expressionToActionString(getCallArg(args, 3, call), vars);
     const unless = args[4] ? parseUnless(getCallArg(args, 4, call)) : undefined;
 
     const operation: TDAddTransAction = {
