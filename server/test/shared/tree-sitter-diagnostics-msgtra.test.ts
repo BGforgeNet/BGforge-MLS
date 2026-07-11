@@ -38,7 +38,7 @@ describe("fallout-msg parse errors", () => {
     it("flags an unterminated entry (missing closing brace)", () => {
         const tree = msg.parseWithCache("{200}{}{Bye")!;
         const diagnostics = collectParseErrors(tree.rootNode);
-        expect(diagnostics.some((d) => d.message.startsWith("missing '"))).toBe(true);
+        expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("missing '"))).toBe(true);
     });
 
     it("accepts #, //, and /* */ marked comments without diagnostics", () => {
@@ -76,6 +76,8 @@ describe("weidu-tra parse errors", () => {
     it("flags a non-entry garbage line", () => {
         const tree = tra.parseWithCache("@1 = ~ok~\nqqq zzz nonsense")!;
         const diagnostics = collectParseErrors(tree.rootNode);
-        expect(diagnostics.some((d) => d.message.startsWith("Syntax error"))).toBe(true);
+        expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("Syntax error"))).toBe(
+            true,
+        );
     });
 });

@@ -60,7 +60,9 @@ end
 `;
         const tree = parseWithCache(text)!;
         const diagnostics = collectParseErrors(tree.rootNode);
-        const errorDiag = diagnostics.find((d) => d.message.startsWith("Syntax error"));
+        const errorDiag = diagnostics.find(
+            (d) => typeof d.message === "string" && d.message.startsWith("Syntax error"),
+        );
         expect(errorDiag).toBeDefined();
         // "near '<token>'" carries the offending text, not a bare "Syntax error".
         expect(errorDiag!.message).toContain("near '");

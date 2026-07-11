@@ -3,12 +3,15 @@ import type { ExtensionContext } from "vscode";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
-let outputChannel: vscode.OutputChannel | undefined;
+let outputChannel: vscode.LogOutputChannel | undefined;
 let debugEnabled = false;
 
 /** Create the extension's output channel and register it for disposal. */
-export function initOutputChannel(context: ExtensionContext): vscode.OutputChannel {
-    const channel = vscode.window.createOutputChannel("BGforge MLS");
+export function initOutputChannel(context: ExtensionContext): vscode.LogOutputChannel {
+    // vscode-languageclient 10.x requires a LogOutputChannel for `outputChannel`; the `{ log: true }`
+    // overload (VS Code 1.74+, under our 1.91 engine floor) returns one. conlog still uses appendLine,
+    // which a LogOutputChannel inherits, so extension-side output is unchanged.
+    const channel = vscode.window.createOutputChannel("BGforge MLS", { log: true });
     context.subscriptions.push(channel);
     outputChannel = channel;
     return channel;
