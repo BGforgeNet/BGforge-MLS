@@ -40,7 +40,7 @@
           "name": "string.weidu-tp2-tooltip"
         },
         {
-          "match": "\\b(warningString|displayString|buffString\\|ascString|stringWithVars)\\b",
+          "match": "\\b(warningString|displayString|buffString|ascString|stringWithVars)\\b",
           "name": "string.weidu-tp2-tooltip"
         },
         {

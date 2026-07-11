@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### WeiDU
+
+- Fixed: in TP2 hover tooltips, `buffString` and `ascString` parameter names were not highlighted because of an unreachable pattern branch.
+
 ### Performance
 
 - Fixed: on large mod workspaces the language server could use excessive memory while indexing at startup. It now skips `node_modules` and dotfile directories and limits how many files it reads at once.
