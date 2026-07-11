@@ -35,7 +35,9 @@ pnpm exec tsx client/src/dialog-editor/test/harness/build.mts
 pnpm exec tsx client/src/dialog-editor/test/harness/render.mts [out.png]
 ```
 
-Prereqs are environmental, not repo deps: Playwright + a Chromium browser on `PATH`.
+Prereqs: `playwright` is a pinned devDep (resolved by `pnpm install`); install the browser it drives with
+`pnpm exec playwright install chromium`. These drivers assert (PASS/FAIL gates) and run in CI via the
+`Harness` workflow; the edit drivers also need `pnpm build:grammar` (they parse `.d` through the weidu-d WASM).
 
 ## Files
 

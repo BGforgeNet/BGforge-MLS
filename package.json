@@ -107,6 +107,7 @@
         "mocha": "^11.7.6",
         "oxfmt": "^0.53.0",
         "oxlint": "1.68.0",
+        "playwright": "1.61.1",
         "quick-lru": "^7.3.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",

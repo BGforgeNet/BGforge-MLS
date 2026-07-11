@@ -1,0 +1,64 @@
+name: "Harness"
+
+# Render/drive the binary-editor and dialog-editor webview harnesses in headless Chromium as a regression
+# suite (scripts/test-harness.sh). Each driver mounts the real webview bundle and asserts through PASS/FAIL
+# gates - catching render/mount/CSP/layout regressions the node/jsdom vitest suites cannot see.
+#
+# Kept in its OWN job rather than the main "Build" gate so the Chromium download (~150MB) and the browser
+# runs add no wall-clock to every other check. See the harness READMEs and docs/architecture.md.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+
+# Cancel superseded runs on the same ref (branch pushes and PR updates).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    name: harness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The dialog-editor edit drivers parse real .d through the weidu-d tree-sitter WASM (via the fake host),
+      # which is a gitignored build artifact.
+      - name: Build tree-sitter grammar
+        run: pnpm build:grammar
+
+      # playwright is a pinned devDep, but pnpm's build-script gate skips its browser postinstall, so pull the
+      # one browser the harnesses launch here. --with-deps installs the OS libraries Chromium needs on the runner.
+      - name: Install Chromium for Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Several binary-editor drivers read real .itm/.cre/.map files from the gitignored-but-reproducible
+      # external/ trees (the dialog drivers and the deep-jump driver use committed testFixture/ and need none).
+      - name: Reset external fixture repos
+        run: ./scripts/reset-external.sh
+
+      - name: Run render/drive harnesses
+        run: ./scripts/test-harness.sh

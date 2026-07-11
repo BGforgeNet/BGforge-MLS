@@ -74,16 +74,13 @@ It is type-checked via `test/harness/tsconfig.json`, which includes the DOM lib 
 
 ## Prerequisites
 
-- **Playwright + a Chromium browser** must be available on `PATH` in whatever environment runs the harness.
-  Install Playwright and its browsers globally:
+- **Playwright** is a pinned devDependency (`pnpm install` provides it), so `pnpm exec tsx <driver>` resolves
+  `import { chromium } from "playwright"` with no global install. Its browser postinstall is skipped by pnpm's
+  build-script gate, so install the one browser the drivers launch:
 
   ```
-  npm install -g playwright
-  playwright install chromium
+  pnpm exec playwright install chromium
   ```
-
-  Playwright is intentionally NOT listed in any `package.json` in this repo. It is an environment
-  prerequisite, not a repo dependency.
 
 - **Node 20+** (matched to the project's minimum supported runtime).
 
