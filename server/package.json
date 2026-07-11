@@ -37,21 +37,21 @@
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
-        "esbuild-wasm": "^0.28.0",
+        "esbuild-wasm": "^0.28.1",
         "fast-glob": "^3.3.3",
         "p-limit": "^7.3.0",
         "ts-morph": "^27.0.2",
         "typescript": "^5.9.3",
         "vscode-languageserver": "8.1.0",
         "vscode-languageserver-textdocument": "^1.0.12",
-        "web-tree-sitter": "^0.26.9",
+        "web-tree-sitter": "^0.26.10",
         "yaml": "^2.9.0"
     },
     "devDependencies": {
         "@bgforge/format": "workspace:*",
-        "@types/node": "^24.12.2",
-        "fast-check": "^4.8.0",
-        "vitest": "^4.1.8"
+        "@types/node": "^24.13.3",
+        "fast-check": "^4.9.0",
+        "vitest": "^4.1.10"
     },
     "optionalDependencies": {
         "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz"

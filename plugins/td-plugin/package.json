@@ -4,8 +4,8 @@
     "private": true,
     "description": "TypeScript Language Service Plugin for TD files - injects runtime types, filters completions, excludes DOM lib",
     "devDependencies": {
-        "@types/node": "^24.12.2",
+        "@types/node": "^24.13.3",
         "typescript": "^5.9.3",
-        "vitest": "^4.1.8"
+        "vitest": "^4.1.10"
     }
 }
