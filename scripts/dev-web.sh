@@ -32,7 +32,8 @@
 
 set -eu -o pipefail
 
-CS_VERSION="${CODE_SERVER_VERSION:-4.123.0}"
+CS_VERSION_DEFAULT="4.123.0"
+CS_VERSION="${CODE_SERVER_VERSION:-$CS_VERSION_DEFAULT}"
 HOST="${CODE_SERVER_HOST:-0.0.0.0}"
 PORT="${CODE_SERVER_PORT:-8080}"
 AUTH="${CODE_SERVER_AUTH:-none}"
@@ -64,6 +65,16 @@ esac
 CS_HOME="$DEV_DIR/code-server/code-server-${CS_VERSION}-linux-${ARCH}"
 CS_BIN="$CS_HOME/bin/code-server"
 
+# sha256 of the linux tarball assets for CS_VERSION_DEFAULT, taken from GitHub's own per-asset
+# "digest" field (`gh api repos/coder/code-server/releases/tags/v<ver> --jq '.assets[].digest'`),
+# confirmed by downloading the amd64 asset and recomputing sha256sum locally - not a checksum file
+# coder/code-server itself publishes (it does not ship a SHA256SUMS asset), but a genuine per-file
+# digest GitHub computes at upload time. Only covers the pinned default; see the override check below.
+declare -A CS_SHA256_DEFAULT=(
+    [amd64]="e54325a6439652f188203fb80a25c303b87f153550e9eee0c078b798b791d657"
+    [arm64]="855bdd7b8f522399e951c33a885a138ecf392427fb4464669ee55c9cc8fcb5f3"
+)
+
 # Bootstrap: download the pinned code-server once into .dev/ (reused thereafter).
 if [[ ! -x "$CS_BIN" ]]; then
     echo "code-server ${CS_VERSION} (${ARCH}) not present - downloading..."
@@ -71,6 +82,21 @@ if [[ ! -x "$CS_BIN" ]]; then
     url="https://github.com/coder/code-server/releases/download/v${CS_VERSION}/code-server-${CS_VERSION}-linux-${ARCH}.tar.gz"
     tmp="$(mktemp)"
     curl -fSL "$url" -o "$tmp"
+    if [[ "$CS_VERSION" == "$CS_VERSION_DEFAULT" ]]; then
+        expected="${CS_SHA256_DEFAULT[$ARCH]:-}"
+        if [[ -n "$expected" ]]; then
+            actual="$(sha256sum "$tmp" | awk '{print $1}')"
+            if [[ "$actual" != "$expected" ]]; then
+                echo "checksum mismatch for code-server ${CS_VERSION} (${ARCH}): expected ${expected}, got ${actual}" >&2
+                rm -f "$tmp"
+                exit 1
+            fi
+        else
+            echo "warning: no pinned checksum for arch ${ARCH}; skipping tarball verification" >&2
+        fi
+    else
+        echo "warning: CODE_SERVER_VERSION overridden to ${CS_VERSION}; skipping tarball verification (only the pinned default ${CS_VERSION_DEFAULT} has a known checksum)" >&2
+    fi
     tar -xzf "$tmp" -C "$DEV_DIR/code-server"
     rm -f "$tmp"
     [[ -x "$CS_BIN" ]] || { echo "download/extract failed: $CS_BIN missing" >&2; exit 1; }
