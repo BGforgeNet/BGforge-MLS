@@ -11,23 +11,6 @@ export interface CompletionItem {
     readonly type?: string;
 }
 
-/** A stanza entry in the IE data YAML structure */
-export interface IEDataEntry {
-    /** Stanza name used as YAML key in completion data files (server reads these) */
-    readonly stanza: string;
-    /** Stanza name used in highlight tmLanguage repository (defaults to stanza if not set) */
-    readonly highlightStanza?: string;
-    readonly scope: string;
-    readonly items: readonly CompletionItem[];
-    readonly completion_type?: number;
-    readonly string?: boolean;
-    /** When true, all doc fields use |- block scalar style (for litscal-wrapped values) */
-    readonly blockDoc?: boolean;
-}
-
-/** Map of category name to IE data entries */
-export type IEData = Record<string, IEDataEntry>;
-
 /** An offset item from IESDP file format data */
 export interface OffsetItem {
     readonly type: string;
@@ -68,57 +51,6 @@ export interface IESDPGame {
     readonly ids: string;
     readonly "2da": string;
     readonly actions: string;
-}
-
-/** An item type entry from IESDP item_types.yml (code is a hex string like "0x00") */
-export interface ItemTypeRaw {
-    readonly type: string;
-    readonly code: string;
-    readonly id?: string;
-}
-
-/** Processed IESDP data, categorized by offset type */
-export interface ProcessedIESDPData {
-    readonly chars: readonly CompletionItem[];
-    readonly lbytes: readonly CompletionItem[];
-    readonly words: readonly CompletionItem[];
-    readonly dwords: readonly CompletionItem[];
-    readonly resrefs: readonly CompletionItem[];
-    readonly strrefs: readonly CompletionItem[];
-    readonly other: readonly CompletionItem[];
-}
-
-/** IElib function parameter */
-export interface FuncParam {
-    readonly name: string;
-    readonly desc: string;
-    readonly type: string;
-    readonly required?: number;
-    /** Default value - may be string or number in YAML data */
-    readonly default?: string | number;
-}
-
-/** IElib function return value */
-export interface FuncReturn {
-    readonly name: string;
-    readonly desc: string;
-    readonly type: string;
-}
-
-/** IElib function data from YAML */
-export interface FuncData {
-    readonly name: string;
-    readonly type: string;
-    readonly desc: string;
-    readonly int_params?: readonly FuncParam[];
-    readonly string_params?: readonly FuncParam[];
-    readonly return?: readonly FuncReturn[];
-    readonly defaults?: Record<string, string>;
-}
-
-/** IElib type entry */
-export interface TypeEntry {
-    readonly name: string;
 }
 
 /** VSCode completion item kind constants matching the Python values */

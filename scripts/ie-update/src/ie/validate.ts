@@ -22,17 +22,7 @@ export {
     requireString,
     validateArray,
 } from "../../../utils/src/validate-helpers.ts";
-import type {
-    ActionItem,
-    ActionParam,
-    FuncData,
-    FuncParam,
-    FuncReturn,
-    IESDPGame,
-    ItemTypeRaw,
-    OffsetItem,
-    TypeEntry,
-} from "./types.ts";
+import type { ActionItem, ActionParam, IESDPGame, OffsetItem } from "./types.ts";
 
 /**
  * Validates that a field is a number. Throws with field name and context on failure.
@@ -141,97 +131,5 @@ export function validateOffsetItem(data: unknown, context: string): OffsetItem {
         id: optionalString(r, "id", context),
         unused: optionalNumberOrBoolean(r, "unused", context),
         unknown: optionalNumberOrBoolean(r, "unknown", context),
-    };
-}
-
-export function validateItemTypeRaw(data: unknown, context: string): ItemTypeRaw {
-    const r = assertObject(data, context);
-    return {
-        type: requireString(r, "type", context),
-        code: requireString(r, "code", context),
-        id: optionalString(r, "id", context),
-    };
-}
-
-export function validateTypeEntry(data: unknown, context: string): TypeEntry {
-    const r = assertObject(data, context);
-    return {
-        name: requireString(r, "name", context),
-    };
-}
-
-function validateFuncParam(data: unknown, context: string): FuncParam {
-    const r = assertObject(data, context);
-    const rawDefault = r["default"];
-    let defaultVal: string | number | undefined;
-    if (rawDefault !== undefined) {
-        if (typeof rawDefault !== "string" && typeof rawDefault !== "number") {
-            throw new TypeError(`Invalid 'default' (expected string or number) in ${context}`);
-        }
-        defaultVal = rawDefault;
-    }
-    return {
-        name: requireString(r, "name", context),
-        desc: requireString(r, "desc", context),
-        type: requireString(r, "type", context),
-        required: optionalNumber(r, "required", context),
-        default: defaultVal,
-    };
-}
-
-function validateFuncReturn(data: unknown, context: string): FuncReturn {
-    const r = assertObject(data, context);
-    return {
-        name: requireString(r, "name", context),
-        desc: requireString(r, "desc", context),
-        type: requireString(r, "type", context),
-    };
-}
-
-export function validateFuncData(data: unknown, context: string): FuncData {
-    const r = assertObject(data, context);
-
-    const rawIntParams = r["int_params"];
-    let intParams: readonly FuncParam[] | undefined;
-    if (rawIntParams !== undefined) {
-        const arr = assertArray(rawIntParams, `${context}.int_params`);
-        intParams = arr.map((p, i) => validateFuncParam(p, `${context}.int_params[${i}]`));
-    }
-
-    const rawStrParams = r["string_params"];
-    let strParams: readonly FuncParam[] | undefined;
-    if (rawStrParams !== undefined) {
-        const arr = assertArray(rawStrParams, `${context}.string_params`);
-        strParams = arr.map((p, i) => validateFuncParam(p, `${context}.string_params[${i}]`));
-    }
-
-    const rawReturn = r["return"];
-    let ret: readonly FuncReturn[] | undefined;
-    if (rawReturn !== undefined) {
-        const arr = assertArray(rawReturn, `${context}.return`);
-        ret = arr.map((p, i) => validateFuncReturn(p, `${context}.return[${i}]`));
-    }
-
-    const rawDefaults = r["defaults"];
-    let defaults: Record<string, string> | undefined;
-    if (rawDefaults !== undefined) {
-        const dr = assertObject(rawDefaults, `${context}.defaults`);
-        const entries = Object.entries(dr).map(([key, value]) => {
-            if (typeof value !== "string") {
-                throw new TypeError(`Invalid default '${key}' (expected string) in ${context}.defaults`);
-            }
-            return [key, value] as const;
-        });
-        defaults = Object.fromEntries(entries);
-    }
-
-    return {
-        name: requireString(r, "name", context),
-        type: requireString(r, "type", context),
-        desc: requireString(r, "desc", context),
-        int_params: intParams,
-        string_params: strParams,
-        return: ret,
-        defaults,
     };
 }
