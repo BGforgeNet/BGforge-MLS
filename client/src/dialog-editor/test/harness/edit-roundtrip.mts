@@ -120,16 +120,20 @@ check(
 // writer defers empty pending options - no `++ ~~ EXIT` husk) and the adopted parse cannot contain it:
 // the webview must carry the row AND the DOM draft across the adopt (the job the old reconcile branch
 // existed for). The adopt is driven the external-edit way (a plain same-file model post through App).
+const emitsBeforeOverlay = editCount;
 await page.locator(".st[data-sid]").first().click({ button: "right" });
 await page.waitForSelector(".ctxitem", { timeout: 5000 });
 await page.locator(".ctxitem", { hasText: "Add option" }).first().click();
 const overlayInput = page.locator("input.rtextedit").first();
 await overlayInput.waitFor({ timeout: 5000 });
 await overlayInput.fill("Overlay draft");
-// Let the structural emit fire (250ms debounce) and round-trip: it must NOT splice a husk.
-await new Promise((r) => setTimeout(r, 700));
+// Wait for the structural emit to fire (debounced) and round-trip through the host, then assert it did NOT
+// splice a husk - tie the wait to the emit actually landing rather than guessing a debounce+round-trip budget.
+await pollUntil(() => editCount > emitsBeforeOverlay);
 check("an empty pending option does not splice a `++ ~~` husk", !host.doc.text.includes("~~ EXIT"), host.doc.text);
-// External same-file adopt while the draft is open (what a text-side edit does in production).
+// External same-file adopt while the draft is open (what a text-side edit does in production). The adopt
+// carries the identical model, so it yields no distinct DOM signal to poll for (the input is present before
+// AND after); a bounded settle lets the adopt effect run before we assert the draft survived it.
 await page.evaluate((m) => window.postMessage({ type: "model", model: m }, "*"), currentModel(host, "roundtrip"));
 await new Promise((r) => setTimeout(r, 400));
 check(

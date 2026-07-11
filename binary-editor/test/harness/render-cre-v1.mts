@@ -99,17 +99,19 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
-await page.waitForTimeout(200);
 
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]')
+        .filter({ hasText: label })
+        .first()
+        .waitFor({ timeout: 5000 });
 }
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Effects$/ }) });
 async function selectRow(scope: Locator, idx: number): Promise<void> {
     await scope.locator(".vlist .vrow").nth(idx).click();
     await scope.locator(".row-actions").first().waitFor({ timeout: 3000 });
-    await page.waitForTimeout(100);
 }
 
 await clickTab("Effects");

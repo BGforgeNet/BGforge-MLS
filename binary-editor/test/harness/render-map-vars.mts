@@ -70,7 +70,18 @@ check(
 );
 
 await varTabBtn.click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const btn = Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]')).find((b) =>
+                (b.textContent ?? "").includes("Variables"),
+            );
+            return btn !== undefined && /Variables\s*\(\s*21\s*\)/.test(btn.textContent ?? "");
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 // Variables tab button should show a count badge (21 from arcaves).
 const varTabLabel = await varTabBtn.innerText();

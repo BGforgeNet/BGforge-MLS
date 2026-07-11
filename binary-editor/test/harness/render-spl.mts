@@ -110,11 +110,11 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+// Layout/paint settle after initial mount - no crisp DOM condition distinguishes "painted" from "attached".
 await page.waitForTimeout(200);
 await page.screenshot({ path: shotPath("shot-spl.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
 }
 
 // ---- Layout assertions (General tab) ----
@@ -169,7 +169,6 @@ check("baseline: 3 effects", sectionKids(effectsNodeId) === 3, `total=${sectionK
 // ---- Abilities & Effects tree tab ----
 await clickTab("Abilities & Effects");
 await page.waitForSelector(".eff-tree .eff-tree-vrow", { timeout: 5000 });
-await page.waitForTimeout(200);
 
 const treeTabText = (
     (await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').textContent()) ?? ""

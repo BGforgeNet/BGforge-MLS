@@ -99,7 +99,6 @@ async function runFormat(browser: Browser, label: string, uri: string, bytes: Ui
     });
     await page.goto("file://" + path.join(here, "app.html"));
     await page.waitForSelector(".layout-root", { timeout: 5000 });
-    await page.waitForTimeout(200);
 
     const found: ClipViolation[] = [];
     // Check whatever a freshly-opened detail/list selection renders too: select the first list row if one is
@@ -109,7 +108,11 @@ async function runFormat(browser: Browser, label: string, uri: string, bytes: Ui
         const firstRow = page.locator(".master .vlist .vrow").first();
         if (await firstRow.count()) {
             await firstRow.click().catch(() => undefined);
-            await page.waitForTimeout(150);
+            await page
+                .waitForFunction(() => document.querySelector(".detail .layout-root .field") !== null, undefined, {
+                    timeout: 5000,
+                })
+                .catch(() => undefined);
             found.push(...(await collectClipViolations(page, ctx + " (detail)")));
         }
     };
@@ -123,7 +126,18 @@ async function runFormat(browser: Browser, label: string, uri: string, bytes: Ui
             const tab = tabs.nth(i);
             const name = ((await tab.textContent()) ?? `tab${i}`).replace(/\s*\(\d.*\)\s*$/, "").trim();
             await tab.click();
-            await page.waitForTimeout(200);
+            await page
+                .waitForFunction(
+                    (expectedLabel) => {
+                        const active = document.querySelector(
+                            '.bb-tabs.primary button[role="tab"][aria-selected="true"]',
+                        );
+                        return !!active && (active.textContent ?? "").includes(expectedLabel);
+                    },
+                    name,
+                    { timeout: 5000 },
+                )
+                .catch(() => undefined);
             await sweepCurrentView(`${label} > ${name}`);
         }
     }

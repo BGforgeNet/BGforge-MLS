@@ -76,7 +76,11 @@ for (const c of CASES) {
     // DOM: render the real webview, assert no tabs + positive label/value gap.
     await page.goto("file://" + path.join(here, "app.html"));
     await page.waitForSelector(".layout-root", { timeout: 5000 });
-    await page.waitForTimeout(120);
+    await page
+        .waitForFunction(() => document.querySelectorAll(".layout-root .panel").length >= 2, undefined, {
+            timeout: 5000,
+        })
+        .catch(() => undefined);
     const dom = await page.evaluate(() => {
         const tabs = document.querySelectorAll(".bb-tabs").length;
         const panels = document.querySelectorAll(".layout-root .panel").length;

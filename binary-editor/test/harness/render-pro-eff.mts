@@ -86,7 +86,9 @@ currentOpenResult = proOpen.result;
 await page.goto("file://" + path.join(here, "app.html"));
 // PRO renders as a single dense page via the declarative layout (every object/sub type has a variant).
 await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.querySelectorAll(".layout-root .field").length > 0, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 check(
     "pro: resolves an item layout variant",
@@ -117,7 +119,9 @@ await page2.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page2.goto("file://" + path.join(here, "app.html"));
 await page2.waitForSelector(".layout-root", { timeout: 5000 });
-await page2.waitForTimeout(200);
+await page2
+    .waitForFunction(() => document.querySelectorAll(".layout-root .field").length > 20, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 check(
     "eff: resolves the 'effect' layout variant",

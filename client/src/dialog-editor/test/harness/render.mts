@@ -79,7 +79,11 @@ const dupBtn = page.getByRole("button", { name: "Duplicate state" });
 await dupBtn.waitFor({ timeout: 5000 });
 const before = await page.locator(".svelte-flow__node").count();
 await dupBtn.click();
-await page.waitForTimeout(400);
+await page
+    .waitForFunction((n) => document.querySelectorAll(".svelte-flow__node").length === n + 1, before, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const after = await page.locator(".svelte-flow__node").count();
 check(
     "Duplicate state adds a node (deep-clones the $state proxy)",
@@ -90,7 +94,16 @@ check(
 // Spotlight overlay (1B): toggling it dims fully-authored cards (no badge) while the
 // flagged ones stay fully opaque - the author's "which parts are projections?" lens.
 await page.getByRole("button", { name: "Spotlight" }).click();
-await page.waitForTimeout(250);
+await page
+    .waitForFunction(
+        () => {
+            const cards = Array.from(document.querySelectorAll(".card"));
+            return cards.some((c) => !c.classList.contains("flagged") && parseFloat(getComputedStyle(c).opacity) < 0.5);
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const spot = await page.evaluate(() => {
     // No named inner functions here: tsx/esbuild keepNames would inject a __name helper
     // that is undefined in the page context. Inline the opacity read instead.
@@ -125,13 +138,27 @@ async function measureCollisionsAt(width: number): Promise<string[]> {
     await postModel();
     await showGraph();
     await page.locator(".svelte-flow__node").first().click({ force: true }); // show the inspector
+    const opened: string[] = [];
     for (const name of ["Source", "Issues"]) {
         const b = page.getByRole("button", { name: new RegExp("^" + name) });
         // force: a floating overlay may intercept the button at narrow width - that is the very
         // collision under test, so open the panels regardless and let the box-check report it.
-        if (await b.count()) await b.first().click({ force: true });
+        if (await b.count()) {
+            await b.first().click({ force: true });
+            opened.push(name);
+        }
     }
-    await page.waitForTimeout(200);
+    await page
+        .waitForFunction(
+            (names) => {
+                if (!document.querySelector(".inspector")) return false;
+                const sel: Record<string, string> = { Source: ".dsource", Issues: ".issues" };
+                return names.every((n) => document.querySelector(sel[n]!));
+            },
+            opened,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
     await page.screenshot({ path: path.join(outDir, `dialog-harness-${width}.png`) });
     return page.evaluate(() => {
         // Inline only (no named fns): tsx/esbuild keepNames would inject an undefined __name in the page.
@@ -194,7 +221,16 @@ const afterCancel = await page.locator(".svelte-flow__node").count();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.getByRole("button", { name: "Delete state" }).click();
 await page.locator(".confirm .confirmdel").click(); // confirm Delete
-await page.waitForTimeout(300);
+await page
+    .waitForFunction(
+        () =>
+            !Array.from(document.querySelectorAll(".svelte-flow__node")).some((n) =>
+                n.textContent?.includes("returnBriel"),
+            ),
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const afterDel = await page.locator(".svelte-flow__node").count();
 const returnBrielGone = (await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).count()) === 0;
 check(
@@ -215,7 +251,9 @@ await showGraph();
 const beforeKbd = await page.locator(".svelte-flow__node").count();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.keyboard.press("Backspace");
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => !!document.querySelector(".confirm"), undefined, { timeout: 5000 })
+    .catch(() => undefined);
 const kbdConfirm = await page.locator(".confirm").isVisible();
 const afterKbdNoConfirm = await page.locator(".svelte-flow__node").count();
 check(
@@ -243,7 +281,18 @@ const firstItem = page.locator('[role="treeitem"]').first();
 await firstItem.click();
 const firstSid = await firstItem.getAttribute("data-sid");
 await page.keyboard.press("ArrowDown");
-await page.waitForTimeout(80);
+await page
+    .waitForFunction(
+        (sid) => {
+            const a = document.activeElement as HTMLElement | null;
+            if (!a) return false;
+            const key = a.getAttribute("data-sid") ?? a.getAttribute("data-choice");
+            return key !== null && key !== sid;
+        },
+        firstSid,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 // Navigation interleaves state rows and selectable options in DOM order, so ArrowDown off the first state
 // lands on either its first option (a .rep row, carrying data-choice) or - if it has none - the next
 // state row. Either way the landing target must be BOTH focused and selected, proving selection follows:
@@ -258,7 +307,13 @@ const down = await page.evaluate(() => {
     return { key: a.getAttribute("data-sid") ?? a.getAttribute("data-choice"), selected };
 });
 await page.keyboard.press("ArrowUp");
-await page.waitForTimeout(80);
+await page
+    .waitForFunction(
+        (sid) => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid") === sid,
+        firstSid,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 // ArrowUp steps back to the first state row (data-sid === firstSid).
 const upSid = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid"));
 check(
@@ -276,10 +331,22 @@ check(
 await firstItem.focus();
 const expInit = await firstItem.getAttribute("aria-expanded");
 await page.keyboard.press("ArrowLeft");
-await page.waitForTimeout(120);
+await page
+    .waitForFunction(
+        () => document.querySelector('[role="treeitem"]')?.getAttribute("aria-expanded") === "false",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const expCollapsed = await firstItem.getAttribute("aria-expanded");
 await page.keyboard.press("ArrowRight");
-await page.waitForTimeout(120);
+await page
+    .waitForFunction(
+        () => document.querySelector('[role="treeitem"]')?.getAttribute("aria-expanded") === "true",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const expReExpanded = await firstItem.getAttribute("aria-expanded");
 check(
     "ArrowLeft collapses and ArrowRight expands the focused row",
@@ -366,7 +433,9 @@ await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 const repsBefore = await page.locator(".rep").count();
 await page.locator(".addbtn").first().click(); // "+ option" on the first editable state
-await page.waitForTimeout(200);
+await page
+    .waitForFunction((n) => document.querySelectorAll(".rep").length === n + 1, repsBefore, { timeout: 5000 })
+    .catch(() => undefined);
 const repsAfterAdd = await page.locator(".rep").count();
 check(
     'tree "+ option" appends a player option (add through the production path)',
@@ -377,7 +446,9 @@ check(
 const firstRep = page.locator(".rep").first();
 await firstRep.hover();
 await firstRep.locator(".delopt:not([disabled])").click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction((n) => document.querySelectorAll(".rep").length === n - 1, repsAfterAdd, { timeout: 5000 })
+    .catch(() => undefined);
 const repsAfterRemove = await page.locator(".rep").count();
 check(
     'tree hover "x" removes a player option (remove through the production path)',
@@ -395,7 +466,15 @@ await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 const optRow = page.locator(".rep[data-choice]").first();
 await optRow.click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () =>
+            document.querySelectorAll(".rep.repsel").length === 1 &&
+            document.querySelectorAll(".trow.choicesel").length === 1,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const selState = await page.evaluate(() => ({
     treeSel: document.querySelectorAll(".rep.repsel").length,
     inspectorSel: document.querySelectorAll(".trow.choicesel").length,
@@ -431,7 +510,16 @@ check(
 // The breadcrumb's state crumb returns to the whole-state editor (NPC line back, breadcrumb gone, node
 // highlight restored).
 await page.locator(".inspector .crumb").click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () =>
+            document.querySelectorAll(".inspector .crumbs").length === 0 &&
+            document.querySelectorAll(".inspector .iv.npc").length === 1 &&
+            document.querySelectorAll(".st.sel").length === 1,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const restored = await page.evaluate(() => ({
     crumbs: document.querySelectorAll(".inspector .crumbs").length,
     npc: document.querySelectorAll(".inspector .iv.npc").length,
@@ -448,12 +536,25 @@ check(
 const editRow = page.locator(".rep[data-choice]").first();
 const oldText = (await editRow.locator(".rtext").textContent())?.trim() ?? "";
 await editRow.dblclick();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.activeElement?.classList.contains("rtextedit") ?? false, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const inputAppeared = await page.locator(".rtextedit").count();
 const inputFocused = await page.evaluate(() => document.activeElement?.classList.contains("rtextedit") ?? false);
 await page.locator(".rtextedit").first().fill("EDITED INLINE");
 await page.keyboard.press("Enter");
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const el = document.querySelector(".rep[data-choice] .rtext");
+            return (el?.textContent ?? "").trim() === "EDITED INLINE";
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const newText = (await page.locator(".rep[data-choice]").first().locator(".rtext").textContent())?.trim() ?? "";
 check(
     "double-click edits an option inline and Enter commits the new text",
@@ -464,8 +565,23 @@ check(
 // After the inline edit commits (Enter), focus returns to the just-edited option row so the arrows keep
 // working - the pre-fix regression was that the input blurred to <body> and Up/Down stopped. ArrowDown must
 // now move focus/selection to a neighbouring row (a treeitem), not scroll.
+const preNavKey = await page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    return a?.getAttribute("data-sid") ?? a?.getAttribute("data-choice") ?? null;
+});
 await page.keyboard.press("ArrowDown");
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        (prev) => {
+            const a = document.activeElement as HTMLElement | null;
+            if (!a) return false;
+            const key = a.getAttribute("data-sid") ?? a.getAttribute("data-choice");
+            return a.getAttribute("role") === "treeitem" && key !== null && key !== prev;
+        },
+        preNavKey,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const afterEditNav = await page.evaluate(() => {
     const a = document.activeElement as HTMLElement | null;
     return {
@@ -489,16 +605,29 @@ await page.setViewportSize({ width: 900, height: 800 });
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 await page.locator('[role="treeitem"]').first().click();
-await page.waitForTimeout(150);
 const npcBtn = page.locator('[role="treeitem"]').first().locator(".linebtn").first();
+await npcBtn.waitFor({ timeout: 5000 }); // let the docked-inspector reflow settle before reading/double-clicking
 const npcOld = (await npcBtn.textContent())?.trim() ?? "";
 await npcBtn.dblclick();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.activeElement?.classList.contains("lineedit") ?? false, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const npcInput = await page.locator(".lineedit").count();
 const npcFocused = await page.evaluate(() => document.activeElement?.classList.contains("lineedit") ?? false);
 await page.locator(".lineedit").first().fill("NPC EDITED INLINE");
 await page.keyboard.press("Enter");
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const el = document.querySelector('[role="treeitem"] .linebtn');
+            return (el?.textContent ?? "").trim() === "NPC EDITED INLINE";
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const npcNew =
     (await page.locator('[role="treeitem"]').first().locator(".linebtn").first().textContent())?.trim() ?? "";
 check(
@@ -514,7 +643,16 @@ await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 const repsBeforeAdd = await page.locator(".rep").count();
 await page.locator(".addbtn").first().click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        (n) =>
+            document.querySelectorAll(".rep").length === n + 1 &&
+            document.querySelectorAll(".rtextedit").length === 1 &&
+            (document.activeElement?.classList.contains("rtextedit") ?? false),
+        repsBeforeAdd,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const addEdit = await page.evaluate(() => ({
     reps: document.querySelectorAll(".rep").length,
     inputs: document.querySelectorAll(".rtextedit").length,
@@ -537,7 +675,13 @@ const statesBeforeAdd = await page.locator(".st").count();
 const firstRow = page.locator(".st").first();
 await firstRow.hover();
 await firstRow.locator(".addnode").click();
-await page.waitForTimeout(250);
+await page
+    .waitForFunction(
+        (n) => document.querySelectorAll(".st").length === n + 1 && document.querySelectorAll(".st.sel").length === 1,
+        statesBeforeAdd,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const nodeAdd = await page.evaluate(() => ({
     // Count state rows (.st) specifically - option rows are also [role=treeitem] now, so a plain treeitem
     // count would jump by 2 (the new child state AND the new option leading to it).
@@ -563,7 +707,13 @@ const rowWithDel = page
     .first();
 await rowWithDel.hover();
 await rowWithDel.locator(".delnode:not([disabled])").click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        (n) => !!document.querySelector(".confirm") || document.querySelectorAll(".st").length < n,
+        statesBeforeDel,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 // A referenced state pops the redirect-to-EXIT confirm; an unreferenced one is removed straight away.
 // Either proves the guarded delete path is wired from the tree.
 const delOutcome = await page.evaluate(() => ({
@@ -580,7 +730,11 @@ check(
 // perpetual spinner.
 await page.goto("file://" + appHtml);
 await page.evaluate(() => window.postMessage({ type: "error", message: "PARSE BOOM 42" }, "*"));
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelector("#app")?.textContent?.includes("PARSE BOOM 42") ?? false, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const errText = (await page.locator("#app").textContent()) ?? "";
 check(
     "an error message renders the fail-loud error state",

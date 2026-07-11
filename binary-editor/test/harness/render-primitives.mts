@@ -98,15 +98,18 @@ const comboboxAllCount = await page.locator(".bb-combobox-item").count();
 // SelectInputState picks up (setting inputValue.current) and our handleInput handler picks up (updating our
 // local inputValue state, driving $derived visibleOptions). The dropdown is already open from ArrowDown.
 await page.locator(".bb-combobox-input").pressSequentially("fireball");
-// Give Svelte reactive updates a moment to re-render the filtered list.
-await page.waitForTimeout(200);
+// Wait for Svelte reactive updates to re-render the filtered list (item count drops below the unfiltered total).
+await page
+    .waitForFunction((all) => document.querySelectorAll(".bb-combobox-item").length < all, comboboxAllCount, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const comboboxFilteredCount = await page.locator(".bb-combobox-item").count();
 
 // Close the combobox dropdown (still open from the filter step) before interacting with the Checkbox.
 // Wait for the content to detach (bits-ui resets body.style.pointerEvents only after close animation).
 await page.keyboard.press("Escape");
 await page.waitForSelector(".bb-combobox-content", { state: "detached", timeout: 3000 }).catch(() => {});
-await page.waitForTimeout(150);
 
 // ---- Exercise Checkbox: click checkbox-a (unchecked -> checked) and assert data-state changes ----
 // bits-ui sets data-state="checked"|"unchecked" on Checkbox.Root (role="checkbox"). We locate it inside
@@ -115,18 +118,33 @@ await page.waitForSelector("#checkbox-a [role='checkbox']", { timeout: 5000 });
 const checkboxABefore = await page.locator("#checkbox-a [role='checkbox']").getAttribute("data-state");
 
 await page.locator("#checkbox-a [role='checkbox']").click();
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        (before) => document.querySelector("#checkbox-a [role='checkbox']")?.getAttribute("data-state") !== before,
+        checkboxABefore,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const checkboxAAfter = await page.locator("#checkbox-a [role='checkbox']").getAttribute("data-state");
 
 // Also confirm checkbox-b starts checked and can be untoggled.
 const checkboxBBefore = await page.locator("#checkbox-b [role='checkbox']").getAttribute("data-state");
 await page.locator("#checkbox-b [role='checkbox']").click();
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        (before) => document.querySelector("#checkbox-b [role='checkbox']")?.getAttribute("data-state") !== before,
+        checkboxBBefore,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const checkboxBAfter = await page.locator("#checkbox-b [role='checkbox']").getAttribute("data-state");
 
 // Disabled checkbox must not change on click.
 const checkboxDisabledBefore = await page.locator("#checkbox-disabled [role='checkbox']").getAttribute("data-state");
 await page.locator("#checkbox-disabled [role='checkbox']").click({ force: true });
+// No state-change event to poll for here: correct behavior is "nothing happens" on a disabled control, so there
+// is no becomes-true condition to wait on. Keep a bounded settle so a real bug (an incorrect state flip) has
+// time to land before the read below.
 await page.waitForTimeout(100);
 const checkboxDisabledAfter = await page.locator("#checkbox-disabled [role='checkbox']").getAttribute("data-state");
 
@@ -147,7 +165,9 @@ const checkboxDisabledNamedCorrectly =
 // does not affect item label text or role - assert on labels and roles only, not icon visuals.
 // Menu.svelte passes preventScroll={false} so it does not set body.style.pointerEvents:none (unlike the
 // prior combobox). Ensure the combobox scroll-lock (if any) is cleared before clicking.
-await page.waitForFunction(() => document.body.style.pointerEvents !== "none", { timeout: 500 }).catch(() => {});
+await page
+    .waitForFunction(() => document.body.style.pointerEvents !== "none", undefined, { timeout: 500 })
+    .catch(() => {});
 await page.waitForSelector("#menu-showcase .bb-menu-trigger", { timeout: 5000 });
 await page.locator("#menu-showcase .bb-menu-trigger").click();
 // Wait for at least one menu item to appear (the content is portalled to document body).
@@ -158,7 +178,13 @@ const menuItemCount = await page.locator(".bb-menu-item").count();
 // Assert by label text (not icon) so missing codicon glyphs don't interfere.
 const addAboveItem = page.locator(".bb-menu-item", { hasText: "Add above" });
 await addAboveItem.click();
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        () => document.querySelector("#menu-selected")?.getAttribute("data-value") === "add-above",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const menuSelectedAfterAdd = await page.locator("#menu-selected").getAttribute("data-value");
 
 // Re-open the menu to test the disabled item. Menu.svelte uses preventScroll={false} so no scroll-lock
@@ -171,12 +197,14 @@ const disabledItem = page.locator(".bb-menu-item[data-disabled]");
 const disabledItemCount = await disabledItem.count();
 // Click the disabled item - it must not fire onselect (the selected value must not change).
 await disabledItem.click({ force: true });
+// No state-change event to poll for here: correct behavior is "nothing happens" on a disabled item, so there
+// is no becomes-true condition to wait on. Keep a bounded settle so a real bug (an incorrect onselect fire) has
+// time to land before the read below.
 await page.waitForTimeout(100);
 const menuSelectedAfterDisabled = await page.locator("#menu-selected").getAttribute("data-value");
 
 // Close the menu before the screenshot.
 await page.keyboard.press("Escape");
-await page.waitForTimeout(150);
 
 // ---- Exercise Tabs (horizontal): assert initial active, click a different tab, assert selection moves ----
 // The showcase reflects active tab id into #tabs-h-active[data-value] so we can assert without reading
@@ -186,12 +214,24 @@ const tabsHInitial = await page.locator("#tabs-h-active").getAttribute("data-val
 // Click the "Abilities" tab (second tab, id="abilities").
 const tabsHAbilities = page.locator("#tabs-h-showcase [role='tab'][aria-selected]", { hasText: "Abilities" });
 await tabsHAbilities.click();
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        () => document.querySelector("#tabs-h-active")?.getAttribute("data-value") === "abilities",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const tabsHAfterClick = await page.locator("#tabs-h-active").getAttribute("data-value");
 
 // Arrow-key nav: with "Abilities" now active, press ArrowRight to move to "Effects".
 await page.keyboard.press("ArrowRight");
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        () => document.querySelector("#tabs-h-active")?.getAttribute("data-value") === "effects",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const tabsHAfterArrow = await page.locator("#tabs-h-active").getAttribute("data-value");
 
 // ---- Exercise Tabs (vertical): assert initial active, click a different tab, assert selection moves ----
@@ -200,12 +240,24 @@ const tabsVInitial = await page.locator("#tabs-v-active").getAttribute("data-val
 // Click the "Effects" tab (third tab, id="effects").
 const tabsVEffects = page.locator("#tabs-v-showcase [role='tab']", { hasText: "Effects" });
 await tabsVEffects.click();
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        () => document.querySelector("#tabs-v-active")?.getAttribute("data-value") === "effects",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const tabsVAfterClick = await page.locator("#tabs-v-active").getAttribute("data-value");
 
 // Arrow-key nav: with "Effects" now active, press ArrowUp to move to "Abilities" (vertical orientation).
 await page.keyboard.press("ArrowUp");
-await page.waitForTimeout(100);
+await page
+    .waitForFunction(
+        () => document.querySelector("#tabs-v-active")?.getAttribute("data-value") === "abilities",
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const tabsVAfterArrow = await page.locator("#tabs-v-active").getAttribute("data-value");
 
 // ---- Exercise compact RowActions: kebab-only layout + Menu->Delete fires immediately ----
@@ -221,7 +273,14 @@ const compactDirectButtons = await page
 await page.locator("#rowactions-compact .bb-menu-trigger").click();
 await page.waitForSelector(".bb-menu-item", { timeout: 5000 });
 await page.locator(".bb-menu-item", { hasText: "Delete" }).click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () =>
+            (document.querySelector("#rowactions-last-op")?.getAttribute("data-value") ?? "").includes('"op":"remove"'),
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const opAfterMenuDelete = await page.locator("#rowactions-last-op").getAttribute("data-value");
 
 await page.screenshot({ path: shotPath("shot-primitives.png") });

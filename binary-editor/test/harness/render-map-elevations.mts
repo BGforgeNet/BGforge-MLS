@@ -53,7 +53,13 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Objects" }).first().click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => document.querySelectorAll('.layout-root .bb-tabs.secondary button[role="tab"]').length >= 3,
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 // Read the elevation subtab strip: label + disabled state.
 const subs = await page.evaluate(() =>

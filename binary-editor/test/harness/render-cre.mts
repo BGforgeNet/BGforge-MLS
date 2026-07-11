@@ -101,6 +101,8 @@ async function doUndo(): Promise<void> {
     const r = dispatch({ type: "undo", sessionId });
     if (r.type === "structure") postToWebview({ type: "changeSet", changeSet: r.result.changeSet });
     else postToWebview({ type: "invalidated" });
+    // The refresh touches several independent DOM regions (fields, tab badges, lists) with no single
+    // DOM-observable completion signal generic across every call site - bounded settle, not a condition poll.
     await activePage?.waitForTimeout(150);
 }
 
@@ -120,7 +122,7 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
-await page.waitForTimeout(200);
+await page.waitForSelector(".layout-root .panel h3", { timeout: 5000 });
 // CRE is tabbed; capture the default (General) tab immediately so the screenshot exists regardless of
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
 await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
@@ -141,7 +143,9 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
         alignClass,
     );
     await alignFc.locator(".bb-combobox-input").click(); // focusing the input opens the list (chevron is decorative)
-    await page.waitForTimeout(150);
+    await page
+        .waitForFunction(() => document.querySelectorAll(".bb-popup-item").length > 0, undefined, { timeout: 5000 })
+        .catch(() => undefined);
     // The OPEN list must render real items: a visible row height (a collapsed ~6px row clips the label) and a
     // non-empty label on every option, with an item highlighted (on open it is the current value's row; after a
     // filter bits-ui highlights the first match - covered by the primitives probe).
@@ -160,7 +164,16 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
         JSON.stringify(listInfo),
     );
     await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
-    await page.waitForTimeout(150);
+    await page
+        .waitForFunction(
+            () => {
+                const el = document.querySelector('.bb-combobox-input[aria-label="Alignment"]');
+                return !!el && (el as HTMLInputElement).value.includes("Chaotic neutral");
+            },
+            undefined,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
     const alignClip = await alignFc
         .locator(".bb-combobox-input")
         .evaluate((el: HTMLInputElement) => ({ text: el.value, clipped: el.scrollWidth > el.clientWidth + 1 }));
@@ -172,9 +185,21 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
     // Re-picking the CURRENT value must keep it and close: bits-ui's single-select toggles the selection OFF on a
     // re-pick (value -> ""), which would blank an enum and leave the list open. "Chaotic neutral" is selected now.
     await alignFc.locator(".bb-combobox-input").click();
-    await page.waitForTimeout(120);
     await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
-    await page.waitForTimeout(120);
+    await page
+        .waitForFunction(
+            () => {
+                const el = document.querySelector('.bb-combobox-input[aria-label="Alignment"]');
+                return (
+                    !!el &&
+                    (el as HTMLInputElement).value.includes("Chaotic neutral") &&
+                    document.querySelectorAll(".bb-combobox-content").length === 0
+                );
+            },
+            undefined,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
     const rePick = await alignFc.locator(".bb-combobox-input").evaluate((el: HTMLInputElement) => el.value);
     const rePickOpen = await page.locator(".bb-combobox-content").count();
     check(
@@ -186,7 +211,11 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
 
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]')
+        .filter({ hasText: label })
+        .first()
+        .waitFor({ timeout: 5000 });
 }
 
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Effects$/ }) });
@@ -194,11 +223,26 @@ const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { h
 async function selectRow(scope: Locator, idx: number): Promise<void> {
     await scope.locator(".vlist .vrow").nth(idx).click();
     await scope.locator(".row-actions").first().waitFor({ timeout: 3000 });
-    await page.waitForTimeout(100);
 }
+// Effects RowActions (Add above/Duplicate/Delete) drive a real structureOp round trip (webview -> host -> dispatch
+// -> changeSet reply), so the row count is the settle signal - callers always check it via a Node-side
+// sectionCount() that only reflects the mutation once the reply has landed. clickAction/clickDelete are only ever
+// called against the Effects panel in this file, so the row list is queried directly rather than threaded through.
 async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
+    const before = await scope.locator(".vlist .vrow").count();
     await scope.locator(`.row-actions button[aria-label="${ariaLabel}"]`).first().click();
-    await page.waitForTimeout(200);
+    await page
+        .waitForFunction(
+            (b) => {
+                const panel = Array.from(document.querySelectorAll(".panel")).find(
+                    (p) => (p.querySelector("h3")?.textContent ?? "").trim() === "Effects",
+                );
+                return !!panel && panel.querySelectorAll(".vlist .vrow").length !== b;
+            },
+            before,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
 }
 async function clickDelete(scope: Locator): Promise<void> {
     // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
@@ -376,7 +420,17 @@ const readSpellsTab = () =>
     });
 const spellsTabBefore = await readSpellsTab();
 await firstLevelCard.locator("button.sb-add", { hasText: "memorize" }).first().click();
-await page.waitForTimeout(250);
+await page
+    .waitForFunction(
+        (before) => {
+            const tabs = Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'));
+            const tab = tabs.find((b) => (b.textContent ?? "").trim().startsWith("Spells"));
+            return !!tab && (tab.textContent ?? "").trim() !== before;
+        },
+        spellsTabBefore,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const spellsTabAfter = await readSpellsTab();
 check(
     "spells: + memorize adds a memorized spell (count +1)",
@@ -404,13 +458,11 @@ check(
 // ---- Spellbook card layout: cards must be a uniform width (no flex-grow drift where a trailing odd card on a
 // partial row hits max-width and is wider), and a level's Known and Memorized entries must align row-for-row. ----
 await page.setViewportSize({ width: 900, height: 1500 });
-await page.waitForTimeout(150);
 const cardWidths = await page.evaluate(() =>
     Array.from(document.querySelectorAll(".spellbook .sb-level"), (el) => Math.round(el.getBoundingClientRect().width)),
 );
 check("spells: all level cards have equal width", new Set(cardWidths).size === 1, JSON.stringify(cardWidths));
 await page.setViewportSize({ width: 1280, height: 1000 });
-await page.waitForTimeout(150);
 const entryAlign = await page.evaluate(() => {
     for (const c of Array.from(document.querySelectorAll(".spellbook .sb-level"))) {
         const cols = c.querySelectorAll(".sb-col");

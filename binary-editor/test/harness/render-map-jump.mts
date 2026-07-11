@@ -70,7 +70,18 @@ const fieldHex = (label: string) =>
 // --- Find a script whose SID links to its object. Only object-owned scripts (item/critter) are referenced by
 // an object, so scan each script subtab's first rows until one exposes a SID chip. ---
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Scripts" }).first().click();
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () =>
+            Array.from(document.querySelectorAll('.layout-root .bb-tabs button[role="tab"]')).some((b) =>
+                ["System", "Spatial", "Timer", "Item", "Critter"].some((t) =>
+                    (b.textContent ?? "").trim().startsWith(t),
+                ),
+            ),
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const sidField = () =>
     page
         .locator(".layout-root .field")
@@ -83,12 +94,25 @@ for (let s = 0; s < (await subtabs.count()) && sidHex === null; s++) {
     const label = (await subtabs.nth(s).innerText()).trim();
     if (!["System", "Spatial", "Timer", "Item", "Critter"].some((t) => label.startsWith(t))) continue;
     await subtabs.nth(s).click();
-    await page.waitForTimeout(120);
+    await page
+        .waitForFunction(() => document.querySelectorAll(".layout-root .vlist .vrow").length > 0, undefined, {
+            timeout: 5000,
+        })
+        .catch(() => undefined);
     const rows = page.locator(".layout-root .vlist .vrow");
     const rowCount = Math.min(await rows.count(), 20);
     for (let i = 0; i < rowCount; i++) {
         await rows.nth(i).click();
-        await page.waitForTimeout(70);
+        await page
+            .waitForFunction(
+                (idx) => {
+                    const el = document.querySelectorAll(".layout-root .vlist .vrow")[idx];
+                    return el !== undefined && el.classList.contains("selected");
+                },
+                i,
+                { timeout: 5000 },
+            )
+            .catch(() => undefined);
         if ((await sidField().locator(".jump-link").count()) > 0) {
             sidHex = await fieldHex("SID");
             jumpLabel = (await sidField().locator(".jump-link").first().innerText()).trim();
@@ -101,7 +125,19 @@ check("found a script whose SID links to its object", sidHex !== null, `sid=0x${
 if (sidHex !== null) {
     const sidVal = parseInt(sidHex, 16) | 0;
     await sidField().locator(".jump-link").first().click();
-    await page.waitForTimeout(200);
+    await page
+        .waitForFunction(
+            () => {
+                const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
+                    (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+                );
+                const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
+                return input !== null && input.value.length > 0;
+            },
+            undefined,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
 
     const tabAfter = (await activePrimaryTab()).trim();
     check("the script SID jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);

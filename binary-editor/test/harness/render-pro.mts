@@ -50,7 +50,11 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForTimeout(250);
+await page
+    .waitForFunction(() => document.querySelectorAll(".layout-root .panel > h3").length === 6, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 
 check(
     "critter resolves a declarative layout (variant critter)",
@@ -146,7 +150,16 @@ if (!target) {
             ),
         { row: target, v: NEW_VALUE },
     );
-    await page.waitForTimeout(150);
+    await page
+        .waitForFunction(
+            (v) =>
+                Array.from(document.querySelectorAll(".layout-root input")).some(
+                    (el) => (el as HTMLInputElement).value === v,
+                ),
+            NEW_VALUE,
+            { timeout: 5000 },
+        )
+        .catch(() => undefined);
     const valuesAfter = await page.$$eval(".layout-root input", (els) => els.map((e) => (e as HTMLInputElement).value));
     check(
         "reactivity: a changeSet edit re-renders the control",

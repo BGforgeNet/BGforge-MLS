@@ -39,7 +39,17 @@ check("find-bar is present without any toggle (always visible)", (await page.loc
 // "Coran" appears in several lines/options of the real dialogue - enough to test navigation.
 await page.locator(".findinput").click();
 await page.locator(".findinput").pressSequentially("Coran", { delay: 20 });
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => {
+            const t = document.querySelector(".findcount")?.textContent ?? "";
+            const m = /^1\/(\d+)$/.exec(t);
+            return !!m && Number(m[1]) > 1;
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const count1 = await countText();
 const total = Number(count1.split("/")[1] ?? "0");
 check(
@@ -85,7 +95,11 @@ const keyOf = (): Promise<string | null> =>
     );
 const firstKey = await keyOf();
 await page.locator(".findinput").press("Enter");
-await page.waitForTimeout(120);
+await page
+    .waitForFunction((exp) => (document.querySelector(".findcount")?.textContent ?? "") === exp, `2/${total}`, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const count2 = await countText();
 const secondKey = await keyOf();
 check(
@@ -96,7 +110,11 @@ check(
 
 await page.locator(".findinput").press("Shift+Enter"); // back to 1
 await page.locator(".findinput").press("Shift+Enter"); // wrap to last (N)
-await page.waitForTimeout(120);
+await page
+    .waitForFunction((exp) => (document.querySelector(".findcount")?.textContent ?? "") === exp, `${total}/${total}`, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 const count3 = await countText();
 check(
     "Shift+Enter wraps backward past the first to the last match (N/N)",
@@ -106,7 +124,11 @@ check(
 
 // --- 3. Escape clears the query (the bar stays visible) --------------------------------------------------
 await page.locator(".findinput").press("Escape");
-await page.waitForTimeout(120);
+await page
+    .waitForFunction(() => (document.querySelector(".findinput") as HTMLInputElement | null)?.value === "", undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 check(
     "Escape clears the query but keeps the always-visible bar",
     (await page.locator(".findinput").inputValue()) === "" && (await page.locator(".findinput").count()) === 1,
@@ -119,7 +141,11 @@ await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 await page.locator('[role="treeitem"]').first().click(); // move focus into the tree first
 await page.keyboard.press("Control+f");
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(() => document.activeElement?.classList.contains("findinput") ?? false, undefined, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
 check(
     "Ctrl+F focuses the find input",
     await page.evaluate(() => document.activeElement?.classList.contains("findinput") ?? false),
@@ -128,10 +154,21 @@ check(
 // --- 5. A collapsed match is revealed (ancestors un-collapsed) when navigated to ------------------------
 // Collapse the whole tree, then search + navigate: the current match's row must render (reveal ran).
 await page.getByRole("button", { name: "Collapse all" }).click();
-await page.waitForTimeout(100);
 await page.locator(".findinput").click();
 await page.locator(".findinput").pressSequentially("Coran", { delay: 20 });
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(
+        () => {
+            const el = document.querySelector(".searchcurrent") as HTMLElement | null;
+            if (!el) return false;
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 const revealedVisible = await page.locator(".searchcurrent").first().isVisible();
 check("navigating to a match inside a collapsed subtree reveals it (row is in the DOM and visible)", revealedVisible);
 

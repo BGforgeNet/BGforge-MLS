@@ -52,7 +52,9 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForTimeout(150);
+await page
+    .waitForFunction(() => document.querySelector(".banner.warning") !== null, undefined, { timeout: 5000 })
+    .catch(() => undefined);
 
 const banner = await page.evaluate(() => {
     const b = document.querySelector(".banner.warning");

@@ -123,13 +123,21 @@ const fieldHex = (label: string) =>
 
 // Open the linked script: Scripts tab -> its type subtab -> filter to its exact label -> click it.
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Scripts" }).first().click();
-await page.waitForTimeout(150);
 await page.locator('.layout-root .bb-tabs button[role="tab"]').filter({ hasText: deep.scriptType }).first().click();
-await page.waitForTimeout(150);
 await page.locator(".layout-root .list-filter-input").first().fill(deep.scriptLabel);
-await page.waitForTimeout(200);
 await page.locator(".layout-root .vlist .vrow").filter({ hasText: deep.scriptLabel }).first().click();
-await page.waitForTimeout(200);
+await page
+    .waitForFunction(
+        () => {
+            const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
+                (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
+            );
+            return field !== undefined && field.querySelector(".jump-link") !== null;
+        },
+        undefined,
+        { timeout: 5000 },
+    )
+    .catch(() => undefined);
 
 const sidChip = page
     .locator(".layout-root .field")
@@ -152,6 +160,7 @@ await page
             const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
             return input !== null && input.value.length > 0;
         },
+        undefined,
         { timeout: 5000 },
     )
     .catch(() => undefined); // let the assertions below report the concrete failure rather than a poll timeout
