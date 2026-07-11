@@ -206,3 +206,6 @@ BG1NPC/bg1npc/romances/xarom/baf/x#xatire.baf
 BG1NPC/bg1npc/core/tpa/a64_beregost.tpa
 BG1NPC/bg1npc/phase2/tpa/bg1npc_phase2.tpa
 BG1NPC/bg1npc/phase2/tpa/bg1npc_xzarqst.tpa
+
+# BG1NPC malformed D file (weidu rejects it; unresolvable %macro% used as standalone CHAIN content)
+BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d
