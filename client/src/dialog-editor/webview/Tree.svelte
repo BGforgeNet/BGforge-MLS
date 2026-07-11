@@ -966,12 +966,6 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    /* Placeholder for a node with no NPC line of its own (its lines live per-branch): muted, italic - reads as
-       "nothing here" rather than a real line, and gives the state row something to highlight when selected. */
-    .line.noline {
-        color: #5b6472;
-        font-style: italic;
-    }
     /* Fork hint on an if/else node's row: it has no single line - its two branch lines below (each [if]/[else]
        gated) are its forms. Muted + italic so it reads as a structural marker, not dialogue. */
     .line.forkhint {

@@ -64,7 +64,10 @@
         // type - the value is a plain mutable DialogModel that the caller re-wraps as $state.
         return $state.snapshot(m) as DialogModel;
     }
-    let editModel = $state<DialogModel>(cloneModel(model));
+    // untrack: capture the model prop ONCE into the working copy. Later host posts are adopted
+    // imperatively (see the adopt-in-place machinery below), never by re-deriving editModel - so this
+    // read is deliberately non-reactive, not a missing $derived.
+    let editModel = $state<DialogModel>(untrack(() => cloneModel(model)));
 
     // The GRAPH projection is imperative - rebuild() writes nodes/edges - while every other model
     // projection here (treeData, tabs, issues, searchMatches, ...) is $derived and refreshes on any
