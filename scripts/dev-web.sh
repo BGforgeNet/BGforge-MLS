@@ -32,7 +32,7 @@
 
 set -eu -o pipefail
 
-CS_VERSION_DEFAULT="4.123.0"
+CS_VERSION_DEFAULT="4.127.0"
 CS_VERSION="${CODE_SERVER_VERSION:-$CS_VERSION_DEFAULT}"
 HOST="${CODE_SERVER_HOST:-0.0.0.0}"
 PORT="${CODE_SERVER_PORT:-8080}"
@@ -71,8 +71,8 @@ CS_BIN="$CS_HOME/bin/code-server"
 # coder/code-server itself publishes (it does not ship a SHA256SUMS asset), but a genuine per-file
 # digest GitHub computes at upload time. Only covers the pinned default; see the override check below.
 declare -A CS_SHA256_DEFAULT=(
-    [amd64]="e54325a6439652f188203fb80a25c303b87f153550e9eee0c078b798b791d657"
-    [arm64]="855bdd7b8f522399e951c33a885a138ecf392427fb4464669ee55c9cc8fcb5f3"
+    [amd64]="2684cd3237181d837e8fe8757d98096e2d050a7d1687ee68ac39dd45a7a100d9"
+    [arm64]="957755006866ed53c8bbcf22452b1522f9c26b85a68f93c593e74600817574d0"
 )
 
 # Bootstrap: download the pinned code-server once into .dev/ (reused thereafter).
