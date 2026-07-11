@@ -19,6 +19,7 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # id-token: write is needed for `pnpm publish --provenance` (npm OIDC attestation).
     permissions:
       contents: read

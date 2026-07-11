@@ -18,6 +18,12 @@ on:
     # the same runner concurrency window.
     - cron: "30 6 * * 1"
 
+# Cancel a superseded push/PR run, but never a scheduled scan - a half-finished
+# weekly scan is worse than letting it run to completion alongside a new push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 permissions:
   contents: read
 
@@ -25,6 +31,7 @@ jobs:
   analyze:
     name: Analyze JavaScript/TypeScript
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
       actions: read

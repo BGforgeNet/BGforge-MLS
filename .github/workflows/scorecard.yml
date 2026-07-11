@@ -11,12 +11,19 @@ on:
     # Weekly on Monday at 06:00 UTC.
     - cron: "0 6 * * 1"
 
+# Cancel a superseded push/PR run, but never a scheduled scan - a half-finished
+# weekly scan is worse than letting it run to completion alongside a new push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 permissions: read-all
 
 jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       security-events: write
       id-token: write
