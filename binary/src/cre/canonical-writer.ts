@@ -45,6 +45,27 @@ export function serializeCreCanonicalDocument(document: CreCanonicalDocument): U
     const { knownSpells, spellMemInfo, memorizedSpells, effects, items, itemSlots } = document;
     const offsets = computeCreSectionOffsets(document);
     const effectSize = effects.kind === "v1" ? CRE_EFFECT_V1_SIZE : CRE_EFFECT_V2_SIZE;
+    const totalSize = offsets.itemSlots + CRE_ITEM_SLOTS_SIZE;
+
+    // An empty section's offset is preserved verbatim from the header (nonEmptyCreSectionOffsets omits it, so
+    // enforceDerivedFields leaves it) rather than recomputed. Across the real corpus it almost always already
+    // equals the computed in-place position, but a fixture can store a different in-bounds value there (e.g.
+    // imoen.cre's empty memorized-spells offset), and preserving it keeps that file byte-exact through a no-op
+    // round-trip. A size-shrinking edit (e.g. removing a spell-memorization owner and its slice) can instead
+    // leave that preserved offset pointing PAST the new EOF, and the parser rejects `offset > size` even for a
+    // zero-length section. Where a preserved empty-section offset is now out of bounds, fall back to the
+    // computed in-bounds position; a still-valid offset is left untouched.
+    const sectionOffsets = nonEmptyCreSectionOffsets(document, offsets);
+    const storedOffsets = {
+        knownSpells: document.header.knownSpellsOffset,
+        spellMemInfo: document.header.spellMemInfoOffset,
+        memorizedSpells: document.header.memorizedSpellsOffset,
+        effects: document.header.effectsOffset,
+        items: document.header.itemsOffset,
+    } as const;
+    for (const key of Object.keys(storedOffsets) as (keyof typeof storedOffsets)[]) {
+        if (!(key in sectionOffsets) && storedOffsets[key] > totalSize) sectionOffsets[key] = offsets[key];
+    }
 
     const header = enforceDerivedFields(creHeaderSpecAnnotated, document.header, {
         arrays: {
@@ -54,10 +75,9 @@ export function serializeCreCanonicalDocument(document: CreCanonicalDocument): U
             effects: effects.records,
             items,
         },
-        sectionOffsets: nonEmptyCreSectionOffsets(document, offsets),
+        sectionOffsets,
     });
 
-    const totalSize = offsets.itemSlots + CRE_ITEM_SLOTS_SIZE;
     const out = new Uint8Array(totalSize);
 
     creHeaderSchema.write(writerAt(out, 0), header);
