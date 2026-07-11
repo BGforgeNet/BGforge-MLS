@@ -115,7 +115,7 @@
         "remark-validate-links": "^13.1.0",
         "svelte": "^5.56.4",
         "svelte-check": "^4.7.2",
-        "tree-sitter-cli": "0.26.10",
+        "tree-sitter-cli": "0.26.9",
         "tsx": "^4.23.0",
         "typescript": "^5.9.3",
         "vite": "^8.1.4",
