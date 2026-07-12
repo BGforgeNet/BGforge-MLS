@@ -6,7 +6,7 @@ import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScrip
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
-import type { HostToWebview, WebviewToHost } from "./webview/messages";
+import { type HostToWebview, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
@@ -101,7 +101,11 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             }
         });
 
-        panel.webview.onDidReceiveMessage(async (message: WebviewToHost) => {
+        panel.webview.onDidReceiveMessage(async (message: unknown) => {
+            if (!isWebviewToHost(message)) {
+                // Malformed or unknown-shape message: ignore rather than act on partial data.
+                return;
+            }
             try {
                 await this.handleWebviewMessage(document, panel, message);
             } catch (error) {
