@@ -161,4 +161,75 @@ END
         expect(r.get("a_main")).toBe("reachable");
         expect(r.get("b_main")).toBe("reachable");
     });
+
+    // SSL does not enter at its textually-first state - talk_p_proc calls an entry proc, and dialog nodes
+    // routinely loop back to that entry ("go back" options), so the entry itself carries an inbound edge and is
+    // NOT a no-inbound seed. A classifier that seeds only from states[0] + no-inbound (ignoring the model's
+    // entryCalls/entryIds) never reaches the entry's subtree and mass-flags it "orphan" - the real Fallout bug.
+    it("seeds the walk from SSL entry procs so a talk_p_proc-entered, back-looping chain is reachable, not orphan", () => {
+        const stateOf = (id: string, targets: string[]): DialogState => ({
+            id,
+            text: `@${id}`,
+            choices: targets.map((t, i) => ({ id: `${id}#${i}`, target: { kind: "state", stateId: t } })),
+        });
+        const model: DialogModel = {
+            sourceLang: "ssl",
+            editable: false,
+            entryIds: ["greeting"],
+            entryCalls: [
+                {
+                    name: "greeting",
+                    stmtRange: { start: 0, end: 0 },
+                    targetRange: { start: 0, end: 0 },
+                    topLevel: true,
+                },
+            ],
+            roots: [
+                {
+                    id: "dialog",
+                    label: "dialog",
+                    kind: "dialog",
+                    states: [
+                        stateOf("intro_unrelated", []), // textually first, but not the engine entry
+                        stateOf("greeting", ["reply_yes"]), // the talk_p_proc entry
+                        stateOf("reply_yes", ["greeting"]), // loops back -> greeting carries an inbound edge
+                    ],
+                },
+            ],
+        };
+        const r = classifyReachability(model);
+        expect(r.get("greeting")).toBe("reachable"); // talk_p_proc entry, seeded even though it has an inbound edge
+        expect(r.get("reply_yes")).toBe("reachable"); // reached only through the entry chain
+    });
+
+    // A force_dialog_start / start_dialog_at_node target lands in entryIds but has NO entryCalls entry (nothing
+    // in talk_p_proc calls it). It is entered from outside the dialog flow -> external-entry, never orphan - and
+    // it still seeds the walk so its own chain is reachable.
+    it("treats a force_dialog_start entry (entryIds without entryCalls) as external-entry, its chain reachable", () => {
+        const stateOf = (id: string, targets: string[]): DialogState => ({
+            id,
+            text: `@${id}`,
+            choices: targets.map((t, i) => ({ id: `${id}#${i}`, target: { kind: "state", stateId: t } })),
+        });
+        const model: DialogModel = {
+            sourceLang: "ssl",
+            editable: false,
+            entryIds: ["oob_entry"], // no entryCalls: reached only via force_dialog_start
+            roots: [
+                {
+                    id: "dialog",
+                    label: "dialog",
+                    kind: "dialog",
+                    states: [
+                        stateOf("intro_unrelated", []),
+                        stateOf("oob_entry", ["oob_reply"]),
+                        stateOf("oob_reply", ["oob_entry"]), // loops back -> oob_entry has an inbound edge
+                    ],
+                },
+            ],
+        };
+        const r = classifyReachability(model);
+        expect(r.get("oob_entry")).toBe("external-entry");
+        expect(r.get("oob_reply")).toBe("reachable");
+    });
 });

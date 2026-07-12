@@ -27,9 +27,11 @@ import type { DialogModel, DialogState } from "./dialog-model";
 export type Reachability = "reachable" | "external-entry" | "orphan";
 
 /**
- * Classify every state in the file. Entry points are each dialog root's first state
- * plus every state with no in-file inbound GOTO (those must be entered externally).
- * Reachability is the transitive closure from that entry set over in-file GOTO edges.
+ * Classify every state in the file. Entry points are each dialog root's first state, every state with no
+ * in-file inbound GOTO (those must be entered externally), and - for SSL - the model's declared entry nodes
+ * (talk_p_proc / force_dialog_start targets in entryCalls/entryIds), which frequently carry a back-loop
+ * inbound edge and so are NOT caught by the no-inbound rule. Reachability is the transitive closure from that
+ * entry set over in-file GOTO edges.
  */
 const REACHABILITY_RANK: Record<Reachability, number> = { reachable: 2, "external-entry": 1, orphan: 0 };
 
@@ -45,6 +47,15 @@ export function classifyReachability(model: DialogModel): Map<string, Reachabili
         const prev = result.get(id);
         if (prev === undefined || REACHABILITY_RANK[r] > REACHABILITY_RANK[prev]) result.set(id, r);
     };
+
+    // SSL declares its real entries: entryCalls is the talk_p_proc `call <node>` bootstrap (a reachable entry);
+    // entryIds is those plus force_dialog_start / start_dialog_at_node targets (entered from outside the dialog
+    // flow). D sets NEITHER, so both sets are empty and D's behaviour is unchanged. Seeding the walk from these
+    // is what stops a talk_p_proc-entered chain - whose entry often carries a back-loop inbound edge, so it is
+    // not a no-inbound seed - from being mass-flagged orphan (the two subsystems otherwise disagree: findCallers
+    // counts these as entries while the walk treated their subtree as dead).
+    const entryCallNames = new Set((model.entryCalls ?? []).map((ec) => ec.name));
+    const entryIds = new Set(model.entryIds);
 
     for (const root of model.roots) {
         const byId = new Map<string, DialogState>();
@@ -67,6 +78,9 @@ export function classifyReachability(model: DialogModel): Map<string, Reachabili
         const queue: string[] = [];
         if (rootEntry !== undefined) queue.push(rootEntry);
         for (const s of root.states) if (!hasInbound.has(s.id)) queue.push(s.id);
+        // Also seed from the model's declared SSL entries in this root - they routinely carry a back-loop
+        // inbound edge and so are missed by the no-inbound seed above.
+        for (const s of root.states) if (entryIds.has(s.id) || entryCallNames.has(s.id)) queue.push(s.id);
 
         const reached = new Set<string>();
         while (queue.length > 0) {
@@ -83,9 +97,12 @@ export function classifyReachability(model: DialogModel): Map<string, Reachabili
         }
 
         for (const s of root.states) {
-            // The root's first state is the canonical entry (reachable); any other no-inbound state is entered
-            // from outside the file (external-entry); the rest classify by whether the GOTO walk reached them.
-            if (s.id === rootEntry) record(s.id, "reachable");
+            // The root's first state and every talk_p_proc entry (entryCalls) are canonical entries -> reachable.
+            // A force_dialog_start entry (in entryIds but with no entryCalls) is entered from outside the dialog
+            // flow -> external-entry, like any other no-inbound state. The rest classify by whether the GOTO walk
+            // reached them.
+            if (s.id === rootEntry || entryCallNames.has(s.id)) record(s.id, "reachable");
+            else if (entryIds.has(s.id)) record(s.id, "external-entry");
             else if (!hasInbound.has(s.id)) record(s.id, "external-entry");
             else if (reached.has(s.id)) record(s.id, "reachable");
             else record(s.id, "orphan");
