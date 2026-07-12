@@ -50,9 +50,6 @@ export type {
     LayoutVariant,
 } from "./layout-schema-types";
 
-// Edit policy
-export { findEditableField } from "./field-edit-policy";
-
 // Presentation schema
 export {
     createFieldKey,

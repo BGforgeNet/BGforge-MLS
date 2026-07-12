@@ -93,9 +93,7 @@ export function buildModel(parseResult: ParseResult): Model {
             const entry = pe.entry;
             const id = parentId === undefined ? String(index) : `${parentId}/${index}`;
             const namePath: NamePath = [...parentNamePath, entry.name];
-            const group = pe.kind === "group" ? (entry as ParsedGroup) : undefined;
-            // A node is locked if any ancestor group carries editingLocked === true.
-            const locked = parentLocked || group?.editingLocked === true;
+            const locked = isEntryLocked(entry, parentLocked);
             byId.set(id, nodes.length);
             const parentKey = parentId ?? "";
             const siblings = childrenByParent.get(parentKey);
@@ -144,4 +142,44 @@ function isAncestorChainExpanded(model: Model, parentId: NodeId): boolean {
         current = idx === undefined ? undefined : model.nodes[idx]?.parentId;
     }
     return true;
+}
+
+/**
+ * Single source of truth for the "editing-locked" propagation rule: an entry is locked when it
+ * itself carries `editingLocked === true` (only a `ParsedGroup` can) OR `ancestorLocked` is true
+ * (some enclosing group up the chain already carries the flag). A parser sets `editingLocked` when
+ * it could not fully decode a record (e.g. a MAP object whose subtype trailer depends on external
+ * `.pro` metadata); field edits inside such a subtree are width-preserving but not
+ * interpretation-preserving, so nothing under the flag may be mutated.
+ *
+ * `buildModel`'s pre-order walk applies this per entry during construction (`ancestorLocked` is the
+ * threaded `parentLocked` flag); `isNodeLocked` below applies it again per `NodeId`, reading the SAME
+ * `FlatNode.parentLocked` the walk already computed. One predicate, two call sites - a lock enforced
+ * at build/display time and one enforced before a host-side mutation can never drift apart.
+ */
+function isEntryLocked(entry: ParsedField | ParsedGroup, ancestorLocked: boolean): boolean {
+    return ancestorLocked || (isGroup(entry) && entry.editingLocked === true);
+}
+
+/** True when node `id` (or any ancestor) is editing-locked. False for an unknown id - callers that
+ *  need existence validation perform their own `byId` lookup and raise their own "unknown node" error. */
+export function isNodeLocked(model: Model, id: NodeId): boolean {
+    const idx = model.byId.get(id);
+    const node = idx === undefined ? undefined : model.nodes[idx];
+    return node !== undefined && isEntryLocked(node.source, node.parentLocked === true);
+}
+
+/**
+ * Throws a structured error if node `id` is editing-locked; no-op otherwise. This is the gate every
+ * host write entry point (`editField`, `structureOp`, `spellbookEdit`) calls immediately before
+ * mutating its target, so a crafted or raced webview message cannot slip an edit past the same lock
+ * the webview already disables its controls for (previously the lock was enforced ONLY by the
+ * webview disabling controls - the host write path performed no check of its own).
+ */
+export function assertNotLocked(model: Model, id: NodeId): void {
+    if (!isNodeLocked(model, id)) return;
+    const idx = model.byId.get(id);
+    const node = idx === undefined ? undefined : model.nodes[idx];
+    const label = node?.name ?? id;
+    throw new Error(`"${label}" is inside a locked, partially-undecoded subtree and cannot be edited.`);
 }

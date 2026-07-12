@@ -1,8 +1,10 @@
 /**
- * Pins the public surface of @bgforge/binary against the symbols its
- * consumers (BGforge MLS client editors, fgbin CLI) actually import.
- * Adding a new public symbol requires extending this list; removing one
- * fails this test before downstream callers see the break.
+ * Pins the public surface of @bgforge/binary against the symbols its actual consumers import: the
+ * `@bgforge/binary-editor` package (the editor session, structure-op/spellbook-op handling, and the
+ * declarative layout resolver), the VS Code binary custom editor in `client/src/binary-editor` (via
+ * `binary-editor`'s worker bundle), and the `fgbin` CLI (`binary/src/cli.ts`, imported through this
+ * same `./index` barrel). Adding a new public symbol requires extending this list; removing one fails
+ * this test before downstream callers see the break.
  */
 
 import { describe, it, expect } from "vitest";
@@ -19,8 +21,6 @@ const REQUIRED_VALUE_EXPORTS = [
     "getOutputPathForJsonSnapshot",
     // Format adapters
     "formatAdapterRegistry",
-    // Edit policy
-    "findEditableField",
     // Presentation
     "createFieldKey",
     "toSemanticFieldKey",

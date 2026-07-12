@@ -1,5 +1,5 @@
 import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforge/binary";
-import { buildModel, type FlatNode } from "./model";
+import { assertNotLocked, buildModel, type FlatNode } from "./model";
 import { invalidateCachedDocument } from "./edit";
 import { DEFAULT_WINDOW, getWindow } from "./window";
 import { resolveTabCounts } from "./layout";
@@ -160,6 +160,11 @@ function childIdAt(model: EditorSession["model"], kids: number[], index: number)
 }
 
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
+    // Reject a locked target here at the host, not just in the webview that disables its controls -
+    // a crafted or raced message must not be able to restructure a partially-undecoded subtree.
+    // "add" targets the section group itself; every other op targets a concrete entry.
+    assertNotLocked(session.model, req.op === "add" ? req.sectionId : req.entryId);
+
     const adapter = formatAdapterRegistry.get(session.parserId);
     // Resolve the NodeId target to the section path + the entry's structural ordinal from the OLD
     // model, before commit replaces session.model.

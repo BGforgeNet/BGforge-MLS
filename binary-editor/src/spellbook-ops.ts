@@ -14,7 +14,7 @@ import {
     formatAdapterRegistry,
     type ParsedField,
 } from "@bgforge/binary";
-import { buildModel, type FlatNode, type Model } from "./model";
+import { assertNotLocked, buildModel, type FlatNode, type Model } from "./model";
 import { commitModel, noopResult, reparse } from "./structure-ops";
 import { childGroups, fieldsByKey, fieldNumber, findGroup, normKey } from "./relationship/model-helpers";
 import type { EditorSession } from "./session";
@@ -58,6 +58,8 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
         const owners = childGroups(session.model, meminfo);
         const ownerIndex = owners.findIndex((o) => o.id === op.ownerNodeId);
         if (ownerIndex === -1) return noopResult(session);
+        // Reject a locked owner here at the host, not just in the webview that disables its controls.
+        assertNotLocked(session.model, op.ownerNodeId);
         // The new slice lands at the END of this owner's range (start + count) - the position the byte builder
         // appends at - so we can locate it in the rebuilt model to preset its resref + Memorized flag.
         const f = fieldsByKey(session.model, owners[ownerIndex]!);
@@ -99,6 +101,8 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
     }
 
     if (op.op === "addKnown") {
+        const knownSection = findGroup(session.model, KNOWN_SECTION);
+        if (knownSection) assertNotLocked(session.model, knownSection.id);
         const bytes = adapter?.buildAddEntryBytes?.(pr, [KNOWN_SECTION]);
         if (!bytes) return noopResult(session);
         const model = buildModel(reparse(session, bytes));
@@ -114,6 +118,11 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
     }
 
     if (op.op === "removeOrphan") {
+        const memorizedSection = findGroup(session.model, MEMORIZED_SECTION);
+        const orphanTarget = memorizedSection
+            ? childGroups(session.model, memorizedSection)[op.memorizedIndex]
+            : undefined;
+        if (orphanTarget) assertNotLocked(session.model, orphanTarget.id);
         const bytes = buildCreRemoveOrphanMemorizedBytes(pr, op.memorizedIndex);
         if (!bytes) return noopResult(session);
         return commitModel(session, "Remove orphan memorized spell", buildModel(reparse(session, bytes)));
@@ -125,6 +134,7 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
     // target before the view refreshes; dispatches are sequential, so the second call sees the first's
     // committed row and no-ops rather than creating the "more than one memorization row" inconsistency.
     const meminfoGroup = findGroup(session.model, MEMINFO_SECTION);
+    if (meminfoGroup) assertNotLocked(session.model, meminfoGroup.id);
     const dupRow =
         meminfoGroup &&
         childGroups(session.model, meminfoGroup).some((row) => {

@@ -1,4 +1,5 @@
 import { formatAdapterRegistry, type ParsedField, type ParseResult } from "@bgforge/binary";
+import { assertNotLocked } from "./model";
 import { layoutFieldRows, type EditorSession } from "./session";
 import { projectRow } from "./window";
 import { serializeSession } from "./serialize";
@@ -38,6 +39,9 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     const node = session.model.nodes[idx];
     if (!node) throw new Error(`Unknown node ${nodeId}`);
     if (node.kind !== "field") throw new Error(`Node ${nodeId} is not a field`);
+    // Reject a locked target here at the host, not just in the webview that disables its controls -
+    // a crafted or raced message must not be able to mutate a partially-undecoded subtree.
+    assertNotLocked(session.model, nodeId);
 
     session.undo.push({ label: `Edit ${node.name}`, before: cloneParseResult(session) });
     session.redo = [];
