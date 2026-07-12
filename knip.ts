@@ -1,5 +1,10 @@
 import type { KnipConfig } from "knip";
 
+// knip is held at ^6.25.x: 6.26.0 regressed its .svelte import parsing and
+// false-flags genuinely-used deps imported only from .svelte files
+// (@xyflow/svelte, bits-ui) as unused. Re-test .svelte dependency detection
+// before moving past 6.25.x.
+
 const isProductionKnip = process.argv.includes("--production");
 
 const config: KnipConfig = {

@@ -29,8 +29,9 @@ const close = dts.indexOf("\n}", start); // enum members carry no nested braces
 const block = dts.slice(start, close + 2); // through the closing brace
 
 const header =
-    "// Runtime SyntaxType enum, generated from the grammar and split out of\n" +
-    "// tree-sitter.d.ts so the values exist at runtime under any bundler.\n";
+    "// Auto-generated from the grammar by split-syntax-type.mjs. Do not hand-edit.\n" +
+    "// Runtime SyntaxType enum, split out of tree-sitter.d.ts so the values exist\n" +
+    "// at runtime under any bundler.\n";
 fs.writeFileSync(outPath, header + block + "\n");
 
 dts =

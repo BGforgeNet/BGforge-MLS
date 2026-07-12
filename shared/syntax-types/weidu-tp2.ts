@@ -1,5 +1,6 @@
-// Runtime SyntaxType enum, generated from the grammar and split out of
-// tree-sitter.d.ts so the values exist at runtime under any bundler.
+// Auto-generated from the grammar by split-syntax-type.mjs. Do not hand-edit.
+// Runtime SyntaxType enum, split out of tree-sitter.d.ts so the values exist
+// at runtime under any bundler.
 export enum SyntaxType {
   ERROR = "ERROR",
   ActionAddAreaType = "action_add_area_type",
