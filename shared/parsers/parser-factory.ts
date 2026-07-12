@@ -88,6 +88,15 @@ export function createCachedParserModule(
 ): CachedParserModule {
     const base = createParserModule(wasmFileName, name);
 
+    // Keyed by full document text, not URI+version with incremental `tree.edit()`
+    // reparsing. Incremental parsing was measured and declined: a full reparse of a
+    // typical script averages ~6 ms and a 12250-line TP2 installer ~58 ms
+    // (server/test/perf/parser-cache.bench.ts, tp2-parse.bench.ts). At single-digit
+    // ms for the common case, the incremental machinery (threading didChange edit
+    // ranges through to `oldTree`, tree lifetime management, per-grammar
+    // golden-equivalence tests) is not justified by the saving. If large-file
+    // keystroke latency is ever a concern, debouncing the tree-sitter validation is
+    // the cheaper mitigation than incremental reparsing.
     const cache = new QuickLRU<string, Tree>({ maxSize: maxCacheSize });
 
     return {
