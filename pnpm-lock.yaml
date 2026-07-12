@@ -276,6 +276,16 @@ importers:
       esbuild-wasm:
         specifier: ^0.28.1
         version: 0.28.1
+    devDependencies:
+      '@bgforge/format':
+        specifier: workspace:*
+        version: link:../format
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      fast-check:
+        specifier: ^4.9.0
+        version: 4.9.0
       fast-glob:
         specifier: ^3.3.3
         version: 3.3.3
@@ -288,6 +298,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       vscode-languageserver:
         specifier: 10.1.0
         version: 10.1.0
@@ -300,19 +313,6 @@ importers:
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
-    devDependencies:
-      '@bgforge/format':
-        specifier: workspace:*
-        version: link:../format
-      '@types/node':
-        specifier: ^24.13.3
-        version: 24.13.3
-      fast-check:
-        specifier: ^4.9.0
-        version: 4.9.0
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
     optionalDependencies:
       sslc-emscripten-noderawfs:
         specifier: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz

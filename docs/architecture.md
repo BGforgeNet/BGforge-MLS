@@ -244,6 +244,17 @@ separate top-level step - it runs inside `build:client`.
    `../../../shared/syntax-types/<grammar>` instead, so `format` no longer forms a source cycle with
    `server` and typechecks standalone. Server code imports the shim at `./syntax-type` unchanged.
 
+5. **Server runtime dependencies**: `scripts/build-base-server.sh` bundles the LSP server with only
+   `vscode` and `esbuild-wasm` externalized - every other dependency (ts-morph, web-tree-sitter,
+   fast-glob, p-limit, yaml, the LSP libraries) is inlined into `out/server.js`. So
+   `@bgforge/mls-server`'s `package.json` declares only `esbuild-wasm` as a runtime `dependency`
+   (plus the optional `sslc-emscripten-noderawfs` compiler); the build-time-only packages sit in
+   `devDependencies`, keeping `npm install @bgforge/mls-server` lean. The record of what is bundled
+   is the release CycloneDX SBOM, not the manifest. fast-glob's inlined fdir carries a guarded
+   `require.resolve("picomatch")` that no-ops (try/catch) when picomatch is absent, so the lean
+   install still runs - verified by packing the tarball and running its bin against an
+   initialize + workspace-scan handshake in an esbuild-wasm-only environment.
+
 ### TypeScript configuration
 
 esbuild emits all production code; `tsc` is used for type-checking only (`noEmit: true`).
