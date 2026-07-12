@@ -99,8 +99,15 @@ check("Global subtab visible", (await globalTab.count()) > 0, `subtabs: ${JSON.s
 const globalLabel = await globalTab.innerText();
 check("Global subtab shows count 21", /Global\s*\(\s*21\s*\)/.test(globalLabel), `label='${globalLabel.trim()}'`);
 
-// Global subtab is active -> shows variable list rows.
+// Global subtab is active -> shows variable list rows. Wait for the list to mount
+// before counting: the label above is derived from already-present parent data and
+// renders first, while the rows lag by a frame - counting eagerly races them to 0 on
+// a slow runner (matches the sibling wait in render-map.mts).
 const rows = page.locator(".layout-root .vlist .vrow");
+await rows
+    .first()
+    .waitFor({ timeout: 5000 })
+    .catch(() => {});
 const rowCount = await rows.count();
 check("Global subtab shows variable list rows (>0)", rowCount > 0, `rows=${rowCount}`);
 
