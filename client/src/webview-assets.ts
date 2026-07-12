@@ -5,7 +5,6 @@ import { randomBytes } from "crypto";
 type AssetCacheEntry = {
     extensionPath: string;
     html?: string;
-    css?: string;
     js?: string;
 };
 
@@ -33,14 +32,6 @@ export function getCachedHtmlAsset(cacheKey: string, extensionPath: string, rela
         cacheEntry.html = loadAsset(extensionPath, relativePath);
     }
     return cacheEntry.html;
-}
-
-export function getCachedCssAsset(cacheKey: string, extensionPath: string, relativePaths: readonly string[]): string {
-    const cacheEntry = getCacheEntry(cacheKey, extensionPath);
-    if (!cacheEntry.css) {
-        cacheEntry.css = relativePaths.map((relativePath) => loadAsset(extensionPath, relativePath)).join("\n");
-    }
-    return cacheEntry.css;
 }
 
 export function getCachedJsAsset(cacheKey: string, extensionPath: string, relativePath: string): string {

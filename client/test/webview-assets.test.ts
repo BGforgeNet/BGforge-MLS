@@ -11,13 +11,7 @@ vi.mock("fs", () => ({
 }));
 
 import * as fs from "fs";
-import {
-    getCachedHtmlAsset,
-    getCachedCssAsset,
-    getCachedJsAsset,
-    generateNonce,
-    inlineWebviewScript,
-} from "../src/webview-assets";
+import { getCachedHtmlAsset, getCachedJsAsset, generateNonce, inlineWebviewScript } from "../src/webview-assets";
 
 const mockReadFileSync = vi.mocked(fs.readFileSync);
 
@@ -58,26 +52,6 @@ describe("getCachedHtmlAsset", () => {
 
         expect(result).toBe("<html>other-ext</html>");
         expect(mockReadFileSync).toHaveBeenCalledTimes(2);
-    });
-});
-
-describe("getCachedCssAsset", () => {
-    it("concatenates multiple CSS files with newline separator", () => {
-        mockReadFileSync.mockReturnValueOnce("body { color: red; }").mockReturnValueOnce(".foo { display: block; }");
-
-        const result = getCachedCssAsset("css-test-1", "/ext", ["a.css", "b.css"]);
-        expect(result).toBe("body { color: red; }\n.foo { display: block; }");
-        expect(mockReadFileSync).toHaveBeenCalledTimes(2);
-    });
-
-    it("returns cached CSS on repeated calls", () => {
-        mockReadFileSync.mockReturnValue(".cached {}");
-
-        getCachedCssAsset("css-test-2", "/ext", ["only.css"]);
-        const result = getCachedCssAsset("css-test-2", "/ext", ["only.css"]);
-
-        expect(result).toBe(".cached {}");
-        expect(mockReadFileSync).toHaveBeenCalledTimes(1);
     });
 });
 
