@@ -40,6 +40,7 @@ pnpm build:transpile
 step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "pnpm lint:shell" \
+    "Workflow lint" "pnpm lint:workflows" \
     "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
     "Typecheck svelte" "pnpm typecheck:svelte" \
     "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \

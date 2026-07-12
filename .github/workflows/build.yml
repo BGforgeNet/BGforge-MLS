@@ -49,7 +49,10 @@ jobs:
       - name: Install apt packages (xmllint for the XSD tests; xvfb for E2E on release)
         env:
           XVFB: ${{ startsWith(github.ref, 'refs/tags/') && 'xvfb' || '' }}
-        run: sudo apt-get install -y libxml2-utils $XVFB
+        run: |
+          pkgs=(libxml2-utils)
+          [[ -n "$XVFB" ]] && pkgs+=(xvfb)
+          sudo apt-get install -y "${pkgs[@]}"
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9

@@ -1,0 +1,32 @@
+# zizmor configuration: https://docs.zizmor.sh/configuration/
+#
+# Each entry below is a finding that was reviewed and accepted as intentional,
+# with the technical reason recorded here rather than only in a commit message.
+# Composite-action findings (actions/*/action.yml) cannot be ignored through this
+# file - see the inline `# zizmor: ignore[...]` comments in those files instead.
+rules:
+  unpinned-uses:
+    ignore:
+      # slsa-framework/slsa-github-generator MUST be pinned to a full @vX.Y.Z tag,
+      # not a commit SHA: slsa-verifier validates the workflow_ref recorded in the
+      # provenance attestation against the trusted builder's published tag, so a
+      # SHA pin would make the resulting attestation unverifiable. Documented
+      # in-line at the `uses:` line itself (build.yml, provenance job).
+      - build.yml:216
+  cache-poisoning:
+    ignore:
+      # actions/setup-node's `cache: pnpm` restores the pnpm store from the
+      # standard actions/cache backend. It caches only the pnpm content-addressed
+      # store, not build outputs, and every restored package is re-verified by
+      # pnpm's integrity checks against the lockfile on install - a poisoned
+      # cache entry would fail installation rather than silently execute.
+      - build.yml:63
+      - publish-library.yml:45
+  superfluous-actions:
+    ignore:
+      # softprops/action-gh-release predates and provides a strictly richer
+      # interface than `gh release` for this workflow's needs (structured
+      # `files:` glob input, `fail_on_unmatched_files`, templated `name:`) without
+      # a hand-rolled script. Keeping the action is a readability tradeoff, not
+      # an oversight.
+      - build.yml:159

@@ -56,6 +56,9 @@ runs:
       shell: bash
       env:
         PKG_VERSION: ${{ inputs.version }}
+      # zizmor: ignore[adhoc-packages] this step's purpose IS installing the
+      # consumer-selected published @bgforge/transpile version to run it; there is
+      # no lockfile to install from since the version is a caller-chosen input.
       run: npm install -g "@bgforge/transpile@${PKG_VERSION}"
 
     - name: List changed source files
