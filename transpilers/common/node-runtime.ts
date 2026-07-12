@@ -10,6 +10,12 @@
  * rather than resolving "node". We cannot change esbuild's spawn, but we can make "node"
  * resolve to process.execPath by pointing PATH at it - applied ONLY when "node" is not
  * already resolvable, so a host that already has Node is left untouched (zero regression).
+ *
+ * Extension-wide invariant (this module is its documented home): every child Node process
+ * launches via process.execPath - the runtime already executing our code - never a bare
+ * "node" PATH lookup the host may not satisfy. sslc gets this from child_process.fork's
+ * default (server/src/sslc/ssl_compiler.ts); esbuild's dep-internal spawn gets it from
+ * ensureNodeOnPath below.
  */
 
 import * as fs from "fs";
