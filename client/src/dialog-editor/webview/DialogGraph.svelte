@@ -574,18 +574,21 @@
     }
 
     function edgeStyle(e: FlowEdge): string {
+        // Same token choices as the canvas legend below (.lg.player/.lg.continue/.lg.exit/.lg.external) so an
+        // edge's colour always matches its legend entry. `var(--vscode-*)` resolves fine here - Svelte Flow
+        // applies this string as a real DOM `style` attribute on the SVG path, not an SVG presentation attribute.
         const color =
             e.kind === "back"
-                ? "#f59e0b"
+                ? "var(--vscode-editorWarning-foreground)"
                 : e.category === "combat"
-                  ? "#b91c1c"
+                  ? "var(--vscode-errorForeground)"
                   : e.category === "exit"
-                    ? "#ef4444"
+                    ? "var(--vscode-errorForeground)"
                     : e.category === "external"
-                      ? "#f59e0b"
+                      ? "var(--vscode-editorWarning-foreground)"
                       : e.category === "player"
-                        ? "#a3e635"
-                        : "#64748b";
+                        ? "var(--vscode-charts-green)"
+                        : "var(--vscode-descriptionForeground)";
         const dash = e.dashed || e.kind === "back" ? ";stroke-dasharray:5 4" : "";
         return `stroke:${color}${dash}`;
     }
@@ -1447,7 +1450,18 @@
                     </ControlButton>
                 </Controls>
                 {#if containerW >= MINIMAP_MIN_W}
-                    <MiniMap pannable zoomable bgColor="#15171c" maskColor="rgba(10, 12, 16, 0.7)" nodeColor="#3b82f6" nodeStrokeColor="#60a5fa" />
+                    <!-- Svelte Flow applies these via its `style:` directive (a real inline CSS property, not an
+                         SVG presentation attribute), so `var(--vscode-*)` resolves correctly here too. maskColor
+                         (the dimmed out-of-viewport overlay) needs translucency VS Code has no token for, so it
+                         stays a plain black scrim - same rationale as the modal backdrop below. -->
+                    <MiniMap
+                        pannable
+                        zoomable
+                        bgColor="var(--vscode-editorWidget-background)"
+                        maskColor="rgba(10, 12, 16, 0.7)"
+                        nodeColor="var(--vscode-focusBorder)"
+                        nodeStrokeColor="var(--vscode-charts-blue)"
+                    />
                 {/if}
                 <!-- Legend only: the shared toolbar is now a docked header above the canvas, so this
                      top-left corner is free. Controls dock bottom-left and the MiniMap bottom-right, so
@@ -1576,7 +1590,7 @@
     .dialog-graph {
         width: 100%;
         height: 100%;
-        background: #191c21;
+        background: var(--vscode-editor-background);
         display: flex;
         flex-direction: column;
     }
@@ -1586,42 +1600,42 @@
         display: flex;
         gap: 2px;
         padding: 4px 6px 0;
-        background: #15171c;
-        border-bottom: 1px solid #2b303a;
+        background: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+        border-bottom: 1px solid var(--vscode-panel-border);
         overflow-x: auto;
     }
     .tab {
         display: flex;
         align-items: center;
         gap: 6px;
-        background: #21242b;
-        border: 1px solid #2b303a;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-bottom: none;
         border-radius: 5px 5px 0 0;
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 11px;
         padding: 4px 10px;
         cursor: pointer;
         white-space: nowrap;
     }
     .tab:hover {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .tab.active {
-        background: #191c21;
-        color: #22d3ee;
-        border-color: #3a3f4b;
+        background: var(--vscode-editor-background);
+        color: var(--vscode-textLink-foreground);
+        border-color: var(--vscode-input-border, var(--vscode-panel-border));
     }
     .tab .tcount {
-        background: #2b303a;
+        background: var(--vscode-badge-background);
         border-radius: 8px;
-        color: #cbd5e1;
+        color: var(--vscode-badge-foreground);
         font-size: 9px;
         padding: 0 5px;
     }
     .tab.active .tcount {
-        background: #1d4ed8;
-        color: #fff;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
     }
     /* Row holding the canvas and the docked side rail. */
     .body {
@@ -1649,8 +1663,8 @@
         gap: 8px;
         padding: 8px;
         overflow-y: auto;
-        background: #191c21;
-        border-left: 1px solid #2b303a;
+        background: var(--vscode-editor-background);
+        border-left: 1px solid var(--vscode-panel-border);
     }
     /* Spotlight overlay: dim fully-authored cards so the derived/uncertain ones stand out.
        `.card` lives in Node.svelte, so reach it with :global; each card carries `.flagged`
@@ -1664,7 +1678,7 @@
     /* Segmented Graph/Tree switch - the current mode is highlighted. */
     .viewseg {
         display: inline-flex;
-        border: 1px solid #3a3f4b;
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
         border-radius: 4px;
         overflow: hidden;
         /* A little extra separation from the actions that follow it on the buttons row. */
@@ -1672,19 +1686,19 @@
         vertical-align: middle;
     }
     .viewseg button {
-        background: #21242b;
+        background: var(--vscode-editorWidget-background);
         border: none;
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 12px;
         padding: 4px 10px;
         cursor: pointer;
     }
     .viewseg button:first-child {
-        border-right: 1px solid #3a3f4b;
+        border-right: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
     }
     .viewseg button.active {
-        background: #1d4ed8;
-        color: #fff;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
     }
     /* Tree view: a scrolling outline with the toolbar pinned on top; the inspector,
        source, and issues panels float over it (same affordances as the graph). */
@@ -1693,7 +1707,7 @@
         inset: 0;
         display: flex;
         flex-direction: column;
-        background: #191c21;
+        background: var(--vscode-editor-background);
     }
     /* Shared docked toolbar header for BOTH graph and tree views (see the markup comment). Three stacked
        rows: feedback, buttons, hotkeys - each on its own line. Each row wraps internally on a narrow canvas
@@ -1706,8 +1720,8 @@
         align-items: stretch;
         gap: 16px;
         padding: 6px 8px;
-        background: #15171c;
-        border-bottom: 1px solid #2b303a;
+        background: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+        border-bottom: 1px solid var(--vscode-panel-border);
     }
     /* Left column: beta notice above the button row. */
     .tbleft {
@@ -1717,12 +1731,12 @@
         flex-direction: column;
         gap: 4px;
     }
-    /* Beta notice sits above a separator line, with breathing room, dividing it from the buttons below. The
-       #2b303a rule matches the toolbar's other divider (the keyboard-panel border-left). */
+    /* Beta notice sits above a separator line, with breathing room, dividing it from the buttons below. Uses
+       the same panel-border token as the toolbar's other divider (the keyboard-panel border-left). */
     .tbbeta {
         padding-bottom: 6px;
         margin-bottom: 6px;
-        border-bottom: 1px solid #2b303a;
+        border-bottom: 1px solid var(--vscode-panel-border);
     }
     /* One horizontal line of the toolbar (feedback / buttons); wraps internally when too narrow. */
     .tbrow {
@@ -1736,22 +1750,22 @@
         margin-top: 4px;
     }
     .findinput {
-        background: #15171c;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
         border-radius: 4px;
-        color: #e8eaed;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
         font-size: 12px;
         padding: 4px 8px;
         min-width: 220px;
     }
     .findinput:focus {
         outline: none;
-        border-color: #3b82f6;
+        border-color: var(--vscode-focusBorder);
     }
     /* Match position "3/12" (or "No matches"), fixed-ish width so the nav buttons don't jitter as it changes. */
     .findcount {
         font-size: 11px;
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         min-width: 62px;
         text-align: center;
     }
@@ -1770,19 +1784,19 @@
         flex: 0 0 auto;
         display: flex;
         align-items: center;
-        border-left: 1px solid #2b303a;
+        border-left: 1px solid var(--vscode-panel-border);
         padding-left: 12px;
     }
     /* Beta notice - low-emphasis muted text on its own row. */
     .dlgbeta {
         font-size: 11px;
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
     }
     .dlgbeta a {
-        color: #60a5fa;
+        color: var(--vscode-textLink-foreground);
     }
     .dlgbeta a:hover {
-        color: #93c5fd;
+        color: var(--vscode-textLink-activeForeground);
     }
     /* Tree keyboard reference: muted key -> action pairs laid out in a grid that fills 4 rows then flows into a
        new column (>=2 columns), so the panel stays short instead of one tall single-column stack. Each pair is
@@ -1795,7 +1809,7 @@
         justify-content: start;
         gap: 2px 14px;
         font-size: 10px;
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
     }
     .keyhints > span {
         white-space: nowrap;
@@ -1803,9 +1817,9 @@
     .keyhints kbd {
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 9px;
-        color: #c5c8ce;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
         border-radius: 3px;
         padding: 0 4px;
         margin: 0 1px;
@@ -1814,27 +1828,29 @@
        inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
     .untra {
         flex: 0 0 auto;
-        background: #2a2620;
-        border-bottom: 1px solid #a16207;
-        color: #fbbf24;
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+        border-bottom: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+        /* inputValidation-warningForeground (falls back to plain foreground), not editorWarning-foreground -
+           the latter fails WCAG contrast against this warning background wash in light themes. */
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
         font-size: 11px;
         line-height: 1.4;
         padding: 5px 9px;
     }
     .untra b {
-        color: #fcd34d;
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
     }
     .untra code {
         font-family: var(--vscode-editor-font-family, monospace);
-        color: #e8eaed;
-        background: #15171c;
+        color: var(--vscode-foreground);
+        background: var(--vscode-input-background);
         border-radius: 3px;
         padding: 0 3px;
     }
     .tbsep {
         width: 1px;
         align-self: stretch;
-        background: #3a3f4b;
+        background: var(--vscode-panel-border);
         margin: 2px 4px;
     }
     /* "Auto node names" toggle: a checkbox label sitting beside the toolbar buttons. */
@@ -1843,7 +1859,7 @@
         align-items: center;
         gap: 5px;
         font-size: 12px;
-        color: #cdd3dd;
+        color: var(--vscode-foreground);
         cursor: pointer;
         margin-right: 4px;
         white-space: nowrap;
@@ -1857,7 +1873,7 @@
         overflow: auto;
     }
     .treeempty {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 12px;
         padding: 16px;
     }
@@ -1875,8 +1891,8 @@
         display: flex;
         flex-direction: column;
         padding: 4px;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
     }
@@ -1884,26 +1900,26 @@
         background: none;
         border: none;
         text-align: left;
-        color: #e8eaed;
+        color: var(--vscode-foreground);
         font-size: 12px;
         padding: 5px 10px;
         border-radius: 4px;
         cursor: pointer;
     }
     .ctxitem:hover:not(:disabled) {
-        background: #2b303a;
+        background: var(--vscode-list-hoverBackground);
     }
     .ctxitem:disabled {
         opacity: 0.4;
         cursor: default;
     }
     .ctxitem.del {
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
     }
     /* "Set target" sub-page: a back row above a scrollable list of same-file targets. */
     .ctxitem.back {
-        color: #9aa0a6;
-        border-bottom: 1px solid #3a3f4b;
+        color: var(--vscode-descriptionForeground);
+        border-bottom: 1px solid var(--vscode-panel-border);
         border-radius: 0;
         margin-bottom: 2px;
     }
@@ -1914,11 +1930,14 @@
         overflow-y: auto;
     }
     .ctxnote {
-        color: #fbbf24;
+        color: var(--vscode-editorWarning-foreground);
         font-size: 11px;
         padding: 5px 10px;
     }
-    /* Confirm modal for a delete that would silently redirect inbound transitions to EXIT. */
+    /* Confirm modal for a delete that would silently redirect inbound transitions to EXIT. The backdrop
+       and box-shadow stay a plain black scrim - a dimming overlay/shadow reads correctly on any theme
+       and VS Code exposes no dedicated token for it (the binary editor's popups leave theirs unthemed
+       for the same reason). */
     .modalback {
         position: fixed;
         inset: 0;
@@ -1932,12 +1951,12 @@
         left: 50%;
         transform: translate(-50%, -50%);
         max-width: 320px;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 8px;
         padding: 14px;
         box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-        color: #e8eaed;
+        color: var(--vscode-foreground);
         font-size: 12px;
     }
     .confirmmsg {
@@ -1945,7 +1964,7 @@
         margin-bottom: 12px;
     }
     .confirmmsg b {
-        color: #fcd34d;
+        color: var(--vscode-editorWarning-foreground);
     }
     .confirmbtns {
         display: flex;
@@ -1953,91 +1972,105 @@
         gap: 8px;
     }
     .confirmdel {
-        color: #fca5a5;
-        border-color: #7f1d1d;
+        color: var(--vscode-errorForeground);
+        border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
     }
     .confirmok {
-        color: #a7f3d0;
-        border-color: #14532d;
+        color: var(--vscode-charts-green);
+        border-color: var(--vscode-charts-green);
     }
     /* Name-prompt input + validation error (manual node naming). */
     .namelbl {
         display: block;
         margin-bottom: 6px;
-        color: #b6bdc9;
+        color: var(--vscode-descriptionForeground);
     }
     .nameinput {
         width: 100%;
         box-sizing: border-box;
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 12px;
-        color: #e5e7eb;
-        background: #0b1220;
-        border: 1px solid #3b82f6;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-focusBorder);
         border-radius: 4px;
         padding: 5px 7px;
     }
     .nameerr {
         margin-top: 8px;
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
         line-height: 1.4;
     }
     .toolbtn {
-        background: #2b303a;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-button-secondaryBackground, transparent);
+        border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
         border-radius: 4px;
-        color: #e8eaed;
+        color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
         font-size: 12px;
         padding: 4px 10px;
         cursor: pointer;
         margin-right: 4px;
     }
     .toolbtn.active {
-        background: #1d4ed8;
-        border-color: #3b82f6;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border-color: var(--vscode-focusBorder);
     }
     .toolbtn.warn {
-        color: #fca5a5;
-        border-color: #7f1d1d;
+        color: var(--vscode-errorForeground);
+        border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
     }
-    /* Svelte Flow ships a light theme (white controls/minimap); theme its chrome to
-       the dark editor palette so the controls and minimap aren't blank-white boxes. */
+    /* Svelte Flow ships a light theme (white controls/minimap); theme its chrome via its own exposed
+       --xy-* CSS variables to the editor palette so the controls and minimap track the active VS Code
+       theme instead of rendering as blank-white (or hardcoded-dark) boxes. */
     :global(.svelte-flow__controls) {
-        --xy-controls-button-background-color: #2b303a;
-        --xy-controls-button-background-color-hover: #3a3f4b;
-        --xy-controls-button-color: #e8eaed;
-        --xy-controls-button-color-hover: #ffffff;
-        --xy-controls-button-border-color: #3a3f4b;
+        --xy-controls-button-background-color: var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background));
+        --xy-controls-button-background-color-hover: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+        --xy-controls-button-color: var(--vscode-foreground);
+        --xy-controls-button-color-hover: var(--vscode-foreground);
+        --xy-controls-button-border-color: var(--vscode-panel-border);
     }
     :global(.svelte-flow__minimap) {
-        border: 1px solid #3a3f4b;
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
     }
+    /* Svelte Flow's own "Svelte Flow" attribution chip (bottom-right) ships a hardcoded #999 link on a
+       translucent white pill - legible-ish on a light canvas but low-contrast to invisible on a dark
+       one. Theme its two exposed parts directly (the library has no --xy-attribution-* color var, only
+       a background var - see @xyflow/svelte/dist/style.css). */
+    :global(.svelte-flow__attribution) {
+        background: var(--vscode-editorWidget-background);
+    }
+    :global(.svelte-flow__attribution a) {
+        color: var(--vscode-descriptionForeground);
+    }
     /* Larger, clearly-colored handles so a connection is obviously grabbable: drag a
-       node's right-edge dot onto another node to relink that transition. */
+       node's right-edge dot onto another node to relink that transition. The handle fill colors are
+       deliberately hued (not neutral foreground/background) so a drag target reads at a glance - the
+       closest documented tokens are the chart accents used for the rest of the canvas's semantic color. */
     :global(.svelte-flow__handle) {
         width: 11px;
         height: 11px;
-        border: 1px solid #0b0d10;
+        border: 1px solid var(--vscode-editor-background);
     }
     :global(.svelte-flow__handle-right) {
-        background: #a3e635;
+        background: var(--vscode-charts-green);
     }
     :global(.svelte-flow__handle-left) {
-        background: #38bdf8;
+        background: var(--vscode-charts-blue);
     }
     /* Draggable dot on each edge (at its midpoint): grab it and drop on a node to
        relink that transition. Subtle by default, brightens on hover. */
     :global(.dlg-reconnect-anchor) {
-        background: #f59e0b;
-        border: 1px solid #0b0d10;
+        background: var(--vscode-charts-orange);
+        border: 1px solid var(--vscode-editor-background);
         border-radius: 50%;
         opacity: 0.55;
         cursor: grab;
     }
     :global(.dlg-reconnect-anchor:hover) {
         opacity: 1;
-        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+        box-shadow: 0 0 0 2px var(--vscode-focusBorder);
     }
     .legend {
         display: flex;
@@ -2045,47 +2078,47 @@
            they are a fixed vocabulary, so they must all stay legible rather than hard-cut. */
         flex-wrap: wrap;
         gap: 4px 10px;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
         padding: 3px 8px;
         font-size: 10px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .lg {
-        border-left: 8px solid #64748b;
+        border-left: 8px solid var(--vscode-descriptionForeground);
         padding-left: 5px;
     }
     .lg.player {
-        border-color: #a3e635;
+        border-color: var(--vscode-charts-green);
     }
     .lg.continue {
-        border-color: #64748b;
+        border-color: var(--vscode-descriptionForeground);
         /* Continue edges render dashed in the graph; show that in the key so the style is documented. */
         border-left-style: dashed;
     }
     .lg.exit {
-        border-color: #ef4444;
+        border-color: var(--vscode-errorForeground);
     }
     .lg.external {
-        border-color: #f59e0b;
+        border-color: var(--vscode-editorWarning-foreground);
     }
     .issues {
         width: 100%;
         box-sizing: border-box;
         max-height: 30vh;
         overflow: auto;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
         padding: 6px 8px;
         font-size: 11px;
     }
     .issues .ok {
-        color: #a3e635;
+        color: var(--vscode-charts-green);
     }
     .issues .issue {
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
         font-family: monospace;
         font-size: 10px;
         padding: 1px 0;
@@ -2096,11 +2129,11 @@
         max-height: 40vh;
         overflow: auto;
         margin: 0;
-        background: #15171c;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
         padding: 8px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
         font-family: monospace;
         font-size: 10px;
         line-height: 1.4;

@@ -175,14 +175,19 @@ check("navigating to a match inside a collapsed subtree reveals it (row is in th
 // --- 6. Tree-render invariant: node ids stay DIMMED, incl. the editable <button> variant -----------------
 // A CSS-specificity regression left `.nodeid.nodeidbtn { color: inherit }` pulling the row's bright text, so
 // every editable node id rendered undimmed. SSR can't compute styles, so this needs the browser; the D model
-// renders editable nodes (nodeidbtn buttons). Assert the computed colour is the dim #5b6472 = rgb(91,100,114).
+// renders editable nodes (nodeidbtn buttons). Assert the computed colour is --vscode-descriptionForeground
+// (the muted/dim role), not --vscode-foreground (the bright row text) - pinned to the harness's Dark+
+// fallback (theme-vars.ts) rather than a raw hex, so this stays correct if that palette is retuned.
 const idColors = await page.evaluate(() =>
     [...document.querySelectorAll(".nodeid")].slice(0, 5).map((el) => getComputedStyle(el).color),
 );
+const dimColor = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--vscode-descriptionForeground").trim(),
+);
 check(
     "node ids are dimmed (editable button variant included)",
-    idColors.length > 0 && idColors.every((c) => c === "rgb(91, 100, 114)"),
-    `colors=${JSON.stringify(idColors)}`,
+    idColors.length > 0 && idColors.every((c) => c === dimColor),
+    `colors=${JSON.stringify(idColors)} expected=${dimColor}`,
 );
 
 await browser.close();

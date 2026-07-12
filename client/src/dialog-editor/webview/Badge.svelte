@@ -85,38 +85,49 @@
     }
     /* derived = read-only, neutral grey (matches the dashed read-only card). */
     .b-derived {
-        color: #cbd5e1;
-        background: #374151;
-        border-color: #4b5563;
+        color: var(--vscode-descriptionForeground);
+        background: var(--vscode-editorWidget-background);
+        border-color: var(--vscode-panel-border);
     }
-    /* approximate = red, "caution: the shown structure is incomplete" - the strongest honesty warning. */
+    /* approximate = red, "caution: the shown structure is incomplete" - the strongest honesty warning.
+       Uses the same error-validation triad as the rest of the editor's error surfaces (rgba fallback
+       matches the convention already used by the binary editor's diagnostics banner). */
     .b-approx {
-        color: #fca5a5;
-        background: #3a1c1c;
-        border-color: #b91c1c;
+        color: var(--vscode-errorForeground);
+        background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 28, 0.15));
+        border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
     }
     /* unresolved external = amber, "edge leaves the known world". */
     .b-ext {
-        color: #fcd34d;
-        background: #3a2f17;
-        border-color: #a16207;
+        /* inputValidation-warningForeground (falls back to plain foreground), not editorWarning-foreground -
+           the latter is tuned for squiggles/icons and fails WCAG contrast against the warning background
+           wash in light themes (verified: ~2.8:1, below the 4.5:1 text floor). */
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+        border-color: var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
     }
     /* computed/random msgId = blue, "approximate / runtime". */
     .b-computed {
-        color: #93c5fd;
-        background: #1e2a3f;
-        border-color: #3b82f6;
+        color: var(--vscode-editorInfo-foreground);
+        background: var(--vscode-inputValidation-infoBackground, rgba(0, 122, 204, 0.12));
+        border-color: var(--vscode-inputValidation-infoBorder, var(--vscode-editorInfo-foreground));
     }
-    /* conditional = soft amber, distinct from the harder ext amber. */
+    /* conditional = soft amber, distinct from the harder ext amber in the old fixed palette; VS Code has
+       one amber family, so both now share the warning triad - the badge TEXT ("if" vs "ext?") is what
+       actually distinguishes them (Badge's own contract: text carries the meaning, colour is secondary). */
     .b-cond {
-        color: #fbbf24;
-        background: #2c2616;
-        border-color: #b4801f;
+        /* inputValidation-warningForeground (falls back to plain foreground), not editorWarning-foreground -
+           the latter is tuned for squiggles/icons and fails WCAG contrast against the warning background
+           wash in light themes (verified: ~2.8:1, below the 4.5:1 text floor). */
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+        border-color: var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
     }
-    /* side-effect = teal, "changes state". */
+    /* side-effect = teal in the old palette; VS Code has no dedicated teal token, so this reuses
+       charts.purple - the same "affects game state" hue as the action [do] chip and the low-INT chip. */
     .b-fx {
-        color: #5eead4;
-        background: #142a28;
-        border-color: #0d9488;
+        color: var(--vscode-charts-purple);
+        background: var(--vscode-editorWidget-background);
+        border-color: var(--vscode-charts-purple);
     }
 </style>

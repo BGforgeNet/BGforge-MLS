@@ -10,12 +10,14 @@
 {#if lowIq}<span class="iq" title="Low-INT only: shown to a low-intelligence PC (a *LowOption macro)">INT-</span>{/if}
 
 <style>
-    /* Low-INT-only option marker: purple, distinct from every reaction color. */
+    /* Low-INT-only option marker: purple, distinct from every reaction color. `charts-purple` is the
+       closest documented VS Code token for a semantic hue outside error/warning/info; there is no
+       matching purple background token, so the surrounding widget background stands in. */
     .iq {
         flex: 0 0 auto;
-        color: #d8b4fe;
-        background: #241730;
-        border: 1px solid #7e22ce;
+        color: var(--vscode-charts-purple);
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-charts-purple);
         border-radius: 3px;
         padding: 0 3px;
         font-size: 8px;

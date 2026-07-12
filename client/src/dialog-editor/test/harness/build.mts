@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { DARK_THEME_VARS } from "./theme-vars";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../../../..");
@@ -33,11 +34,18 @@ const flowCss = fs.readFileSync(path.join(repo, "client/node_modules/@xyflow/sve
 const NONCE = "dlgharnessnonce";
 const csp =
     `default-src 'none'; img-src data:; font-src data:; ` + `style-src 'unsafe-inline'; script-src 'nonce-${NONCE}';`;
+// The dialog editor's styles consume --vscode-* theme variables (see theme-vars.ts); the real VS Code
+// webview injects these from the active color theme, so the harness needs its own fallback block or
+// every themed color renders unset. Dark+ is the baked-in default here (matching the pre-theming
+// visual baseline); a driver that wants the light palette overrides it with page.addStyleTag() after
+// load - see render-theme-compare.mts.
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="${csp}" />
 <style>
-  html,body{margin:0;background:#191c21;}
+  html,body{margin:0;}
+  ${DARK_THEME_VARS}
+  body{background:var(--vscode-editor-background);}
   ${flowCss}
 </style></head>
 <body><div id="app"></div><script nonce="${NONCE}">${js}</script></body></html>`;

@@ -796,7 +796,7 @@
 <style>
     .tree {
         font-size: 12px;
-        color: #e8eaed;
+        color: var(--vscode-foreground);
         padding: 8px 8px 40px;
         user-select: none;
     }
@@ -820,27 +820,28 @@
         border: 1px solid transparent;
     }
     .st:hover {
-        background: #20242c;
+        background: var(--vscode-list-hoverBackground);
     }
     .st.sel {
-        background: #1f2a44;
-        border-color: #3b82f6;
+        background: var(--vscode-list-activeSelectionBackground);
+        border-color: var(--vscode-focusBorder);
     }
+    /* Conversation start node: same green accent as the graph card's "start" marker. */
     .st.entry .who {
-        color: #5eead4;
+        color: var(--vscode-charts-green);
     }
     .st.derived {
         opacity: 0.92;
     }
     .st.derived .who {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
     }
     /* Unsaved-draft cue: an item in the webview's optimistic model that is not yet in the source parse - a
        just-added node/option before the reparse adopts it, or an empty option awaiting its text. A 2px amber
        left-accent marks it as unsaved without the alarm of red; the row title explains it. */
     .st.pending,
     .rep.pending {
-        box-shadow: inset 2px 0 0 #d97706;
+        box-shadow: inset 2px 0 0 var(--vscode-editorWarning-foreground);
     }
     .rep {
         padding-left: calc(var(--lvl) * 14px + 8px);
@@ -852,10 +853,10 @@
         cursor: pointer;
     }
     .reprow:hover {
-        background: #20242c;
+        background: var(--vscode-list-hoverBackground);
     }
     .reprow:focus-visible {
-        outline: 1px solid #3b82f6;
+        outline: 1px solid var(--vscode-focusBorder);
         outline-offset: -1px;
         border-radius: 4px;
     }
@@ -864,39 +865,42 @@
     /* Highlighted if/else branch: clicking a branch line accents that branch's whole run - its opening line
        and every option under it (nested sub-branches included) - with a faint tint and a left bar, so the
        picked branch reads as a group. Placed BEFORE .repsel so a selected option's stronger fill wins on its
-       own row. */
+       own row. list-inactiveSelectionBackground is VS Code's own "selected but not the active focus" wash,
+       which fits a highlighted-but-not-selected branch; the left bar reuses focusBorder solid (no alpha
+       needed at 2px). */
     .brep.branchhl,
     .rep.branchhl {
-        background: rgba(59, 130, 246, 0.1);
+        background: var(--vscode-list-inactiveSelectionBackground);
         border-radius: 4px;
-        box-shadow: inset 2px 0 0 rgba(96, 165, 250, 0.7);
+        box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
     }
     .rep.repsel {
-        background: #1f2a44;
+        background: var(--vscode-list-activeSelectionBackground);
         border-radius: 4px;
-        box-shadow: inset 2px 0 0 #3b82f6;
+        box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
     }
     /* Find-bar matches: every hit gets a faint amber wash, and the current match adds a solid amber outline
        (a deliberately different hue from the blue selection/branch highlight, so a find result never reads as
        a normal selection). Placed after the selection/branch rules so the current match's find colour wins
-       over its selection fill; the outline is a separate property, so it composes with any box-shadow accent. */
+       over its selection fill; the outline is a separate property, so it composes with any box-shadow accent.
+       Reuses the warning-validation wash/foreground - VS Code has one amber family, not a separate "find" hue. */
     .st.searchhit,
     .rep.searchhit,
     .brep.searchhit {
-        background: rgba(250, 204, 21, 0.14);
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
         border-radius: 4px;
     }
     .st.searchcurrent,
     .rep.searchcurrent,
     .brep.searchcurrent {
-        outline: 1px solid #facc15;
+        outline: 1px solid var(--vscode-editorWarning-foreground);
         outline-offset: -1px;
         border-radius: 4px;
     }
     .caret {
         background: none;
         border: none;
-        color: #94a3b8;
+        color: var(--vscode-descriptionForeground);
         cursor: pointer;
         font-size: 10px;
         padding: 0;
@@ -908,12 +912,12 @@
         transform: rotate(0deg);
     }
     .caret.leafdot {
-        color: #475569;
+        color: var(--vscode-descriptionForeground);
         cursor: default;
         transform: none;
     }
     .who {
-        color: #22d3ee;
+        color: var(--vscode-textLink-foreground);
         font-weight: 700;
         font-size: 10px;
         white-space: nowrap;
@@ -922,7 +926,7 @@
        dialogue text. Repeats down the tree, so it must stay visually quiet - muted like the "(no line)"
        placeholder, not the brighter dialogue blue. */
     .nodeid {
-        color: #5b6472;
+        color: var(--vscode-descriptionForeground);
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 10px;
         white-space: nowrap;
@@ -938,22 +942,22 @@
         padding: 0;
         margin: 0;
         font: inherit;
-        color: #5b6472;
+        color: var(--vscode-descriptionForeground);
         cursor: pointer;
     }
     .nodeid.nodeidbtn:hover {
-        color: #93a4bd;
+        color: var(--vscode-foreground);
         text-decoration: underline;
         text-underline-offset: 2px;
     }
-    /* Inline rename input: fills the id slot, blue-bordered to signal active editing (mirrors the NPC-line
+    /* Inline rename input: fills the id slot, focus-bordered to signal active editing (mirrors the NPC-line
        edit's .lineedit). Monospace like the label it replaces. */
     .nodeid.nameedit {
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 10px;
-        color: #e5e7eb;
-        background: #0b1220;
-        border: 1px solid #3b82f6;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-focusBorder);
         border-radius: 2px;
         padding: 0 3px;
         margin: -1px 0;
@@ -961,7 +965,7 @@
         max-width: 200px;
     }
     .line {
-        color: #93c5fd;
+        color: var(--vscode-charts-blue);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -969,7 +973,7 @@
     /* Fork hint on an if/else node's row: it has no single line - its two branch lines below (each [if]/[else]
        gated) are its forms. Muted + italic so it reads as a structural marker, not dialogue. */
     .line.forkhint {
-        color: #5b6472;
+        color: var(--vscode-descriptionForeground);
         font-style: italic;
         font-size: 10px;
     }
@@ -981,7 +985,7 @@
         padding: 0;
         margin: 0;
         font: inherit;
-        color: #93c5fd;
+        color: var(--vscode-charts-blue);
         text-align: left;
         cursor: pointer;
         min-width: 0;
@@ -992,11 +996,11 @@
         text-underline-offset: 2px;
     }
     .line.linebtn:focus-visible {
-        outline: 1px solid #3b82f6;
+        outline: 1px solid var(--vscode-focusBorder);
         outline-offset: 1px;
         border-radius: 2px;
     }
-    /* Inline NPC-line edit input: fills the line slot, blue-bordered to signal active editing (mirrors the
+    /* Inline NPC-line edit input: fills the line slot, focus-bordered to signal active editing (mirrors the
        option edit's .rtextedit). Overrides .line's dimmed blue text and ellipsis clipping. */
     .line.lineedit {
         flex: 1 1 auto;
@@ -1005,9 +1009,9 @@
         margin: -1px 0;
         padding: 0 4px;
         font: inherit;
-        color: #e8eaed;
-        background: #0f1420;
-        border: 1px solid #3b82f6;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-focusBorder);
         border-radius: 3px;
         outline: none;
     }
@@ -1020,7 +1024,7 @@
         line-height: 1.4;
     }
     .rmark {
-        color: #475569;
+        color: var(--vscode-descriptionForeground);
     }
     /* Continuation lines of a multisay monologue: muted, italic, and indented under the node's first SAY line so
        the sequence reads as one NPC speaking several lines (not truncated to the first). Display-only in the tree
@@ -1032,7 +1036,7 @@
         line-height: 1.35;
     }
     .saymore {
-        color: #94a3b8;
+        color: var(--vscode-descriptionForeground);
         font-style: italic;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1042,13 +1046,13 @@
     /* Option text. min-width:0 lets it shrink and ellipsize inside the flex row; the row itself (.reprow) is
        the focusable selection target now, not this span. */
     .rtext {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
     }
-    /* Inline edit input: fills the option-text slot, blue-bordered to signal active editing. Negative
+    /* Inline edit input: fills the option-text slot, focus-bordered to signal active editing. Negative
        vertical margin keeps the row height unchanged when the text swaps to the input. */
     .rtextedit {
         flex: 1 1 auto;
@@ -1057,34 +1061,34 @@
         margin: -1px 0;
         padding: 0 4px;
         font: inherit;
-        color: #e8eaed;
-        background: #0f1420;
-        border: 1px solid #3b82f6;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-focusBorder);
         border-radius: 3px;
         outline: none;
     }
     .rtext.silent {
-        color: #64748b;
+        color: var(--vscode-descriptionForeground);
         font-style: italic;
     }
     /* Reaction text color mirrors the graph card (good green, bad red, neutral quiet) so the same
        reply reads the same way in both views. `.silent` (a continue, no reaction) still wins above. */
     .rtext.r-good {
-        color: #86efac;
+        color: var(--vscode-charts-green);
     }
     .rtext.r-bad {
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
     }
     .rtext.r-neutral {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .cond,
     .rcond {
-        color: #f59e0b;
+        color: var(--vscode-editorWarning-foreground);
         font-size: 9px;
     }
     .ract {
-        color: #c084fc;
+        color: var(--vscode-charts-purple);
         font-size: 9px;
     }
     .lf {
@@ -1094,17 +1098,17 @@
         white-space: nowrap;
     }
     .lf.exit {
-        color: #fca5a5;
-        border: 1px solid #7f1d1d;
+        color: var(--vscode-errorForeground);
+        border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
     }
     .lf.combat {
-        color: #fecaca;
-        border: 1px solid #b91c1c;
-        background: #3b1515;
+        color: var(--vscode-errorForeground);
+        border: 1px solid var(--vscode-errorForeground);
+        background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 28, 0.15));
     }
     span.lf.ext {
-        color: #fbbf24;
-        border: 1px dashed #a16207;
+        color: var(--vscode-editorWarning-foreground);
+        border: 1px dashed var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
     }
     button.lf {
         background: none;
@@ -1112,22 +1116,24 @@
         font-family: inherit;
     }
     button.lf.ref {
-        color: #93c5fd;
-        border: 1px solid #1e3a5f;
+        color: var(--vscode-charts-blue);
+        border: 1px solid var(--vscode-panel-border);
     }
     /* First-expansion target label: muted (the destination node is expanded right below, so this is an
        orientation aid, not the primary way to reach it - keep it quieter than a ref/jump leaf). */
     button.lf.tgt {
-        color: #7c8698;
-        border: 1px solid #2b303a;
+        color: var(--vscode-descriptionForeground);
+        border: 1px solid var(--vscode-panel-border);
     }
     button.lf.tgt:hover {
-        color: #aab6c8;
+        color: var(--vscode-foreground);
     }
     button.lf.jump {
-        color: #fcd34d;
-        border: 1px solid #a16207;
-        background: #33291a;
+        /* inputValidation-warningForeground (falls back to plain foreground), not editorWarning-foreground -
+           the latter fails WCAG contrast against this warning background wash in light themes. */
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+        border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
     }
     button.lf.ref:hover,
     button.lf.jump:hover {
@@ -1143,9 +1149,9 @@
     }
     .addbtn {
         background: none;
-        border: 1px dashed #3a4152;
+        border: 1px dashed var(--vscode-input-border, var(--vscode-panel-border));
         border-radius: 4px;
-        color: #64748b;
+        color: var(--vscode-descriptionForeground);
         cursor: pointer;
         font-family: inherit;
         font-size: 10px;
@@ -1153,17 +1159,20 @@
         padding: 0 8px;
     }
     .addbtn:hover {
-        border-color: #4b5563;
-        color: #93a2b8;
-        background: #20242c;
+        border-color: var(--vscode-panel-border);
+        color: var(--vscode-foreground);
+        background: var(--vscode-list-hoverBackground);
     }
     /* Inline remove: hidden until the option row is hovered (or the button is focused for keyboard use). Sits
        inline at the end of the row's content (left-aligned, right after the target), not pushed to the far
-       right. Disabled (conditional SSL option) reads dim and non-interactive. */
+       right. Disabled (conditional SSL option) reads dim and non-interactive. Quiet-until-hover is now carried
+       by opacity rather than a second, darker red shade - VS Code exposes one error-foreground token, not the
+       two-tone red the old fixed palette had. */
     .delopt {
         background: none;
         border: none;
-        color: #b45; /* muted red, quiet until hover */
+        color: var(--vscode-errorForeground);
+        opacity: 0.75;
         cursor: pointer;
         font-size: 11px;
         line-height: 1;
@@ -1175,10 +1184,11 @@
         visibility: visible;
     }
     .delopt:hover:not(:disabled) {
-        color: #fca5a5;
+        opacity: 1;
     }
     .delopt:disabled {
-        color: #6b7280;
+        color: var(--vscode-descriptionForeground);
+        opacity: 1;
         cursor: default;
     }
     /* Node add-child ("+") / delete ("-"): hover-revealed at the right of a state row, mirroring the
@@ -1202,19 +1212,21 @@
         padding: 0 3px;
     }
     .addnode {
-        color: #86efac; /* green: additive */
+        color: var(--vscode-charts-green); /* green: additive */
     }
     .addnode:hover {
-        color: #bbf7d0;
+        opacity: 0.8;
     }
     .delnode {
-        color: #b45; /* muted red, matches the option remove */
+        color: var(--vscode-errorForeground); /* matches the option remove */
+        opacity: 0.75;
     }
     .delnode:hover:not(:disabled) {
-        color: #fca5a5;
+        opacity: 1;
     }
     .delnode:disabled {
-        color: #6b7280;
+        color: var(--vscode-descriptionForeground);
+        opacity: 1;
         cursor: default;
     }
 </style>

@@ -639,21 +639,21 @@
            floating over it. */
         width: 100%;
         box-sizing: border-box;
-        background: #21242b;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
         border-radius: 6px;
         padding: 8px;
         font-size: 11px;
-        color: #e8eaed;
+        color: var(--vscode-foreground);
     }
     .ih {
-        color: #22d3ee;
+        color: var(--vscode-textLink-foreground);
         font-weight: 700;
         font-size: 11px;
         margin-bottom: 6px;
     }
     /* Breadcrumb header for the focused-option view: the owner-state crumb (a button that returns to the
-       whole-state editor) + a separator + the current option. The crumb reuses the .ih cyan heading. */
+       whole-state editor) + a separator + the current option. The crumb reuses the .ih heading accent. */
     .crumbs {
         display: flex;
         align-items: baseline;
@@ -665,7 +665,7 @@
         padding: 0;
         font: inherit;
         font-weight: 700;
-        color: #22d3ee;
+        color: var(--vscode-textLink-foreground);
         cursor: pointer;
     }
     .crumb:hover {
@@ -673,24 +673,26 @@
         text-underline-offset: 2px;
     }
     .crumbsep {
-        color: #64748b;
+        color: var(--vscode-descriptionForeground);
     }
     .crumbcur {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-weight: 600;
     }
     .ronote {
-        background: #2a2620;
-        border: 1px solid #a16207;
+        background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+        border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
         border-radius: 4px;
-        color: #fbbf24;
+        /* inputValidation-warningForeground (falls back to plain foreground), not editorWarning-foreground -
+           the latter fails WCAG contrast against this warning background wash in light themes. */
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
         font-size: 10px;
         line-height: 1.35;
         padding: 5px 7px;
         margin-bottom: 6px;
     }
     .ronote b {
-        color: #fcd34d;
+        color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
     }
     /* Disabled fields (read-only SSL: target dropdown, reaction, state id, ...) get the same dashed border as
        the locked condition field below - the 0.55 dimming alone is too subtle to read as "not editable" (a
@@ -699,10 +701,10 @@
         opacity: 0.55;
         cursor: not-allowed;
         border-style: dashed;
-        border-color: #6b7280;
+        border-color: var(--vscode-panel-border);
     }
     .ik {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 9px;
         text-transform: uppercase;
         margin-top: 8px;
@@ -711,11 +713,11 @@
     .iv {
         width: 100%;
         box-sizing: border-box;
-        background: #15171c;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
         border-radius: 4px;
         padding: 3px 6px;
-        color: #e8eaed;
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
         font-family: inherit;
         font-size: 11px;
     }
@@ -726,7 +728,7 @@
         overflow: hidden;
     }
     .iv.code {
-        color: #f59e0b;
+        color: var(--vscode-editorWarning-foreground);
         font-family: monospace;
         font-size: 10px;
     }
@@ -741,8 +743,8 @@
         flex: 0 0 64px;
     }
     .trow {
-        border: 1px solid #313846;
-        border-left: 3px solid #64748b;
+        border: 1px solid var(--vscode-panel-border);
+        border-left: 3px solid var(--vscode-descriptionForeground);
         border-radius: 4px;
         padding: 4px 6px;
         margin-top: 4px;
@@ -750,11 +752,11 @@
         flex-direction: column;
         gap: 3px;
     }
-    /* The option selected from the tree: blue left accent + faint fill, matching the tree row's blue
+    /* The option selected from the tree: focus-accented left border + faint fill, matching the tree row's
        selection, so the same option reads as selected in both panels. */
     .trow.choicesel {
-        border-left-color: #3b82f6;
-        background: #18202f;
+        border-left-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-inactiveSelectionBackground);
     }
     .trhead {
         display: flex;
@@ -762,16 +764,16 @@
         align-items: center;
     }
     .tnum {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 9px;
     }
     .trbtns button,
     .add,
     .stateops button {
-        background: #2b303a;
-        border: 1px solid #3a3f4b;
+        background: var(--vscode-button-secondaryBackground, transparent);
+        border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
         border-radius: 3px;
-        color: #cbd5e1;
+        color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
         font-size: 10px;
         cursor: pointer;
         padding: 1px 5px;
@@ -792,7 +794,7 @@
     /* Reverse-reference rows (find-callers). A referencing option/call is a clickable row that navigates to
        it; an entry row is static. Neutral grey accent for a normal ref, amber for an external entry. */
     .refnote {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 10px;
         font-style: italic;
         padding: 2px 0;
@@ -806,11 +808,11 @@
         display: block;
         width: 100%;
         text-align: left;
-        background: #21242b;
-        border: 1px solid #2b303a;
-        border-left: 3px solid #64748b;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-panel-border);
+        border-left: 3px solid var(--vscode-descriptionForeground);
         border-radius: 3px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
         font-size: 10px;
         padding: 3px 6px;
         cursor: pointer;
@@ -819,24 +821,24 @@
         white-space: nowrap;
     }
     .ref:hover {
-        border-color: #3b82f6;
-        color: #fff;
+        border-color: var(--vscode-focusBorder);
+        color: var(--vscode-foreground);
     }
     .ref.static {
         cursor: default;
-        color: #9aa0a6;
-        border-left-color: #f59e0b;
+        color: var(--vscode-descriptionForeground);
+        border-left-color: var(--vscode-editorWarning-foreground);
     }
-    /* NPC line = blue (blue-300), matching the graph card and tree; player option text = neutral grey
-       (slate-300), overridden to green/red by the per-option reaction chip. */
+    /* NPC line = blue (charts-blue), matching the graph card and tree; player option text = the default
+       foreground, overridden to green/red by the per-option reaction chip. */
     .iv.npc {
-        color: #93c5fd;
+        color: var(--vscode-charts-blue);
     }
     .iv.reply {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .iv.cond {
-        color: #f59e0b;
+        color: var(--vscode-editorWarning-foreground);
     }
     /* A read-only SSL condition (a shared if-block, or the node-level one pending write-back):
        a dashed border plus a caption make the locked state legible on its own - the disabled
@@ -844,22 +846,22 @@
        discoverable (a hover-only cue fails to explain why the field cannot be edited). */
     .iv.cond.locked {
         border-style: dashed;
-        border-color: #6b7280;
+        border-color: var(--vscode-panel-border);
     }
     .condnote {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 9px;
         margin-top: 1px;
         padding-left: 2px;
     }
     .condnote b {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .iv.act {
-        color: #c084fc;
+        color: var(--vscode-charts-purple);
     }
     .iv.tgt {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     /* Reaction (N/G/B) + low-INT toggle: one compact row, checkbox pinned to the right
        edge (matches .branchremove's margin-left: auto). */
@@ -871,20 +873,20 @@
         flex-wrap: wrap;
     }
     .rctlbl {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 9px;
         text-transform: uppercase;
     }
     .iv.rct {
         width: auto;
         padding: 2px 4px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .lowlbl {
         display: flex;
         align-items: center;
         gap: 4px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
         font-size: 10px;
         cursor: pointer;
         margin-left: auto;
@@ -892,9 +894,10 @@
     .lowlbl input {
         margin: 0;
     }
-    /* SSL side-effects: teal, matching the side-effect badge. Read-only, so a plain box. */
+    /* SSL side-effects: matches the header accent, distinct from the amber/purple/blue code fields around it.
+       Read-only, so a plain box. */
     .iv.sfx {
-        color: #22d3ee;
+        color: var(--vscode-textLink-foreground);
         font-family: monospace;
         font-size: 10px;
         word-break: break-word;
@@ -909,19 +912,19 @@
         padding: 4px;
     }
     .del {
-        color: #fca5a5;
-        border-color: #7f1d1d;
+        color: var(--vscode-errorForeground);
+        border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
     }
     .branch {
-        border: 1px solid #3a3f44;
-        border-left: 3px solid #5a6270;
+        border: 1px solid var(--vscode-panel-border);
+        border-left: 3px solid var(--vscode-descriptionForeground);
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--vscode-editorWidget-background);
         margin: 8px 0;
         padding: 4px 7px 7px;
     }
     .branchhead {
-        color: #b9c0c8;
+        color: var(--vscode-descriptionForeground);
         font-size: 10px;
         font-weight: 600;
         font-style: italic;
@@ -930,7 +933,7 @@
         align-items: center;
     }
     .branchlabel {
-        color: #b9c0c8;
+        color: var(--vscode-descriptionForeground);
         font-size: 10px;
         font-style: italic;
         margin-right: 4px;
@@ -945,23 +948,23 @@
         margin-top: 2px;
     }
     .branchreply {
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
         font-size: 11px;
         margin: 1px 0 4px;
     }
     /* Read-only branch sections for a STRUCTURED node (inspectorBranches): reuse .branch chrome; the section
-       for the branch clicked in the tree (highlightedBranchKey) gets a blue accent + tint so it matches the
+       for the branch clicked in the tree (highlightedBranchKey) gets a focus accent + tint so it matches the
        tree's branch highlight. */
     .binspbranch.branchhl {
-        border-left-color: #60a5fa;
-        background: rgba(59, 130, 246, 0.1);
+        border-left-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-inactiveSelectionBackground);
     }
     .binspcond {
         width: auto;
         min-width: 55%;
         font-size: 10px;
         padding: 1px 4px;
-        color: #cbd5e1;
+        color: var(--vscode-foreground);
     }
     .binsprow {
         display: flex;
@@ -970,14 +973,14 @@
         gap: 6px;
         margin: 3px 0;
         padding-left: 6px;
-        border-left: 1px solid #2b303a;
+        border-left: 1px solid var(--vscode-panel-border);
     }
     .binsptext {
-        color: #d1d5db;
+        color: var(--vscode-foreground);
         font-size: 11px;
     }
     .binsptgt {
-        color: #93c5fd;
+        color: var(--vscode-charts-blue);
         font-size: 10px;
         white-space: nowrap;
     }
@@ -985,21 +988,23 @@
         flex-basis: 100%;
         width: auto;
         font-size: 9px;
-        color: #7c8798;
+        color: var(--vscode-descriptionForeground);
         padding: 0 4px;
         margin-left: 6px;
     }
     .logic {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 10px;
         margin-top: 2px;
     }
     .logic summary {
         cursor: pointer;
     }
+    /* Raw side-effect source lines: same "affects game state" purple as the action [do] chip and the
+       side-effect badge (Badge.svelte .b-fx), since there is no dedicated VS Code token for this hue. */
     .logicline {
         margin: 1px 0;
-        color: #c08;
+        color: var(--vscode-charts-purple);
         font-family: var(--vscode-editor-font-family, monospace);
         white-space: pre-wrap;
     }
@@ -1010,10 +1015,10 @@
     /* Remove-branch button: compact destructive action pinned to the right of the branch head.
        Disabled (not hidden) when the branch has side-effects that cannot be spliced out safely. */
     .branchremove {
-        background: #2b303a;
-        border: 1px solid #7f1d1d;
+        background: var(--vscode-button-secondaryBackground, transparent);
+        border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
         border-radius: 3px;
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
         font-size: 9px;
         cursor: pointer;
         padding: 1px 5px;

@@ -5,6 +5,7 @@
 ### Dialog editor
 
 - New interactive Dialog Editor for D, TD, SSL, TSSL dialogue.
+- The Dialog Editor now follows the active VS Code color theme, including light themes.
 
 ### Translations
 

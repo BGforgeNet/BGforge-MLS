@@ -59,12 +59,12 @@
 
 <style>
     .empty {
-        color: #9aa0a6;
+        color: var(--vscode-descriptionForeground);
         font-size: 12px;
         padding: 16px;
     }
     .empty.err {
-        color: #fca5a5;
+        color: var(--vscode-errorForeground);
         max-width: 480px;
         line-height: 1.5;
     }
