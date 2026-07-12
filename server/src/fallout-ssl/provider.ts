@@ -373,7 +373,13 @@ class FalloutSslProvider
             conlog("Fallout SSL provider not initialized, cannot compile");
             return;
         }
-        await falloutCompile(uri, this.storedContext.settings.falloutSSL, interactive, text);
+        await falloutCompile(
+            uri,
+            this.storedContext.settings.falloutSSL,
+            interactive,
+            text,
+            this.storedContext.settings.debug,
+        );
     }
 }
 

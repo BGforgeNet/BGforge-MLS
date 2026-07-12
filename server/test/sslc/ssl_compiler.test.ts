@@ -8,10 +8,14 @@ import { EventEmitter } from "events";
 import fs from "node:fs";
 
 const mockShowWarning = vi.fn();
+// A persistent spy, unlike a fresh `vi.fn()` returned from the factory below on
+// every getConnection() call - console.log calls from separate ssl_compile()
+// invocations must land on the same mock to be observable by a test.
+const mockConsoleLog = vi.fn();
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: (...args: unknown[]) => mockConsoleLog(...args), warn: vi.fn(), error: vi.fn() },
         window: {
             showWarningMessage: (...args: unknown[]) => mockShowWarning(...args),
         },
@@ -108,6 +112,31 @@ describe("ssl_compile", () => {
 
             const result = await promise;
             expect(result.returnCode).toBe(1);
+        });
+    });
+
+    describe("debug dump gating", () => {
+        it("does not log the compile payload when debug is unset", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile(baseOpts);
+            proc.emit("close", 0);
+            await promise;
+
+            expect(mockConsoleLog).not.toHaveBeenCalled();
+        });
+
+        it("logs the compile payload when debug is true", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, debug: true });
+            proc.emit("close", 0);
+            await promise;
+
+            expect(mockConsoleLog).toHaveBeenCalledTimes(1);
+            expect(mockConsoleLog.mock.calls[0]?.[0]).toEqual(expect.stringContaining("Built-in compiler:"));
         });
     });
 

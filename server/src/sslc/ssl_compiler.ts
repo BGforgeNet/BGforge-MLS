@@ -26,6 +26,8 @@ export async function ssl_compile(opts: {
     /** Wall-clock timeout in ms. Defaults to 60 000 ms. On expiry the child is
      *  killed and the function resolves with returnCode 1 and a timeout message. */
     timeoutMs?: number;
+    /** Gates the per-compile payload dump on "close" (see below). Defaults to false. */
+    debug?: boolean;
 }) {
     if (!isSslcAvailable()) {
         const msg =
@@ -117,22 +119,28 @@ export async function ssl_compile(opts: {
         });
 
         p.on("close", (code) => {
-            conlog(
-                `Built-in compiler:\n` +
-                    "opts=" +
-                    JSON.stringify(opts) +
-                    "\n" +
-                    "cmdArgs=" +
-                    JSON.stringify(cmdArgs) +
-                    "\n" +
-                    "returnCode=" +
-                    code +
-                    "\n" +
-                    stdout.join("") +
-                    "\n" +
-                    stderr.join("") +
-                    "\n",
-            );
+            // Full-payload dump, gated behind settings.debug like the sibling
+            // provider-side dump (see fallout-ssl/provider.ts resolveSymbol) -
+            // opts/cmdArgs/stdout/stderr are not worth an unconditional info-level
+            // log on every compile.
+            if (opts.debug) {
+                conlog(
+                    `Built-in compiler:\n` +
+                        "opts=" +
+                        JSON.stringify(opts) +
+                        "\n" +
+                        "cmdArgs=" +
+                        JSON.stringify(cmdArgs) +
+                        "\n" +
+                        "returnCode=" +
+                        code +
+                        "\n" +
+                        stdout.join("") +
+                        "\n" +
+                        stderr.join("") +
+                        "\n",
+                );
+            }
             settle({
                 returnCode: code !== null ? code : 1, // If code is null, assume error
                 stdout: stdout.join(""),

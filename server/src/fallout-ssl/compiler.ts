@@ -228,7 +228,13 @@ function getValidationOutputPath(uri: string, base: string) {
     return path.join(tmpDir, `tmp-${uriHash}-${base}.int`);
 }
 
-export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, interactive = false, text: string) {
+export async function compile(
+    uri: NormalizedUri,
+    sslSettings: SSLsettings,
+    interactive = false,
+    text: string,
+    debug = false,
+) {
     const filepath = uriToPath(uri);
     const cwdTo = path.dirname(filepath);
     const tmpPath = path.join(cwdTo, TMP_SSL_NAME);
@@ -297,6 +303,7 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
                     options: sslSettings.compileOptions,
                     headersDir: sslSettings.headersDirectory,
                     signal,
+                    debug,
                 });
                 if (signal.aborted) {
                     return;

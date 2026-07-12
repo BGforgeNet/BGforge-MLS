@@ -6,6 +6,7 @@ import { getServerContext, tryGetServerContext } from "../server-context";
 import { compile } from "../compile";
 import { clearAllDiagnostics } from "../diagnostic-store";
 import { updateTreeSitterDiagnostics } from "../tree-sitter-validation";
+import { timeHandler } from "../shared/time-handler";
 import { handleCompileError } from "./compile-error";
 import {
     type MLSsettings,
@@ -55,100 +56,124 @@ export function clearDocumentSettings(): void {
 }
 
 export function register(ctx: HandlerContext): void {
-    ctx.documents.onDidClose((e) => {
-        documentSettings.delete(normalizeUri(e.document.uri));
-        registry.handleDocumentClosed(e.document.languageId, e.document.uri);
-    });
+    ctx.documents.onDidClose(
+        timeHandler(
+            "onDidClose",
+            (e) => {
+                documentSettings.delete(normalizeUri(e.document.uri));
+                registry.handleDocumentClosed(e.document.languageId, e.document.uri);
+            },
+            ctx.timingOpts,
+        ),
+    );
 
-    ctx.documents.onDidOpen(async (event) => {
-        // Await the context barrier - covers the (now-very-small) window where
-        // onInitialize's async work has not finished yet.
-        const serverCtx = await getServerContext();
+    ctx.documents.onDidOpen(
+        timeHandler(
+            "onDidOpen",
+            async (event) => {
+                // Await the context barrier - covers the (now-very-small) window where
+                // onInitialize's async work has not finished yet.
+                const serverCtx = await getServerContext();
 
-        const uri = event.document.uri;
-        const langId = event.document.languageId;
-        const text = event.document.getText();
+                const uri = event.document.uri;
+                const langId = event.document.languageId;
+                const text = event.document.getText();
 
-        registry.reloadFileData(langId, uri, text);
-        serverCtx.translation.reloadFile(uri, langId, text);
-        serverCtx.translation.reloadConsumer(uri, text, langId);
-    });
+                registry.reloadFileData(langId, uri, text);
+                serverCtx.translation.reloadFile(uri, langId, text);
+                serverCtx.translation.reloadConsumer(uri, text, langId);
+            },
+            ctx.timingOpts,
+        ),
+    );
 
-    ctx.documents.onDidSave(async (change) => {
-        const uri = change.document.uri;
-        const langId = change.document.languageId;
-        const text = change.document.getText();
+    ctx.documents.onDidSave(
+        timeHandler(
+            "onDidSave",
+            async (change) => {
+                const uri = change.document.uri;
+                const langId = change.document.languageId;
+                const text = change.document.getText();
 
-        registry.reloadFileData(langId, uri, text);
+                registry.reloadFileData(langId, uri, text);
 
-        // Header changes can affect semantic tokens in other files
-        // (e.g., @type {resref} annotations define resref highlighting).
-        if (isHeaderFile(uri)) {
-            ctx.connection.languages.semanticTokens.refresh();
-        }
+                // Header changes can affect semantic tokens in other files
+                // (e.g., @type {resref} annotations define resref highlighting).
+                if (isHeaderFile(uri)) {
+                    ctx.connection.languages.semanticTokens.refresh();
+                }
 
-        tryGetServerContext()?.translation.reloadFile(uri, langId, text);
-        tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
+                tryGetServerContext()?.translation.reloadFile(uri, langId, text);
+                tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
 
-        const normUri = normalizeUri(uri);
+                const normUri = normalizeUri(uri);
 
-        // Skip compile for files touched by a recent multi-file rename.
-        if (ctx.renameSuppression.consumeAffected(normUri)) {
-            return;
-        }
+                // Skip compile for files touched by a recent multi-file rename.
+                if (ctx.renameSuppression.consumeAffected(normUri)) {
+                    return;
+                }
 
-        const docSettings = await ctx.getDocumentSettings(uri);
-        // Tree-sitter parse errors are gated only by `diagnostics`, not
-        // `validate` - the parse is in-memory, so it refreshes on every save
-        // regardless of validation mode.
-        if (docSettings.diagnostics) {
-            updateTreeSitterDiagnostics(uri, langId, text);
-        }
-        if (shouldValidateOnSave(docSettings.validate)) {
-            // Cancel any pending debounced compile for this URI - save takes priority
-            // and must not race with a stale onDidChangeContent compilation.
-            ctx.compileDebouncer.cancel(normUri);
-            void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
-        }
-    });
+                const docSettings = await ctx.getDocumentSettings(uri);
+                // Tree-sitter parse errors are gated only by `diagnostics`, not
+                // `validate` - the parse is in-memory, so it refreshes on every save
+                // regardless of validation mode.
+                if (docSettings.diagnostics) {
+                    updateTreeSitterDiagnostics(uri, langId, text);
+                }
+                if (shouldValidateOnSave(docSettings.validate)) {
+                    // Cancel any pending debounced compile for this URI - save takes priority
+                    // and must not race with a stale onDidChangeContent compilation.
+                    ctx.compileDebouncer.cancel(normUri);
+                    void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
+                }
+            },
+            ctx.timingOpts,
+        ),
+    );
 
-    ctx.documents.onDidChangeContent(async (event) => {
-        const uri = event.document.uri;
-        const langId = event.document.languageId;
-        const text = event.document.getText();
-        const normUri = normalizeUri(uri);
+    ctx.documents.onDidChangeContent(
+        timeHandler(
+            "onDidChangeContent",
+            async (event) => {
+                const uri = event.document.uri;
+                const langId = event.document.languageId;
+                const text = event.document.getText();
+                const normUri = normalizeUri(uri);
 
-        // Keep provider data (function index, etc.) and translation data up to date as content changes.
-        // This ensures hover/definition work immediately after edits like rename.
-        // Debounced to avoid excessive reloads during rapid typing.
-        ctx.fileReloadDebouncer.schedule(normUri, () => {
-            registry.reloadFileData(langId, uri, text);
-            tryGetServerContext()?.translation.reloadFile(uri, langId, text);
-            tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
-            if (isHeaderFile(uri)) {
-                ctx.connection.languages.semanticTokens.refresh();
-            }
-        });
+                // Keep provider data (function index, etc.) and translation data up to date as content changes.
+                // This ensures hover/definition work immediately after edits like rename.
+                // Debounced to avoid excessive reloads during rapid typing.
+                ctx.fileReloadDebouncer.schedule(normUri, () => {
+                    registry.reloadFileData(langId, uri, text);
+                    tryGetServerContext()?.translation.reloadFile(uri, langId, text);
+                    tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
+                    if (isHeaderFile(uri)) {
+                        ctx.connection.languages.semanticTokens.refresh();
+                    }
+                });
 
-        // Skip compile for files touched by a recent multi-file rename.
-        if (ctx.renameSuppression.isAffected(normUri)) {
-            return;
-        }
+                // Skip compile for files touched by a recent multi-file rename.
+                if (ctx.renameSuppression.isAffected(normUri)) {
+                    return;
+                }
 
-        // Drop both diagnostic sources so stale marks vanish immediately on edit.
-        clearAllDiagnostics(uri);
+                // Drop both diagnostic sources so stale marks vanish immediately on edit.
+                clearAllDiagnostics(uri);
 
-        const docSettings = await ctx.getDocumentSettings(uri);
-        // Tree-sitter parse is synchronous and cheap (no disk I/O): publish parse
-        // errors on every edit when enabled, independent of `validate`, for instant
-        // feedback ahead of (or instead of) the disk-bound external compiler.
-        if (docSettings.diagnostics) {
-            updateTreeSitterDiagnostics(uri, langId, text);
-        }
-        if (shouldValidateOnChange(docSettings.validate)) {
-            ctx.compileDebouncer.schedule(normUri, () => {
-                void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
-            });
-        }
-    });
+                const docSettings = await ctx.getDocumentSettings(uri);
+                // Tree-sitter parse is synchronous and cheap (no disk I/O): publish parse
+                // errors on every edit when enabled, independent of `validate`, for instant
+                // feedback ahead of (or instead of) the disk-bound external compiler.
+                if (docSettings.diagnostics) {
+                    updateTreeSitterDiagnostics(uri, langId, text);
+                }
+                if (shouldValidateOnChange(docSettings.validate)) {
+                    ctx.compileDebouncer.schedule(normUri, () => {
+                        void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
+                    });
+                }
+            },
+            ctx.timingOpts,
+        ),
+    );
 }
