@@ -25,6 +25,10 @@
 - Fixed: dropped several phantom TP2 keywords the grammar never matched, and corrected highlighting of the real ones.
 - Fixed: the WeiDU D formatter was not idempotent when a `~string~` immediately followed a keyword.
 
+### Transpilers
+
+- Fixed: transpiling a multi-file TSSL/TBAF/TD source (one that uses `import`) needed a separate Node.js install on the system `PATH` and failed on editors that ship their own runtime instead of a `node` binary. The bundler now falls back to the editor's own runtime, the same way the built-in SSL compiler already does.
+
 ### Performance
 
 - Fixed: on large mod workspaces the language server could use excessive memory while indexing at startup. It now skips `node_modules` and dotfile directories and limits how many files it reads at once.
