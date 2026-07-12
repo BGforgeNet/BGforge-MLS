@@ -92,6 +92,9 @@ jobs:
           echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
 
       - name: Generate CycloneDX SBOM
+        # The SBOM is attached to the GitHub Release, so it is only needed on
+        # release-tag builds; skip the ~minute of cyclonedx work on branch/PR pushes.
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           set -euo pipefail
           # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
