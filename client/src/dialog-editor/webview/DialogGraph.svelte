@@ -23,6 +23,7 @@
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { translationHint, unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
+    import { classifyReachability } from "../../../../shared/dialog-reachability";
     import type { DialogActions } from "./dialog-actions";
     import { decideReparse, type ReparseMessage } from "./reparse-decision";
     import { resolveJumpTarget } from "./jump-resolve";
@@ -497,6 +498,13 @@
             return { kind: c.kind, fromStateId: c.fromStateId, label: `${c.fromStateId} (${verb})${text ? ": " + text : ""}` };
         });
     });
+
+    // Reachability class of the selected state - the same honest three-way signal (reachable / external-entry /
+    // orphan) the graph already tags cards with. Recomputed when the model structure changes; looked up per
+    // selection. Lets the inspector's "Referenced by" note tell a real orphan (inbound refs but no path from an
+    // entry) from an entry point that merely has no in-file inbound (WeiDU D top-level states, SSL EXTERN banter).
+    const reachByState = $derived(classifyReachability(editModel));
+    const selectedReachability = $derived(selected ? reachByState.get(selected.id) : undefined);
 
     // Right-click context menu in the tree: structural actions without the
     // select-then-inspector round-trip. A state row offers state actions; a reply row
@@ -1314,7 +1322,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} reachability={selectedReachability} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -1453,13 +1461,16 @@
                     <!-- Svelte Flow applies these via its `style:` directive (a real inline CSS property, not an
                          SVG presentation attribute), so `var(--vscode-*)` resolves correctly here too. maskColor
                          (the dimmed out-of-viewport overlay) needs translucency VS Code has no token for, so it
-                         stays a plain black scrim - same rationale as the modal backdrop below. -->
+                         stays a plain black scrim - same rationale as the modal backdrop below. nodeColor is
+                         charts-blue, NOT focusBorder: focusBorder is a low-saturation grey in many themes, so
+                         the nodes rendered as monochrome dots; charts-blue is a theme-tuned vivid blue (the same
+                         token the edges and node stroke use), restoring the coloured minimap. -->
                     <MiniMap
                         pannable
                         zoomable
                         bgColor="var(--vscode-editorWidget-background)"
                         maskColor="rgba(10, 12, 16, 0.7)"
-                        nodeColor="var(--vscode-focusBorder)"
+                        nodeColor="var(--vscode-charts-blue)"
                         nodeStrokeColor="var(--vscode-charts-blue)"
                     />
                 {/if}

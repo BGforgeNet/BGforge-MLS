@@ -22,6 +22,7 @@
         writeText,
     } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
+    import type { Reachability } from "../../../../shared/dialog-reachability";
     import { autosize } from "./autosize";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
@@ -31,7 +32,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -45,6 +46,10 @@
         sourceName: string | undefined;
         /** Inbound references to this state (who reaches it), resolved to display rows. */
         callers: CallerRow[];
+        /** Reachability class (from classifyReachability): distinguishes a genuine orphan (has inbound refs
+            yet no path from an entry) from an entry point with no in-file inbound (external-entry / the dialog's
+            own start). Drives the "Referenced by" note so a normal WeiDU-D / EXTERN entry is not called dead. */
+        reachability?: Reachability;
         /** Select a state (a caller) - switches tab first if it lives in another dialog. */
         onNavigate: (stateId: string) => void;
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
@@ -593,13 +598,25 @@
 
     <!-- Reverse references (find-callers): what reaches this state - the cross-reference a modder needs
          before editing or renaming a node, which the raw-text workflow does with a project grep. Option/call
-         rows navigate to the referencing state; the entry rows are informational. An empty list means the
-         node is an orphan (nothing reaches it). -->
+         rows navigate to the referencing state; the entry rows are informational. Whether zero references means
+         "orphan" is NOT a raw count: classifyReachability decides it (see the note branches below). -->
     {#if !focusedChoice}
     <div class="ik">Referenced by ({callers.length})</div>
     {#if callers.length === 0}
-        <div class="refnote">Nothing in this file reaches this state (an orphan / unreachable node).</div>
+        <!-- No in-file inbound reference. classifyReachability calls this external-entry (or the dialog's own
+             entry state), never orphan: WeiDU D has no single entry point - every top-level state is engine-
+             enterable - and an SSL banter state is entered by a cross-file EXTERN. A genuine orphan HAS inbound
+             refs (below), so it can never land in this zero-caller branch. Matches the graph card's grey "entry"
+             mark, not the red "dead" one. -->
+        <div class="refnote">No in-file references{reachability === "external-entry"
+            ? " - entered from outside this file (a cross-file EXTERN, the engine, or another mod)"
+            : " - this is a dialog entry point"}, not an orphan.</div>
     {:else}
+        {#if reachability === "orphan"}
+            <!-- Genuinely disconnected: the reference(s) below exist, but no path from any entry point reaches
+                 this state. Matches the graph card's red "dead" mark; this is the real orphan signal. -->
+            <div class="refnote refnote-dead">Unreachable: no path from an entry point reaches this state despite the reference(s) below (a disconnected island).</div>
+        {/if}
         <div class="refs">
             {#each callers as ref, i (i)}
                 {#if ref.fromStateId}
@@ -695,10 +712,15 @@
         color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
     }
     /* Disabled fields (read-only SSL: target dropdown, reaction, state id, ...) get the same dashed border as
-       the locked condition field below - the 0.55 dimming alone is too subtle to read as "not editable" (a
+       the locked condition field below - a muted foreground alone is too subtle to read as "not editable" (a
        disabled <select> otherwise looks like an active dropdown, chevron and all). */
     .iv:disabled {
-        opacity: 0.55;
+        /* Dim via a muted FOREGROUND, not opacity: opacity makes the input's own solid background translucent
+           too, so a coloured row behind it - an explicitly-selected option's `.choicesel` selection wash -
+           bleeds through and washes the text out (fine over the dark panel bg in the list view, low-contrast
+           over the selection bg in the focused view). disabledForeground stays legible on the input background
+           in both themes; the dashed border carries the disabled affordance. */
+        color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
         cursor: not-allowed;
         border-style: dashed;
         border-color: var(--vscode-panel-border);
@@ -798,6 +820,13 @@
         font-size: 10px;
         font-style: italic;
         padding: 2px 0;
+    }
+    /* The real orphan signal - a red, non-italic note matching the graph card's "dead" mark. errorForeground
+       is theme-tuned for legibility on the editor/panel background (no wash here), so it clears contrast. */
+    .refnote-dead {
+        color: var(--vscode-errorForeground);
+        font-style: normal;
+        font-weight: 600;
     }
     .refs {
         display: flex;
