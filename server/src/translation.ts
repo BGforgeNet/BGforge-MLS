@@ -3,327 +3,69 @@
  * Self-contained service that loads translations and provides hover, inlay hints,
  * go-to-definition, and find-references for translation references.
  * Can be used by any consumer (providers, TSSL/TBAF handlers, etc.)
+ *
+ * This is a thin facade over the translation subsystem in `./translation/`: it owns the shared
+ * `TranslationState` (entry map, consumer index) for its lifetime, does the request-guarding
+ * (initialized/language/workspace-subpath checks) that is the same shape across every public
+ * method, and delegates the actual work to the loader / feature / write-back modules.
  */
 
-import * as crypto from "crypto";
-import * as fs from "fs";
-import pLimit from "p-limit";
-import * as path from "path";
 import { fileURLToPath } from "url";
-import * as yaml from "yaml";
-import {
-    type Hover,
-    type InlayHint,
-    type Location,
-    type MarkupContent,
-    type Position,
-    type Range,
-    MarkupKind,
-} from "vscode-languageserver/node";
-import { errorMessage } from "./diagnostics";
+import * as path from "path";
+import { type Hover, type InlayHint, type Location, type Position, type Range } from "vscode-languageserver/node";
 import { conlog } from "./logger";
-import {
-    appendMsgEntries,
-    appendTraEntries,
-    rewriteMsgEntries,
-    rewriteTraEntries,
-    siblingTraCandidates,
-} from "../../shared/dialog-tra-edit";
-import {
-    findFiles,
-    findFilesByExtensions,
-    isDirectory,
-    isSubpathFullyResolved,
-    isSubpathResolved,
-    tryRealpathSync,
-    WORKSPACE_SCAN_CONCURRENCY,
-} from "./path-utils";
-import { pathToUri } from "./uri-utils";
-import {
-    CONSUMER_EXTENSIONS_MSG,
-    CONSUMER_EXTENSIONS_TRA,
-    EXT_TBAF,
-    EXT_TD,
-    EXT_TSSL,
-    LANG_FALLOUT_SSL,
-    LANG_TYPESCRIPT,
-    MSG_LANGUAGES,
-    TRA_LANGUAGES,
-    TRANSLATION_FILE_LANGUAGES,
-} from "./core/languages";
-import {
-    REGEX_MSG_HOVER,
-    REGEX_MSG_INLAY,
-    REGEX_MSG_INLAY_FLOATER_RAND,
-    regexMsgRef,
-    REGEX_TRANSPILER_TRA_HOVER,
-    REGEX_TRANSPILER_TRA_INLAY,
-    REGEX_TRA_COMMENT,
-    REGEX_TRA_COMMENT_EXT,
-    REGEX_TRA_HOVER,
-    REGEX_TRA_INLAY,
-    regexTraRef,
-} from "./core/patterns";
+import { isSubpathFullyResolved, tryRealpathSync } from "./path-utils";
+import { LANG_FALLOUT_SSL, TRANSLATION_FILE_LANGUAGES } from "./core/languages";
 import type { ProjectTraSettings } from "./settings";
+import {
+    addConsumer,
+    buildConsumerIndex,
+    filePathToTraKey,
+    loadDir,
+    removeConsumer,
+    resolveTraDir,
+} from "./translation/loader";
+import { entryAtPosition } from "./translation/entries";
+import {
+    findReferencesInConsumers,
+    generateInlayHints,
+    getTraExt,
+    isTraRef,
+    lookupDefinition,
+    lookupHover,
+    resolveTraFileKey,
+    translatableLanguages,
+} from "./translation/features";
+import {
+    NO_WRITE,
+    reloadFileLines,
+    writeMessages as writeMessagesImpl,
+    type WriteMessagesResult,
+} from "./translation/write-back";
+import { createTranslationState, type TranslationState } from "./translation/state";
 
-interface TraEntry {
-    source: string;
-    hover: Hover;
-    inlay: string;
-    inlayTooltip?: string;
-    /** 0-based line number of this entry in the translation file */
-    line: number;
-    /** 0-based character offset within the line */
-    character: number;
-    /** 0-based end line of the full match (accounts for multiline values) */
-    endLine: number;
-    /** 0-based end character offset within the end line */
-    endCharacter: number;
-}
-
-/** Single file: index => entry */
-interface TraEntries extends Map<string, TraEntry> {}
-/** Relative file: path => entries */
-interface TraData extends Map<string, TraEntries> {}
-
-type TraExt = "msg" | "tra";
+export type { WriteMessagesResult } from "./translation/write-back";
+export { UnsupportedEncodingCharacterError } from "./translation/encoding";
 
 /** Languages that contain translation strings (msg/tra files) */
 const languages = TRANSLATION_FILE_LANGUAGES;
 
-/**
- * Result of `writeMessages`: whether the active `.tra` changed, plus any sibling-language
- * `.tra` files (a `tra/<language>/` layout) that now hold stale, pre-edit text and need
- * updating. `staleSiblingLanguages` is the list of those sibling language directory names.
- */
-export interface WriteMessagesResult {
-    changed: boolean;
-    staleSiblingLanguages: string[];
-}
-const NO_WRITE: WriteMessagesResult = { changed: false, staleSiblingLanguages: [] };
-
-/**
- * Where a from-scratch dialog's translation file is bootstrapped when no tra directory is configured. Fallout
- * SSL (`.msg`) uses the engine's English dialog path; WeiDU D (`.tra`) uses the plain `tra` default (the WeiDU
- * convention, same as the settings default). The editor creates the dir AND records it in `.bgforge.yml`, so the
- * loader (`resolveTraDir` -> `loadDir`) scans it on reopen and hover/inlay/the dialog editor (one path via
- * `getMessages`) all resolve `@N`. A sibling next to the source would not be scanned; these are the working
- * locations. (WeiDU D writes new text inline in the `.d` rather than allocating `@N`, so its `.tra` bootstrap is
- * rarely exercised - see dialog-tra-edit.ts - but the location stays correct when it is.)
- */
-const DEFAULT_SSL_DIALOG_DIR = "data/text/english/dialog";
-const DEFAULT_D_TRA_DIR = "tra";
-
-/** Languages that can have translation references */
-const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ...MSG_LANGUAGES]);
-
-const extensions: Array<TraExt> = ["msg", "tra"];
-
-// =========================================================================
-// File encoding: UTF-8-first read with a windows-1252 fallback, encoding-
-// preserving write, and an atomic (temp-file + rename) write-back.
-// =========================================================================
-
-/** Which decoder successfully read a `.tra`/`.msg` file's bytes. */
-type ResolvedEncoding = "utf-8" | "windows-1252";
-
-const UTF8_STRICT_DECODER = new TextDecoder("utf-8", { fatal: true });
-const WINDOWS_1252_DECODER = new TextDecoder("windows-1252");
-
-/**
- * byte value (0-255) -> character, built by decoding every byte value through the windows-1252
- * decoder once. windows-1252 is a total single-byte mapping - the WHATWG encoding index assigns
- * even its five formally-unused positions (0x81/0x8D/0x8F/0x90/0x9D) to their C1 control code
- * points - so this string covers all 256 byte values with no gaps, and every character is a
- * single BMP code point, so spreading it below stays 1:1 with byte offset.
- */
-const WINDOWS_1252_BYTE_TO_CHAR = WINDOWS_1252_DECODER.decode(Uint8Array.from({ length: 256 }, (_, i) => i));
-
-/** character -> byte value: the reverse of the table above, used to encode text back on save. */
-const WINDOWS_1252_CHAR_TO_BYTE: ReadonlyMap<string, number> = new Map(
-    [...WINDOWS_1252_BYTE_TO_CHAR].map((ch, byte): [string, number] => [ch, byte]),
-);
-
-/**
- * Thrown by `encodeToResolvedEncoding` when saving would drop or corrupt a character the target
- * (non-UTF-8) encoding cannot represent. This is the loud-refusal side of the encoding-preserving
- * write: rather than silently transcoding the whole file to UTF-8 or writing U+FFFD replacement
- * characters, the save is refused and the error propagates to the caller.
- */
-export class UnsupportedEncodingCharacterError extends Error {
-    readonly character: string;
-    readonly encoding: ResolvedEncoding;
-
-    constructor(character: string, encoding: ResolvedEncoding) {
-        super(
-            `Cannot save: character ${JSON.stringify(character)} is not representable in ${encoding}. ` +
-                "Save the file as UTF-8 (or remove the character) to keep this edit.",
-        );
-        this.name = "UnsupportedEncodingCharacterError";
-        this.character = character;
-        this.encoding = encoding;
-    }
-}
-
-/**
- * Decode raw file bytes: strict UTF-8 first, falling back to windows-1252 if the bytes are not
- * valid UTF-8 - most real-world `.tra`/`.msg` files predate UTF-8 and are windows-1252/-1251-class
- * legacy-codepage text. The fallback is a total mapping (see WINDOWS_1252_BYTE_TO_CHAR above) so
- * this never itself throws: every byte sequence decodes to *some* string. A misdetected encoding
- * would only silently corrupt data on WRITE, so refusal happens there instead (see
- * `encodeToResolvedEncoding`), not here.
- */
-function decodeFileBytes(raw: Uint8Array): { text: string; encoding: ResolvedEncoding } {
-    try {
-        return { text: UTF8_STRICT_DECODER.decode(raw), encoding: "utf-8" };
-    } catch {
-        return { text: WINDOWS_1252_DECODER.decode(raw), encoding: "windows-1252" };
-    }
-}
-
-/**
- * Encode text back to the encoding a file was originally read as, so untouched entries round-trip
- * byte-identically on save. Throws `UnsupportedEncodingCharacterError` for a windows-1252 file
- * whose edited text contains a character outside the windows-1252 repertoire - see the class doc.
- */
-function encodeToResolvedEncoding(text: string, encoding: ResolvedEncoding): Buffer {
-    if (encoding === "utf-8") {
-        return Buffer.from(text, "utf8");
-    }
-    const bytes: number[] = [];
-    for (const ch of text) {
-        const byte = WINDOWS_1252_CHAR_TO_BYTE.get(ch);
-        if (byte === undefined) {
-            throw new UnsupportedEncodingCharacterError(ch, encoding);
-        }
-        bytes.push(byte);
-    }
-    return Buffer.from(bytes);
-}
-
-/**
- * Write `data` to `absPath` atomically: write to a temp file in the SAME directory (guaranteeing
- * the same filesystem, so the rename below is atomic) then rename over the destination. A crash or
- * interruption mid-write leaves the original `.tra`/`.msg` - the document of record - untouched
- * instead of truncated; only the temp file can end up half-written.
- */
-function atomicWriteFileSync(absPath: string, data: Uint8Array): void {
-    const dir = path.dirname(absPath);
-    const tempPath = path.join(dir, `.${path.basename(absPath)}.${crypto.randomBytes(6).toString("hex")}.tmp`);
-    fs.writeFileSync(tempPath, data);
-    fs.renameSync(tempPath, absPath);
-}
-
-/** Resolve a path's realpath, returning undefined on failure or missing input. */
-function resolveRealpath(p: string | undefined): string | undefined {
-    if (!p) return undefined;
-    try {
-        return fs.realpathSync(p);
-    } catch {
-        return undefined;
-    }
-}
-
-/**
- * Check if a symbol is a translation reference for the given language.
- * For typescript files, also checks file extension to determine format.
- */
-function isTraRef(word: string, langId: string, filePath?: string): boolean {
-    // For typescript, determine pattern by file extension
-    if (langId === LANG_TYPESCRIPT && filePath) {
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext === EXT_TSSL) {
-            return REGEX_MSG_HOVER.test(word);
-        }
-        if (ext === EXT_TBAF || ext === EXT_TD) {
-            return REGEX_TRANSPILER_TRA_HOVER.test(word);
-        }
-        // Regular .ts file - check all patterns, format determined by @tra comment
-        return REGEX_MSG_HOVER.test(word) || REGEX_TRANSPILER_TRA_HOVER.test(word);
-    }
-
-    // For other languages, check the language arrays
-    if (TRA_LANGUAGES.includes(langId) && word.match(REGEX_TRA_HOVER)) {
-        return true;
-    }
-    if (MSG_LANGUAGES.includes(langId) && word.match(REGEX_MSG_HOVER)) {
-        return true;
-    }
-    return false;
-}
-
-/** Result of resolving a translation reference to its entry */
-type ResolveResult =
-    | { kind: "entry"; entry: TraEntry; fileKey: string }
-    | { kind: "file-missing"; fileKey: string }
-    | { kind: "entry-missing"; fileKey: string; lineKey: string }
-    | null;
-
 export class Translation {
-    private directory: string;
-    private data: TraData;
-    /** Forward index: traFileKey -> set of absolute consumer file paths */
-    private consumers: Map<string, Set<string>>;
-    /**
-     * Inverse of `consumers`: absolute consumer file path -> its current traFileKey.
-     *
-     * A consumer file references exactly one tra/msg file at a time (resolved by
-     * `resolveTraFileKey`), so this is a 1:1 lookup, not 1:many. Maintained in
-     * lockstep with `consumers` so `reloadConsumer` can remove the previous
-     * mapping for a file in O(1) instead of scanning every traFileKey's consumer
-     * set on each debounced document change.
-     */
-    private consumerToTraKey: Map<string, string>;
-    private settings: ProjectTraSettings;
-    private workspaceRoot: string | undefined;
-    /**
-     * `fs.realpathSync(workspaceRoot)` memoised at construction. isSubpath is called
-     * on every debounced document change; resolving the workspace root once avoids a
-     * syscall per call. `undefined` if no workspace root or realpath failed.
-     */
-    private resolvedWsRoot: string | undefined;
-    /** Lazily memoised realpath of the tra directory (see resolvedTraDir getter). */
-    private resolvedTraDirCache: string | null | undefined = null;
+    private readonly state: TranslationState;
     initialized: boolean;
-    /**
-     * Optional callback fired whenever a `.tra`/`.msg` document's entries are re-read and
-     * re-indexed (see `reloadFileLines`). Lets the caller push an LSP `inlayHint.refresh()` so
-     * open consumer documents drop stale `@N` previews instead of waiting for their own next
-     * edit. Undefined in contexts with no live client to notify (unit tests, CLI-style use).
-     */
-    private readonly notifyReload: (() => void) | undefined;
 
     constructor(settings: ProjectTraSettings, workspaceRoot: string | undefined, notifyReload?: () => void) {
         conlog("Translation: initializing");
-        this.settings = settings;
-        this.directory = settings.directory;
-        this.workspaceRoot = workspaceRoot;
-        this.resolvedWsRoot = resolveRealpath(workspaceRoot);
+        this.state = createTranslationState(settings, workspaceRoot, notifyReload);
         this.initialized = false;
-        this.data = new Map();
-        this.consumers = new Map();
-        this.consumerToTraKey = new Map();
-        this.notifyReload = notifyReload;
-    }
-
-    /**
-     * Memoised realpath of the resolved tra directory. Returns `undefined` if the
-     * directory can't be resolved (missing workspace root, realpath failure).
-     */
-    private get resolvedTraDir(): string | undefined {
-        if (this.resolvedTraDirCache === null) {
-            const traDir = this.resolveTraDir();
-            this.resolvedTraDirCache = resolveRealpath(traDir);
-        }
-        return this.resolvedTraDirCache;
     }
 
     async init(): Promise<void> {
         // Route loading through resolveTraDir so the workspace-subpath check
         // gates the load path the same way it gates the lookup path.
-        const traDir = this.resolveTraDir();
-        this.data = traDir ? await this.loadDir(traDir) : new Map();
-        await this.buildConsumerIndex();
+        const traDir = resolveTraDir(this.state);
+        this.state.data = traDir ? await loadDir(traDir) : new Map();
+        await buildConsumerIndex(this.state);
         this.initialized = true;
         conlog("Translation: initialized");
     }
@@ -343,7 +85,7 @@ export class Translation {
     getHover(uri: string, langId: string, symbol: string, text: string): Hover | null {
         const relPath = this.resolveRelPath(uri, langId, symbol);
         if (!relPath) return null;
-        return this.lookupHover(symbol, text, relPath, langId);
+        return lookupHover(this.state, symbol, text, relPath, langId);
     }
 
     /**
@@ -357,7 +99,7 @@ export class Translation {
     getDefinition(uri: string, langId: string, symbol: string, text: string): Location | null {
         const relPath = this.resolveRelPath(uri, langId, symbol);
         if (!relPath) return null;
-        return this.lookupDefinition(symbol, text, relPath, langId);
+        return lookupDefinition(this.state, symbol, text, relPath, langId);
     }
 
     /**
@@ -370,19 +112,19 @@ export class Translation {
      */
     getInlayHints(uri: string, langId: string, text: string, range: Range): InlayHint[] {
         if (!this.initialized) return [];
-        if (this.data.size === 0) return [];
+        if (this.state.data.size === 0) return [];
 
         const filePath = this.uriToPath(uri);
-        const traFileKey = this.resolveTraFileKey(filePath, text, langId);
+        const traFileKey = resolveTraFileKey(this.state, filePath, text, langId);
         if (!traFileKey) return [];
 
-        const traEntries = this.data.get(traFileKey);
+        const traEntries = this.state.data.get(traFileKey);
         if (!traEntries) return [];
 
-        const traExt = this.getTraExt(langId, filePath, text);
+        const traExt = getTraExt(this.state, langId, filePath, text);
         if (!traExt) return [];
 
-        return this.generateInlayHints(traFileKey, traEntries, traExt, text, range, filePath);
+        return generateInlayHints(traFileKey, traEntries, traExt, text, range, filePath);
     }
 
     /**
@@ -396,7 +138,7 @@ export class Translation {
         if (!this.initialized) return;
         if (!languages.includes(langId)) return;
 
-        const wsRoot = this.resolvedWsRoot;
+        const wsRoot = this.state.resolvedWsRoot;
         if (wsRoot === undefined) return;
         const filePath = this.uriToPath(uri);
         const resolvedFilePath = tryRealpathSync(filePath);
@@ -404,7 +146,7 @@ export class Translation {
         if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return;
 
         const wsPath = path.relative(wsRoot, filePath);
-        this.reloadFileLines(wsPath, text);
+        reloadFileLines(this.state, wsPath, text);
     }
 
     /**
@@ -428,18 +170,18 @@ export class Translation {
         const filePath = this.uriToPath(uri);
 
         // Derive the tra file key: the file's path relative to the tra directory.
-        const traFileKey = this.filePathToTraKey(filePath);
+        const traFileKey = filePathToTraKey(this.state, filePath);
         if (!traFileKey) return [];
 
-        const traEntries = this.data.get(traFileKey);
+        const traEntries = this.state.data.get(traFileKey);
         if (!traEntries) return [];
 
         // Find which entry the cursor is on
-        const entryNum = this.entryAtPosition(traEntries, position);
+        const entryNum = entryAtPosition(traEntries, position);
         if (entryNum === undefined) return [];
 
         const traExt = traFileKey.endsWith(".msg") ? "msg" : "tra";
-        return this.findReferencesInConsumers(traFileKey, entryNum, traExt, filePath, includeDeclaration);
+        return findReferencesInConsumers(this.state, traFileKey, entryNum, traExt, filePath, includeDeclaration);
     }
 
     /**
@@ -454,7 +196,7 @@ export class Translation {
         if (!this.initialized) return;
         if (!translatableLanguages.has(langId)) return;
 
-        const wsRoot = this.resolvedWsRoot;
+        const wsRoot = this.state.resolvedWsRoot;
         if (wsRoot === undefined) return;
         const filePath = this.uriToPath(uri);
         const resolvedFilePath = tryRealpathSync(filePath);
@@ -464,14 +206,14 @@ export class Translation {
         const wsRelPath = path.relative(wsRoot, filePath);
 
         // Remove this file from its previous consumer set in O(1) via the reverse index.
-        this.removeConsumer(filePath);
+        removeConsumer(this.state, filePath);
 
         // Resolve which tra/msg file this consumer maps to
-        const traFileKey = this.resolveTraFileKey(wsRelPath, text, langId);
+        const traFileKey = resolveTraFileKey(this.state, wsRelPath, text, langId);
         if (!traFileKey) return;
-        if (!this.data.has(traFileKey)) return;
+        if (!this.state.data.has(traFileKey)) return;
 
-        this.addConsumer(traFileKey, filePath);
+        addConsumer(this.state, traFileKey, filePath);
     }
 
     /**
@@ -486,10 +228,10 @@ export class Translation {
         if (!this.initialized) return messages;
 
         const filePath = this.uriToPath(uri);
-        const traFileKey = this.resolveTraFileKey(filePath, text, langId);
+        const traFileKey = resolveTraFileKey(this.state, filePath, text, langId);
         if (!traFileKey) return messages;
 
-        const traEntries = this.data.get(traFileKey);
+        const traEntries = this.state.data.get(traFileKey);
         if (!traEntries) return messages;
 
         for (const [id, entry] of traEntries) {
@@ -507,113 +249,7 @@ export class Translation {
     writeMessages(uri: string, text: string, langId: string, messages: Record<string, string>): WriteMessagesResult {
         if (!this.initialized) return NO_WRITE;
         const filePath = this.uriToPath(uri);
-        const ext = this.getTraExt(langId, filePath, text);
-        const fileKey = this.resolveTraFileKey(filePath, text, langId);
-        if (!ext || !fileKey) return NO_WRITE;
-        // The `.msg`/`.tra` must land where `loadDir` scans (`resolveTraDir`), or nothing resolves `@N` on
-        // reopen - the dialog editor, hover, and inlay are ONE path (getMessages/resolveEntry -> this.data
-        // keyed by resolveTraFileKey), so a file the loader never scans is invisible to all three. Three cases:
-        //  - the configured tra dir EXISTS -> write there (a real project with its tra/ or dialog dir);
-        //  - from-scratch with a workspace -> bootstrap the format's convention dir (SSL .msg -> the Fallout
-        //    data/text/english/dialog path; D .tra -> the plain `tra` default), create it, RECORD it in
-        //    .bgforge.yml so the next session's loadDir scans it, and write there. This session resolves via the
-        //    this.data.set below; the config makes it survive a reopen;
-        //  - no workspace root -> a sibling of the source, so text is not silently lost (last resort).
-        // (resolveTraDir returns the path even when the dir is absent, so directory EXISTENCE is the test.)
-        const configured = this.resolveAbsolutePath(fileKey);
-        let absPath: string;
-        if (configured && fs.existsSync(path.dirname(configured))) {
-            absPath = configured;
-        } else if (this.workspaceRoot) {
-            const relDir = ext === "msg" ? DEFAULT_SSL_DIALOG_DIR : DEFAULT_D_TRA_DIR;
-            const dir = path.join(this.workspaceRoot, relDir);
-            fs.mkdirSync(dir, { recursive: true });
-            this.ensureTraConfig(relDir);
-            absPath = path.join(dir, fileKey);
-        } else {
-            absPath = path.join(path.dirname(filePath), fileKey);
-        }
-        let original: string;
-        // Encoding for a brand-new file (the ENOENT branch below) defaults to UTF-8 - there are no
-        // existing bytes to resolve an encoding from.
-        let sourceEncoding: ResolvedEncoding = "utf-8";
-        try {
-            const raw = fs.readFileSync(absPath);
-            ({ text: original, encoding: sourceEncoding } = decodeFileBytes(raw));
-        } catch (error) {
-            // ENOENT -> the file does not exist yet, so create it (the from-scratch case: an SSL dialog's text
-            // has nowhere to land until its `.msg` is written). Any OTHER read error (permissions, a directory
-            // in the way) must NOT proceed to a write that could clobber an existing-but-unreadable file.
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") return NO_WRITE;
-            original = "";
-        }
-        // Each format needs its own rewriter: a .tra is `@N = ~text~`, a .msg is
-        // `{id}{sound}{text}`, and either rewriter is a silent no-op on the other's syntax.
-        // Both rewrite existing entries then append brand-new ones: a newly-added option's or state's text
-        // has no entry yet (the D-family allocator mints its `@N` at save time, like the SSL allocator does
-        // for `.msg` ids), and a rewrite-only path silently drops that text from the translation file.
-        const updated =
-            ext === "msg"
-                ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
-                : appendTraEntries(rewriteTraEntries(original, messages), messages);
-        if (updated === original) return NO_WRITE;
-        // Re-encode to the encoding the file was read as (sourceEncoding, above) so untouched
-        // entries round-trip byte-identically; encodeToResolvedEncoding throws rather than
-        // silently transcoding or replacement-charing an edit the target encoding can't represent
-        // - nothing below is written when that happens. Then write via a same-directory temp file
-        // + rename so a crash mid-write can't truncate the document of record.
-        const encoded = encodeToResolvedEncoding(updated, sourceEncoding);
-        atomicWriteFileSync(absPath, encoded);
-        // Refresh the cached entries that getMessages/inlay hints read for this file.
-        this.data.set(fileKey, this.parseEntries(updated, ext));
-        return { changed: true, staleSiblingLanguages: this.staleSiblingLanguages(absPath) };
-    }
-
-    /**
-     * Bootstrap `.bgforge.yml` for a from-scratch dialog so the tra directory the editor just wrote to is
-     * RECORDED - the next session's `loadDir` then scans it (this session already resolves via the in-memory
-     * `this.data.set` above). Only CREATES the file when absent - never clobbers an existing project config.
-     * Fail-soft: a write failure is logged, not thrown, since the `.msg` already persisted; only reopen-time
-     * resolution would be affected. Shape matches settings.ts's reader (`mls.translation.directory`).
-     */
-    private ensureTraConfig(relDir: string): void {
-        if (!this.workspaceRoot) return;
-        const configPath = path.join(this.workspaceRoot, ".bgforge.yml");
-        try {
-            // `flag: "wx"` creates the file only if it does not already exist and fails with EEXIST
-            // otherwise, so an existing project config is never clobbered - atomically, with no
-            // existsSync->writeFileSync TOCTOU window.
-            fs.writeFileSync(configPath, yaml.stringify({ mls: { translation: { directory: relDir } } }), {
-                flag: "wx",
-            });
-            conlog(`Translation: created .bgforge.yml (translation.directory: ${relDir})`);
-        } catch (error) {
-            // File already present: the config exists, nothing to create - not a failure.
-            if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
-            conlog(`Translation: could not create .bgforge.yml: ${errorMessage(error)}`, "warn");
-        }
-    }
-
-    /**
-     * Sibling-language `.tra` files (a `tra/<language>/<file>.tra` layout) that exist on
-     * disk beside the one just written - they still hold the pre-edit text, so the save
-     * path can warn that they diverged. Returns the sibling language directory names.
-     * Empty for a flat / single-language layout (no same-named file in a sibling dir).
-     */
-    private staleSiblingLanguages(absPath: string): string[] {
-        const langParent = path.dirname(path.dirname(absPath));
-        let subdirs: string[];
-        try {
-            subdirs = fs
-                .readdirSync(langParent, { withFileTypes: true })
-                .filter((d) => d.isDirectory())
-                .map((d) => d.name);
-        } catch {
-            return [];
-        }
-        return siblingTraCandidates(absPath, subdirs)
-            .filter((p) => fs.existsSync(p))
-            .map((p) => path.basename(path.dirname(p)));
+        return writeMessagesImpl(this.state, filePath, text, langId, messages);
     }
 
     // =========================================================================
@@ -633,10 +269,10 @@ export class Translation {
      */
     private resolveRelPath(uri: string, langId: string, symbol: string): string | null {
         if (!this.initialized) return null;
-        if (this.data.size === 0) return null;
+        if (this.state.data.size === 0) return null;
         if (!translatableLanguages.has(langId)) return null;
 
-        const wsRoot = this.resolvedWsRoot;
+        const wsRoot = this.state.resolvedWsRoot;
         if (wsRoot === undefined) return null;
         const filePath = this.uriToPath(uri);
         if (!isTraRef(symbol, langId, filePath)) return null;
@@ -645,765 +281,5 @@ export class Translation {
         if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return null;
 
         return path.relative(wsRoot, filePath);
-    }
-
-    /**
-     * Determine translation file extension based on language and file path.
-     * For typescript files, checks .tssl (msg) vs .tbaf (tra) extension.
-     * For regular .ts files, infers from @tra comment or loaded translation files.
-     */
-    private getTraExt(langId: string, filePath?: string, text?: string): TraExt | undefined {
-        // For typescript, determine by file extension
-        if (langId === LANG_TYPESCRIPT && filePath) {
-            const ext = path.extname(filePath).toLowerCase();
-            if (ext === EXT_TSSL) {
-                return "msg";
-            }
-            if (ext === EXT_TBAF || ext === EXT_TD) {
-                return "tra";
-            }
-            // Regular .ts file - infer from @tra comment first
-            if (text) {
-                const traFileExt = this.getTraFileExtFromComment(text);
-                if (traFileExt) {
-                    return traFileExt;
-                }
-            }
-            // No @tra comment - infer from loaded translation files (msg and tra are never mixed)
-            for (const key of this.data.keys()) {
-                if (key.endsWith(".msg")) return "msg";
-                if (key.endsWith(".tra")) return "tra";
-            }
-            return undefined;
-        }
-
-        // For other languages, check the language arrays
-        // Check MSG_LANGUAGES first since it's more specific
-        if (MSG_LANGUAGES.includes(langId)) {
-            return "msg";
-        }
-        if (TRA_LANGUAGES.includes(langId)) {
-            return "tra";
-        }
-        return undefined;
-    }
-
-    /**
-     * Extract translation file extension from @tra comment.
-     * Returns "msg" or "tra" based on the referenced file extension.
-     */
-    private getTraFileExtFromComment(text: string): TraExt | undefined {
-        const firstLine = text.split(/\r?\n/g)[0];
-        if (!firstLine) return undefined;
-
-        const match = REGEX_TRA_COMMENT_EXT.exec(firstLine);
-        const captured = match?.[1];
-        if (captured === "tra" || captured === "msg") {
-            return captured;
-        }
-        return undefined;
-    }
-
-    /** Loads all tra files in a directory to a map of maps of strings */
-    private async loadDir(traDir: string): Promise<TraData> {
-        const traData: TraData = new Map();
-        if (!isDirectory(traDir)) {
-            conlog(`Translation: ${traDir} is not a directory, skipping`);
-            return traData;
-        }
-
-        for (const ext of extensions) {
-            // Sequential per extension is intentional: later extensions can
-            // override entries from earlier ones, so ordering matters.
-            // eslint-disable-next-line no-await-in-loop
-            const traFiles = await findFiles(traDir, ext);
-            // eslint-disable-next-line no-await-in-loop
-            const { results, errors } = await this.loadFiles(traDir, traFiles, ext);
-            if (errors.length > 0) {
-                conlog(
-                    `Translation: ${errors.length} error(s) loading *.${ext} from ${traDir}: ${errors.map((e) => errorMessage(e)).join("; ")}`,
-                    "warn",
-                );
-            }
-            for (const x of results) {
-                for (const [key, value] of x) {
-                    traData.set(key, value);
-                }
-            }
-        }
-        return traData;
-    }
-
-    private async loadFiles(
-        traDir: string,
-        files: string[],
-        ext: TraExt,
-    ): Promise<{ results: TraData[]; errors: unknown[] }> {
-        const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
-        const results: TraData[] = [];
-        const errors: unknown[] = [];
-        await Promise.all(
-            files.map((relPath) =>
-                limit(async () => {
-                    try {
-                        const raw = await fs.promises.readFile(path.join(traDir, relPath));
-                        const { text } = decodeFileBytes(raw);
-                        const lines = this.parseEntries(text, ext);
-                        const result: TraData = new Map([[relPath, lines]]);
-                        results.push(result);
-                    } catch (error) {
-                        // Collect per-file failures instead of failing fast - a single unreadable
-                        // file shouldn't abort the whole load pass.
-                        errors.push(error);
-                    }
-                }),
-            ),
-        );
-        return { results, errors };
-    }
-
-    /** Parses text and returns a map of index => entry */
-    private parseEntries(text: string, traType: TraExt): TraEntries {
-        let regex: RegExp;
-        if (traType === "tra") {
-            regex = /@(\d+)\s*=\s*~([^~]*)~/gm;
-        } else {
-            regex = /{(\d+)}\s*{\w*}\s*{([^}]*)}/gm;
-        }
-        const entries: TraEntries = new Map();
-        let currentLine = 0;
-        let lineStartIndex = 0;
-        let match = regex.exec(text);
-        while (match !== null) {
-            if (match.index === regex.lastIndex) {
-                regex.lastIndex++;
-            }
-            const num = match[1];
-            const str = match[2];
-            // Check undefined only -- empty string is a valid translation entry (e.g., @0 = ~~)
-            if (num === undefined || str === undefined) {
-                match = regex.exec(text);
-                continue;
-            }
-
-            // Track line/character position by scanning newlines up to match start.
-            // This loop and the end-position loop below scan disjoint ranges
-            // (lineStartIndex..match.index and match.index..matchEnd) so newlines
-            // are never double-counted, even for multiline values.
-            for (let i = lineStartIndex; i < match.index; i++) {
-                if (text[i] === "\n") {
-                    currentLine++;
-                    lineStartIndex = i + 1;
-                }
-            }
-            const startLine = currentLine;
-            const character = match.index - lineStartIndex;
-
-            // Compute end position by scanning newlines through the full match.
-            // This also advances currentLine/lineStartIndex past multiline values
-            // so the next iteration starts from the correct position.
-            const matchEnd = match.index + match[0].length;
-            for (let i = match.index; i < matchEnd; i++) {
-                if (text[i] === "\n") {
-                    currentLine++;
-                    lineStartIndex = i + 1;
-                }
-            }
-            const endLine = currentLine;
-            const endCharacter = matchEnd - lineStartIndex;
-
-            const hover: Hover = {
-                contents: {
-                    kind: "markdown",
-                    value: `\`\`\`bgforge-mls-string\n${str}\n\`\`\``,
-                },
-            };
-            const inlay = this.stringToInlay(str);
-
-            const entry: TraEntry = {
-                source: str,
-                hover,
-                inlay,
-                line: startLine,
-                character,
-                endLine,
-                endCharacter,
-            };
-            if (`/* ${str} */` !== inlay) {
-                entry.inlayTooltip = str;
-            }
-            entries.set(num, entry);
-            match = regex.exec(text);
-        }
-        return entries;
-    }
-
-    private reloadFileLines(wsPath: string, text: string): void {
-        const traPath = this.getTraPath(wsPath);
-        if (!traPath) {
-            conlog(`Translation: can't detect tra path for ${wsPath}, skipping reload`);
-            return;
-        }
-        const ext = path.parse(traPath).ext.slice(-3);
-        if (ext !== "tra" && ext !== "msg") {
-            conlog(`Translation: unknown extension ${ext}`);
-            return;
-        }
-        const entries = this.parseEntries(text, ext as TraExt);
-        this.data.set(traPath, entries);
-        conlog(`Translation: reloaded ${traPath}`);
-        // Open consumer documents' inlay hints were computed against the now-stale entries;
-        // push a refresh so the client recomputes them against the entries just set above.
-        this.notifyReload?.();
-    }
-
-    /**
-     * Convert a workspace-relative source path to its tra-directory-relative key
-     * (the same key form `loadDir` produces), or undefined if the file is not under
-     * the configured translation directory.
-     *
-     * Path-math only, via `resolveTraDir` and the absolute file path. A realpath-based
-     * subpath check (the previous `isSubpath(this.directory, wsPath)`) resolved the
-     * workspace-relative `wsPath` against the process CWD, which is not the workspace
-     * root under a normally-spawned LSP server - so it rejected every file whenever the
-     * server ran from any other directory, silently disabling `.tra`/`.msg` reload.
-     */
-    private getTraPath(wsPath: string): string | undefined {
-        const traDir = this.resolveTraDir();
-        if (traDir === undefined || this.workspaceRoot === undefined) return undefined;
-        const absFile = path.resolve(this.workspaceRoot, wsPath);
-        const rel = path.relative(traDir, absFile);
-        if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
-            return undefined;
-        }
-        return rel;
-    }
-
-    /**
-     * Resolve the translation file key for a source file.
-     * Checks for @tra comment first, falls back to auto-matching by basename.
-     */
-    private resolveTraFileKey(filePath: string, fullText: string, langId: string): string | undefined {
-        const firstLine = fullText.split(/\r?\n/g)[0];
-        if (!firstLine) return undefined;
-
-        const match = REGEX_TRA_COMMENT.exec(firstLine);
-        if (match && match[1]) {
-            return match[1];
-        }
-        if (this.settings.auto_tra) {
-            const traExt = this.getTraExt(langId, filePath, fullText);
-            if (!traExt) return undefined;
-            const basename = path.parse(filePath).name;
-            return `${basename}.${traExt}`;
-        }
-        return undefined;
-    }
-
-    /**
-     * Resolve a translation reference to its entry, file key, and line key.
-     * Shared by lookupHover and lookupDefinition to avoid duplicating resolution logic.
-     */
-    private resolveEntry(word: string, text: string, relPath: string, langId: string): ResolveResult {
-        const ext = this.getTraExt(langId, relPath, text);
-        if (!ext) return null;
-
-        const fileKey = this.resolveTraFileKey(relPath, text, langId);
-        if (!fileKey) return null;
-
-        const traFile = this.data.get(fileKey);
-        if (!traFile) {
-            return { kind: "file-missing", fileKey };
-        }
-
-        const lineKey = this.getLineKey(word, ext);
-        if (!lineKey) {
-            conlog(`Translation: line key not found for ${word}`);
-            return null;
-        }
-
-        const traEntry = traFile.get(lineKey);
-        if (!traEntry) {
-            return { kind: "entry-missing", fileKey, lineKey };
-        }
-
-        return { kind: "entry", entry: traEntry, fileKey };
-    }
-
-    private lookupHover(word: string, text: string, relPath: string, langId: string): Hover | null {
-        const result = this.resolveEntry(word, text, relPath, langId);
-        if (!result) return null;
-
-        if (result.kind === "file-missing") {
-            return {
-                contents: {
-                    kind: "plaintext",
-                    value: `Error: file ${result.fileKey} not found.`,
-                },
-            };
-        }
-        if (result.kind === "entry-missing") {
-            return {
-                contents: {
-                    kind: "plaintext",
-                    value: `Error: entry ${result.lineKey} not found in ${result.fileKey}.`,
-                },
-            };
-        }
-
-        return result.entry.hover;
-    }
-
-    private lookupDefinition(word: string, text: string, relPath: string, langId: string): Location | null {
-        const result = this.resolveEntry(word, text, relPath, langId);
-        if (!result || result.kind !== "entry") return null;
-
-        const absolutePath = this.resolveAbsolutePath(result.fileKey);
-        if (!absolutePath) return null;
-
-        return {
-            uri: pathToUri(absolutePath),
-            range: {
-                start: { line: result.entry.line, character: result.entry.character },
-                end: { line: result.entry.line, character: result.entry.character },
-            },
-        };
-    }
-
-    /** Resolve a tra-directory-relative file key to an absolute path */
-    private resolveAbsolutePath(fileKey: string): string | undefined {
-        const traDir = this.resolveTraDir();
-        if (!traDir) return undefined;
-        return path.join(traDir, fileKey);
-    }
-
-    private getLineKey(word: string, ext: TraExt): string | undefined {
-        if (ext === "msg") {
-            const match = REGEX_MSG_HOVER.exec(word);
-            if (match) {
-                return match[2];
-            }
-        }
-        if (ext === "tra") {
-            // Check for transpiler tra(123) format (TBAF/TD)
-            const traMatch = REGEX_TRANSPILER_TRA_HOVER.exec(word);
-            if (traMatch) {
-                return traMatch[1];
-            }
-            // Standard @123 format
-            return word.substring(1);
-        }
-        return undefined;
-    }
-
-    private generateInlayHints(
-        traFileKey: string,
-        traEntries: TraEntries,
-        traExt: TraExt,
-        text: string,
-        range: Range,
-        filePath: string,
-    ): InlayHint[] {
-        const hints: InlayHint[] = [];
-
-        let lines = text.split("\n");
-        lines = lines.slice(range.start.line, range.end.line);
-
-        const pushHint = (line: number, character: number, lineKey: string): void => {
-            const hintValue = this.getHintValue(traEntries, traFileKey, lineKey);
-            hints.push({
-                position: { line, character },
-                label: hintValue.label,
-                tooltip: hintValue.tooltip,
-                kind: 2,
-                paddingLeft: true,
-                paddingRight: true,
-            });
-        };
-
-        // Determine regex based on file type
-        // keyIndex: which capture group contains the translation ID
-        let regex: RegExp;
-        let keyIndex: number;
-        if (traExt === "msg") {
-            lines.forEach((lineText, i) => {
-                const lineNumber = range.start.line + i;
-                const lineHints: Array<{ character: number; lineKey: string }> = [];
-
-                for (const match of lineText.matchAll(REGEX_MSG_INLAY)) {
-                    const lineKey = match[2];
-                    if (!lineKey) {
-                        continue;
-                    }
-                    lineHints.push({
-                        character: match.index + match[0].length,
-                        lineKey,
-                    });
-                }
-
-                for (const match of lineText.matchAll(REGEX_MSG_INLAY_FLOATER_RAND)) {
-                    const secondKey = match[2];
-                    if (!secondKey) {
-                        continue;
-                    }
-                    const secondStart = match[0].lastIndexOf(secondKey);
-                    lineHints.push({
-                        character: match.index + secondStart + secondKey.length,
-                        lineKey: secondKey,
-                    });
-                }
-
-                lineHints.sort((a, b) => a.character - b.character);
-                for (const lineHint of lineHints) {
-                    pushHint(lineNumber, lineHint.character, lineHint.lineKey);
-                }
-            });
-            return hints;
-        } else {
-            // TypeScript transpiler files (.tbaf, .td, .ts) use tra(123) syntax.
-            // Native WeiDU files (baf, d, tp2) use @123 syntax.
-            const ext = path.extname(filePath).toLowerCase();
-            if (ext === EXT_TBAF || ext === EXT_TD || ext === ".ts") {
-                regex = REGEX_TRANSPILER_TRA_INLAY;
-            } else {
-                regex = REGEX_TRA_INLAY;
-            }
-            keyIndex = 1;
-        }
-
-        // NOTE: This works because we split by newlines first, so each line element is
-        // guaranteed single-line. If future patterns need multiline matching, this would
-        // need byte-offset-to-position conversion like in weidu-tp2/rename.ts.
-        lines.forEach((l, i) => {
-            const matches = l.matchAll(regex);
-            for (const m of matches) {
-                const char_end = m.index + m[0].length;
-                const lineKey = m[keyIndex];
-                if (!lineKey) continue;
-                pushHint(range.start.line + i, char_end, lineKey);
-            }
-        });
-        return hints;
-    }
-
-    private getHintValue(
-        traEntries: TraEntries,
-        traFileKey: string,
-        lineKey: string,
-    ): { label: string; tooltip?: string | MarkupContent } {
-        const traEntry = traEntries.get(lineKey);
-        if (traEntry === undefined) {
-            return { label: `/* Error: no such string ${traFileKey}:${lineKey} */`, tooltip: "" };
-        }
-        const tooltip = traEntry.inlayTooltip
-            ? { kind: MarkupKind.Markdown, value: "```bgforge-mls-string\n" + traEntry.inlayTooltip + "\n```" }
-            : undefined;
-        return {
-            label: traEntry.inlay,
-            tooltip,
-        };
-    }
-
-    private stringToInlay(text: string): string {
-        let line = text.replaceAll("\r", "");
-        line = line.replaceAll("\n", "\\n");
-        // Escape */ to prevent breaking the inlay comment syntax
-        line = line.replaceAll("*/", "*\\/");
-        if (line.length > 30) {
-            line = line.slice(0, 27) + "...";
-        }
-        return `/* ${line} */`;
-    }
-
-    // =========================================================================
-    // Find References helpers
-    // =========================================================================
-
-    /**
-     * Build the reverse index mapping each traFileKey to consumer file paths.
-     * Walks the workspace once for the union of consumer extensions (mirroring
-     * workspace-scanner.ts's single-walk startup scan), then reads each file's first line to
-     * check for an @tra comment, falling back to basename matching. The read fan-out is bounded
-     * by WORKSPACE_SCAN_CONCURRENCY - a real mod workspace's consumer corpus can run from
-     * hundreds to thousands of files, not the "tens" this comment used to assume, and an
-     * unbounded synchronous read loop blocked the event loop for the whole startup scan.
-     */
-    private async buildConsumerIndex(): Promise<void> {
-        const wsRoot = this.workspaceRoot;
-        if (!wsRoot) return;
-
-        this.consumers = new Map();
-        this.consumerToTraKey = new Map();
-
-        // Determine which extensions to scan based on loaded tra data
-        const hasMsg = [...this.data.keys()].some((k) => k.endsWith(".msg"));
-        const hasTra = [...this.data.keys()].some((k) => k.endsWith(".tra"));
-
-        const extsToScan: string[] = [];
-        if (hasTra) {
-            extsToScan.push(...CONSUMER_EXTENSIONS_TRA);
-        }
-        if (hasMsg) {
-            extsToScan.push(...CONSUMER_EXTENSIONS_MSG);
-        }
-
-        // Deduplicate extensions
-        const uniqueExts = [...new Set(extsToScan)];
-        if (uniqueExts.length === 0) return;
-
-        const files = await findFilesByExtensions(wsRoot, uniqueExts);
-        const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
-        await Promise.all(
-            files.map((relFile) =>
-                limit(async () => {
-                    const absPath = path.join(wsRoot, relFile);
-                    await this.indexConsumerFile(absPath, relFile);
-                }),
-            ),
-        );
-
-        conlog(`Translation: built consumer index with ${this.consumers.size} tra/msg file mappings`);
-    }
-
-    /**
-     * Index a single consumer file into the reverse map.
-     * Reads the first 256 bytes for an @tra comment (decoded UTF-8-first with a windows-1252
-     * fallback, same as the tra/msg read path in loadFiles), falls back to basename matching.
-     * Async, and bounded by the pLimit pool in buildConsumerIndex, so a large consumer corpus
-     * neither blocks the event loop nor floods the filesystem with unbounded concurrent opens.
-     */
-    private async indexConsumerFile(absPath: string, wsRelPath: string): Promise<void> {
-        let traFileKey: string | undefined;
-
-        // Try reading first line for @tra comment (only 256 bytes, not the whole file)
-        try {
-            const handle = await fs.promises.open(absPath, "r");
-            let firstLine: string;
-            try {
-                const buf = Buffer.alloc(256);
-                const { bytesRead } = await handle.read(buf, 0, 256, 0);
-                firstLine = decodeFileBytes(buf.subarray(0, bytesRead)).text.split(/\r?\n/)[0] ?? "";
-            } finally {
-                await handle.close();
-            }
-            const match = REGEX_TRA_COMMENT.exec(firstLine);
-            if (match && match[1]) {
-                traFileKey = match[1];
-            }
-        } catch {
-            // File might be inaccessible, skip
-            return;
-        }
-
-        // Fall back to basename matching
-        if (!traFileKey && this.settings.auto_tra) {
-            const basename = path.parse(wsRelPath).name;
-            const ext = path.extname(absPath).toLowerCase();
-            const traExt = this.consumerExtToTraExt(ext);
-            if (traExt) {
-                const candidate = `${basename}.${traExt}`;
-                if (this.data.has(candidate)) {
-                    traFileKey = candidate;
-                }
-            }
-        }
-
-        if (!traFileKey) return;
-        if (!this.data.has(traFileKey)) return;
-
-        this.addConsumer(traFileKey, absPath);
-    }
-
-    /** Add a file to the consumer set for a given tra file key. */
-    private addConsumer(traFileKey: string, absPath: string): void {
-        let consumerSet = this.consumers.get(traFileKey);
-        if (!consumerSet) {
-            consumerSet = new Set();
-            this.consumers.set(traFileKey, consumerSet);
-        }
-        consumerSet.add(absPath);
-        this.consumerToTraKey.set(absPath, traFileKey);
-    }
-
-    /** Remove a file from its current consumer set in O(1) via the reverse index. */
-    private removeConsumer(absPath: string): void {
-        const previousKey = this.consumerToTraKey.get(absPath);
-        if (previousKey === undefined) return;
-        this.consumerToTraKey.delete(absPath);
-        // Leave empty traFileKey entries in `this.consumers` behind to match the
-        // pre-reverse-index semantics (the old loop deleted from every set
-        // unconditionally without removing keys); downstream reads handle absent
-        // and empty Sets identically.
-        this.consumers.get(previousKey)?.delete(absPath);
-    }
-
-    /**
-     * Convert an absolute file path of a tra/msg file to its tra file key.
-     * Handles both absolute and relative tra directory settings.
-     */
-    private filePathToTraKey(filePath: string): string | undefined {
-        const traDir = this.resolvedTraDir;
-        if (!traDir) return undefined;
-        if (!isSubpathResolved(traDir, filePath)) return undefined;
-        return path.relative(traDir, filePath);
-    }
-
-    /** Resolve the tra directory to an absolute path, refusing values that
-     *  resolve outside the workspace root.
-     *
-     *  Defense in depth: VSCode Workspace Trust is the primary gate against an
-     *  untrusted `.bgforge.yml`, but trust can be bypassed (or absent in
-     *  non-VSCode LSP clients), so the LSP layer also checks. A `directory`
-     *  that escapes via `..` or names an absolute path elsewhere on disk is
-     *  ignored - `loadDir` is never called against it, so unrelated `.tra`/
-     *  `.msg` files outside the workspace never reach hover/inlay output.
-     *
-     *  The check is path-math only (no realpath): a tra directory that does
-     *  not yet exist on disk but resolves inside the workspace is still
-     *  accepted, matching `loadDir`'s tolerance for missing directories. */
-    private resolveTraDir(): string | undefined {
-        let resolved: string;
-        if (path.isAbsolute(this.directory)) {
-            resolved = this.directory;
-        } else if (this.workspaceRoot) {
-            resolved = path.join(this.workspaceRoot, this.directory);
-        } else {
-            return undefined;
-        }
-        if (this.workspaceRoot) {
-            const rel = path.relative(this.workspaceRoot, resolved);
-            if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
-                conlog(
-                    `Translation: ignoring tra directory '${this.directory}' - resolves outside workspace root`,
-                    "warn",
-                );
-                return undefined;
-            }
-        }
-        return resolved;
-    }
-
-    /**
-     * Map a consumer file extension to its corresponding translation extension.
-     * Derived from CONSUMER_EXTENSIONS_TRA/MSG to maintain a single source of truth.
-     */
-    private consumerExtToTraExt(ext: string): TraExt | undefined {
-        const bare = ext.startsWith(".") ? ext.slice(1).toLowerCase() : ext.toLowerCase();
-        if (CONSUMER_EXTENSIONS_TRA.includes(bare as (typeof CONSUMER_EXTENSIONS_TRA)[number])) {
-            return "tra";
-        }
-        if (CONSUMER_EXTENSIONS_MSG.includes(bare as (typeof CONSUMER_EXTENSIONS_MSG)[number])) {
-            return "msg";
-        }
-        return undefined;
-    }
-
-    /**
-     * Find which entry number the cursor is on in a tra/msg file.
-     * Matches both the entry number/header and the value span (including multiline).
-     */
-    private entryAtPosition(entries: TraEntries, position: Position): string | undefined {
-        for (const [num, entry] of entries) {
-            // Check if position falls within this entry's range (start to end, inclusive)
-            if (position.line < entry.line) continue;
-            if (position.line > entry.endLine) continue;
-            if (position.line === entry.line && position.character < entry.character) continue;
-            if (position.line === entry.endLine && position.character > entry.endCharacter) continue;
-            return num;
-        }
-        return undefined;
-    }
-
-    /**
-     * Find all references to a specific entry number across consumer files.
-     * Consumer files are read concurrently via fs.promises.readFile to avoid
-     * blocking the event loop on large mod projects.
-     */
-    private async findReferencesInConsumers(
-        traFileKey: string,
-        entryNum: string,
-        traExt: TraExt,
-        traAbsPath: string,
-        includeDeclaration: boolean,
-    ): Promise<Location[]> {
-        const locations: Location[] = [];
-
-        // Optionally include the declaration itself
-        if (includeDeclaration) {
-            const entry = this.data.get(traFileKey)?.get(entryNum);
-            if (entry) {
-                locations.push({
-                    uri: pathToUri(traAbsPath),
-                    range: {
-                        start: { line: entry.line, character: entry.character },
-                        end: { line: entry.endLine, character: entry.endCharacter },
-                    },
-                });
-            }
-        }
-
-        const consumerFiles = this.consumers.get(traFileKey);
-        if (!consumerFiles) return locations;
-
-        const reads = await Promise.all(
-            [...consumerFiles].map(async (absPath) => {
-                try {
-                    const raw = await fs.promises.readFile(absPath);
-                    const { text } = decodeFileBytes(raw);
-                    return { absPath, text };
-                } catch {
-                    // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
-                    return undefined;
-                }
-            }),
-        );
-
-        for (const read of reads) {
-            if (!read) continue;
-            const { absPath, text } = read;
-            const refs = this.scanFileForReferences(text, entryNum, traExt);
-            const fileUri = pathToUri(absPath);
-            for (const ref of refs) {
-                locations.push({
-                    uri: fileUri,
-                    range: {
-                        start: { line: ref.line, character: ref.character },
-                        end: { line: ref.line, character: ref.endCharacter },
-                    },
-                });
-            }
-        }
-
-        return locations;
-    }
-
-    /**
-     * Scan a file's text for references to a specific entry number.
-     * Returns line/character positions for each match.
-     */
-    private scanFileForReferences(
-        text: string,
-        entryNum: string,
-        traExt: TraExt,
-    ): Array<{ line: number; character: number; endCharacter: number }> {
-        const results: Array<{ line: number; character: number; endCharacter: number }> = [];
-        const lines = text.split("\n");
-
-        // MSG references (mstr(num), NOption(num), floater_rand(x, num)) use a
-        // combined regex covering both first-arg and floater_rand second-arg
-        // patterns; TRA references use a separate pattern.
-        const regex = traExt === "tra" ? regexTraRef(entryNum) : regexMsgRef(entryNum);
-        for (let i = 0; i < lines.length; i++) {
-            const lineText = lines[i]!;
-            for (const match of lineText.matchAll(regex)) {
-                results.push({
-                    line: i,
-                    character: match.index,
-                    endCharacter: match.index + match[0].length,
-                });
-            }
-        }
-
-        return results;
     }
 }
