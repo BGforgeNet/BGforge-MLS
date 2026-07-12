@@ -19,6 +19,9 @@ import {
     type TDTransitionNext,
     type TDChainEpilogue,
     type TDInterject,
+    type TDPatchOperation,
+    type TDAlterTrans,
+    type TDReplaceStates,
     TDConstructType,
     TDTextType,
     TDTransitionType,
@@ -444,7 +447,7 @@ function emitInterject(interject: TDChain | TDInterject): string {
 // Patch operations
 // =============================================================================
 
-function emitPatch(patch: { type: "patch"; operation: import("./types").TDPatchOperation }): string {
+function emitPatch(patch: { type: "patch"; operation: TDPatchOperation }): string {
     const op = patch.operation;
 
     switch (op.op) {
@@ -483,7 +486,7 @@ function emitPatch(patch: { type: "patch"; operation: import("./types").TDPatchO
     }
 }
 
-function emitAlterTrans(op: import("./types").TDAlterTrans): string {
+function emitAlterTrans(op: TDAlterTrans): string {
     const lines: string[] = [
         `ALTER_TRANS ${op.filename}`,
         `BEGIN ${formatStateList(op.states)} END`,
@@ -514,7 +517,7 @@ function formatUnless(unless?: string): string {
     return unless ? ` UNLESS ~${unless}~` : "";
 }
 
-function emitReplaceStates(op: import("./types").TDReplaceStates): string {
+function emitReplaceStates(op: TDReplaceStates): string {
     const lines: string[] = [
         `// REPLACE states in ${op.filename} - manually verify WeiDU syntax`,
         `APPEND ${op.filename}`,

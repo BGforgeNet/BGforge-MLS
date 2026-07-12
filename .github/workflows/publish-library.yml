@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# A release publish must not be interrupted mid-run: a half-cancelled npm publish is
+# worse than a duplicate run. Serialize per tag ref without cancelling in flight.
+concurrency:
+  group: publish-library-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: publish

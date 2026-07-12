@@ -21,9 +21,11 @@ Uses the current `host.getScriptFileNames()` (not a stale pre-override reference
 
 ## Source files
 
-| File           | Purpose                                              |
-| -------------- | ---------------------------------------------------- |
-| `src/index.ts` | Plugin entry point, host overrides, completion proxy |
+| File                        | Purpose                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `src/index.ts`              | Plugin entry point, host overrides, completion proxy                                           |
+| `src/inject-runtime.ts`     | Resolves and injects `td-runtime.d.ts`, overrides compiler settings, extracts TD runtime names |
+| `src/filter-completions.ts` | Pure completion filtering: blocks ES2020 lib names in `.td` files, TD runtime names elsewhere  |
 
 ## Build
 

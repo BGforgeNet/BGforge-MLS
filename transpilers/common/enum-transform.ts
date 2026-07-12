@@ -409,6 +409,8 @@ export function enumTransformPlugin(allEnumNames: Set<string>, filter: RegExp): 
                 try {
                     source = fs.readFileSync(args.path, "utf-8");
                 } catch {
+                    // Unreadable path (e.g. a virtual module esbuild resolved with no on-disk
+                    // file): skip the transform and let esbuild's default loader handle it.
                     return null;
                 }
                 if (!source.includes("enum ")) {

@@ -18,16 +18,16 @@ generate_data=(pnpm exec tsx scripts/utils/src/generate-data.ts)
 
 # Extract engine procedure names and docs for the TSSL transpiler and TypeScript plugin
 pnpm exec tsx scripts/utils/src/extract-engine-proc-docs.ts \
-    --yaml $data_dir/fallout-ssl-base.yml \
-    --out $dest_dir/fallout-ssl-engine-proc-docs.json \
-    --names $dest_dir/fallout-ssl-engine-procedures.json
+    --yaml "$data_dir/fallout-ssl-base.yml" \
+    --out "$dest_dir/fallout-ssl-engine-proc-docs.json" \
+    --names "$dest_dir/fallout-ssl-engine-procedures.json"
 
 pnpm exec tsx scripts/utils/src/update-fallout-base-functions-highlight.ts \
-    --yaml $data_dir/fallout-ssl-base.yml \
+    --yaml "$data_dir/fallout-ssl-base.yml" \
     --highlight syntaxes/fallout-ssl.tmLanguage.yml
 
 pnpm exec tsx scripts/utils/src/update-sfall-highlight.ts \
-    --yaml $data_dir/fallout-ssl-sfall.yml \
+    --yaml "$data_dir/fallout-ssl-sfall.yml" \
     --highlight syntaxes/fallout-ssl.tmLanguage.yml
 
 "${generate_data[@]}" \
@@ -43,7 +43,7 @@ pnpm exec tsx scripts/utils/src/update-sfall-highlight.ts \
     --tooltip-lang weidu-tp2-tooltip
 
 pnpm exec tsx scripts/utils/src/update-tp2-highlight.ts \
-    --yaml $data_dir/weidu-tp2-base.yml \
+    --yaml "$data_dir/weidu-tp2-base.yml" \
     --highlight syntaxes/weidu-tp2.tmLanguage.yml
 
 "${generate_data[@]}" \
@@ -53,7 +53,7 @@ pnpm exec tsx scripts/utils/src/update-tp2-highlight.ts \
     --tooltip-lang weidu-baf-tooltip
 
 pnpm exec tsx scripts/utils/src/update-baf-highlight.ts \
-    --yaml $data_dir/weidu-baf-iesdp.yml \
+    --yaml "$data_dir/weidu-baf-iesdp.yml" \
     --highlight syntaxes/weidu-baf.tmLanguage.yml
 
 "${generate_data[@]}" \
@@ -63,5 +63,5 @@ pnpm exec tsx scripts/utils/src/update-baf-highlight.ts \
     --tooltip-lang weidu-d-tooltip
 
 pnpm exec tsx scripts/utils/src/update-d-highlight.ts \
-    --yaml $data_dir/weidu-d-base.yml \
+    --yaml "$data_dir/weidu-d-base.yml" \
     --highlight syntaxes/weidu-d.tmLanguage.yml

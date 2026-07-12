@@ -44,16 +44,13 @@ else
     check "build.yml contains CycloneDX SBOM step" "missing"
 fi
 
-# (c) SLSA provenance generator referenced (either in build.yml or release-provenance.yml).
+# (c) SLSA provenance generator referenced in build.yml.
 # Require the `uses:` directive shape so a comment referencing the upstream
 # project cannot satisfy the gate; only a real workflow reference counts.
 slsa_found=0
-for f in "$WORKFLOWS_DIR/build.yml" "$WORKFLOWS_DIR/release-provenance.yml"; do
-    if [[ -f "$f" ]] && grep -Eq "uses:[[:space:]]+slsa-framework/slsa-github-generator/" "$f"; then
-        slsa_found=1
-        break
-    fi
-done
+if [[ -f "$WORKFLOWS_DIR/build.yml" ]] && grep -Eq "uses:[[:space:]]+slsa-framework/slsa-github-generator/" "$WORKFLOWS_DIR/build.yml"; then
+    slsa_found=1
+fi
 if [[ "$slsa_found" -eq 1 ]]; then
     check "SLSA provenance generator referenced" "ok"
 else

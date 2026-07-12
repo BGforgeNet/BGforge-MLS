@@ -137,7 +137,7 @@ export function unrollForCore(vars: VarsContext, forStmt: ForStatement, onIterat
             throw new TranspileError(
                 `Loop exceeded maximum ${utils.MAX_LOOP_ITERATIONS} iterations. ` +
                     `This likely indicates an infinite loop or a design issue. ` +
-                    `BAF scripts should not need many iterations.`,
+                    `Transpiled scripts should not need this many iterations.`,
             );
         }
         vars.set(loopVar, current.toString());

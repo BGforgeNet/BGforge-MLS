@@ -16,7 +16,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**GitHub Actions**](#github-actions): format, transpile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
-- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog tree preview](#dialog-tree-preview).
+- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [Dialog Editor](#dialog-editor).
 - [**Forum**](https://forums.bgforge.net/viewforum.php?f=35)
 
 ## Languages
@@ -90,7 +90,7 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 ## Hotkeys
 
 - `CTRL+R`: compile a Fallout `.ssl` file or parse a WeiDU file, reporting [errors](#error-reporting) if any.
-- `CTRL+SHIFT+V`: open [dialog tree preview](#dialog-tree-preview) (SSL, TSSL, D, TD files).
+- `CTRL+SHIFT+V`: open the [Dialog Editor](#dialog-editor) (SSL, TSSL, D, TD files).
 - Standard VS Code hotkeys:
   - `CTRL+SHIFT+O`: document symbols
   - `CTRL+T`: workspace symbols
@@ -105,11 +105,11 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 
 ![fallout highlighting and hover example](docs/fallout.png)
 
-### Dialog tree preview
+### Dialog Editor
 
-Visual dialog tree for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
+Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
 
-![dialog tree preview example](docs/dialog_preview.png)
+![dialog editor example](docs/dialog_preview.png)
 
 ### Error reporting
 

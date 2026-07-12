@@ -16,10 +16,12 @@ const TS6133_CODE = 6133;
 /**
  * Matches the quoted identifier in a TS6133 message: 'name' or "name".
  * The pattern depends on TypeScript's diagnostic message wording, which is
- * stable across the 5.x line but unversioned in the public API. If a future
- * TypeScript major rephrases TS6133, the procedure-name suppression below
- * will silently stop working - guard with a snapshot test on a fixed TS
- * version before bumping the `typescript` dep range.
+ * stable across the 5.x line but unversioned in the public API. The unit
+ * tests exercise this regex against representative TS6133 message strings,
+ * but those expected strings are hand-authored - a future TypeScript major
+ * that rephrases TS6133 would slip past them and silently disable the
+ * procedure-name suppression below. Re-verify the wording against the
+ * installed compiler when bumping the `typescript` dep range.
  */
 const TS6133_IDENTIFIER_RE = /^['"](\w+)['"]\s+is declared but/;
 

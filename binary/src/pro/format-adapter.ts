@@ -53,8 +53,7 @@ export const proFormatAdapter: BinaryFormatAdapter = {
     },
 };
 
-// Self-register on module load. Public `binary/src/index.ts` triggers this
-// by side-effect-importing the per-format adapter modules in its bottom
-// block; format-adapter.ts itself has no bottom-imports, so domain-range and
-// presentation-schema can read the registry without dragging in canonical
-// readers (which transitively depend on domain-range).
+// Registration lives in the root `../format-adapter.ts`: it eagerly imports and
+// registers every per-format adapter (this one included) on its own module load.
+// This module only exports `proFormatAdapter` and performs no side-effect
+// registration itself.

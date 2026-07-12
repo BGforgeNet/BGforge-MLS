@@ -14,7 +14,7 @@
 #   - `pnpm test:external` (or scripts/reset-external.sh) - the binary drivers read fixtures from the
 #     gitignored-but-reproducible external/ trees.
 #
-set -uo pipefail
+set -euo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 

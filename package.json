@@ -71,6 +71,7 @@
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:md-links",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
+        "ie-binary-update": "./scripts/ie-binary-update.sh",
         "fallout-update": "./scripts/fallout-update.sh",
         "generate-data": "./scripts/generate-data.sh",
         "syntaxes-to-json": "./scripts/syntaxes-to-json.sh",
