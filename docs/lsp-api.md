@@ -5,7 +5,6 @@ Public protocol surface for third-party LSP clients integrating with `@bgforge/m
 This document covers:
 
 - standard LSP commands exposed via `workspace/executeCommand`
-- custom requests and notifications used by the full VS Code client
 - repo-specific behavior layered onto standard LSP methods
 - which methods are portable to non-VSCode clients
 
@@ -45,7 +44,7 @@ Notes:
 
 ### `bgforge.parseDialog`
 
-Parse dialog-tree data for preview UIs.
+Parse dialog data for the Dialog Editor (and other clients that render dialog trees).
 
 - Params: first argument object must include `uri: string`
 - Result: dialog tree JSON with a `messages` map populated from translation files when available
@@ -72,54 +71,12 @@ Supported sources:
 
 This command is intended for clients that implement a dialog preview UI.
 
-## Custom Methods
-
-These methods are not part of standard LSP. Third-party clients may ignore them unless they want feature parity with the VS Code extension.
-
-### Notification: `bgforge-mls/load-finished`
-
-Sent by the server after initialization and provider loading complete.
-
-Use case:
-
-- hide a client-side loading indicator once the server is ready
-
-Payload:
-
-- none
-
-Optional:
-
-- safe to ignore in generic clients
-
-### Request: `bgforge-mls/setBuiltInCompiler`
-
-Sent by the server to the client after an interactive Fallout SSL compile fails to launch the configured external compiler and the user chooses to switch to the built-in compiler.
-
-Params:
-
-```json
-{
-  "uri": "file:///path/to/script.ssl"
-}
-```
-
-Expected client behavior:
-
-- persist `bgforge.falloutSSL.compilePath = ""`
-- prefer workspace-folder scope when the URI belongs to a workspace folder
-
-Optional:
-
-- safe to ignore if the client does not support settings persistence
-- the server treats failure as non-fatal and still continues with the built-in compiler for that compile
-
 ## VS Code Extension Commands
 
 These are VS Code extension-host commands, not LSP commands:
 
 - `extension.bgforge.compile`
-- `extension.bgforge.dialogPreview`
+- `extension.bgforge.dialogEditor`
 
 Third-party LSP clients should not rely on these identifiers. Use the standard LSP command ids above instead.
 
@@ -127,9 +84,9 @@ Third-party LSP clients should not rely on these identifiers. Use the standard L
 
 The server uses standard LSP methods wherever possible. In one case, the VS Code client and server use a repo-specific convention layered onto a standard request.
 
-### `workspace/symbol`
+### Language-scoped workspace symbols
 
-The server accepts ordinary standard LSP `workspace/symbol` requests:
+Standard LSP `workspace/symbol` requests return the server's default global aggregation - symbols from every provider that implements workspace-symbol search:
 
 ```json
 {
@@ -137,39 +94,37 @@ The server accepts ordinary standard LSP `workspace/symbol` requests:
 }
 ```
 
-With a plain query string, the server performs the default global aggregation across providers.
-
-The VS Code client can also opt into language-scoped results by encoding the active language into the same `query` field:
+A client that wants results scoped to a single language sends a `workspace/executeCommand` request instead, using a per-language command id:
 
 ```json
 {
-  "query": "bgforge-ws:weidu-d:foo"
+  "command": "bgforge.workspaceSymbols.weidu-d",
+  "arguments": [{ "query": "foo" }]
 }
 ```
 
+The server runs only that language's provider and returns the filtered `SymbolInformation[]`.
+
 Format:
 
-- `bgforge-ws:<languageId>:<query>`
+- command: `bgforge.workspaceSymbols.<languageId>` (the `LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX` constant plus the language id, in `shared/protocol.ts`)
+- argument: a single `{ "query": string }` object
 
-Supported `languageId` values:
+Supported `languageId` values (`WORKSPACE_SYMBOL_SCOPED_LANGUAGES` in `shared/protocol.ts`):
 
 - `fallout-ssl`
 - `weidu-d`
 - `weidu-tp2`
 
-Behavior:
-
-- scoped query: only the matching provider contributes workspace symbols
-- plain query: all providers with `workspaceSymbols()` contribute results
-
 Compatibility:
 
-- third-party clients do not need to change anything to remain compatible
-- clients that want language-scoped Ctrl+T behavior must opt in by using the encoded query format above
-- this convention is repo-specific and not part of standard LSP
+- third-party clients need no changes to keep using plain `workspace/symbol` for global aggregation
+- clients that want language-scoped Ctrl+T behavior opt in by sending the executeCommand above
+- these command ids are repo-specific, layered onto the standard `workspace/executeCommand` method
+
+In the bundled VS Code client this is wired through a `provideWorkspaceSymbols` middleware (`client/src/extension.ts`): when the active document belongs to a scoped language, the middleware forwards the request to the matching `bgforge.workspaceSymbols.<languageId>` command; otherwise it falls through to the standard aggregated request.
 
 Rationale:
 
-- standard LSP `workspace/symbol` provides only a free-form `query` string
-- it does not carry current document URI or language id
-- the encoding is therefore the only lightweight way for a client to request active-language scoping without defining a separate custom request
+- standard LSP `workspace/symbol` provides only a free-form `query` string, with no current document URI or language id
+- a dedicated per-language executeCommand carries the scope explicitly instead of overloading the query string
