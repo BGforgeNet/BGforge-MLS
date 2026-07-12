@@ -6,24 +6,19 @@
  */
 
 import { defineConfig } from "vitest/config";
+import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     test: {
         name: "tssl-plugin",
         include: ["plugins/tssl-plugin/test/**/*.test.ts"],
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
-            // Maintainer-recommended workaround for the .tmp/coverage-N.json
-            // ENOENT race under parallel coverage runs (vitest-dev/vitest
-            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
-            clean: false,
+        coverage: coverageConfig({
             thresholds: {
                 lines: 100,
                 functions: 100,
                 branches: 100,
                 statements: 100,
             },
-        },
+        }),
     },
 });

@@ -11,6 +11,7 @@
 
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     resolve: {
@@ -26,25 +27,20 @@ export default defineConfig({
         include: ["test/**/*.test.ts"],
         exclude: ["test/smoke-stdio.test.ts", "test/integration/**"],
         testTimeout: 30000,
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
-            // Separate from the client's coverage output so the parallel
-            // server+client coverage runs in scripts/test.sh don't race on
-            // coverage/.tmp shard files.
+        // Separate from the client's coverage output so the parallel
+        // server+client coverage runs in scripts/test.sh don't race on
+        // coverage/.tmp shard files.
+        //
+        // Coverage is intentionally scoped to "files actually loaded by tests"
+        // (the v8 default - no `include`). Adding `include: ["src/**/*.ts"]`
+        // would also count integration-only modules and the tree-sitter
+        // generated types in the denominator, which the unit slice cannot
+        // realistically cover. The `@bgforge/format` alias above resolves
+        // to format/src/ but tests load only a thin slice of it; add an
+        // explicit `include` here only after auditing exactly which files
+        // the unit suite touches.
+        coverage: coverageConfig({
             reportsDirectory: "coverage/server",
-            // Maintainer-recommended workaround for the .tmp/coverage-N.json
-            // ENOENT race under parallel coverage runs (vitest-dev/vitest
-            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
-            clean: false,
-            // Coverage is intentionally scoped to "files actually loaded by tests"
-            // (the v8 default - no `include`). Adding `include: ["src/**/*.ts"]`
-            // would also count integration-only modules and the tree-sitter
-            // generated types in the denominator, which the unit slice cannot
-            // realistically cover. The `@bgforge/format` alias above resolves
-            // to format/src/ but tests load only a thin slice of it; add an
-            // explicit `include` here only after auditing exactly which files
-            // the unit suite touches.
             exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
                 lines: 91,
@@ -52,6 +48,6 @@ export default defineConfig({
                 branches: 80,
                 statements: 90,
             },
-        },
+        }),
     },
 });

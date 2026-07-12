@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     resolve: {
@@ -18,29 +19,22 @@ export default defineConfig({
         // v8 coverage instrumentation slows the binary parser tests; the 5s
         // vitest default is too tight for them.
         testTimeout: 15000,
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
+        // Pin the denominator to this package's source so transitive
+        // workspace deps (e.g. @bgforge/format aliased above its tests)
+        // cannot dilute the ratio.
+        //
+        // Thresholds set at the floor measured by this unit-test slice.
+        // CLI integration tests live in a separate vitest project and are
+        // not counted here. Ratchet upward as coverage grows.
+        coverage: coverageConfig({
             reportsDirectory: "coverage/binary",
-            // Skip the outer reportsDirectory wipe at run start. Maintainer-recommended
-            // workaround for the .tmp/coverage-N.json ENOENT race that fires under CPU
-            // contention when many vitest --coverage processes run in parallel
-            // (vitest-dev/vitest #4943, #5903). Combined with the serialised coverage
-            // block in scripts/test.sh.
-            clean: false,
-            // Pin the denominator to this package's source so transitive
-            // workspace deps (e.g. @bgforge/format aliased above its tests)
-            // cannot dilute the ratio.
             include: ["src/**/*.ts"],
-            // Thresholds set at the floor measured by this unit-test slice.
-            // CLI integration tests live in a separate vitest project and are
-            // not counted here. Ratchet upward as coverage grows.
             thresholds: {
                 lines: 90,
                 functions: 91,
                 branches: 77,
                 statements: 88,
             },
-        },
+        }),
     },
 });

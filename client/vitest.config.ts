@@ -5,6 +5,7 @@
 
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     resolve: {
@@ -23,17 +24,11 @@ export default defineConfig({
         // tests in this suite; the 5s vitest default is too tight for them under
         // --coverage and was producing intermittent failures.
         testTimeout: 15000,
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
-            // Separate from the server's coverage output so the parallel
-            // server+client coverage runs in scripts/test.sh don't race on
-            // coverage/.tmp shard files.
+        // Separate from the server's coverage output so the parallel
+        // server+client coverage runs in scripts/test.sh don't race on
+        // coverage/.tmp shard files.
+        coverage: coverageConfig({
             reportsDirectory: "coverage/client",
-            // Maintainer-recommended workaround for the .tmp/coverage-N.json
-            // ENOENT race under parallel coverage runs (vitest-dev/vitest
-            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
-            clean: false,
             // Constrain measurement to client sources. Without this, v8 also
             // counts files loaded transitively through workspace deps
             // (@bgforge/binary), which sinks the ratio because the binary
@@ -107,6 +102,6 @@ export default defineConfig({
                 branches: 90,
                 statements: 96,
             },
-        },
+        }),
     },
 });

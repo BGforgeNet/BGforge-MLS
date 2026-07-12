@@ -1,26 +1,21 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     test: {
         name: "shared",
         include: [path.resolve(__dirname, "**/test/**/*.test.ts")],
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
+        // The shared/ tree contains a few small library-style helpers used
+        // across packages. Threshold reflects the floor measured today.
+        coverage: coverageConfig({
             reportsDirectory: "coverage/shared",
-            // Maintainer-recommended workaround for the .tmp/coverage-N.json
-            // ENOENT race under parallel coverage runs (vitest-dev/vitest
-            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
-            clean: false,
-            // The shared/ tree contains a few small library-style helpers used
-            // across packages. Threshold reflects the floor measured today.
             thresholds: {
                 lines: 99,
                 functions: 89,
                 branches: 97,
                 statements: 99,
             },
-        },
+        }),
     },
 });
