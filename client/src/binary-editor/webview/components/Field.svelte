@@ -15,6 +15,9 @@
     // in its `auto` grid track (columns stay aligned). Shared with GridBlock via controlWidthClass so every
     // renderer sizes the same way (see controls.ts).
     const widthClass = $derived(controlWidthClass(row));
+    // A row inside an editing-locked (partially-undecoded) subtree is read-only; surface WHY on hover so a
+    // disabled control is not just mysteriously greyed. Set only for the lock case (not padding/note).
+    const readOnly = $derived(row.editingLocked === true);
     const hasDiag = $derived(diagnostics.length > 0);
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
     const firstFix = $derived(diagnostics.find((d) => d.quickFix));
@@ -33,7 +36,8 @@
     <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
          two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
          max-content column and every control aligns at a uniform width. -->
-    <span class="field-control {widthClass}">
+    <span class="field-control {widthClass}"
+          title={readOnly ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
         <CellControl {row} {onedit} />
         {#if row.link && jump}
             {@const link = row.link}

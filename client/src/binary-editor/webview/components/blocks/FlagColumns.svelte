@@ -38,7 +38,8 @@
     }
 </script>
 {#if row}
-    <fieldset class="flag-group" class:bare={!boxed} class:spread>
+    <fieldset class="flag-group" class:bare={!boxed} class:spread
+              title={row.editingLocked ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
         {#if boxed}<legend>{row.name}</legend>{/if}
         <div class="flag-columns" class:spread>
             {#each cols as col, ci (ci)}

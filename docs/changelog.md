@@ -101,6 +101,7 @@
 - Change: flag-word fields in JSON snapshots are now serialised as a flat sorted array of strings instead of a `{flags, flagsRaw}` wrapper object. Each entry is either a named slug (e.g. `"lightThru"`) or `bit<N>` for set bits the spec doesn't name (e.g. `"bit13"`). Snapshots produced by previous versions need to be re-saved through this version's CLI before consumers on the new shape can read them.
 - More robust parse and display.
 - MAP truncation / undecodable-region notes in JSON snapshots and the binary editor tree are now labelled `Truncated` instead of the previous `TODO` placeholder.
+- Fields inside a MAP's undecodable region now carry a "read-only" hover tooltip explaining why they cannot be edited, and the edit-rejection message describes them as "read-only" rather than "locked" to keep them distinct from the in-game "Locked" object flag.
 - `fgbin` rejects oversized binary input files (e.g. a `.map` exceeding 16 MB) with a clear error before allocating a Buffer, so a malformed or accidentally-truncated download cannot trigger a multi-GB allocation.
 - The MAP parser caps inventory recursion depth at 2 (game format invariant: items can carry an inventory exactly one level deep). Crafted MAPs that advertise nested-inside-nested inventories now surface as a parse error instead of recursing until the JS stack overflows.
 

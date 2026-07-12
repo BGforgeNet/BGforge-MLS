@@ -200,7 +200,7 @@ describe("editField: rejects a field inside a real locked MAP subtree", () => {
         if (!lockedField) throw new Error("no field under the locked object");
         const before = (lockedField.source as ParsedField).value;
 
-        expect(() => editField(session, lockedField.id, 999)).toThrow(/locked/i);
+        expect(() => editField(session, lockedField.id, 999)).toThrow(/read-only/i);
         expect(session.dirty).toBe(false);
         expect((lockedField.source as ParsedField).value).toBe(before);
     });
@@ -236,7 +236,7 @@ describe("structureOp: rejects an op targeting a real locked MAP subtree", () =>
         if (parentId === undefined) throw new Error("locked object should have a parent section");
         const before = (session.model.childrenByParent.get(parentId) ?? []).length;
 
-        expect(() => structureOp(session, { op: "remove", entryId: lockedGroup.id })).toThrow(/locked/i);
+        expect(() => structureOp(session, { op: "remove", entryId: lockedGroup.id })).toThrow(/read-only/i);
         expect(session.dirty).toBe(false);
         expect((session.model.childrenByParent.get(parentId) ?? []).length).toBe(before);
     });
@@ -246,7 +246,7 @@ describe("structureOp: rejects an op targeting a real locked MAP subtree", () =>
         const lockedGroup = findLockedObjectGroup(session);
         expect(() =>
             structureOp(session, { op: "addChild", entryId: lockedGroup.id, childSection: "Inventory" }),
-        ).toThrow(/locked/i);
+        ).toThrow(/read-only/i);
         expect(session.dirty).toBe(false);
     });
 });
@@ -296,7 +296,7 @@ describe("spellbookEdit: rejects memorize onto a locked memorization-info owner"
             dirty: false,
         };
         expect(() => spellbookEdit(session, { op: "memorize", ownerNodeId: owner.id, resref: "TEST" })).toThrow(
-            /locked/i,
+            /read-only/i,
         );
         expect(session.dirty).toBe(false);
     });

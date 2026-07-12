@@ -57,6 +57,10 @@ export function projectRow(
     // Fields inside an editingLocked ancestor group are not editable; padding and
     // note fields carry no user-editable data regardless of lock state.
     base.editable = node.parentLocked !== true && field.type !== "padding" && field.type !== "note";
+    // A field inside an editing-locked (partially-undecoded) subtree is read-only for THAT reason
+    // specifically - distinct from padding/note fields, which are non-editable for their own reason. Carry
+    // the flag so the view can explain WHY the control is disabled (mirrors the group row's editingLocked).
+    if (node.parentLocked === true) base.editingLocked = true;
     if (field.description !== undefined) base.description = field.description;
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;

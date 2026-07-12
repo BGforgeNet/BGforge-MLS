@@ -181,5 +181,7 @@ export function assertNotLocked(model: Model, id: NodeId): void {
     const idx = model.byId.get(id);
     const node = idx === undefined ? undefined : model.nodes[idx];
     const label = node?.name ?? id;
-    throw new Error(`"${label}" is inside a locked, partially-undecoded subtree and cannot be edited.`);
+    // "read-only" not "locked": the in-game data carries its own "Locked" object flag (a door/container
+    // lock), so the edit-rejection message avoids that word to keep the two concepts distinct for the user.
+    throw new Error(`"${label}" is read-only: it is in a region that could not be fully decoded and cannot be edited.`);
 }
