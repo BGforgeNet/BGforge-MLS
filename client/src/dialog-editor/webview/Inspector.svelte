@@ -715,12 +715,12 @@
        the locked condition field below - a muted foreground alone is too subtle to read as "not editable" (a
        disabled <select> otherwise looks like an active dropdown, chevron and all). */
     .iv:disabled {
-        /* Dim via a muted FOREGROUND, not opacity: opacity makes the input's own solid background translucent
-           too, so a coloured row behind it - an explicitly-selected option's `.choicesel` selection wash -
-           bleeds through and washes the text out (fine over the dark panel bg in the list view, low-contrast
-           over the selection bg in the focused view). disabledForeground stays legible on the input background
-           in both themes; the dashed border carries the disabled affordance. */
-        color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+        /* A read-only field still exists to be READ, so keep its value at full input-foreground contrast.
+           Do NOT dim the text: disabledForeground is VS Code's ~50%-alpha grey (~2.8:1 over the input
+           background - fails WCAG AA 4.5:1), and opacity would bleed the selected-option `.choicesel` wash
+           through the input's own background. The "not editable" affordance is carried entirely by the dashed
+           border + not-allowed cursor below, so dimming the text is redundant as well as unreadable. */
+        color: var(--vscode-input-foreground, var(--vscode-foreground));
         cursor: not-allowed;
         border-style: dashed;
         border-color: var(--vscode-panel-border);
