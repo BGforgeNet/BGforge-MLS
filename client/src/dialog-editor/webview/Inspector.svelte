@@ -726,7 +726,13 @@
         border-color: var(--vscode-panel-border);
     }
     .ik {
-        color: var(--vscode-descriptionForeground);
+        /* Field labels (Option text / Condition / Target / ...) are primary UI text the user reads to identify
+           each field, so use full foreground. descriptionForeground is VS Code's ~70%-alpha grey - it measures
+           ~3.97:1 on the panel background (fails WCAG AA 4.5:1) and is VS Code's token for secondary DESCRIPTION
+           text, not field labels. The 9px uppercase styling already separates labels from values; contrast must
+           not carry that job. Only the focused-option view renders these labels, which is why the node view
+           (no labels) looked fine while the option view read as low-contrast. */
+        color: var(--vscode-foreground);
         font-size: 9px;
         text-transform: uppercase;
         margin-top: 8px;
@@ -902,7 +908,8 @@
         flex-wrap: wrap;
     }
     .rctlbl {
-        color: var(--vscode-descriptionForeground);
+        /* Same as .ik: a field label, full foreground for AA contrast (descriptionForeground is ~3.97:1). */
+        color: var(--vscode-foreground);
         font-size: 9px;
         text-transform: uppercase;
     }
