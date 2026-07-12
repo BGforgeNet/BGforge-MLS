@@ -128,4 +128,9 @@ cp node_modules/bgforge-td-plugin/package.json node_modules/bgforge-td-plugin/in
 
 rm -rf "$inject_dir"
 
+# Fail closed if the packaged VSIX regressed in size or shipped unexpected content.
+# The .vscodeignore denylist ships anything new by default, and no test opens the produced
+# bundle - this is the gate that does (see .vscodeignore header).
+./scripts/verify-package-contents.sh "$vsix_file"
+
 echo "Done"
