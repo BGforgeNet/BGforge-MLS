@@ -780,11 +780,14 @@
         flex-direction: column;
         gap: 3px;
     }
-    /* The option selected from the tree: focus-accented left border + faint fill, matching the tree row's
-       selection, so the same option reads as selected in both panels. */
+    /* The option selected from the tree: a focus-accented left border marks it. Do NOT add a full-row
+       background fill here: list-inactiveSelectionBackground equals input-background in some themes
+       (bgforge-monokai: both #414339), so a fill paints the row the SAME colour as every field's own
+       background - the field boxes, their borders, and the row all collapse into one grey blob and the form
+       structure disappears (labels + values become bare text on grey). The left accent, the tree-row
+       highlight, and the "option #N" crumb carry the selection without touching field backgrounds. */
     .trow.choicesel {
         border-left-color: var(--vscode-focusBorder);
-        background: var(--vscode-list-inactiveSelectionBackground);
     }
     .trhead {
         display: flex;
