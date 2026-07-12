@@ -1,7 +1,8 @@
 /**
- * Vitest root configuration enabling workspace mode via `test.projects`.
- * Allows `vitest run` at the repo root to discover all test projects,
- * and `vitest run --project <name>` to target a specific one.
+ * Vitest root configuration aggregating all test projects via `test.projects`.
+ * Named `vitest.config.ts` (not `vitest.workspace.ts`): Vitest 4 discovery no
+ * longer auto-loads the workspace filename, so `vitest run` / `vitest run
+ * --project <name>` at the repo root only pick this up under the config name.
  *
  * This file is additive - it does not replace the per-package `test.sh`
  * orchestration used by `pnpm test` and `pnpm test:all`.
