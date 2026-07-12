@@ -12,10 +12,10 @@ set -eu -o pipefail
 source "$(dirname "$0")/esbuild-lib.sh"
 
 esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js \
-  --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
-  --banner:js="$imu_banner_with_shebang" \
-  "$imu_define" \
-  "$@"
+    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --banner:js="$imu_banner_with_shebang" \
+    "$imu_define" \
+    "$@"
 
 # Copy tree-sitter WASM files
 copy_wasm_to server/out

@@ -28,7 +28,7 @@ output=$2
 
 # Snapshot .pro files. fgbin --save is idempotent (writes only when changed),
 # so re-running the script is cheap.
-[[ -d $proto_dir/items   ]] && node "$FGBIN" "$proto_dir/items"   -r --save -q
+[[ -d $proto_dir/items ]] && node "$FGBIN" "$proto_dir/items" -r --save -q
 [[ -d $proto_dir/scenery ]] && node "$FGBIN" "$proto_dir/scenery" -r --save -q
 
 # Roll snapshots up into a pid -> subType map keyed by the full pid as a
@@ -36,11 +36,17 @@ output=$2
 # hence the multiply.
 roll_up() {
     local dir=$1 section=$2
-    [[ -d $dir ]] || { echo '{}'; return; }
+    [[ -d $dir ]] || {
+        echo '{}'
+        return
+    }
     local files=()
     while IFS= read -r -d '' f; do files+=("$f"); done \
         < <(find "$dir" -name '*.pro.json' -print0)
-    [[ ${#files[@]} -gt 0 ]] || { echo '{}'; return; }
+    [[ ${#files[@]} -gt 0 ]] || {
+        echo '{}'
+        return
+    }
     jq -s --arg section "$section" '
         map({
             key: (.document.header.objectType * 16777216
@@ -50,12 +56,12 @@ roll_up() {
     ' "${files[@]}"
 }
 
-items=$(roll_up   "$proto_dir/items"   itemProperties)
+items=$(roll_up "$proto_dir/items" itemProperties)
 scenery=$(roll_up "$proto_dir/scenery" sceneryProperties)
 
 jq -n --argjson items "$items" --argjson scenery "$scenery" \
-    '{items: $items, scenery: $scenery}' > "$output"
+    '{items: $items, scenery: $scenery}' >"$output"
 
-n_items=$(jq '.items   | length' < "$output")
-n_scen=$(jq  '.scenery | length' < "$output")
+n_items=$(jq '.items   | length' <"$output")
+n_scen=$(jq '.scenery | length' <"$output")
 echo "Wrote $output ($n_items items, $n_scen scenery)"

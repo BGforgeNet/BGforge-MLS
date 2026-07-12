@@ -19,4 +19,4 @@ fi
 while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     "$CLI" "$f" "$flag"
-done < "$LIST"
+done <"$LIST"

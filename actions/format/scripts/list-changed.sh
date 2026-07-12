@@ -20,9 +20,15 @@ source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 exts=(ssl baf d tp2 tph tpa tpp tra msg 2da)
 extra_names=(scripts.lst)
 
-ext_alt="$(IFS='|'; echo "${exts[*]}")"
+ext_alt="$(
+    IFS='|'
+    echo "${exts[*]}"
+)"
 # awk alternation over the exact filenames, dots escaped for the regex.
-name_alt="$(IFS='|'; echo "${extra_names[*]}")"
+name_alt="$(
+    IFS='|'
+    echo "${extra_names[*]}"
+)"
 name_alt="${name_alt//./\\.}"
 
 find_names=()

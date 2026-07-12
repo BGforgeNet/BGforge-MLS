@@ -41,8 +41,8 @@ fi
 # TS plugins: normal build puts them in node_modules/, npm package needs them in server/out/
 echo "=== Building TS plugins into server/out/ ==="
 pnpm exec esbuild ./plugins/tssl-plugin/src/index.ts \
-  --bundle --outfile=server/out/tssl-plugin.js --format=cjs --platform=node --minify
+    --bundle --outfile=server/out/tssl-plugin.js --format=cjs --platform=node --minify
 pnpm exec esbuild ./plugins/td-plugin/src/index.ts \
-  --bundle --outfile=server/out/td-plugin.js --format=cjs --platform=node --minify
+    --bundle --outfile=server/out/td-plugin.js --format=cjs --platform=node --minify
 
 do_publish "@bgforge/mls-server" server "$@"

@@ -16,7 +16,7 @@ parallel() {
         local logfile="$LOG_DIR/${label// /-}.log"
         local start
         start=$(date +%s%3N)
-        ( eval "$cmd" > "$logfile" 2>&1 ) &
+        (eval "$cmd" >"$logfile" 2>&1) &
         pids+=($!)
         labels+=("$label")
         logs+=("$logfile")
@@ -30,11 +30,11 @@ parallel() {
             [ "${pids[$i]}" = "done" ] && continue
             if ! kill -0 "${pids[$i]}" 2>/dev/null; then
                 if wait "${pids[$i]}"; then
-                    local elapsed=$(( $(date +%s%3N) - ${starts[$i]} ))
+                    local elapsed=$(($(date +%s%3N) - ${starts[$i]}))
                     echo "  ok  ${labels[$i]} (${elapsed}ms)"
                     pids[i]="done"
                 else
-                    local elapsed=$(( $(date +%s%3N) - ${starts[$i]} ))
+                    local elapsed=$(($(date +%s%3N) - ${starts[$i]}))
                     echo ""
                     echo "  FAIL  ${labels[$i]} (${elapsed}ms)"
                     echo ""

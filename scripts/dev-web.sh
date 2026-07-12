@@ -48,7 +48,10 @@ DO_BUILD=1
 for arg in "$@"; do
     case "$arg" in
         --no-build) DO_BUILD=0 ;;
-        *) echo "unknown argument: $arg" >&2; exit 2 ;;
+        *)
+            echo "unknown argument: $arg" >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -59,7 +62,10 @@ OPEN_PATH="${DEV_WEB_OPEN-$DEFAULT_OPEN}"
 case "$(uname -m)" in
     x86_64 | amd64) ARCH=amd64 ;;
     aarch64 | arm64) ARCH=arm64 ;;
-    *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+    *)
+        echo "unsupported architecture: $(uname -m)" >&2
+        exit 1
+        ;;
 esac
 
 CS_HOME="$DEV_DIR/code-server/code-server-${CS_VERSION}-linux-${ARCH}"
@@ -99,7 +105,10 @@ if [[ ! -x "$CS_BIN" ]]; then
     fi
     tar -xzf "$tmp" -C "$DEV_DIR/code-server"
     rm -f "$tmp"
-    [[ -x "$CS_BIN" ]] || { echo "download/extract failed: $CS_BIN missing" >&2; exit 1; }
+    [[ -x "$CS_BIN" ]] || {
+        echo "download/extract failed: $CS_BIN missing" >&2
+        exit 1
+    }
     echo "installed code-server to $CS_HOME"
 fi
 

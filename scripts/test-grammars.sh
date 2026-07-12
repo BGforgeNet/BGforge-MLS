@@ -26,10 +26,10 @@ export SKIP_FORMAT_BUILD=1
 step "Testing grammars"
 parallel \
     "fallout-ssl" "$SCRIPT_DIR/test-grammar.sh fallout-ssl" \
-    "weidu-baf"   "$SCRIPT_DIR/test-grammar.sh weidu-baf" \
-    "weidu-d"     "$SCRIPT_DIR/test-grammar.sh weidu-d" \
-    "weidu-tp2"   "$SCRIPT_DIR/test-grammar.sh weidu-tp2" \
-    "weidu-tra"   "$SCRIPT_DIR/test-grammar.sh weidu-tra" \
+    "weidu-baf" "$SCRIPT_DIR/test-grammar.sh weidu-baf" \
+    "weidu-d" "$SCRIPT_DIR/test-grammar.sh weidu-d" \
+    "weidu-tp2" "$SCRIPT_DIR/test-grammar.sh weidu-tp2" \
+    "weidu-tra" "$SCRIPT_DIR/test-grammar.sh weidu-tra" \
     "fallout-msg" "$SCRIPT_DIR/test-grammar.sh fallout-msg"
 
 timing_summary "All grammar tests passed"

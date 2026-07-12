@@ -17,7 +17,7 @@ tmbundle_zip="dist/${tmbundle_name}-${version}.tmbundle.zip"
 rm -rf "$tmbundle_dir" "$tmbundle_zip"
 mkdir -p "$tmbundle_dir/Syntaxes"
 
-cat > "$tmbundle_dir/info.plist" << 'PLIST'
+cat >"$tmbundle_dir/info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -38,7 +38,7 @@ PLIST
 for f in syntaxes/*.tmLanguage.json; do
     base=$(basename "$f")
     case "$base" in
-        bgforge-mls-*|*-tooltip.*) continue ;;
+        bgforge-mls-* | *-tooltip.*) continue ;;
     esac
     cp "$f" "$tmbundle_dir/Syntaxes/"
 done
@@ -63,12 +63,12 @@ cp editors/kate/*.ksh.xml "$ksh_dir/"
 # ship no scalable icon here and fall back to the generic file icon.
 mkdir -p "$ksh_dir/mimetypes"
 cp editors/kate/bgforge-mls.mime.xml "$ksh_dir/mimetypes/"
-cp themes/icons/fallout-ssl.svg  "$ksh_dir/mimetypes/application-x-fallout-ssl.svg"
+cp themes/icons/fallout-ssl.svg "$ksh_dir/mimetypes/application-x-fallout-ssl.svg"
 cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-weidu-tra.svg"
 cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-fallout-msg.svg"
 cp themes/icons/infinity-2da.svg "$ksh_dir/mimetypes/application-x-infinity-2da.svg"
-cp themes/icons/fallout-pro.svg  "$ksh_dir/mimetypes/application-x-fallout-pro.svg"
-cp themes/icons/fallout-map.svg  "$ksh_dir/mimetypes/application-x-fallout-map.svg"
+cp themes/icons/fallout-pro.svg "$ksh_dir/mimetypes/application-x-fallout-pro.svg"
+cp themes/icons/fallout-map.svg "$ksh_dir/mimetypes/application-x-fallout-map.svg"
 cp themes/icons/infinity-itm.svg "$ksh_dir/mimetypes/application-x-infinity-itm.svg"
 cp themes/icons/infinity-spl.svg "$ksh_dir/mimetypes/application-x-infinity-spl.svg"
 cp themes/icons/infinity-eff.svg "$ksh_dir/mimetypes/application-x-infinity-eff.svg"

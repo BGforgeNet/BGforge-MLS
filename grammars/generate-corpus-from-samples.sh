@@ -26,7 +26,7 @@ echo "Detected file extension: .$EXT"
 
 OUTPUT_FILE="test/corpus/samples.txt"
 mkdir -p test/corpus
-true > "$OUTPUT_FILE"
+true >"$OUTPUT_FILE"
 
 for f in test/samples/*."$EXT"; do
     basename=$(basename "$f" ."$EXT")
@@ -44,7 +44,7 @@ for f in test/samples/*."$EXT"; do
         echo ""
         tree-sitter parse --no-ranges "$f" 2>&1
         echo ""
-    } >> "$OUTPUT_FILE"
+    } >>"$OUTPUT_FILE"
 done
 
 echo "Generated corpus tests in $OUTPUT_FILE"

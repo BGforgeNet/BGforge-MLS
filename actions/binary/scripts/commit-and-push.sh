@@ -28,7 +28,7 @@ for ext in "${exts[@]}"; do
 done
 
 # Stage only snapshot files; never sweep up unrelated working-tree changes.
-find . -type f \( "${find_names[@]}" \) -print0 \
-    | xargs -0 -r git add --
+find . -type f \( "${find_names[@]}" \) -print0 |
+    xargs -0 -r git add --
 
 finalize_commit_and_push

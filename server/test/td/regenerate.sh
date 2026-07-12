@@ -16,7 +16,7 @@ fi
 for sample in samples/*.td; do
     name=$(basename "$sample" .td)
     echo "Regenerating ${name}.d..."
-    node --no-warnings "$CLI" "$sample" > "samples-expected/${name}.d"
+    node --no-warnings "$CLI" "$sample" >"samples-expected/${name}.d"
 done
 
 echo "Done."

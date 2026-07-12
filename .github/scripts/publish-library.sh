@@ -13,15 +13,30 @@ if [[ -z "${TAG_NAME:-}" ]]; then
     exit 1
 fi
 
-prefix="${TAG_NAME%%/*}"   # e.g. binary
-tag_version="${TAG_NAME#*/v}"  # e.g. 0.2.0
+prefix="${TAG_NAME%%/*}"      # e.g. binary
+tag_version="${TAG_NAME#*/v}" # e.g. 0.2.0
 
 # Map the tag prefix to the package name, its package.json, and its publish script.
 # The allowlist is also the validation: an unrecognized prefix aborts.
 case "$prefix" in
-    binary)    pkgname="@bgforge/binary";    pkgjson="binary/package.json";      script="scripts/publish-binary.sh";    testcfg="binary/vitest.config.ts" ;;
-    format)    pkgname="@bgforge/format";    pkgjson="format/package.json";      script="scripts/publish-format.sh";    testcfg="format/vitest.config.ts" ;;
-    transpile) pkgname="@bgforge/transpile"; pkgjson="transpilers/package.json"; script="scripts/publish-transpile.sh"; testcfg="" ;;
+    binary)
+        pkgname="@bgforge/binary"
+        pkgjson="binary/package.json"
+        script="scripts/publish-binary.sh"
+        testcfg="binary/vitest.config.ts"
+        ;;
+    format)
+        pkgname="@bgforge/format"
+        pkgjson="format/package.json"
+        script="scripts/publish-format.sh"
+        testcfg="format/vitest.config.ts"
+        ;;
+    transpile)
+        pkgname="@bgforge/transpile"
+        pkgjson="transpilers/package.json"
+        script="scripts/publish-transpile.sh"
+        testcfg=""
+        ;;
     *)
         echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, or transpile)." >&2
         exit 1

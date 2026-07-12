@@ -24,7 +24,7 @@ for sample in samples/*.td; do
         continue
     fi
 
-    node --no-warnings "$CLI" "$sample" > "$expected"
+    node --no-warnings "$CLI" "$sample" >"$expected"
     updated=$((updated + 1))
 done
 

@@ -17,10 +17,13 @@ GRAMMAR_DIR="$ROOT_DIR/grammars/$GRAMMAR_NAME"
 
 case "$GRAMMAR_NAME" in
     fallout-ssl) LINK_NAME="tree-sitter-ssl" ;;
-    weidu-baf)   LINK_NAME="tree-sitter-baf" ;;
-    weidu-d)     LINK_NAME="tree-sitter-weidu_d" ;;
-    weidu-tp2)   LINK_NAME="tree-sitter-weidu_tp2" ;;
-    *) echo "Unknown grammar: $GRAMMAR_NAME"; exit 1 ;;
+    weidu-baf) LINK_NAME="tree-sitter-baf" ;;
+    weidu-d) LINK_NAME="tree-sitter-weidu_d" ;;
+    weidu-tp2) LINK_NAME="tree-sitter-weidu_tp2" ;;
+    *)
+        echo "Unknown grammar: $GRAMMAR_NAME"
+        exit 1
+        ;;
 esac
 
 LINK_PATH="$ROOT_DIR/grammars/$LINK_NAME"

@@ -19,6 +19,6 @@ source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     [[ -f "$f" ]] && git add -- "$f"
-done < "$LIST"
+done <"$LIST"
 
 finalize_commit_and_push

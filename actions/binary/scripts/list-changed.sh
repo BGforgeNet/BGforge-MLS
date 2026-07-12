@@ -23,7 +23,10 @@ if [[ "${#exts[@]}" -eq 0 ]]; then
     exit 1
 fi
 
-ext_alt="$(IFS='|'; echo "${exts[*]}")"
+ext_alt="$(
+    IFS='|'
+    echo "${exts[*]}"
+)"
 find_names=()
 for ext in "${exts[@]}"; do
     [[ "${#find_names[@]}" -gt 0 ]] && find_names+=(-o)
@@ -38,7 +41,10 @@ filter() {
 }
 
 # The commit step stages `*.<ext>.json`, so pass the canonical extension list on.
-ext_csv="$(IFS=','; echo "${exts[*]}")"
-echo "extensions=$ext_csv" >> "$GITHUB_OUTPUT"
+ext_csv="$(
+    IFS=','
+    echo "${exts[*]}"
+)"
+echo "extensions=$ext_csv" >>"$GITHUB_OUTPUT"
 
 lc_emit_list filter "${find_names[@]}"

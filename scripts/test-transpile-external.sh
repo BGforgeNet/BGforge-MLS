@@ -75,7 +75,7 @@ test_repo() {
 step "Transpile external repos"
 parallel \
     "bg2-tweaks-and-tricks" "test_repo '$ROOT_DIR/external/infinity-engine/bg2-tweaks-and-tricks'" \
-    "bg2-wildmage"          "test_repo '$ROOT_DIR/external/infinity-engine/bg2-wildmage'" \
-    "FO2tweaks"             "test_repo '$ROOT_DIR/external/fallout/FO2tweaks'"
+    "bg2-wildmage" "test_repo '$ROOT_DIR/external/infinity-engine/bg2-wildmage'" \
+    "FO2tweaks" "test_repo '$ROOT_DIR/external/fallout/FO2tweaks'"
 
 timing_summary "Transpile external tests passed"

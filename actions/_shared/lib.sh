@@ -44,28 +44,28 @@ lc_emit_list() {
         # Default checkouts are shallow; pull base+head into the local clone so
         # `git diff` can resolve them. Failures fall through to the full-scan.
         git fetch --no-tags --depth=1 origin "$base" "$head" >/dev/null 2>&1 || true
-        if git rev-parse --verify --quiet "$base" >/dev/null \
-           && git rev-parse --verify --quiet "$head" >/dev/null; then
-            git diff --name-only --diff-filter=AMR "$base" "$head" -- "$SCAN_PATH" \
-                | "$filter_fn" \
-                | while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done \
-                > "$list"
+        if git rev-parse --verify --quiet "$base" >/dev/null &&
+            git rev-parse --verify --quiet "$head" >/dev/null; then
+            git diff --name-only --diff-filter=AMR "$base" "$head" -- "$SCAN_PATH" |
+                "$filter_fn" |
+                while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done \
+                    >"$list"
             mode=incremental
         fi
     fi
 
     if [[ "$mode" == "full" ]]; then
-        find "$SCAN_PATH" -type f \( "${find_names[@]}" \) > "$list"
+        find "$SCAN_PATH" -type f \( "${find_names[@]}" \) >"$list"
     fi
 
     sort -u -o "$list" "$list"
-    count=$(wc -l < "$list")
+    count=$(wc -l <"$list")
     echo "Mode: $mode, files: $count"
 
     {
         echo "list=$list"
         echo "count=$count"
-    } >> "$GITHUB_OUTPUT"
+    } >>"$GITHUB_OUTPUT"
 }
 
 # Commit whatever the caller has already staged and push, rebasing onto the
@@ -80,7 +80,7 @@ finalize_commit_and_push() {
         {
             echo "changed=false"
             echo "changed-files="
-        } >> "$GITHUB_OUTPUT"
+        } >>"$GITHUB_OUTPUT"
         echo "No changes to commit."
         return 0
     fi
@@ -92,7 +92,7 @@ finalize_commit_and_push() {
         echo "changed-files<<__END__"
         echo "$files"
         echo "__END__"
-    } >> "$GITHUB_OUTPUT"
+    } >>"$GITHUB_OUTPUT"
 
     git commit -m "$COMMIT_MESSAGE"
 

@@ -21,12 +21,12 @@ source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 while IFS= read -r f; do
     [[ -z "$f" ]] && continue
     case "$f" in
-        *.td)   out="${f%.td}.d" ;;
+        *.td) out="${f%.td}.d" ;;
         *.tbaf) out="${f%.tbaf}.baf" ;;
         *.tssl) out="${f%.tssl}.ssl" ;;
         *) continue ;;
     esac
     [[ -f "$out" ]] && git add -- "$out"
-done < "$LIST"
+done <"$LIST"
 
 finalize_commit_and_push

@@ -34,7 +34,7 @@ remove_excluded() {
         # Skip dangerous paths: absolute or parent refs
         [[ "$file" =~ ^/ || "$file" =~ \.\. ]] && continue
         rm -rf "${target_dir:?}/$file"
-    done < "$exclude_file"
+    done <"$exclude_file"
 }
 
 reset_repos() {
@@ -68,7 +68,7 @@ test_bin() {
 
     step "Testing Fallout binary assets"
     # Stdout mode outputs JSON - discard it, we only care about exit code (parse success)
-    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q > /dev/null
+    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q >/dev/null
 }
 
 step "Building CLIs"

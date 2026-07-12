@@ -22,7 +22,10 @@ source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 # after the leading dot: .td<-.d, .tbaf<-.baf, .tssl<-.ssl (see the filter below).
 # Keep in sync with @bgforge/transpile (transpilers/src/cli.ts).
 in_exts=(td tbaf tssl)
-in_alt="$(IFS='|'; echo "${in_exts[*]}")"
+in_alt="$(
+    IFS='|'
+    echo "${in_exts[*]}"
+)"
 
 find_names=()
 for ext in "${in_exts[@]}"; do
