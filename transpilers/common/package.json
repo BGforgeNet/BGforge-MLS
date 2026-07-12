@@ -8,6 +8,6 @@
     },
     "devDependencies": {
         "esbuild-wasm": "^0.28.1",
-        "ts-morph": "^27.0.2"
+        "ts-morph": "catalog:"
     }
 }

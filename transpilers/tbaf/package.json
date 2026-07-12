@@ -4,6 +4,6 @@
     "private": true,
     "description": "TBAF transpiler (TypeScript to WeiDU BAF)",
     "devDependencies": {
-        "ts-morph": "^27.0.2"
+        "ts-morph": "catalog:"
     }
 }

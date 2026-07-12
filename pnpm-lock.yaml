@@ -4,6 +4,30 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@types/node':
+      specifier: ^24.13.3
+      version: 24.13.3
+    ts-morph:
+      specifier: ^27.0.2
+      version: 27.0.2
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
+    vitest:
+      specifier: ^4.1.10
+      version: 4.1.10
+    vscode-languageclient:
+      specifier: 10.1.0
+      version: 10.1.0
+    vscode-languageserver:
+      specifier: 10.1.0
+      version: 10.1.0
+    vscode-languageserver-protocol:
+      specifier: 3.18.2
+      version: 3.18.2
+
 overrides:
   mocha>diff: '>=8.0.3'
   mocha>serialize-javascript: '>=7.0.5'
@@ -29,7 +53,7 @@ importers:
         specifier: ^10.0.10
         version: 10.0.10
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 'catalog:'
         version: 24.13.3
       '@vitest/coverage-v8':
         specifier: ^4.1.10
@@ -95,13 +119,13 @@ importers:
         specifier: ^4.23.0
         version: 4.23.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
         specifier: ^8.1.4
         version: 8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       vscode-oniguruma:
         specifier: ^2.0.1
@@ -135,7 +159,7 @@ importers:
         specifier: ^0.22.4
         version: 0.22.4(oxc-resolver@11.21.3)(tsx@4.23.0)(typescript@5.9.3)
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   binary-editor:
@@ -145,10 +169,10 @@ importers:
         version: link:../binary
     devDependencies:
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   client:
@@ -166,14 +190,14 @@ importers:
         specifier: ^0.11.1
         version: 0.11.1
       vscode-languageclient:
-        specifier: 10.1.0
+        specifier: 'catalog:'
         version: 10.1.0
       vscode-languageserver-protocol:
-        specifier: 3.18.2
+        specifier: 'catalog:'
         version: 3.18.2
     devDependencies:
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 'catalog:'
         version: 24.13.3
       '@types/vscode':
         specifier: ^1.91.0
@@ -216,7 +240,7 @@ importers:
         specifier: ^0.22.4
         version: 0.22.4(oxc-resolver@11.21.3)(tsx@4.23.0)(typescript@5.9.3)
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   grammars/fallout-msg: {}
@@ -250,25 +274,25 @@ importers:
   plugins/td-plugin:
     devDependencies:
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 'catalog:'
         version: 24.13.3
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   plugins/tssl-plugin:
     devDependencies:
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 'catalog:'
         version: 24.13.3
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   server:
@@ -281,7 +305,7 @@ importers:
         specifier: workspace:*
         version: link:../format
       '@types/node':
-        specifier: ^24.13.3
+        specifier: 'catalog:'
         version: 24.13.3
       fast-check:
         specifier: ^4.9.0
@@ -293,16 +317,16 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
       ts-morph:
-        specifier: ^27.0.2
+        specifier: 'catalog:'
         version: 27.0.2
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: 'catalog:'
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
       vscode-languageserver:
-        specifier: 10.1.0
+        specifier: 'catalog:'
         version: 10.1.0
       vscode-languageserver-textdocument:
         specifier: ^1.0.12
@@ -344,25 +368,25 @@ importers:
         specifier: ^0.28.1
         version: 0.28.1
       ts-morph:
-        specifier: ^27.0.2
+        specifier: 'catalog:'
         version: 27.0.2
 
   transpilers/tbaf:
     devDependencies:
       ts-morph:
-        specifier: ^27.0.2
+        specifier: 'catalog:'
         version: 27.0.2
 
   transpilers/td:
     devDependencies:
       ts-morph:
-        specifier: ^27.0.2
+        specifier: 'catalog:'
         version: 27.0.2
 
   transpilers/tssl:
     devDependencies:
       ts-morph:
-        specifier: ^27.0.2
+        specifier: 'catalog:'
         version: 27.0.2
 
 packages:

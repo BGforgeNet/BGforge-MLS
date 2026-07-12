@@ -17,11 +17,11 @@
         "@bgforge/binary-editor": "workspace:*",
         "@xyflow/svelte": "^1.6.2",
         "elkjs": "^0.11.1",
-        "vscode-languageclient": "10.1.0",
-        "vscode-languageserver-protocol": "3.18.2"
+        "vscode-languageclient": "catalog:",
+        "vscode-languageserver-protocol": "catalog:"
     },
     "devDependencies": {
-        "@types/node": "^24.13.3",
+        "@types/node": "catalog:",
         "@types/vscode": "^1.91.0",
         "@vscode/test-electron": "^2.5.2",
         "bits-ui": "2.18.1",

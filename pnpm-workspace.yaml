@@ -11,6 +11,20 @@ packages:
   - transpilers/tssl
   - transpilers/tbaf
   - transpilers/td
+
+# Mechanical enforcement for the lockstep dependency groups documented in AGENTS.md
+# (Pinned dependency constraints). A member manifest references `catalog:` instead of
+# a literal range, so an out-of-lockstep bump in one package.json fails `pnpm install`
+# rather than silently drifting until noticed by convention.
+catalog:
+  vscode-languageclient: 10.1.0
+  vscode-languageserver: 10.1.0
+  vscode-languageserver-protocol: 3.18.2
+  ts-morph: ^27.0.2
+  typescript: ^5.9.3
+  vitest: ^4.1.10
+  "@types/node": ^24.13.3
+
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
 # `@vscode/vsce` dep no longer used since vsce 3. `@vscode/vsce-sign` only matters
