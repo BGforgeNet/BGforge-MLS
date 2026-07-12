@@ -24,7 +24,33 @@ vi.mock("../src/server", () => ({
     },
 }));
 
-import { Translation } from "../src/translation";
+/**
+ * Tracks fs.renameSync/writeFileSync calls so the atomic write-back test can assert HOW
+ * writeMessages wrote the file, not just what ended up on disk. `vi.spyOn(fs, "...")` can't
+ * intercept these because translation.ts (and this file) import fs via `import * as fs from
+ * "fs"`, and an ES module namespace object's properties are non-configurable - vi.spyOn throws
+ * "Cannot redefine property". A hoisted vi.mock replaces the resolved module for every
+ * importer instead (regardless of import style), so it works here; every other fs function is
+ * passed straight through to the real implementation, so the other ~70 tests in this file are
+ * unaffected.
+ */
+const fsCallLog = { renameSync: [] as Array<[string, string]>, writeFileSyncDestPaths: new Set<string>() };
+vi.mock("fs", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("fs")>();
+    return {
+        ...actual,
+        renameSync: (oldPath: fs.PathLike, newPath: fs.PathLike) => {
+            fsCallLog.renameSync.push([String(oldPath), String(newPath)]);
+            return actual.renameSync(oldPath, newPath);
+        },
+        writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
+            fsCallLog.writeFileSyncDestPaths.add(String(args[0]));
+            return actual.writeFileSync(...args);
+        },
+    };
+});
+
+import { Translation, UnsupportedEncodingCharacterError } from "../src/translation";
 import { project as loadProjectSettings, type ProjectTraSettings } from "../src/settings";
 
 describe("Translation", () => {
@@ -994,6 +1020,223 @@ translation~`;
 
             // Non-translation langId should be silently ignored
             expect(() => translation.reloadFile(traUri, "typescript", newText)).not.toThrow();
+        });
+
+        it("reloads and fires the notify callback regardless of the process working directory", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+
+            const traUri = `file://${tempDir}/test.tra`;
+            // Deliberately do NOT chdir into the workspace: a normally-spawned LSP server's CWD is
+            // not the workspace root. getTraPath must resolve the reload path with path-math
+            // (workspace root + resolveTraDir), not a CWD-relative realpath - otherwise
+            // reloadFileLines silently no-ops and .tra/.msg reload-on-save is dead in production.
+            expect(process.cwd()).not.toBe(tempDir);
+            t.reloadFile(traUri, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not fire the reload-notify callback for a non-tra/msg file extension", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+
+            // langId is a translation-file langId, but the extension itself is not .tra/.msg, so
+            // reloadFileLines' own extension check rejects it before any data is touched.
+            const outsideUri = `file://${tempDir}/test.tssl`;
+            t.reloadFile(outsideUri, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).not.toHaveBeenCalled();
+        });
+
+        it("works without a reload-notify callback (optional constructor argument)", async () => {
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+
+            const traUri = `file://${tempDir}/test.tra`;
+            expect(() => t.reloadFile(traUri, "weidu-tra", `@100 = ~Updated text~`)).not.toThrow();
+        });
+    });
+
+    describe("writeMessages (atomic write-back)", () => {
+        it("writes via a same-directory temp file + rename, leaving no temp file behind", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra test.msg */\nconst x = mstr(100);`;
+            const destPath = path.join(tempDir, "test.msg");
+
+            // Reset here, not in the shared beforeEach: fixture setup (creating test.msg/.tra
+            // etc.) also calls writeFileSync on this same destPath, which would otherwise pollute
+            // the log before the call under test even runs.
+            fsCallLog.renameSync.length = 0;
+            fsCallLog.writeFileSyncDestPaths.clear();
+
+            const result = translation.writeMessages(uri, text, "typescript", { "100": "Atomic edit" });
+
+            expect(result.changed).toBe(true);
+            // Exactly one rename, from a temp path in the SAME directory, onto the destination.
+            expect(fsCallLog.renameSync).toHaveLength(1);
+            const [tempPath, renamedTo] = fsCallLog.renameSync[0]!;
+            expect(path.dirname(tempPath)).toBe(path.dirname(destPath));
+            expect(renamedTo).toBe(destPath);
+            // writeFileSync itself never targeted the destination path directly - only the temp
+            // path (renameSync is what puts content at the destination, atomically).
+            expect(fsCallLog.writeFileSyncDestPaths.has(destPath)).toBe(false);
+            expect(fsCallLog.writeFileSyncDestPaths.has(tempPath)).toBe(true);
+            // The rename consumed the temp file - nothing named *.tmp remains on disk.
+            const leftovers = fs.readdirSync(tempDir).filter((f) => f.endsWith(".tmp"));
+            expect(leftovers).toEqual([]);
+            // And the destination itself has the expected final content.
+            expect(fs.readFileSync(destPath, "utf8")).toContain("{100}{}{Atomic edit}");
+        });
+    });
+
+    describe("legacy-codepage support (windows-1252 fallback)", () => {
+        /** Build raw file bytes: ASCII scaffolding around one explicit non-ASCII byte value. */
+        function cp1252Bytes(...parts: Array<string | number>): Buffer {
+            return Buffer.concat(
+                parts.map((p) => (typeof p === "string" ? Buffer.from(p, "ascii") : Buffer.from([p]))),
+            );
+        }
+
+        it("resolves a windows-1252 .tra file's accented text (read path)", async () => {
+            // 0xE9 = 'e' with acute accent in both windows-1252 and Latin-1; not valid UTF-8 on its own.
+            const raw = cp1252Bytes("@100 = ~Caf", 0xe9, "~\n@101 = ~Non-accented~");
+            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(raw)).toThrow();
+            fs.writeFileSync(path.join(tempDir, "cp1252.tra"), raw);
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+
+            fs.writeFileSync(path.join(tempDir, "cp1252.tbaf"), "");
+            const uri = `file://${tempDir}/cp1252.tbaf`;
+            const text = `/** @tra cp1252.tra */\nconst x = tra(100);`;
+            const hover = t.getHover(uri, "typescript", "tra(100)", text);
+
+            expect(hover).not.toBeNull();
+            const value = (hover!.contents as { value: string }).value;
+            expect(value).toContain("Café");
+        });
+
+        it("still resolves a UTF-8 .tra file's multi-byte text (read path unaffected)", async () => {
+            // U+00E9 encoded as UTF-8 is the two bytes 0xC3 0xA9 - decodes as UTF-8, not windows-1252.
+            const raw = Buffer.from("@100 = ~Café~\n@101 = ~Non-accented~", "utf8");
+            fs.writeFileSync(path.join(tempDir, "utf8.tra"), raw);
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+
+            fs.writeFileSync(path.join(tempDir, "utf8.tbaf"), "");
+            const uri = `file://${tempDir}/utf8.tbaf`;
+            const text = `/** @tra utf8.tra */\nconst x = tra(100);`;
+            const hover = t.getHover(uri, "typescript", "tra(100)", text);
+
+            expect(hover).not.toBeNull();
+            expect((hover!.contents as { value: string }).value).toContain("Café");
+        });
+
+        it("round-trips a windows-1252 file byte-identically on save: untouched entries unchanged", async () => {
+            // The accented byte lives in the UNTOUCHED entry (101); entry 100 (the one edited) is
+            // plain ASCII. This way the post-save file staying non-UTF-8 actually proves entry
+            // 101's original cp1252 byte survived, rather than merely reflecting that the new
+            // text for entry 100 happens to be ASCII.
+            const raw = cp1252Bytes("@100 = ~Original entry~\n@101 = ~Caf", 0xe9, " untouched~");
+            const traPath = path.join(tempDir, "cp1252.tra");
+            fs.writeFileSync(traPath, raw);
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "cp1252.tbaf"), "");
+            const uri = `file://${tempDir}/cp1252.tbaf`;
+            const text = `/** @tra cp1252.tra */\nconst x = tra(100);`;
+
+            const result = t.writeMessages(uri, text, "typescript", { "100": "Edited only entry 100" });
+            expect(result.changed).toBe(true);
+
+            const updated = fs.readFileSync(traPath);
+            // Still not valid UTF-8: round-tripped as windows-1252, not transcoded.
+            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(updated)).toThrow();
+            // The untouched entry 101's line is byte-identical to the original, accented byte included.
+            const line101 = "@101 = ~Caf";
+            const originalLine = raw.subarray(raw.indexOf(line101, 0, "ascii"));
+            const updatedLine = updated.subarray(updated.indexOf(line101, 0, "ascii"));
+            expect(updatedLine).toEqual(originalLine);
+        });
+
+        it("refuses to save a windows-1252 file when the edit adds a character outside windows-1252", async () => {
+            const raw = cp1252Bytes("@100 = ~Caf", 0xe9, "~\n@101 = ~Non-accented~");
+            fs.writeFileSync(path.join(tempDir, "cp1252.tra"), raw);
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "cp1252.tbaf"), "");
+            const uri = `file://${tempDir}/cp1252.tbaf`;
+            const text = `/** @tra cp1252.tra */\nconst x = tra(100);`;
+
+            // U+4E2D ("middle", CJK) is not representable in windows-1252.
+            expect(() => t.writeMessages(uri, text, "typescript", { "100": "Not cp1252: 中" })).toThrow(
+                UnsupportedEncodingCharacterError,
+            );
+            // Nothing was written: the file is untouched.
+            expect(fs.readFileSync(path.join(tempDir, "cp1252.tra"))).toEqual(raw);
+        });
+
+        it("allows a UTF-8 file to gain any Unicode character (no windows-1252 constraint)", async () => {
+            const raw = Buffer.from("@100 = ~Café~\n@101 = ~Non-accented~", "utf8");
+            fs.writeFileSync(path.join(tempDir, "utf8.tra"), raw);
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "utf8.tbaf"), "");
+            const uri = `file://${tempDir}/utf8.tbaf`;
+            const text = `/** @tra utf8.tra */\nconst x = tra(100);`;
+
+            const result = t.writeMessages(uri, text, "typescript", { "100": "Now with 中" });
+            expect(result.changed).toBe(true);
+            const updated = fs.readFileSync(path.join(tempDir, "utf8.tra"), "utf8");
+            expect(updated).toContain("中");
+        });
+
+        it("a brand-new file (from-scratch save) defaults to UTF-8 encoding", async () => {
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "scratch2.tbaf"), "");
+            const uri = `file://${tempDir}/scratch2.tbaf`;
+            const text = `/** @tra scratch2.tra */\nconst x = tra(100);`;
+
+            const result = t.writeMessages(uri, text, "typescript", { "100": "Brand new 中" });
+            expect(result.changed).toBe(true);
+            const onDisk = fs.readFileSync(path.join(tempDir, "scratch2.tra"), "utf8");
+            expect(onDisk).toContain("中");
+        });
+    });
+
+    describe("consumer index concurrency (bounded async startup walk)", () => {
+        it("indexes every consumer file correctly when the file count exceeds the concurrency bound", async () => {
+            // WORKSPACE_SCAN_CONCURRENCY is 4; create more consumer files than that so the pLimit
+            // fan-out in buildConsumerIndex must actually queue work, not just run everything at once.
+            const traContent = `@100 = ~Shared entry~`;
+            fs.writeFileSync(path.join(tempDir, "many.tra"), traContent);
+
+            const N = 12;
+            for (let i = 0; i < N; i++) {
+                fs.writeFileSync(
+                    path.join(tempDir, `consumer${i}.baf`),
+                    `/** @tra many.tra */\nDisplayStringHead(Myself,@100)`,
+                );
+            }
+
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
+            await t.init();
+
+            const traUri = `file://${tempDir}/many.tra`;
+            const refs = await t.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+
+            expect(refs.length).toBe(N);
+            const files = new Set(refs.map((r) => r.uri));
+            expect(files.size).toBe(N);
         });
     });
 });

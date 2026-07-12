@@ -5,6 +5,7 @@
  * Can be used by any consumer (providers, TSSL/TBAF handlers, etc.)
  */
 
+import * as crypto from "crypto";
 import * as fs from "fs";
 import pLimit from "p-limit";
 import * as path from "path";
@@ -30,8 +31,8 @@ import {
 } from "../../shared/dialog-tra-edit";
 import {
     findFiles,
+    findFilesByExtensions,
     isDirectory,
-    isSubpath,
     isSubpathFullyResolved,
     isSubpathResolved,
     tryRealpathSync,
@@ -118,6 +119,101 @@ const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ..
 
 const extensions: Array<TraExt> = ["msg", "tra"];
 
+// =========================================================================
+// File encoding: UTF-8-first read with a windows-1252 fallback, encoding-
+// preserving write, and an atomic (temp-file + rename) write-back.
+// =========================================================================
+
+/** Which decoder successfully read a `.tra`/`.msg` file's bytes. */
+type ResolvedEncoding = "utf-8" | "windows-1252";
+
+const UTF8_STRICT_DECODER = new TextDecoder("utf-8", { fatal: true });
+const WINDOWS_1252_DECODER = new TextDecoder("windows-1252");
+
+/**
+ * byte value (0-255) -> character, built by decoding every byte value through the windows-1252
+ * decoder once. windows-1252 is a total single-byte mapping - the WHATWG encoding index assigns
+ * even its five formally-unused positions (0x81/0x8D/0x8F/0x90/0x9D) to their C1 control code
+ * points - so this string covers all 256 byte values with no gaps, and every character is a
+ * single BMP code point, so spreading it below stays 1:1 with byte offset.
+ */
+const WINDOWS_1252_BYTE_TO_CHAR = WINDOWS_1252_DECODER.decode(Uint8Array.from({ length: 256 }, (_, i) => i));
+
+/** character -> byte value: the reverse of the table above, used to encode text back on save. */
+const WINDOWS_1252_CHAR_TO_BYTE: ReadonlyMap<string, number> = new Map(
+    [...WINDOWS_1252_BYTE_TO_CHAR].map((ch, byte): [string, number] => [ch, byte]),
+);
+
+/**
+ * Thrown by `encodeToResolvedEncoding` when saving would drop or corrupt a character the target
+ * (non-UTF-8) encoding cannot represent. This is the loud-refusal side of the encoding-preserving
+ * write: rather than silently transcoding the whole file to UTF-8 or writing U+FFFD replacement
+ * characters, the save is refused and the error propagates to the caller.
+ */
+export class UnsupportedEncodingCharacterError extends Error {
+    readonly character: string;
+    readonly encoding: ResolvedEncoding;
+
+    constructor(character: string, encoding: ResolvedEncoding) {
+        super(
+            `Cannot save: character ${JSON.stringify(character)} is not representable in ${encoding}. ` +
+                "Save the file as UTF-8 (or remove the character) to keep this edit.",
+        );
+        this.name = "UnsupportedEncodingCharacterError";
+        this.character = character;
+        this.encoding = encoding;
+    }
+}
+
+/**
+ * Decode raw file bytes: strict UTF-8 first, falling back to windows-1252 if the bytes are not
+ * valid UTF-8 - most real-world `.tra`/`.msg` files predate UTF-8 and are windows-1252/-1251-class
+ * legacy-codepage text. The fallback is a total mapping (see WINDOWS_1252_BYTE_TO_CHAR above) so
+ * this never itself throws: every byte sequence decodes to *some* string. A misdetected encoding
+ * would only silently corrupt data on WRITE, so refusal happens there instead (see
+ * `encodeToResolvedEncoding`), not here.
+ */
+function decodeFileBytes(raw: Uint8Array): { text: string; encoding: ResolvedEncoding } {
+    try {
+        return { text: UTF8_STRICT_DECODER.decode(raw), encoding: "utf-8" };
+    } catch {
+        return { text: WINDOWS_1252_DECODER.decode(raw), encoding: "windows-1252" };
+    }
+}
+
+/**
+ * Encode text back to the encoding a file was originally read as, so untouched entries round-trip
+ * byte-identically on save. Throws `UnsupportedEncodingCharacterError` for a windows-1252 file
+ * whose edited text contains a character outside the windows-1252 repertoire - see the class doc.
+ */
+function encodeToResolvedEncoding(text: string, encoding: ResolvedEncoding): Buffer {
+    if (encoding === "utf-8") {
+        return Buffer.from(text, "utf8");
+    }
+    const bytes: number[] = [];
+    for (const ch of text) {
+        const byte = WINDOWS_1252_CHAR_TO_BYTE.get(ch);
+        if (byte === undefined) {
+            throw new UnsupportedEncodingCharacterError(ch, encoding);
+        }
+        bytes.push(byte);
+    }
+    return Buffer.from(bytes);
+}
+
+/**
+ * Write `data` to `absPath` atomically: write to a temp file in the SAME directory (guaranteeing
+ * the same filesystem, so the rename below is atomic) then rename over the destination. A crash or
+ * interruption mid-write leaves the original `.tra`/`.msg` - the document of record - untouched
+ * instead of truncated; only the temp file can end up half-written.
+ */
+function atomicWriteFileSync(absPath: string, data: Uint8Array): void {
+    const dir = path.dirname(absPath);
+    const tempPath = path.join(dir, `.${path.basename(absPath)}.${crypto.randomBytes(6).toString("hex")}.tmp`);
+    fs.writeFileSync(tempPath, data);
+    fs.renameSync(tempPath, absPath);
+}
+
 /** Resolve a path's realpath, returning undefined on failure or missing input. */
 function resolveRealpath(p: string | undefined): string | undefined {
     if (!p) return undefined;
@@ -189,8 +285,15 @@ export class Translation {
     /** Lazily memoised realpath of the tra directory (see resolvedTraDir getter). */
     private resolvedTraDirCache: string | null | undefined = null;
     initialized: boolean;
+    /**
+     * Optional callback fired whenever a `.tra`/`.msg` document's entries are re-read and
+     * re-indexed (see `reloadFileLines`). Lets the caller push an LSP `inlayHint.refresh()` so
+     * open consumer documents drop stale `@N` previews instead of waiting for their own next
+     * edit. Undefined in contexts with no live client to notify (unit tests, CLI-style use).
+     */
+    private readonly notifyReload: (() => void) | undefined;
 
-    constructor(settings: ProjectTraSettings, workspaceRoot: string | undefined) {
+    constructor(settings: ProjectTraSettings, workspaceRoot: string | undefined, notifyReload?: () => void) {
         conlog("Translation: initializing");
         this.settings = settings;
         this.directory = settings.directory;
@@ -200,6 +303,7 @@ export class Translation {
         this.data = new Map();
         this.consumers = new Map();
         this.consumerToTraKey = new Map();
+        this.notifyReload = notifyReload;
     }
 
     /**
@@ -430,8 +534,12 @@ export class Translation {
             absPath = path.join(path.dirname(filePath), fileKey);
         }
         let original: string;
+        // Encoding for a brand-new file (the ENOENT branch below) defaults to UTF-8 - there are no
+        // existing bytes to resolve an encoding from.
+        let sourceEncoding: ResolvedEncoding = "utf-8";
         try {
-            original = fs.readFileSync(absPath, "utf8");
+            const raw = fs.readFileSync(absPath);
+            ({ text: original, encoding: sourceEncoding } = decodeFileBytes(raw));
         } catch (error) {
             // ENOENT -> the file does not exist yet, so create it (the from-scratch case: an SSL dialog's text
             // has nowhere to land until its `.msg` is written). Any OTHER read error (permissions, a directory
@@ -449,7 +557,13 @@ export class Translation {
                 ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
                 : appendTraEntries(rewriteTraEntries(original, messages), messages);
         if (updated === original) return NO_WRITE;
-        fs.writeFileSync(absPath, updated);
+        // Re-encode to the encoding the file was read as (sourceEncoding, above) so untouched
+        // entries round-trip byte-identically; encodeToResolvedEncoding throws rather than
+        // silently transcoding or replacement-charing an edit the target encoding can't represent
+        // - nothing below is written when that happens. Then write via a same-directory temp file
+        // + rename so a crash mid-write can't truncate the document of record.
+        const encoded = encodeToResolvedEncoding(updated, sourceEncoding);
+        atomicWriteFileSync(absPath, encoded);
         // Refresh the cached entries that getMessages/inlay hints read for this file.
         this.data.set(fileKey, this.parseEntries(updated, ext));
         return { changed: true, staleSiblingLanguages: this.staleSiblingLanguages(absPath) };
@@ -632,7 +746,8 @@ export class Translation {
             files.map((relPath) =>
                 limit(async () => {
                     try {
-                        const text = await fs.promises.readFile(path.join(traDir, relPath), "utf8");
+                        const raw = await fs.promises.readFile(path.join(traDir, relPath));
+                        const { text } = decodeFileBytes(raw);
                         const lines = this.parseEntries(text, ext);
                         const result: TraData = new Map([[relPath, lines]]);
                         results.push(result);
@@ -737,16 +852,31 @@ export class Translation {
         const entries = this.parseEntries(text, ext as TraExt);
         this.data.set(traPath, entries);
         conlog(`Translation: reloaded ${traPath}`);
+        // Open consumer documents' inlay hints were computed against the now-stale entries;
+        // push a refresh so the client recomputes them against the entries just set above.
+        this.notifyReload?.();
     }
 
-    /** Convert workspace-relative path to tra-directory-relative path */
+    /**
+     * Convert a workspace-relative source path to its tra-directory-relative key
+     * (the same key form `loadDir` produces), or undefined if the file is not under
+     * the configured translation directory.
+     *
+     * Path-math only, via `resolveTraDir` and the absolute file path. A realpath-based
+     * subpath check (the previous `isSubpath(this.directory, wsPath)`) resolved the
+     * workspace-relative `wsPath` against the process CWD, which is not the workspace
+     * root under a normally-spawned LSP server - so it rejected every file whenever the
+     * server ran from any other directory, silently disabling `.tra`/`.msg` reload.
+     */
     private getTraPath(wsPath: string): string | undefined {
-        if (isDirectory(this.directory)) {
-            if (isSubpath(this.directory, wsPath)) {
-                return path.relative(this.directory, wsPath);
-            }
+        const traDir = this.resolveTraDir();
+        if (traDir === undefined || this.workspaceRoot === undefined) return undefined;
+        const absFile = path.resolve(this.workspaceRoot, wsPath);
+        const rel = path.relative(traDir, absFile);
+        if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
+            return undefined;
         }
-        return undefined;
+        return rel;
     }
 
     /**
@@ -991,8 +1121,12 @@ export class Translation {
 
     /**
      * Build the reverse index mapping each traFileKey to consumer file paths.
-     * Scans the workspace for files with consumer extensions, reads first line
-     * to check for @tra comment, falls back to basename matching.
+     * Walks the workspace once for the union of consumer extensions (mirroring
+     * workspace-scanner.ts's single-walk startup scan), then reads each file's first line to
+     * check for an @tra comment, falling back to basename matching. The read fan-out is bounded
+     * by WORKSPACE_SCAN_CONCURRENCY - a real mod workspace's consumer corpus can run from
+     * hundreds to thousands of files, not the "tens" this comment used to assume, and an
+     * unbounded synchronous read loop blocked the event loop for the whole startup scan.
      */
     private async buildConsumerIndex(): Promise<void> {
         const wsRoot = this.workspaceRoot;
@@ -1015,35 +1149,43 @@ export class Translation {
 
         // Deduplicate extensions
         const uniqueExts = [...new Set(extsToScan)];
+        if (uniqueExts.length === 0) return;
 
-        for (const ext of uniqueExts) {
-            // eslint-disable-next-line no-await-in-loop
-            const files = await findFiles(wsRoot, ext);
-            for (const relFile of files) {
-                const absPath = path.join(wsRoot, relFile);
-                this.indexConsumerFile(absPath, relFile);
-            }
-        }
+        const files = await findFilesByExtensions(wsRoot, uniqueExts);
+        const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
+        await Promise.all(
+            files.map((relFile) =>
+                limit(async () => {
+                    const absPath = path.join(wsRoot, relFile);
+                    await this.indexConsumerFile(absPath, relFile);
+                }),
+            ),
+        );
 
         conlog(`Translation: built consumer index with ${this.consumers.size} tra/msg file mappings`);
     }
 
     /**
      * Index a single consumer file into the reverse map.
-     * Reads the first line for @tra comment, falls back to basename matching.
-     * Uses synchronous I/O: this runs during init() after async tra loading completes,
-     * only reads 256 bytes per file, and typical mod projects have tens of consumer files.
+     * Reads the first 256 bytes for an @tra comment (decoded UTF-8-first with a windows-1252
+     * fallback, same as the tra/msg read path in loadFiles), falls back to basename matching.
+     * Async, and bounded by the pLimit pool in buildConsumerIndex, so a large consumer corpus
+     * neither blocks the event loop nor floods the filesystem with unbounded concurrent opens.
      */
-    private indexConsumerFile(absPath: string, wsRelPath: string): void {
+    private async indexConsumerFile(absPath: string, wsRelPath: string): Promise<void> {
         let traFileKey: string | undefined;
 
         // Try reading first line for @tra comment (only 256 bytes, not the whole file)
         try {
-            const fd = fs.openSync(absPath, "r");
-            const buf = Buffer.alloc(256);
-            const bytesRead = fs.readSync(fd, buf, 0, 256, 0);
-            fs.closeSync(fd);
-            const firstLine = buf.subarray(0, bytesRead).toString("utf8").split(/\r?\n/)[0] ?? "";
+            const handle = await fs.promises.open(absPath, "r");
+            let firstLine: string;
+            try {
+                const buf = Buffer.alloc(256);
+                const { bytesRead } = await handle.read(buf, 0, 256, 0);
+                firstLine = decodeFileBytes(buf.subarray(0, bytesRead)).text.split(/\r?\n/)[0] ?? "";
+            } finally {
+                await handle.close();
+            }
             const match = REGEX_TRA_COMMENT.exec(firstLine);
             if (match && match[1]) {
                 traFileKey = match[1];
@@ -1206,7 +1348,8 @@ export class Translation {
         const reads = await Promise.all(
             [...consumerFiles].map(async (absPath) => {
                 try {
-                    const text = await fs.promises.readFile(absPath, "utf8");
+                    const raw = await fs.promises.readFile(absPath);
+                    const { text } = decodeFileBytes(raw);
                     return { absPath, text };
                 } catch {
                     // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path

@@ -67,8 +67,12 @@ export function register(ctx: HandlerContext): void {
         // already firing requests (e.g. textDocument/inlayHint).
         const projectSettings = settings.project(workspaceRoot);
 
-        // Initialize translation service
-        const translation = new Translation(projectSettings.translation, workspaceRoot);
+        // Initialize translation service. The refresh callback lets a .tra/.msg reload push
+        // open consumer documents' stale inlay @N previews to be recomputed - see
+        // Translation.reloadFileLines, which fires it after re-indexing a translation file.
+        const translation = new Translation(projectSettings.translation, workspaceRoot, () =>
+            ctx.connection.languages.inlayHint.refresh(),
+        );
         await translation.init();
 
         // Route parser-init log lines through the LSP connection so they surface

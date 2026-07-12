@@ -6,6 +6,13 @@
 
 - New interactive Dialog Editor for D, TD, SSL, TSSL dialogue.
 
+### Translations
+
+- `.tra`/`.msg` files are now read as UTF-8 first, falling back to windows-1252 for older files that predate UTF-8 - accented and other special characters in `@N` text now display correctly instead of being mangled.
+- Saving `@N` edits now preserves a file's original encoding: a windows-1252 file round-trips its untouched text byte-for-byte instead of being silently rewritten as UTF-8. An edit that adds a character the file's encoding can't represent is refused with an error instead of corrupting the file.
+- Saving `@N` edits is now crash-safe: the file is written to a temporary file and swapped in, so an interruption mid-save can no longer leave a `.tra`/`.msg` truncated.
+- Editing an open `.tra`/`.msg` file now refreshes the `@N` inlay hint previews in other open files immediately, instead of waiting for their own next edit.
+
 ### Requirements
 
 - Minimum supported VS Code is now 1.91 (was 1.73).
@@ -20,6 +27,7 @@
 ### Performance
 
 - Fixed: on large mod workspaces the language server could use excessive memory while indexing at startup. It now skips `node_modules` and dotfile directories and limits how many files it reads at once.
+- Fixed: startup indexing of files that may reference `@N` translation strings read the whole workspace synchronously with no concurrency limit; it's now read asynchronously with the same bounded concurrency as the rest of the startup scan.
 
 ### Data
 

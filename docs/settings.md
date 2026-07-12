@@ -65,6 +65,18 @@ To override resolution for a single file, put a directive on its **first line** 
 The directive names a word-character file only (`[A-Za-z0-9_]`); for a name containing other characters (e.g. the
 `#` in `x#viconia`), use `translation.directory` instead.
 
+### Encoding
+
+`.tra`/`.msg` files are decoded as UTF-8 first; a file that is not valid UTF-8 (most classic-era mods predate it and
+use a legacy codepage) falls back to windows-1252, which covers the common Western-European accented characters.
+There is no setting for this - it is automatic and needs no configuration.
+
+Saving `@N` edits (from the dialog editor) preserves whichever encoding the file was read as: an edited windows-1252
+file writes back windows-1252, so its untouched entries stay byte-for-byte identical. If an edit introduces a
+character the file's encoding cannot represent, the save is refused with an error rather than silently rewriting the
+whole file as UTF-8 or dropping the character - re-save the file as UTF-8 first (or remove the character) to keep
+that edit.
+
 ## How to Pass Settings
 
 Depends on the editor. See the editor-specific pages for examples:
