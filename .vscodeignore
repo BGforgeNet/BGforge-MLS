@@ -2,20 +2,22 @@
 # pnpm symlinks in server/node_modules are stripped by package.sh.
 # Root node_modules is excluded below; TS plugins are injected by package.sh.
 #
-# WARNING: vsce does NOT read .gitignore. A gitignored build/cache dir (e.g. .dev/)
-# still ships unless it is ALSO listed here. This denylist fails open - anything new
-# in the working tree ships by default - so scripts/verify-package-contents.sh runs at
-# the end of package.sh and fails the build if an unexpected path or size regresses in.
+# WARNING: vsce does NOT read .gitignore. A gitignored build/cache dir still ships unless
+# it is ALSO listed here. The dotfile glob below covers dot-prefixed caches (.dev/, .oxlint/,
+# .pnpm-store/, ...); a NON-dot dir added later still needs its own entry. This denylist fails
+# open - anything new in the working tree ships by default - so scripts/verify-package-contents.sh
+# runs at the end of package.sh and fails the build if an unexpected path or size regresses in.
 
-# Dotfiles and dotdirs
-.claude/
-.editorconfig
-.gitattributes
-.github/
-.gitignore
-.reports/
-.vscode/
-.vscode-test/
+# All dotfiles and dot-directories, at any depth. vsce runs minimatch with { dot: true }
+# and only auto-appends /** to NON-glob folder names, so a bare `.*` matches dot NAMES but
+# not their contents - the four forms below cover root dotfiles, root dot-dir contents, and
+# nested dotfiles/dot-dirs. This subsumes .git*/.vscode*/.claude/ AND every gitignored local
+# cache vsce would otherwise ship (.dev/ tool binaries, .oxlint/, .pnpm-store/, .superpowers/,
+# .pkg-inject/, .oxlintrc.json, .oxfmtrc.json). Nothing runtime is dot-prefixed.
+.*
+.*/**
+**/.*
+**/.*/**
 
 # Dev files
 CLAUDE.md
@@ -30,6 +32,7 @@ dist/
 *.vsix
 *.tgz
 *.log
+*.tsbuildinfo
 **/*.map
 *.tmbundle
 *.zip
@@ -46,13 +49,6 @@ scripts/
 test/
 tmp/
 transpilers/
-
-# Local tool/binary caches. Gitignored (so invisible to git-based reasoning) but NOT
-# excluded by that alone - vsce packages the working tree. .dev/ holds the dev:web
-# code-server bootstrap and the downloaded CI lint binaries (actionlint/zizmor/shfmt);
-# .oxlint/ holds the oxlint plugin cache. Neither is runtime.
-.dev/
-.oxlint/
 
 # Bundled library workspaces: esbuild inlines their src/data into client/out and
 # server/out at build time, so nothing under them is read from disk at runtime.
@@ -72,8 +68,6 @@ editors/
 AGENTS.md
 **/AGENTS.md
 **/INTERNALS.md
-.oxlintrc.json
-.oxfmtrc.json
 lefthook.yml
 stryker.conf.json
 tsconfig.base.json
@@ -95,10 +89,9 @@ themes/vscode-monokai.json
 themes/vs-seti-icon-theme.json
 
 # READMEs and co-located agent instruction files in subdirectories
-# (root README auto-included by vsce)
+# (root README auto-included by vsce; nested .gitignore covered by the dotfile glob)
 **/README.md
 **/CLAUDE.md
-**/.gitignore
 
 # Client dev files. The webview HTML/CSS assets under client/src/ ARE runtime (loaded
 # via webview.asWebviewUri), so client/src is kept - but its Svelte/TS/test sources are
@@ -132,11 +125,6 @@ server/node_modules/esbuild-wasm/**/*.d.ts
 server/node_modules/esbuild-wasm/LICENSE.md
 server/node_modules/esbuild-wasm/README.md
 
-# pnpm internal dirs in server/node_modules (surviving after symlink strip)
-server/node_modules/.ignored*/
-
 # Root node_modules: exclude entirely (TS plugins injected by package.sh)
+# (pnpm .ignored*/ dirs and the .pkg-inject/ staging dir are covered by the dotfile glob.)
 node_modules/
-
-# Temp dir used by package.sh for zip injection
-.pkg-inject/
