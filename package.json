@@ -377,7 +377,6 @@
                 "extensions": [
                     ".2da"
                 ],
-                "configuration": "./language-configurations/infinity-2da.language-configuration.json",
                 "icon": {
                     "light": "./themes/icons/infinity-2da-light.svg",
                     "dark": "./themes/icons/infinity-2da.svg"
