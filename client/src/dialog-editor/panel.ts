@@ -20,11 +20,12 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
-import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
+import type { DialogMessages } from "../../../shared/dialog-model";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
+import { isWebviewToHost } from "./webview/messages";
 
 // The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
 // language service + the tssl/td plugins run), so they are recognized by EXTENSION, not languageId - see
@@ -102,47 +103,44 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         };
         const core = new DialogHostCore(io, document.uri.path);
 
-        panel.webview.onDidReceiveMessage(
-            (msg: {
-                type?: string;
-                model?: DialogModel;
-                offset?: number;
-                text?: string;
-                level?: string;
-                seq?: number;
-                message?: string;
-                stack?: string;
-            }) => {
-                if (msg?.type === "ready") core.handleReady();
+        panel.webview.onDidReceiveMessage((raw: unknown) => {
+            // Same reject-and-ignore posture as the binary editor's isWebviewToHost: an unrecognized
+            // or malformed message changes nothing rather than acting on partial data.
+            if (!isWebviewToHost(raw)) return;
+            switch (raw.type) {
+                case "ready":
+                    core.handleReady();
+                    break;
                 // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
-                else if (msg?.type === "revealSource" && typeof msg.offset === "number") {
-                    void this.revealSource(document, msg.offset);
-                }
+                case "revealSource":
+                    void this.revealSource(document, raw.offset);
+                    break;
                 // A user-facing notice from the webview (e.g. Del pressed on a non-deletable node): surface it
                 // as a VS Code notification so a blocked action explains itself instead of silently doing nothing.
-                else if (msg?.type === "notify" && typeof msg.text === "string") {
-                    if (msg.level === "warn") void vscode.window.showWarningMessage(msg.text);
-                    else void vscode.window.showInformationMessage(msg.text);
-                }
+                case "notify":
+                    if (raw.level === "warn") void vscode.window.showWarningMessage(raw.text);
+                    else void vscode.window.showInformationMessage(raw.text);
+                    break;
                 // The webview emits one "edit" (the whole model) per user action; the core serializes and
                 // applies them (see host-core.ts).
-                else if (msg?.type === "edit" && msg.model) {
-                    core.handleEdit(msg.model, msg.seq ?? 0);
-                }
+                case "edit":
+                    core.handleEdit(raw.model, raw.seq ?? 0);
+                    break;
                 // A fatal error caught by the webview's installFatalErrorHandler (see main.ts). Parity with
                 // the binary editor's "runtimeError" case (provider.ts): surface through the same
                 // operator-visible channels (output channel + toast) instead of leaving a silently blank panel.
-                else if (msg?.type === "runtimeError" && typeof msg.message === "string") {
+                case "runtimeError": {
                     const file = path.basename(document.uri.fsPath);
                     surfaceWebviewRuntimeError({
                         label: `Dialog editor for ${file}`,
                         userFacingFile: file,
-                        message: msg.message,
-                        stack: msg.stack,
+                        message: raw.message,
+                        stack: raw.stack,
                     });
+                    break;
                 }
-            },
-        );
+            }
+        });
 
         const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
             if (e.document.uri.toString() !== document.uri.toString()) return;
