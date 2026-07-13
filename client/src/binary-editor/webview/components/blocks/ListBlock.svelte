@@ -1,7 +1,7 @@
 <script lang="ts">
     // A variable-length array section inside a layout (e.g. ITM/SPL abilities + effects, MAP objects).
-    // Delegates to the same ListSection (master-detail) / InlineList (inline) components the legacy tabs
-    // path uses, via the windowed getChildren bridge - so filtering, virtualization, structure ops, and
+    // Delegates to the shared ListSection (master-detail) / InlineList (inline) components via the
+    // windowed getChildren bridge - so filtering, virtualization, structure ops, and
     // nested detail forms all come for free. The section node + caps are resolved by sectionKey in
     // resolveLayout; the render mode is declared on the block.
     import type { DetailRow, Diagnostic, LayoutChildList, LayoutSection, NodeId } from "@bgforge/binary-editor";

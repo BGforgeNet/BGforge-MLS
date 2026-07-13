@@ -14,8 +14,7 @@ export const proFormatAdapter: BinaryFormatAdapter = {
     domainRanges: proDomainRanges,
     // PRO caches a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
-    // Declarative single-page layout. Only the "critter" variant is authored so far; other PRO
-    // object/sub types report a variantId with no matching variant and fall back to the tabs path.
+    // Declarative single-page layout covering every PRO object/sub type (see layout-schema.ts).
     layout: proLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {

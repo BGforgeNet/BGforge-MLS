@@ -141,7 +141,9 @@ export interface ParseResult extends ParseDisplayModel, ParseSerializationContex
     /**
      * Layout-variant id the parser reports for object/sub-type dispatch (e.g. "critter",
      * "item.weapon"). Selects the matching variant from the format's declarative `layout`.
-     * Optional: formats without a layout schema leave it unset and use the legacy tabs path.
+     * Optional in the type, but every shipped format's parser reports one; a result without a
+     * matching variant yields no layout and the webview shows its error banner (the former
+     * tabs fallback is retired - see binary-editor's `buildLayout`).
      */
     variantId?: string;
 }

@@ -271,8 +271,9 @@ button:disabled {
    and let the detail FORM grow to its natural height and flow into the page scroll - so a tall detail (e.g. an
    ITM ability) shows in full under one page scroll instead of a nested inner scrollbar. align-items:flex-start
    keeps the short master column hugging the top instead of stretching to the detail's height. The inline-list
-   variant is bounded the same way below. Outside .layout-root (the legacy tabs path), the list fills a
-   flex-bounded body and these rules do not apply. */
+   variant is bounded the same way below. All rendering happens inside .layout-root (the former tabs path is
+   retired): the unscoped .master-detail/.detail rules above carry the shared structure, and these scoped
+   rules layer the layout-specific alignment/overflow behavior on top. */
 .layout-root .master-detail {
     align-items: flex-start;
 }
