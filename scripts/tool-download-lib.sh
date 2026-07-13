@@ -6,7 +6,7 @@
 # GitHub-hosted runners and the devbox each ship a different subset (e.g. shellcheck but
 # not shfmt, or the reverse), so a self-contained, checksum-verified download is the one
 # path that works everywhere. Sourced by lint-workflows.sh (actionlint, zizmor) and
-# lint-shell.sh (shfmt).
+# lint-shell.sh (shfmt); do not execute it directly.
 
 # ensure_verified_tool LABEL URL EXPECTED_SHA256 DEST_BIN [TAR_MEMBER]
 #

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Shared timing helpers for test scripts.
-# Source this to get step() which prints elapsed time between stages.
+# Source this to get step() which prints elapsed time between stages; do not execute it directly.
 
 _timing_start=$(date +%s%3N)
 _timing_prev=$_timing_start

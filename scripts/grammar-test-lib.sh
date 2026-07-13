@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Shared library for grammar test scripts.
-# Source this after setting GRAMMAR_NAME and SAMPLE_EXTS.
+# Source this after setting GRAMMAR_NAME and SAMPLE_EXTS; do not execute it directly.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TS="$ROOT_DIR/node_modules/.bin/tree-sitter"

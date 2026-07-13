@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Shared logic for cloning the external repos used as test fixtures.
+# Source this file; do not execute it directly.
 #
 # Each line in external/*.txt is either:
 #   - blank or a # comment -> ignored
