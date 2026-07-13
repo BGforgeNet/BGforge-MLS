@@ -11,9 +11,21 @@
 # Pinned commits make the integration tests reproducible across upstream
 # pushes; unpinned URLs follow upstream HEAD.
 
+# Initialise any submodules of $1 (shallow, recursive). No-op when the repo
+# declares none. Some mods vendor shared libraries (e.g. BGforge-MLS-IElib) as
+# submodules, and their sources are part of the real-world corpus the
+# integration tests sweep.
+init_submodules() {
+    local repo_dir="$1"
+    if [[ -f "$repo_dir/.gitmodules" ]]; then
+        git -C "$repo_dir" submodule update --init --recursive --depth 1 -q
+    fi
+}
+
 # Clone each repo listed in $1 into $2.
 # If a target directory already exists, leave its checkout alone - callers
-# rely on this for the "already cloned" optimisation.
+# rely on this for the "already cloned" optimisation. Submodules are still
+# initialised on that path so pre-existing checkouts converge with fresh ones.
 clone_repos() {
     local txt_file="$1"
     local target_dir="$2"
@@ -28,6 +40,7 @@ clone_repos() {
 
         if [[ -d "$target_dir/$name" ]]; then
             echo "  Already cloned: $name"
+            init_submodules "$target_dir/$name"
             continue
         fi
 
@@ -41,6 +54,7 @@ clone_repos() {
             echo "  Cloning: $name (HEAD)"
             git clone --depth 1 -q "$url" "$target_dir/$name"
         fi
+        init_submodules "$target_dir/$name"
     done <"$txt_file"
 }
 

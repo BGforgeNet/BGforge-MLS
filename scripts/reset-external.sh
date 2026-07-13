@@ -23,6 +23,9 @@ fi
 for dir in "$ROOT_DIR"/external/fallout/*/ "$ROOT_DIR"/external/infinity-engine/*/; do
     if [[ -d "$dir/.git" ]]; then
         git -C "$dir" checkout . 2>/dev/null || true
+        # Submodule worktrees are separate repos; the checkout above does not
+        # touch them, so reset each initialised one as well.
+        git -C "$dir" submodule foreach --recursive --quiet 'git checkout . 2>/dev/null || true' 2>/dev/null || true
     fi
 done
 
