@@ -27,7 +27,7 @@
 
 ### Transpilers
 
-- Fixed: transpiling a multi-file TSSL/TBAF/TD source (one that uses `import`) needed a separate Node.js install on the system `PATH` and failed on editors that ship their own runtime instead of a `node` binary. The bundler now falls back to the editor's own runtime, the same way the built-in SSL compiler already does.
+- Fixed: transpiling a multi-file TSSL/TBAF/TD source (one that uses `import`) relied on the system `PATH` `node`, so it broke on editors that ship their own runtime instead of a `node` binary AND in environments with a broken `node` shim (stale nvm/mise/asdf). The bundler now always uses the editor's own runtime, the same way the built-in SSL compiler does, so a missing or broken `PATH` `node` no longer affects it.
 
 ### Performance
 

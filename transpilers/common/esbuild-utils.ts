@@ -23,10 +23,9 @@ let esbuildInitialized = false;
  * Native esbuild (used by CLI via alias) doesn't need initialize().
  * esbuild-wasm (used by LSP server) requires it.
  *
- * esbuild-wasm's Node build spawns `node <bin/esbuild>` via a PATH lookup, which fails on a
- * host with no `node` on PATH (VS Code/VSCodium ship an Electron runtime, not `node`). Point
- * `node` at the extension host's own runtime first, the way the sslc compiler's fork does -
- * see node-runtime.ts. A no-op when a real `node` is already resolvable.
+ * esbuild-wasm spawns `node <bin/esbuild>` via a bare PATH lookup; ensureNodeOnPath points `node`
+ * at the extension host's own runtime first (see node-runtime.ts), so an absent or broken PATH
+ * `node` can't break bundling.
  */
 async function ensureEsbuild(): Promise<void> {
     if (esbuildInitialized) return;
