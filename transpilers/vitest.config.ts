@@ -13,16 +13,17 @@ export default defineConfig({
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
         // and the test/td + test/tbaf fixture-driven integration suites in
         // scripts/test.sh - not by this vitest project. Threshold values are
-        // deliberately at the unit-only floor; raise them as standalone unit
-        // tests are added. See docs/architecture.md "Coverage thresholds" for
-        // the full layering.
+        // ratcheted to just under the unit-suite actuals (35.8/44.8/24.7/34.9
+        // at last ratchet); keep raising them as standalone unit tests are
+        // added. See docs/architecture.md "Coverage thresholds" for the full
+        // layering.
         coverage: coverageConfig({
             reportsDirectory: "coverage/transpile",
             thresholds: {
-                lines: 15,
-                functions: 25,
-                branches: 8,
-                statements: 15,
+                lines: 34,
+                functions: 43,
+                branches: 23,
+                statements: 33,
             },
         }),
     },
