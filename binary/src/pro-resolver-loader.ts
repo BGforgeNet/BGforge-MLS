@@ -16,6 +16,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { performance } from "perf_hooks";
 import { proParser } from "./pro";
+import { MAX_FILE_SIZES } from "./max-file-sizes";
 import type { PidResolver } from "./pid-resolver";
 
 interface SubdirSpec {
@@ -83,6 +84,15 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
             const pid = (pidType << 24) | objectId;
 
             try {
+                // Same stat-before-allocate budget the CLI parse path applies (max-file-sizes.ts):
+                // the parser's own 1 KB limit rejects oversized DATA, but only after the whole file
+                // has already been read into memory - cap the read itself.
+                const proCap = MAX_FILE_SIZES.pro;
+                const size = fs.statSync(filePath).size;
+                if (proCap !== undefined && size > proCap) {
+                    errors.push(`Skipped ${filePath}: ${size} bytes exceeds the ${proCap}-byte PRO cap`);
+                    continue;
+                }
                 const data = fs.readFileSync(filePath);
                 const parsed = proParser.parse(new Uint8Array(data));
                 if (!parsed.document) {

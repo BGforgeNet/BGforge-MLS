@@ -15,6 +15,7 @@ import * as path from "path";
 import * as os from "os";
 import { loadProDirResolver, composePidResolvers } from "../src/pro-resolver-loader";
 import { resolvePidSubType } from "../src/pid-resolver";
+import { MAX_FILE_SIZES } from "../src/max-file-sizes";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 
@@ -107,6 +108,17 @@ describe("loadProDirResolver", () => {
         expect(stats.subtypesResolved).toBe(1);
         expect(stats.errors).toHaveLength(1);
         expect(stats.errors[0]).toMatch(/00000099\.pro/);
+    });
+
+    it("skips an oversized .pro without reading it, recording a size error", () => {
+        const proCap = MAX_FILE_SIZES.pro;
+        if (proCap === undefined) throw new Error("MAX_FILE_SIZES has no pro entry");
+        copyFixture("items", "00000031.pro");
+        fs.writeFileSync(path.join(tmpDir, "items", "00000042.pro"), Buffer.alloc(proCap + 1));
+        const { resolver, stats } = loadProDirResolver(tmpDir);
+        expect(resolver(31)).toBe(4); // good file still parsed
+        expect(stats.errors).toHaveLength(1);
+        expect(stats.errors[0]).toMatch(/00000042\.pro.*exceeds/);
     });
 
     it("ignores nested subdirectories (top-level only by design)", () => {
