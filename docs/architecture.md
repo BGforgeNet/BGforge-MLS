@@ -81,7 +81,7 @@ vscode-mls/
 |   +-- src/
 |   |   +-- extension.ts            Entry point (activate/deactivate, LSP client)
 |   |   +-- logging.ts              Output channel + conlog wrapper (gated on bgforge.debug)
-|   |   +-- utils.ts                escapeHtml + small extension-host helpers
+|   |   +-- webview-utils.ts        In-webview helpers (fatal-error handler, init timeout, benign-error filter)
 |   |   +-- webview-assets.ts       HTML/CSS/JS asset cache shared by webview panels
 |   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-editor/          Dialog Editor (custom text editor + Svelte webview; @xyflow/svelte graph)
