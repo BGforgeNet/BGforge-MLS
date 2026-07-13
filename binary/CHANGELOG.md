@@ -2,17 +2,23 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
-## Unreleased
+## 0.3.0
 
 ### Changed
 
 - Oversized JSON snapshots (crafted to inflate array lengths) are now rejected before allocation.
 - Registering two parsers or format adapters under the same id now throws instead of silently overwriting.
+- Proto-dir `.pro` reads (MAP subtype resolution) are now capped at the PRO size budget.
+
+### Removed
+
+- `findEditableField` is no longer exported; there is no replacement.
 
 ### Fixed
 
 - Trailing-NUL trimming no longer leaves a literal NUL byte at the end of a trimmed value.
 - CRE: an empty section whose offset a shrinking edit pushed past end-of-file is now recomputed correctly on save.
+- The CLI's JSON-snapshot input-size cap can no longer be raced past by swapping the file mid-read.
 
 ## 0.2.0
 

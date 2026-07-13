@@ -86,14 +86,23 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
             try {
                 // Same stat-before-allocate budget the CLI parse path applies (max-file-sizes.ts):
                 // the parser's own 1 KB limit rejects oversized DATA, but only after the whole file
-                // has already been read into memory - cap the read itself.
+                // has already been read into memory - cap the read itself. fstat and read go through
+                // ONE descriptor so the size check and the read see the same inode; a statSync ->
+                // readFileSync pair on the path leaves a TOCTOU window (CodeQL js/file-system-race)
+                // where a file swapped after the check could bypass the cap.
                 const proCap = MAX_FILE_SIZES.pro;
-                const size = fs.statSync(filePath).size;
-                if (proCap !== undefined && size > proCap) {
-                    errors.push(`Skipped ${filePath}: ${size} bytes exceeds the ${proCap}-byte PRO cap`);
-                    continue;
+                let data: Buffer;
+                const fd = fs.openSync(filePath, "r");
+                try {
+                    const size = fs.fstatSync(fd).size;
+                    if (proCap !== undefined && size > proCap) {
+                        errors.push(`Skipped ${filePath}: ${size} bytes exceeds the ${proCap}-byte PRO cap`);
+                        continue;
+                    }
+                    data = fs.readFileSync(fd);
+                } finally {
+                    fs.closeSync(fd);
                 }
-                const data = fs.readFileSync(filePath);
                 const parsed = proParser.parse(new Uint8Array(data));
                 if (!parsed.document) {
                     errors.push(`Failed to parse ${filePath}: no canonical document`);

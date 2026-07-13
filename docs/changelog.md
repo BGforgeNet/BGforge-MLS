@@ -1,18 +1,25 @@
 # Changelog
 
-## Unreleased
+## 3.10.0
 
 ### Dialog editor
 
 - New interactive Dialog Editor for D, TD, SSL, TSSL dialogue.
-- The Dialog Editor now follows the active VS Code color theme, including light themes.
+
+### Diagnostics
+
+- New `bgforge.diagnostics` setting (on by default): instant syntax-error reporting for all parsed languages (Fallout SSL and MSG, WeiDU BAF, D, TP2, TRA), alongside compiler diagnostics.
+
+### Binary editor
+
+- Read-only fields are now enforced on save, not only disabled in the interface, and show a tooltip explaining why.
+- Fixed: a size-shrinking CRE edit could corrupt an empty section's offset, producing a file that failed to reopen.
 
 ### Translations
 
 - `.tra`/`.msg` files are now read as UTF-8 first, falling back to windows-1252 for older files that predate UTF-8 - accented and other special characters in `@N` text now display correctly instead of being mangled.
-- Saving `@N` edits now preserves a file's original encoding: a windows-1252 file round-trips its untouched text byte-for-byte instead of being silently rewritten as UTF-8. An edit that adds a character the file's encoding can't represent is refused with an error instead of corrupting the file.
-- Saving `@N` edits is now crash-safe: the file is written to a temporary file and swapped in, so an interruption mid-save can no longer leave a `.tra`/`.msg` truncated.
 - Editing an open `.tra`/`.msg` file now refreshes the `@N` inlay hint previews in other open files immediately, instead of waiting for their own next edit.
+- `.msg` comments must now be marked (`#`, `//`, or `/* */`); unmarked trailing text is a syntax error.
 
 ### Requirements
 
@@ -20,14 +27,15 @@
 
 ### WeiDU
 
-- Added parsing and highlighting for more WeiDU constructs: TP2 `REQUIRE_FILE` / `FORBID_FILE` / `FORBID_PREDICATE` component flags, `EXTEND_TOP` / `EXTEND_BOTTOM ... USING`, and `REMOVE_CRE_ITEMS`; D `CHAIN3` and `%var%`-interpolated names.
+- Added parsing and highlighting for more WeiDU constructs: TP2 `REQUIRE_FILE` / `FORBID_FILE` / `FORBID_PREDICATE` component flags, `EXTEND_TOP` / `EXTEND_BOTTOM ... USING`, and `REMOVE_CRE_ITEMS`; D `CHAIN3`, `%var%`-interpolated names, hyphenated state labels, `ALTER_TRANS` bareword `ACTION`, and trailing `IF`/`UNLESS` after `ADD_TRANS_ACTION`.
 - Fixed: in TP2 hover tooltips, `buffString` and `ascString` parameter names were not highlighted because of an unreachable pattern branch.
 - Fixed: dropped several phantom TP2 keywords the grammar never matched, and corrected highlighting of the real ones.
 - Fixed: the WeiDU D formatter was not idempotent when a `~string~` immediately followed a keyword.
 
 ### Transpilers
 
-- Fixed: transpiling a multi-file TSSL/TBAF/TD source (one that uses `import`) relied on the system `PATH` `node`, so it broke on editors that ship their own runtime instead of a `node` binary AND in environments with a broken `node` shim (stale nvm/mise/asdf). The bundler now always uses the editor's own runtime, the same way the built-in SSL compiler does, so a missing or broken `PATH` `node` no longer affects it.
+- Built-in transpiler no longer relies on system Node.
+- Fixed: the TD loop unroller silently dropped all but the first variable of a multi-variable `for` initializer; it now reports an error.
 
 ### Performance
 
