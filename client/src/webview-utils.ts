@@ -17,7 +17,7 @@ export interface FatalErrorHandlerOptions {
     /** The `acquireVsCodeApi()` handle, used to report the error to the host. */
     readonly vscode: VsCodeApi;
     /**
-     * Human label for this webview ("Dialog preview" / "Binary editor"). Drives
+     * Human label for this webview ("Dialog editor" / "Binary editor"). Drives
      * the console prefix and the default messages for uncaught errors; the
      * lowercased form is spliced into the "Unhandled ... error" defaults.
      */

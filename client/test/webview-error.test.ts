@@ -49,16 +49,13 @@ describe("surfaceWebviewRuntimeError", () => {
 
     test("logs to console.error with stack for Developer Tools", () => {
         surfaceWebviewRuntimeError({
-            label: "Dialog preview for x.ssl",
+            label: "Dialog editor for x.ssl",
             userFacingFile: "x.ssl",
             message: "oops",
             stack: "stack trace",
         });
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-            expect.stringContaining("Dialog preview for x.ssl"),
-            "stack trace",
-        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("Dialog editor for x.ssl"), "stack trace");
     });
 
     test("calls showErrorMessage with the user-facing filename and the error message", () => {

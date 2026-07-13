@@ -19,7 +19,7 @@ import { timeHandler } from "../shared/time-handler";
 import { handleCompileError } from "./compile-error";
 import type { HandlerContext } from "./context";
 
-/** Dialog preview handler registry. Maps language/extension to parser + translation language. */
+/** Dialog editor handler registry. Maps language/extension to parser + translation language. */
 const dialogHandlers = [
     {
         match: (langId: string, _uri: string) => langId === LANG_FALLOUT_SSL,

@@ -144,7 +144,7 @@ server/src/
 |   +-- symbol.ts             # DocumentSymbol extraction
 |   +-- ast-utils.ts          # Tree-sitter helpers
 |   +-- file-parser.ts        # .d file parser (drives indexer)
-|   +-- dialog.ts             # Dialog preview integration (server/td/dialog.ts mirror)
+|   +-- dialog.ts             # Dialog editor integration (server/td/dialog.ts mirror)
 |   +-- dialog-utils.ts       # Dialog-tree shape helpers
 |   +-- dialog-modify.ts      # Dialog-tree mutators (used by webview-driven edits)
 +-- weidu-tp2/                # WeiDU mod installers

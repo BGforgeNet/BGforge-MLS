@@ -38,7 +38,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 | Diagnostics       |      ✓       |           ✓            |    ✓    |               ✓                |
 | JSDoc             |      ✓       |                        |    ✓    |               ✓                |
 | Folding           |      ✓       |           ✓            |    ✓    |               ✓                |
-| Dialog preview    |      ✓       |                        |    ✓    |                                |
+| Dialog editor     |      ✓       |                        |    ✓    |                                |
 
 ## Transpilers
 
@@ -46,11 +46,11 @@ These are TypeScript-like language subsets that compile to the scripting formats
 
 They bring the TypeScript type system, many TypeScript features, and better tooling to modding.
 
-| Transpiler | Extension | Target | Inlay Hints | Dialog Preview |
-| ---------- | --------- | ------ | :---------: | :------------: |
-| TSSL       | .tssl     | .ssl   |    .msg     |       ✓        |
-| TBAF       | .tbaf     | .baf   |    .tra     |                |
-| TD         | .td       | .d     |    .tra     |       ✓        |
+| Transpiler | Extension | Target | Inlay Hints | Dialog Editor |
+| ---------- | --------- | ------ | :---------: | :-----------: |
+| TSSL       | .tssl     | .ssl   |    .msg     |       ✓       |
+| TBAF       | .tbaf     | .baf   |    .tra     |               |
+| TD         | .td       | .d     |    .tra     |       ✓       |
 
 **[TSSL](transpilers/tssl/docs/README.md)** (.tssl) compiles to Fallout SSL. Companion project: [FOlib](https://github.com/BGforgeNet/folib).
 
@@ -109,7 +109,7 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 
 Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
 
-![dialog editor example](docs/dialog_preview.png)
+![dialog editor example](docs/dialog_editor.png)
 
 ### Error reporting
 

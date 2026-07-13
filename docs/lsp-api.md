@@ -69,7 +69,7 @@ Supported sources:
 - TD (`.td`)
 - TSSL (`.tssl`)
 
-This command is intended for clients that implement a dialog preview UI.
+This command is intended for clients that implement a dialog editor or preview UI.
 
 ## VS Code Extension Commands
 

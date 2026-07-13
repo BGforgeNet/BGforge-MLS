@@ -444,11 +444,11 @@ structured IR (`BAFBlock/Condition/Action`) with condition algebra (boolean to
 CNF conversion for BAF OR groups). TD has the richest IR (20+ construct types)
 with state machines, method chain parsing, and dual-pass orphan detection.
 
-| Transpiler | Input   | Output | Key Features                                                                                                  |
-| ---------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| TSSL       | `.tssl` | `.ssl` | const/let, loops, functions, enum pre-transform                                                               |
-| TBAF       | `.tbaf` | `.baf` | for/for-of, arrays, spread, destructuring, function inlining, point tuples                                    |
-| TD         | `.td`   | `.d`   | All TBAF features + conditionals, method chains, transitive state collection, orphan warnings, dialog preview |
+| Transpiler | Input   | Output | Key Features                                                                                                 |
+| ---------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| TSSL       | `.tssl` | `.ssl` | const/let, loops, functions, enum pre-transform                                                              |
+| TBAF       | `.tbaf` | `.baf` | for/for-of, arrays, spread, destructuring, function inlining, point tuples                                   |
+| TD         | `.td`   | `.d`   | All TBAF features + conditionals, method chains, transitive state collection, orphan warnings, dialog editor |
 
 **TD module structure** (`transpilers/td/src/`):
 
@@ -880,7 +880,7 @@ worthwhile.
 The feature matrix appears in two forms serving different audiences; both are maintained.
 
 - **README** - user-facing languages ("Fallout SSL", "WeiDU TP2"), ✓ marks, includes a
-  "Dialog preview" row. Optimized for someone deciding whether the extension supports
+  "Dialog editor" row. Optimized for someone deciding whether the extension supports
   their workflow.
 - **`server/INTERNALS.md#feature-matrix`** - provider names (`fallout-ssl`, `weidu-tp2`),
   `Y`/`n/a`/blank distinction, covers extra providers (`weidu-log`, `worldmap`, `weidu-tra`,
