@@ -3,14 +3,10 @@
     import { controlWidthClass } from "../state/controls";
     import CellControl from "./CellControl.svelte";
     import Icon from "./Icon.svelte";
-    import { useJump } from "../state/jump-context";
+    import JumpLink from "./JumpLink.svelte";
     const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[] } = $props();
-    // Cross-record jump: a field whose value references another record (e.g. a MAP script Owner ID -> its
-    // object) carries `row.link`. When a jump handler is provided (MAP), render a click-to-navigate chip
-    // showing the target label; other formats/views have no handler and render nothing.
-    const jump = useJump();
     // Width class on .field-control -> CSS maps it to the control box width (--val-ch) so the box left-aligns
     // in its `auto` grid track (columns stay aligned). Shared with GridBlock via controlWidthClass so every
     // renderer sizes the same way (see controls.ts).
@@ -39,11 +35,11 @@
     <span class="field-control {widthClass}"
           title={readOnly ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
         <CellControl {row} {onedit} />
-        {#if row.link && jump}
-            {@const link = row.link}
-            <button type="button" class="jump-link" title={`Go to ${link.label}`} onclick={() => jump(link)}>
-                <span class="jump-arrow" aria-hidden="true">-&gt;</span>{link.label}
-            </button>
+        <!-- Cross-record jump: a field whose value references another record (e.g. a MAP script Owner ID ->
+             its object, a CRE item slot -> its Items entry) carries `row.link`. JumpLink renders nothing when
+             no jump handler is in context (a view with no navigable sections). -->
+        {#if row.link}
+            <JumpLink link={row.link} />
         {/if}
         {#if hasDiag}
             <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span

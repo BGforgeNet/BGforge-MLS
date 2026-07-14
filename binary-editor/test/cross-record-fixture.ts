@@ -98,3 +98,15 @@ export function findGroupNodeField(model: Model, topGroupName: string, fieldName
     if (!field) throw new Error(`no field "${fieldName}" under "${topGroupName}"`);
     return field;
 }
+
+/** Locate the Nth child GROUP of a top-level group (e.g. an Items entry), as opposed to
+ *  `findGroupNode` which reaches one level further down into a named field of that child. */
+export function findChildGroup(model: Model, topGroupName: string, childIndex: number): FlatNode {
+    const top = model.nodes.find((n) => n.kind === "group" && n.name === topGroupName);
+    if (!top) throw new Error(`no group "${topGroupName}"`);
+    const child = (model.childrenByParent.get(top.id) ?? [])
+        .map((i) => model.nodes[i]!)
+        .filter((n) => n.kind === "group")[childIndex];
+    if (!child) throw new Error(`no child group ${childIndex} in "${topGroupName}"`);
+    return child;
+}

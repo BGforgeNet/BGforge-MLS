@@ -322,6 +322,39 @@ check(
     `gridColMajor=${gridColMajor}`,
 );
 
+// Cross-record jump chip: an Item Slots cell holding a valid item-table index renders a click-to-navigate
+// chip (shared with Field.svelte via JumpLink.svelte), an empty (-1) slot renders none. edwin6's Amulet slot
+// holds index 0 (Items entry "Item 1"); Helmet is empty (-1).
+const slotCell = (label: string) =>
+    page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').filter({
+        has: page.locator(".nm", { hasText: label }),
+    });
+const amuletChip = await slotCell("Amulet").locator(".jump-link").allInnerTexts();
+// The chip's text is the decorative "->" arrow span followed by the link label (see JumpLink.svelte); strip
+// the arrow to assert the label itself.
+const amuletChipLabel = amuletChip[0]?.replace(/^->\s*/, "").trim();
+check(
+    "inventory: a slot holding a valid item index renders a jump chip labelled with its Items entry",
+    amuletChip.length === 1 && amuletChipLabel === "Item 1",
+    JSON.stringify(amuletChip),
+);
+const helmetChipCount = await slotCell("Helmet").locator(".jump-link").count();
+check("inventory: an empty (-1) item slot renders no jump chip", helmetChipCount === 0, `count=${helmetChipCount}`);
+
+const itemsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Items$/ }) });
+await slotCell("Amulet").locator(".jump-link").first().click();
+await itemsPanel.locator(".vlist .vrow.selected").first().waitFor({ timeout: 5000 });
+const selectedItemIsFirst = await itemsPanel
+    .locator(".vlist .vrow")
+    .first()
+    .evaluate((el) => el.classList.contains("selected"));
+check(
+    "inventory: clicking the jump chip selects the referenced entry in the Items list",
+    selectedItemIsFirst,
+    `selectedItemIsFirst=${selectedItemIsFirst}`,
+);
+await page.screenshot({ path: shotPath("shot-cre-inventory.png"), fullPage: true });
+
 // Proficiencies and Tracked Objects share the "Proficiencies" tab; Sound Slots is its own "Sounds" tab.
 const gridCounts = async (): Promise<{ counts: Record<string, number>; minGridGap: number }> =>
     page.evaluate(() => {

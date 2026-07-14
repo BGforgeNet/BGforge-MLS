@@ -106,9 +106,12 @@ function inRangeRefFields(model: Model, rel: IndexRefRelationship): FlatNode[] {
 
 /** Display overlay turning an in-range index field into a dropdown of the named targets: a `NONE` entry for
  *  the empty sentinel (-1) plus one `i: <label>` per target entry, labelled by the relationship's
- *  `targetLabelField` (e.g. the item ResRef). Returns undefined when `node` is not an in-range referring field
- *  or the relationship declares no label field, leaving the field a plain number. View-only: the stored int16
- *  index is unchanged, so byte round-trip is unaffected. */
+ *  `targetLabelField` (e.g. the item ResRef). When the field currently holds a valid in-range index, the
+ *  override also carries a jump `link` to that target entry (the same in-document navigation MAP's SID links
+ *  use - see `map-links.ts`), so clicking the slot's chip jumps to the referenced entry in its own list
+ *  section. Returns undefined when `node` is not an in-range referring field or the relationship declares no
+ *  label field, leaving the field a plain number. View-only: the stored int16 index is unchanged, so byte
+ *  round-trip is unaffected. */
 export function indexRefFieldOverride(
     model: Model,
     node: FlatNode,
@@ -119,16 +122,23 @@ export function indexRefFieldOverride(
     const targetGroup = findGroup(model, rel.targetGroup);
     if (!targetGroup) return;
     const labelKey = normKey(rel.targetLabelField);
+    const entries = childGroups(model, targetGroup);
     // Bare option names; the view (enumOptionList) prefixes each with its stored value, so an in-range slot
     // reads "<index> <ResRef>" and the empty sentinel reads "-1 None". A target with no ResRef has a blank
     // name and renders as just its index.
     const enumOptions: Record<string, string> = { "-1": "None" };
-    childGroups(model, targetGroup).forEach((entry, i) => {
+    entries.forEach((entry, i) => {
         const labelField = fieldsByKey(model, entry).get(labelKey);
         const label = labelField ? fieldText(labelField) : undefined;
         enumOptions[String(i)] = label ?? "";
     });
-    return { presentationType: "enum", enumOptions };
+    const override: FieldOverride = { presentationType: "enum", enumOptions };
+    const value = fieldNumber(node);
+    if (value !== undefined && value >= 0 && value < entries.length) {
+        const target = entries[value]!;
+        override.link = { targetNodeId: target.id, sectionKey: targetGroup.name, label: target.name };
+    }
+    return override;
 }
 
 /** Default owning-slice noun for the orphan/overlap messages, matching the ITM/SPL relationships (abilities +

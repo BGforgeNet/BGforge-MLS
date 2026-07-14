@@ -3,6 +3,7 @@
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { controlWidthClass } from "../../state/controls";
     import CellControl from "../CellControl.svelte";
+    import JumpLink from "../JumpLink.svelte";
 
     const { columns, items, fields, onedit }: {
         columns: number;
@@ -31,8 +32,15 @@
         <div class="skill">
             <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}</span>
             <!-- Wrap in the same sized .field-control Field.svelte uses, so a dropdown in a grid cell is sized
-                 to its longest option instead of falling to the combobox's intrinsic (clipping) width. -->
-            <span class="field-control {controlWidthClass(cell.row)}"><CellControl row={cell.row} {onedit} /></span>
+                 to its longest option instead of falling to the combobox's intrinsic (clipping) width. The
+                 jump chip (e.g. a CRE item slot -> its Items entry) sits after the control, inside the same
+                 span, so it never opens a third grid track or shifts column alignment. -->
+            <span class="field-control {controlWidthClass(cell.row)}">
+                <CellControl row={cell.row} {onedit} />
+                {#if cell.row.link}
+                    <JumpLink link={cell.row.link} />
+                {/if}
+            </span>
         </div>
     {/each}
 </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry, type IndexRefRelationship, type SliceRefRelationship } from "@bgforge/binary";
-import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
+import { buildModel, creResult, findChildGroup, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
 import {
     crossRefCascade,
     duplicateIndexRefDiagnostics,
@@ -328,6 +328,36 @@ describe("CRE item-slot dropdowns: index references render as named-item enums",
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: fullInventory({ 0: -1 }), meminfos: [] }));
         const ov = indexRefFieldOverride(m, findGroupNodeField(m, "Item Slots", "Slot 0"), creItemSlotRel);
         expect(ov?.enumOptions).toEqual({ "-1": "None" });
+    });
+    it("carries a jump link to the target item's entry for a valid in-range slot", () => {
+        // Slot 2 -> item index 0 (SW1H01), entry 0 of the Items list.
+        const m = inventory();
+        const slot2 = findGroupNodeField(m, "Item Slots", "Slot 2");
+        const row = projectRow(m, slot2, getRelationshipModel("cre"));
+        const target = findChildGroup(m, "Items", 0);
+        expect(row.link).toEqual({ targetNodeId: target.id, sectionKey: "Items", label: target.name });
+    });
+    it("carries no link for an empty (-1) slot", () => {
+        const m = inventory();
+        const slot1 = findGroupNodeField(m, "Item Slots", "Slot 1"); // -1 in fullInventory({ 1: -1, ... })
+        const row = projectRow(m, slot1, getRelationshipModel("cre"));
+        expect(row.link).toBeUndefined();
+    });
+    it("carries no link for an out-of-range slot index", () => {
+        // 2 items (valid indices 0-1); slot 0 references index 3, which is out of range.
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 2, slots: fullInventory({ 0: 3 }), meminfos: [], itemNames: ["A", "B"] }),
+        );
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        const row = projectRow(m, slot0, getRelationshipModel("cre"));
+        expect(row.link).toBeUndefined();
+    });
+    it("carries no link for the trailing selected-weapon slot/ability fields (38/39)", () => {
+        const m = inventory();
+        for (const name of ["Slot 38", "Slot 39"]) {
+            const slot = findGroupNodeField(m, "Item Slots", name);
+            expect(projectRow(m, slot, getRelationshipModel("cre")).link).toBeUndefined();
+        }
     });
     it("re-projects in-range slots (not 38/39) when an item's ResRef is edited", () => {
         // Editing an item's ResRef changes every slot dropdown's label, so the slots are dependents of the
