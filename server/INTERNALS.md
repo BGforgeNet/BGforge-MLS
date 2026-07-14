@@ -658,7 +658,7 @@ Startup / File Change
        |
        v
 +------------------+     +------------------+
-| call-sites.ts    | --> | ReferencesIndex  |
+| parseFile()      | --> | ReferencesIndex  |
 | (per-language    |     | .updateFile()    |
 |  AST extractor)  |     +------------------+
 +------------------+
@@ -676,7 +676,7 @@ Find References Request
   Merge local + cross-file results
 ```
 
-**Per-language call-site extractors** (`call-sites.ts`):
+**Per-language call-site extractors** (each language's `parseFile()`, in `header-parser.ts` for SSL/TP2 and `file-parser.ts` for D, which emits the `refs` map on its `ParseResult`):
 
 - **SSL**: Collects all `Identifier` nodes grouped by name. Cross-file lookup uses exact match.
 - **TP2**: Collects `FUNCTION_DEF_TYPES` and `FUNCTION_CALL_TYPES` name fields. Keys are case-sensitive. Variables are not indexed - they are function/loop-scoped.
