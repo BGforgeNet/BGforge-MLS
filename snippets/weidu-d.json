@@ -1,0 +1,61 @@
+{
+    "BEGIN dialog header": {
+        "prefix": "BEGIN",
+        "body": ["BEGIN ~${1:dialogname}~\n$0"],
+        "description": "BEGIN dialog header"
+    },
+    "State block": {
+        "prefix": "IF",
+        "body": [
+            "IF ~${1:condition}~ THEN BEGIN ${2:state_label}\n  SAY ~${3:text}~\n  IF ~${4:reply_condition}~ THEN GOTO ${5:next_label}\nEND\n$0"
+        ],
+        "description": "State block"
+    },
+    "SAY line": {
+        "prefix": "SAY",
+        "body": ["SAY ~${1:text}~$0"],
+        "description": "SAY line"
+    },
+    "REPLY-GOTO transition": {
+        "prefix": "IF",
+        "body": ["IF ~${1:condition}~ THEN REPLY ~${2:text}~ GOTO ${3:label}$0"],
+        "description": "REPLY-GOTO transition"
+    },
+    "GOTO transition": {
+        "prefix": "GOTO",
+        "body": ["GOTO ${1:label}$0"],
+        "description": "GOTO transition"
+    },
+    "EXIT transition": {
+        "prefix": "EXIT",
+        "body": ["EXIT$0"],
+        "description": "EXIT transition"
+    },
+    "EXTERN transition": {
+        "prefix": "EXTERN",
+        "body": ["EXTERN ~${1:file}~ ${2:label}$0"],
+        "description": "EXTERN transition"
+    },
+    "CHAIN block": {
+        "prefix": "CHAIN",
+        "body": ["CHAIN ~${1:file}~ ${2:label}\n  ~${3:text}~\nEXIT\n$0"],
+        "description": "CHAIN block"
+    },
+    "INTERJECT_COPY_TRANS block": {
+        "prefix": "INTERJECT_COPY_TRANS",
+        "body": [
+            "INTERJECT_COPY_TRANS ~${1:target_file}~ ${2:state_label} ${3:UniqueGlobalName}\n== ~${4:interjector_file}~ IF ~${5:condition}~ THEN @${6:0}\nEND\n$0"
+        ],
+        "description": "INTERJECT_COPY_TRANS block"
+    },
+    "APPEND block": {
+        "prefix": "APPEND",
+        "body": ["APPEND ~${1:file}~\nIF ~${2:trigger}~ THEN BEGIN ${3:label}\n  SAY ~${4:text}~\nEND\nEND\n$0"],
+        "description": "APPEND block"
+    },
+    "EXTEND_BOTTOM block": {
+        "prefix": "EXTEND_BOTTOM",
+        "body": ["EXTEND_BOTTOM ~${1:file}~ ${2:label}\n+ ~${3:trigger}~ + ~${4:reply}~ GOTO ${5:next_label}\nEND\n$0"],
+        "description": "EXTEND_BOTTOM block"
+    }
+}

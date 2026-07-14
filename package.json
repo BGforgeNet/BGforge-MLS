@@ -566,6 +566,10 @@
                 "path": "./snippets/weidu-baf.json"
             },
             {
+                "language": "weidu-d",
+                "path": "./snippets/weidu-d.json"
+            },
+            {
                 "language": "weidu-tp2",
                 "path": "./snippets/weidu-tp2.json"
             }
