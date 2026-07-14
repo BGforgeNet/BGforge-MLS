@@ -39,6 +39,48 @@ Entry with sound ref
     (sound_ref)))
 
 ================
+Sound ref with variable interpolation
+================
+
+@700 = ~[KRYSTIN 8]~ [%tutu_var%SIRIN05]
+
+---
+
+(source_file
+  (entry
+    (number)
+    (tilde_string)
+    (sound_ref)))
+
+================
+Sound ref with embedded space
+================
+
+@701 = ~Oh.~ [XAN 23]
+
+---
+
+(source_file
+  (entry
+    (number)
+    (tilde_string)
+    (sound_ref)))
+
+================
+Sound ref with hash character
+================
+
+@702 = ~text~ [X#BLANK]
+
+---
+
+(source_file
+  (entry
+    (number)
+    (tilde_string)
+    (sound_ref)))
+
+================
 Entry with female text
 ================
 

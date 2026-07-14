@@ -11,3 +11,5 @@
 //                     ^ string.special
 @200 = "double quoted"
 //     ^ string
+@300 = ~Hi~ [%v%SND]
+//           ^ string.special

@@ -9,6 +9,7 @@
 ### Translations
 
 - `.tra`/`.msg` files now have an Outline: one entry per `@N` / `{N}` string, with the text preview - jump anywhere in a large file from the Outline panel or breadcrumbs. Multiline entries can be folded.
+- Fixed: valid `.tra` entries whose sound reference contains a variable (`[%tutu_var%SIRIN05]`), a space (`[XAN 23]`), or a `#` (`[X#BLANK]`) no longer report a false syntax error.
 
 ### Binary editor
 

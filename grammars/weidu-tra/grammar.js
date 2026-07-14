@@ -44,8 +44,12 @@ export default grammar({
         // "text" - double-quote delimited, can span multiple lines
         double_string: () => token(seq('"', /[^"]*/, '"')),
 
-        // [SOUNDREF]
-        sound_ref: () => seq("[", /\w+/, "]"),
+        // [SOUNDREF] - the bracketed sound resref. WeiDU's tra lexer (WeiDUorg/weidu src/tlexer.in)
+        // tokenises this as "[" [^']']* "]", i.e. any character except the closing bracket; real
+        // corpus resrefs use variable interpolation (%tutu_var%SIRIN05), '#' (X#BLANK), embedded
+        // spaces (XAN 23) and lowercase (AMB_E04a), none of which \w admits. Newline is excluded so
+        // an unclosed '[' fails locally instead of consuming the rest of the file.
+        sound_ref: () => seq("[", /[^\]\n]+/, "]"),
 
         comment: () => token(seq("//", /[^\n]*/)),
 

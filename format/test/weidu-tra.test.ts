@@ -59,6 +59,14 @@ describe("weidu-tra/format", () => {
         noop("@11 = ~Male~ [MALE] ~Female~ [FEMALE]\n");
     });
 
+    it("preserves sound refs with non-word characters (interpolation, space, hash)", () => {
+        // Sound resrefs are non-string content preserved verbatim; the formatter must not
+        // choke on the interpolation/space/hash characters real WeiDU resrefs use.
+        noop("@12 = ~text~ [%tutu_var%SIRIN05]\n");
+        noop("@13 = ~text~ [XAN 23]\n");
+        noop("@14 = ~text~ [X#BLANK]\n");
+    });
+
     it("normalizes prefix when sound refs are present", () => {
         expect(fmt("@ 2 = ~Foo~ [FOO]\n")).toBe("@2 = ~Foo~ [FOO]\n");
     });
