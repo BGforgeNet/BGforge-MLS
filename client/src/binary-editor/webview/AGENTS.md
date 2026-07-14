@@ -7,6 +7,16 @@ General UI/UX principles (size to content, align columns, legible contrast, don'
 alone) are assumed - this records what is SPECIFIC to this editor, including which apparent oddities are
 intentional so a change doesn't "fix" them.
 
+## Field-presentation features cover every block renderer, through one shared layer
+
+Fields render through MULTIPLE components: `Field.svelte` (kv/detail forms), `blocks/FieldsBlock.svelte`
+(packed titled boxes), `blocks/GridBlock.svelte` (label+control grids), `blocks/MatrixBlock.svelte` (2D
+matrices), with `CellControl.svelte` as the shared control dispatcher underneath. A per-field presentation
+property (a tooltip, a range hint, a diagnostic/advisory, a link affordance) added to ONE of these renderers
+is a defect unless every other renderer either also gets it (via one shared helper/component, never per-block
+copies) or is explicitly declared N/A with the reason. A field's presentation must not depend on which block
+kind the layout schema happened to place it in.
+
 ## Field width: a small display-width tier scale
 
 Value controls map to a small fixed set of widths by DISPLAY width (characters rendered), not byte size. TEXT
