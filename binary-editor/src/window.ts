@@ -1,4 +1,10 @@
-import { type ParsedField, type ParsedGroup, toSemanticFieldKey } from "@bgforge/binary";
+import {
+    type ParsedField,
+    type ParsedGroup,
+    getDomainRange,
+    getNumericTypeRange,
+    toSemanticFieldKey,
+} from "@bgforge/binary";
 import { type FlatNode, type Model, visibleNodes } from "./model";
 import type { RelationshipModel } from "./relationship/types";
 import type { NodeId, Row } from "./types";
@@ -88,6 +94,25 @@ export function projectRow(
             // A cross-record reference field (e.g. MAP script Owner ID -> object) carries its jump target.
             if (ov.link !== undefined) base.link = ov.link;
         }
+    }
+    // Effective advisory range (storage-type bounds narrowed by any domain declaration) for a field still
+    // presented as a raw number. Keyed off `base.valueType` AFTER the overlay above: `getNumericTypeRange`
+    // only matches the 8 NumericTypeName literals, so it naturally excludes an enum/flags-typed field and
+    // one the overlay retyped to "enum" for display - min/max would be meaningless once the control is a
+    // dropdown. Consumed by the webview for the input's min/max attributes and its live out-of-range hint;
+    // the write-time zod gate (derive-zod.ts) stays the sole save-blocking authority.
+    const typeRange = getNumericTypeRange(base.valueType ?? "");
+    if (typeRange) {
+        let min = typeRange.min;
+        let max = typeRange.max;
+        const domainRange =
+            semanticKey !== undefined ? getDomainRange(model.parseResult.format, semanticKey) : undefined;
+        if (domainRange) {
+            min = domainRange.min;
+            max = domainRange.max;
+        }
+        base.min = min;
+        base.max = max;
     }
     return base;
 }

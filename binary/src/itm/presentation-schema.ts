@@ -33,9 +33,10 @@ export const itmCompiledPatternFields: readonly CompiledPatternFieldPresentation
 );
 
 // Per-field numeric clamp bounds, derived from `domain:` annotations on the
-// underlying specs. Empty until specs start declaring domains; the table is
-// wired through the format adapter so a new `domain` annotation flows into
-// validateNumericValue / the editor's range UI automatically.
+// underlying specs. Wired through the format adapter (`setDomainRangeLookup`),
+// so a new `domain` annotation flows into `validateNumericValue`'s save-time
+// check and the editor's projected Row `min`/`max` (window.ts `projectRow`)
+// without touching either consumer.
 export const itmDomainRanges: Readonly<Record<string, NumericRange>> = {
     ...toDomainRanges(itmHeaderSpecAnnotated, "itm.header"),
     ...toDomainRanges(itmAbilitySpecAnnotated, "itm.abilities[]"),

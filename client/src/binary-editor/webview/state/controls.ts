@@ -193,3 +193,13 @@ export function controlWidthClass(row: Row): string {
     if (kind === "enum") return dropdownWidth(row);
     return `tier-${valueTier(row)}`;
 }
+
+// ---- numeric range advisory (tooltip text) ----
+/** Advisory range hint text for a numeric field's tooltip (e.g. "0 to 255"), from the effective bounds
+ *  the host already resolved into `row.min`/`row.max` (storage-type range narrowed by any `domain:`
+ *  declaration - see `binary/src/binary-format-contract.ts`). Undefined when the row carries no resolved
+ *  range: an enum/flags-presented field (native or overlay-retyped) or a non-numeric field. */
+export function rangeTooltip(row: Row): string | undefined {
+    if (row.min === undefined || row.max === undefined) return undefined;
+    return `${row.min} to ${row.max}`;
+}

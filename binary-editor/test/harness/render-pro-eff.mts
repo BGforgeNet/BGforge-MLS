@@ -104,6 +104,67 @@ check("pro: no section tabs (single page)", proDom.tabs === 0, `count=${proDom.t
 
 await page.screenshot({ path: shotPath("shot-pro.png") });
 
+// ---- Numeric range advisory: PRO header "Light Radius" (domain-narrowed to 0-8, below uint32's own
+// 0-4294967295 - binary/src/pro/specs/header.ts) surfaces its resolved bounds as input min/max, a tooltip
+// hint, and an immediate out-of-range message through the existing per-field diagnostic icon. ----
+const rangeAttrs = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    const input = field?.querySelector(".field-control input[type='number']");
+    return {
+        found: field !== undefined,
+        min: input?.getAttribute("min"),
+        max: input?.getAttribute("max"),
+        labelTitle: field?.querySelector(".label")?.getAttribute("title"),
+    };
+});
+check("pro: Light Radius field is present", rangeAttrs.found, JSON.stringify(rangeAttrs));
+check(
+    "pro: Light Radius input carries the domain-narrowed min/max attributes",
+    rangeAttrs.min === "0" && rangeAttrs.max === "8",
+    `min=${rangeAttrs.min} max=${rangeAttrs.max}`,
+);
+check(
+    "pro: Light Radius tooltip includes the resolved range",
+    (rangeAttrs.labelTitle ?? "").includes("0 to 8"),
+    `title=${rangeAttrs.labelTitle}`,
+);
+
+// Type an out-of-range value and confirm the per-field diagnostic icon shows the precise message
+// immediately, without waiting on a host round trip.
+await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    const input = field?.querySelector("input[type='number']") as HTMLInputElement | null | undefined;
+    if (input) {
+        input.value = "20";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+});
+await page
+    .waitForFunction(
+        () => {
+            const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+            const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+            return field?.querySelector(".diag") != null;
+        },
+        undefined,
+        { timeout: 2000 },
+    )
+    .catch(() => undefined);
+const rangeError = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    return field?.querySelector(".diag")?.getAttribute("aria-label");
+});
+check(
+    "pro: typing an out-of-range Light Radius shows the precise advisory message",
+    rangeError === "Value 20 out of range (0 to 8)",
+    `message=${rangeError}`,
+);
+
+await page.screenshot({ path: shotPath("shot-pro-range-error.png") });
+
 // ---- EFF pass: reload the same page with a fresh hostUp binding pointing at effOpen ----
 // We need to rebind __hostUp before navigating. The easiest way in Playwright is to expose a new page,
 // but exposeFunction can only be called once per name. Instead, post the new open result via a fresh

@@ -35,6 +35,8 @@ const REQUIRED_VALUE_EXPORTS = [
     "resolveStoredFieldValue",
     // Numeric contracts
     "validateNumericValue",
+    "getNumericTypeRange",
+    "getDomainRange",
     // Flags
     "isFlagActive",
     // Concrete parsers

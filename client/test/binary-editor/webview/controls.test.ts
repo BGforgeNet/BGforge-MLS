@@ -9,6 +9,7 @@ import {
     parseCustomValue,
     valueTier,
     dropdownWidth,
+    rangeTooltip,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -246,6 +247,21 @@ const sampleOptions = [
     { value: 3, label: "Fireball" },
     { value: 100, label: "Charm Animal" },
 ];
+
+describe("rangeTooltip", () => {
+    const numberRow: Row = { ...enumRow, valueType: "uint8", enumOptions: undefined, rawValue: 5 };
+
+    it("renders the resolved min/max as tooltip text", () => {
+        expect(rangeTooltip({ ...numberRow, min: 0, max: 255 })).toBe("0 to 255");
+        expect(rangeTooltip({ ...numberRow, min: 0, max: 8 })).toBe("0 to 8");
+    });
+
+    it("returns undefined when the row carries no resolved range (enum/flags/non-numeric fields)", () => {
+        expect(rangeTooltip(numberRow)).toBeUndefined();
+        expect(rangeTooltip(enumRow)).toBeUndefined();
+        expect(rangeTooltip(flagRow)).toBeUndefined();
+    });
+});
 
 describe("filterOptions", () => {
     it("returns all options for an empty query", () => {

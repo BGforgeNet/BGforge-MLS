@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { mapParser, type ParseResult } from "@bgforge/binary";
 import { buildModel, setExpanded } from "../src/model";
 import { getChildren, getWindow, projectRow } from "../src/window";
+import { openSession, sessionStore } from "../src/session";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 function model() {
@@ -195,6 +196,48 @@ describe("projectRow metadata", () => {
         const m = buildModel(enumFlagResult());
         const race = m.nodes.find((n) => n.name === "Race")!;
         expect(projectRow(m, race).rawValue).toBe(1);
+    });
+
+    it("carries the storage-type bounds as min/max for a plain numeric field", () => {
+        const m = buildModel(syntheticLockedResult());
+        const unlockedField = m.nodes.find((n) => n.name === "UnlockedField")!;
+        const row = projectRow(m, unlockedField);
+        expect(row.min).toBe(0);
+        expect(row.max).toBe(255);
+    });
+
+    it("carries no min/max for an enum or a flags field", () => {
+        const m = buildModel(enumFlagResult());
+        const race = m.nodes.find((n) => n.name === "Race")!; // valueType "enum"
+        const flags = m.nodes.find((n) => n.name === "Flags")!; // valueType "flags"
+        expect(projectRow(m, race).min).toBeUndefined();
+        expect(projectRow(m, race).max).toBeUndefined();
+        expect(projectRow(m, flags).min).toBeUndefined();
+        expect(projectRow(m, flags).max).toBeUndefined();
+    });
+});
+
+describe("projectRow numeric range - domain narrowing", () => {
+    // 00000031.pro is the same committed fixture pro-roundtrip.test.ts uses for its Light Radius
+    // clamp assertions: the PRO header spec declares `lightRadius: { codec: u32, domain: { min: 0, max: 8 } }`
+    // (binary/src/pro/specs/header.ts), so its effective range must narrow below uint32's 0-4294967295.
+    const PRO_FIXTURE = path.resolve(__dirname, "../../client/testFixture/proto/items/00000031.pro");
+
+    function proSession() {
+        const { sessionId } = openSession("file:///fixture.pro", new Uint8Array(fs.readFileSync(PRO_FIXTURE)));
+        const session = sessionStore.get(sessionId);
+        if (!session) throw new Error("PRO fixture did not open a session");
+        return session;
+    }
+
+    it("narrows a domain-annotated field's range below its storage-type bounds", () => {
+        const session = proSession();
+        for (const n of session.model.nodes) if (n.childCount > 0) setExpanded(session.model, n.id, true);
+        const rows = getWindow(session.model, 0, 1_000_000, session.relationshipModel);
+        const lightRadius = rows.find((r) => r.name === "Light Radius");
+        expect(lightRadius, "PRO fixture must contain a Light Radius field").toBeDefined();
+        expect(lightRadius?.min).toBe(0);
+        expect(lightRadius?.max).toBe(8);
     });
 });
 

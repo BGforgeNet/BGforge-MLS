@@ -44,6 +44,12 @@ export interface Row {
     /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
      *  (Signedness is the field codec's job, not a display format.) */
     numericFormat?: "hex32";
+    /** Effective advisory bounds for a field still presented as a raw number: the storage-type range
+     *  (`getNumericTypeRange`) narrowed by a `domain:` declaration when one exists (`getDomainRange`) - see
+     *  `binary-format-contract.ts`. Undefined for a field presented as an enum/flags dropdown (native or
+     *  overlay-retyped) or a non-numeric field (string/padding/note); those have no `NumericTypeName` match. */
+    min?: number;
+    max?: number;
     /** Semantic field key (`toSemanticFieldKey(format, sourceSegments)`) for field rows, e.g.
      *  `cre.effects[].v2.opcode`. Lets a list entry's detail pane build a per-entry `FieldRef -> Row` map and
      *  render through a shared layout fragment; undefined for groups and fields whose key does not resolve. */

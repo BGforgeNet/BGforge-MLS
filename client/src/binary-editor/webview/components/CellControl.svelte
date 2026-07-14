@@ -9,9 +9,10 @@
     import EnumField from "./controls/EnumField.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
 
-    const { row, onedit }: {
+    const { row, onedit, onlocalinvalid }: {
         row: Row;
         onedit: (id: string, v: number | string) => void;
+        onlocalinvalid?: (message: string | undefined) => void;
     } = $props();
     const kind = $derived(controlKind(row));
     const emit = (v: number | string) => onedit(row.id, v);
@@ -20,7 +21,7 @@
     // the SAME FlagColumns the rest of the editor uses, as a one-field record keyed by the field's own id.
     const flagFields = $derived<Record<string, Row>>({ [row.id]: row });
 </script>
-{#if kind === "number"}<NumberField {row} onedit={emit} />
+{#if kind === "number"}<NumberField {row} onedit={emit} {onlocalinvalid} />
 {:else if kind === "string"}<StringField {row} onedit={emit} />
 {:else if kind === "enum"}<EnumField {row} onedit={emit} />
 {:else}<FlagColumns field={row.id} fields={flagFields} columns={1} boxed={false} {onedit} />{/if}

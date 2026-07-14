@@ -1,6 +1,13 @@
 <script lang="ts">
     import type { Row } from "@bgforge/binary-editor";
-    const { row, onedit }: { row: Row; onedit: (value: number) => void } = $props();
+    const { row, onedit, onlocalinvalid }: {
+        row: Row;
+        onedit: (value: number) => void;
+        // Reports (or clears, with undefined) an advisory out-of-range message for the CURRENT input value,
+        // so Field.svelte can show it through its existing diagnostic icon without waiting on the host
+        // round trip. Optional: grid/matrix cells that render this control standalone need no diag icon.
+        onlocalinvalid?: (message: string | undefined) => void;
+    } = $props();
     // Width comes from the display-width tier (the tier class on the ancestor .field-control sets --val-ch in
     // CSS); this control just renders the value. Hex sits in the M tier ("0x" + 8 digits = 10 chars).
     // `hex32` is a display-only format: `rawValue` is the stored number, the control shows a 0x-prefixed hex
@@ -26,6 +33,20 @@
         const v = Number((e.target as HTMLInputElement).value);
         if (Number.isFinite(v)) onedit(v);
     }
+    // Advisory check against the field's effective bounds (row.min/row.max, resolved host-side in
+    // window.ts projectRow - storage-type range narrowed by any domain declaration). Runs on every
+    // keystroke of the plain decimal input so the message shows immediately, without waiting on the host
+    // round trip; the write-time zod gate (derive-zod.ts) stays the sole save-blocking authority. Skipped
+    // for hex32: its control edits the value's unsigned 32-bit bit pattern (see commitHex), which does not
+    // line up with a signed type's row.min/row.max.
+    function checkRange(v: number): void {
+        if (row.numericFormat === "hex32" || row.min === undefined || row.max === undefined) return;
+        onlocalinvalid?.(v < row.min || v > row.max ? `Value ${v} out of range (${row.min} to ${row.max})` : undefined);
+    }
+    function inputPlain(e: Event) {
+        const v = Number((e.target as HTMLInputElement).value);
+        if (Number.isFinite(v)) checkRange(v);
+    }
 </script>
 
 {#if row.numericFormat === "hex32"}
@@ -46,5 +67,13 @@
         />
     </span>
 {:else}
-    <input type="number" value={row.rawValue ?? ""} disabled={!row.editable} onchange={commitPlain} />
+    <input
+        type="number"
+        value={row.rawValue ?? ""}
+        min={row.min}
+        max={row.max}
+        disabled={!row.editable}
+        oninput={inputPlain}
+        onchange={commitPlain}
+    />
 {/if}

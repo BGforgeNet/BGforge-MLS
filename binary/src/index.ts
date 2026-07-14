@@ -71,7 +71,8 @@ export {
 } from "./display-lookups";
 
 // Numeric contracts
-export { validateNumericValue } from "./binary-format-contract";
+export { validateNumericValue, getNumericTypeRange, getDomainRange } from "./binary-format-contract";
+export type { NumericRange } from "./binary-format-contract";
 
 // Flags
 export { isFlagActive } from "./flags";
