@@ -1415,20 +1415,41 @@ input[type="text"]::placeholder {
     gap: 4px 40px;
 }
 .layout-root .grid .skill {
-    /* Subgrid spanning this column's (label, control, chip) track triple, so labels share a max-content track
-       and controls align - the same technique .field uses. Replaces a fixed 108px label width that a longer
-       label (e.g. "Selected weapon ability") overflowed, misaligning its control. The chip is its own track
-       (not appended inside .field-control) so a jump chip never grows the control's max-content demand -
-       under space pressure the chip track gives way, never the control (see .chip below). */
+    /* Subgrid spanning this column's (label, control) track pair, so labels share a max-content track and
+       controls align - the same technique .field uses. Replaces a fixed 108px label width that a longer label
+       (e.g. "Selected weapon ability") overflowed, misaligning its control. A cross-record jump is the label
+       itself acting as a link, so it stays in the label track and needs no track of its own. */
     display: grid;
     grid-template-columns: subgrid;
-    grid-column: span 3;
+    grid-column: span 2;
     column-gap: 10px;
     align-items: center;
 }
 .layout-root .grid .skill .nm {
     color: var(--vscode-descriptionForeground);
     white-space: nowrap;
+}
+/* A grid label that jumps to another record (a CRE item slot -> its Items entry) renders as a button styled to
+   read as a link: link-coloured, underline on hover/focus, a visible focus ring for keyboard use. It is only a
+   link when the slot actually references a record; an empty (-1) slot keeps the plain .nm label above. Button
+   chrome is reset so it sits in the label track exactly like the span it replaces. */
+.layout-root .grid .skill .nm-link {
+    font: inherit;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+}
+.layout-root .grid .skill .nm-link:hover {
+    color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+    text-decoration: underline;
+}
+.layout-root .grid .skill .nm-link:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+    text-decoration: underline;
 }
 .layout-stub {
     color: var(--vscode-descriptionForeground);
@@ -1618,9 +1639,7 @@ input[type="text"]::placeholder {
  * same sizing the kv field layout uses); without this a grid dropdown fell to the combobox's intrinsic,
  * too-narrow width and clipped its option labels (e.g. CRE item-slot "0 BGMISC89"). Numeric inputs keep the
  * fixed compact width above. min-width matches width (not 0, unlike the kv-multi rules above, which deliberately
- * allow shrink in a too-narrow pane): the grid's control track must never shrink below its tier, even under
- * overall row width pressure from a jump chip in the neighboring .chip track - the chip track gives way instead
- * (see .layout-root .grid .skill .chip below). */
+ * allow shrink in a too-narrow pane): the grid's control track must never shrink below its tier. */
 .layout-root .grid .skill .field-control {
     min-width: var(--val-ch, 16ch);
 }
@@ -1629,18 +1648,6 @@ input[type="text"]::placeholder {
     width: var(--val-ch);
     box-sizing: border-box;
     min-width: var(--val-ch);
-}
-/* The jump-chip track (a CRE item slot -> its Items entry): its own subgrid column, separate from the control
-   track above, so it never grows the control's max-content demand. Empty for every row with no link (0 width).
-   Under space pressure it is the one that shrinks/clips - never the control. */
-.layout-root .grid .skill .chip {
-    min-width: 0;
-    overflow: hidden;
-}
-.layout-root .grid .skill .chip .jump-link {
-    /* The column-gap between the control and chip tracks already provides the spacing Field.svelte's inline
-       chip relies on margin-left for - a separate track means no doubled-up gap here. */
-    margin-left: 0;
 }
 /* Hide the native number spinner in the dense layout: it overlaps the right-aligned value in the narrow
  * stat/field inputs, and values here are typed, not stepped. */

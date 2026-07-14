@@ -1,7 +1,9 @@
 <script lang="ts">
-    // Shared cross-record jump-chip markup, extracted so Field.svelte (form/detail rows) and GridBlock.svelte
-    // (the CRE item-slots grid) render the SAME affordance rather than each carrying its own copy. Renders
-    // nothing when no jump handler is in context (a view with no navigable sections).
+    // Cross-record jump chip for form/detail rows (Field.svelte): a "-> label" affordance beside a value whose
+    // field REFERENCES another record (e.g. a MAP object's script SID -> its reverse-referenced object). The CRE
+    // item-slots grid does NOT use this - there the slot LABEL itself is the link (see GridBlock.svelte), because
+    // the label names the referent. Renders nothing when no jump handler is in context (a view with no navigable
+    // sections).
     import type { Row } from "@bgforge/binary-editor";
     import { useJump } from "../state/jump-context";
     const { link }: { link: NonNullable<Row["link"]> } = $props();

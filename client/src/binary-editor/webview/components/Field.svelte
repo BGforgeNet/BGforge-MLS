@@ -40,9 +40,12 @@
     <span class="field-control {widthClass}"
           title={readOnly ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
         <CellControl {row} {onedit} />
-        <!-- Cross-record jump: a field whose value references another record (e.g. a MAP script Owner ID ->
-             its object, a CRE item slot -> its Items entry) carries `row.link`. JumpLink renders nothing when
-             no jump handler is in context (a view with no navigable sections). -->
+        <!-- Cross-record jump (kv / detail form): a field whose value references another record - e.g. a MAP
+             object's script SID pointing at the reverse-referenced object - carries `row.link`, rendered as a
+             chip beside the value. Here the label names the FIELD and the target is a separate object, so a
+             chip is the right affordance. The CRE item-slots GRID instead makes the slot LABEL itself the link
+             (see GridBlock.svelte), because there the label names the referent ("Weapon 2" IS the linked entry).
+             JumpLink renders nothing when no jump handler is in context (a view with no navigable sections). -->
         {#if row.link}
             <JumpLink link={row.link} />
         {/if}

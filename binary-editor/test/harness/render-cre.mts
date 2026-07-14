@@ -364,42 +364,49 @@ check(
     `gridColMajor=${gridColMajor}`,
 );
 
-// Cross-record jump chip: an Item Slots cell holding a valid item-table index renders a click-to-navigate
-// chip (shared with Field.svelte via JumpLink.svelte), an empty (-1) slot renders none. edwin6's Amulet slot
-// holds index 0 (Items entry "Item 1"); Helmet is empty (-1).
+// Cross-record jump: an Item Slots cell holding a valid item-table index renders its
+// slot LABEL as a jump link (a .nm-link button whose title points at the Items entry); an empty (-1) slot keeps
+// a plain .nm label. edwin6's Amulet slot holds index 0 (Items entry "Item 1"); Helmet is empty (-1).
 const slotCell = (label: string) =>
     page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').filter({
         has: page.locator(".nm", { hasText: label }),
     });
-const amuletChip = await slotCell("Amulet").locator(".jump-link").allInnerTexts();
-// The chip's text is the decorative "->" arrow span followed by the link label (see JumpLink.svelte); strip
-// the arrow to assert the label itself.
-const amuletChipLabel = amuletChip[0]?.replace(/^->\s*/, "").trim();
+const amuletLink = slotCell("Amulet").locator("button.nm-link");
+const amuletLinkInfo = {
+    count: await amuletLink.count(),
+    text: (await amuletLink.first().textContent())?.trim(),
+    title: await amuletLink.first().getAttribute("title"),
+};
 check(
-    "inventory: a slot holding a valid item index renders a jump chip labelled with its Items entry",
-    amuletChip.length === 1 && amuletChipLabel === "Item 1",
-    JSON.stringify(amuletChip),
+    "inventory: a slot holding a valid item index renders its label as a jump link to the Items entry",
+    amuletLinkInfo.count === 1 && amuletLinkInfo.text === "Amulet" && amuletLinkInfo.title === "Go to Item 1",
+    JSON.stringify(amuletLinkInfo),
 );
-const helmetChipCount = await slotCell("Helmet").locator(".jump-link").count();
-check("inventory: an empty (-1) item slot renders no jump chip", helmetChipCount === 0, `count=${helmetChipCount}`);
+const helmetLinkCount = await slotCell("Helmet").locator("button.nm-link").count();
+check(
+    "inventory: an empty (-1) item slot renders a plain label, not a link",
+    helmetLinkCount === 0,
+    `count=${helmetLinkCount}`,
+);
 
 const itemsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Items$/ }) });
-await slotCell("Amulet").locator(".jump-link").first().click();
+await slotCell("Amulet").locator("button.nm-link").first().click();
 await itemsPanel.locator(".vlist .vrow.selected").first().waitFor({ timeout: 5000 });
 const selectedItemIsFirst = await itemsPanel
     .locator(".vlist .vrow")
     .first()
     .evaluate((el) => el.classList.contains("selected"));
 check(
-    "inventory: clicking the jump chip selects the referenced entry in the Items list",
+    "inventory: clicking the slot label link selects the referenced entry in the Items list",
     selectedItemIsFirst,
     `selectedItemIsFirst=${selectedItemIsFirst}`,
 );
 
-// Chip-sizing guard: a jump chip must never squeeze the combobox it sits beside (the control and chip render
-// through separate subgrid tracks - see GridBlock.svelte / styles.css ".grid .skill .chip" - so the control's
-// own track floors at its dd-tier width regardless of chip content). A clipped combobox has scrollWidth >
-// clientWidth on its search-input element.
+// Control-sizing guard: a slot's jump affordance must never squeeze the combobox it sits beside. The jump is
+// now the LABEL acting as a link (in the max-content label track), and the control track floors at its dd-tier
+// width - so a slot with a link must render its dropdown at the same width as one without. A clipped combobox
+// has scrollWidth > clientWidth on its search-input element (guards the dropdown-squeeze regression regardless
+// of the affordance).
 async function measureItemSlotClipping(): Promise<{ anyClipped: boolean; detail: string }> {
     return page.evaluate(() => {
         // `:has(h3:text-is(...))` is a Playwright-locator-only pseudo, not valid in a native querySelectorAll
@@ -425,10 +432,10 @@ check(
 await page.screenshot({ path: shotPath("shot-cre-inventory.png"), fullPage: true });
 
 // Live case: crossRefDependents re-projects every in-range slot when an item's ResRef changes, and a slot's
-// OWN edit can add/remove ITS OWN chip at runtime. Helmet (empty, column 0, same visual column as Amulet) has
-// no chip; drive its combobox to the item Amulet already holds, giving Helmet a fresh live chip, and confirm
-// Helmet's own label/control track position is unchanged - the chip track is separate, so gaining a chip must
-// not shift the control that was already there.
+// OWN edit can add/remove ITS OWN link at runtime. Helmet (empty, column 0, same visual column as Amulet) has
+// a plain label; drive its combobox to the item Amulet already holds, so Helmet gains a link and its label
+// turns into a .nm-link. Confirm Helmet's own control keeps its column left edge - the label link occupies the
+// same (max-content) label track as the plain label did, so gaining a link must not shift the control.
 const helmetControl = slotCell("Helmet").locator(".field-control");
 const helmetBefore = await helmetControl.evaluate((el) => el.getBoundingClientRect().left);
 await page.locator('.bb-combobox-input[aria-label="Helmet"]').click();
@@ -436,16 +443,16 @@ await page
     .waitForFunction(() => document.querySelectorAll(".bb-popup-item").length > 0, undefined, { timeout: 5000 })
     .catch(() => undefined);
 await page.locator(".bb-popup-item", { hasText: "BGMISC89" }).first().click();
-await slotCell("Helmet").locator(".jump-link").first().waitFor({ timeout: 5000 });
+await slotCell("Helmet").locator("button.nm-link").first().waitFor({ timeout: 5000 });
 const helmetAfter = await helmetControl.evaluate((el) => el.getBoundingClientRect().left);
 check(
-    "inventory: a slot's own control keeps its column left edge when its own chip appears live",
+    "inventory: a slot's own control keeps its column left edge when its label becomes a link live",
     Math.abs(helmetBefore - helmetAfter) < 1,
     `before=${helmetBefore} after=${helmetAfter}`,
 );
 const clipAfterLiveChip = await measureItemSlotClipping();
 check(
-    "inventory: no item-slot combobox clips after a chip appears live",
+    "inventory: no item-slot combobox clips after a slot label becomes a link live",
     !clipAfterLiveChip.anyClipped,
     clipAfterLiveChip.detail,
 );

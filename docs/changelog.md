@@ -15,7 +15,7 @@
 
 ### Binary editor
 
-- CRE inventory slots now show a jump link to the referenced item entry in the Items section - no more reading the index and switching tabs by hand.
+- CRE inventory slots that hold an item now turn the slot label into a link to that item's entry in the Items section - no more reading the index and switching tabs by hand.
 - Numeric fields now show their valid range in the field tooltip, and a value outside that range highlights the field with a warning outline - while you type and for as long as the value stays out of range - on every numeric field, whether it renders in a form, a grid, or a matrix.
 
 ### Dialog editor
