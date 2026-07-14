@@ -57,7 +57,10 @@ const config: KnipConfig = {
                 "test/td/*.ts",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
-                ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
+                // In production mode test files are not entries, so any non-.test.ts helper under test/
+                // (assertion helpers, fixtures) would be reported as an unused file - the whole test tree
+                // is irrelevant to production analysis.
+                ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/**"] : []),
             ],
             // esbuild-wasm is required at runtime: the server bundle imports
             // transpilers/common/bundle.ts via filesystem path and externalises

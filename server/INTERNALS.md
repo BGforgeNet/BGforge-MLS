@@ -83,6 +83,7 @@ server/src/
 |   +-- formatting.ts         # onDocumentFormatting
 |   +-- signature.ts          # onSignatureHelp
 |   +-- folding.ts            # onFoldingRanges
+|   +-- selection-range.ts    # onSelectionRanges
 |   +-- inlay-hints.ts        # inlayHint.on
 |   +-- semantic-tokens.ts    # semanticTokens.on
 |   +-- execute-command.ts    # onExecuteCommand + dialog editor commands
@@ -186,6 +187,7 @@ server/src/
 |   +-- signature.ts          # Signature help utilities
 |   +-- semantic-tokens.ts    # Shared semantic-token helpers
 |   +-- folding-ranges.ts     # Shared folding-range helper
+|   +-- selection-ranges.ts   # Shared selection-range helper
 |   +-- format-edits.ts       # Document format-edit helpers
 |   +-- format-options.ts     # Format option resolution
 |   +-- comment-check.ts
@@ -427,6 +429,7 @@ interface LanguageProvider {
   format?(text, uri): FormatResult;
   symbols?(text): DocumentSymbol[];
   foldingRanges?(text): FoldingRange[];
+  selectionRanges?(text, positions): SelectionRange[];
   definition?(text, position, uri): Location | null;
   hover?(text, symbol, uri, position): HoverResult; // discriminated union
   filterCompletions?(items, text, position, uri, trigger?): CompletionItem[];
@@ -520,18 +523,18 @@ This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax
 
 ## Feature Matrix
 
-| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc | Semantic Tokens |
-| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :---------: | :---: | :-------------: |
-| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |      Y      |   Y   |        Y        |
-| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |      Y      |  n/a  |                 |
-| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |                 |
-| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |        Y        |
-| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
-| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
-| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
-| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
-| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |        Y        |
-| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |                 |
+| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Selection Range | Diagnostics | JSDoc | Semantic Tokens |
+| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :-------------: | :---------: | :---: | :-------------: |
+| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |        Y        |      Y      |   Y   |        Y        |
+| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |        Y        |      Y      |  n/a  |                 |
+| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |   Y   |                 |
+| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |   Y   |        Y        |
+| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |  n/a  |       n/a       |
+| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |  n/a  |       n/a       |
+| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |       |                 |
+| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |       |                 |
+| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |        Y        |
+| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |                 |
 
 ## Request Routing
 
@@ -555,6 +558,7 @@ Reusable infrastructure that providers consume via configuration, not inheritanc
 | ----------------------- | --------------------------------------------------------------------------------------- | ------------------- |
 | `parser-factory.ts`     | Factory: `createCachedParserModule(wasm, name)`                                         | All 4 LSP providers |
 | `folding-ranges.ts`     | Factory: `createFoldingRangesProvider(init, parse, blockTypes)`                         | All 4 LSP providers |
+| `selection-ranges.ts`   | Factory: `createSelectionRangesProvider(init, parse)`                                   | All 4 LSP providers |
 | `comment-check.ts`      | Factory: `createIsInsideComment(init, parse, commentTypes)`                             | BAF, D, TP2         |
 | `provider-helpers.ts`   | Helpers: `resolveSymbolWithLocal()`, `formatWithValidation()`, `getStaticCompletions()` | All providers       |
 | `references-index.ts`   | Index: `ReferencesIndex` for cross-file Find References                                 | SSL, TP2, D         |

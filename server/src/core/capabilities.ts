@@ -20,6 +20,7 @@ import type {
     Location,
     Position,
     Range,
+    SelectionRange,
     SignatureHelp,
     SymbolInformation,
     TextEdit,
@@ -106,6 +107,10 @@ export interface SymbolCapability {
 
 export interface FoldingCapability {
     foldingRanges(text: string): FoldingRange[];
+}
+
+export interface SelectionRangeCapability {
+    selectionRanges(text: string, positions: Position[]): SelectionRange[];
 }
 
 export interface NavigationCapability {

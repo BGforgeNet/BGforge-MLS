@@ -17,6 +17,7 @@ import {
     type FoldingRange,
     type Location,
     type Position,
+    type SelectionRange,
     type SignatureHelp,
     type SymbolInformation,
     type WorkspaceEdit,
@@ -39,6 +40,7 @@ import {
     type FormattingCapability,
     type SymbolCapability,
     type FoldingCapability,
+    type SelectionRangeCapability,
     type NavigationCapability,
     type RenameCapability,
     type CompletionCapability,
@@ -57,6 +59,7 @@ import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
 import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
+import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { getDocumentSymbols } from "./symbol";
 import { getLocalDefinition } from "./definition";
 import { findReferences } from "./references";
@@ -81,6 +84,7 @@ const SSL_FOLDABLE_TYPES = new Set([
 ]);
 
 const sslFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, SSL_FOLDABLE_TYPES);
+const sslSelectionRanges = createSelectionRangesProvider(isInitialized, parseWithCache);
 
 class FalloutSslProvider
     implements
@@ -88,6 +92,7 @@ class FalloutSslProvider
         FormattingCapability,
         SymbolCapability,
         FoldingCapability,
+        SelectionRangeCapability,
         NavigationCapability,
         RenameCapability,
         CompletionCapability,
@@ -192,6 +197,10 @@ class FalloutSslProvider
 
     foldingRanges(text: string): FoldingRange[] {
         return sslFoldingRanges(text);
+    }
+
+    selectionRanges(text: string, positions: Position[]): SelectionRange[] {
+        return sslSelectionRanges(text, positions);
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {

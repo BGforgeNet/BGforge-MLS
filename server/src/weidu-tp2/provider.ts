@@ -14,6 +14,7 @@ import {
     type FoldingRange,
     type Location,
     type Position,
+    type SelectionRange,
     type SymbolInformation,
     type WorkspaceEdit,
     InsertTextFormat,
@@ -37,6 +38,7 @@ import {
     type FormattingCapability,
     type SymbolCapability,
     type FoldingCapability,
+    type SelectionRangeCapability,
     type NavigationCapability,
     type RenameCapability,
     type HoverCapability,
@@ -71,6 +73,7 @@ import { getLocalSymbols as extractLocalSymbols, lookupLocalSymbol, clearLocalSy
 import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
+import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { JSDOC_TYPE_TO_TOKEN, type SemanticTokenSpan } from "../shared/semantic-tokens";
@@ -116,6 +119,7 @@ const TP2_FOLDABLE_TYPES = new Set([
 ]);
 
 const tp2FoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, TP2_FOLDABLE_TYPES);
+const tp2SelectionRanges = createSelectionRangesProvider(isInitialized, parseWithCache);
 
 /**
  * Add parameter completions (INT_VAR, STR_VAR names) when in funcParamName context.
@@ -284,6 +288,7 @@ class WeiduTp2Provider
         FormattingCapability,
         SymbolCapability,
         FoldingCapability,
+        SelectionRangeCapability,
         NavigationCapability,
         RenameCapability,
         HoverCapability,
@@ -470,6 +475,10 @@ class WeiduTp2Provider
 
     foldingRanges(text: string): FoldingRange[] {
         return tp2FoldingRanges(text);
+    }
+
+    selectionRanges(text: string, positions: Position[]): SelectionRange[] {
+        return tp2SelectionRanges(text, positions);
     }
 
     references(

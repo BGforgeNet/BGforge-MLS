@@ -30,6 +30,7 @@ import type { Translation } from "../../src/translation";
 
 import * as completion from "../../src/handlers/completion";
 import * as folding from "../../src/handlers/folding";
+import * as selectionRange from "../../src/handlers/selection-range";
 import * as formatting from "../../src/handlers/formatting";
 import * as symbols from "../../src/handlers/symbols";
 import * as semanticTokens from "../../src/handlers/semantic-tokens";
@@ -54,6 +55,7 @@ function makeCtx(docs: Map<string, TextDocument>): { ctx: HandlerContext; wired:
         onCompletion: record("onCompletion"),
         onCompletionResolve: record("onCompletionResolve"),
         onFoldingRanges: record("onFoldingRanges"),
+        onSelectionRanges: record("onSelectionRanges"),
         onDocumentFormatting: record("onDocumentFormatting"),
         onDocumentSymbol: record("onDocumentSymbol"),
         onWorkspaceSymbol: record("onWorkspaceSymbol"),
@@ -159,6 +161,13 @@ const GUARD_CASES: GuardCase[] = [
         register: folding.register,
         wires: "onFoldingRanges",
         params: { textDocument: { uri: UNKNOWN_URI } },
+        empty: [],
+    },
+    {
+        name: "selection range",
+        register: selectionRange.register,
+        wires: "onSelectionRanges",
+        params: { textDocument: { uri: UNKNOWN_URI }, positions: [POSITION] },
         empty: [],
     },
     {
@@ -271,6 +280,21 @@ describe("handler delegation to the provider registry", () => {
         const result = await wiredHandler(wired, "onFoldingRanges")({ textDocument: { uri: KNOWN_URI } });
 
         expect(spy).toHaveBeenCalledWith("fallout-ssl", "text");
+        expect(result).toBe(sentinel);
+    });
+
+    it("selection range delegates to registry.selectionRanges", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
+        const sentinel = [{ range: { start: POSITION, end: POSITION } }];
+        const spy = vi.spyOn(registry, "selectionRanges").mockReturnValue(sentinel as never);
+
+        selectionRange.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onSelectionRanges",
+        )({ textDocument: { uri: KNOWN_URI }, positions: [POSITION] });
+
+        expect(spy).toHaveBeenCalledWith("fallout-ssl", "text", [POSITION]);
         expect(result).toBe(sentinel);
     });
 

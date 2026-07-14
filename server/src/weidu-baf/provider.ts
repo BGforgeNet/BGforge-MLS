@@ -5,7 +5,7 @@
  * Uses unified Symbols storage for completion and hover data.
  */
 
-import type { CompletionItem, FoldingRange, Position } from "vscode-languageserver/node";
+import type { CompletionItem, FoldingRange, Position, SelectionRange } from "vscode-languageserver/node";
 import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { LANG_WEIDU_BAF } from "../core/languages";
@@ -21,6 +21,7 @@ import {
     type CompletionCapability,
     type DataCapability,
     type FoldingCapability,
+    type SelectionRangeCapability,
     type FeatureGateCapability,
     type CompilationCapability,
 } from "../language-provider";
@@ -31,6 +32,7 @@ import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from 
 import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-baf";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
+import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
 
 /** Comment node types in the BAF grammar. */
@@ -42,6 +44,7 @@ const isInsideComment = createIsInsideComment(isInitialized, parseWithCache, BAF
 const BAF_FOLDABLE_TYPES = new Set([SyntaxType.Block, SyntaxType.Response]);
 
 const bafFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, BAF_FOLDABLE_TYPES);
+const bafSelectionRanges = createSelectionRangesProvider(isInitialized, parseWithCache);
 
 class WeiduBafProvider
     implements
@@ -50,6 +53,7 @@ class WeiduBafProvider
         CompletionCapability,
         DataCapability,
         FoldingCapability,
+        SelectionRangeCapability,
         FeatureGateCapability,
         CompilationCapability
 {
@@ -81,6 +85,10 @@ class WeiduBafProvider
 
     foldingRanges(text: string): FoldingRange[] {
         return bafFoldingRanges(text);
+    }
+
+    selectionRanges(text: string, positions: Position[]): SelectionRange[] {
+        return bafSelectionRanges(text, positions);
     }
 
     format(text: string, uri: NormalizedUri): FormatResult {

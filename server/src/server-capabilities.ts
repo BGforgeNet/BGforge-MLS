@@ -32,6 +32,7 @@ export function getServerCapabilities(): ServerCapabilities {
         documentSymbolProvider: true,
         workspaceSymbolProvider: true,
         foldingRangeProvider: true,
+        selectionRangeProvider: true,
         executeCommandProvider: {
             commands: [
                 COMMAND_compile,

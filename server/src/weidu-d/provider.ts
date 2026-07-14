@@ -12,6 +12,7 @@ import type {
     FoldingRange,
     Location,
     Position,
+    SelectionRange,
     SymbolInformation,
 } from "vscode-languageserver/node";
 import { conlog } from "../logger";
@@ -28,6 +29,7 @@ import {
     type FormattingCapability,
     type SymbolCapability,
     type FoldingCapability,
+    type SelectionRangeCapability,
     type NavigationCapability,
     type RenameCapability,
     type HoverCapability,
@@ -51,6 +53,7 @@ import { initParser, parseWithCache, isInitialized } from "../../../shared/parse
 import { getDocumentSymbols } from "./symbol";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
+import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
 
 /** D block-level node types for code folding. */
@@ -67,6 +70,7 @@ const D_FOLDABLE_TYPES = new Set([
 ]);
 
 const dFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, D_FOLDABLE_TYPES);
+const dSelectionRanges = createSelectionRangesProvider(isInitialized, parseWithCache);
 
 class WeiduDProvider
     implements
@@ -74,6 +78,7 @@ class WeiduDProvider
         FormattingCapability,
         SymbolCapability,
         FoldingCapability,
+        SelectionRangeCapability,
         NavigationCapability,
         RenameCapability,
         HoverCapability,
@@ -132,6 +137,10 @@ class WeiduDProvider
 
     foldingRanges(text: string): FoldingRange[] {
         return dFoldingRanges(text);
+    }
+
+    selectionRanges(text: string, positions: Position[]): SelectionRange[] {
+        return dSelectionRanges(text, positions);
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {

@@ -21,6 +21,7 @@ import {
     type Position,
     type Range,
     type InlayHint,
+    type SelectionRange,
     type SemanticTokens,
     type SymbolInformation,
     type WorkspaceEdit,
@@ -167,6 +168,14 @@ class ProviderRegistry {
         const provider = this.get(langId);
         if (provider?.foldingRanges) {
             return provider.foldingRanges(text);
+        }
+        return [];
+    }
+
+    selectionRanges(langId: string, text: string, positions: Position[]): SelectionRange[] {
+        const provider = this.get(langId);
+        if (provider?.selectionRanges) {
+            return provider.selectionRanges(text, positions);
         }
         return [];
     }
