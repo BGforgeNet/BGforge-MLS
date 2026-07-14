@@ -65,6 +65,15 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
             return [{ type: "children", requestId: m.requestId, parentId: r.parentId, rows: r.rows, total: r.total }];
         }
     }
+    if (m.type === "editField") {
+        const r = dispatch({
+            type: "editField",
+            sessionId: currentOpenResult.sessionId,
+            nodeId: m.nodeId,
+            value: m.value,
+        });
+        return r.type === "edited" ? [{ type: "changeSet", changeSet: r.result.changeSet, selection: m.nodeId }] : [];
+    }
     return [];
 }
 
@@ -105,8 +114,10 @@ check("pro: no section tabs (single page)", proDom.tabs === 0, `count=${proDom.t
 await page.screenshot({ path: shotPath("shot-pro.png") });
 
 // ---- Numeric range advisory: PRO header "Light Radius" (domain-narrowed to 0-8, below uint32's own
-// 0-4294967295 - binary/src/pro/specs/header.ts) surfaces its resolved bounds as input min/max, a tooltip
-// hint, and an immediate out-of-range message through the existing per-field diagnostic icon. ----
+// 0-4294967295 - binary/src/pro/specs/header.ts) surfaces its resolved bounds as input min/max plus an
+// "Allowed range" title on the control itself (in NumberField, the shared numeric control, so every block
+// renderer gets it). An out-of-range value is flagged by the native :out-of-range styling + aria-invalid,
+// value-derived so it warns while typing AND persists once the value commits - never a transient advisory. ----
 const rangeAttrs = await page.evaluate(() => {
     const fields = Array.from(document.querySelectorAll(".layout-root .field"));
     const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
@@ -115,7 +126,8 @@ const rangeAttrs = await page.evaluate(() => {
         found: field !== undefined,
         min: input?.getAttribute("min"),
         max: input?.getAttribute("max"),
-        labelTitle: field?.querySelector(".label")?.getAttribute("title"),
+        title: input?.getAttribute("title"),
+        ariaInvalid: input?.getAttribute("aria-invalid"),
     };
 });
 check("pro: Light Radius field is present", rangeAttrs.found, JSON.stringify(rangeAttrs));
@@ -125,42 +137,93 @@ check(
     `min=${rangeAttrs.min} max=${rangeAttrs.max}`,
 );
 check(
-    "pro: Light Radius tooltip includes the resolved range",
-    (rangeAttrs.labelTitle ?? "").includes("0 to 8"),
-    `title=${rangeAttrs.labelTitle}`,
+    "pro: Light Radius control title states the allowed range",
+    (rangeAttrs.title ?? "").includes("0 to 8"),
+    `title=${rangeAttrs.title}`,
+);
+check(
+    "pro: an in-range Light Radius is not flagged (aria-invalid absent)",
+    rangeAttrs.ariaInvalid === null,
+    `aria-invalid=${rangeAttrs.ariaInvalid}`,
 );
 
-// Type an out-of-range value and confirm the per-field diagnostic icon shows the precise message
-// immediately, without waiting on a host round trip.
+// Baseline geometry of the Light Radius field and its next sibling, to prove the out-of-range indication
+// (border-color + background only) never reflows the layout. Inlined (not a shared Node function) so tsx's
+// name-keeping wrapper is not injected into the serialized browser closure.
+const beforeRects = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const idx = fields.findIndex((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    const s = fields[idx]?.getBoundingClientRect();
+    const n = fields[idx + 1]?.getBoundingClientRect();
+    return {
+        self: s ? [Math.round(s.x), Math.round(s.y), Math.round(s.width), Math.round(s.height)] : null,
+        next: n ? [Math.round(n.x), Math.round(n.y), Math.round(n.width), Math.round(n.height)] : null,
+    };
+});
+
+// While typing (value set, not yet committed): the native :out-of-range styling flags it live.
+const typing = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    const input = field?.querySelector("input[type='number']") as HTMLInputElement | null;
+    if (!input) return { outOfRange: false };
+    input.value = "20";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    return { outOfRange: input.matches(":out-of-range") };
+});
+check(
+    "pro: an out-of-range Light Radius is flagged while typing (native :out-of-range)",
+    typing.outOfRange,
+    JSON.stringify(typing),
+);
+
+// Commit the out-of-range value (change -> host round trip stores it faithfully; no clamp/reject).
 await page.evaluate(() => {
     const fields = Array.from(document.querySelectorAll(".layout-root .field"));
     const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
-    const input = field?.querySelector("input[type='number']") as HTMLInputElement | null | undefined;
-    if (input) {
-        input.value = "20";
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
+    const input = field?.querySelector("input[type='number']") as HTMLInputElement | null;
+    input?.dispatchEvent(new Event("change", { bubbles: true }));
 });
 await page
     .waitForFunction(
         () => {
             const fields = Array.from(document.querySelectorAll(".layout-root .field"));
             const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
-            return field?.querySelector(".diag") != null;
+            return field?.querySelector("input[type='number']")?.getAttribute("aria-invalid") === "true";
         },
         undefined,
         { timeout: 2000 },
     )
     .catch(() => undefined);
-const rangeError = await page.evaluate(() => {
+const committed = await page.evaluate(() => {
     const fields = Array.from(document.querySelectorAll(".layout-root .field"));
     const field = fields.find((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
-    return field?.querySelector(".diag")?.getAttribute("aria-label");
+    const input = field?.querySelector("input[type='number']") as HTMLInputElement | null;
+    return {
+        value: input?.value,
+        ariaInvalid: input?.getAttribute("aria-invalid"),
+        outOfRange: input ? input.matches(":out-of-range") : false,
+    };
 });
 check(
-    "pro: typing an out-of-range Light Radius shows the precise advisory message",
-    rangeError === "Value 20 out of range (0 to 8)",
-    `message=${rangeError}`,
+    "pro: a committed out-of-range Light Radius stays flagged (value-derived, persists after blur)",
+    committed.value === "20" && committed.ariaInvalid === "true" && committed.outOfRange === true,
+    JSON.stringify(committed),
+);
+const afterRects = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".layout-root .field"));
+    const idx = fields.findIndex((f) => f.querySelector(".label")?.textContent?.trim() === "Light Radius");
+    const s = fields[idx]?.getBoundingClientRect();
+    const n = fields[idx + 1]?.getBoundingClientRect();
+    return {
+        self: s ? [Math.round(s.x), Math.round(s.y), Math.round(s.width), Math.round(s.height)] : null,
+        next: n ? [Math.round(n.x), Math.round(n.y), Math.round(n.width), Math.round(n.height)] : null,
+    };
+});
+check(
+    "pro: the out-of-range indication does not reflow the layout",
+    JSON.stringify(beforeRects) === JSON.stringify(afterRects),
+    `before=${JSON.stringify(beforeRects)} after=${JSON.stringify(afterRects)}`,
 );
 
 await page.screenshot({ path: shotPath("shot-pro-range-error.png") });

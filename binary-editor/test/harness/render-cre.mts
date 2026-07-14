@@ -303,6 +303,48 @@ const fieldGap = await page.evaluate(() => {
 });
 check("layout: field label/value gap is positive (no overlap)", fieldGap >= 4, `minFieldGap=${fieldGap}px`);
 
+// Range coverage: the numeric range indication (min/max attributes + an "Allowed range" title) must reach
+// EVERY block renderer through the shared NumberField, not just Field.svelte's kv form. Assert one numeric
+// input in each block kind carries it - FieldsBlock (General scalars), MatrixBlock (Proficiencies grid),
+// GridBlock (Sounds grid).
+const fieldsBlockRange = await page.evaluate(() => {
+    const input = document.querySelector(".layout-root .kv .field input[type='number']");
+    return { min: input?.getAttribute("min"), max: input?.getAttribute("max"), title: input?.getAttribute("title") };
+});
+check(
+    "range coverage: a FieldsBlock numeric field carries min/max and an 'Allowed range' title",
+    fieldsBlockRange.min != null &&
+        fieldsBlockRange.max != null &&
+        (fieldsBlockRange.title ?? "").startsWith("Allowed range:"),
+    JSON.stringify(fieldsBlockRange),
+);
+
+await clickTab("Proficiencies");
+const matrixBlockRange = await page.evaluate(() => {
+    const input = document.querySelector(".layout-root .matrix .strow .c input[type='number']");
+    return { min: input?.getAttribute("min"), max: input?.getAttribute("max"), title: input?.getAttribute("title") };
+});
+check(
+    "range coverage: a MatrixBlock numeric cell carries min/max and an 'Allowed range' title",
+    matrixBlockRange.min != null &&
+        matrixBlockRange.max != null &&
+        (matrixBlockRange.title ?? "").startsWith("Allowed range:"),
+    JSON.stringify(matrixBlockRange),
+);
+
+await clickTab("Sounds");
+const gridBlockRange = await page.evaluate(() => {
+    const input = document.querySelector(".layout-root .grid .skill .field-control input[type='number']");
+    return { min: input?.getAttribute("min"), max: input?.getAttribute("max"), title: input?.getAttribute("title") };
+});
+check(
+    "range coverage: a GridBlock numeric cell carries min/max and an 'Allowed range' title",
+    gridBlockRange.min != null &&
+        gridBlockRange.max != null &&
+        (gridBlockRange.title ?? "").startsWith("Allowed range:"),
+    JSON.stringify(gridBlockRange),
+);
+
 await clickTab("Inventory");
 const itemSlots = await page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').count();
 check("layout: item-slots grid renders 40 cells", itemSlots === 40, `count=${itemSlots}`);

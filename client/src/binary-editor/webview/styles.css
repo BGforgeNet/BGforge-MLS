@@ -655,6 +655,21 @@ input[type="text"]::placeholder {
     color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
 }
 
+/* Out-of-range advisory: a numeric field whose value falls outside its declared domain (row.min/row.max) gets
+   a warning-toned box, driven by the browser-native :out-of-range pseudo-class (fed by the min/max attributes
+   in NumberField). It tracks the live typed value AND persists once an out-of-range value is committed - the
+   editor stores whatever the file/user has, this is advisory only, never a clamp. Only border-color and
+   background change (never size), so the indication appearing or disappearing never reflows the layout.
+   Scoped to editable inputs; read-only fields render as plain text with no input chrome. Focus keeps its own
+   border (second rule) so the keyboard focus ring stays visible while the background still signals the state. */
+.layout-root input[type="number"]:out-of-range:not(:disabled) {
+    border-color: var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+}
+.layout-root input[type="number"]:out-of-range:not(:disabled):focus {
+    border-color: var(--vscode-focusBorder);
+}
+
 /* Read-only (non-editable / derived / locked) controls in the dense layout render as plain muted text -
  * no input box, no dropdown arrow - rather than a dimmed input, so it is obvious at a glance which fields
  * are editable (a control with input chrome) vs read-only (#17). Editable controls keep their box + a

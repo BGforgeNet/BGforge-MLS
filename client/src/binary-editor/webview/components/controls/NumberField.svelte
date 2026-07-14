@@ -1,12 +1,9 @@
 <script lang="ts">
     import type { Row } from "@bgforge/binary-editor";
-    const { row, onedit, onlocalinvalid }: {
+    import { rangeTooltip } from "../../state/controls";
+    const { row, onedit }: {
         row: Row;
         onedit: (value: number) => void;
-        // Reports (or clears, with undefined) an advisory out-of-range message for the CURRENT input value,
-        // so Field.svelte can show it through its existing diagnostic icon without waiting on the host
-        // round trip. Optional: grid/matrix cells that render this control standalone need no diag icon.
-        onlocalinvalid?: (message: string | undefined) => void;
     } = $props();
     // Width comes from the display-width tier (the tier class on the ancestor .field-control sets --val-ch in
     // CSS); this control just renders the value. Hex sits in the M tier ("0x" + 8 digits = 10 chars).
@@ -33,20 +30,20 @@
         const v = Number((e.target as HTMLInputElement).value);
         if (Number.isFinite(v)) onedit(v);
     }
-    // Advisory check against the field's effective bounds (row.min/row.max, resolved host-side in
-    // window.ts projectRow - storage-type range narrowed by any domain declaration). Runs on every
-    // keystroke of the plain decimal input so the message shows immediately, without waiting on the host
-    // round trip; the write-time zod gate (derive-zod.ts) stays the sole save-blocking authority. Skipped
-    // for hex32: its control edits the value's unsigned 32-bit bit pattern (see commitHex), which does not
-    // line up with a signed type's row.min/row.max.
-    function checkRange(v: number): void {
-        if (row.numericFormat === "hex32" || row.min === undefined || row.max === undefined) return;
-        onlocalinvalid?.(v < row.min || v > row.max ? `Value ${v} out of range (${row.min} to ${row.max})` : undefined);
-    }
-    function inputPlain(e: Event) {
-        const v = Number((e.target as HTMLInputElement).value);
-        if (Number.isFinite(v)) checkRange(v);
-    }
+    // Advisory range indication against the field's effective bounds (row.min/row.max, resolved host-side
+    // in window.ts projectRow - storage-type range narrowed by any `domain:` declaration). This is purely
+    // an indication: the editor faithfully stores whatever the file or user has, never clamping or
+    // rejecting on write - the write-time zod gate (derive-zod.ts) is the sole save-blocking authority.
+    // The out-of-range VISUAL is the browser's native input:out-of-range (styles.css), which the `min`/`max`
+    // attributes below drive; it reflects the live typed value AND persists after a committed out-of-range
+    // value, with no reflow. `bounds`/`outOfRange` here only feed the title hint and aria-invalid, derived
+    // from the stored value. Skipped for hex32: its control edits the unsigned 32-bit bit pattern (see
+    // commitHex), which does not line up with a signed type's row.min/row.max.
+    const bounds = $derived(row.numericFormat === "hex32" ? undefined : rangeTooltip(row));
+    const outOfRange = $derived(
+        bounds !== undefined && row.min !== undefined && row.max !== undefined && (raw < row.min || raw > row.max),
+    );
+    const rangeTitle = $derived(bounds === undefined ? undefined : `Allowed range: ${bounds}`);
 </script>
 
 {#if row.numericFormat === "hex32"}
@@ -73,7 +70,8 @@
         min={row.min}
         max={row.max}
         disabled={!row.editable}
-        oninput={inputPlain}
+        title={rangeTitle}
+        aria-invalid={outOfRange || undefined}
         onchange={commitPlain}
     />
 {/if}

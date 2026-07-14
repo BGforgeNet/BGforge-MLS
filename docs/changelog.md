@@ -16,7 +16,7 @@
 ### Binary editor
 
 - CRE inventory slots now show a jump link to the referenced item entry in the Items section - no more reading the index and switching tabs by hand.
-- Numeric fields now show their valid range in the tooltip, and entering an out-of-range value flags the exact field immediately with the allowed bounds, instead of a generic error after the fact.
+- Numeric fields now show their valid range in the field tooltip, and a value outside that range highlights the field with a warning outline - while you type and for as long as the value stays out of range - on every numeric field, whether it renders in a form, a grid, or a matrix.
 
 ### Dialog editor
 
