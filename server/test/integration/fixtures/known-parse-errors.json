@@ -232,22 +232,8 @@
         "files": ["BG1NPC/bg1npc/core/tpa/a64_beregost.tpa", "BG1NPC/bg1npc/phase2/tpa/bg1npc_xzarqst.tpa"]
     },
     "weidu-tra": {
-        "reason": "Remaining weidu-tra gaps AFTER the sound_ref charset fix, each a distinct construct from it: (B) two-sound `~male~ [snd] ~female~ [snd]` entries the `entry` rule does not model; (C) `%...%`-delimited strings the grammar lacks; (D) non-numeric `@BGT_NNN` keys in worldmap.tra, which are not standard WeiDU tra. Tracked; not changed by the charset fix.",
+        "reason": "worldmap.tra files use non-numeric `@BGT_781001` keys, which are not standard WeiDU tra - the tra lexer (WeiDUorg/weidu src/tlexer.in) only accepts `@['-']?['0'-'9']+`. These are preprocessed by BGT, not parsed directly; a grammar fix is not appropriate. The charset, two-sound, and percent-string gaps that previously errored here are now fixed.",
         "files": [
-            "BG1NPC/bg1npc/tra/french/bg1npc_tmp.tra",
-            "BG1NPC/bg1npc/tra/french/x#xqxan.tra",
-            "BG1NPC/bg1npc/tra/polish/x#ajint.tra",
-            "BG1NPC/bg1npc/tra/polish/x#dynaquest.tra",
-            "BG1NPC/bg1npc/tra/polish/x#pcinit_tmp.tra",
-            "BG1NPC/bg1npc/tra/polish/x#xqxan.tra",
-            "BG1NPC/bg1npc/tra/spanish/bg1npc_tmp.tra",
-            "BG1NPC/bg1npc/tra/spanish/x#ajint.tra",
-            "BG1NPC/bg1npc/tra/spanish/x#bri.tra",
-            "BGT-WeiDU/bgt/language/tchinese/dialog.tra",
-            "BGT-WeiDU/bgt/language/tchinese/journal.tra",
-            "BGT-WeiDU/bgt/language/tchinese/journal_bg2gtu.tra",
-            "BGT-WeiDU/bgt/language/tchinese/scripts.tra",
-            "BGT-WeiDU/bgt/language/tchinese/setup.tra",
             "BGT-WeiDU/bgt/worldmap/czech/worldmap.tra",
             "BGT-WeiDU/bgt/worldmap/english/worldmap.tra",
             "BGT-WeiDU/bgt/worldmap/french/worldmap.tra",

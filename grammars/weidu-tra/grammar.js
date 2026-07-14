@@ -3,8 +3,8 @@
  * @author BGforge <dev@bgforge.net>
  * @license MIT
  *
- * Format: @number = string [string] [sound_ref]
- * Strings can be delimited by ~text~, "text", or ~~~~~text~~~~~.
+ * Format: @number = male_string [sound] [female_string [sound]]
+ * Strings can be delimited by ~text~, "text", %text%, or ~~~~~text~~~~~.
  * Comments (// and block) only appear between entries.
  */
 
@@ -21,28 +21,36 @@ export default grammar({
     rules: {
         source_file: ($) => repeat($.entry),
 
-        // @number = string [female_string] [sound_ref]
+        // @number = male_string [sound] [female_string [sound]]
+        // WeiDU's grammar (WeiDUorg/weidu src/toldparser.mly, production `lse_string sound_opt
+        // lse_string sound_opt`) allows a sound after EACH string, so a male sound may precede the
+        // female string - the old `text female_text? sound?` shape could not model that ordering.
         entry: ($) =>
             seq(
                 "@",
                 field("number", $.number),
                 "=",
                 field("text", $._string),
-                optional(field("female_text", $._string)),
                 optional(field("sound", $.sound_ref)),
+                optional(seq(field("female_text", $._string), optional(field("female_sound", $.sound_ref)))),
             ),
 
         number: () => /-?\d+/,
 
         // Use _string (hidden) to wrap the actual string rules. This ensures
         // tree-sitter processes extras before attempting the external scanner.
-        _string: ($) => choice($.tilde_string, $.double_string),
+        _string: ($) => choice($.tilde_string, $.double_string, $.percent_string),
 
         // tilde_string is handled entirely by the external scanner:
         // matches both ~text~ and ~~~~~text~~~~~
 
         // "text" - double-quote delimited, can span multiple lines
         double_string: () => token(seq('"', /[^"]*/, '"')),
+
+        // %text% - percent delimited, can span multiple lines. WeiDU's tra lexer (WeiDUorg/weidu
+        // src/tlexer.in) tokenises this as '%' [^'%']* '%', a third string delimiter alongside the
+        // tilde and double-quote forms; real corpus files (e.g. BGT tchinese setup.tra) use it.
+        percent_string: () => token(seq("%", /[^%]*/, "%")),
 
         // [SOUNDREF] - the bracketed sound resref. WeiDU's tra lexer (WeiDUorg/weidu src/tlexer.in)
         // tokenises this as "[" [^']']* "]", i.e. any character except the closing bracket; real

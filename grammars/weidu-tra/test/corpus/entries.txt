@@ -95,6 +95,64 @@ Entry with female text
     (tilde_string)))
 
 ================
+Two-sound entry (male and female sound)
+================
+
+@401 = ~male~ [MALE01] ~female~ [FEMALE01]
+
+---
+
+(source_file
+  (entry
+    (number)
+    (tilde_string)
+    (sound_ref)
+    (tilde_string)
+    (sound_ref)))
+
+================
+Male sound then female text without female sound
+================
+
+@402 = ~male~ [MALE01] ~female~
+
+---
+
+(source_file
+  (entry
+    (number)
+    (tilde_string)
+    (sound_ref)
+    (tilde_string)))
+
+================
+Percent-delimited string
+================
+
+@403 = %percent text%
+
+---
+
+(source_file
+  (entry
+    (number)
+    (percent_string)))
+
+================
+Multiline percent-delimited string
+================
+
+@404 = %line one
+line two%
+
+---
+
+(source_file
+  (entry
+    (number)
+    (percent_string)))
+
+================
 Five-tilde entry
 ================
 

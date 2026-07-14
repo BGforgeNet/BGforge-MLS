@@ -13,3 +13,8 @@
 //     ^ string
 @300 = ~Hi~ [%v%SND]
 //           ^ string.special
+@301 = ~m~ [A] ~f~ [B]
+//         ^ string.special
+//                 ^ string.special
+@302 = %pct%
+//      ^ string

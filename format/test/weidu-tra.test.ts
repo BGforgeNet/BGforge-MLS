@@ -67,6 +67,16 @@ describe("weidu-tra/format", () => {
         noop("@14 = ~text~ [X#BLANK]\n");
     });
 
+    it("preserves a two-sound entry with a male sound before the female string", () => {
+        noop("@15 = ~male~ [MALE01] ~female~ [FEMALE01]\n");
+        noop("@16 = ~male~ [MALE01] ~female~\n");
+    });
+
+    it("preserves percent-delimited strings, single and multi-line", () => {
+        noop("@17 = %percent text%\n");
+        noop("@18 = %line one\nline two%\n");
+    });
+
     it("normalizes prefix when sound refs are present", () => {
         expect(fmt("@ 2 = ~Foo~ [FOO]\n")).toBe("@2 = ~Foo~ [FOO]\n");
     });

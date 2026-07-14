@@ -22,6 +22,7 @@
 
 (tilde_string) @string
 (double_string) @string
+(percent_string) @string
 
 ; ----- Sound references -----
 

@@ -58,6 +58,16 @@ describe("translation/symbols", () => {
                 end: { line: 1, character: 2 },
             });
         });
+
+        it("indexes a two-sound entry by its @N key with the male-string preview", () => {
+            // Entry symbols come from the line-based parseEntries, which is independent of the
+            // tree-sitter grammar; the grammar's two-sound entry reshape must not affect it.
+            const symbols = getTranslationSymbols("@5 = ~male~ [SND1] ~female~ [SND2]\n", "tra");
+
+            expect(symbols.length).toBe(1);
+            expect(symbols[0]!.name).toBe("@5");
+            expect(symbols[0]!.detail).toBe("male");
+        });
     });
 
     describe("getTranslationSymbols() - msg", () => {
