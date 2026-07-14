@@ -353,7 +353,80 @@ check(
     selectedItemIsFirst,
     `selectedItemIsFirst=${selectedItemIsFirst}`,
 );
+
+// Chip-sizing guard: a jump chip must never squeeze the combobox it sits beside (the control and chip render
+// through separate subgrid tracks - see GridBlock.svelte / styles.css ".grid .skill .chip" - so the control's
+// own track floors at its dd-tier width regardless of chip content). A clipped combobox has scrollWidth >
+// clientWidth on its search-input element.
+async function measureItemSlotClipping(): Promise<{ anyClipped: boolean; detail: string }> {
+    return page.evaluate(() => {
+        // `:has(h3:text-is(...))` is a Playwright-locator-only pseudo, not valid in a native querySelectorAll
+        // (unlike `:has()` itself, which IS real CSS) - find the "Item Slots" panel by its h3 text instead.
+        const panel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
+            (p) => (p.querySelector("h3")?.textContent ?? "").trim() === "Item Slots",
+        );
+        const boxes = Array.from(
+            panel?.querySelectorAll(".grid .skill .field-control .bb-combobox-input") ?? [],
+        ) as HTMLInputElement[];
+        const clipped = boxes
+            .map((b) => ({ label: b.getAttribute("aria-label"), over: b.scrollWidth - b.clientWidth }))
+            .filter((c) => c.over > 1);
+        return { anyClipped: clipped.length > 0, detail: JSON.stringify(clipped) };
+    });
+}
+const clipComfortable = await measureItemSlotClipping();
+check(
+    "inventory: no item-slot combobox clips at the harness's comfortable (1280px) viewport",
+    !clipComfortable.anyClipped,
+    clipComfortable.detail,
+);
 await page.screenshot({ path: shotPath("shot-cre-inventory.png"), fullPage: true });
+
+// Live case: crossRefDependents re-projects every in-range slot when an item's ResRef changes, and a slot's
+// OWN edit can add/remove ITS OWN chip at runtime. Helmet (empty, column 0, same visual column as Amulet) has
+// no chip; drive its combobox to the item Amulet already holds, giving Helmet a fresh live chip, and confirm
+// Helmet's own label/control track position is unchanged - the chip track is separate, so gaining a chip must
+// not shift the control that was already there.
+const helmetControl = slotCell("Helmet").locator(".field-control");
+const helmetBefore = await helmetControl.evaluate((el) => el.getBoundingClientRect().left);
+await page.locator('.bb-combobox-input[aria-label="Helmet"]').click();
+await page
+    .waitForFunction(() => document.querySelectorAll(".bb-popup-item").length > 0, undefined, { timeout: 5000 })
+    .catch(() => undefined);
+await page.locator(".bb-popup-item", { hasText: "BGMISC89" }).first().click();
+await slotCell("Helmet").locator(".jump-link").first().waitFor({ timeout: 5000 });
+const helmetAfter = await helmetControl.evaluate((el) => el.getBoundingClientRect().left);
+check(
+    "inventory: a slot's own control keeps its column left edge when its own chip appears live",
+    Math.abs(helmetBefore - helmetAfter) < 1,
+    `before=${helmetBefore} after=${helmetAfter}`,
+);
+const clipAfterLiveChip = await measureItemSlotClipping();
+check(
+    "inventory: no item-slot combobox clips after a chip appears live",
+    !clipAfterLiveChip.anyClipped,
+    clipAfterLiveChip.detail,
+);
+// Revert the live edit so the byte-round-trip regression later in this file sees the original fixture bytes.
+await doUndo();
+
+// Constrained-width pass: the CRE layout caps at 1180px (maxContentWidthPx) regardless of a WIDER viewport,
+// so the comfortable pass above never falls below that cap. A live code-server session at a 1920px BROWSER
+// window still measured real clipping, because the webview's actual content area (behind VS Code's own
+// sidebar/tabs chrome) was narrower than this harness's bare full-viewport render - narrow the viewport below
+// the cap to reproduce that squeeze directly. 1000px (panel ~996px) was measured (via a throwaway probe
+// against the pre-fix build) as reliably past the threshold where the pre-fix code clipped; 1150px (panel
+// ~1146px) was NOT - the panel's own maxContentWidthPx cap (1180px) leaves only a little slack before real
+// content genuinely exceeds it, so the constrained width must clear that margin, not just dip below the cap.
+await page.setViewportSize({ width: 1000, height: 900 });
+const clipConstrained = await measureItemSlotClipping();
+check(
+    "inventory: no item-slot combobox clips at a constrained (1000px) viewport",
+    !clipConstrained.anyClipped,
+    clipConstrained.detail,
+);
+await page.screenshot({ path: shotPath("shot-cre-inventory-narrow.png"), fullPage: true });
+await page.setViewportSize({ width: 1280, height: 900 });
 
 // Proficiencies and Tracked Objects share the "Proficiencies" tab; Sound Slots is its own "Sounds" tab.
 const gridCounts = async (): Promise<{ counts: Record<string, number>; minGridGap: number }> =>
