@@ -103,8 +103,8 @@ export function register(ctx: HandlerContext): void {
         registry.register(weiduTp2Provider);
         registry.register(weiduLogProvider);
         registry.register(infinity2daProvider);
-        registry.register(createFormatOnlyProvider(LANG_WEIDU_TRA, formatTra));
-        registry.register(createFormatOnlyProvider(LANG_FALLOUT_MSG, formatMsg));
+        registry.register(createFormatOnlyProvider(LANG_WEIDU_TRA, formatTra, "tra"));
+        registry.register(createFormatOnlyProvider(LANG_FALLOUT_MSG, formatMsg, "msg"));
         registry.register(createFormatOnlyProvider(LANG_FALLOUT_SCRIPTS_LST, formatScriptsLst));
 
         // Register language aliases (languages that share data with parent providers)

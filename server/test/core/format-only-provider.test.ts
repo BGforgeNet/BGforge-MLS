@@ -92,4 +92,36 @@ describe("createFormatOnlyProvider", () => {
         expect(traProvider.format!("x", testUri).edits[0]?.newText).toBe("TRA");
         expect(msgProvider.format!("x", testUri).edits[0]?.newText).toBe("MSG");
     });
+
+    describe("traExt-gated symbols/foldingRanges", () => {
+        it("does not implement symbols/foldingRanges when traExt is omitted", () => {
+            const provider = createFormatOnlyProvider("fallout-scripts-lst", () => ({ text: "x" }));
+
+            expect(provider.symbols).toBeUndefined();
+            expect(provider.foldingRanges).toBeUndefined();
+        });
+
+        it("implements symbols() over the entries, keyed as @N, when traExt is 'tra'", () => {
+            const provider = createFormatOnlyProvider("weidu-tra", () => ({ text: "x" }), "tra");
+
+            const symbols = provider.symbols!("@1 = ~One~\n");
+            expect(symbols).toHaveLength(1);
+            expect(symbols[0]!.name).toBe("@1");
+        });
+
+        it("implements symbols() over the entries, keyed as {N}, when traExt is 'msg'", () => {
+            const provider = createFormatOnlyProvider("fallout-msg", () => ({ text: "x" }), "msg");
+
+            const symbols = provider.symbols!("{1}{}{One}\n");
+            expect(symbols).toHaveLength(1);
+            expect(symbols[0]!.name).toBe("{1}");
+        });
+
+        it("implements foldingRanges() for a multiline entry when traExt is 'tra'", () => {
+            const provider = createFormatOnlyProvider("weidu-tra", () => ({ text: "x" }), "tra");
+
+            const ranges = provider.foldingRanges!("@1 = ~One\nTwo~\n");
+            expect(ranges).toEqual([{ startLine: 0, endLine: 1 }]);
+        });
+    });
 });
