@@ -1,0 +1,11 @@
+// arrays and string paths: an array literal, a foreach over it, and Fallout-style path
+// concatenation with backslashes (mirrors the real fo2tweaks frame-patching idiom).
+function start() {
+    const frms = ["hmwarr", "hfmaxx", "nmwarr"];
+    let path: string;
+    for (const frm of frms) {
+        path = "art\\critters\\" + frm;
+        debug_msg(path);
+    }
+}
+export {};

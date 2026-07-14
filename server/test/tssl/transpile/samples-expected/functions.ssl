@@ -1,0 +1,16 @@
+/* Do not edit. This file is generated from functions.tssl. Make your changes there and regenerate this file. */
+
+procedure warm_up(variable rounds);
+procedure start();
+
+/* ===== main body ===== */
+procedure warm_up(variable rounds) begin
+    debug_msg("warming");
+end
+procedure start() begin
+    if (game_loaded) then begin
+        call warm_up(3);
+        debug_msg("started");
+    end
+end
+/* ===== end main body ===== */

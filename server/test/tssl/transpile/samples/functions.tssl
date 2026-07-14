@@ -1,0 +1,14 @@
+// functions: a user procedure gets a forward declaration and, called as a statement, the
+// `call` keyword; engine builtins are called without `call`, and a zero-arg engine builtin
+// (game_loaded) has its parentheses stripped in the output.
+function warm_up(rounds: number) {
+    debug_msg("warming");
+}
+
+function start() {
+    if (game_loaded()) {
+        warm_up(3);
+        debug_msg("started");
+    }
+}
+export {};

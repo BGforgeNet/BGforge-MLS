@@ -1,0 +1,23 @@
+// control flow: if / else if / else chains, a while loop, and a for-of that becomes foreach.
+function start() {
+    let count = 2;
+    if (count == 0) {
+        debug_msg("zero");
+    } else if (count == 1) {
+        debug_msg("one");
+    } else {
+        debug_msg("many");
+    }
+
+    let i = 0;
+    while (i < count) {
+        debug_msg("tick");
+        i = i + 1;
+    }
+
+    const levels = [1, 2, 3];
+    for (const lvl of levels) {
+        debug_msg("level");
+    }
+}
+export {};

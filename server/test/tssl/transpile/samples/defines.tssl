@@ -1,0 +1,13 @@
+// const -> #define: module-level constants (string and numeric) become SSL #define macros.
+const SCRIPT_REALNAME = "gl_g_defines";
+const MAX_LEVEL = 99;
+const GREETING = "hello wasteland";
+
+function start() {
+    debug_msg(SCRIPT_REALNAME);
+    display_msg(GREETING);
+    if (MAX_LEVEL > 0) {
+        debug_msg("ready");
+    }
+}
+export {};

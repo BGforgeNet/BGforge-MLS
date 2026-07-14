@@ -1,0 +1,12 @@
+// let / const -> variable: a module-level `let` becomes a global `variable`; function-local
+// `let` and `const` become function-scoped `variable`s; reassignment is preserved.
+let hits: number;
+
+function start() {
+    let total = 0;
+    const step = 2;
+    total = total + step;
+    hits = total;
+    debug_msg("counted");
+}
+export {};

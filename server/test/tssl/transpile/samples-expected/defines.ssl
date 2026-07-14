@@ -1,0 +1,17 @@
+/* Do not edit. This file is generated from defines.tssl. Make your changes there and regenerate this file. */
+
+#define SCRIPT_REALNAME "gl_g_defines"
+#define MAX_LEVEL 99
+#define GREETING "hello wasteland"
+
+procedure start();
+
+/* ===== main body ===== */
+procedure start() begin
+    debug_msg(SCRIPT_REALNAME);
+    display_msg(GREETING);
+    if (MAX_LEVEL > 0) then begin
+        debug_msg("ready");
+    end
+end
+/* ===== end main body ===== */

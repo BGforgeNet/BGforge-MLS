@@ -1,0 +1,14 @@
+/* Do not edit. This file is generated from variables.tssl. Make your changes there and regenerate this file. */
+
+procedure start();
+
+/* ===== main body ===== */
+variable hits;
+procedure start() begin
+    variable total = 0;
+    variable step = 2;
+    total = total + step;
+    hits = total;
+    debug_msg("counted");
+end
+/* ===== end main body ===== */

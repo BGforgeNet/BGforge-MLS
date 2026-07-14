@@ -1,0 +1,14 @@
+/* Do not edit. This file is generated from arrays.tssl. Make your changes there and regenerate this file. */
+
+procedure start();
+
+/* ===== main body ===== */
+procedure start() begin
+    variable frms = ["hmwarr", "hfmaxx", "nmwarr"];
+    variable path;
+    foreach (variable frm in frms) begin
+        path = "art\\critters\\" + frm;
+        debug_msg(path);
+    end
+end
+/* ===== end main body ===== */

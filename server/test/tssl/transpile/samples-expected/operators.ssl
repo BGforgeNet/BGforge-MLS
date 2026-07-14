@@ -1,0 +1,19 @@
+/* Do not edit. This file is generated from operators.tssl. Make your changes there and regenerate this file. */
+
+procedure start();
+
+/* ===== main body ===== */
+variable mode;
+procedure start() begin
+    variable hp = 40;
+    variable poisoned = 1;
+    if (hp > 0 and hp < 20 or poisoned == 1) then begin
+        mode = 1;
+    end
+    if (not (hp >= 100)) then begin
+        mode = 2;
+    end
+    mode = (hp > 50) ? 10 : 20;
+    debug_msg("classified");
+end
+/* ===== end main body ===== */

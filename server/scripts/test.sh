@@ -16,7 +16,7 @@ echo "=== Running unit tests ==="
 pnpm test:unit
 
 echo ""
-# Each language's test.sh runs its own typecheck-samples.sh (Phase 1) then diffs
+# Each transpiler's test.sh runs its own typecheck-samples.sh (Phase 1) then diffs
 # the transpiler output against the golden samples-expected/ fixtures (Phase 2).
 echo "=== Testing TD samples ==="
 ./test/td/test.sh
@@ -24,6 +24,10 @@ echo "=== Testing TD samples ==="
 echo ""
 echo "=== Testing TBAF samples ==="
 ./test/tbaf/test.sh
+
+echo ""
+echo "=== Testing TSSL samples ==="
+./test/tssl/transpile/test.sh
 
 echo ""
 echo "SUCCESS: All server tests passed"

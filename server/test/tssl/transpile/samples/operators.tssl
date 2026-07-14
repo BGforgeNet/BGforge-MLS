@@ -1,0 +1,17 @@
+// operator lowering: && -> and, || -> or, ! -> not; comparisons and arithmetic pass through;
+// a ternary becomes SSL's (cond) ? a : b form.
+let mode: number;
+
+function start() {
+    let hp = 40;
+    let poisoned = 1;
+    if (hp > 0 && hp < 20 || poisoned == 1) {
+        mode = 1;
+    }
+    if (!(hp >= 100)) {
+        mode = 2;
+    }
+    mode = hp > 50 ? 10 : 20;
+    debug_msg("classified");
+}
+export {};

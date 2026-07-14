@@ -54,7 +54,12 @@ const config: KnipConfig = {
                 // before build, but the ignore is still required after build.
                 "out/**",
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
+                // (root scripts/test.sh runs Knip alongside the sample harness). Verified required:
+                // with the symlinks present, dropping these makes Knip fail on 6 "Unused files".
+                // The tssl entry draws a "Remove from ignore" hint when the symlinks are absent -
+                // benign and expected, same as out/** above.
                 "test/td/*.ts",
+                "test/tssl/transpile/*.ts",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
                 // In production mode test files are not entries, so any non-.test.ts helper under test/
