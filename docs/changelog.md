@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Language features
+
+- Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
+
+### Translations
+
+- `.tra`/`.msg` files now have an Outline: one entry per `@N` / `{N}` string, with the text preview - jump anywhere in a large file from the Outline panel or breadcrumbs. Multiline entries can be folded.
+
+### Binary editor
+
+- CRE inventory slots now show a jump link to the referenced item entry in the Items section - no more reading the index and switching tabs by hand.
+- Numeric fields now show their valid range in the tooltip, and entering an out-of-range value flags the exact field immediately with the allowed bounds, instead of a generic error after the fact.
+
+### Dialog editor
+
+- The find bar has a new Code toggle: search inside node triggers, choice conditions, and actions (e.g. find every node gated on a variable), in addition to the dialogue text the search always covers.
+
+### Snippets
+
+- New snippets for WeiDU D files: state blocks, replies, CHAIN, INTERJECT_COPY_TRANS, APPEND, and EXTEND_BOTTOM skeletons.
+
 ## 3.10.1
 
 ### Dialog editor
