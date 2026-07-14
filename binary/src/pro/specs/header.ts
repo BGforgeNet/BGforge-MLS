@@ -19,6 +19,7 @@ export const headerSpec = {
     frmType: { codec: u8, enum: FRMType },
     frmId: { codec: u24 },
     lightRadius: { codec: u32, domain: { min: 0, max: 8 } },
+    // Max is 65536 (not 65535) per sfall FalloutEngine/Structs.h, which documents lightIntensity as "range 0 - 65536".
     lightIntensity: { codec: u32, domain: { min: 0, max: 65536 } },
     flags: { codec: u32, flags: HeaderFlags },
 } satisfies Record<string, FieldSpec>;
