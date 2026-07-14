@@ -325,9 +325,12 @@
     // is typing/navigating in the box, find-as-you-type must not yank focus onto each match's row (that drops
     // characters); when focus is in the tree instead, selection focuses its row normally.
     let searchInputFocused = $state(false);
-    // Matches recompute on every model edit or query change (treeData is derived), so a match always points at
-    // a live row. Empty when the query is blank (collectMatches returns []).
-    const searchMatches = $derived(collectMatches(treeData, searchQuery));
+    // Opt-in "search in code" toggle (default off, per-session only): also hit-test triggers, conditions, and
+    // actions, not just dialogue - see tree-search.ts's includeCode option and its default rationale.
+    let searchIncludeCode = $state(false);
+    // Matches recompute on every model edit, query change, or includeCode toggle (treeData is derived), so a
+    // match always points at a live row. Empty when the query is blank (collectMatches returns []).
+    const searchMatches = $derived(collectMatches(treeData, searchQuery, { includeCode: searchIncludeCode }));
     // Row keys to highlight (all matches) and the current match's key (emphasized). The key namespaces don't
     // collide - see tree-search.ts.
     const searchHits = $derived(new Set(searchMatches.map((m) => m.key)));
@@ -1411,6 +1414,14 @@
                     <button class="toolbtn findnav" title="Previous match (Shift+Enter)" aria-label="Previous match" onclick={prevMatch} disabled={searchMatches.length === 0}>&lt;</button>
                     <button class="toolbtn findnav" title="Next match (Enter)" aria-label="Next match" onclick={nextMatch} disabled={searchMatches.length === 0}>&gt;</button>
                     <button class="toolbtn findnav" title="Clear search (Escape)" aria-label="Clear search" onclick={clearSearch} disabled={searchQuery === ""}>x</button>
+                    <!-- Opt-in code search: off by default (a condition/trigger/action is code, not dialogue -
+                         see tree-search.ts). Reruns the search and jumps to the first match on toggle, same as
+                         find-as-you-type (onQueryChanged's reset-and-jump applies equally to a match-set change
+                         from this toggle). -->
+                    <label class="tbtoggle" title="On: also search node triggers, choice conditions/actions, and branch conditions. Off: dialogue text only.">
+                        <input type="checkbox" bind:checked={searchIncludeCode} onchange={onQueryChanged} />
+                        Code
+                    </label>
                 </div>
             {/if}
         </div>
