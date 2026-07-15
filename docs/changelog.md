@@ -5,6 +5,7 @@
 ### Language features
 
 - Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
+- WeiDU `.d` files now provide completion and hover for BAF triggers and actions inside embedded `IF`/`DO`/condition strings - the same engine vocabulary the `.baf` editor offers, now available in dialog code. BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`) is now syntax-highlighted too.
 
 ### Translations
 
