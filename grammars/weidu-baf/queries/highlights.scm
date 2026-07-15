@@ -55,6 +55,18 @@
 ; Point coordinates ([x.y])
 (point) @number
 
+; ----- Constants -----
+
+; IDS constants in argument position (General(Myself,NEUTRAL) -> NEUTRAL).
+; Identified by POSITION, not casing: the args: field excludes the func: slot structurally, and every other
+; argument form (%vars%, [PC], [x.y], strings, numbers) is its own node type - so a bare identifier here is
+; always a constant. This covers the CamelCase OBJECT.IDS entries too, which a casing rule cannot reach.
+;
+; The TextMate grammar (syntaxes/weidu-baf.tmLanguage.yml) identifies the same constants by CASING instead.
+; That asymmetry is deliberate: TextMate has only regex and cannot ask whether an identifier is an argument.
+(call_expr
+  args: (identifier) @constant)
+
 ; ----- Operators -----
 
 "!" @operator
