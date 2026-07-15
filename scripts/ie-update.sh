@@ -6,6 +6,7 @@ set -xeu -o pipefail
 
 data_dir="server/data"
 data_baf="$data_dir/weidu-baf-iesdp.yml"
+data_ids="$data_dir/weidu-baf-ids.yml"
 
 # shellcheck source=scripts/external-repos-lib.sh
 source ./scripts/external-repos-lib.sh
@@ -16,6 +17,10 @@ checkout_iesdp_ielib "$iesdp_dir"
 
 pnpm exec tsx scripts/ie-update/src/iesdp-update.ts -s "$iesdp_dir" \
     --data-baf "$data_baf"
+
+# IDS constant tables (animate/slots/ea/...) used as trigger/action arguments, from IESDP's ids pages.
+pnpm exec tsx scripts/ie-update/src/baf-ids-update.ts -s "$iesdp_dir" \
+    --data-ids "$data_ids"
 
 # Regenerate highlight and convert yaml to json. update-data runs these once at
 # its tail (after ie-update and fallout-update), so it sets MLS_SKIP_REGEN=1 to

@@ -6,12 +6,12 @@ How engine data moves from external sources to runtime-loadable JSON and TextMat
 EXTERNAL SOURCES
 ─────────────────────────────────────────────────────────────────────────────
 
-  sfall repo                    IESDP repo              IDS files
-  (BGforgeNet/sfall)            (BGforgeNet/iesdp)      (manual, game install)
+  sfall repo                    IESDP repo              IESDP ids pages
+  (BGforgeNet/sfall)            (BGforgeNet/iesdp)      (BGforgeNet/iesdp)
         │                             │                        │
         ▼                             ▼                        ▼
-  fallout-update.sh            ie-update.sh            ids-to-yaml.ts
-                                                        (manual one-off run)
+  fallout-update.sh            ie-update.sh            baf-ids-update.ts
+                                                        (via ie-update.sh)
         │                             │                        │
         ▼                             ▼                        ▼
   fallout-ssl-sfall.yml        weidu-baf-iesdp.yml      weidu-baf-ids.yml
