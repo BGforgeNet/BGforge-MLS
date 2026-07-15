@@ -9,7 +9,11 @@
  * BAF symbol under the cursor - explaining code, not authoring it).
  */
 
-import type { Position } from "vscode-languageserver/node";
+import type { CompletionItem, Position } from "vscode-languageserver/node";
+import { type IndexedSymbol, SymbolKind } from "../core/symbol";
+import { Symbols } from "../core/symbol-index";
+import { loadStaticSymbols } from "../core/static-loader";
+import { LANG_WEIDU_BAF } from "../core/languages";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
 import { SyntaxType } from "./syntax-type";
 
@@ -43,4 +47,33 @@ export function detectEmbeddedBaf(text: string, position: Position): EmbeddedBaf
         if (parent.childForFieldName(field)?.id === node.id) return "action";
     }
     return null;
+}
+
+let bafStore: Symbols | undefined;
+/** Lowercased BAF symbol name -> symbol, for case-insensitive resolution. */
+let byLowerName: Map<string, IndexedSymbol> | undefined;
+
+/** Load the BAF static vocabulary. Idempotent; called from the D provider's init(). */
+export function initEmbeddedBaf(): void {
+    if (bafStore) return;
+    const store = new Symbols();
+    store.loadStatic(loadStaticSymbols(LANG_WEIDU_BAF));
+    const lower = new Map<string, IndexedSymbol>();
+    for (const symbol of store.query({})) {
+        lower.set(symbol.name.toLowerCase(), symbol);
+    }
+    bafStore = store;
+    byLowerName = lower;
+}
+
+/** Case-insensitive lookup of any BAF symbol (permissive - hover explains whatever is under the cursor). */
+export function resolveEmbeddedBafSymbol(name: string): IndexedSymbol | undefined {
+    return byLowerName?.get(name.toLowerCase());
+}
+
+/** BAF completions scoped to the field kind (precise: triggers XOR actions; block keywords excluded). */
+export function getEmbeddedBafCompletions(kind: EmbeddedBafKind): CompletionItem[] {
+    if (!bafStore) return [];
+    const symbolKind = kind === "trigger" ? SymbolKind.Trigger : SymbolKind.Action;
+    return bafStore.query({ kinds: [symbolKind] }).map((symbol) => symbol.completion);
 }
