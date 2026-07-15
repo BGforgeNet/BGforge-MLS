@@ -44,6 +44,9 @@ const IDS_FILES: readonly IdsFile[] = [
         // IESDP's ea page documents the named allegiances but omits ANYONE (0), the common wildcard.
         prepend: [{ name: "ANYONE", detail: "0", doc: "ea.ids" }],
     },
+    { stanza: "bg2_general_ids", page: "general", doc: "general.ids" },
+    { stanza: "bg2_race_ids", page: "race", doc: "race.ids" },
+    { stanza: "bg2_gender_ids", page: "gender", doc: "gender.ids" },
 ];
 
 /**

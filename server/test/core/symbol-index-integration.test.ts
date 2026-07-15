@@ -214,6 +214,13 @@ describe("Symbols integration", () => {
                 expect(symbols.lookup(name), `Missing EA.IDS symbol: ${name}`).toBeDefined();
             }
         });
+
+        it("bundles GENERAL/RACE/GENDER IDS constants (via weidu-baf-ids.yml)", () => {
+            // Same wiring guard as EA, for the other bundled IDS tables (baf-ids-update.ts IDS_FILES).
+            for (const name of ["HUMANOID", "GENERAL_ITEM", "HUMAN", "ELF", "MALE", "FEMALE"]) {
+                expect(symbols.lookup(name), `Missing IDS symbol: ${name}`).toBeDefined();
+            }
+        });
     });
 
     describe("query operations", () => {

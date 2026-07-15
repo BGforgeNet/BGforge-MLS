@@ -6,7 +6,7 @@
 
 - Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
 - WeiDU `.d` files now provide completion and hover for BAF triggers and actions inside embedded `IF`/`DO`/condition strings - the same engine vocabulary the `.baf` editor offers, now available in dialog code. BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`) is now syntax-highlighted too.
-- WeiDU BAF and D completion now include EA.IDS creature-allegiance values (`ANYONE`, `NEUTRAL`, `ENEMY`, `PC`, `ALLY`, ...) for use as trigger/action arguments such as `Allegiance(Myself,NEUTRAL)`.
+- WeiDU BAF and D completion now include IDS constant values - creature allegiance (`ANYONE`, `NEUTRAL`, `ENEMY`, ...), general type (`HUMANOID`, `UNDEAD`, ...), race (`HUMAN`, `ELF`, ...), and gender (`MALE`, `FEMALE`, ...) - for use as trigger/action arguments such as `Allegiance(Myself,NEUTRAL)`.
 
 ### Translations
 

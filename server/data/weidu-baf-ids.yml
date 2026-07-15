@@ -1155,3 +1155,369 @@ bg2_ea_ids:
     - name: ENEMY
       detail: "255"
       doc: ea.ids
+bg2_general_ids:
+  type: 21
+  items:
+    - name: HUMANOID
+      detail: "1"
+      doc: general.ids
+    - name: ANIMAL
+      detail: "2"
+      doc: general.ids
+    - name: DEAD
+      detail: "3"
+      doc: general.ids
+    - name: UNDEAD
+      detail: "4"
+      doc: general.ids
+    - name: GIANTHUMANOID
+      detail: "5"
+      doc: general.ids
+    - name: FROZEN
+      detail: "6"
+      doc: general.ids
+    - name: MONSTER
+      detail: "255"
+      doc: general.ids
+    - name: WEAPON
+      detail: "101"
+      doc: general.ids
+    - name: ARMOR
+      detail: "102"
+      doc: general.ids
+    - name: AMULET
+      detail: "103"
+      doc: general.ids
+    - name: BELT
+      detail: "104"
+      doc: general.ids
+    - name: BOOTS
+      detail: "105"
+      doc: general.ids
+    - name: AMMO
+      detail: "106"
+      doc: general.ids
+    - name: GENERAL_ITEM
+      detail: "0"
+      doc: general.ids
+    - name: HELMET
+      detail: "107"
+      doc: general.ids
+    - name: KEY
+      detail: "108"
+      doc: general.ids
+    - name: POTION
+      detail: "109"
+      doc: general.ids
+    - name: RING
+      detail: "110"
+      doc: general.ids
+    - name: SCROLL
+      detail: "111"
+      doc: general.ids
+    - name: SHIELD
+      detail: "112"
+      doc: general.ids
+    - name: GLOVES
+      detail: "113"
+      doc: general.ids
+bg2_race_ids:
+  type: 21
+  items:
+    - name: HUMAN
+      detail: "1"
+      doc: race.ids
+    - name: ELF
+      detail: "2"
+      doc: race.ids
+    - name: HALF_ELF
+      detail: "3"
+      doc: race.ids
+    - name: DWARF
+      detail: "4"
+      doc: race.ids
+    - name: HALFLING
+      detail: "5"
+      doc: race.ids
+    - name: GNOME
+      detail: "6"
+      doc: race.ids
+    - name: HALFORC
+      detail: "7"
+      doc: race.ids
+    - name: ANKHEG
+      detail: "101"
+      doc: race.ids
+    - name: BASILISK
+      detail: "102"
+      doc: race.ids
+    - name: BEAR
+      detail: "103"
+      doc: race.ids
+    - name: CARRIONCRAWLER
+      detail: "104"
+      doc: race.ids
+    - name: DOG
+      detail: "105"
+      doc: race.ids
+    - name: DOPPLEGANGER
+      detail: "106"
+      doc: race.ids
+    - name: ETTERCAP
+      detail: "107"
+      doc: race.ids
+    - name: GHOUL
+      detail: "108"
+      doc: race.ids
+    - name: GIBBERLING
+      detail: "109"
+      doc: race.ids
+    - name: GNOLL
+      detail: "110"
+      doc: race.ids
+    - name: HOBGOBLIN
+      detail: "111"
+      doc: race.ids
+    - name: KOBOLD
+      detail: "112"
+      doc: race.ids
+    - name: OGRE
+      detail: "113"
+      doc: race.ids
+    - name: SKELETON
+      detail: "115"
+      doc: race.ids
+    - name: SPIDER
+      detail: "116"
+      doc: race.ids
+    - name: WOLF
+      detail: "117"
+      doc: race.ids
+    - name: WYVERN
+      detail: "118"
+      doc: race.ids
+    - name: SLIME
+      detail: "119"
+      doc: race.ids
+    - name: FAIRY
+      detail: "120"
+      doc: race.ids
+    - name: DEMONIC
+      detail: "121"
+      doc: race.ids
+    - name: LYCANTHROPE
+      detail: "122"
+      doc: race.ids
+    - name: BEHOLDER
+      detail: "123"
+      doc: race.ids
+    - name: MIND_FLAYER
+      detail: "124"
+      doc: race.ids
+    - name: VAMPIRE
+      detail: "125"
+      doc: race.ids
+    - name: VAMPYRE
+      detail: "126"
+      doc: race.ids
+    - name: OTYUGH
+      detail: "127"
+      doc: race.ids
+    - name: RAKSHASA
+      detail: "128"
+      doc: race.ids
+    - name: TROLL
+      detail: "129"
+      doc: race.ids
+    - name: UMBERHULK
+      detail: "130"
+      doc: race.ids
+    - name: SAHUAGIN
+      detail: "131"
+      doc: race.ids
+    - name: SHADOW
+      detail: "132"
+      doc: race.ids
+    - name: SPECTRE
+      detail: "133"
+      doc: race.ids
+    - name: WRAITH
+      detail: "134"
+      doc: race.ids
+    - name: KUO-TOA
+      detail: "135"
+      doc: race.ids
+    - name: MIST
+      detail: "136"
+      doc: race.ids
+    - name: CAT
+      detail: "137"
+      doc: race.ids
+    - name: DUERGAR
+      detail: "138"
+      doc: race.ids
+    - name: MEPHIT
+      detail: "139"
+      doc: race.ids
+    - name: MIMIC
+      detail: "140"
+      doc: race.ids
+    - name: IMP
+      detail: "141"
+      doc: race.ids
+    - name: GIANT
+      detail: "142"
+      doc: race.ids
+    - name: ORC
+      detail: "143"
+      doc: race.ids
+    - name: GOLEM
+      detail: "144"
+      doc: race.ids
+    - name: ELEMENTAL
+      detail: "145"
+      doc: race.ids
+    - name: DRAGON
+      detail: "146"
+      doc: race.ids
+    - name: GENIE
+      detail: "147"
+      doc: race.ids
+    - name: ZOMBIE
+      detail: "148"
+      doc: race.ids
+    - name: LICH
+      detail: "150"
+      doc: race.ids
+    - name: RABBIT
+      detail: "151"
+      doc: race.ids
+    - name: GITHYANKI
+      detail: "152"
+      doc: race.ids
+    - name: TIEFLING
+      detail: "153"
+      doc: race.ids
+    - name: YUANTI
+      detail: "154"
+      doc: race.ids
+    - name: DEMILICH
+      detail: "155"
+      doc: race.ids
+    - name: SOLAR
+      detail: "156"
+      doc: race.ids
+    - name: ANTISOLAR
+      detail: "157"
+      doc: race.ids
+    - name: PLANATAR
+      detail: "158"
+      doc: race.ids
+    - name: DARKPLANATAR
+      detail: "159"
+      doc: race.ids
+    - name: NO_RACE
+      detail: "255"
+      doc: race.ids
+    - name: SWORD
+      detail: "201"
+      doc: race.ids
+    - name: BOW
+      detail: "202"
+      doc: race.ids
+    - name: XBOW
+      detail: "203"
+      doc: race.ids
+    - name: STAFF
+      detail: "204"
+      doc: race.ids
+    - name: SLING
+      detail: "205"
+      doc: race.ids
+    - name: MACE
+      detail: "206"
+      doc: race.ids
+    - name: DAGGER
+      detail: "207"
+      doc: race.ids
+    - name: SPEAR
+      detail: "208"
+      doc: race.ids
+    - name: FIST
+      detail: "209"
+      doc: race.ids
+    - name: HAMMER
+      detail: "210"
+      doc: race.ids
+    - name: MORNINGSTAR
+      detail: "211"
+      doc: race.ids
+    - name: ROBES
+      detail: "212"
+      doc: race.ids
+    - name: LEATHER
+      detail: "213"
+      doc: race.ids
+    - name: CHAIN
+      detail: "214"
+      doc: race.ids
+    - name: PLATE
+      detail: "215"
+      doc: race.ids
+bg2_gender_ids:
+  type: 21
+  items:
+    - name: MALE
+      detail: "1"
+      doc: gender.ids
+    - name: FEMALE
+      detail: "2"
+      doc: gender.ids
+    - name: OTHER
+      detail: "3"
+      doc: gender.ids
+    - name: NIETHER
+      detail: "4"
+      doc: gender.ids
+    - name: BOTH
+      detail: "5"
+      doc: gender.ids
+    - name: SUMMONED
+      detail: "6"
+      doc: gender.ids
+    - name: ILLUSIONARY
+      detail: "7"
+      doc: gender.ids
+    - name: EXTRA
+      detail: "8"
+      doc: gender.ids
+    - name: SUMMONED_DEMON
+      detail: "9"
+      doc: gender.ids
+    - name: EXTRA2
+      detail: "10"
+      doc: gender.ids
+    - name: EXTRA3
+      detail: "11"
+      doc: gender.ids
+    - name: EXTRA4
+      detail: "12"
+      doc: gender.ids
+    - name: EXTRA5
+      detail: "13"
+      doc: gender.ids
+    - name: EXTRA6
+      detail: "14"
+      doc: gender.ids
+    - name: EXTRA7
+      detail: "15"
+      doc: gender.ids
+    - name: EXTRA8
+      detail: "16"
+      doc: gender.ids
+    - name: EXTRA9
+      detail: "17"
+      doc: gender.ids
+    - name: EXTRA10
+      detail: "18"
+      doc: gender.ids
