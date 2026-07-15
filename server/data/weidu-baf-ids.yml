@@ -1,10 +1,13 @@
 # Auto-generated from IESDP IDS pages by scripts/ie-update/src/baf-ids-update.ts. Do not hand-edit.
 
-bg2_animate_ids:
+bgee_animate_ids:
   type: 21
   items:
     - name: FIRE_RING
       detail: "0x0000"
+      doc: animate.ids
+    - name: FIRE_RING_BRIGHT
+      detail: "0x0001"
       doc: animate.ids
     - name: CHUNKS
       detail: "0x0100"
@@ -63,8 +66,29 @@ bg2_animate_ids:
     - name: WYVERN_BIG
       detail: "0x1000"
       doc: animate.ids
+    - name: WYVERN_WHITE_BIG
+      detail: "0x1003"
+      doc: animate.ids
+    - name: WYRMLING_ALBINO
+      detail: "0x1004"
+      doc: animate.ids
     - name: TANARRI
       detail: "0x1100"
+      doc: animate.ids
+    - name: DRAGON_WHITE
+      detail: "0x1101"
+      doc: animate.ids
+    - name: FIEND_BLUE
+      detail: "0x1102"
+      doc: animate.ids
+    - name: FIEND_GREEN
+      detail: "0x1103"
+      doc: animate.ids
+    - name: FIEND_RED
+      detail: "0x1104"
+      doc: animate.ids
+    - name: DRAGON_GREEN_IWD
+      detail: "0x1105"
       doc: animate.ids
     - name: DRAGON_RED
       detail: "0x1200"
@@ -93,7 +117,7 @@ bg2_animate_ids:
     - name: DRAGON_PURPLE
       detail: "0x1208"
       doc: animate.ids
-    - name: DEMIGORGON
+    - name: DEMOGORGON
       detail: "0x1300"
       doc: animate.ids
     - name: SIRINE
@@ -113,6 +137,9 @@ bg2_animate_ids:
       doc: animate.ids
     - name: STATIC_NOBLE_MAN_CHAIR
       detail: "0x4000"
+      doc: animate.ids
+    - name: NULL_ANIMATION
+      detail: "0x4001"
       doc: animate.ids
     - name: STATIC_NOBLE_MAN_MATTE
       detail: "0x4002"
@@ -393,12 +420,6 @@ bg2_animate_ids:
     - name: THIEF_FEMALE_HALFORC
       detail: "0x6315"
       doc: animate.ids
-    - name: MONK_MALE_HUMAN
-      detail: "0x6500"
-      doc: animate.ids
-    - name: MONK_FEMALE_HUMAN
-      detail: "0x6510"
-      doc: animate.ids
     - name: DRIZZT
       detail: "0x6400"
       doc: animate.ids
@@ -419,6 +440,15 @@ bg2_animate_ids:
       doc: animate.ids
     - name: DOOM_GUARD_LARGER
       detail: "0x6406"
+      doc: animate.ids
+    - name: MONK_MALE_HUMAN
+      detail: "0x6500"
+      doc: animate.ids
+    - name: MONK_FEMALE_HUMAN
+      detail: "0x6510"
+      doc: animate.ids
+    - name: FIGHTER_FEMALE_HUMAN_BG1
+      detail: "0x6621"
       doc: animate.ids
     - name: HALF_OGRE
       detail: "0x7000"
@@ -492,10 +522,22 @@ bg2_animate_ids:
     - name: ETTERCAP
       detail: "0x7600"
       doc: animate.ids
+    - name: MAUREZHI
+      detail: "0x7601"
+      doc: animate.ids
+    - name: MYRLOCHAR
+      detail: "0x7602"
+      doc: animate.ids
+    - name: DOG_GRAY
+      detail: "0x7603"
+      doc: animate.ids
+    - name: SPIDER_WATER
+      detail: "0x7604"
+      doc: animate.ids
     - name: GHOUL
       detail: "0x7700"
       doc: animate.ids
-    - name: REVEANT
+    - name: REVENANT
       detail: "0x7701"
       doc: animate.ids
     - name: GHAST
@@ -506,6 +548,12 @@ bg2_animate_ids:
       doc: animate.ids
     - name: GIBBERLING
       detail: "0x7800"
+      doc: animate.ids
+    - name: GIBBERLING_BROOD
+      detail: "0x7801"
+      doc: animate.ids
+    - name: BLACK_PUDDING
+      detail: "0x7802"
       doc: animate.ids
     - name: SLIME_GREEN
       detail: "0x7900"
@@ -523,220 +571,352 @@ bg2_animate_ids:
       detail: "0x7904"
       doc: animate.ids
     - name: SPIDER_GIANT
-      detail: "0x7a00"
+      detail: "0x7A00"
       doc: animate.ids
     - name: SPIDER_HUGE
-      detail: "0x7a01"
+      detail: "0x7A01"
       doc: animate.ids
     - name: SPIDER_PHASE
-      detail: "0x7a02"
+      detail: "0x7A02"
       doc: animate.ids
     - name: SPIDER_SWORD
-      detail: "0x7a03"
+      detail: "0x7A03"
       doc: animate.ids
     - name: SPIDER_WRAITH
-      detail: "0x7a04"
+      detail: "0x7A04"
       doc: animate.ids
     - name: WOLF
-      detail: "0x7b00"
+      detail: "0x7B00"
       doc: animate.ids
     - name: WOLF_WORG
-      detail: "0x7b01"
+      detail: "0x7B01"
       doc: animate.ids
     - name: WOLF_DIRE
-      detail: "0x7b02"
+      detail: "0x7B02"
       doc: animate.ids
     - name: WOLF_WINTER
-      detail: "0x7b03"
+      detail: "0x7B03"
       doc: animate.ids
-    - name: WOLF_VAMPIRE
-      detail: "0x7b04"
+    - name: WOLF_VAMPIRIC
+      detail: "0x7B04"
       doc: animate.ids
     - name: WOLF_DREAD
-      detail: "0x7b05"
+      detail: "0x7B05"
       doc: animate.ids
     - name: WOLF_SHADOW
-      detail: "0x7b06"
+      detail: "0x7B06"
       doc: animate.ids
     - name: KOBOLD_XVART
-      detail: "0x7c00"
+      detail: "0x7C00"
       doc: animate.ids
     - name: KOBOLD_TASLOI
-      detail: "0x7c01"
+      detail: "0x7C01"
       doc: animate.ids
     - name: ZOMBIE
-      detail: "0x7d00"
+      detail: "0x7D00"
+      doc: animate.ids
+    - name: SLAVE_FIGHTER
+      detail: "0x7D01"
+      doc: animate.ids
+    - name: CHICKEN_BROWN
+      detail: "0x7D02"
+      doc: animate.ids
+    - name: CHICKEN_WHITE
+      detail: "0x7D03"
+      doc: animate.ids
+    - name: HARLOT_FIGHTER
+      detail: "0x7D04"
+      doc: animate.ids
+    - name: NOBLEMAN_FIGHTER
+      detail: "0x7D05"
+      doc: animate.ids
+    - name: NOBLEWOMAN_FIGHTER
+      detail: "0x7D06"
+      doc: animate.ids
+    - name: PEASANT_MAN_FIGHTER
+      detail: "0x7D07"
+      doc: animate.ids
+    - name: PEASANT_WOMAN_FIGHTER
+      detail: "0x7D08"
       doc: animate.ids
     - name: WEREWOLF
-      detail: "0x7e00"
+      detail: "0x7E00"
       doc: animate.ids
     - name: WEREWOLF_GREATER
-      detail: "0x7e01"
+      detail: "0x7E01"
       doc: animate.ids
     - name: TROLL
-      detail: "0x7f00"
+      detail: "0x7F00"
       doc: animate.ids
     - name: MINDFLAYER
-      detail: "0x7f01"
+      detail: "0x7F01"
       doc: animate.ids
     - name: BEHOLDER
-      detail: "0x7f02"
+      detail: "0x7F02"
       doc: animate.ids
     - name: IMP
-      detail: "0x7f03"
+      detail: "0x7F03"
       doc: animate.ids
     - name: GOLEM_IRON
-      detail: "0x7f04"
+      detail: "0x7F04"
       doc: animate.ids
     - name: DJINNI
-      detail: "0x7f05"
+      detail: "0x7F05"
       doc: animate.ids
     - name: DJINNI_LEGS
-      detail: "0x7f06"
+      detail: "0x7F06"
       doc: animate.ids
     - name: GOLEM_CLAY
-      detail: "0x7f07"
+      detail: "0x7F07"
       doc: animate.ids
     - name: OTYUGH
-      detail: "0x7f08"
+      detail: "0x7F08"
       doc: animate.ids
-    - name: SAHAUGIN
-      detail: "0x7f09"
+    - name: SAHUAGIN
+      detail: "0x7F09"
       doc: animate.ids
     - name: GREATCAT_PANTHER
-      detail: "0x7f0a"
+      detail: "0x7F0A"
       doc: animate.ids
     - name: GREATCAT_LEOPARD
-      detail: "0x7f0b"
+      detail: "0x7F0B"
       doc: animate.ids
     - name: KUO-TOA
-      detail: "0x7f0c"
+      detail: "0x7F0C"
       doc: animate.ids
     - name: LICH
-      detail: "0x7f0d"
+      detail: "0x7F0D"
       doc: animate.ids
     - name: DEMILICH
-      detail: "0x7f0e"
+      detail: "0x7F0E"
       doc: animate.ids
     - name: TROLL_SMALL
-      detail: "0x7f0f"
+      detail: "0x7F0F"
       doc: animate.ids
     - name: RAKSHASA
-      detail: "0x7f10"
+      detail: "0x7F10"
       doc: animate.ids
     - name: UMBER_HULK
-      detail: "0x7f11"
+      detail: "0x7F11"
       doc: animate.ids
     - name: VAMPIRE
-      detail: "0x7f12"
+      detail: "0x7F12"
       doc: animate.ids
     - name: SNAKE
-      detail: "0x7f13"
+      detail: "0x7F13"
       doc: animate.ids
     - name: GITHYANKI
-      detail: "0x7f14"
+      detail: "0x7F14"
       doc: animate.ids
     - name: BEHOLDER_SMALL
-      detail: "0x7f15"
+      detail: "0x7F15"
       doc: animate.ids
     - name: MOOSE
-      detail: "0x7f16"
+      detail: "0x7F16"
       doc: animate.ids
     - name: RABBIT
-      detail: "0x7f17"
+      detail: "0x7F17"
       doc: animate.ids
     - name: DEER
-      detail: "0x7f18"
+      detail: "0x7F18"
       doc: animate.ids
     - name: DANCING_SWORD
-      detail: "0x7f19"
+      detail: "0x7F19"
       doc: animate.ids
     - name: GROUNDHOG
-      detail: "0x7f20"
+      detail: "0x7F20"
       doc: animate.ids
     - name: PHEASANT
-      detail: "0x7f21"
+      detail: "0x7F21"
       doc: animate.ids
     - name: VAMPIRE_FEMALE
-      detail: "0x7f22"
+      detail: "0x7F22"
       doc: animate.ids
-    - name: SAHAUGIN_LARGE
-      detail: "0x7f23"
+    - name: SAHUAGIN_LARGE
+      detail: "0x7F23"
       doc: animate.ids
     - name: PIRATE
-      detail: "0x7f24"
+      detail: "0x7F24"
       doc: animate.ids
     - name: DROW
-      detail: "0x7f27"
+      detail: "0x7F27"
       doc: animate.ids
     - name: KUO-TOA_LARGE
-      detail: "0x7f28"
+      detail: "0x7F28"
       doc: animate.ids
     - name: DROW_FEMALE
-      detail: "0x7f29"
+      detail: "0x7F29"
       doc: animate.ids
     - name: SAILOR_MAN
-      detail: "0x7f2a"
+      detail: "0x7F2A"
       doc: animate.ids
     - name: MDK2_MAX
-      detail: "0x7f2b"
+      detail: "0x7F2B"
       doc: animate.ids
-    - name: AMISH_SOLDIER
-      detail: "0x7f2c"
+    - name: AMNIAN_SOLDIER
+      detail: "0x7F2C"
       doc: animate.ids
     - name: WYVERN_FAMILIAR
-      detail: "0x7f2d"
+      detail: "0x7F2D"
       doc: animate.ids
     - name: RAVER
-      detail: "0x7f2e"
+      detail: "0x7F2E"
       doc: animate.ids
     - name: SPIDER_SMALL
-      detail: "0x7f2f"
+      detail: "0x7F2F"
       doc: animate.ids
     - name: BODHI
-      detail: "0x7f30"
+      detail: "0x7F30"
       doc: animate.ids
     - name: ELLESIME
-      detail: "0x7f31"
+      detail: "0x7F31"
       doc: animate.ids
     - name: SLAYER
-      detail: "0x7f32"
+      detail: "0x7F32"
       doc: animate.ids
     - name: MDK2_KURT
-      detail: "0x7f33"
+      detail: "0x7F33"
       doc: animate.ids
     - name: MDK2_DOCTOR
-      detail: "0x7f34"
+      detail: "0x7F34"
       doc: animate.ids
     - name: MIST_CREATURE
-      detail: "0x7f35"
+      detail: "0x7F35"
       doc: animate.ids
     - name: SHADOW_THIEF
-      detail: "0x7f36"
+      detail: "0x7F36"
       doc: animate.ids
     - name: JON_IRENICUS
-      detail: "0x7f37"
+      detail: "0x7F37"
       doc: animate.ids
     - name: WIZARD_EYE
-      detail: "0x7f38"
+      detail: "0x7F38"
       doc: animate.ids
     - name: BLOB_MIST_CREATURE
-      detail: "0x7f39"
+      detail: "0x7F39"
       doc: animate.ids
-    - name: HULA_WIZARD
-      detail: "0x7f3a"
+    - name: IRENICUS_ROBED
+      detail: "0x7F3A"
       doc: animate.ids
     - name: SOLAR
-      detail: "0x7f3b"
+      detail: "0x7F3B"
       doc: animate.ids
-    - name: ANTISOLAR
-      detail: "0x7f3c"
+    - name: DEVA_MONADIC
+      detail: "0x7F3C"
       doc: animate.ids
     - name: MELISSAN
-      detail: "0x7f3d"
+      detail: "0x7F3D"
       doc: animate.ids
-    - name: FIRE_GIANT
-      detail: "0x7f3e"
+    - name: GIANT_FIRE
+      detail: "0x7F3E"
+      doc: animate.ids
+    - name: GIANT_YAGA-SHURA
+      detail: "0x7F3F"
+      doc: animate.ids
+    - name: GOLEM_MINI
+      detail: "0x7F40"
+      doc: animate.ids
+    - name: EFREETI_NOBLE
+      detail: "0x7F41"
+      doc: animate.ids
+    - name: RED_WIZARD
+      detail: "0x7F42"
+      doc: animate.ids
+    - name: YOCHLOL
+      detail: "0x7F43"
+      doc: animate.ids
+    - name: ELLESIME_WHITE
+      detail: "0x7F44"
+      doc: animate.ids
+    - name: LAGOON_CREATURE
+      detail: "0x7F45"
+      doc: animate.ids
+    - name: DEATH_TYRANT
+      detail: "0x7F46"
+      doc: animate.ids
+    - name: GIANT_FIRE_2
+      detail: "0x7F47"
+      doc: animate.ids
+    - name: SOLAR_FALLEN
+      detail: "0x7F48"
+      doc: animate.ids
+    - name: DEVA_MONADIC_FALLEN
+      detail: "0x7F49"
+      doc: animate.ids
+    - name: DEVA_ASTRAL
+      detail: "0x7F4A"
+      doc: animate.ids
+    - name: DEVA_ASTRAL_FALLEN
+      detail: "0x7F4B"
+      doc: animate.ids
+    - name: PLANETAR
+      detail: "0x7F4C"
+      doc: animate.ids
+    - name: PLANETAR_FALLEN
+      detail: "0x7F4D"
+      doc: animate.ids
+    - name: DEVA_MOVANIC
+      detail: "0x7F4E"
+      doc: animate.ids
+    - name: DEVA_MOVANIC_FALLEN
+      detail: "0x7F4F"
+      doc: animate.ids
+    - name: NISHRUU
+      detail: "0x7F50"
+      doc: animate.ids
+    - name: HAKEASHAR
+      detail: "0x7F51"
+      doc: animate.ids
+    - name: SAILOR_GREEN
+      detail: "0x7F52"
+      doc: animate.ids
+    - name: SAILOR_RED
+      detail: "0x7F53"
+      doc: animate.ids
+    - name: SAILOR_DARK
+      detail: "0x7F54"
+      doc: animate.ids
+    - name: CRUSADER_SOLDIER
+      detail: "0x7F55"
+      doc: animate.ids
+    - name: WILL_O_WISP
+      detail: "0x7F56"
+      doc: animate.ids
+    - name: WILL_O_WISP_SMALL
+      detail: "0x7F57"
+      doc: animate.ids
+    - name: ABISHAI_BLACK
+      detail: "0x7F58"
+      doc: animate.ids
+    - name: ABISHAI_GREEN
+      detail: "0x7F59"
+      doc: animate.ids
+    - name: ABISHAI_RED
+      detail: "0x7F5A"
+      doc: animate.ids
+    - name: ABISHAI_BLUE
+      detail: "0x7F5B"
+      doc: animate.ids
+    - name: HAG_NIGHT
+      detail: "0x7F5C"
+      doc: animate.ids
+    - name: HAG_GREEN
+      detail: "0x7F5D"
+      doc: animate.ids
+    - name: HAG_SEA
+      detail: "0x7F5E"
+      doc: animate.ids
+    - name: HAG_ANNIS
+      detail: "0x7F5F"
+      doc: animate.ids
+    - name: SNAKE_WATER
+      detail: "0x7F60"
+      doc: animate.ids
+    - name: DRAGON_RED_JUVENILE
+      detail: "0x7F61"
+      doc: animate.ids
+    - name: DRAGON_GREEN_JUVENILE
+      detail: "0x7F62"
       doc: animate.ids
     - name: GNOLL
       detail: "0x8000"
@@ -751,222 +931,585 @@ bg2_animate_ids:
       detail: "0x9000"
       doc: animate.ids
     - name: WYVERN
-      detail: "0xa000"
+      detail: "0xA000"
       doc: animate.ids
     - name: CARRION_CRAWLER
-      detail: "0xa100"
+      detail: "0xA100"
+      doc: animate.ids
+    - name: WYVERN_WHITE
+      detail: "0xA200"
+      doc: animate.ids
+    - name: MEGALOCENTIPEDE
+      detail: "0xA201"
+      doc: animate.ids
+    - name: TUNNEL_WORM
+      detail: "0xA202"
       doc: animate.ids
     - name: COW
-      detail: "0xb000"
+      detail: "0xB000"
       doc: animate.ids
     - name: HORSE
-      detail: "0xb100"
+      detail: "0xB100"
       doc: animate.ids
     - name: STATIC_BEGGAR_MAN
-      detail: "0xb200"
+      detail: "0xB200"
       doc: animate.ids
     - name: STATIC_HARLOT_WOMAN
-      detail: "0xb210"
+      detail: "0xB210"
       doc: animate.ids
     - name: STATIC_BOY
-      detail: "0xb300"
+      detail: "0xB300"
       doc: animate.ids
     - name: STATIC_GIRL
-      detail: "0xb310"
+      detail: "0xB310"
       doc: animate.ids
     - name: STATIC_FAT_MAN
-      detail: "0xb400"
+      detail: "0xB400"
       doc: animate.ids
     - name: STATIC_FAT_WOMAN
-      detail: "0xb410"
+      detail: "0xB410"
       doc: animate.ids
     - name: STATIC_PEASANT_MAN
-      detail: "0xb500"
+      detail: "0xB500"
       doc: animate.ids
     - name: STATIC_PEASANT_WOMAN
-      detail: "0xb510"
+      detail: "0xB510"
       doc: animate.ids
     - name: STATIC_NOBLE_MAN
-      detail: "0xb600"
+      detail: "0xB600"
       doc: animate.ids
     - name: STATIC_NOBLE_WOMAN
-      detail: "0xb610"
+      detail: "0xB610"
       doc: animate.ids
     - name: STATIC_SLAVE
-      detail: "0xb700"
+      detail: "0xB700"
       doc: animate.ids
     - name: BAT_INSIDE
-      detail: "0xc000"
+      detail: "0xC000"
       doc: animate.ids
     - name: CAT
-      detail: "0xc100"
+      detail: "0xC100"
       doc: animate.ids
     - name: CHICKEN
-      detail: "0xc200"
+      detail: "0xC200"
       doc: animate.ids
     - name: RAT
-      detail: "0xc300"
+      detail: "0xC300"
       doc: animate.ids
     - name: SQUIRREL
-      detail: "0xc400"
+      detail: "0xC400"
       doc: animate.ids
     - name: BAT_OUTSIDE
-      detail: "0xc500"
+      detail: "0xC500"
       doc: animate.ids
     - name: BEGGAR_MAN
-      detail: "0xc600"
+      detail: "0xC600"
       doc: animate.ids
     - name: HARLOT_WOMAN
-      detail: "0xc610"
+      detail: "0xC610"
       doc: animate.ids
     - name: BOY
-      detail: "0xc700"
+      detail: "0xC700"
       doc: animate.ids
     - name: GIRL
-      detail: "0xc710"
+      detail: "0xC710"
       doc: animate.ids
     - name: FAT_MAN
-      detail: "0xc800"
+      detail: "0xC800"
       doc: animate.ids
     - name: FAT_WOMAN
-      detail: "0xc810"
+      detail: "0xC810"
       doc: animate.ids
     - name: PEASANT_MAN
-      detail: "0xc900"
+      detail: "0xC900"
       doc: animate.ids
     - name: PEASANT_WOMAN
-      detail: "0xc910"
+      detail: "0xC910"
       doc: animate.ids
     - name: NOBLE_MAN
-      detail: "0xca00"
+      detail: "0xCA00"
       doc: animate.ids
     - name: NOBLE_WOMAN
-      detail: "0xca10"
+      detail: "0xCA10"
       doc: animate.ids
     - name: SLAVE
-      detail: "0xcb00"
+      detail: "0xCB00"
+      doc: animate.ids
+    - name: KEG1
+      detail: "0xCC00"
+      doc: animate.ids
+    - name: KEG2
+      detail: "0xCC01"
+      doc: animate.ids
+    - name: KEG3
+      detail: "0xCC02"
+      doc: animate.ids
+    - name: RAT_OUTSIDE
+      detail: "0xCC04"
       doc: animate.ids
     - name: EAGLE
-      detail: "0xd000"
+      detail: "0xD000"
       doc: animate.ids
     - name: SEAGULL
-      detail: "0xd100"
+      detail: "0xD100"
       doc: animate.ids
     - name: VULTURE
-      detail: "0xd200"
+      detail: "0xD200"
       doc: animate.ids
     - name: BIRD
-      detail: "0xd300"
+      detail: "0xD300"
       doc: animate.ids
     - name: BIRD_INSIDE
-      detail: "0xd400"
+      detail: "0xD400"
       doc: animate.ids
-    - name: IC_ETTIN
-      detail: "0xe010"
+    - name: CYCLOPS
+      detail: "0xE000"
+      doc: animate.ids
+    - name: ETTIN
+      detail: "0xE010"
       doc: animate.ids
     - name: DONOT_USE
-      detail: "0xe020"
+      detail: "0xE020"
       doc: animate.ids
-    - name: IC_LICHBLACK
-      detail: "0xe050"
+    - name: HISTACHII
+      detail: "0xE040"
       doc: animate.ids
-    - name: IC_MINOTAUR
-      detail: "0xe070"
+    - name: LICH_BLACK
+      detail: "0xE050"
       doc: animate.ids
-    - name: IC_MUMMY
-      detail: "0xe080"
+    - name: LICH_WHITE
+      detail: "0xE060"
       doc: animate.ids
-    - name: IC_MERILITH
-      detail: "0xe090"
+    - name: MINOTAUR
+      detail: "0xE070"
       doc: animate.ids
-    - name: IC_TROLL1
-      detail: "0xe0b0"
+    - name: MUMMY
+      detail: "0xE080"
       doc: animate.ids
-    - name: IC_CORNUGONSKI
-      detail: "0xe0e0"
+    - name: MARILITH
+      detail: "0xE090"
       doc: animate.ids
-    - name: IC_ICE_GOLEM
-      detail: "0xe0f0"
+    - name: TROLL_ICE
+      detail: "0xE0A0"
       doc: animate.ids
-    - name: IC_GLAB
-      detail: "0xe0f1"
+    - name: TROLL_BLUE
+      detail: "0xE0B0"
       doc: animate.ids
-    - name: IC_WAILING_VIRGIN
-      detail: "0xe0f2"
+    - name: TROLL_SNOW
+      detail: "0xE0C0"
       doc: animate.ids
-    - name: IC_GOBLIN_AXE
-      detail: "0xe400"
+    - name: UMBER_HULK_ELDER
+      detail: "0xE0D0"
       doc: animate.ids
-    - name: IC_GOBLIN_BOW
-      detail: "0xe410"
+    - name: CORNUGON
+      detail: "0xE0E0"
       doc: animate.ids
-    - name: IC_GOBLINELITE_AXE
-      detail: "0xe420"
+    - name: GOLEM_ICE
+      detail: "0xE0F0"
       doc: animate.ids
-    - name: IC_GOBLINELITE_BOW
-      detail: "0xe430"
+    - name: GLABREZU
+      detail: "0xE0F1"
       doc: animate.ids
-    - name: IC_LIZARDCASTER1
-      detail: "0xe500"
+    - name: WAILING_VIRGIN
+      detail: "0xE0F2"
       doc: animate.ids
-    - name: IC_MYCONID
-      detail: "0xe600"
+    - name: BEETLE_BORING
+      detail: "0xE200"
       doc: animate.ids
-    - name: IC_MYCONID2
-      detail: "0xe610"
+    - name: BEETLE_FIRE
+      detail: "0xE210"
       doc: animate.ids
-    - name: IC_OROG1
-      detail: "0xe700"
+    - name: BEETLE_BOMBARDIER
+      detail: "0xE220"
       doc: animate.ids
-    - name: IC_OROG2
-      detail: "0xe710"
+    - name: BEETLE_RHINOCEROS
+      detail: "0xE230"
       doc: animate.ids
-    - name: IC_OROG3
-      detail: "0xe720"
+    - name: ANIMATED_PLATE_BRONZE
+      detail: "0xE240"
       doc: animate.ids
-    - name: IC_ORC_MELEE1
-      detail: "0xe800"
+    - name: ANIMATED_PLATE_DARK
+      detail: "0xE241"
       doc: animate.ids
-    - name: IC_ORC_RANGE2
-      detail: "0xe810"
+    - name: ANIMATED_PLATE_GREEN
+      detail: "0xE242"
       doc: animate.ids
-    - name: IC_ORC_MELEE3
-      detail: "0xe820"
+    - name: ARUNDEL
+      detail: "0xE243"
       doc: animate.ids
-    - name: IC_ORC_RANGE4
-      detail: "0xe830"
+    - name: BARBARIAN_WARRIOR_TAN
+      detail: "0xE244"
       doc: animate.ids
-    - name: IC_ORC_SHAMAN
-      detail: "0xe840"
+    - name: BARBARIAN_WARRIOR_RED
+      detail: "0xE245"
       doc: animate.ids
-    - name: IC_SALAMANDER
-      detail: "0xe900"
+    - name: BARBARIAN_WARRIOR_BROWN
+      detail: "0xE246"
       doc: animate.ids
-    - name: IC_SALAMANDER2
-      detail: "0xe910"
+    - name: BARBARIAN_SHAMAN_HAMMER
+      detail: "0xE247"
       doc: animate.ids
-    - name: IC_SHROOM
-      detail: "0xea00"
+    - name: BARBARIAN_SHAMAN_STAFF
+      detail: "0xE248"
       doc: animate.ids
-    - name: IC_SKELETON0
-      detail: "0xeb00"
+    - name: BARBARIAN_SHAMAN_CLUB
+      detail: "0xE249"
       doc: animate.ids
-    - name: IC_SKELETONA
-      detail: "0xeb10"
+    - name: BARBARIAN_ICASARACHT
+      detail: "0xE24A"
       doc: animate.ids
-    - name: IC_SKELETONB
-      detail: "0xeb20"
+    - name: ELEMENTAL_EARTH_IWD
+      detail: "0xE24B"
       doc: animate.ids
-    - name: IC_YUANTI
-      detail: "0xed00"
+    - name: ELEMENTAL_FIRE_IWD
+      detail: "0xE24C"
       doc: animate.ids
-    - name: IC_YUANTI2
-      detail: "0xed10"
+    - name: ELEMENTAL_WATER
+      detail: "0xE24D"
       doc: animate.ids
-    - name: IC_YUANTI3
-      detail: "0xed20"
+    - name: GIANT_FIRE_IWD
+      detail: "0xE24E"
       doc: animate.ids
-bg2_slots_ids:
+    - name: GIANT_FROST
+      detail: "0xE24F"
+      doc: animate.ids
+    - name: GOLEM_IRON_IWD
+      detail: "0xE250"
+      doc: animate.ids
+    - name: GIANT_VERBEEG
+      detail: "0xE251"
+      doc: animate.ids
+    - name: HARPY
+      detail: "0xE252"
+      doc: animate.ids
+    - name: REMORHAZ
+      detail: "0xE253"
+      doc: animate.ids
+    - name: TROLL_SCRAG
+      detail: "0xE254"
+      doc: animate.ids
+    - name: SEER
+      detail: "0xE255"
+      doc: animate.ids
+    - name: BELHIFET
+      detail: "0xE256"
+      doc: animate.ids
+    - name: BELHIFET_PRIEST
+      detail: "0xE257"
+      doc: animate.ids
+    - name: HEPHERNAAN
+      detail: "0xE258"
+      doc: animate.ids
+    - name: SVIRFNEBLIN_PALE_AXE
+      detail: "0xE259"
+      doc: animate.ids
+    - name: SVIRFNEBLIN_PALE_NOAXE
+      detail: "0xE25A"
+      doc: animate.ids
+    - name: UMBER_HULK_VODYANOI
+      detail: "0xE25B"
+      doc: animate.ids
+    - name: MARILITH_IWD
+      detail: "0xE25C"
+      doc: animate.ids
+    - name: TUNDRA_YETI
+      detail: "0xE25D"
+      doc: animate.ids
+    - name: WIGHT_BARROW
+      detail: "0xE25E"
+      doc: animate.ids
+    - name: DROWNED_DEAD
+      detail: "0xE25F"
+      doc: animate.ids
+    - name: CREEPING_DOOM
+      detail: "0xE260"
+      doc: animate.ids
+    - name: SAHUAGIN_IWD
+      detail: "0xE261"
+      doc: animate.ids
+    - name: SAHUAGIN_LARGE_IWD
+      detail: "0xE262"
+      doc: animate.ids
+    - name: SVIRFNEBLIN_DARK_AXE
+      detail: "0xE263"
+      doc: animate.ids
+    - name: SVIRFNEBLIN_DARK_NOAXE
+      detail: "0xE264"
+      doc: animate.ids
+    - name: BOAR_ARCTIC
+      detail: "0xE265"
+      doc: animate.ids
+    - name: BUGBEAR_CAPTAIN
+      detail: "0xE266"
+      doc: animate.ids
+    - name: BUGBEAR
+      detail: "0xE267"
+      doc: animate.ids
+    - name: CHIMERA
+      detail: "0xE268"
+      doc: animate.ids
+    - name: HALFDRAGON_BLACK
+      detail: "0xE269"
+      doc: animate.ids
+    - name: HALFDRAGON_RED
+      detail: "0xE26A"
+      doc: animate.ids
+    - name: TREANT_DARK
+      detail: "0xE26B"
+      doc: animate.ids
+    - name: ELEMENTAL_WATER_SMALL
+      detail: "0xE26C"
+      doc: animate.ids
+    - name: FEYR_GREATER
+      detail: "0xE26D"
+      doc: animate.ids
+    - name: FEYR
+      detail: "0xE26E"
+      doc: animate.ids
+    - name: GIANT_FOMORIAN
+      detail: "0xE26F"
+      doc: animate.ids
+    - name: GOBLIN_CAPTAIN
+      detail: "0xE270"
+      doc: animate.ids
+    - name: GOBLIN_SHAMAN
+      detail: "0xE271"
+      doc: animate.ids
+    - name: GOBLIN_WORG
+      detail: "0xE272"
+      doc: animate.ids
+    - name: GOBLIN_WORG_CAPTAIN
+      detail: "0xE273"
+      doc: animate.ids
+    - name: HOOK_HORROR
+      detail: "0xE274"
+      doc: animate.ids
+    - name: ISAIR
+      detail: "0xE275"
+      doc: animate.ids
+    - name: LEMURE
+      detail: "0xE276"
+      doc: animate.ids
+    - name: MADAE
+      detail: "0xE277"
+      doc: animate.ids
+    - name: MALARITE
+      detail: "0xE278"
+      doc: animate.ids
+    - name: OROG_SHAMAN
+      detail: "0xE279"
+      doc: animate.ids
+    - name: ORC_AXE_UNDEAD
+      detail: "0xE27A"
+      doc: animate.ids
+    - name: ORC_SHAMAN_UNDEAD
+      detail: "0xE27B"
+      doc: animate.ids
+    - name: SHENRICAL
+      detail: "0xE27C"
+      doc: animate.ids
+    - name: WEREBADGER
+      detail: "0xE27D"
+      doc: animate.ids
+    - name: WERERAT
+      detail: "0xE27E"
+      doc: animate.ids
+    - name: BOAR_WILD
+      detail: "0xE27F"
+      doc: animate.ids
+    - name: WORG
+      detail: "0xE280"
+      doc: animate.ids
+    - name: YUAN-TI_HALF
+      detail: "0xE281"
+      doc: animate.ids
+    - name: DRIDER_FEMALE
+      detail: "0xE282"
+      doc: animate.ids
+    - name: DRIDER_MALE
+      detail: "0xE283"
+      doc: animate.ids
+    - name: INVISIBLE_SMALL
+      detail: "0xE284"
+      doc: animate.ids
+    - name: INVISIBLE_MEDIUM
+      detail: "0xE285"
+      doc: animate.ids
+    - name: INVISIBLE_LARGE
+      detail: "0xE286"
+      doc: animate.ids
+    - name: INVISIBLE_GIANT
+      detail: "0xE287"
+      doc: animate.ids
+    - name: GOBLIN_WORG_ELITE
+      detail: "0xE288"
+      doc: animate.ids
+    - name: GOBLIN_WORG_SHAMAN
+      detail: "0xE289"
+      doc: animate.ids
+    - name: TROLL_SPECTRAL
+      detail: "0xE28A"
+      doc: animate.ids
+    - name: ABISHAI_WHITE
+      detail: "0xE28B"
+      doc: animate.ids
+    - name: DRAGON_WHITE_YOUNG
+      detail: "0xE28C"
+      doc: animate.ids
+    - name: DRAGON_SILVER_YOUNG
+      detail: "0xE28D"
+      doc: animate.ids
+    - name: DRAGON_GREEN_YOUNG
+      detail: "0xE28E"
+      doc: animate.ids
+    - name: DROWNED_DEAD_RED
+      detail: "0xE28F"
+      doc: animate.ids
+    - name: HALFDRAGON_GREEN
+      detail: "0xE290"
+      doc: animate.ids
+    - name: BUGBEAR_SHAMAN
+      detail: "0xE291"
+      doc: animate.ids
+    - name: ETTIN_GHOST
+      detail: "0xE292"
+      doc: animate.ids
+    - name: GIANT_HILL
+      detail: "0xE293"
+      doc: animate.ids
+    - name: BONEBAT
+      detail: "0xE294"
+      doc: animate.ids
+    - name: GHOST
+      detail: "0xE300"
+      doc: animate.ids
+    - name: GHOUL_GREATER
+      detail: "0xE310"
+      doc: animate.ids
+    - name: GHAST_GREATER
+      detail: "0xE320"
+      doc: animate.ids
+    - name: GOBLIN_AXE
+      detail: "0xE400"
+      doc: animate.ids
+    - name: GOBLIN_BOW
+      detail: "0xE410"
+      doc: animate.ids
+    - name: GOBLIN_ELITE_AXE
+      detail: "0xE420"
+      doc: animate.ids
+    - name: GOBLIN_ELITE_BOW
+      detail: "0xE430"
+      doc: animate.ids
+    - name: MKHIIN
+      detail: "0xE440"
+      doc: animate.ids
+    - name: MKHIIN_BOW
+      detail: "0xE441"
+      doc: animate.ids
+    - name: MKHIIN_STAFF
+      detail: "0xE442"
+      doc: animate.ids
+    - name: MKHIIN_ARMOR_AXE
+      detail: "0xE443"
+      doc: animate.ids
+    - name: MKHIIN_ARMOR_BOW
+      detail: "0xE444"
+      doc: animate.ids
+    - name: LIZARD_MAN_ELITE
+      detail: "0xE500"
+      doc: animate.ids
+    - name: LIZARD_MAN
+      detail: "0xE510"
+      doc: animate.ids
+    - name: LIZARD_KING
+      detail: "0xE520"
+      doc: animate.ids
+    - name: MYCONID_RED
+      detail: "0xE600"
+      doc: animate.ids
+    - name: MYCONID_BLUE
+      detail: "0xE610"
+      doc: animate.ids
+    - name: OROG
+      detail: "0xE700"
+      doc: animate.ids
+    - name: OROG_ELITE
+      detail: "0xE710"
+      doc: animate.ids
+    - name: OROG_CHIEFTAIN
+      detail: "0xE720"
+      doc: animate.ids
+    - name: ORC_MELEE
+      detail: "0xE800"
+      doc: animate.ids
+    - name: ORC_RANGE
+      detail: "0xE810"
+      doc: animate.ids
+    - name: ORC_ELITE_MELEE
+      detail: "0xE820"
+      doc: animate.ids
+    - name: ORC_ELITE_RANGE
+      detail: "0xE830"
+      doc: animate.ids
+    - name: ORC_SHAMAN
+      detail: "0xE840"
+      doc: animate.ids
+    - name: SALAMANDER_FIRE
+      detail: "0xE900"
+      doc: animate.ids
+    - name: SALAMANDER_FROST
+      detail: "0xE910"
+      doc: animate.ids
+    - name: SHRIEKER
+      detail: "0xEA00"
+      doc: animate.ids
+    - name: SHADOW_SMALL
+      detail: "0xEA10"
+      doc: animate.ids
+    - name: SHADOW_LARGE
+      detail: "0xEA20"
+      doc: animate.ids
+    - name: SKELETON_MONSTER
+      detail: "0xEB00"
+      doc: animate.ids
+    - name: SKELETON_WARRIOR
+      detail: "0xEB10"
+      doc: animate.ids
+    - name: SKELETON_FIEND
+      detail: "0xEB20"
+      doc: animate.ids
+    - name: WIGHT_GRAY
+      detail: "0xEC00"
+      doc: animate.ids
+    - name: WIGHT_GREEN
+      detail: "0xEC10"
+      doc: animate.ids
+    - name: WIGHT_YELLOW
+      detail: "0xEC20"
+      doc: animate.ids
+    - name: YUAN-TI
+      detail: "0xED00"
+      doc: animate.ids
+    - name: YUAN-TI_ELITE
+      detail: "0xED10"
+      doc: animate.ids
+    - name: YUAN-TI_PRIEST
+      detail: "0xED20"
+      doc: animate.ids
+    - name: ZOMBIE_YELLOW
+      detail: "0xEE00"
+      doc: animate.ids
+    - name: ZOMBIE_BLUE
+      detail: "0xEE10"
+      doc: animate.ids
+    - name: WATER_WEIRD
+      detail: "0xEF10"
+      doc: animate.ids
+    - name: DONOT_USE2
+      detail: "0xEF91"
+      doc: animate.ids
+bgee_slots_ids:
   type: 21
   items:
     - name: SLOT_AMULET
@@ -1095,7 +1638,7 @@ bg2_slots_ids:
     - name: SLOT_WEAPON3
       detail: "38"
       doc: slots.ids
-bg2_ea_ids:
+bgee_ea_ids:
   type: 21
   items:
     - name: ANYONE
@@ -1119,6 +1662,9 @@ bg2_ea_ids:
     - name: CHARMED
       detail: "6"
       doc: ea.ids
+    - name: REALLYCHARMED
+      detail: "7"
+      doc: ea.ids
     - name: GOODBUTRED
       detail: "28"
       doc: ea.ids
@@ -1133,6 +1679,9 @@ bg2_ea_ids:
       doc: ea.ids
     - name: ANYTHING
       detail: "126"
+      doc: ea.ids
+    - name: AREAOBJECT
+      detail: "127"
       doc: ea.ids
     - name: NEUTRAL
       detail: "128"
@@ -1152,12 +1701,18 @@ bg2_ea_ids:
     - name: EVILBUTBLUE
       detail: "202"
       doc: ea.ids
+    - name: CHARMED_PC
+      detail: "254"
+      doc: ea.ids
     - name: ENEMY
       detail: "255"
       doc: ea.ids
-bg2_general_ids:
+bgee_general_ids:
   type: 21
   items:
+    - name: GENERAL_ITEM
+      detail: "0"
+      doc: general.ids
     - name: HUMANOID
       detail: "1"
       doc: general.ids
@@ -1176,8 +1731,8 @@ bg2_general_ids:
     - name: FROZEN
       detail: "6"
       doc: general.ids
-    - name: MONSTER
-      detail: "255"
+    - name: PLANT
+      detail: "7"
       doc: general.ids
     - name: WEAPON
       detail: "101"
@@ -1196,9 +1751,6 @@ bg2_general_ids:
       doc: general.ids
     - name: AMMO
       detail: "106"
-      doc: general.ids
-    - name: GENERAL_ITEM
-      detail: "0"
       doc: general.ids
     - name: HELMET
       detail: "107"
@@ -1221,7 +1773,10 @@ bg2_general_ids:
     - name: GLOVES
       detail: "113"
       doc: general.ids
-bg2_race_ids:
+    - name: MONSTER
+      detail: "255"
+      doc: general.ids
+bgee_race_ids:
   type: 21
   items:
     - name: HUMAN
@@ -1386,6 +1941,9 @@ bg2_race_ids:
     - name: ZOMBIE
       detail: "148"
       doc: race.ids
+    - name: STATUE
+      detail: "149"
+      doc: race.ids
     - name: LICH
       detail: "150"
       doc: race.ids
@@ -1416,8 +1974,83 @@ bg2_race_ids:
     - name: DARKPLANATAR
       detail: "159"
       doc: race.ids
-    - name: NO_RACE
-      detail: "255"
+    - name: BEETLE
+      detail: "160"
+      doc: race.ids
+    - name: GOBLIN
+      detail: "161"
+      doc: race.ids
+    - name: LIZARDMAN
+      detail: "162"
+      doc: race.ids
+    - name: MYCONID
+      detail: "164"
+      doc: race.ids
+    - name: BUGBEAR
+      detail: "165"
+      doc: race.ids
+    - name: FEYR
+      detail: "166"
+      doc: race.ids
+    - name: HOOK_HORROR
+      detail: "167"
+      doc: race.ids
+    - name: SHRIEKER
+      detail: "168"
+      doc: race.ids
+    - name: SALAMANDER
+      detail: "169"
+      doc: race.ids
+    - name: BIRD
+      detail: "170"
+      doc: race.ids
+    - name: MINOTAUR
+      detail: "171"
+      doc: race.ids
+    - name: DRIDER
+      detail: "172"
+      doc: race.ids
+    - name: SIMULACRUM
+      detail: "173"
+      doc: race.ids
+    - name: HARPY
+      detail: "174"
+      doc: race.ids
+    - name: SPECTRAL_UNDEAD
+      detail: "175"
+      doc: race.ids
+    - name: SHAMBLING_MOUND
+      detail: "176"
+      doc: race.ids
+    - name: CHIMERA
+      detail: "177"
+      doc: race.ids
+    - name: HALF_DRAGON
+      detail: "178"
+      doc: race.ids
+    - name: YETI
+      detail: "179"
+      doc: race.ids
+    - name: KEG
+      detail: "180"
+      doc: race.ids
+    - name: WILL-O-WISP
+      detail: "181"
+      doc: race.ids
+    - name: MAMMAL
+      detail: "182"
+      doc: race.ids
+    - name: REPTILE
+      detail: "183"
+      doc: race.ids
+    - name: TREANT
+      detail: "184"
+      doc: race.ids
+    - name: AASIMAR
+      detail: "185"
+      doc: race.ids
+    - name: ETTIN
+      detail: "199"
       doc: race.ids
     - name: SWORD
       detail: "201"
@@ -1464,7 +2097,10 @@ bg2_race_ids:
     - name: PLATE
       detail: "215"
       doc: race.ids
-bg2_gender_ids:
+    - name: NO_RACE
+      detail: "255"
+      doc: race.ids
+bgee_gender_ids:
   type: 21
   items:
     - name: MALE
@@ -1520,4 +2156,7 @@ bg2_gender_ids:
       doc: gender.ids
     - name: EXTRA10
       detail: "18"
+      doc: gender.ids
+    - name: IMPRISONED_SUMMONED
+      detail: "66"
       doc: gender.ids

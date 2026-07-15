@@ -22,31 +22,31 @@ const GENERATED_MARKER =
 /** All IDS stanzas are constant values. */
 const IDS_TYPE = 21; // CompletionItemKind.Constant
 
+/**
+ * IESDP game subdir the IDS pages are read from. The Enhanced Editions (bgee/BG2EE/EET) are the dominant
+ * modern WeiDU modding target, and their IDS are a superset of classic BG2's (e.g. race.ids adds the BG2
+ * creature types, ea.ids adds ANYONE/REALLYCHARMED). IESDP has no separate bg2ee dir - bgee holds the EE
+ * IDS. Guarded by symbol-index-integration.test.ts ("targets Enhanced Edition IDS").
+ */
+const IESDP_GAME_DIR = "bgee";
+
 interface IdsFile {
     /** YAML stanza key. */
     readonly stanza: string;
-    /** IESDP htm basename under files/ids/bg2/. */
+    /** IESDP htm basename under files/ids/<IESDP_GAME_DIR>/. */
     readonly page: string;
     /** `doc` value stamped on each item (the source IDS filename). */
     readonly doc: string;
-    /** Items prepended before the parsed ones - for values IESDP's page omits (e.g. EA's ANYONE=0). */
-    readonly prepend?: readonly CompletionItem[];
 }
 
 /** The IDS tables bundled for BAF/D completion. Add a row to bundle another IDS. */
 const IDS_FILES: readonly IdsFile[] = [
-    { stanza: "bg2_animate_ids", page: "animate", doc: "animate.ids" },
-    { stanza: "bg2_slots_ids", page: "slots", doc: "slots.ids" },
-    {
-        stanza: "bg2_ea_ids",
-        page: "ea",
-        doc: "ea.ids",
-        // IESDP's ea page documents the named allegiances but omits ANYONE (0), the common wildcard.
-        prepend: [{ name: "ANYONE", detail: "0", doc: "ea.ids" }],
-    },
-    { stanza: "bg2_general_ids", page: "general", doc: "general.ids" },
-    { stanza: "bg2_race_ids", page: "race", doc: "race.ids" },
-    { stanza: "bg2_gender_ids", page: "gender", doc: "gender.ids" },
+    { stanza: "bgee_animate_ids", page: "animate", doc: "animate.ids" },
+    { stanza: "bgee_slots_ids", page: "slots", doc: "slots.ids" },
+    { stanza: "bgee_ea_ids", page: "ea", doc: "ea.ids" },
+    { stanza: "bgee_general_ids", page: "general", doc: "general.ids" },
+    { stanza: "bgee_race_ids", page: "race", doc: "race.ids" },
+    { stanza: "bgee_gender_ids", page: "gender", doc: "gender.ids" },
 ];
 
 /**
@@ -84,9 +84,8 @@ function buildIdsDoc(iesdpDir: string): Document {
     yamlDoc.contents = root;
 
     for (const ids of IDS_FILES) {
-        const page = path.join(iesdpDir, "files", "ids", "bg2", `${ids.page}.htm`);
-        const parsed = parseIdsHtml(fs.readFileSync(page, "utf8"), ids.doc);
-        const items = [...(ids.prepend ?? []), ...parsed];
+        const page = path.join(iesdpDir, "files", "ids", IESDP_GAME_DIR, `${ids.page}.htm`);
+        const items = parseIdsHtml(fs.readFileSync(page, "utf8"), ids.doc);
 
         const stanza = new YAMLMap();
         stanza.add(yamlDoc.createPair("type", IDS_TYPE));

@@ -203,9 +203,9 @@ describe("Symbols integration", () => {
             expect(doc.value).toContain("ActionOverride");
         });
 
-        it("bundles EA.IDS allegiance constants (via weidu-baf-ea-ids.yml)", () => {
-            // Guards the generate-data.sh wiring of the hand-authored EA data file: dropping the `-i`
-            // entry removes these from the built completion data. In production these resolve to
+        it("bundles EA.IDS allegiance constants (via weidu-baf-ids.yml)", () => {
+            // Guards the generate-data.sh wiring of the generated IDS data file: dropping its `-i` entry
+            // removes these from the built completion data. In production these resolve to
             // SymbolKind.Constant (static-loader maps CompletionItemKind.Constant -> SymbolKind.Constant),
             // so they reach both the .baf editor and the embedded-BAF completion in .d files; this test
             // guards their presence in the built data (this file's local completionToSymbol does not
@@ -219,6 +219,15 @@ describe("Symbols integration", () => {
             // Same wiring guard as EA, for the other bundled IDS tables (baf-ids-update.ts IDS_FILES).
             for (const name of ["HUMANOID", "GENERAL_ITEM", "HUMAN", "ELF", "MALE", "FEMALE"]) {
                 expect(symbols.lookup(name), `Missing IDS symbol: ${name}`).toBeDefined();
+            }
+        });
+
+        it("targets Enhanced Edition IDS (bgee), not classic bg2", () => {
+            // baf-ids-update.ts reads IESDP's bgee pages, not bg2. These symbols exist only in the EE IDS
+            // tables (absent from classic bg2), so their presence locks in the variant: a regression of the
+            // generator's source dir back to bg2 drops them and fails here.
+            for (const name of ["REALLYCHARMED", "PLANT", "MINOTAUR", "GOBLIN"]) {
+                expect(symbols.lookup(name), `Missing EE-only IDS symbol: ${name}`).toBeDefined();
             }
         });
     });
