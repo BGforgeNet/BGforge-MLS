@@ -337,7 +337,7 @@
     },
     "condition": {
       "name": "meta.weidu-d.condition",
-      "begin": "\\b(IF)\\b\\s+(~)",
+      "begin": "\\b(IF)\\b(?:\\s+WEIGHT\\s+#\\s*-?[0-9]+)?\\s+(~)",
       "beginCaptures": {
         "1": {
           "name": "keyword.other.weidu-d"
