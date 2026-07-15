@@ -4295,6 +4295,120 @@
             "value": "```weidu-baf-tooltip\n0x7d00\n```\nanimate.ids"
         }
     },
+    "ALLY": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n4\n```\nea.ids"
+        }
+    },
+    "ANYONE": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n0\n```\nea.ids"
+        }
+    },
+    "ANYTHING": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n126\n```\nea.ids"
+        }
+    },
+    "CHARMED": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n6\n```\nea.ids"
+        }
+    },
+    "CONTROLLED": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n5\n```\nea.ids"
+        }
+    },
+    "ENEMY": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n255\n```\nea.ids"
+        }
+    },
+    "EVILBUTBLUE": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n202\n```\nea.ids"
+        }
+    },
+    "EVILBUTGREEN": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n201\n```\nea.ids"
+        }
+    },
+    "EVILCUTOFF": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n200\n```\nea.ids"
+        }
+    },
+    "FAMILIAR": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n3\n```\nea.ids"
+        }
+    },
+    "GOODBUTBLUE": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n29\n```\nea.ids"
+        }
+    },
+    "GOODBUTRED": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n28\n```\nea.ids"
+        }
+    },
+    "GOODCUTOFF": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n30\n```\nea.ids"
+        }
+    },
+    "INANIMATE": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n1\n```\nea.ids"
+        }
+    },
+    "NEUTRAL": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n128\n```\nea.ids"
+        }
+    },
+    "NOTEVIL": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n199\n```\nea.ids"
+        }
+    },
+    "NOTGOOD": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n31\n```\nea.ids"
+        }
+    },
+    "NOTNEUTRAL": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n198\n```\nea.ids"
+        }
+    },
+    "PC": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n2\n```\nea.ids"
+        }
+    },
     "SLOT_AMMO": {
         "contents": {
             "kind": "markdown",

@@ -202,6 +202,18 @@ describe("Symbols integration", () => {
             expect(doc.kind).toBe("markdown");
             expect(doc.value).toContain("ActionOverride");
         });
+
+        it("bundles EA.IDS allegiance constants (via weidu-baf-ea-ids.yml)", () => {
+            // Guards the generate-data.sh wiring of the hand-authored EA data file: dropping the `-i`
+            // entry removes these from the built completion data. In production these resolve to
+            // SymbolKind.Constant (static-loader maps CompletionItemKind.Constant -> SymbolKind.Constant),
+            // so they reach both the .baf editor and the embedded-BAF completion in .d files; this test
+            // guards their presence in the built data (this file's local completionToSymbol does not
+            // replicate the production kind mapping, so kind is asserted via the unit/live paths instead).
+            for (const name of ["ANYONE", "NEUTRAL", "ENEMY", "PC", "ALLY"]) {
+                expect(symbols.lookup(name), `Missing EA.IDS symbol: ${name}`).toBeDefined();
+            }
+        });
     });
 
     describe("query operations", () => {

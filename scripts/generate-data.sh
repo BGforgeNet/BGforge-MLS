@@ -48,6 +48,7 @@ pnpm exec tsx scripts/utils/src/update-tp2-highlight.ts \
 
 "${generate_data[@]}" \
     -i "$data_dir/weidu-baf-base.yml" -i "$data_dir/weidu-baf-iesdp.yml" -i "$data_dir/weidu-baf-ids.yml" \
+    -i "$data_dir/weidu-baf-ea-ids.yml" \
     --completion "$dest_dir/completion.weidu-baf.json" \
     --hover "$dest_dir/hover.weidu-baf.json" \
     --tooltip-lang weidu-baf-tooltip

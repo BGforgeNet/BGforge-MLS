@@ -7161,6 +7161,196 @@
         }
     },
     {
+        "label": "ALLY",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n4\n```\nea.ids"
+        }
+    },
+    {
+        "label": "ANYONE",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n0\n```\nea.ids"
+        }
+    },
+    {
+        "label": "ANYTHING",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n126\n```\nea.ids"
+        }
+    },
+    {
+        "label": "CHARMED",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n6\n```\nea.ids"
+        }
+    },
+    {
+        "label": "CONTROLLED",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n5\n```\nea.ids"
+        }
+    },
+    {
+        "label": "ENEMY",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n255\n```\nea.ids"
+        }
+    },
+    {
+        "label": "EVILBUTBLUE",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n202\n```\nea.ids"
+        }
+    },
+    {
+        "label": "EVILBUTGREEN",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n201\n```\nea.ids"
+        }
+    },
+    {
+        "label": "EVILCUTOFF",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n200\n```\nea.ids"
+        }
+    },
+    {
+        "label": "FAMILIAR",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n3\n```\nea.ids"
+        }
+    },
+    {
+        "label": "GOODBUTBLUE",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n29\n```\nea.ids"
+        }
+    },
+    {
+        "label": "GOODBUTRED",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n28\n```\nea.ids"
+        }
+    },
+    {
+        "label": "GOODCUTOFF",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n30\n```\nea.ids"
+        }
+    },
+    {
+        "label": "INANIMATE",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n1\n```\nea.ids"
+        }
+    },
+    {
+        "label": "NEUTRAL",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n128\n```\nea.ids"
+        }
+    },
+    {
+        "label": "NOTEVIL",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n199\n```\nea.ids"
+        }
+    },
+    {
+        "label": "NOTGOOD",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n31\n```\nea.ids"
+        }
+    },
+    {
+        "label": "NOTNEUTRAL",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n198\n```\nea.ids"
+        }
+    },
+    {
+        "label": "PC",
+        "kind": 21,
+        "source": "builtin",
+        "category": "bg2_ea_ids",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-baf-tooltip\n2\n```\nea.ids"
+        }
+    },
+    {
         "label": "SLOT_AMMO",
         "kind": 21,
         "source": "builtin",
