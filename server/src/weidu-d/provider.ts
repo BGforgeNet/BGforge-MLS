@@ -39,7 +39,9 @@ import {
     type IndexingCapability,
     type FeatureGateCapability,
     type WorkspaceSymbolCapability,
+    HoverResult,
 } from "../language-provider";
+import { detectEmbeddedBaf, resolveEmbeddedBafSymbol, initEmbeddedBaf } from "./embedded-baf";
 import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
@@ -103,6 +105,7 @@ class WeiduDProvider
         this.fileIndex = new FileIndex();
         const staticSymbols = loadStaticSymbols(LANG_WEIDU_D);
         this.fileIndex.loadStatic(staticSymbols);
+        initEmbeddedBaf();
 
         conlog(`WeiDU D provider initialized with ${staticSymbols.length} static symbols`);
     }
@@ -170,6 +173,13 @@ class WeiduDProvider
     }
 
     hover(text: string, symbol: string, uri: NormalizedUri, position: Position) {
+        // Inside an embedded BAF trigger/action/condition string, resolve against the BAF vocabulary.
+        // Not found -> notHandled so the normal path is not foreclosed. State labels never occur inside
+        // these strings, so there is no conflict with getStateLabelHover.
+        if (detectEmbeddedBaf(text, position)) {
+            const resolved = resolveEmbeddedBafSymbol(symbol);
+            return resolved?.hover ? HoverResult.found(resolved.hover) : HoverResult.notHandled();
+        }
         return getStateLabelHover(text, symbol, uri, position);
     }
 
