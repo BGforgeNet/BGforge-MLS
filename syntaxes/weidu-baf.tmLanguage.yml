@@ -2509,12 +2509,15 @@ repository:
       - match: \b(STATE_STUNNED)\b
 
   ea-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
       - match: \b(ALLY)\b
       - match: \b(ANYONE)\b
       - match: \b(ANYTHING)\b
+      - match: \b(AREAOBJECT)\b
       - match: \b(CHARMED)\b
+      - match: \b(CHARMED_PC)\b
       - match: \b(CONTROLLED)\b
       - match: \b(ENEMY)\b
       - match: \b(EVILBUTBLUE)\b
@@ -2528,6 +2531,7 @@ repository:
       - match: \b(NEUTRAL)\b
       - match: \b(NOTEVIL)\b
       - match: \b(NOTGOOD)\b
+      - match: \b(NOTNEUTRAL)\b
       - match: \b(PC)\b
       - match: \b(REALLYCHARMED)\b
 
@@ -2551,6 +2555,7 @@ repository:
       - match: \b(NEUTRAL_GOOD)\b
 
   general-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
       - match: \b(AMMO)\b
@@ -2577,12 +2582,23 @@ repository:
       - match: \b(WEAPON)\b
 
   gender-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
       - match: \b(BOTH)\b
       - match: \b(EXTRA)\b
+      - match: \b(EXTRA10)\b
+      - match: \b(EXTRA2)\b
+      - match: \b(EXTRA3)\b
+      - match: \b(EXTRA4)\b
+      - match: \b(EXTRA5)\b
+      - match: \b(EXTRA6)\b
+      - match: \b(EXTRA7)\b
+      - match: \b(EXTRA8)\b
+      - match: \b(EXTRA9)\b
       - match: \b(FEMALE)\b
       - match: \b(ILLUSIONARY)\b
+      - match: \b(IMPRISONED_SUMMONED)\b
       - match: \b(MALE)\b
       - match: \b(NIETHER)\b
       - match: \b(OTHER)\b
@@ -2984,6 +3000,7 @@ repository:
       - match: \b(UNHAPPY_BREAKING_BOUNDARY)\b
 
   race-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
       - match: \b(AASIMAR)\b
@@ -3305,6 +3322,7 @@ repository:
       - match: \b(WIZARDSLAYER)\b
 
   slots-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
       - match: \b(SLOT_AMMO)\b
@@ -3351,11 +3369,27 @@ repository:
       - match: \b(SLOT_WEAPON3)\b
 
   animate-ids:
+    # Auto-generated from weidu-baf-ids.yml - do not edit manually.
     name: constant.other.weidu-baf
     patterns:
-      - match: \b(AMISH_SOLDIER)\b
+      - match: \b(ABISHAI_BLACK)\b
+      - match: \b(ABISHAI_BLUE)\b
+      - match: \b(ABISHAI_GREEN)\b
+      - match: \b(ABISHAI_RED)\b
+      - match: \b(ABISHAI_WHITE)\b
+      - match: \b(AMNIAN_SOLDIER)\b
+      - match: \b(ANIMATED_PLATE_BRONZE)\b
+      - match: \b(ANIMATED_PLATE_DARK)\b
+      - match: \b(ANIMATED_PLATE_GREEN)\b
       - match: \b(ANKHEG)\b
-      - match: \b(ANTISOLAR)\b
+      - match: \b(ARUNDEL)\b
+      - match: \b(BARBARIAN_ICASARACHT)\b
+      - match: \b(BARBARIAN_SHAMAN_CLUB)\b
+      - match: \b(BARBARIAN_SHAMAN_HAMMER)\b
+      - match: \b(BARBARIAN_SHAMAN_STAFF)\b
+      - match: \b(BARBARIAN_WARRIOR_BROWN)\b
+      - match: \b(BARBARIAN_WARRIOR_RED)\b
+      - match: \b(BARBARIAN_WARRIOR_TAN)\b
       - match: \b(BASILISK)\b
       - match: \b(BASILISK_GREATER)\b
       - match: \b(BAT_INSIDE)\b
@@ -3364,18 +3398,34 @@ repository:
       - match: \b(BEAR_BROWN)\b
       - match: \b(BEAR_CAVE)\b
       - match: \b(BEAR_POLAR)\b
+      - match: \b(BEETLE_BOMBARDIER)\b
+      - match: \b(BEETLE_BORING)\b
+      - match: \b(BEETLE_FIRE)\b
+      - match: \b(BEETLE_RHINOCEROS)\b
       - match: \b(BEGGAR_MAN)\b
       - match: \b(BEHOLDER)\b
       - match: \b(BEHOLDER_SMALL)\b
+      - match: \b(BELHIFET)\b
+      - match: \b(BELHIFET_PRIEST)\b
       - match: \b(BIRD)\b
       - match: \b(BIRD_INSIDE)\b
+      - match: \b(BLACK_PUDDING)\b
       - match: \b(BLOB_MIST_CREATURE)\b
+      - match: \b(BOAR_ARCTIC)\b
+      - match: \b(BOAR_WILD)\b
       - match: \b(BODHI)\b
+      - match: \b(BONEBAT)\b
       - match: \b(BOY)\b
+      - match: \b(BUGBEAR)\b
+      - match: \b(BUGBEAR_CAPTAIN)\b
+      - match: \b(BUGBEAR_SHAMAN)\b
       - match: \b(BURNING_MAN)\b
       - match: \b(CARRION_CRAWLER)\b
       - match: \b(CAT)\b
       - match: \b(CHICKEN)\b
+      - match: \b(CHICKEN_BROWN)\b
+      - match: \b(CHICKEN_WHITE)\b
+      - match: \b(CHIMERA)\b
       - match: \b(CHUNKS)\b
       - match: \b(CLERIC_FEMALE_DWARF)\b
       - match: \b(CLERIC_FEMALE_DWARF_LOW)\b
@@ -3399,18 +3449,31 @@ repository:
       - match: \b(CLERIC_MALE_HUMAN_LOW)\b
       - match: \b(CLOUD_STATIC)\b
       - match: \b(CLOUD_TRAVEL)\b
+      - match: \b(CORNUGON)\b
       - match: \b(COW)\b
+      - match: \b(CREEPING_DOOM)\b
+      - match: \b(CRUSADER_SOLDIER)\b
+      - match: \b(CYCLOPS)\b
       - match: \b(DANCING_SWORD)\b
       - match: \b(DEATH_KNIGHT)\b
+      - match: \b(DEATH_TYRANT)\b
       - match: \b(DEER)\b
-      - match: \b(DEMIGORGON)\b
       - match: \b(DEMILICH)\b
+      - match: \b(DEMOGORGON)\b
+      - match: \b(DEVA_ASTRAL)\b
+      - match: \b(DEVA_ASTRAL_FALLEN)\b
+      - match: \b(DEVA_MONADIC)\b
+      - match: \b(DEVA_MONADIC_FALLEN)\b
+      - match: \b(DEVA_MOVANIC)\b
+      - match: \b(DEVA_MOVANIC_FALLEN)\b
       - match: \b(DJINNI)\b
       - match: \b(DJINNI_LEGS)\b
+      - match: \b(DOG_GRAY)\b
       - match: \b(DOG_MOON)\b
       - match: \b(DOG_WAR)\b
       - match: \b(DOG_WILD)\b
       - match: \b(DONOT_USE)\b
+      - match: \b(DONOT_USE2)\b
       - match: \b(DOOM_GUARD)\b
       - match: \b(DOOM_GUARD_LARGER)\b
       - match: \b(DOPPLEGANGER)\b
@@ -3420,25 +3483,44 @@ repository:
       - match: \b(DRAGON_BLUE)\b
       - match: \b(DRAGON_BROWN)\b
       - match: \b(DRAGON_GREEN)\b
+      - match: \b(DRAGON_GREEN_IWD)\b
+      - match: \b(DRAGON_GREEN_JUVENILE)\b
+      - match: \b(DRAGON_GREEN_YOUNG)\b
       - match: \b(DRAGON_MULTICOLOR)\b
       - match: \b(DRAGON_PURPLE)\b
       - match: \b(DRAGON_RED)\b
+      - match: \b(DRAGON_RED_JUVENILE)\b
       - match: \b(DRAGON_SILVER)\b
+      - match: \b(DRAGON_SILVER_YOUNG)\b
+      - match: \b(DRAGON_WHITE)\b
+      - match: \b(DRAGON_WHITE_YOUNG)\b
+      - match: \b(DRIDER_FEMALE)\b
+      - match: \b(DRIDER_MALE)\b
       - match: \b(DRIZZT)\b
       - match: \b(DROW)\b
+      - match: \b(DROWNED_DEAD)\b
+      - match: \b(DROWNED_DEAD_RED)\b
       - match: \b(DROW_FEMALE)\b
       - match: \b(EAGLE)\b
+      - match: \b(EFREETI_NOBLE)\b
       - match: \b(ELEMENTAL_AIR)\b
       - match: \b(ELEMENTAL_AIR_SMALL)\b
       - match: \b(ELEMENTAL_EARTH)\b
+      - match: \b(ELEMENTAL_EARTH_IWD)\b
       - match: \b(ELEMENTAL_EARTH_SMALL)\b
       - match: \b(ELEMENTAL_FIRE)\b
+      - match: \b(ELEMENTAL_FIRE_IWD)\b
       - match: \b(ELEMENTAL_FIRE_PURPLE)\b
       - match: \b(ELEMENTAL_FIRE_SMALL)\b
       - match: \b(ELEMENTAL_FIRE_SMALL_PURPLE)\b
+      - match: \b(ELEMENTAL_WATER)\b
+      - match: \b(ELEMENTAL_WATER_SMALL)\b
       - match: \b(ELLESIME)\b
+      - match: \b(ELLESIME_WHITE)\b
       - match: \b(ELMINSTER)\b
       - match: \b(ETTERCAP)\b
+      - match: \b(ETTIN)\b
+      - match: \b(ETTIN_GHOST)\b
       - match: \b(EXPLODING_ARM)\b
       - match: \b(EXPLODING_FOOT)\b
       - match: \b(EXPLODING_HEAD)\b
@@ -3446,6 +3528,11 @@ repository:
       - match: \b(EXPLODING_TORSO)\b
       - match: \b(FAT_MAN)\b
       - match: \b(FAT_WOMAN)\b
+      - match: \b(FEYR)\b
+      - match: \b(FEYR_GREATER)\b
+      - match: \b(FIEND_BLUE)\b
+      - match: \b(FIEND_GREEN)\b
+      - match: \b(FIEND_RED)\b
       - match: \b(FIGHTER_FEMALE_DWARF)\b
       - match: \b(FIGHTER_FEMALE_DWARF_LOW)\b
       - match: \b(FIGHTER_FEMALE_ELF)\b
@@ -3455,6 +3542,7 @@ repository:
       - match: \b(FIGHTER_FEMALE_HALFLING_LOW)\b
       - match: \b(FIGHTER_FEMALE_HALFORC)\b
       - match: \b(FIGHTER_FEMALE_HUMAN)\b
+      - match: \b(FIGHTER_FEMALE_HUMAN_BG1)\b
       - match: \b(FIGHTER_FEMALE_HUMAN_LOW)\b
       - match: \b(FIGHTER_MALE_DWARF)\b
       - match: \b(FIGHTER_MALE_DWARF_LOW)\b
@@ -3466,69 +3554,90 @@ repository:
       - match: \b(FIGHTER_MALE_HALFORC)\b
       - match: \b(FIGHTER_MALE_HUMAN)\b
       - match: \b(FIGHTER_MALE_HUMAN_LOW)\b
-      - match: \b(FIRE_GIANT)\b
       - match: \b(FIRE_RING)\b
+      - match: \b(FIRE_RING_BRIGHT)\b
       - match: \b(GHAST)\b
+      - match: \b(GHAST_GREATER)\b
+      - match: \b(GHOST)\b
       - match: \b(GHOUL)\b
+      - match: \b(GHOUL_GREATER)\b
+      - match: \b(GIANT_FIRE)\b
+      - match: \b(GIANT_FIRE_2)\b
+      - match: \b(GIANT_FIRE_IWD)\b
+      - match: \b(GIANT_FOMORIAN)\b
+      - match: \b(GIANT_FROST)\b
+      - match: \b(GIANT_HILL)\b
+      - match: \b(GIANT_VERBEEG)\b
+      - match: \b(GIANT_YAGA-SHURA)\b
       - match: \b(GIBBERLING)\b
+      - match: \b(GIBBERLING_BROOD)\b
       - match: \b(GIRL)\b
       - match: \b(GITHYANKI)\b
+      - match: \b(GLABREZU)\b
       - match: \b(GNOLL)\b
+      - match: \b(GOBLIN_AXE)\b
+      - match: \b(GOBLIN_BOW)\b
+      - match: \b(GOBLIN_CAPTAIN)\b
+      - match: \b(GOBLIN_ELITE_AXE)\b
+      - match: \b(GOBLIN_ELITE_BOW)\b
+      - match: \b(GOBLIN_SHAMAN)\b
+      - match: \b(GOBLIN_WORG)\b
+      - match: \b(GOBLIN_WORG_CAPTAIN)\b
+      - match: \b(GOBLIN_WORG_ELITE)\b
+      - match: \b(GOBLIN_WORG_SHAMAN)\b
       - match: \b(GOLEM_CLAY)\b
+      - match: \b(GOLEM_ICE)\b
       - match: \b(GOLEM_IRON)\b
+      - match: \b(GOLEM_IRON_IWD)\b
+      - match: \b(GOLEM_MINI)\b
       - match: \b(GRAY_OOZE)\b
       - match: \b(GREASE_STATIC)\b
       - match: \b(GREASE_TRAVEL)\b
       - match: \b(GREATCAT_LEOPARD)\b
       - match: \b(GREATCAT_PANTHER)\b
       - match: \b(GROUNDHOG)\b
+      - match: \b(HAG_ANNIS)\b
+      - match: \b(HAG_GREEN)\b
+      - match: \b(HAG_NIGHT)\b
+      - match: \b(HAG_SEA)\b
+      - match: \b(HAKEASHAR)\b
+      - match: \b(HALFDRAGON_BLACK)\b
+      - match: \b(HALFDRAGON_GREEN)\b
+      - match: \b(HALFDRAGON_RED)\b
       - match: \b(HALF_OGRE)\b
+      - match: \b(HARLOT_FIGHTER)\b
       - match: \b(HARLOT_WOMAN)\b
+      - match: \b(HARPY)\b
+      - match: \b(HEPHERNAAN)\b
+      - match: \b(HISTACHII)\b
       - match: \b(HOBGOBLIN)\b
+      - match: \b(HOOK_HORROR)\b
       - match: \b(HORSE)\b
-      - match: \b(HULA_WIZARD)\b
-      - match: \b(IC_CORNUGONSKI)\b
-      - match: \b(IC_ETTIN)\b
-      - match: \b(IC_GLAB)\b
-      - match: \b(IC_GOBLINELITE_AXE)\b
-      - match: \b(IC_GOBLINELITE_BOW)\b
-      - match: \b(IC_GOBLIN_AXE)\b
-      - match: \b(IC_GOBLIN_BOW)\b
-      - match: \b(IC_ICE_GOLEM)\b
-      - match: \b(IC_LICHBLACK)\b
-      - match: \b(IC_LIZARDCASTER1)\b
-      - match: \b(IC_MERILITH)\b
-      - match: \b(IC_MINOTAUR)\b
-      - match: \b(IC_MUMMY)\b
-      - match: \b(IC_MYCONID)\b
-      - match: \b(IC_MYCONID2)\b
-      - match: \b(IC_ORC_MELEE1)\b
-      - match: \b(IC_ORC_MELEE3)\b
-      - match: \b(IC_ORC_RANGE2)\b
-      - match: \b(IC_ORC_RANGE4)\b
-      - match: \b(IC_ORC_SHAMAN)\b
-      - match: \b(IC_OROG1)\b
-      - match: \b(IC_OROG2)\b
-      - match: \b(IC_OROG3)\b
-      - match: \b(IC_SALAMANDER)\b
-      - match: \b(IC_SALAMANDER2)\b
-      - match: \b(IC_SHROOM)\b
-      - match: \b(IC_SKELETON0)\b
-      - match: \b(IC_SKELETONA)\b
-      - match: \b(IC_SKELETONB)\b
-      - match: \b(IC_TROLL1)\b
-      - match: \b(IC_WAILING_VIRGIN)\b
-      - match: \b(IC_YUANTI)\b
-      - match: \b(IC_YUANTI2)\b
-      - match: \b(IC_YUANTI3)\b
       - match: \b(IMP)\b
+      - match: \b(INVISIBLE_GIANT)\b
+      - match: \b(INVISIBLE_LARGE)\b
+      - match: \b(INVISIBLE_MEDIUM)\b
+      - match: \b(INVISIBLE_SMALL)\b
+      - match: \b(IRENICUS_ROBED)\b
+      - match: \b(ISAIR)\b
       - match: \b(JON_IRENICUS)\b
+      - match: \b(KEG1)\b
+      - match: \b(KEG2)\b
+      - match: \b(KEG3)\b
       - match: \b(KOBOLD)\b
       - match: \b(KOBOLD_TASLOI)\b
       - match: \b(KOBOLD_XVART)\b
       - match: \b(KUO-TOA)\b
       - match: \b(KUO-TOA_LARGE)\b
+      - match: \b(LAGOON_CREATURE)\b
+      - match: \b(LEMURE)\b
       - match: \b(LICH)\b
+      - match: \b(LICH_BLACK)\b
+      - match: \b(LICH_WHITE)\b
+      - match: \b(LIZARD_KING)\b
+      - match: \b(LIZARD_MAN)\b
+      - match: \b(LIZARD_MAN_ELITE)\b
+      - match: \b(MADAE)\b
       - match: \b(MAGE_FEMALE_DWARF)\b
       - match: \b(MAGE_FEMALE_DWARF_LOW)\b
       - match: \b(MAGE_FEMALE_ELF)\b
@@ -3545,42 +3654,95 @@ repository:
       - match: \b(MAGE_MALE_HALFORC)\b
       - match: \b(MAGE_MALE_HUMAN)\b
       - match: \b(MAGE_MALE_HUMAN_LOW)\b
+      - match: \b(MALARITE)\b
+      - match: \b(MARILITH)\b
+      - match: \b(MARILITH_IWD)\b
+      - match: \b(MAUREZHI)\b
       - match: \b(MDK2_DOCTOR)\b
       - match: \b(MDK2_KURT)\b
       - match: \b(MDK2_MAX)\b
+      - match: \b(MEGALOCENTIPEDE)\b
       - match: \b(MELISSAN)\b
       - match: \b(MINDFLAYER)\b
+      - match: \b(MINOTAUR)\b
       - match: \b(MIST_CREATURE)\b
+      - match: \b(MKHIIN)\b
+      - match: \b(MKHIIN_ARMOR_AXE)\b
+      - match: \b(MKHIIN_ARMOR_BOW)\b
+      - match: \b(MKHIIN_BOW)\b
+      - match: \b(MKHIIN_STAFF)\b
       - match: \b(MONK)\b
       - match: \b(MONK_FEMALE_HUMAN)\b
       - match: \b(MONK_MALE_HUMAN)\b
       - match: \b(MOOSE)\b
+      - match: \b(MUMMY)\b
+      - match: \b(MYCONID_BLUE)\b
+      - match: \b(MYCONID_RED)\b
+      - match: \b(MYRLOCHAR)\b
+      - match: \b(NISHRUU)\b
+      - match: \b(NOBLEMAN_FIGHTER)\b
+      - match: \b(NOBLEWOMAN_FIGHTER)\b
       - match: \b(NOBLE_MAN)\b
       - match: \b(NOBLE_WOMAN)\b
+      - match: \b(NULL_ANIMATION)\b
       - match: \b(OGRE)\b
       - match: \b(OGRE_MAGE)\b
       - match: \b(OGRILLON)\b
+      - match: \b(ORC_AXE_UNDEAD)\b
+      - match: \b(ORC_ELITE_MELEE)\b
+      - match: \b(ORC_ELITE_RANGE)\b
+      - match: \b(ORC_MELEE)\b
+      - match: \b(ORC_RANGE)\b
+      - match: \b(ORC_SHAMAN)\b
+      - match: \b(ORC_SHAMAN_UNDEAD)\b
+      - match: \b(OROG)\b
+      - match: \b(OROG_CHIEFTAIN)\b
+      - match: \b(OROG_ELITE)\b
+      - match: \b(OROG_SHAMAN)\b
       - match: \b(OTYUGH)\b
       - match: \b(PEASANT_MAN)\b
+      - match: \b(PEASANT_MAN_FIGHTER)\b
       - match: \b(PEASANT_WOMAN)\b
+      - match: \b(PEASANT_WOMAN_FIGHTER)\b
       - match: \b(PHEASANT)\b
       - match: \b(PIRATE)\b
+      - match: \b(PLANETAR)\b
+      - match: \b(PLANETAR_FALLEN)\b
       - match: \b(RABBIT)\b
       - match: \b(RAKSHASA)\b
       - match: \b(RAT)\b
+      - match: \b(RAT_OUTSIDE)\b
       - match: \b(RAVER)\b
-      - match: \b(REVEANT)\b
-      - match: \b(SAHAUGIN)\b
-      - match: \b(SAHAUGIN_LARGE)\b
+      - match: \b(RED_WIZARD)\b
+      - match: \b(REMORHAZ)\b
+      - match: \b(REVENANT)\b
+      - match: \b(SAHUAGIN)\b
+      - match: \b(SAHUAGIN_IWD)\b
+      - match: \b(SAHUAGIN_LARGE)\b
+      - match: \b(SAHUAGIN_LARGE_IWD)\b
+      - match: \b(SAILOR_DARK)\b
+      - match: \b(SAILOR_GREEN)\b
       - match: \b(SAILOR_MAN)\b
+      - match: \b(SAILOR_RED)\b
+      - match: \b(SALAMANDER_FIRE)\b
+      - match: \b(SALAMANDER_FROST)\b
       - match: \b(SAREVOK)\b
       - match: \b(SEAGULL)\b
+      - match: \b(SEER)\b
       - match: \b(SHADOW)\b
+      - match: \b(SHADOW_LARGE)\b
+      - match: \b(SHADOW_SMALL)\b
       - match: \b(SHADOW_THIEF)\b
       - match: \b(SHAMBLING_MOUND)\b
+      - match: \b(SHENRICAL)\b
+      - match: \b(SHRIEKER)\b
       - match: \b(SIRINE)\b
       - match: \b(SKELETON)\b
+      - match: \b(SKELETON_FIEND)\b
+      - match: \b(SKELETON_MONSTER)\b
+      - match: \b(SKELETON_WARRIOR)\b
       - match: \b(SLAVE)\b
+      - match: \b(SLAVE_FIGHTER)\b
       - match: \b(SLAYER)\b
       - match: \b(SLEEPING_DWARF)\b
       - match: \b(SLEEPING_FAT_MAN_HUMAN)\b
@@ -3596,12 +3758,15 @@ repository:
       - match: \b(SMOKE_PUFF_LARGE)\b
       - match: \b(SMOKE_PUFF_SMALL)\b
       - match: \b(SNAKE)\b
+      - match: \b(SNAKE_WATER)\b
       - match: \b(SOLAR)\b
+      - match: \b(SOLAR_FALLEN)\b
       - match: \b(SPIDER_GIANT)\b
       - match: \b(SPIDER_HUGE)\b
       - match: \b(SPIDER_PHASE)\b
       - match: \b(SPIDER_SMALL)\b
       - match: \b(SPIDER_SWORD)\b
+      - match: \b(SPIDER_WATER)\b
       - match: \b(SPIDER_WRAITH)\b
       - match: \b(SQUIRREL)\b
       - match: \b(STATIC_BEGGAR_MAN)\b
@@ -3628,6 +3793,10 @@ repository:
       - match: \b(STATIC_SPIDER_WOMAN)\b
       - match: \b(STORM_STATIC)\b
       - match: \b(STORM_TRAVEL)\b
+      - match: \b(SVIRFNEBLIN_DARK_AXE)\b
+      - match: \b(SVIRFNEBLIN_DARK_NOAXE)\b
+      - match: \b(SVIRFNEBLIN_PALE_AXE)\b
+      - match: \b(SVIRFNEBLIN_PALE_NOAXE)\b
       - match: \b(TANARRI)\b
       - match: \b(THIEF_FEMALE_DWARF)\b
       - match: \b(THIEF_FEMALE_DWARF_LOW)\b
@@ -3651,26 +3820,57 @@ repository:
       - match: \b(THIEF_MALE_HUMAN_LOW)\b
       - match: \b(TRAP_GLYPH)\b
       - match: \b(TRAP_SKULL)\b
+      - match: \b(TREANT_DARK)\b
       - match: \b(TROLL)\b
+      - match: \b(TROLL_BLUE)\b
+      - match: \b(TROLL_ICE)\b
+      - match: \b(TROLL_SCRAG)\b
       - match: \b(TROLL_SMALL)\b
+      - match: \b(TROLL_SNOW)\b
+      - match: \b(TROLL_SPECTRAL)\b
+      - match: \b(TUNDRA_YETI)\b
+      - match: \b(TUNNEL_WORM)\b
       - match: \b(UMBER_HULK)\b
+      - match: \b(UMBER_HULK_ELDER)\b
+      - match: \b(UMBER_HULK_VODYANOI)\b
       - match: \b(VAMPIRE)\b
       - match: \b(VAMPIRE_FEMALE)\b
       - match: \b(VOLO)\b
       - match: \b(VULTURE)\b
+      - match: \b(WAILING_VIRGIN)\b
+      - match: \b(WATER_WEIRD)\b
       - match: \b(WEB_STATIC)\b
       - match: \b(WEB_TRAVEL)\b
+      - match: \b(WEREBADGER)\b
+      - match: \b(WERERAT)\b
       - match: \b(WEREWOLF)\b
       - match: \b(WEREWOLF_GREATER)\b
+      - match: \b(WIGHT_BARROW)\b
+      - match: \b(WIGHT_GRAY)\b
+      - match: \b(WIGHT_GREEN)\b
+      - match: \b(WIGHT_YELLOW)\b
+      - match: \b(WILL_O_WISP)\b
+      - match: \b(WILL_O_WISP_SMALL)\b
       - match: \b(WIZARD_EYE)\b
       - match: \b(WOLF)\b
       - match: \b(WOLF_DIRE)\b
       - match: \b(WOLF_DREAD)\b
       - match: \b(WOLF_SHADOW)\b
-      - match: \b(WOLF_VAMPIRE)\b
+      - match: \b(WOLF_VAMPIRIC)\b
       - match: \b(WOLF_WINTER)\b
       - match: \b(WOLF_WORG)\b
+      - match: \b(WORG)\b
+      - match: \b(WYRMLING_ALBINO)\b
       - match: \b(WYVERN)\b
       - match: \b(WYVERN_BIG)\b
       - match: \b(WYVERN_FAMILIAR)\b
+      - match: \b(WYVERN_WHITE)\b
+      - match: \b(WYVERN_WHITE_BIG)\b
+      - match: \b(YOCHLOL)\b
+      - match: \b(YUAN-TI)\b
+      - match: \b(YUAN-TI_ELITE)\b
+      - match: \b(YUAN-TI_HALF)\b
+      - match: \b(YUAN-TI_PRIEST)\b
       - match: \b(ZOMBIE)\b
+      - match: \b(ZOMBIE_BLUE)\b
+      - match: \b(ZOMBIE_YELLOW)\b
