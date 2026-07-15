@@ -7,6 +7,7 @@
 - Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
 - WeiDU `.d` files now provide completion and hover for BAF triggers and actions inside embedded `IF`/`DO`/condition strings - the same engine vocabulary the `.baf` editor offers, now available in dialog code. BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`) is now syntax-highlighted too.
 - WeiDU BAF and D completion now include Enhanced Edition IDS constant values - creature allegiance (`ANYONE`, `NEUTRAL`, `ENEMY`, ...), general type (`HUMANOID`, `UNDEAD`, ...), race (`HUMAN`, `ELF`, `MINOTAUR`, ...), and gender (`MALE`, `FEMALE`, ...) - for use as trigger/action arguments such as `Allegiance(Myself,NEUTRAL)`. The same constants are syntax-highlighted from the identical set, so completion and coloring no longer disagree.
+- Fixed: IDS constants in WeiDU BAF are now highlighted consistently. Animation constants (`ABISHAI_BLACK`, `YUAN-TI_ELITE`, ...) and inventory-slot constants (`SLOT_WEAPON1`, ...) were never colored at all; other IDS constants were colored only if they appeared in a hand-maintained list, so a valid constant the list had not caught yet stayed plain. Every uppercase constant is now colored.
 
 ### Translations
 
