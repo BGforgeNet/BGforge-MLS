@@ -41,7 +41,12 @@ import {
     type WorkspaceSymbolCapability,
     HoverResult,
 } from "../language-provider";
-import { detectEmbeddedBaf, resolveEmbeddedBafSymbol, initEmbeddedBaf } from "./embedded-baf";
+import {
+    detectEmbeddedBaf,
+    resolveEmbeddedBafSymbol,
+    initEmbeddedBaf,
+    getEmbeddedBafCompletions,
+} from "./embedded-baf";
 import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
@@ -185,6 +190,19 @@ class WeiduDProvider
 
     getCompletions(_uri: NormalizedUri): CompletionItem[] {
         return getStaticCompletions(this.fileIndex?.symbols);
+    }
+
+    filterCompletions(
+        items: CompletionItem[],
+        text: string,
+        position: Position,
+        _uri: NormalizedUri,
+        _triggerCharacter?: string,
+    ): CompletionItem[] {
+        // Inside an embedded BAF string, replace the D vocabulary with the field-scoped BAF vocabulary -
+        // D structural keywords (SAY/IF/THEN) are invalid inside a BAF trigger/action expression.
+        const kind = detectEmbeddedBaf(text, position);
+        return kind ? getEmbeddedBafCompletions(kind) : items;
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {

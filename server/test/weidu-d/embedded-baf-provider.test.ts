@@ -33,7 +33,7 @@ import { weiduDProvider } from "../../src/weidu-d/provider";
 import { initEmbeddedBaf } from "../../src/weidu-d/embedded-baf";
 import { initParser } from "../../../shared/parsers/weidu-d";
 import { normalizeUri } from "../../src/core/normalized-uri";
-import type { Position } from "vscode-languageserver/node";
+import type { CompletionItem, Position } from "vscode-languageserver/node";
 
 beforeAll(async () => {
     await initParser();
@@ -71,5 +71,20 @@ describe("weiduDProvider.hover - embedded BAF", () => {
         const result = weiduDProvider.hover!(text, "greeting", URI, at(2, "greeting"));
         expect(result.handled).toBe(true);
         if (result.handled) expect(result.hover).not.toBeNull();
+    });
+});
+
+describe("weiduDProvider.filterCompletions - embedded BAF", () => {
+    it("offers BAF triggers inside a trigger string", () => {
+        const out = weiduDProvider.filterCompletions!([], text, at(2, "Acquired"), URI);
+        const labels = out.map((c) => c.label);
+        expect(labels).toContain("Acquired");
+        expect(labels).not.toContain("ActionOverride");
+    });
+
+    it("returns the D completions unchanged outside any embedded region", () => {
+        const dItems: CompletionItem[] = [{ label: "SENTINEL_D_ITEM" }];
+        const out = weiduDProvider.filterCompletions!(dItems, text, at(3, "Hi"), URI);
+        expect(out).toBe(dItems);
     });
 });
