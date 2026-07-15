@@ -2,9 +2,13 @@
  * Vitest configuration for server unit tests with coverage reporting.
  *
  * Coverage measures every source file the unit tests import. Exclusions:
- *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` - LSP
- *     dispatcher glue that delegates to unit-tested sub-modules; end-to-end
- *     behaviour is verified by integration tests under `test/integration/`.
+ *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts`,
+ *     `src/weidu-d/provider.ts` - LSP dispatcher glue that delegates to
+ *     unit-tested sub-modules; end-to-end behaviour is verified by integration
+ *     tests under `test/integration/` (weidu-d: `weidu-d.test.ts`,
+ *     `weidu-d-writeback.test.ts`). The three are treated uniformly - a
+ *     dispatcher whose branches are integration-tested is excluded here, not
+ *     duplicated with redundant unit tests.
  *
  * See INTERNALS.md "Coverage scope".
  */
@@ -41,7 +45,7 @@ export default defineConfig({
         // the unit suite touches.
         coverage: coverageConfig({
             reportsDirectory: "coverage/server",
-            exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
+            exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts", "src/weidu-d/provider.ts"],
             thresholds: {
                 lines: 91,
                 functions: 96,
