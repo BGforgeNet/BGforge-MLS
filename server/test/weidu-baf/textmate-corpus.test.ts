@@ -49,20 +49,41 @@ const TRIGGER = "entity.name.function.trigger.weidu-baf";
 const ACTION = "support.function.weidu-baf";
 
 describe("weidu-baf grammar name population", () => {
-    it("still enumerates every name a casing rule cannot express", () => {
-        // The casing rule \b[A-Z][A-Z0-9_]*\b covers ALL-CAPS constants. Everything else MUST remain
-        // enumerated or it silently loses its colour. This asserts the exception set is intact.
-        const consts = namesByScope().get(CONSTANT) ?? [];
-        const inexpressible = consts.filter((n) => !ALLCAPS.test(n));
+    // Every hyphenated constant in the grammar. \b[A-Z][A-Z0-9_]*\b shreds these into fragments (it stops at
+    // the "-", which is not a word character), so each MUST stay enumerated ahead of the casing rule.
+    // Derived from the grammar's own scope assignments, not hand-listed: an earlier hand-built list read a
+    // truncated probe and carried only 5 of the 8, which would have silently dropped the three YUAN-TI
+    // variants. Asserted as an EXACT set for that reason - a >= threshold cannot catch a dropped name.
+    const HYPHENATED = [
+        "GIANT_YAGA-SHURA",
+        "KUO-TOA",
+        "KUO-TOA_LARGE",
+        "WILL-O-WISP",
+        "YUAN-TI",
+        "YUAN-TI_ELITE",
+        "YUAN-TI_HALF",
+        "YUAN-TI_PRIEST",
+    ];
 
-        // OBJECT.IDS entries (CamelCase), CasterHold (STATS.IDS 70), and the hyphenated names.
-        expect(inexpressible).toContain("BestAC");
-        expect(inexpressible).toContain("NearestEnemyOf");
-        expect(inexpressible).toContain("CasterHold");
-        expect(inexpressible).toContain("KUO-TOA");
-        expect(inexpressible).toContain("WILL-O-WISP");
-        expect(inexpressible).toContain("YUAN-TI");
-        expect(inexpressible.length).toBeGreaterThanOrEqual(118);
+    it("still enumerates every hyphenated constant, exactly", () => {
+        const consts = namesByScope().get(CONSTANT) ?? [];
+        const hyphenated = [...new Set(consts.filter((n) => n.includes("-")))].sort();
+        // Exact equality, not a subset check: the failure this guards against is a name silently vanishing
+        // from the enumeration, which every loose matcher passes.
+        expect(hyphenated).toEqual([...HYPHENATED].sort());
+    });
+
+    it("still enumerates every CamelCase constant a casing rule cannot express", () => {
+        // The casing rule covers ALL-CAPS names. The CamelCase remainder - 117 OBJECT.IDS entries plus
+        // CasterHold (genuine STATS.IDS entry 70; its 223 siblings are ALL-CAPS) - must stay enumerated.
+        const consts = namesByScope().get(CONSTANT) ?? [];
+        const camel = [...new Set(consts.filter((n) => !ALLCAPS.test(n) && !n.includes("-")))];
+
+        expect(camel).toContain("BestAC");
+        expect(camel).toContain("NearestEnemyOf");
+        expect(camel).toContain("CasterHold");
+        // Exact count, not a floor: 117 object-ids + CasterHold. A floor would pass while names disappear.
+        expect(camel.length).toBe(118);
     });
 
     it("still enumerates every ALL-CAPS call name so the casing rule cannot claim it", () => {
