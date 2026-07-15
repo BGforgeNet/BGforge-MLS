@@ -28,6 +28,17 @@ vi.mock("../../src/core/static-loader", () => ({
             completion: { label: "ActionOverride", kind: 3 },
             hover: { contents: { kind: "markdown", value: "ActionOverride(O:Actor,A:Action) action" } },
         },
+        {
+            // An IDS/keyword constant - an argument value (e.g. a slots.ids or EA.ids symbol). These are
+            // kind Constant, not Trigger/Action, and appear in argument positions of any call.
+            name: "SLOT_WEAPON",
+            kind: "constant",
+            location: null,
+            scope: { level: 0 },
+            source: { type: 0, uri: null },
+            completion: { label: "SLOT_WEAPON", kind: 21 },
+            hover: { contents: { kind: "markdown", value: "SLOT_WEAPON - slots.ids" } },
+        },
     ]),
 }));
 
@@ -112,15 +123,17 @@ describe("embedded BAF symbol access", () => {
         expect(resolveEmbeddedBafSymbol("NotABafSymbol")).toBeUndefined();
     });
 
-    it("offers triggers (not actions) for a trigger field", () => {
+    it("offers triggers and argument constants, but not actions, for a trigger field", () => {
         const labels = getEmbeddedBafCompletions("trigger").map((c) => c.label);
-        expect(labels).toContain("Acquired");
-        expect(labels).not.toContain("ActionOverride");
+        expect(labels).toContain("Acquired"); // the field-scoped callable
+        expect(labels).toContain("SLOT_WEAPON"); // IDS/keyword constant (argument value), as in the .baf editor
+        expect(labels).not.toContain("ActionOverride"); // opposite callable excluded
     });
 
-    it("offers actions (not triggers) for an action field", () => {
+    it("offers actions and argument constants, but not triggers, for an action field", () => {
         const labels = getEmbeddedBafCompletions("action").map((c) => c.label);
         expect(labels).toContain("ActionOverride");
+        expect(labels).toContain("SLOT_WEAPON");
         expect(labels).not.toContain("Acquired");
     });
 });

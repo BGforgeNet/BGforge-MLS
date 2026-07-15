@@ -4,9 +4,10 @@
  * vocabulary (completion + hover) inside those embedded regions.
  *
  * BAF names are case-insensitive (WeiDU's baflexer uppercases for lookup); D state labels and tp2 vars are
- * case-sensitive. Resolution here case-folds; nothing outside an embedded region changes. Completion is
- * precise by field (trigger/condition -> triggers, action -> actions); hover is permissive (resolves any
- * BAF symbol under the cursor - explaining code, not authoring it).
+ * case-sensitive. Resolution here case-folds; nothing outside an embedded region changes. Completion offers
+ * the field-scoped callable (trigger/condition -> triggers, action -> actions) plus the shared constant
+ * vocabulary (IDS values, keywords) usable as arguments, matching the `.baf` editor; hover is permissive
+ * (resolves any BAF symbol under the cursor - explaining code, not authoring it).
  */
 
 import type { CompletionItem, Position } from "vscode-languageserver/node";
@@ -71,9 +72,15 @@ export function resolveEmbeddedBafSymbol(name: string): IndexedSymbol | undefine
     return byLowerName?.get(name.toLowerCase());
 }
 
-/** BAF completions scoped to the field kind (precise: triggers XOR actions; block keywords excluded). */
+/**
+ * BAF completions for an embedded region: the field-scoped callable (triggers XOR actions) PLUS all
+ * Constant-kind symbols (IDS values like EA.ids/slots.ids, and BAF keywords) - the argument values that
+ * appear inside any call. This matches the vocabulary the `.baf` editor offers; the callable name stays
+ * field-precise while argument constants are available in both fields. Position-aware per-argument IDS
+ * typing is intentionally left to the TBAF transpiler's TypeScript types, not the LSP.
+ */
 export function getEmbeddedBafCompletions(kind: EmbeddedBafKind): CompletionItem[] {
     if (!bafStore) return [];
-    const symbolKind = kind === "trigger" ? SymbolKind.Trigger : SymbolKind.Action;
-    return bafStore.query({ kinds: [symbolKind] }).map((symbol) => symbol.completion);
+    const callableKind = kind === "trigger" ? SymbolKind.Trigger : SymbolKind.Action;
+    return bafStore.query({ kinds: [callableKind, SymbolKind.Constant] }).map((symbol) => symbol.completion);
 }
