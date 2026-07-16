@@ -1,0 +1,120 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "BGforge dialog TypeScript expression",
+  "scopeName": "source.dialog-tsexpr",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#language-constants"
+    },
+    {
+      "include": "#function-call"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.dialog-tsexpr"
+        },
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "name": "comment.block.dialog-tsexpr"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.dialog-tsexpr",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.dialog-tsexpr"
+            }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.dialog-tsexpr",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.dialog-tsexpr"
+            }
+          ]
+        },
+        {
+          "begin": "`",
+          "end": "`",
+          "name": "string.template.dialog-tsexpr",
+          "patterns": [
+            {
+              "match": "\\\\.",
+              "name": "constant.character.escape.dialog-tsexpr"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b(0[xX][0-9a-fA-F]+|\\d+(\\.\\d+)?)\\b",
+          "name": "constant.numeric.dialog-tsexpr"
+        }
+      ]
+    },
+    "language-constants": {
+      "patterns": [
+        {
+          "match": "\\b(true|false|null|undefined)\\b",
+          "name": "constant.language.dialog-tsexpr"
+        }
+      ]
+    },
+    "function-call": {
+      "patterns": [
+        {
+          "match": "\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b(?=\\s*\\()",
+          "name": "entity.name.function.dialog-tsexpr"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "match": "\\b([A-Z][A-Z0-9_]*)\\b",
+          "name": "constant.other.dialog-tsexpr"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "&&|\\|\\||!==|!=|===|==|<=|>=|<|>|!|\\+|-|\\*|/|%",
+          "name": "keyword.operator.dialog-tsexpr"
+        }
+      ]
+    }
+  }
+}

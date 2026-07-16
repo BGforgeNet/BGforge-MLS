@@ -2,15 +2,13 @@ import { mount } from "svelte";
 import App from "./App.svelte";
 import { postToHost } from "./host";
 import { installFatalErrorHandler } from "../../webview-utils";
-import { initTokenizerFromBytes } from "./highlight/tokenize";
-import { initSslTokenizer } from "./highlight/textmate";
+import { initTextmate } from "./highlight/textmate";
 import type { IRawGrammar } from "vscode-textmate";
-import grammarWasm from "../../../../grammars/weidu-baf/tree-sitter-baf.wasm";
-import highlightsScm from "../../../../grammars/weidu-baf/queries/highlights.scm";
-import runtimeWasm from "web-tree-sitter/web-tree-sitter.wasm";
 import onigWasm from "vscode-oniguruma/release/onig.wasm";
+import bafGrammarJson from "../../../../syntaxes/weidu-baf.tmLanguage.json";
 import sslGrammarJson from "../../../../syntaxes/fallout-ssl.tmLanguage.json";
 import docstringGrammarJson from "../../../../syntaxes/bgforge-mls-docstring.tmLanguage.json";
+import tsExprGrammarJson from "../../../../syntaxes/dialog-tsexpr.tmLanguage.json";
 
 const target = document.getElementById("app");
 
@@ -32,25 +30,25 @@ if (target) {
     // Tell the host the webview is ready to receive the model.
     postToHost({ type: "ready" });
 
-    // Bring the BAF syntax tokenizer up AFTER mount, and deliberately without awaiting it: it colours the
+    // Bring the TextMate tokenizer up AFTER mount, and deliberately without awaiting it: it colours the
     // condition/action fields as a progressive enhancement, so it must never gate first paint or blank the
-    // panel if it fails. The grammar/runtime wasm and the highlight query are embedded in this bundle
-    // (esbuild binary/text loaders - see scripts/build-webviews.mjs) rather than fetched, so there is no
-    // asWebviewUri round-trip and the CSP needs no connect-src, only 'wasm-unsafe-eval' to compile the
-    // grammar. tokenizeBaf returns [] until this resolves; the fields render flat until then, then re-colour.
-    void initTokenizerFromBytes(runtimeWasm, grammarWasm, highlightsScm);
-
-    // Bring the SSL TextMate tokenizer up the same way - after mount, not awaited, a progressive enhancement
-    // that must never gate first paint. The editor colours SSL through this grammar, so running it in the
-    // webview is parity by construction. onig.wasm is embedded via the esbuild binary loader and the two
-    // grammar JSONs via the default json loader (both in-bundle, nothing fetched), so the CSP needs the same
-    // 'wasm-unsafe-eval' as BAF and no connect-src. The include chain is source.fallout-ssl -> the docstring
-    // grammar; both are registered so a docstring inside a condition still resolves (it never appears in one,
-    // but the grammar can reference it). The .json files ARE compiled TextMate grammars, but resolveJsonModule
-    // infers a structural literal type that does not unify with IRawGrammar's index-signature interfaces; the
-    // Registry consumes them unchanged, so cast at this one boundary.
-    void initSslTokenizer(onigWasm, [
-        { scopeName: "source.fallout-ssl", grammar: sslGrammarJson as unknown as IRawGrammar },
-        { scopeName: "source.bgforge-mls-docstring", grammar: docstringGrammarJson as unknown as IRawGrammar },
-    ]);
+    // panel if it fails. One engine (vscode-textmate + oniguruma) runs every dialog language's grammar; the
+    // editor colours all of them through these same grammars, so the webview is parity by construction.
+    // onig.wasm is embedded via the esbuild binary loader and the grammar JSONs via the default json loader
+    // (all in-bundle, nothing fetched), so the CSP needs only 'wasm-unsafe-eval' to compile the regex engine
+    // and no connect-src. tokenize() returns [] until this resolves; fields render flat until then, then
+    // re-colour. The SSL grammar's include chain reaches the docstring grammar, so it is registered too (a
+    // docstring never appears in a condition, but the grammar can reference it). The .json files ARE compiled
+    // TextMate grammars, but resolveJsonModule infers a structural literal type that does not unify with
+    // IRawGrammar's index-signature interfaces; the Registry consumes them unchanged, so cast at this boundary.
+    void initTextmate(
+        onigWasm,
+        [
+            { scopeName: "source.weidu-baf", grammar: bafGrammarJson as unknown as IRawGrammar },
+            { scopeName: "source.fallout-ssl", grammar: sslGrammarJson as unknown as IRawGrammar },
+            { scopeName: "source.bgforge-mls-docstring", grammar: docstringGrammarJson as unknown as IRawGrammar },
+            { scopeName: "source.dialog-tsexpr", grammar: tsExprGrammarJson as unknown as IRawGrammar },
+        ],
+        { baf: "source.weidu-baf", ssl: "source.fallout-ssl", ts: "source.dialog-tsexpr" },
+    );
 }

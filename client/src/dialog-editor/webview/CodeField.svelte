@@ -1,8 +1,8 @@
 <!--
-  A one-line-ish code field, syntax-coloured. Language-agnostic: `lang` selects the tokenizer - WeiDU BAF runs
-  the tree-sitter tokenizer (highlight/tokenize.ts), Fallout SSL runs the TextMate grammar (highlight/
-  textmate.ts). Both emit the same role set, so everything below the tokenizer call - overlay, alignment,
-  palette - is shared.
+  A one-line-ish code field, syntax-coloured. Language-agnostic: `lang` selects which TextMate grammar the
+  shared tokenizer (highlight/textmate.ts) colours with - WeiDU BAF, Fallout SSL, or a minimal TypeScript
+  expression grammar (TD/TSSL conditions). All three emit the same role set, so everything below the tokenizer
+  call - overlay, alignment, palette - is shared.
 
   Shape: a transparent <textarea> over a <pre> painting the same text in coloured runs. The textarea keeps
   every native behaviour (caret, selection, IME, undo, spellcheck-off) and the <pre> supplies the colour, so
@@ -24,26 +24,23 @@
 -->
 <script lang="ts">
     import { autosize } from "./autosize";
-    import { toParts, tokenizeBaf, tokenizerReady, type BafFragmentKind } from "./highlight/tokenize";
-    import { sslTokenizerReady, tokenizeSsl } from "./highlight/textmate";
+    import { toParts } from "./highlight/types";
+    import { textmateReady, tokenize, type TmLang } from "./highlight/textmate";
 
     let {
         value,
         lang,
-        kind,
         disabled = false,
         title = "",
         placeholder = "",
         oninput,
     }: {
         value: string;
-        /** Which grammar/engine to colour with. BAF runs the tree-sitter tokenizer; SSL runs the TextMate
-            grammar - the two differ because SSL needs casing to isolate constants (see highlight/textmate.ts). */
-        lang: "baf" | "ssl";
-        /** BAF only: which synthetic context to parse the fragment in - the same call syntax is a trigger in a
-            condition and an action in a THEN, so a BAF caller must say which. Unused for SSL: TextMate is
-            line-oriented and tokenizes a bare fragment directly, with no wrapper and so no kind. */
-        kind?: BafFragmentKind;
+        /** Which TextMate grammar to colour with: "baf" (WeiDU triggers/actions), "ssl" (Fallout SSL), or "ts"
+            (the minimal TypeScript-expression grammar for TD/TSSL conditions). All three run through the one
+            shared tokenizer; the grammar itself distinguishes a trigger from an action by name, so no per-field
+            "kind" is needed (unlike the retired tree-sitter tokenizer, which parsed a synthetic wrapper). */
+        lang: TmLang;
         disabled?: boolean;
         title?: string;
         placeholder?: string;
@@ -51,20 +48,16 @@
     } = $props();
 
     // The webview mounts before the host can hand it the grammar assets, so the tokenizer is never ready at
-    // first paint. The tokenizers are plain functions Svelte cannot track, so this flag is what re-renders the
+    // first paint. tokenize() is a plain function Svelte cannot track, so this flag is what re-renders the
     // field once the assets land; without it the fields would stay flat forever in the live panel while every
     // unit test still passed. Until then - and permanently, if an asset fails to load - the field renders as
     // one plain run: degraded and readable, never blank.
     let ready = $state(false);
     $effect(() => {
-        void (lang === "ssl" ? sslTokenizerReady() : tokenizerReady()).then(() => (ready = true));
+        void textmateReady().then(() => (ready = true));
     });
 
-    const parts = $derived(
-        ready
-            ? toParts(value, lang === "ssl" ? tokenizeSsl(value) : tokenizeBaf(value, kind ?? "condition"))
-            : [{ text: value }],
-    );
+    const parts = $derived(ready ? toParts(value, tokenize(lang, value)) : [{ text: value }]);
 </script>
 
 <div class="cf">

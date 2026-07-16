@@ -8,6 +8,7 @@
         type DialogBranch,
         type DialogChoice,
         type RenderFamily,
+        type SourceLang,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
@@ -33,7 +34,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, sourceLang, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -56,6 +57,10 @@
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
         onFocusOwnerState: () => void;
         format: RenderFamily;
+        /** The dialog's SOURCE language, distinct from `format` (the render family): a TD dialog renders in the
+            weidu-d family but its conditions are TypeScript, a TSSL dialog renders SSL-family but its conditions
+            are TypeScript. The condition/trigger fields colour by this, not by `format` (see `condLang`). */
+        sourceLang: SourceLang;
         editable: boolean;
         // Per-node editability (`nodeEditable`): field AND structural edits both round-trip to source - the two
         // coincide now, so this is the single gate (retarget, reorder, add/remove option, and the reaction/low-INT
@@ -136,6 +141,12 @@
     // SSL is a full scripting language with no surgical write-back, so its detail panel is
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
+
+    // Which TextMate grammar colours the CONDITION/TRIGGER fields, chosen by SOURCE language (not render
+    // family): a D condition is BAF, an SSL condition is SSL, and a TD or TSSL condition is TypeScript source
+    // (the model stores `cond.getText()`). The per-option ACTION field is always BAF - both D and TD store a
+    // BAF action string there (TD's `.action("...")` content), so it is hardcoded lang="baf" at its site.
+    const condLang = $derived<"baf" | "ssl" | "ts">(sourceLang === "d" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts");
 
     // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
     // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
@@ -357,9 +368,9 @@
             <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
                  statement span to support wrap/unwrap; the save path and verify must diff the
                  reply condition. Disabled until then - CodeField's disabled styling and the tooltip explain
-                 why, and the same CodeField (lang="ssl") as the per-option conditions keeps the two uniform:
-                 both SSL-coloured, read-only here. -->
-            <CodeField lang="ssl" value={state.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" />
+                 why, and the same CodeField (condLang) as the per-option conditions keeps the two uniform:
+                 SSL-coloured for SSL, TypeScript-coloured for TSSL, read-only here. -->
+            <CodeField lang={condLang} value={state.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the source" placeholder="(unconditional)" />
             {#if state.sideEffects?.length}
                 <div class="ik">Side effects</div>
                 <div class="iv sfx">{state.sideEffects.join(", ")}</div>
@@ -369,10 +380,10 @@
         <div class="row2">
             <div>
                 <div class="ik">Trigger</div>
-                <!-- Only the D family reaches this branch, so the field always holds a BAF condition. It was
-                     an <input>; CodeField's textarea wraps a long trigger into view instead of scrolling it
-                     out of sight, and keeps the three BAF fields one control rather than two. -->
-                <CodeField lang="baf" kind="condition" value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
+                <!-- The D family reaches this branch: a D trigger is BAF, a TD trigger is TypeScript source (the
+                     enclosing `if (...)` condition) - condLang picks the grammar. CodeField's textarea wraps a
+                     long trigger into view instead of scrolling it out of sight. -->
+                <CodeField lang={condLang} value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
             <div class="wcol">
                 <div class="ik">Weight</div>
@@ -440,14 +451,14 @@
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
                 {#if ssl}
-                    <!-- An SSL condition is Fallout SSL, not BAF, so it is coloured by the SSL TextMate grammar
-                         (lang="ssl"), not the BAF tokenizer. The editor colours SSL the same way, and SSL needs
-                         casing to tell a constant from a variable - which the grammar already encodes, so
-                         running it is parity by construction. Disabled (a shared condition) renders dashed via
-                         CodeField's own disabled styling, replacing the old class:locked. -->
-                    <CodeField lang="ssl" value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <!-- SSL-family condition: coloured by condLang - the SSL grammar for an SSL condition, the
+                         TypeScript-expression grammar for a TSSL condition (its source is TypeScript). Both run
+                         through the same tokenizer as every other field, so it is editor parity by construction.
+                         Disabled (a shared condition) renders dashed via CodeField's own disabled styling. -->
+                    <CodeField lang={condLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {:else}
-                    <CodeField lang="baf" kind="condition" value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <!-- D-family condition: BAF for D, TypeScript source for TD - condLang picks the grammar. -->
+                    <CodeField lang={condLang} value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
@@ -459,10 +470,11 @@
             {/if}
             {#if !ssl && !state.branches}
                 {#if labeled}<div class="ik">Action</div>{/if}
-                <!-- Guarded by `!ssl` above, so this always holds a BAF action. `kind="action"` is not
-                     cosmetic: the same call syntax is a trigger in a condition and an action in a THEN, and
-                     only the caller knows which this field is. -->
-                <CodeField lang="baf" kind="action" value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
+                <!-- Guarded by `!ssl` above, so this always holds a BAF action - for BOTH D and TD (TD's
+                     `.action("...")` stores a BAF action string, not TypeScript), hence lang="baf" regardless of
+                     condLang. The BAF grammar reads a name as an action or a trigger by which IDS list it is in,
+                     so no per-field "kind" hint is needed. -->
+                <CodeField lang="baf" value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
