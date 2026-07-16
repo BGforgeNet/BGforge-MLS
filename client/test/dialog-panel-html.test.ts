@@ -36,12 +36,25 @@ describe("buildDialogWebviewHtml", () => {
         expect(html).not.toContain("{{nonce}}");
     });
 
-    test("locks script-src to the nonce only (no external host, no unsafe-inline)", () => {
+    test("script-src is the nonce plus wasm-unsafe-eval only (no external host, no unsafe-inline)", () => {
         const html = buildDialogWebviewHtml({ cspSource: CSP_SOURCE, cssUri: CSS_URI, nonce: NONCE, scriptBody: "0;" });
         expect(html).toContain(`script-src 'nonce-${NONCE}'`);
         const scriptSrc = /script-src ([^;]*);/.exec(html)?.[1] ?? "";
+        // The BAF tokenizer compiles a tree-sitter grammar; WebAssembly.compile is gated by script-src, so
+        // without 'wasm-unsafe-eval' every condition/action field renders flat. It is NOT 'unsafe-eval':
+        // wasm compilation has its own narrower directive, and plain eval() stays forbidden.
+        expect(scriptSrc).toContain("'wasm-unsafe-eval'");
+        expect(scriptSrc).not.toContain("'unsafe-eval'"); // the broad one; wasm-unsafe-eval is the narrow grant
         expect(scriptSrc).not.toContain("unsafe-inline");
         expect(scriptSrc).not.toContain(CSP_SOURCE);
+    });
+
+    test("adds no connect-src: the tokenizer wasm is embedded in the bundle, never fetched", () => {
+        // Embedding rather than fetching is what keeps default-src 'none' intact for network. A regression to
+        // fetching the wasm via asWebviewUri would need connect-src back; assert it stays absent so that
+        // change cannot land silently.
+        const html = buildDialogWebviewHtml({ cspSource: CSP_SOURCE, cssUri: CSS_URI, nonce: NONCE, scriptBody: "0;" });
+        expect(html).not.toContain("connect-src");
     });
 
     test("allows style-src from the webview source plus unsafe-inline (Svelte Flow inline transforms)", () => {

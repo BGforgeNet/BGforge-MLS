@@ -246,39 +246,3 @@ describe("tokenizeBaf before initialization", () => {
         await expect(fresh.tokenizerReady()).resolves.toBeUndefined();
     });
 });
-
-describe("initTokenizer", () => {
-    it("fetches each wasm from the URI it was given and tokenizes with the result", async () => {
-        // The webview path: the host resolves both URIs via asWebviewUri and the webview fetches them. The
-        // two wasms are not interchangeable - handing the grammar to Parser.init, or the runtime to
-        // Language.load, fails only in the live webview, where nothing else here would catch it.
-        const bytes: Record<string, Buffer> = {
-            "https://example/web-tree-sitter.wasm": readFileSync(RUNTIME_WASM),
-            "https://example/tree-sitter-baf.wasm": readFileSync(GRAMMAR_WASM),
-        };
-        const fetched: string[] = [];
-        vi.stubGlobal("fetch", (uri: string) => {
-            fetched.push(uri);
-            const body = bytes[uri];
-            if (!body) {
-                throw new Error(`unexpected fetch: ${uri}`);
-            }
-            // Copy out of the Buffer rather than handing over `.buffer`: readFileSync returns a view into a
-            // shared pool, so the raw ArrayBuffer is not the file's bytes.
-            return Promise.resolve({ arrayBuffer: () => Promise.resolve(Uint8Array.from(body).buffer) });
-        });
-
-        vi.resetModules();
-        const fresh = await import("../src/dialog-editor/webview/highlight/tokenize");
-        await fresh.initTokenizer(
-            "https://example/web-tree-sitter.wasm",
-            "https://example/tree-sitter-baf.wasm",
-            readFileSync(HIGHLIGHTS_SCM, "utf-8"),
-        );
-
-        expect(fetched).toEqual(["https://example/web-tree-sitter.wasm", "https://example/tree-sitter-baf.wasm"]);
-        const text = "General(Myself,NEUTRAL)";
-        expect(roleAt(text, "General", fresh.tokenizeBaf(text, "condition"))).toBe("trigger");
-        vi.unstubAllGlobals();
-    });
-});

@@ -5,25 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DARK_THEME_VARS } from "./theme-vars";
+import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../../../../scripts/esbuild-web-tree-sitter.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../../../..");
-
-// web-tree-sitter's Emscripten glue carries a Node-only branch - `await import("fs/promises")` to read a
-// grammar from a path, `await import("module")` for createRequire - behind a `globalThis.process?.versions
-// .node` guard. A browser never enters it, and the tokenizer hands Language.load BYTES rather than a path
-// anyway, so the code is dead here; esbuild still has to resolve the specifiers to bundle, so stub them.
-// Switching to platform:"node" would silence the same error by asserting a target this is not.
-const stubNodeOnlyImports = {
-    name: "stub-node-only-imports",
-    setup(build: { onResolve: Function; onLoad: Function }) {
-        build.onResolve({ filter: /^(fs\/promises|module)$/ }, (args: { path: string }) => ({
-            path: args.path,
-            namespace: "node-stub",
-        }));
-        build.onLoad({ filter: /.*/, namespace: "node-stub" }, () => ({ contents: "export default {};" }));
-    },
-};
 
 // Bundle the production root App.svelte. css: "injected" so component <style> blocks
 // reach the page as inline <style> elements (allowed by style-src 'unsafe-inline').
@@ -35,10 +20,10 @@ await build({
     write: true,
     outdir,
     logLevel: "info",
-    // The BAF tokenizer's grammar/runtime wasm and its highlight query are embedded in the bundle (see
-    // harness-main.ts): with no host there is no asWebviewUri to fetch them from, and the harness page is a
-    // single file loaded over file://, where a fetch would be blocked anyway.
-    loader: { ".wasm": "binary", ".scm": "text" },
+    // Embed the BAF tokenizer's wasm/query and stub web-tree-sitter's Node-only imports, exactly as the
+    // production webview build does (scripts/esbuild-web-tree-sitter.mjs) - so this harness bundles the
+    // tokenizer the same way the shipped webview does, and cannot pass while production's bundling breaks.
+    loader: webTreeSitterLoaders,
     plugins: [esbuildSvelte({ compilerOptions: { dev: true, css: "injected" } }), stubNodeOnlyImports],
 });
 const js = fs.readFileSync(path.join(outdir, "harness-main.js"), "utf8");

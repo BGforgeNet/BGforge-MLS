@@ -115,8 +115,10 @@ export function tokenizerReady(): Promise<void> {
  * Node-bound (`fs.readFileSync`, `path.join(__dirname, ...)`).
  *
  * The query source is injected rather than imported so this module stays free of a build-time `.scm` text
- * loader, which only esbuild is configured for; the webview entry point supplies it, and tests supply the
- * same file read from disk.
+ * loader, which only esbuild is configured for; the webview entry point (main.ts) supplies it from a bundled
+ * import, and tests supply the same file read from disk. The webview embeds the two wasm blobs and the query
+ * in its bundle rather than fetching them - so this bytes-in entry is the ONLY init path; there is no URL
+ * variant, and the CSP therefore needs no connect-src.
  */
 export async function initTokenizerFromBytes(
     runtimeWasm: Uint8Array,
@@ -137,22 +139,6 @@ export async function initTokenizerFromBytes(
     parser.setLanguage(language);
     query = new Query(language, highlightsScm);
     markReady();
-}
-
-/**
- * Called ONCE at webview startup. Both URIs are produced host-side by webview.asWebviewUri(): the webview
- * cannot resolve relative paths under the host's CSP, so it never builds its own.
- */
-export async function initTokenizer(
-    runtimeWasmUri: string,
-    grammarWasmUri: string,
-    highlightsScm: string,
-): Promise<void> {
-    const [runtimeWasm, grammarWasm] = await Promise.all([
-        fetch(runtimeWasmUri).then((r) => r.arrayBuffer()),
-        fetch(grammarWasmUri).then((r) => r.arrayBuffer()),
-    ]);
-    await initTokenizerFromBytes(new Uint8Array(runtimeWasm), new Uint8Array(grammarWasm), highlightsScm);
 }
 
 /**
