@@ -104,6 +104,26 @@ describe("tokenizeBaf - action fragments", () => {
     });
 });
 
+describe("tokenizeBaf - points vs object refs", () => {
+    // The BAF grammar disambiguates these structurally (numeric components are a point, named components an
+    // object ref) because the engine itself needs the called function's signature to tell them apart. These
+    // assert the distinction survives all the way to a paintable role.
+    it("colours a numeric coordinate pair as a number, not an object ref", () => {
+        const text = "MoveToPoint([10.10])";
+        expect(roleAt(text, "[10.10]", tokenizeBaf(text, "action"))).toBe("number");
+    });
+
+    it("colours a mixed numeric and variable coordinate pair as a number", () => {
+        const text = 'CreateCreature("x",[200.%py%],0)';
+        expect(roleAt(text, "[200.%py%]", tokenizeBaf(text, "action"))).toBe("number");
+    });
+
+    it("colours a two-component EA.GENERAL specifier as a constant, not a number", () => {
+        const text = "Kill([NOTGOOD.HUMANOID])";
+        expect(roleAt(text, "[NOTGOOD.HUMANOID]", tokenizeBaf(text, "action"))).toBe("constant");
+    });
+});
+
 describe("tokenizeBaf - degradation", () => {
     it("returns the spans it can for a half-typed call rather than throwing", () => {
         // tree-sitter is error-tolerant: a call whose paren is not yet closed keeps its own names under an
