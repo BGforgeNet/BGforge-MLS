@@ -113,29 +113,6 @@ export async function initTokenizer(
 }
 
 /**
- * Drop spans contained in or overlapping an earlier one, outermost-first.
- *
- * The captures genuinely overlap: highlights.scm captures an object_ref ([PC]) as @constant while separately
- * capturing its own "[" and "]" tokens as @punctuation.bracket, so three captures cover the same characters.
- * The renderer paints spans in sequence, so an unarbitrated overlap would emit those characters more than
- * once and visibly duplicate the text. Outermost wins: [PC] reads as one constant, which is what the query's
- * object-reference rule intends.
- */
-function resolveOverlaps(spans: Span[]): Span[] {
-    // Longest-first at a given start, so the outermost span is the one accepted.
-    spans.sort((a, b) => a.start - b.start || b.end - a.end);
-    const resolved: Span[] = [];
-    let lastEnd = -1;
-    for (const span of spans) {
-        if (span.start >= lastEnd) {
-            resolved.push(span);
-            lastEnd = span.end;
-        }
-    }
-    return resolved;
-}
-
-/**
  * Tokenize one field's fragment. Spans are returned in the FRAGMENT's own coordinates, so the caller never
  * sees the synthetic wrapper.
  *
@@ -176,7 +153,13 @@ export function tokenizeBaf(text: string, kind: BafFragmentKind): Span[] {
             }
             spans.push({ start: startIndex - fragmentStart, end: endIndex - fragmentStart, role });
         }
-        return resolveOverlaps(spans);
+        // The renderer walks the spans in order, so sort them. web-tree-sitter does not document an ordering
+        // across a query's patterns, and every capture here is a distinct leaf token: highlights.scm captures
+        // each object-specifier component and each point coordinate individually rather than capturing the
+        // bracket as one node, so no two spans cover the same character and there is nothing to arbitrate.
+        // A whole-node capture would reintroduce overlap, and this is where a resolver would belong.
+        spans.sort((a, b) => a.start - b.start);
+        return spans;
     } catch {
         return [];
     } finally {

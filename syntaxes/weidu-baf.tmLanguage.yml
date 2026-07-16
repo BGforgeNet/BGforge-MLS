@@ -24,6 +24,38 @@ repository:
       - match: \b(([0-9]+)|(0x[0-9a-fA-F]+))\b
         name: constant.numeric.weidu-baf
 
+  # A bracketed value: an object specifier ([PC], [NOTGOOD.HUMANOID], [ENEMY.0.0.MAGE]) or a point
+  # ([10.10], [4.-4], [%px%.%py%]).
+  #
+  # One rule covers both. The engine tells them apart from the called function's signature - MoveToPoint
+  # reads [10.10] as coordinates, See reads [0.0] as EA.GENERAL - and the tree-sitter grammar has to make
+  # that call because it builds a parse tree (grammars/weidu-baf/grammar.js resolves it structurally). Here
+  # it makes no difference: a component scopes as what it is either way, so both forms produce identical
+  # scopes and a second rule would only duplicate this one.
+  #
+  # Components: an IDS name, its numeric equivalent, or a %variable% coordinate. The name/number split is
+  # kept (constant.other vs constant.numeric) rather than flattened - bgforge-monokai paints both purple,
+  # and a theme that distinguishes numbers is free to. The brackets and dots are not part of the value.
+  #
+  # NOT the object.ids vocabulary (#object-ids): those are the static and marked objects (Myself, Player1,
+  # LastSeenBy), written bare without brackets. IESDP lists the three categories separately - a specifier is
+  # unbound and re-checked at every reference.
+  bracketed-values:
+    begin: (\[)(?=(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*\])
+    beginCaptures:
+      "1": { name: keyword.punctuation.bracket.weidu-baf }
+    end: (\])
+    endCaptures:
+      "1": { name: keyword.punctuation.bracket.weidu-baf }
+    patterns:
+      - match: \.
+        name: keyword.punctuation.separator.weidu-baf
+      - include: "#vars"
+      - match: -?\b[0-9]+\b
+        name: constant.numeric.weidu-baf
+      - match: \b[A-Za-z_][A-Za-z0-9_]*\b
+        name: constant.other.weidu-baf
+
   condition:
     begin: \b(IF)\b
     end: \b(THEN)\b
@@ -45,6 +77,7 @@ repository:
       - include: '#comments'
       - include: '#vartype'
       - include: '#strings'
+      - include: '#bracketed-values'
       - include: '#numbers'
       - include: '#tra-ref'
       - include: '#operators'
@@ -74,6 +107,7 @@ repository:
       - include: '#comments'
       - include: '#vartype'
       - include: '#strings'
+      - include: '#bracketed-values'
       - include: '#numbers'
       - include: '#response'
       - include: '#tra-ref'

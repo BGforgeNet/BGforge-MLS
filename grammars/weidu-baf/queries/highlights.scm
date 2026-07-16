@@ -49,11 +49,19 @@
 ; Variable references (%varname%)
 (variable_ref) @variable
 
-; Object references ([PC], [ENEMY], [ANYONE])
-(object_ref) @constant
+; Object specifiers ([PC], [NOTGOOD.HUMANOID], [ENEMY.0.0.MAGE]).
+;
+; Captured per COMPONENT, not as a whole node. A component is an IDS value written either as its name or as
+; its number, so a name is a constant here while a numeric component falls to the (number) rule above - the
+; same split the TextMate grammar makes with constant.other and constant.numeric, which a theme is free to
+; paint alike (bgforge-monokai does) or apart. Capturing the whole node instead would swallow the brackets
+; and dots, painting them as part of the constant.
+(object_ref
+  (identifier) @constant)
 
-; Point coordinates ([x.y])
-(point) @number
+; A point's coordinates are NOT captured here: each is a number or a %variable%, and the rules above already
+; say so. Capturing (point) as a whole was wrong twice over - it painted the brackets and dots as part of the
+; value, and it painted a %variable% coordinate as a number.
 
 ; ----- Constants -----
 

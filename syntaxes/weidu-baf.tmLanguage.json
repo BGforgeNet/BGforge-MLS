@@ -44,6 +44,37 @@
         }
       ]
     },
+    "bracketed-values": {
+      "begin": "(\\[)(?=(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*\\])",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.punctuation.bracket.weidu-baf"
+        }
+      },
+      "end": "(\\])",
+      "endCaptures": {
+        "1": {
+          "name": "keyword.punctuation.bracket.weidu-baf"
+        }
+      },
+      "patterns": [
+        {
+          "match": "\\.",
+          "name": "keyword.punctuation.separator.weidu-baf"
+        },
+        {
+          "include": "#vars"
+        },
+        {
+          "match": "-?\\b[0-9]+\\b",
+          "name": "constant.numeric.weidu-baf"
+        },
+        {
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+          "name": "constant.other.weidu-baf"
+        }
+      ]
+    },
     "condition": {
       "begin": "\\b(IF)\\b",
       "end": "\\b(THEN)\\b",
@@ -82,6 +113,10 @@
         },
         {
           "include": "#strings",
+          "name": "meta.condition-body.weidu-baf"
+        },
+        {
+          "include": "#bracketed-values",
           "name": "meta.condition-body.weidu-baf"
         },
         {
@@ -151,6 +186,9 @@
         },
         {
           "include": "#strings"
+        },
+        {
+          "include": "#bracketed-values"
         },
         {
           "include": "#numbers"

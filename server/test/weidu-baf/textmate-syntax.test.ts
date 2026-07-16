@@ -124,3 +124,56 @@ describe("weidu-baf TextMate syntax - scope contract", () => {
         expect(scopes).toContain("constant.other.weidu-baf");
     });
 });
+
+describe("weidu-baf TextMate syntax - bracketed values", () => {
+    const RESPONSE = "IF True() THEN\nRESPONSE #100\n";
+
+    it("scopes an object specifier's components as constants and its brackets as punctuation", () => {
+        // [EA.GENERAL] and friends: the component is the value, the brackets and dots are not. Both spellings
+        // of a component scope as constant.* so a theme can paint them alike (bgforge-monokai does) or apart.
+        const line = "IF See([NOTGOOD.HUMANOID]) THEN";
+        expect(getTokenScopes(line, 0, "NOTGOOD")).toContain("constant.other.weidu-baf");
+        expect(getTokenScopes(line, 0, "HUMANOID")).toContain("constant.other.weidu-baf");
+        expect(getTokenScopes(line, 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
+        expect(getTokenScopes(line, 0, "]")).toContain("keyword.punctuation.bracket.weidu-baf");
+    });
+
+    it("scopes a numeric specifier component as a number, not a name", () => {
+        // [ENEMY.0.0.MAGE]: a component may be an IDS name or its number. Both are constant.*; keeping the
+        // numeric/other split is what lets a theme distinguish them if it wants to.
+        const line = "IF See([0.0.0.MAGE_ALL]) THEN";
+        expect(getTokenScopes(line, 0, "0")).toContain("constant.numeric.weidu-baf");
+        expect(getTokenScopes(line, 0, "MAGE_ALL")).toContain("constant.other.weidu-baf");
+    });
+
+    it("scopes a single-component specifier", () => {
+        const line = "IF See([PC]) THEN";
+        expect(getTokenScopes(line, 0, "PC")).toContain("constant.other.weidu-baf");
+        expect(getTokenScopes(line, 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
+    });
+
+    it("scopes a point's coordinates as numbers", () => {
+        // A point and a specifier are one rule here: [10.10] and [0.0] scope identically whichever the engine
+        // reads them as, because a component scopes as what it is either way.
+        const scopes = getTokenScopes(`${RESPONSE}MoveToPoint([10.10])\nEND`, 2, "10");
+        expect(scopes).toContain("constant.numeric.weidu-baf");
+        expect(scopes).not.toContain("constant.other.weidu-baf");
+    });
+
+    it("keeps a variable coordinate a variable, and scopes a negative one with its sign", () => {
+        // A point's coordinate is whatever it is - a number or a %var% - never flattened to one scope.
+        const varLine = `${RESPONSE}CreateCreature("x",[200.%py%],0)\nEND`;
+        expect(getTokenScopes(varLine, 2, "%py%")).toContain("variable.parameter.weidu-baf");
+        expect(getTokenScopes(varLine, 2, "200")).toContain("constant.numeric.weidu-baf");
+        // The sign belongs to the number: [4.-4] is (4, -4), not 4 then a stray dash then 4.
+        expect(getTokenScopes(`${RESPONSE}ScreenShake([4.-4],20)\nEND`, 2, "-4")).toContain(
+            "constant.numeric.weidu-baf",
+        );
+    });
+
+    it("leaves a call's own parentheses unscoped", () => {
+        // Only the specifier and point forms carry punctuation scopes; BAF punctuation at large is not
+        // coloured, so a call's parens stay plain.
+        expect(getTokenScopes("IF See([PC]) THEN", 0, "(")).not.toContain("keyword.punctuation.bracket.weidu-baf");
+    });
+});

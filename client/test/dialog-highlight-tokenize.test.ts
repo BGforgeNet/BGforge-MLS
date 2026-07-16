@@ -69,19 +69,26 @@ describe("tokenizeBaf - condition fragments", () => {
         expect(spans.some((s) => s.role === "keyword")).toBe(false);
     });
 
-    it("emits non-overlapping spans so the renderer cannot double-paint a character", () => {
-        // highlights.scm captures an object_ref ([PC]) as @constant while separately capturing its own "["
-        // and "]" tokens as @punctuation.bracket. Those captures genuinely overlap, so the tokenizer must
-        // arbitrate: without this the renderer paints the same characters twice and duplicates the text.
+    it("scopes an object specifier per component, leaving its brackets punctuation", () => {
+        // The bracket is not part of the value: the component is the constant, the brackets and dots are
+        // punctuation. This mirrors the TextMate grammar, which scopes the same form via #object-specifiers.
         const text = "See([PC])";
         const spans = tokenizeBaf(text, "condition");
+        expect(roleAt(text, "PC", spans)).toBe("constant");
+        expect(roleAt(text, "[", spans)).toBe("punctuation");
+        expect(roleAt(text, "]", spans)).toBe("punctuation");
+    });
+
+    it("emits ordered spans that never cover the same character twice", () => {
+        // The renderer walks spans in order and would duplicate text if two covered one character.
+        const text = "See([NOTGOOD.HUMANOID])";
+        const spans = tokenizeBaf(text, "condition");
+        expect(spans.length).toBeGreaterThan(0);
         for (let i = 1; i < spans.length; i += 1) {
-            expect(spans[i]!.start, `span ${i} must not overlap its predecessor`).toBeGreaterThanOrEqual(
+            expect(spans[i]!.start, `span ${i} must start at or after its predecessor's end`).toBeGreaterThanOrEqual(
                 spans[i - 1]!.end,
             );
         }
-        // Outermost wins: the whole [PC] reads as one constant, not a bracket/constant/bracket sandwich.
-        expect(roleAt(text, "[PC]", spans)).toBe("constant");
     });
 });
 
@@ -104,23 +111,36 @@ describe("tokenizeBaf - action fragments", () => {
     });
 });
 
-describe("tokenizeBaf - points vs object refs", () => {
-    // The BAF grammar disambiguates these structurally (numeric components are a point, named components an
-    // object ref) because the engine itself needs the called function's signature to tell them apart. These
-    // assert the distinction survives all the way to a paintable role.
-    it("colours a numeric coordinate pair as a number, not an object ref", () => {
+describe("tokenizeBaf - points vs object specifiers", () => {
+    // The grammar tells these apart structurally (two numeric/variable components is a point, anything else a
+    // specifier) because the engine itself needs the called function's signature to know. These assert the
+    // distinction survives to a paintable role, and that each token keeps its own - a coordinate is a number,
+    // a specifier component is a constant, and neither swallows its brackets.
+    it("colours a coordinate as a number, not as part of an object specifier", () => {
         const text = "MoveToPoint([10.10])";
-        expect(roleAt(text, "[10.10]", tokenizeBaf(text, "action"))).toBe("number");
+        const spans = tokenizeBaf(text, "action");
+        expect(roleAt(text, "10", spans)).toBe("number");
+        expect(roleAt(text, ".", spans)).toBe("punctuation");
     });
 
-    it("colours a mixed numeric and variable coordinate pair as a number", () => {
+    it("keeps a variable coordinate a variable, not a number", () => {
+        // The whole point used to be captured as one @number, which painted %py% - a variable - as a number.
         const text = 'CreateCreature("x",[200.%py%],0)';
-        expect(roleAt(text, "[200.%py%]", tokenizeBaf(text, "action"))).toBe("number");
+        const spans = tokenizeBaf(text, "action");
+        expect(roleAt(text, "200", spans)).toBe("number");
+        expect(roleAt(text, "%py%", spans)).toBe("constant");
     });
 
-    it("colours a two-component EA.GENERAL specifier as a constant, not a number", () => {
-        const text = "Kill([NOTGOOD.HUMANOID])";
-        expect(roleAt(text, "[NOTGOOD.HUMANOID]", tokenizeBaf(text, "action"))).toBe("constant");
+    it("colours a named specifier component as a constant and a numeric one as a number", () => {
+        // Both are IDS values, and the TextMate side scopes them constant.other and constant.numeric - two
+        // constant.* scopes a theme is free to paint alike (bgforge-monokai does) or apart. The role split
+        // here carries the same information.
+        const named = "Kill([NOTGOOD.HUMANOID])";
+        expect(roleAt(named, "NOTGOOD", tokenizeBaf(named, "action"))).toBe("constant");
+        const numeric = "Kill([0.0.0.MAGE_ALL])";
+        const spans = tokenizeBaf(numeric, "action");
+        expect(roleAt(numeric, "0", spans)).toBe("number");
+        expect(roleAt(numeric, "MAGE_ALL", spans)).toBe("constant");
     });
 });
 
