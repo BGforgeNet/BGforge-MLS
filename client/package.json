@@ -18,7 +18,8 @@
         "@xyflow/svelte": "^1.6.2",
         "elkjs": "^0.11.1",
         "vscode-languageclient": "catalog:",
-        "vscode-languageserver-protocol": "catalog:"
+        "vscode-languageserver-protocol": "catalog:",
+        "web-tree-sitter": "^0.26.10"
     },
     "devDependencies": {
         "@types/node": "catalog:",
