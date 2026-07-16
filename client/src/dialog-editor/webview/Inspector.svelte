@@ -535,14 +535,19 @@
                 {:else}
                     <div class="branchhead">
                         <span class="branchlabel">[if]</span>
-                        <input
-                            class="iv code branchcond"
-                            value={b.condition ?? ""}
-                            disabled={!structuralEditable}
-                            title={!structuralEditable ? structReason : ""}
-                            placeholder="(condition)"
-                            oninput={(e) => (b.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}
-                        />
+                        <!-- A bundle branch's condition is the same kind of value as a per-option condition, so it
+                             colours through the same CodeField (condLang: SSL for an SSL node, TypeScript for a
+                             TSSL one), wrapped in a flex item so `[if] <colour> x` stays on one row. -->
+                        <div class="branchcondwrap">
+                            <CodeField
+                                lang={condLang}
+                                value={b.condition ?? ""}
+                                disabled={!structuralEditable}
+                                title={!structuralEditable ? structReason : ""}
+                                placeholder="(condition)"
+                                oninput={(v) => (b.condition = v.trim() === "" ? undefined : v)}
+                            />
+                        </div>
                         {#if structuralEditable}
                             <button
                                 class="branchremove"
@@ -577,11 +582,14 @@
                  is not valid SSL). The button is disabled until a non-empty condition is typed.
                  $newBranchCond is a writable store - see the declaration comment above. -->
             <div class="branchadd-row">
-                <input
-                    class="iv code branchcond"
-                    bind:value={$newBranchCond}
-                    placeholder="condition for new if branch"
-                />
+                <div class="branchcondwrap">
+                    <CodeField
+                        lang={condLang}
+                        value={$newBranchCond}
+                        placeholder="condition for new if branch"
+                        oninput={(v) => newBranchCond.set(v)}
+                    />
+                </div>
                 <button
                     class="add"
                     disabled={$newBranchCond.trim() === ""}
@@ -987,11 +995,12 @@
         font-style: italic;
         margin-right: 4px;
     }
-    .branchcond {
-        width: auto;
-        min-width: 60%;
-        font-size: 10px;
-        padding: 1px 4px;
+    /* Flex item holding a branch-condition CodeField, so the coloured field grows to fill the row between the
+       [if] label and the remove/add button (and can shrink - min-width:0 - rather than overflow). The CodeField
+       owns its own border/padding/font, matching the per-option condition fields. */
+    .branchcondwrap {
+        flex: 1;
+        min-width: 0;
     }
     .branchnpc {
         margin-top: 2px;
@@ -1084,10 +1093,6 @@
         align-items: center;
         gap: 4px;
         margin-top: 6px;
-    }
-    .branchadd-row input {
-        flex: 1;
-        min-width: 0;
     }
     /* Dim the "+ if" button when no condition has been typed yet. */
     .add:disabled {
