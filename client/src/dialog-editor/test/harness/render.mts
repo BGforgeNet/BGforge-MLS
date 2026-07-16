@@ -726,6 +726,70 @@ check(
     JSON.stringify({ before: statesBeforeDel, ...delOutcome }),
 );
 
+// BAF syntax colouring in the condition/action fields. Two things that only hold together in a browser:
+// the field RE-RENDERS once the wasm lands, which it cannot do at first paint (harness-main.ts kicks init
+// off after mount, as production must too); and the coloured layer lays text out exactly like the textarea
+// over it. That second one is the component's whole risk - a drift puts the caret off its glyphs - and it
+// is invisible to a screenshot, because the textarea's own text is transparent. So assert it by
+// measurement, on a value long enough to wrap.
+//
+// This does NOT cover the CSP: the harness page's policy is not enforced by Chromium (see build.mts), and
+// the wasm is embedded rather than fetched. Whether the real panel may compile the grammar at all is
+// answerable only by driving the live host.
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 460, height: 800 });
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+await page.locator(".rep[data-choice]").first().click();
+await page.waitForSelector(".inspector .cf", { timeout: 5_000 });
+await page
+    .waitForFunction(() => document.querySelectorAll(".inspector .cf pre span[class]").length > 0, undefined, {
+        timeout: 10_000,
+    })
+    .catch(() => undefined);
+// A long condition exercising several roles: wrapping is what makes the two layers disagree, if they do.
+await page
+    .locator(".inspector .cf textarea")
+    .first()
+    .fill('OR(2) Global("P#LongVariableName","GLOBAL",%v%) !Dead(NAME) // note');
+await page
+    .waitForFunction(() => !!document.querySelector(".inspector .cf pre span.keyword"), undefined, { timeout: 5_000 })
+    .catch(() => undefined);
+const hl = await page.evaluate(() => {
+    // Inline only (no named fns): tsx/esbuild keepNames would inject an undefined __name in the page.
+    const roles: Record<string, string> = {};
+    for (const s of Array.from(document.querySelectorAll<HTMLElement>(".inspector .cf pre span[class]"))) {
+        const role = s.className.split(" ").find((c) => c && !c.startsWith("svelte-"));
+        if (role && !roles[role]) roles[role] = getComputedStyle(s).color;
+    }
+    const ta = document.querySelector<HTMLTextAreaElement>(".inspector .cf textarea");
+    const pre = document.querySelector<HTMLElement>(".inspector .cf pre");
+    return {
+        roles,
+        // Every painted role resolving to one colour would mean the palette's vars are unset, which reads
+        // as "highlighted" in a screenshot while carrying no information.
+        distinctColors: new Set(Object.values(roles)).size,
+        taTransparent: ta ? getComputedStyle(ta).color === "rgba(0, 0, 0, 0)" : false,
+        caretVisible: ta ? getComputedStyle(ta).caretColor !== "rgba(0, 0, 0, 0)" : false,
+        sameFont: !!ta && !!pre && getComputedStyle(ta).font === getComputedStyle(pre).font,
+        // Identical laid-out height => the layers broke the wrapped lines in the same places.
+        sameWrap: !!ta && !!pre && ta.scrollHeight === pre.scrollHeight,
+        wrapped: !!ta && ta.scrollHeight > 20,
+    };
+});
+check(
+    "BAF fields colour per token once the grammar loads, on a layer that wraps exactly like the textarea",
+    hl.roles["keyword"] === "rgb(241, 76, 76)" && // charts-red: proves the palette resolves, not just that spans exist
+        !!hl.roles["trigger"] &&
+        hl.distinctColors >= 4 &&
+        hl.taTransparent &&
+        hl.caretVisible &&
+        hl.sameFont &&
+        hl.sameWrap &&
+        hl.wrapped,
+    JSON.stringify(hl),
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);

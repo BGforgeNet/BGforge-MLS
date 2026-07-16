@@ -15,6 +15,7 @@ export type HighlightRole =
     | "trigger"
     | "action"
     | "constant"
+    | "variable"
     | "string"
     | "number"
     | "comment"
@@ -24,6 +25,12 @@ export interface Span {
     start: number;
     end: number;
     role: HighlightRole;
+}
+
+/** One run of field text, with the role to paint it (absent = paint it as plain text). */
+export interface Part {
+    text: string;
+    role?: HighlightRole;
 }
 
 /** Which kind of BAF fragment a field holds. Decides the synthetic context it is parsed in. */
@@ -39,9 +46,14 @@ export type BafFragmentKind = "condition" | "action";
  * Both wrappers are chosen to parse with NO error node, so the query matches against a clean tree rather than
  * relying on error recovery. The condition wrapper needs an action body: `RESPONSE #100` with nothing after it
  * does not parse.
+ *
+ * Every suffix STARTS on a new line, which is load-bearing rather than cosmetic: BAF comments run to end of
+ * line, so a suffix sharing the fragment's last line is commented out by a trailing `// ...` and the wrapper
+ * silently stops closing the block. `IF <cond> THEN` did exactly that until a field holding a commented
+ * condition was rendered.
  */
 const WRAPPERS: Readonly<Record<BafFragmentKind, { prefix: string; suffix: string }>> = {
-    condition: { prefix: "IF ", suffix: " THEN\nRESPONSE #100\nEscapeArea()\nEND" },
+    condition: { prefix: "IF ", suffix: "\nTHEN\nRESPONSE #100\nEscapeArea()\nEND" },
     action: { prefix: "IF True() THEN\nRESPONSE #100\n", suffix: "\nEND" },
 };
 
@@ -57,7 +69,10 @@ const CAPTURE_ROLES: Readonly<Record<string, HighlightRole>> = {
     function: "trigger",
     "function.builtin": "action",
     constant: "constant",
-    variable: "constant",
+    // A %variable% is its own role, not a constant: the TextMate grammar scopes it variable.parameter (a
+    // distinct colour in every theme that styles it), and folding it into `constant` here would re-flatten
+    // exactly the distinction the (variable_ref) capture exists to preserve.
+    variable: "variable",
     string: "string",
     "string.special": "string",
     number: "number",
@@ -71,14 +86,33 @@ const CAPTURE_ROLES: Readonly<Record<string, HighlightRole>> = {
 let parser: Parser | undefined;
 let query: Query | undefined;
 
+let markReady: () => void;
+const ready = new Promise<void>((resolve) => {
+    markReady = resolve;
+});
+
+/**
+ * Resolves once the tokenizer can colour. Purely a reactivity trigger for the renderer.
+ *
+ * The webview mounts before the host can hand it the wasm URIs, so initialisation ALWAYS lands after the
+ * first render, and `tokenizeBaf` is a plain function no framework can track. A field therefore renders flat
+ * and re-renders coloured when this resolves. Awaiting initialisation before mounting instead would trade a
+ * guaranteed-ready first paint for a blank panel whenever the wasm fetch fails - the tokenizer is a
+ * progressive enhancement, so it must never gate the editor.
+ *
+ * Never rejects: a failed init leaves this pending forever and fields simply stay flat.
+ */
+export function tokenizerReady(): Promise<void> {
+    return ready;
+}
+
 /**
  * Initialise from wasm BYTES and the query source.
  *
  * Bytes rather than URLs mirrors the repo's Node-side idiom (shared/parsers/parser-factory.ts:28-29 does
- * `Parser.init({ wasmBinary })` from a readFileSync buffer) and keeps URL resolution out of Emscripten's
- * hands - the webview cannot resolve relative paths under the host CSP, so `locateFile` would be the wrong
- * shape. shared/parsers/ cannot be reused despite doing the same job: it is Node-bound (`fs.readFileSync`,
- * `path.join(__dirname, ...)`).
+ * `Parser.init({ wasmBinary })` from a readFileSync buffer): the caller has already resolved where the wasm
+ * lives, so Emscripten never has to. shared/parsers/ cannot be reused despite doing the same job - it is
+ * Node-bound (`fs.readFileSync`, `path.join(__dirname, ...)`).
  *
  * The query source is injected rather than imported so this module stays free of a build-time `.scm` text
  * loader, which only esbuild is configured for; the webview entry point supplies it, and tests supply the
@@ -89,11 +123,20 @@ export async function initTokenizerFromBytes(
     grammarWasm: Uint8Array,
     highlightsScm: string,
 ): Promise<void> {
-    await Parser.init({ wasmBinary: runtimeWasm });
+    // `locateFile` is required even though the bytes are supplied, which is not obvious: web-tree-sitter's
+    // Emscripten glue runs `wasmBinaryFile ??= findWasmBinary()` UNCONDITIONALLY, and findWasmBinary falls
+    // back to `new URL("web-tree-sitter.wasm", import.meta.url)`. Bundled to IIFE - which both the webview
+    // and the harness are - `import.meta.url` is empty, so that URL throws and takes the whole webview down
+    // before the editor mounts. Returning the name unchanged keeps it a plain string; it is only ever
+    // compared against the cache key, never fetched, because `wasmBinary` short-circuits the load.
+    // Node does not need this (import.meta.url is a real file:// URL there), which is why the server's
+    // shared/parsers/parser-factory.ts omits it and why the unit tests, running under Node, cannot catch it.
+    await Parser.init({ wasmBinary: runtimeWasm, locateFile: (path: string) => path });
     const language = await Language.load(grammarWasm);
     parser = new Parser();
     parser.setLanguage(language);
     query = new Query(language, highlightsScm);
+    markReady();
 }
 
 /**
@@ -110,6 +153,31 @@ export async function initTokenizer(
         fetch(grammarWasmUri).then((r) => r.arrayBuffer()),
     ]);
     await initTokenizerFromBytes(new Uint8Array(runtimeWasm), new Uint8Array(grammarWasm), highlightsScm);
+}
+
+/**
+ * Cut `text` into consecutive runs covering it exactly, so a renderer can emit one element per run and the
+ * concatenation still reads as the original string - a character silently dropped or doubled here would
+ * misalign a text overlay against the input it sits under.
+ *
+ * Relies on tokenizeBaf's contract that spans are sorted, in-bounds, and non-overlapping, which is why there
+ * is no arbitration: highlights.scm captures individual leaf tokens only. A whole-node capture would break
+ * that, and the resolver would belong in tokenizeBaf (where the contract is stated), not here.
+ */
+export function toParts(text: string, spans: Span[]): Part[] {
+    const parts: Part[] = [];
+    let at = 0;
+    for (const { start, end, role } of spans) {
+        if (start > at) {
+            parts.push({ text: text.slice(at, start) });
+        }
+        parts.push({ text: text.slice(start, end), role });
+        at = end;
+    }
+    if (at < text.length) {
+        parts.push({ text: text.slice(at) });
+    }
+    return parts;
 }
 
 /**

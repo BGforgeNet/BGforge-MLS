@@ -12,7 +12,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { tokenizeBaf, initTokenizerFromBytes, type Span } from "../src/dialog-editor/webview/highlight/tokenize";
+import {
+    tokenizeBaf,
+    initTokenizerFromBytes,
+    toParts,
+    type Span,
+} from "../src/dialog-editor/webview/highlight/tokenize";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 // The grammar artefact is `tree-sitter-baf.wasm`, not `weidu-baf.wasm` - the name comes from the grammar's
@@ -123,12 +128,15 @@ describe("tokenizeBaf - points vs object specifiers", () => {
         expect(roleAt(text, ".", spans)).toBe("punctuation");
     });
 
-    it("keeps a variable coordinate a variable, not a number", () => {
+    it("keeps a variable coordinate a variable - neither a number nor a constant", () => {
         // The whole point used to be captured as one @number, which painted %py% - a variable - as a number.
+        // Its role is `variable`, not `constant`: the TextMate grammar scopes it variable.parameter, a
+        // separate colour from constant.* in any theme that styles both, so folding the two here would undo
+        // the distinction on the webview side only.
         const text = 'CreateCreature("x",[200.%py%],0)';
         const spans = tokenizeBaf(text, "action");
         expect(roleAt(text, "200", spans)).toBe("number");
-        expect(roleAt(text, "%py%", spans)).toBe("constant");
+        expect(roleAt(text, "%py%", spans)).toBe("variable");
     });
 
     it("colours a named specifier component as a constant and a numeric one as a number", () => {
@@ -159,11 +167,83 @@ describe("tokenizeBaf - degradation", () => {
     });
 });
 
+describe("tokenizeBaf - the synthetic wrapper must survive the fragment", () => {
+    // A BAF comment runs to end of line, so a wrapper whose suffix shares the fragment's last line gets
+    // commented out and stops closing the block. Both kinds are asserted because only the condition wrapper
+    // ever had the bug - the action one always put its `END` on a new line - so a one-kind test would have
+    // gone green against the broken wrapper.
+    it.each([
+        ["condition", 'Global("a","GLOBAL",1) // why'],
+        ["action", 'SetGlobal("a","GLOBAL",1) // why'],
+    ] as const)("colours a trailing comment in a %s without losing the rest of the line", (kind, text) => {
+        const spans = tokenizeBaf(text, kind);
+        expect(roleAt(text, "// why", spans)).toBe("comment");
+        // The call itself must still be recognised: if the comment ate the wrapper, the fragment lands under
+        // an ERROR node and the call name loses its role while the comment keeps one.
+        expect(spans[0]!.role).toBe(kind === "condition" ? "trigger" : "action");
+    });
+});
+
+describe("toParts", () => {
+    // The overlay paints these runs in a layer sitting exactly on top of the textarea's own text, so the
+    // runs must reconstruct the field's text character-for-character. Any drop or duplication shifts every
+    // following character out from under the caret.
+    it("reconstructs the text exactly, whatever the spans", () => {
+        const text = 'Global("foo","GLOBAL",1)';
+        expect(
+            toParts(text, tokenizeBaf(text, "condition"))
+                .map((p) => p.text)
+                .join(""),
+        ).toBe(text);
+    });
+
+    it("keeps the gaps between spans as unroled runs", () => {
+        // Punctuation and whitespace between captures still has to be emitted, or the overlay loses it.
+        expect(toParts("ab", [{ start: 1, end: 2, role: "number" }])).toEqual([
+            { text: "a" },
+            { text: "b", role: "number" },
+        ]);
+    });
+
+    it("emits a trailing run after the last span", () => {
+        expect(toParts("ab", [{ start: 0, end: 1, role: "number" }])).toEqual([
+            { text: "a", role: "number" },
+            { text: "b" },
+        ]);
+    });
+
+    it("renders text with no spans as a single plain run", () => {
+        // The degraded path: an uninitialised or failed tokenizer must still render the field's text.
+        expect(toParts("General(Myself)", [])).toEqual([{ text: "General(Myself)" }]);
+    });
+
+    it("returns nothing for empty text", () => {
+        expect(toParts("", [])).toEqual([]);
+    });
+});
+
 describe("tokenizeBaf before initialization", () => {
     it("returns no spans so the caller renders flat text instead of blank", async () => {
         vi.resetModules();
         const fresh = await import("../src/dialog-editor/webview/highlight/tokenize");
         expect(fresh.tokenizeBaf("General(Myself,NEUTRAL)", "condition")).toEqual([]);
+    });
+
+    it("leaves tokenizerReady pending until init completes, then resolves it", async () => {
+        // The renderer mounts before the host can supply the wasm, so this promise is what re-renders a
+        // field from flat to coloured. If it resolved eagerly, the fields would never re-render and the
+        // feature would be invisible in the live panel while every test here still passed.
+        vi.resetModules();
+        const fresh = await import("../src/dialog-editor/webview/highlight/tokenize");
+        const pending = Symbol("pending");
+        expect(await Promise.race([fresh.tokenizerReady(), Promise.resolve(pending)])).toBe(pending);
+
+        await fresh.initTokenizerFromBytes(
+            new Uint8Array(readFileSync(RUNTIME_WASM)),
+            new Uint8Array(readFileSync(GRAMMAR_WASM)),
+            readFileSync(HIGHLIGHTS_SCM, "utf-8"),
+        );
+        await expect(fresh.tokenizerReady()).resolves.toBeUndefined();
     });
 });
 

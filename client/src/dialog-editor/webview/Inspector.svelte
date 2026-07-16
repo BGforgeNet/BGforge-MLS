@@ -24,6 +24,7 @@
     import type { CallerRow } from "./find-callers";
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import { autosize } from "./autosize";
+    import CodeField from "./CodeField.svelte";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -367,7 +368,10 @@
         <div class="row2">
             <div>
                 <div class="ik">Trigger</div>
-                <input class="iv code" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+                <!-- Only the D family reaches this branch, so the field always holds a BAF condition. It was
+                     an <input>; CodeField's textarea wraps a long trigger into view instead of scrolling it
+                     out of sight, and keeps the three BAF fields one control rather than two. -->
+                <CodeField kind="condition" value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
             <div class="wcol">
                 <div class="ik">Weight</div>
@@ -434,7 +438,15 @@
                      (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
-                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={(ssl ? !c.conditionEditable : readOnly) ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={ssl ? "(no condition)" : readOnly ? "(none)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                {#if ssl}
+                    <!-- An SSL node's condition is Fallout SSL, not BAF: the two share neither vocabulary nor
+                         grammar, so colouring it with the BAF tokenizer would mislabel it. SSL highlighting is
+                         a separate job (its query is far larger and its wasm ~18x this one), so this field
+                         stays the plain amber control it has always been. -->
+                    <textarea class="iv code cond" class:locked={c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                {:else}
+                    <CodeField kind="condition" value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
                      read-only, so repeating it on all N option cards is just clutter - the dashed field carries
@@ -445,7 +457,10 @@
             {/if}
             {#if !ssl && !state.branches}
                 {#if labeled}<div class="ik">Action</div>{/if}
-                <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <!-- Guarded by `!ssl` above, so this always holds a BAF action. `kind="action"` is not
+                     cosmetic: the same call syntax is a trigger in a condition and an action in a THEN, and
+                     only the caller knows which this field is. -->
+                <CodeField kind="action" value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
@@ -888,9 +903,6 @@
     }
     .condnote b {
         color: var(--vscode-foreground);
-    }
-    .iv.act {
-        color: var(--vscode-charts-purple);
     }
     .iv.tgt {
         color: var(--vscode-foreground);

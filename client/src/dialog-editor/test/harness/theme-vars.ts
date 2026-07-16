@@ -58,6 +58,10 @@ export const DARK_THEME_VARS = `:root {
     --vscode-charts-purple: #b180d7;
     --vscode-charts-blue: #59a4f9;
     --vscode-charts-orange: #ea5c0055;
+    /* charts.red/yellow are registered as aliases of editorError/editorWarning.foreground, so they repeat
+       those values above rather than carrying hues of their own. */
+    --vscode-charts-red: #f14c4c;
+    --vscode-charts-yellow: #cca700;
 }
 `;
 
@@ -101,5 +105,9 @@ export const LIGHT_THEME_VARS = `:root {
     --vscode-charts-purple: #652d90;
     --vscode-charts-blue: #0063d3;
     --vscode-charts-orange: #ea5c0055;
+    /* charts.red/yellow are registered as aliases of editorError/editorWarning.foreground, so they repeat
+       those values above rather than carrying hues of their own. */
+    --vscode-charts-red: #e51400;
+    --vscode-charts-yellow: #bf8803;
 }
 `;
