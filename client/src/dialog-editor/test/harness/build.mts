@@ -20,9 +20,12 @@ await build({
     write: true,
     outdir,
     logLevel: "info",
-    // Embed the BAF tokenizer's wasm/query and stub web-tree-sitter's Node-only imports, exactly as the
-    // production webview build does (scripts/esbuild-web-tree-sitter.mjs) - so this harness bundles the
-    // tokenizer the same way the shipped webview does, and cannot pass while production's bundling breaks.
+    // Embed the tokenizer's assets exactly as the production webview build does
+    // (scripts/esbuild-web-tree-sitter.mjs) - so this harness bundles them the same way the shipped webview
+    // does, and cannot pass while production's bundling breaks. The tokenizer is now TextMate
+    // (vscode-textmate + oniguruma): the .wasm loader embeds onig.wasm as bytes; the grammar JSONs load
+    // through esbuild's default json loader. The .scm loader and the web-tree-sitter node stub are retained
+    // from the shared helper but no longer exercised here (nothing imports web-tree-sitter).
     loader: webTreeSitterLoaders,
     plugins: [esbuildSvelte({ compilerOptions: { dev: true, css: "injected" } }), stubNodeOnlyImports],
 });
