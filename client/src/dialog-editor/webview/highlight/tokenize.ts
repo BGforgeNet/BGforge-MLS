@@ -9,29 +9,10 @@
  */
 
 import { Language, Parser, Query } from "web-tree-sitter";
+import type { HighlightRole, Span } from "./types";
 
-export type HighlightRole =
-    | "keyword"
-    | "trigger"
-    | "action"
-    | "constant"
-    | "variable"
-    | "string"
-    | "number"
-    | "comment"
-    | "punctuation";
-
-export interface Span {
-    start: number;
-    end: number;
-    role: HighlightRole;
-}
-
-/** One run of field text, with the role to paint it (absent = paint it as plain text). */
-export interface Part {
-    text: string;
-    role?: HighlightRole;
-}
+export type { HighlightRole, Span } from "./types";
+export { toParts, type Part } from "./types";
 
 /** Which kind of BAF fragment a field holds. Decides the synthetic context it is parsed in. */
 export type BafFragmentKind = "condition" | "action";
@@ -139,31 +120,6 @@ export async function initTokenizerFromBytes(
     parser.setLanguage(language);
     query = new Query(language, highlightsScm);
     markReady();
-}
-
-/**
- * Cut `text` into consecutive runs covering it exactly, so a renderer can emit one element per run and the
- * concatenation still reads as the original string - a character silently dropped or doubled here would
- * misalign a text overlay against the input it sits under.
- *
- * Relies on tokenizeBaf's contract that spans are sorted, in-bounds, and non-overlapping, which is why there
- * is no arbitration: highlights.scm captures individual leaf tokens only. A whole-node capture would break
- * that, and the resolver would belong in tokenizeBaf (where the contract is stated), not here.
- */
-export function toParts(text: string, spans: Span[]): Part[] {
-    const parts: Part[] = [];
-    let at = 0;
-    for (const { start, end, role } of spans) {
-        if (start > at) {
-            parts.push({ text: text.slice(at, start) });
-        }
-        parts.push({ text: text.slice(start, end), role });
-        at = end;
-    }
-    if (at < text.length) {
-        parts.push({ text: text.slice(at) });
-    }
-    return parts;
 }
 
 /**
