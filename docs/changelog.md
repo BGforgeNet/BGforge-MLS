@@ -26,6 +26,7 @@
 ### Dialog editor
 
 - WeiDU `.d`/`.td` trigger, condition, and action fields are now syntax-highlighted as you edit them - trigger and action names, IDS constants, strings, numbers, variables, and object specifiers each get their own color, and the coloring updates live as you type. Previously these fields showed flat monochrome text.
+- Fallout SSL condition fields in the dialog editor are now syntax-highlighted too - engine functions, constants, numbers, strings, and operators each get their own color, matching how the SSL text editor colors them, and it updates live as you type. Previously these fields showed flat monochrome text.
 - The find bar has a new Code toggle: search inside node triggers, choice conditions, and actions (e.g. find every node gated on a variable), in addition to the dialogue text the search always covers.
 
 ### Snippets
