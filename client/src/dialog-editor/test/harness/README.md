@@ -47,6 +47,10 @@ Prereqs: `playwright` is a pinned devDep (resolved by `pnpm install`); install t
   condition polling, and the check/report accumulator.
 - `render.mts` - the production-path driver (assertions + screenshot).
 - `render-search.mts` - the tree find-bar driver (find-as-you-type, navigation, node-id dim guard).
+- `render-ssl.mts` - the SSL condition-highlighting driver: a real SSL parse, then asserts the condition
+  CodeField colours per token (editor-parity hues) with the overlay aligned to the textarea and no CSP violation.
+- `render-ts.mts` - the same for the TypeScript-based languages (`.td`/`.tssl`): a real TSSL parse whose
+  condition carries distinctly-TypeScript operators (`&&`, `!`), asserting the TypeScript grammar colours it.
 - `edit-behavior.mts` - the selection/add/edit driver (the unified `select()` primitive + shared add/remove paths).
 - `fake-host.ts` - `DialogHostCore` bound to an in-memory document/`.tra` (real server-side D parse, real splice).
 - `edit-roundtrip.mts` - the host round-trip driver: injects `acquireVsCodeApi`, wires the webview to

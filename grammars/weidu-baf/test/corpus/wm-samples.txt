@@ -197,7 +197,9 @@ END
         (action
           call: (call_expr
             func: (identifier)
-            args: (object_ref)
+            args: (point
+              (number)
+              (number))
             args: (number)))
         (action
           call: (call_expr
@@ -299,7 +301,9 @@ END
         (action
           call: (call_expr
             func: (identifier)
-            args: (object_ref)
+            args: (point
+              (number)
+              (number))
             args: (number)))
         (action
           call: (call_expr
@@ -4288,7 +4292,8 @@ END
       (condition
         call: (call_expr
           func: (identifier)
-          args: (object_ref))))
+          args: (object_ref
+            (identifier)))))
     then: (then_clause
       (response
         weight: (number)
@@ -5288,7 +5293,13 @@ END
       (condition
         call: (call_expr
           func: (identifier)
-          args: (object_ref)))
+          args: (object_ref
+            (identifier)
+            (number)
+            (number)
+            (number)
+            (number)
+            (identifier))))
       (condition
         call: (call_expr
           func: (identifier)
@@ -5425,7 +5436,8 @@ END
       (condition
         call: (call_expr
           func: (identifier)
-          args: (object_ref)))
+          args: (object_ref
+            (identifier))))
       (condition
         call: (call_expr
           func: (identifier)
@@ -5645,7 +5657,8 @@ END
       (condition
         call: (call_expr
           func: (identifier)
-          args: (object_ref)
+          args: (object_ref
+            (identifier))
           args: (number))))
     then: (then_clause
       (response
@@ -5697,7 +5710,8 @@ END
       (condition
         call: (call_expr
           func: (identifier)
-          args: (object_ref))))
+          args: (object_ref
+            (identifier)))))
     then: (then_clause
       (response
         weight: (number)
@@ -5745,7 +5759,11 @@ END
           func: (identifier)
           args: (call_expr
             func: (identifier)
-            args: (object_ref))))
+            args: (object_ref
+              (number)
+              (number)
+              (number)
+              (identifier)))))
       (condition
         call: (call_expr
           func: (identifier)
@@ -6894,7 +6912,11 @@ END
           func: (identifier)
           args: (call_expr
             func: (identifier)
-            args: (object_ref))))
+            args: (object_ref
+              (number)
+              (number)
+              (number)
+              (identifier)))))
       (condition
         call: (call_expr
           func: (identifier)
@@ -7600,4 +7622,3 @@ END
         (action
           call: (call_expr
             func: (identifier)))))))
-

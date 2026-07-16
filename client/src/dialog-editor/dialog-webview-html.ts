@@ -30,10 +30,13 @@ export function buildDialogWebviewHtml(opts: DialogWebviewHtmlOptions): string {
     const { cspSource, cssUri, nonce, scriptBody } = opts;
     // style-src needs 'unsafe-inline' (not just a nonce) because Svelte Flow positions
     // nodes via runtime inline `transform` styles; a strict nonce-only style policy would
-    // block them and nodes would stack at the origin. script-src stays nonce-only.
+    // block them and nodes would stack at the origin. script-src is nonce + 'wasm-unsafe-eval':
+    // the BAF syntax tokenizer compiles a tree-sitter grammar, and WebAssembly compilation is
+    // gated by script-src, so a nonce alone leaves the fields flat. No connect-src is needed -
+    // the wasm is embedded in the script bundle, not fetched (see webview/main.ts).
     const csp =
         `default-src 'none'; img-src ${cspSource} data:; font-src ${cspSource}; ` +
-        `style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        `style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval';`;
     const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="${csp}" />
 <link rel="stylesheet" href="${cssUri}" /></head>

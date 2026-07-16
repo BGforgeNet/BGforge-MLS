@@ -1,0 +1,87 @@
+$schema: https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json
+# A deliberately minimal TextMate grammar for the TypeScript EXPRESSIONS that appear in dialog-editor
+# condition fields for the TD/TSSL source languages (`.td`/`.tssl` are `id: typescript`, so the editor itself
+# colours them with VS Code's built-in TypeScript grammar - which is not shipped here). A dialog condition is a
+# short boolean expression (`has_item(dude, PID_KNIFE) && !is_dead(x)`), never a whole TS program, so this
+# covers only the token classes a condition contains: calls, operators, numbers, strings, the literal keywords,
+# and ALL-CAPS constants. Anything else - a bare lowercase identifier (a variable) - is left unscoped and reads
+# plain, matching how the SSL/BAF condition grammars leave a variable plain. Scoped with the standard TextMate
+# scope families the webview tokenizer maps to highlight roles (client/src/dialog-editor/webview/highlight/
+# textmate.ts scopeToRole), so it shares the exact colour palette as the BAF and SSL condition fields.
+#
+# This grammar is webview-only and intentionally NOT registered in package.json contributes.grammars: the
+# editor uses the real TypeScript grammar for `.td`/`.tssl` files. It is compiled to JSON by
+# scripts/syntaxes-to-json.sh like every other grammar here.
+name: BGforge dialog TypeScript expression
+scopeName: source.dialog-tsexpr
+patterns:
+  - include: "#comments"
+  - include: "#strings"
+  - include: "#numbers"
+  - include: "#language-constants"
+  - include: "#function-call"
+  - include: "#constants"
+  - include: "#operators"
+repository:
+  comments:
+    patterns:
+      - match: //.*$
+        name: comment.line.double-slash.dialog-tsexpr
+      - begin: /\*
+        end: \*/
+        name: comment.block.dialog-tsexpr
+
+  strings:
+    patterns:
+      - begin: '"'
+        end: '"'
+        name: string.quoted.double.dialog-tsexpr
+        patterns:
+          - match: \\.
+            name: constant.character.escape.dialog-tsexpr
+      - begin: "'"
+        end: "'"
+        name: string.quoted.single.dialog-tsexpr
+        patterns:
+          - match: \\.
+            name: constant.character.escape.dialog-tsexpr
+      - begin: "`"
+        end: "`"
+        name: string.template.dialog-tsexpr
+        patterns:
+          - match: \\.
+            name: constant.character.escape.dialog-tsexpr
+
+  numbers:
+    patterns:
+      - match: \b(0[xX][0-9a-fA-F]+|\d+(\.\d+)?)\b
+        name: constant.numeric.dialog-tsexpr
+
+  # The literal keywords a boolean condition can hold. constant.language so they read as constants (like an IDS
+  # value), matching how the SSL/BAF fields colour their own literals.
+  language-constants:
+    patterns:
+      - match: \b(true|false|null|undefined)\b
+        name: constant.language.dialog-tsexpr
+
+  # A call's callee - the identifier immediately before `(`. entity.name.function so it reads green, the same
+  # role the BAF/SSL fields give a trigger call. The zero-width lookahead keeps the paren out of the token.
+  function-call:
+    patterns:
+      - match: '\b([A-Za-z_$][A-Za-z0-9_$]*)\b(?=\s*\()'
+        name: entity.name.function.dialog-tsexpr
+
+  # ALL-CAPS identifiers (PID_KNIFE, GVAR_X) read as constants, matching the SSL/BAF condition fields where the
+  # same game constant is purple. This is a deliberate departure from VS Code's base TS TextMate grammar (which
+  # leaves them as plain variables and relies on semantic highlighting for the constant colour) - the drift is
+  # accepted for cross-language consistency across the three condition-field grammars. Placed AFTER function-call
+  # so an ALL-CAPS call name still reads as a call.
+  constants:
+    patterns:
+      - match: \b([A-Z][A-Z0-9_]*)\b
+        name: constant.other.dialog-tsexpr
+
+  operators:
+    patterns:
+      - match: '&&|\|\||!==|!=|===|==|<=|>=|<|>|!|\+|-|\*|/|%'
+        name: keyword.operator.dialog-tsexpr

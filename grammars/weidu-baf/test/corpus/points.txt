@@ -1,0 +1,195 @@
+================================================================================
+Point: two positive numeric coordinates
+================================================================================
+
+IF True() THEN
+  RESPONSE #100
+    MoveToPoint([10.10])
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (point
+              (number)
+              (number))))))))
+
+================================================================================
+Point: negative coordinates
+================================================================================
+
+IF True() THEN
+  RESPONSE #100
+    CreateCreature("wm_rhia1", [-1.-1], 0)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (string)
+            args: (point
+              (number)
+              (number))
+            args: (number)))))))
+
+================================================================================
+Point: variable coordinates
+================================================================================
+
+IF True() THEN
+  RESPONSE #100
+    CreateCreature("x", [%px%.%py%], 0)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (string)
+            args: (point
+              (variable_ref)
+              (variable_ref))
+            args: (number)))))))
+
+================================================================================
+Point: mixed numeric and variable coordinates
+================================================================================
+
+IF True() THEN
+  RESPONSE #100
+    CreateCreature("x", [200.%py%], 0)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (string)
+            args: (point
+              (number)
+              (variable_ref))
+            args: (number)))))))
+
+================================================================================
+Object ref: a two-component EA.GENERAL specifier is not a point
+================================================================================
+
+IF See([NOTGOOD.HUMANOID]) THEN
+  RESPONSE #100
+    Continue()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref
+            (identifier)
+            (identifier)))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Object ref: a numeric specifier with more than two components is not a point
+================================================================================
+
+IF See([0.0.0.MAGE_ALL]) THEN
+  RESPONSE #100
+    Continue()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref
+            (number)
+            (number)
+            (number)
+            (identifier)))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Object ref: a single-component name
+================================================================================
+
+IF See([PC]) THEN
+  RESPONSE #100
+    Continue()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref
+            (identifier)))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))

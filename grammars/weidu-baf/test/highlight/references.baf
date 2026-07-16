@@ -3,6 +3,7 @@ IF
 THEN
   RESPONSE #100
     DisplayString(Player1, @123)
+//                  ^ constant
 //                         ^^^^ string.special
     SetGlobalTimer("%myvar%", "LOCALS", 10)
 //                 ^ string

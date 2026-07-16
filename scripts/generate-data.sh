@@ -54,7 +54,6 @@ pnpm exec tsx scripts/utils/src/update-tp2-highlight.ts \
 
 pnpm exec tsx scripts/utils/src/update-baf-highlight.ts \
     --yaml "$data_dir/weidu-baf-iesdp.yml" \
-    --ids-yaml "$data_dir/weidu-baf-ids.yml" \
     --highlight syntaxes/weidu-baf.tmLanguage.yml
 
 "${generate_data[@]}" \

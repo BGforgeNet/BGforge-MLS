@@ -7,6 +7,9 @@
 - Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
 - WeiDU `.d` files now provide completion and hover for BAF triggers and actions inside embedded `IF`/`DO`/condition strings - the same engine vocabulary the `.baf` editor offers, now available in dialog code. BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`) is now syntax-highlighted too.
 - WeiDU BAF and D completion now include Enhanced Edition IDS constant values - creature allegiance (`ANYONE`, `NEUTRAL`, `ENEMY`, ...), general type (`HUMANOID`, `UNDEAD`, ...), race (`HUMAN`, `ELF`, `MINOTAUR`, ...), and gender (`MALE`, `FEMALE`, ...) - for use as trigger/action arguments such as `Allegiance(Myself,NEUTRAL)`. The same constants are syntax-highlighted from the identical set, so completion and coloring no longer disagree.
+- Fixed: IDS constants in WeiDU BAF are now highlighted consistently. Animation constants (`ABISHAI_BLACK`, `YUAN-TI_ELITE`, ...) and inventory-slot constants (`SLOT_WEAPON1`, ...) were never colored at all; other IDS constants were colored only if they appeared in a hand-maintained list, so a valid constant the list had not caught yet stayed plain. Every uppercase constant is now colored.
+- Fixed: WeiDU BAF coordinates are now read as points. A coordinate mixing signs or variables - `ScreenShake([4.-4],20)`, `CreateCreature("x",[200.%py%],0)` - reported a syntax error on a valid script, and a plain pair like `MoveToPoint([10.10])` was read as an object reference. Coordinates are told apart from object specifiers such as `[NOTGOOD.HUMANOID]` and `[0.0.0.MAGE_ALL]` by their numeric components.
+- WeiDU BAF object specifiers and points (`[PC]`, `[ENEMY.0.0.MAGE]`, `[10.10]`) now color their brackets and dots separately from their contents, so the value stands out from the punctuation around it. Each component keeps its own color: an IDS name and its numeric equivalent both read as constants, while a `%variable%` coordinate reads as a variable rather than a number. In editors that highlight via tree-sitter (Neovim, Helix, Zed, Emacs), specifiers and coordinates were previously colored as one flat blob, brackets included.
 
 ### Translations
 
@@ -22,6 +25,9 @@
 
 ### Dialog editor
 
+- WeiDU `.d` trigger, condition, and action fields are now syntax-highlighted as you edit them - trigger and action names, IDS constants, strings, numbers, variables, and object specifiers each get their own color, and the coloring updates live as you type. Previously these fields showed flat monochrome text.
+- Fallout SSL condition fields in the dialog editor are now syntax-highlighted too - engine functions, constants, numbers, strings, and operators each get their own color, matching how the SSL text editor colors them, and it updates live as you type. Previously these fields showed flat monochrome text.
+- The TypeScript-based dialog languages (`.td` and `.tssl`) now color their condition and trigger fields as TypeScript - engine calls, comparison and boolean operators (`==`, `&&`, `!`), numbers, strings, and ALL-CAPS constants each get their own color, matching the source. A `.td` action field holds a WeiDU action and stays colored as WeiDU. Previously a `.td`/`.tssl` condition was colored with the WeiDU or SSL rules, which do not fit TypeScript syntax.
 - The find bar has a new Code toggle: search inside node triggers, choice conditions, and actions (e.g. find every node gated on a variable), in addition to the dialogue text the search always covers.
 
 ### Snippets

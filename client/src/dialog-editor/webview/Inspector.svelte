@@ -8,6 +8,7 @@
         type DialogBranch,
         type DialogChoice,
         type RenderFamily,
+        type SourceLang,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
@@ -24,6 +25,7 @@
     import type { CallerRow } from "./find-callers";
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import { autosize } from "./autosize";
+    import CodeField from "./CodeField.svelte";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -32,7 +34,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, sourceLang, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -55,6 +57,10 @@
         /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
         onFocusOwnerState: () => void;
         format: RenderFamily;
+        /** The dialog's SOURCE language, distinct from `format` (the render family): a TD dialog renders in the
+            weidu-d family but its conditions are TypeScript, a TSSL dialog renders SSL-family but its conditions
+            are TypeScript. The code fields (condition, trigger, action) colour by this, not `format` (see `codeLang`). */
+        sourceLang: SourceLang;
         editable: boolean;
         // Per-node editability (`nodeEditable`): field AND structural edits both round-trip to source - the two
         // coincide now, so this is the single gate (retarget, reorder, add/remove option, and the reaction/low-INT
@@ -135,6 +141,13 @@
     // SSL is a full scripting language with no surgical write-back, so its detail panel is
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
+
+    // Which TextMate grammar colours every code field (trigger, condition, action), chosen by SOURCE language,
+    // not render family: a D dialog's fields are BAF, an SSL condition is SSL, and a TD or TSSL dialog's fields
+    // are TypeScript source (the model stores the raw `cond.getText()` / action expression). The field's
+    // language is its source language uniformly - a `.td` action is TypeScript the same as its condition, even
+    // though the emitted D action is BAF.
+    const codeLang = $derived<"baf" | "ssl" | "ts">(sourceLang === "d" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts");
 
     // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
     // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
@@ -355,9 +368,10 @@
             <div class="ik">Condition</div>
             <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
                  statement span to support wrap/unwrap; the save path and verify must diff the
-                 reply condition. Disabled until then - the locked styling and tooltip explain why,
-                 and the same textarea control as the per-option conditions keeps the two uniform. -->
-            <textarea class="iv code cond locked" rows="1" disabled use:autosize={state.trigger ?? ""} title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" value={state.trigger ?? ""}></textarea>
+                 reply condition. Disabled until then - CodeField's disabled styling and the tooltip explain
+                 why, and the same CodeField (codeLang) as the per-option conditions keeps the two uniform:
+                 SSL-coloured for SSL, TypeScript-coloured for TSSL, read-only here. -->
+            <CodeField lang={codeLang} value={state.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the source" placeholder="(unconditional)" />
             {#if state.sideEffects?.length}
                 <div class="ik">Side effects</div>
                 <div class="iv sfx">{state.sideEffects.join(", ")}</div>
@@ -367,7 +381,10 @@
         <div class="row2">
             <div>
                 <div class="ik">Trigger</div>
-                <input class="iv code" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+                <!-- The D family reaches this branch: a D trigger is BAF, a TD trigger is TypeScript source (the
+                     enclosing `if (...)` condition) - codeLang picks the grammar. CodeField's textarea wraps a
+                     long trigger into view instead of scrolling it out of sight. -->
+                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
             <div class="wcol">
                 <div class="ik">Weight</div>
@@ -434,7 +451,16 @@
                      (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
-                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={(ssl ? !c.conditionEditable : readOnly) ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={ssl ? "(no condition)" : readOnly ? "(none)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                {#if ssl}
+                    <!-- SSL-family condition: coloured by codeLang - the SSL grammar for an SSL condition, the
+                         TypeScript-expression grammar for a TSSL condition (its source is TypeScript). Both run
+                         through the same tokenizer as every other field, so it is editor parity by construction.
+                         Disabled (a shared condition) renders dashed via CodeField's own disabled styling. -->
+                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                {:else}
+                    <!-- D-family condition: BAF for D, TypeScript source for TD - codeLang picks the grammar. -->
+                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
                      read-only, so repeating it on all N option cards is just clutter - the dashed field carries
@@ -445,7 +471,11 @@
             {/if}
             {#if !ssl && !state.branches}
                 {#if labeled}<div class="ik">Action</div>{/if}
-                <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <!-- Guarded by `!ssl` above: a D-family action. Coloured by codeLang like the condition/trigger -
+                     BAF for a D dialog, TypeScript for a TD one (its source is TypeScript, even though the D it
+                     emits is BAF). The BAF grammar reads a name as an action or trigger by its IDS list, so no
+                     per-field "kind" hint is needed. -->
+                <CodeField lang={codeLang} value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
@@ -506,14 +536,19 @@
                 {:else}
                     <div class="branchhead">
                         <span class="branchlabel">[if]</span>
-                        <input
-                            class="iv code branchcond"
-                            value={b.condition ?? ""}
-                            disabled={!structuralEditable}
-                            title={!structuralEditable ? structReason : ""}
-                            placeholder="(condition)"
-                            oninput={(e) => (b.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}
-                        />
+                        <!-- A bundle branch's condition is the same kind of value as a per-option condition, so it
+                             colours through the same CodeField (codeLang: SSL for an SSL node, TypeScript for a
+                             TSSL one), wrapped in a flex item so `[if] <colour> x` stays on one row. -->
+                        <div class="branchcondwrap">
+                            <CodeField
+                                lang={codeLang}
+                                value={b.condition ?? ""}
+                                disabled={!structuralEditable}
+                                title={!structuralEditable ? structReason : ""}
+                                placeholder="(condition)"
+                                oninput={(v) => (b.condition = v.trim() === "" ? undefined : v)}
+                            />
+                        </div>
                         {#if structuralEditable}
                             <button
                                 class="branchremove"
@@ -548,11 +583,14 @@
                  is not valid SSL). The button is disabled until a non-empty condition is typed.
                  $newBranchCond is a writable store - see the declaration comment above. -->
             <div class="branchadd-row">
-                <input
-                    class="iv code branchcond"
-                    bind:value={$newBranchCond}
-                    placeholder="condition for new if branch"
-                />
+                <div class="branchcondwrap">
+                    <CodeField
+                        lang={codeLang}
+                        value={$newBranchCond}
+                        placeholder="condition for new if branch"
+                        oninput={(v) => newBranchCond.set(v)}
+                    />
+                </div>
                 <button
                     class="add"
                     disabled={$newBranchCond.trim() === ""}
@@ -869,17 +907,8 @@
     .iv.reply {
         color: var(--vscode-foreground);
     }
-    .iv.cond {
-        color: var(--vscode-editorWarning-foreground);
-    }
-    /* A read-only SSL condition (a shared if-block, or the node-level one pending write-back):
-       a dashed border plus a caption make the locked state legible on its own - the disabled
-       dimming alone is too subtle on the amber code text, and the hover tooltip is not
-       discoverable (a hover-only cue fails to explain why the field cannot be edited). */
-    .iv.cond.locked {
-        border-style: dashed;
-        border-color: var(--vscode-panel-border);
-    }
+    /* The SSL condition fields now render through CodeField (lang="ssl"), which owns their colour and its own
+       dashed disabled styling, so the old `.iv.cond` / `.iv.cond.locked` amber rules were removed with them. */
     .condnote {
         color: var(--vscode-descriptionForeground);
         font-size: 9px;
@@ -888,9 +917,6 @@
     }
     .condnote b {
         color: var(--vscode-foreground);
-    }
-    .iv.act {
-        color: var(--vscode-charts-purple);
     }
     .iv.tgt {
         color: var(--vscode-foreground);
@@ -970,11 +996,12 @@
         font-style: italic;
         margin-right: 4px;
     }
-    .branchcond {
-        width: auto;
-        min-width: 60%;
-        font-size: 10px;
-        padding: 1px 4px;
+    /* Flex item holding a branch-condition CodeField, so the coloured field grows to fill the row between the
+       [if] label and the remove/add button (and can shrink - min-width:0 - rather than overflow). The CodeField
+       owns its own border/padding/font, matching the per-option condition fields. */
+    .branchcondwrap {
+        flex: 1;
+        min-width: 0;
     }
     .branchnpc {
         margin-top: 2px;
@@ -1067,10 +1094,6 @@
         align-items: center;
         gap: 4px;
         margin-top: 6px;
-    }
-    .branchadd-row input {
-        flex: 1;
-        min-width: 0;
     }
     /* Dim the "+ if" button when no condition has been typed yet. */
     .add:disabled {

@@ -12,6 +12,12 @@ export default grammar({
 
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
+    // `[10.10]` is a valid prefix of both a point and an object_ref, and which one it is only becomes clear
+    // at the closing bracket - too late for LR(1), which must reduce the first coordinate before it can see
+    // the arity. Declaring the conflict lets the GLR parser carry both readings until the bracket closes,
+    // and point's prec.dynamic picks the winner where both survive. See the point rule for why point wins.
+    conflicts: ($) => [[$._object_component, $._point_coord]],
+
     rules: {
         source_file: ($) => repeat($.block),
 
@@ -43,25 +49,37 @@ export default grammar({
         call_expr: ($) => seq(field("func", $.identifier), "(", optional(commaSep(field("args", $._argument))), ")"),
 
         _argument: ($) =>
-            choice(
-                $.call_expr,
-                $.point, // Must be before object_ref to avoid ambiguity with [0.0]
-                $.object_ref,
-                $.tra_ref,
-                $.variable_ref,
-                $.string,
-                $.number,
-                $.identifier,
-            ),
+            choice($.call_expr, $.point, $.object_ref, $.tra_ref, $.variable_ref, $.string, $.number, $.identifier),
 
         // TRA reference: @123 (no spaces allowed)
         tra_ref: ($) => token(seq("@", /\d+/)),
 
-        // Special object identifiers: [PC], [ENEMY], [ANYONE], etc.
-        object_ref: ($) => seq("[", /[A-Za-z0-9_.]+/, "]"),
+        // Object identifiers: a name ([PC], [ENEMY]) or a dot-separated specifier
+        // ([NOTGOOD.HUMANOID], [EA.GENERAL.RACE.CLASS.SPECIFIC.GENDER.ALIGNMENT]), whose components are
+        // IDS names or their numeric equivalents ([0.0.0.MAGE_ALL]).
+        //
+        // The components are matched individually rather than by one `/[A-Za-z0-9_.]+/` token. That token
+        // spanned the dots, so the lexer consumed `10.10` whole and won `[10.10]` against `point` on longest
+        // match - `point` could only ever win when a coordinate held a character the token could not match,
+        // i.e. `-` or `%`. Coordinates therefore parsed as points when negative and as object refs when
+        // positive, and a mixed `[200.%y%]` parsed as neither.
+        object_ref: ($) => seq("[", $._object_component, repeat(seq(".", $._object_component)), "]"),
+        _object_component: ($) => choice($.identifier, $.number),
 
-        // Point notation: [x.y] for coordinates (can use variable refs)
-        point: ($) => seq("[", $._point_coord, ".", $._point_coord, "]"),
+        // Point notation: [x.y] coordinates, e.g. MoveToPoint([10.10]) or CreateCreature("x",[%px%.%py%],0).
+        //
+        // `[10.10]` is genuinely ambiguous in BAF - the engine reads it as a point or as a two-component
+        // EA.GENERAL specifier depending on the called function's signature, which a context-free grammar
+        // cannot see. It is resolved structurally instead, on the evidence of the shipped scripts: across 730
+        // mod .baf files every two-component all-numeric bracket (1495 of them) is an argument to a
+        // point-taking function (CreateCreature, JumpToPoint, MoveViewPoint, FadeToColor, ...) and none is an
+        // object specifier, while every two-component specifier that IS an object ref names its components
+        // ([NOTGOOD.HUMANOID], [EVILCUTOFF.UNDEAD]). So numeric components mean a point; named components mean
+        // an object ref. The prec.dynamic resolves the remaining overlap - both rules match `[ number .
+        // number ]`, so the GLR parser keeps both and this picks the point, the reading that occurs in
+        // practice. A specifier of any other arity is unaffected: point is exactly two components, so only
+        // object_ref survives and the dynamic precedence never applies.
+        point: ($) => prec.dynamic(1, seq("[", $._point_coord, ".", $._point_coord, "]")),
         _point_coord: ($) => choice($.number, $.variable_ref),
 
         // Variable reference: %varname% (no spaces allowed)
