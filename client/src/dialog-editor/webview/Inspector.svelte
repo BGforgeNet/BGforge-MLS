@@ -356,9 +356,10 @@
             <div class="ik">Condition</div>
             <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
                  statement span to support wrap/unwrap; the save path and verify must diff the
-                 reply condition. Disabled until then - the locked styling and tooltip explain why,
-                 and the same textarea control as the per-option conditions keeps the two uniform. -->
-            <textarea class="iv code cond locked" rows="1" disabled use:autosize={state.trigger ?? ""} title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" value={state.trigger ?? ""}></textarea>
+                 reply condition. Disabled until then - CodeField's disabled styling and the tooltip explain
+                 why, and the same CodeField (lang="ssl") as the per-option conditions keeps the two uniform:
+                 both SSL-coloured, read-only here. -->
+            <CodeField lang="ssl" value={state.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" />
             {#if state.sideEffects?.length}
                 <div class="ik">Side effects</div>
                 <div class="iv sfx">{state.sideEffects.join(", ")}</div>
@@ -371,7 +372,7 @@
                 <!-- Only the D family reaches this branch, so the field always holds a BAF condition. It was
                      an <input>; CodeField's textarea wraps a long trigger into view instead of scrolling it
                      out of sight, and keeps the three BAF fields one control rather than two. -->
-                <CodeField kind="condition" value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
+                <CodeField lang="baf" kind="condition" value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
             <div class="wcol">
                 <div class="ik">Weight</div>
@@ -439,13 +440,14 @@
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
                 {#if ssl}
-                    <!-- An SSL node's condition is Fallout SSL, not BAF: the two share neither vocabulary nor
-                         grammar, so colouring it with the BAF tokenizer would mislabel it. SSL highlighting is
-                         a separate job (its query is far larger and its wasm ~18x this one), so this field
-                         stays the plain amber control it has always been. -->
-                    <textarea class="iv code cond" class:locked={c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                    <!-- An SSL condition is Fallout SSL, not BAF, so it is coloured by the SSL TextMate grammar
+                         (lang="ssl"), not the BAF tokenizer. The editor colours SSL the same way, and SSL needs
+                         casing to tell a constant from a variable - which the grammar already encodes, so
+                         running it is parity by construction. Disabled (a shared condition) renders dashed via
+                         CodeField's own disabled styling, replacing the old class:locked. -->
+                    <CodeField lang="ssl" value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {:else}
-                    <CodeField kind="condition" value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <CodeField lang="baf" kind="condition" value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
@@ -460,7 +462,7 @@
                 <!-- Guarded by `!ssl` above, so this always holds a BAF action. `kind="action"` is not
                      cosmetic: the same call syntax is a trigger in a condition and an action in a THEN, and
                      only the caller knows which this field is. -->
-                <CodeField kind="action" value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
+                <CodeField lang="baf" kind="action" value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
@@ -884,17 +886,8 @@
     .iv.reply {
         color: var(--vscode-foreground);
     }
-    .iv.cond {
-        color: var(--vscode-editorWarning-foreground);
-    }
-    /* A read-only SSL condition (a shared if-block, or the node-level one pending write-back):
-       a dashed border plus a caption make the locked state legible on its own - the disabled
-       dimming alone is too subtle on the amber code text, and the hover tooltip is not
-       discoverable (a hover-only cue fails to explain why the field cannot be edited). */
-    .iv.cond.locked {
-        border-style: dashed;
-        border-color: var(--vscode-panel-border);
-    }
+    /* The SSL condition fields now render through CodeField (lang="ssl"), which owns their colour and its own
+       dashed disabled styling, so the old `.iv.cond` / `.iv.cond.locked` amber rules were removed with them. */
     .condnote {
         color: var(--vscode-descriptionForeground);
         font-size: 9px;
