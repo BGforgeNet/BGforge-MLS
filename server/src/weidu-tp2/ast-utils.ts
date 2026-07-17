@@ -5,6 +5,7 @@
 
 import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 import { createIsInsideComment } from "../shared/comment-check";
+import { createIsInsideString } from "../shared/string-check";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
@@ -112,6 +113,22 @@ const TP2_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, Synt
  * Check if the given position is inside a comment node using tree-sitter.
  */
 export const isInsideComment = createIsInsideComment(isInitialized, parseWithCache, TP2_COMMENT_TYPES);
+
+/**
+ * String-literal node types in the TP2 grammar. Excludes percent_string (a `%var%` variable
+ * reference, not a literal) so clicking a variable inside a path still resolves the variable.
+ */
+const TP2_STRING_TYPES: ReadonlySet<string> = new Set([
+    SyntaxType.TildeString,
+    SyntaxType.DoubleString,
+    SyntaxType.FiveTildeString,
+]);
+
+/**
+ * Check if the given position is inside a string literal. Gates the definition handler's bare-word
+ * symbol fallback so a filename inside a path string cannot wrong-jump to a same-named function.
+ */
+export const isInsideString = createIsInsideString(isInitialized, parseWithCache, TP2_STRING_TYPES);
 
 /** Loop node types that bind variables (PHP_EACH, FOR_EACH). */
 const LOOP_BINDING_TYPES = new Set([

@@ -7,7 +7,15 @@ import type { Position } from "vscode-languageserver/node";
 import { getLinePrefix } from "../cursor-utils";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { CommentKind, detectCommentKind } from "../shared/completion-context";
+import { createIsInsideString } from "../shared/string-check";
 import { SyntaxType } from "./syntax-type";
+
+/**
+ * Check if the given position is inside a string literal (SSL has one string node type, covering
+ * both `"..."` and `<...>` include paths). Gates the definition handler's bare-word symbol fallback
+ * so a filename inside an #include path cannot wrong-jump to a same-named procedure or macro.
+ */
+export const isInsideString = createIsInsideString(isInitialized, parseWithCache, new Set<string>([SyntaxType.String]));
 
 /** SSL completion context for filterCompletions. */
 export enum SslCompletionContext {

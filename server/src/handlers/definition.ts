@@ -39,8 +39,11 @@ export function register(ctx: HandlerContext): void {
                     }
                 }
 
-                // Try provider symbol definition (data-driven, from headers)
-                if (symbol) {
+                // Try provider symbol definition (data-driven, from headers). This matches the bare
+                // word under the cursor against indexed symbol names, so a filename inside a path
+                // string can collide with a symbol and wrong-jump there. Never run it on string
+                // content - providers navigate their own path strings via definition() above.
+                if (symbol && !registry.isPositionInString(langId, text, params.position)) {
                     return registry.symbolDefinition(langId, symbol);
                 }
 

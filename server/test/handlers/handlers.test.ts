@@ -565,6 +565,8 @@ describe("definition handler", () => {
         vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
         vi.spyOn(registry, "definition").mockResolvedValue(null);
         vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        // Cursor is on a code identifier, not a string, so the fallback is allowed to fire.
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(false);
         const symLoc = { uri: "file:///header.ssl", range: { start: POSITION, end: POSITION } };
         const symSpy = vi.spyOn(registry, "symbolDefinition").mockReturnValue(symLoc);
 
@@ -578,6 +580,28 @@ describe("definition handler", () => {
         });
         expect(symSpy).toHaveBeenCalledWith("fallout-ssl", "my_proc");
         expect(result).toBe(symLoc);
+    });
+
+    it("does NOT fire the symbolDefinition fallback when the cursor is inside a string", async () => {
+        // A filename inside a path string can match an indexed symbol name; the gate must stop the
+        // bare-word fallback from wrong-jumping there. Provider and translation both return null.
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(true);
+        const symSpy = vi.spyOn(registry, "symbolDefinition");
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(symSpy).not.toHaveBeenCalled();
+        expect(result).toBeNull();
     });
 
     it("returns null when no symbol is under the cursor and provider returns null", async () => {
