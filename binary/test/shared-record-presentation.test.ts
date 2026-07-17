@@ -42,8 +42,11 @@ describe("shared record presentation is identical across embedding formats", () 
         const eff = suffixEntries("eff", "eff.body");
         const creV2 = suffixEntries("cre", "cre.effects[].v2");
         expect(Object.keys(eff).length).toBeGreaterThan(0);
-        // The packed stacking id is the field that previously drifted - assert it explicitly as well.
-        expect(eff.stackingIdTobex).toEqual({ numericFormat: "hex32" });
+        // The packed stacking id is the field that previously drifted - assert its hex format explicitly as
+        // well. `toMatchObject` so the guard stays on the shared `numericFormat` and does not couple to the
+        // IESDP-sourced `description`/`docUrl` the field also now carries (those would churn on a docs resync);
+        // the full cross-format identity is pinned by the `toEqual(eff)` below regardless.
+        expect(eff.stackingIdTobex).toMatchObject({ numericFormat: "hex32" });
         expect(creV2).toEqual(eff);
     });
 });
