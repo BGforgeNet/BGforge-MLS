@@ -487,6 +487,8 @@ describe("hover handler", () => {
         vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
         vi.spyOn(translationStub, "getHover").mockReturnValue(null);
         vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.notHandled());
+        // Cursor is on a code identifier, not a string, so the data-driven lookup is allowed.
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(false);
         const dataHover = { contents: { kind: MarkupKind.PlainText, value: "data" } };
         const dataSpy = vi.spyOn(registry, "hover").mockReturnValue(dataHover);
 
@@ -500,6 +502,28 @@ describe("hover handler", () => {
         });
         expect(dataSpy).toHaveBeenCalledWith("fallout-ssl", KNOWN_URI, "my_proc", HOVER_TEXT);
         expect(result).toBe(dataHover);
+    });
+
+    it("does NOT run the data-driven hover when the cursor is inside a string", async () => {
+        // A filename inside a path string can match an indexed symbol name; the same gate as the
+        // definition fallback must stop the bare-word hover from showing that symbol's doc.
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(translationStub, "getHover").mockReturnValue(null);
+        vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.notHandled());
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(true);
+        const dataSpy = vi.spyOn(registry, "hover");
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        expect(dataSpy).not.toHaveBeenCalled();
+        expect(result).toBeNull();
     });
 });
 

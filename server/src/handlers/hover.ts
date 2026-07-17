@@ -49,7 +49,13 @@ export function register(ctx: HandlerContext): void {
                     return localHover.hover;
                 }
 
-                // Fall back to data-driven hover (from headers/static data)
+                // Fall back to data-driven hover (name lookup from headers/static data). Like the
+                // definition symbol fallback, never run it on string content: a filename inside a
+                // path string can match an indexed symbol name and show a spurious hover for it.
+                if (registry.isPositionInString(langId, text, textDocumentPosition.position)) {
+                    if (debug) conlog(`[hover] suppressed (cursor in string)`);
+                    return null;
+                }
                 // Pass text to enable unified symbol resolution (Approach C)
                 const dataHover = registry.hover(langId, uri, symbol, text);
                 if (debug) conlog(`[hover] dataHover result=${dataHover ? "found" : "null"}`);
