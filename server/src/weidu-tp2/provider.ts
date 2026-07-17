@@ -68,7 +68,7 @@ import { findReferences } from "./references";
 import { renameSymbol, prepareRenameSymbol } from "./rename";
 import { buildFunctionCallSnippet, getKeywordSnippet } from "./snippets";
 import { getFunctionParamHover } from "./hover";
-import { localCompletion, isInsideComment, isOnLoopVariableBinding } from "./ast-utils";
+import { localCompletion, isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
 import { getLocalSymbols as extractLocalSymbols, lookupLocalSymbol, clearLocalSymbolsCache } from "./local-symbols";
 import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
@@ -396,6 +396,10 @@ class WeiduTp2Provider
 
     shouldProvideFeatures(text: string, position: Position): boolean {
         return !isInsideComment(text, position);
+    }
+
+    isPositionInString(text: string, position: Position): boolean {
+        return isInsideString(text, position);
     }
 
     hover(text: string, symbol: string, _uri: NormalizedUri, position: Position): HoverResult {

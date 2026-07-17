@@ -565,6 +565,8 @@ describe("definition handler", () => {
         vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
         vi.spyOn(registry, "definition").mockResolvedValue(null);
         vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        // Cursor is on a code identifier, not a string, so the fallback is allowed to fire.
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(false);
         const symLoc = { uri: "file:///header.ssl", range: { start: POSITION, end: POSITION } };
         const symSpy = vi.spyOn(registry, "symbolDefinition").mockReturnValue(symLoc);
 
@@ -578,6 +580,28 @@ describe("definition handler", () => {
         });
         expect(symSpy).toHaveBeenCalledWith("fallout-ssl", "my_proc");
         expect(result).toBe(symLoc);
+    });
+
+    it("does NOT fire the symbolDefinition fallback when the cursor is inside a string", async () => {
+        // A filename inside a path string can match an indexed symbol name; the gate must stop the
+        // bare-word fallback from wrong-jumping there. Provider and translation both return null.
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(true);
+        const symSpy = vi.spyOn(registry, "symbolDefinition");
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(symSpy).not.toHaveBeenCalled();
+        expect(result).toBeNull();
     });
 
     it("returns null when no symbol is under the cursor and provider returns null", async () => {
@@ -595,6 +619,71 @@ describe("definition handler", () => {
             position: { line: 0, character: 0 },
         });
         expect(result).toBeNull();
+    });
+});
+
+// --- definition handler string gate, through the REAL registry -------------------------------
+//
+// The tests above stub registry.isPositionInString to prove the handler's control flow. This block
+// exercises the real registry.isPositionInString delegation and the real handler gate together, so
+// the two are verified end-to-end rather than as two separately-mocked halves. The real tp2/ssl
+// providers keep a self-location sentinel, so their definition() returns non-null and the handler
+// returns before the gate is ever reached - the gate can only be exercised by the future-provider
+// shape (definition() returns null on a path string, getSymbolDefinition would match the filename),
+// which this stand-in provider reproduces.
+
+describe("definition handler string gate (real registry delegation)", () => {
+    const GATE_LANG = "gate-stand-in-lang";
+    const GATE_URI = "file:///gate.tpa";
+    const GATE_POS = { line: 0, character: 10 };
+    // The location the bare-word fallback WOULD wrong-jump to (a same-named symbol).
+    const WRONG = { uri: "file:///wrong-symbol.h", range: { start: POSITION, end: POSITION } };
+
+    function registerStandIn(isPositionInString: boolean): void {
+        const provider = {
+            id: GATE_LANG,
+            shouldProvideFeatures: () => true,
+            definition: () => null, // future provider: no AST result on the path string
+            getSymbolDefinition: () => WRONG, // bare-word lookup that collides with the filename
+            isPositionInString: () => isPositionInString,
+        } as unknown as import("../../src/language-provider").LanguageProvider;
+        // Insert straight into the singleton's map rather than registry.register(), whose conlog
+        // needs an initialized LSP connection this seam-level test does not stand up.
+        (registry as unknown as { providers: Map<string, unknown> }).providers.set(GATE_LANG, provider);
+    }
+
+    afterEach(() => {
+        // No public unregister; drop the stand-in from the singleton so it cannot leak into other
+        // tests. Deliberate localized coupling, preferred over a production-only unregister seam.
+        (registry as unknown as { providers: Map<string, unknown> }).providers.delete(GATE_LANG);
+    });
+
+    it("skips the fallback when the cursor is in a string (no wrong-jump)", async () => {
+        registerStandIn(true);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        const { ctx, wired } = makeCtx(new Map([[GATE_URI, mockDoc('INCLUDE "foo.tpa"', GATE_LANG)]]));
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({ textDocument: { uri: GATE_URI }, position: GATE_POS });
+
+        expect(result).toBeNull();
+    });
+
+    it("fires the fallback when the cursor is NOT in a string (gate is what makes the difference)", async () => {
+        registerStandIn(false);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        const { ctx, wired } = makeCtx(new Map([[GATE_URI, mockDoc('INCLUDE "foo.tpa"', GATE_LANG)]]));
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({ textDocument: { uri: GATE_URI }, position: GATE_POS });
+
+        expect(result).toEqual(WRONG);
     });
 });
 

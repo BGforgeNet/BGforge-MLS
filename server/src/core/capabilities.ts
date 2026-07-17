@@ -154,6 +154,13 @@ export interface DataCapability {
     getSignature?(uri: NormalizedUri, symbol: string, paramIndex: number): SignatureHelp | null;
     getSymbolDefinition?(symbol: string): Location | null;
     localSignature?(text: string, symbol: string, paramIndex: number): SignatureHelp | null;
+    /**
+     * True when `position` sits inside a string literal. The definition handler uses this to gate
+     * the bare-word getSymbolDefinition fallback: a filename inside a path string can collide with an
+     * indexed symbol name and wrong-jump there. Any provider exposing getSymbolDefinition must also
+     * expose this (enforced by a guard test); otherwise the fallback is ungated on string content.
+     */
+    isPositionInString?(text: string, position: Position): boolean;
 }
 
 export interface CompilationCapability {

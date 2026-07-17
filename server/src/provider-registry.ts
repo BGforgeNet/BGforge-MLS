@@ -339,6 +339,16 @@ class ProviderRegistry {
         return null;
     }
 
+    /**
+     * True when `position` is inside a string literal for this language. Gates the definition
+     * handler's bare-word symbolDefinition fallback so a filename inside a path string cannot
+     * wrong-jump to a same-named symbol. Defaults to false when a provider does not implement it.
+     */
+    isPositionInString(langId: string, text: string, position: Position): boolean {
+        const provider = this.get(langId);
+        return provider?.isPositionInString?.(text, position) ?? false;
+    }
+
     reloadFileData(langId: string, uri: string, text: string): void {
         const normUri = normalizeUri(uri);
         const provider = this.get(langId);

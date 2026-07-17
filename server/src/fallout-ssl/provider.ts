@@ -67,7 +67,12 @@ import { renameSymbol, prepareRenameSymbol, renameSymbolWorkspace, prepareRename
 import { getLocalSignature } from "./signature";
 import { parseFile } from "./header-parser";
 import { getLocalSymbols, lookupLocalSymbol, clearLocalSymbolsCache } from "./local-symbols";
-import { getSslCompletionContext, SslCompletionContext, isSslDeclarationSite } from "./completion-context";
+import {
+    getSslCompletionContext,
+    SslCompletionContext,
+    isSslDeclarationSite,
+    isInsideString,
+} from "./completion-context";
 import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
@@ -261,6 +266,10 @@ class FalloutSslProvider
     shouldProvideFeatures(text: string, position: Position): boolean {
         const context = getSslCompletionContext(text, position);
         return context === SslCompletionContext.Code;
+    }
+
+    isPositionInString(text: string, position: Position): boolean {
+        return isInsideString(text, position);
     }
 
     localSignature(text: string, symbol: string, paramIndex: number): SignatureHelp | null {
