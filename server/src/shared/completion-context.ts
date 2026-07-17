@@ -12,7 +12,9 @@
  * - Filtering: Generic logic to filter items based on category and context
  */
 
-import type { CompletionItem } from "vscode-languageserver/node";
+import type { CompletionItem, Position } from "vscode-languageserver/node";
+import type { Node as SyntaxNode } from "web-tree-sitter";
+import { classifyAtCursorBoundary } from "./comment-check";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
 
 /**
@@ -83,6 +85,38 @@ export interface CompletionItemWithCategory extends CompletionItem {
      * Items without this field are shown in all contexts (e.g., local completions).
      */
     category?: CompletionCategory;
+}
+
+// ============================================
+// Comment-context detection (grammar-agnostic)
+// ============================================
+
+/** Whether a cursor sits in a JSDoc block, a regular comment, or neither. */
+export enum CommentKind {
+    Jsdoc = "jsdoc",
+    Comment = "comment",
+    None = "none",
+}
+
+/**
+ * Classify whether `position` sits inside a comment (regular or JSDoc), robust to the end-of-line
+ * boundary via {@link classifyAtCursorBoundary}. The type strings are passed in because each grammar
+ * defines its own SyntaxType enum (same values, distinct types).
+ */
+export function detectCommentKind(
+    root: SyntaxNode,
+    position: Position,
+    commentType: string,
+    lineCommentType: string,
+): CommentKind {
+    return (
+        classifyAtCursorBoundary(root, position, (node) => {
+            if (node.type === commentType) {
+                return node.text.trimStart().startsWith("/**") ? CommentKind.Jsdoc : CommentKind.Comment;
+            }
+            return node.type === lineCommentType ? CommentKind.Comment : null;
+        }) ?? CommentKind.None
+    );
 }
 
 // ============================================

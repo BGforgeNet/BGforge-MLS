@@ -42,6 +42,13 @@ END
             expect(isInsideComment(text, Position.create(3, 5))).toBe(true);
         });
 
+        it("returns true at the END of a line comment (cursor typing at EOL)", () => {
+            // line 3: "// line comment" is 15 chars; the cursor sits at column 15 while typing.
+            // A line comment's node range ends at end-of-line, so the final column resolves to the
+            // parent - this must still be treated as in-comment.
+            expect(isInsideComment(text, Position.create(3, 15))).toBe(true);
+        });
+
         it("returns false for position on a keyword", () => {
             // line 4: "IF ~True()~ THEN BEGIN start_state" - position on "IF"
             expect(isInsideComment(text, Position.create(4, 0))).toBe(false);

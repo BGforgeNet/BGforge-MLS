@@ -143,6 +143,14 @@ describe("comment context detection", () => {
         expect(contexts).toContain(CompletionContext.Comment);
     });
 
+    it("at the END of a // line comment (cursor at EOL) -> Comment", () => {
+        // Half-open node range: a line comment ends at end-of-line, so the final column resolves
+        // to the parent code node. That is where the cursor sits while typing, so it must still
+        // count as in-comment or code completions leak into the comment.
+        const contexts = getContexts(`// call Dea|`);
+        expect(contexts).toContain(CompletionContext.Comment);
+    });
+
     it("inside /* */ comment -> Comment", () => {
         const contexts = getContexts(`/* |comment */`);
         expect(contexts).toContain(CompletionContext.Comment);

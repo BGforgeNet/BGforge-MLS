@@ -45,6 +45,15 @@ describe("fallout-ssl JSDoc completion", () => {
             expect(getSslCompletionContext(text, pos)).toBe(SslCompletionContext.Comment);
         });
 
+        it("returns Comment at the END of a line comment (cursor typing at EOL)", () => {
+            // The every-keystroke case: a line comment's node range is half-open and ends at
+            // end-of-line, so descendantForPosition at the final column resolves to the parent
+            // code node. Completions must still be suppressed there.
+            const text = `procedure foo begin\n  // call Dea\nend`;
+            const pos: Position = { line: 1, character: 13 }; // end of "  // call Dea"
+            expect(getSslCompletionContext(text, pos)).toBe(SslCompletionContext.Comment);
+        });
+
         it("returns Code outside any comment", () => {
             const text = `procedure foo begin end`;
             const pos: Position = { line: 0, character: 10 };
