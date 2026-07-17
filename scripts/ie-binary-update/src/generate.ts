@@ -4,6 +4,9 @@ import { emitSpecModule } from "./emit.ts";
 import { loadOffsetItems } from "./parse-format.ts";
 import { translateStruct } from "./translate.ts";
 
+/** Base URL of the online IESDP format-documentation pages (see the IESDP `_config.yml` `fullurl`). */
+const IESDP_DOC_BASE = "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/";
+
 export interface FormatTarget {
     /** Path relative to the IESDP root, e.g. `_data/file_formats/itm_v1/header.yml`. */
     readonly iesdpRelPath: string;
@@ -11,6 +14,9 @@ export interface FormatTarget {
     readonly outputRelPath: string;
     readonly specConst: string;
     readonly dataType: string;
+    /** Rendered IESDP page this struct's fields are documented on, e.g. `itm_v1.htm`. Fields whose tooltip is
+     *  capped get a link to this page (plus their `#anchor` when one is derivable). */
+    readonly docPage: string;
 }
 
 export interface GenerateOptions {
@@ -39,7 +45,7 @@ export function generate(opts: GenerateOptions): GenerateResult {
 
     for (const target of opts.targets) {
         const items = loadOffsetItems(path.join(opts.iesdpDir, target.iesdpRelPath));
-        const struct = translateStruct(items);
+        const struct = translateStruct(items, `${IESDP_DOC_BASE}${target.docPage}`);
         const expected = emitSpecModule({
             struct,
             specConst: target.specConst,

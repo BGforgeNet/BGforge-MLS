@@ -225,6 +225,78 @@ check(
     `colGap=${dom.mainColGap}px blockGap=${dom.mainBlockGap}px`,
 );
 
+// Field tooltips: a rich IESDP `desc` surfaces as the field label's `title` (Field.svelte), while a desc that
+// merely repeats the label is suppressed. This exercises the whole channel end to end - the generator writes
+// the cleaned desc onto the ITM spec, derive-presentation drops the redundant ones, and projectRow reads the
+// survivors from the presentation schema into Row.description, which the webview renders as the label title.
+const tooltips = await page.evaluate(() => {
+    const out: [string, string][] = [];
+    for (const field of Array.from(document.querySelectorAll(".layout-root .field"))) {
+        const label = field.querySelector(".label");
+        if (label) out.push([(label.textContent ?? "").trim(), label.getAttribute("title") ?? ""]);
+    }
+    return out;
+});
+const norm = (s: string): string => s.replace(/\W+/g, "").toLowerCase();
+check(
+    "tooltip: a rich IESDP desc surfaces on the field label ('unused in BG1' from a min-stat field)",
+    tooltips.some(([, title]) => title.includes("unused in BG1")),
+    JSON.stringify(tooltips.filter(([, t]) => t !== "").map(([l, t]) => `${l}: ${t.slice(0, 40)}`)),
+);
+check(
+    "tooltip: a label-redundant desc is suppressed (no field's title just repeats its own label)",
+    tooltips.every(([text, title]) => title === "" || norm(title) !== norm(text)),
+    JSON.stringify(tooltips.filter(([text, title]) => title !== "" && norm(title) === norm(text))),
+);
+
+// Doc link: a field whose full write-up was capped (e.g. Min Level) renders an external IESDP link next to its
+// label (DocLink -> a plain external <a>, which VS Code opens in the browser). Assert the affordance renders
+// with a real IESDP href; the actual browser-open is VS Code host behaviour, covered by the live drive.
+const docLinks = await page.evaluate(() =>
+    Array.from(
+        document.querySelectorAll(".layout-root .doc-link"),
+        (a) => (a as HTMLAnchorElement).getAttribute("href") ?? "",
+    ),
+);
+check(
+    "doc-link: a capped field renders an external IESDP link beside its label",
+    docLinks.length > 0 && docLinks.every((h) => h.startsWith("https://gibberlings3.github.io/iesdp/")),
+    JSON.stringify(docLinks),
+);
+// The doc-link marker's styling (micro raised muted "?") is guarded by measurement, not just the href above:
+// assert the global .doc-link rule actually applies (it previously did not, as a component <style>).
+const docLinkStyle = await page.evaluate(() => {
+    const a = document.querySelector(".layout-root .doc-link");
+    if (!a) return undefined;
+    const cs = getComputedStyle(a);
+    const label = a.closest(".label, .nm") as HTMLElement;
+    const aBox = a.getBoundingClientRect();
+    const labBox = label.getBoundingClientRect();
+    return {
+        smaller: Number.parseFloat(cs.fontSize) < Number.parseFloat(getComputedStyle(label).fontSize),
+        raised: cs.verticalAlign === "super",
+        notClipped: aBox.top >= labBox.top - 0.5 && aBox.bottom <= labBox.bottom + 0.5,
+    };
+});
+check(
+    "doc-link: the micro '?' marker's global styling applies (smaller + raised + not clipped)",
+    docLinkStyle !== undefined && docLinkStyle.smaller && docLinkStyle.raised && docLinkStyle.notClipped,
+    JSON.stringify(docLinkStyle),
+);
+// The "?" repeats the field's own tooltip (the capped description) and appends the "Click to see more" hint.
+const docLinkTitle = await page.evaluate(() => {
+    const a = document.querySelector(".layout-root .doc-link");
+    const label = a?.closest(".label, .nm");
+    return { tip: a?.getAttribute("title") ?? "", labelTip: label?.getAttribute("title") ?? "" };
+});
+check(
+    "doc-link: the '?' tooltip repeats the field description and adds 'Click to see more'",
+    docLinkTitle.labelTip.length > 0 &&
+        docLinkTitle.tip.includes(docLinkTitle.labelTip) &&
+        docLinkTitle.tip.includes("Click to see more"),
+    JSON.stringify(docLinkTitle),
+);
+
 // Bulk select/deselect on the "Unusable By" panel drives the real edit pipeline across the byte fields.
 const unusablePanel = page
     .locator(".panel")

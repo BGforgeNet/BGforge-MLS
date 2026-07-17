@@ -71,6 +71,18 @@ export interface ScalarFieldSpec {
      * (`unused*`, `unknown`, duplicated signature/version). Never changes wire layout.
      */
     readonly hidden?: boolean;
+    /**
+     * Presentation-only tooltip text (cleaned IESDP `desc`), surfaced by the editor as the field's hover
+     * title. Read only by the presentation-schema derivation (`derive-presentation`), never by the codec or
+     * `walkStruct` - so it never enters the parsed document or the JSON snapshot. Generated onto the spec by
+     * `scripts/ie-binary-update`.
+     */
+    readonly description?: string;
+    /**
+     * Link to the field's full online IESDP documentation, surfaced beside the tooltip when the `description`
+     * above was capped for length. Presentation-only, travels the same channel as `description`.
+     */
+    readonly docUrl?: string;
 }
 
 /**

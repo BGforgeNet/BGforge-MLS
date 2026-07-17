@@ -138,6 +138,34 @@ describe("toPresentationEntries", () => {
             "itm.header.idx": { editable: false },
         });
     });
+
+    it("surfaces a description that adds info over the label plus its doc link, and drops a label-redundant one", () => {
+        // A description that slugifies to the same key as the label ("Price" on a Price field) is the label
+        // verbatim - redundant noise - so it is dropped, and its docUrl with it. A description that says more
+        // (the Min Level note) is kept, and its docUrl rides along. This is the tooltip-suppression gate the
+        // whole feature turns on; keeping it here guards it independent of the end-to-end render harness.
+        type T = { minLevel: number; price: number };
+        const url = "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm";
+        const spec: StructSpec<T> = {
+            minLevel: { codec: u32, description: "Min Level - the average of all active class levels.", docUrl: url },
+            price: { codec: u32, description: "Price", docUrl: url },
+        };
+        expect(toPresentationEntries(spec, {}, "itm.header")).toEqual({
+            "itm.header.minLevel": { description: "Min Level - the average of all active class levels.", docUrl: url },
+        });
+    });
+
+    it("keeps a surviving description even when it has no docUrl (a short-but-non-redundant note)", () => {
+        // The Min Strength Bonus note is short enough to not be capped, so no docUrl - but it still adds info
+        // over the "Strength Bonus" label, so the description surfaces on its own.
+        type T = { minStrengthBonus: number };
+        const spec: StructSpec<T> = {
+            minStrengthBonus: { codec: u8, description: "Min Strength Bonus (unused in BG1)" },
+        };
+        expect(toPresentationEntries(spec, {}, "itm.header")).toEqual({
+            "itm.header.minStrengthBonus": { description: "Min Strength Bonus (unused in BG1)" },
+        });
+    });
 });
 
 describe("toPresentationPatterns", () => {

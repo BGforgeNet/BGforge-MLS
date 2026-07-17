@@ -542,6 +542,23 @@ button:disabled {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* Micro "?" doc-link marker beside a capped field's label (rendered by DocLink.svelte). Global, not a component
+   <style> block, so it reliably applies alongside the other .field/.label rules. vertical-align: super keeps it
+   inside the line box so the label's overflow:hidden does not clip it; it stays muted and brightens on hover. */
+.doc-link {
+    margin-left: 2px;
+    font-size: 0.7em;
+    font-weight: 700;
+    vertical-align: super;
+    color: var(--vscode-descriptionForeground);
+    text-decoration: none;
+    opacity: 0.7;
+}
+.doc-link:hover,
+.doc-link:focus-visible {
+    opacity: 1;
+    color: var(--vscode-textLink-activeForeground);
+}
 /* Wraps the control plus its trailing chrome (diagnostic) so .field has exactly two children
    (label + value). In the flex tabs path this is the value side; the layout path makes it the subgrid's
    second column. */

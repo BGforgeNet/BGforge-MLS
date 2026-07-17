@@ -3,6 +3,7 @@ import {
     type ParsedGroup,
     getDomainRange,
     getNumericTypeRange,
+    resolveFieldPresentation,
     toSemanticFieldKey,
 } from "@bgforge/binary";
 import { type FlatNode, type Model, visibleNodes } from "./model";
@@ -76,6 +77,14 @@ export function projectRow(
     // layout fragment. Computed for fields only; undefined when the format/segments don't resolve to a key.
     const semanticKey = toSemanticFieldKey(model.parseResult.format, node.sourceSegments);
     if (semanticKey !== undefined) base.semanticKey = semanticKey;
+    // Static per-field tooltip from the format's presentation schema (cleaned IESDP desc). Editor-only: it
+    // rides the presentation layer, not the parsed document, so the JSON snapshot is unaffected. Layered over
+    // any parser-set description (above) and under the relationship overlay's dynamic redescribe (below).
+    if (semanticKey !== undefined) {
+        const pres = resolveFieldPresentation(model.parseResult.format, semanticKey, node.name);
+        if (pres?.description !== undefined) base.description = pres.description;
+        if (pres?.docUrl !== undefined) base.docUrl = pres.docUrl;
+    }
     // Apply relationship-model overlay last so it can rename/redescribe/re-type a field
     // without touching the underlying ParsedField or the canonical document bytes.
     if (rel !== undefined) {

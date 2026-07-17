@@ -20,6 +20,7 @@
 
 ### Binary editor
 
+- Item, spell, and effect fields (ITM/SPL/EFF, and the effects embedded in CRE) now show the field's IESDP documentation in its tooltip. Fields with a longer write-up get a small `?` marker beside the label; the tooltip is capped to a readable length and the marker links to the field's full IESDP page in your browser.
 - CRE inventory slots that hold an item now turn the slot label into a link to that item's entry in the Items section - no more reading the index and switching tabs by hand.
 - Numeric fields now show their valid range in the field tooltip, and a value outside that range highlights the field with a warning outline - while you type and for as long as the value stays out of range - on every numeric field, whether it renders in a form, a grid, or a matrix.
 
