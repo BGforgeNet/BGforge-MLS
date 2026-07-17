@@ -5,6 +5,10 @@ export interface TranslatedField {
     readonly fieldSource: string;
     /** Identifiers the emitted source depends on - typed-binary codecs, spec helpers. */
     readonly imports: ReadonlyArray<string>;
+    /** Cleaned IESDP `desc`, surfaced as an editor tooltip (presentation only). Undefined for unused bytes. */
+    readonly description?: string;
+    /** Link to the field's full IESDP documentation, emitted when the tooltip was capped (more to read). */
+    readonly docUrl?: string;
 }
 
 export interface TranslatedStruct {
@@ -57,6 +61,62 @@ export function descToCamelCase(desc: string): string {
 }
 
 /**
+ * Cleans an IESDP `desc` into readable tooltip prose. Unlike `descToCamelCase` (which strips aggressively to
+ * derive an identifier), this preserves the wording - only the source-markup a tooltip cannot render is
+ * removed: Jekyll/Liquid directives (`{% include %}`, `{% capture %}`; the prose BETWEEN capture/endcapture is
+ * kept, only the tags go), Markdown link syntax (link text kept), and HTML tags (`<b>`, `<a name>`, `<br>`,
+ * `<code>`). Whitespace - including the newlines of a YAML block scalar - collapses to single spaces. The
+ * result is verbatim wording, not a summary (the caller chose "cleaned text", not "summarize").
+ */
+export function cleanDescription(desc: string): string {
+    let s = desc;
+    s = s.replaceAll(/\{%[^%]*%\}/g, " ");
+    s = s.replaceAll(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    let prev: string;
+    do {
+        prev = s;
+        s = s.replaceAll(/<[^<>]*>/g, " ");
+    } while (s !== prev);
+    // IESDP prose is full of typographic Unicode (long arrows in enum-value lists, en/em dashes, smart quotes).
+    // Fold to ASCII - the generated file, like every authored artifact here, is plain ASCII.
+    s = s
+        .replaceAll(/[\u2192\u27F6\u2794\u2799\u279C]/g, "->")
+        .replaceAll(/[\u2190\u27F5]/g, "<-")
+        .replaceAll(/[\u2010\u2011\u2012\u2013\u2014]/g, "-")
+        .replaceAll(/[\u2018\u2019\u201A\u201B]/g, "'")
+        .replaceAll(/[\u201C\u201D\u201E\u201F]/g, '"')
+        .replaceAll("\u2026", "...")
+        .replaceAll("\u00D7", "x")
+        .replaceAll("\u2265", ">=")
+        .replaceAll("\u2264", "<=")
+        .replaceAll("\u2260", "!=")
+        .replaceAll("\u00A0", " ");
+    return s.replaceAll(/\s+/g, " ").trim();
+}
+
+/** Longest tooltip surfaced inline; a longer description is cut here and a "full docs" link is emitted. */
+const TOOLTIP_CAP = 200;
+
+/**
+ * Cap a cleaned description for an inline hover tooltip. A short desc passes through whole; a long one (a full
+ * IESDP field write-up - e.g. an enum field documenting every value's behaviour) is cut at the first sentence
+ * end before the cap when there is one, else at the last word boundary, and marked truncated so the caller can
+ * link to the full text. IESDP enum lists separate values with " - " (not ". "), so the first sentence break
+ * lands after the value enumeration - the useful part stays, the verbose per-value prose goes behind the link.
+ */
+export function capTooltip(cleaned: string): { text: string; truncated: boolean } {
+    if (cleaned.length <= TOOLTIP_CAP) return { text: cleaned, truncated: false };
+    const sentenceEnd = cleaned.indexOf(". ");
+    if (sentenceEnd !== -1 && sentenceEnd < TOOLTIP_CAP) {
+        return { text: cleaned.slice(0, sentenceEnd + 1), truncated: true };
+    }
+    const slice = cleaned.slice(0, TOOLTIP_CAP);
+    const lastSpace = slice.lastIndexOf(" ");
+    const cut = lastSpace > TOOLTIP_CAP / 2 ? slice.slice(0, lastSpace) : slice;
+    return { text: `${cut} ...`, truncated: true };
+}
+
+/**
  * IESDP scalar type -> typed-binary codec name.
  *
  * `strref` is signed (`i32`) so the −1 "no string" sentinel reads naturally
@@ -86,7 +146,7 @@ function arraySource(elementCodec: string, count: number): string {
     return `arraySpec({ element: { codec: ${elementCodec} }, count: ${count} })`;
 }
 
-export function translateField(item: OffsetItem): TranslatedField {
+export function translateField(item: OffsetItem, docBaseUrl?: string): TranslatedField {
     const isUnused = item.unused !== undefined || item.unknown !== undefined;
     const name = isUnused ? "" : item.id !== undefined ? snakeToCamel(item.id) : descToCamelCase(item.desc);
 
@@ -115,7 +175,28 @@ export function translateField(item: OffsetItem): TranslatedField {
     }
 
     const codec = lookupCodec(item.type);
-    return { name, fieldSource: `{ codec: ${codec} }`, imports: [codec] };
+    // Scalars are the only spec form that carries tooltip metadata in this pass: the `{ codec }` object literal
+    // has slots for it, whereas `charsSpec()` / `arraySpec()` (resref, string, byte-run fields) do not - left
+    // for a follow-up. Emit the CAPPED desc plus, when the full write-up is longer, a link to the field's IESDP
+    // page so the tooltip stays short. The presentation layer (derive-presentation) decides whether the desc
+    // adds anything over the label before surfacing either.
+    const cleaned = isUnused || !item.desc ? undefined : cleanDescription(item.desc) || undefined;
+    const capped = cleaned ? capTooltip(cleaned) : undefined;
+    // Link to the field's IESDP format page when the tooltip was capped (there is more to read). Page-level,
+    // NOT field-precise: IESDP's per-field `<a name="itmv1_..._0xNN">` anchors are referenced in prose but not
+    // emitted as anchor definitions on the published page (verified dead), so a fragment would land nowhere -
+    // the page itself is the only reliable target.
+    const docUrl = docBaseUrl !== undefined && capped?.truncated === true ? docBaseUrl : undefined;
+    const parts = [`codec: ${codec}`];
+    if (capped) parts.push(`description: ${JSON.stringify(capped.text)}`);
+    if (docUrl !== undefined) parts.push(`docUrl: ${JSON.stringify(docUrl)}`);
+    return {
+        name,
+        fieldSource: `{ ${parts.join(", ")} }`,
+        imports: [codec],
+        ...(capped && { description: capped.text }),
+        ...(docUrl !== undefined && { docUrl }),
+    };
 }
 
 /** Bytes consumed by one IESDP offset entry. */
@@ -149,7 +230,7 @@ function fieldByteSize(item: OffsetItem): number {
  * Names unused/unknown fields `unused1..N` so the wire bytes round-trip
  * verbatim - they're padding from the parser's POV but real bytes on disk.
  */
-export function translateStruct(items: readonly OffsetItem[]): TranslatedStruct {
+export function translateStruct(items: readonly OffsetItem[], docBaseUrl?: string): TranslatedStruct {
     const fields: TranslatedField[] = [];
     const imports = new Set<string>();
     let offset = items[0]?.offset ?? 0;
@@ -163,7 +244,7 @@ export function translateStruct(items: readonly OffsetItem[]): TranslatedStruct 
             );
         }
 
-        const translated = translateField(item);
+        const translated = translateField(item, docBaseUrl);
         const isUnused = item.unused !== undefined || item.unknown !== undefined;
         const finalField = isUnused ? { ...translated, name: `unused${++unusedCount}` } : translated;
 

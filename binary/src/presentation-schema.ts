@@ -52,6 +52,8 @@ function mergePresentation(base: FieldPresentation, override: FieldPresentation)
         enumOptions: override.enumOptions ?? base.enumOptions,
         flagOptions: override.flagOptions ?? base.flagOptions,
         flagActivation: override.flagActivation ?? base.flagActivation,
+        description: override.description ?? base.description,
+        docUrl: override.docUrl ?? base.docUrl,
     };
 }
 
@@ -65,6 +67,8 @@ function toFieldPresentation(entry: PatternFieldPresentation | CompiledPatternFi
         numericFormat: entry.numericFormat,
         editable: entry.editable,
         stringCharset: entry.stringCharset,
+        description: entry.description,
+        docUrl: entry.docUrl,
     };
 }
 

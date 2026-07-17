@@ -30,6 +30,11 @@ export const fieldPresentationSchema = z.strictObject({
      * encodings - accepted bytes stay within the engine's documented input.
      */
     stringCharset: stringCharsetSchema.optional(),
+    /** Cleaned IESDP `desc`, surfaced as the field's editor tooltip. Presentation only; never in the snapshot. */
+    description: z.string().min(1).optional(),
+    /** Link to the field's full online IESDP documentation, shown beside a capped tooltip. Presentation only.
+     *  Generator-produced (not external input), so no URL-shape validation - a non-empty string suffices. */
+    docUrl: z.string().min(1).optional(),
 });
 
 export const patternFieldPresentationSchema = fieldPresentationSchema.extend({

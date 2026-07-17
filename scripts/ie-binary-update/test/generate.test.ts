@@ -11,6 +11,7 @@ const itmHeaderTarget: FormatTarget = {
     outputRelPath: "binary/src/itm/specs/header.ts",
     specConst: "itmHeaderSpec",
     dataType: "ItmHeaderData",
+    docPage: "itm_v1.htm",
 };
 
 describe("generate - IESDP itm_v1 header", () => {
@@ -32,15 +33,17 @@ describe("generate - IESDP itm_v1 header", () => {
         expect(generated).toContain("export const itmHeaderSpec = {");
         expect(generated).toContain("export type ItmHeaderData = SpecData<typeof itmHeaderSpec>;");
 
-        // Spot-check a few fields that exercise distinct translation rules.
+        // Spot-check a few fields that exercise distinct translation rules. Scalar fields now carry a trailing
+        // `description` (and sometimes `docUrl`), so match the field + codec prefix rather than the exact
+        // closing - this test guards the name/codec translation, not the tooltip content.
         expect(generated).toContain("signature: charsSpec(4),"); // char array -> chars primitive
-        expect(generated).toContain("unidentifiedName: { codec: i32 },"); // strref -> i32
+        expect(generated).toContain("unidentifiedName: { codec: i32"); // strref -> i32
         expect(generated).toContain("replacement: charsSpec(8),"); // resref -> chars primitive
-        expect(generated).toContain("flags: { codec: u32 },"); // markdown-stripped, derived name
-        expect(generated).toContain("type: { codec: u16 },");
+        expect(generated).toContain("flags: { codec: u32"); // markdown-stripped, derived name
+        expect(generated).toContain("type: { codec: u16");
         expect(generated).toContain("usabilityFlags: arraySpec({ element: { codec: u8 }, count: 4 }),"); // byte+mult stays array
-        expect(generated).toContain("kitUsability1: { codec: u8 },"); // markdown-stripped derived name
-        expect(generated).toContain("featureBlocksCount: { codec: u16 },");
+        expect(generated).toContain("kitUsability1: { codec: u8"); // markdown-stripped derived name
+        expect(generated).toContain("featureBlocksCount: { codec: u16");
     });
 
     test("returns checkOnly=true diff-list when output differs", () => {

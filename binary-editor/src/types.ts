@@ -36,6 +36,9 @@ export interface Row {
     size?: number;
     editable?: boolean;
     description?: string;
+    /** Link to the field's full online documentation, shown as a small external-link affordance beside the
+     *  label when its `description` tooltip was capped for length (from the presentation schema's `docUrl`). */
+    docUrl?: string;
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
     /** Display hint (from the spec's `enumOpen`): the enum is advisory, so the dropdown accepts a custom

@@ -4,6 +4,7 @@
     import { controlWidthClass } from "../../state/controls";
     import { useJump } from "../../state/jump-context";
     import CellControl from "../CellControl.svelte";
+    import DocLink from "../DocLink.svelte";
 
     const { columns, items, fields, onedit }: {
         columns: number;
@@ -46,7 +47,7 @@
                     title={`Go to ${link.label}`}
                     onclick={() => jump(link)}>{cell.row.name}</button>
             {:else}
-                <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}</span>
+                <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}<DocLink url={cell.row.docUrl} description={cell.row.description} /></span>
             {/if}
             <!-- Wrap in the same sized .field-control Field.svelte uses, so a dropdown in a grid cell is sized
                  to its longest option instead of falling to the combobox's intrinsic (clipping) width. -->

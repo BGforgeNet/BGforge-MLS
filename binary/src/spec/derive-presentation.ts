@@ -9,6 +9,8 @@ interface PresentationEntry {
     readonly flagOptions?: Readonly<Record<string, string>>;
     readonly numericFormat?: "decimal" | "hex32";
     readonly editable?: boolean;
+    readonly description?: string;
+    readonly docUrl?: string;
 }
 
 interface PatternEntry extends PresentationEntry {
@@ -74,9 +76,20 @@ function emitPresentationEntries<T>(
             continue;
         }
 
+        // A tooltip only earns its place when it says more than the label. Most IESDP `desc`s are the label
+        // verbatim ("Price", "[Flags]"), so surface a description ONLY when it does not slugify to the same
+        // key as the label - otherwise it is redundant noise on nearly every field.
+        const description =
+            fs.description !== undefined && slugify(fs.description) !== fieldKey ? fs.description : undefined;
+        // The doc link rides with the description: surfaced only when the description is (its "read the full
+        // write-up" affordance), dropped whenever the description is suppressed as label-redundant.
+        const docUrl = description !== undefined ? fs.docUrl : undefined;
+
         if (fs.enum) {
             emit(key, fieldKey, {
                 ...(pres?.label !== undefined && { label: pres.label }),
+                ...(description !== undefined && { description }),
+                ...(docUrl !== undefined && { docUrl }),
                 presentationType: "enum",
                 enumOptions: stringifyKeys(fs.enum),
                 // A packed/bitfield enum (declares `format: "hex32"`) carries the hex format so its value
@@ -89,16 +102,25 @@ function emitPresentationEntries<T>(
         if (fs.flags) {
             emit(key, fieldKey, {
                 ...(pres?.label !== undefined && { label: pres.label }),
+                ...(description !== undefined && { description }),
+                ...(docUrl !== undefined && { docUrl }),
                 presentationType: "flags",
                 flagOptions: stringifyKeys(fs.flags),
             });
             continue;
         }
 
-        const overrides: { numericFormat?: "decimal" | "hex32"; editable?: boolean } = {};
+        const overrides: {
+            numericFormat?: "decimal" | "hex32";
+            editable?: boolean;
+            description?: string;
+            docUrl?: string;
+        } = {};
         if (pres?.format === "decimal" || pres?.format === "hex32") overrides.numericFormat = pres.format;
         if (pres?.editable !== undefined) overrides.editable = pres.editable;
         else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
+        if (description !== undefined) overrides.description = description;
+        if (docUrl !== undefined) overrides.docUrl = docUrl;
         if (Object.keys(overrides).length > 0) {
             emit(key, fieldKey, overrides);
         }

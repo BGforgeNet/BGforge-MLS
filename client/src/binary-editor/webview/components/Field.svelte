@@ -2,6 +2,7 @@
     import type { Diagnostic, Row } from "@bgforge/binary-editor";
     import { controlWidthClass } from "../state/controls";
     import CellControl from "./CellControl.svelte";
+    import DocLink from "./DocLink.svelte";
     import Icon from "./Icon.svelte";
     import JumpLink from "./JumpLink.svelte";
     const { row, onedit, diagnostics = [] }:
@@ -33,7 +34,9 @@
     );
 </script>
 <div class="field">
-    <span class="label" title={labelTitle}>{row.name}</span>
+    <!-- DocLink sits inside the label span so `.field` keeps exactly two children (the 2-column subgrid
+         contract); it renders nothing unless the field carries a docUrl. -->
+    <span class="label" title={labelTitle}>{row.name}<DocLink url={row.docUrl} description={row.description} /></span>
     <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
          two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
          max-content column and every control aligns at a uniform width. -->
