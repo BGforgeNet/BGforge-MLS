@@ -6,6 +6,7 @@
 import type { Position } from "vscode-languageserver/node";
 import { getLinePrefix } from "../cursor-utils";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { CommentKind, detectCommentKind } from "../shared/completion-context";
 import { SyntaxType } from "./syntax-type";
 
 /** SSL completion context for filterCompletions. */
@@ -36,27 +37,15 @@ export function getSslCompletionContext(text: string, position: Position): SslCo
         return SslCompletionContext.Code;
     }
 
-    const node = tree.rootNode.descendantForPosition({
-        row: position.line,
-        column: position.character,
-    });
-    if (!node) {
-        return SslCompletionContext.Code;
-    }
-
-    if (node.type === SyntaxType.Comment) {
-        const commentText = node.text.trimStart();
-        if (commentText.startsWith("/**")) {
+    const kind = detectCommentKind(tree.rootNode, position, SyntaxType.Comment, SyntaxType.LineComment);
+    switch (kind) {
+        case CommentKind.Jsdoc:
             return SslCompletionContext.Jsdoc;
-        }
-        return SslCompletionContext.Comment;
+        case CommentKind.Comment:
+            return SslCompletionContext.Comment;
+        default:
+            return SslCompletionContext.Code;
     }
-
-    if (node.type === SyntaxType.LineComment) {
-        return SslCompletionContext.Comment;
-    }
-
-    return SslCompletionContext.Code;
 }
 
 /**

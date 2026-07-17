@@ -9,7 +9,7 @@
 
 import type { Position } from "vscode-languageserver/node";
 import { SyntaxType } from "../../syntax-type";
-import { getUtf8ByteOffset } from "../../../shared/completion-context";
+import { CommentKind, detectCommentKind, getUtf8ByteOffset } from "../../../shared/completion-context";
 import { getLinePrefix } from "../../../cursor-utils";
 import { getParser, isInitialized } from "../../../../../shared/parsers/weidu-tp2";
 import { CompletionContext } from "../types";
@@ -116,15 +116,18 @@ export function getContextAtPosition(text: string, line: number, character: numb
         return [];
     }
 
-    // No code completions inside comments; offer JSDoc tags inside /** */ comments
-    if (node.type === SyntaxType.Comment) {
-        const commentText = node.text.trimStart();
-        if (commentText.startsWith("/**")) {
-            return [CompletionContext.Jsdoc];
-        }
-        return [CompletionContext.Comment];
+    // No code completions inside comments; offer JSDoc tags inside /** */ comments.
+    // Boundary-robust: a cursor at the end of a line comment must still count as in-comment.
+    const commentKind = detectCommentKind(
+        tree.rootNode,
+        { line, character },
+        SyntaxType.Comment,
+        SyntaxType.LineComment,
+    );
+    if (commentKind === CommentKind.Jsdoc) {
+        return [CompletionContext.Jsdoc];
     }
-    if (node.type === SyntaxType.LineComment) {
+    if (commentKind === CommentKind.Comment) {
         return [CompletionContext.Comment];
     }
 

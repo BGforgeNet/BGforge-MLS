@@ -4,6 +4,35 @@
  */
 
 import type { Position } from "vscode-languageserver/node";
+import type { Node as SyntaxNode } from "web-tree-sitter";
+
+/**
+ * Classify a position by probing the leaf node at the cursor, then - if that yields nothing - the
+ * character immediately before it. Returns the first non-null classification, or null.
+ *
+ * Tree-sitter node ranges are half-open [start, end): a line comment ends at end-of-line, so
+ * descendantForPosition at the final column resolves to the parent code node. That final column is
+ * exactly where the cursor sits while typing at the end of a `//` line, so probing only the cursor
+ * column misclassifies it as code. The one-column-back probe catches that boundary case.
+ */
+export function classifyAtCursorBoundary<T>(
+    root: SyntaxNode,
+    position: Position,
+    classify: (node: SyntaxNode) => T | null,
+): T | null {
+    const at = root.descendantForPosition({ row: position.line, column: position.character });
+    const hit = at ? classify(at) : null;
+    if (hit !== null) {
+        return hit;
+    }
+    if (position.character > 0) {
+        const before = root.descendantForPosition({ row: position.line, column: position.character - 1 });
+        if (before) {
+            return classify(before);
+        }
+    }
+    return null;
+}
 
 /**
  * Create a comment check function for a specific language.
@@ -15,7 +44,7 @@ import type { Position } from "vscode-languageserver/node";
  */
 export function createIsInsideComment(
     isInitialized: () => boolean,
-    parseWithCache: (text: string) => { rootNode: import("web-tree-sitter").Node } | null,
+    parseWithCache: (text: string) => { rootNode: SyntaxNode } | null,
     commentTypes: ReadonlySet<string>,
 ): (text: string, position: Position) => boolean {
     return (text, position) => {
@@ -26,7 +55,9 @@ export function createIsInsideComment(
         if (!tree) {
             return false;
         }
-        const node = tree.rootNode.descendantForPosition({ row: position.line, column: position.character });
-        return node !== null && commentTypes.has(node.type);
+        return (
+            classifyAtCursorBoundary(tree.rootNode, position, (node) => (commentTypes.has(node.type) ? true : null)) ===
+            true
+        );
     };
 }
