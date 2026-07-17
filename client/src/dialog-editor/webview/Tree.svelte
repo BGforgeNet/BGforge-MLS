@@ -393,6 +393,24 @@
             onJump(t.jump.file, t.jump.stateId);
         }
     }
+    // Keyed-each identity for a reply ROW. Beyond `r.id` it folds in the target's shape - and, for a `state`
+    // target, the child node's id - so a live re-parse that flips a reply's target (e.g. `state` -> `external`
+    // when its destination node vanishes from a mid-edit parse) gives the row a NEW key. That forces the reused
+    // row and its recursive child `stateBlock` to be torn down and rebuilt instead of updated in place. In-place
+    // reuse re-ran the child block's deriveds against the now-stale `r.target.node` (undefined) during the same
+    // reactive flush, threw reading `.id`, and aborted the whole flush - wedging the tree until the panel was
+    // reopened. The key expression is evaluated only against a consistent freshly-parsed reply, so it never
+    // dereferences a stale union member itself.
+    function replyKey(r: ConvReply): string {
+        return r.target.kind === "state" ? `${r.id}@${r.target.node.id}` : `${r.id}#${r.target.kind}`;
+    }
+    // Keyed-each identity for a structured node's block item, for the same reason as `replyKey`: a `reply` item
+    // recurses into `stateBlock` (via replyRow), so it must remount rather than reuse when its target flips on a
+    // re-parse. Reply items key on `replyKey`; line/group items key on their kind+index (a group's own nested
+    // reply items are re-keyed by the recursive convBlock, so it needs no target-awareness itself).
+    function blockKey(it: ConvBlock[number], i: number): string {
+        return it.kind === "reply" ? `r:${replyKey(it.reply)}` : `${it.kind}:${i}`;
+    }
     // Keyboard on a focused option ROW, mirroring onRowKeydown for states: Space selects the option;
     // Enter/F2/E begin inline edit (Enter falls back to select when the option is not editable - a locked
     // SSL @N / read-only node has no inline input); G takes the transition (go to the target, like clicking
@@ -620,7 +638,7 @@
                 {@render branchBlock(b, depth, st.id)}
             {/each}
         {:else}
-            {#each st.replies as r, i (r.id)}
+            {#each st.replies as r, i (replyKey(r))}
                 {@render replyRow(r, depth, st.id, i, st.replies.length, false)}
             {/each}
             <!-- Trailing "+" that appends an option to this state's list (editable states only). Shown even
@@ -647,7 +665,7 @@
              matching the state row's own line (linebtn) and the option rows. -->
         <button class="line linebtn" use:clipTitle={{ label: ownerId, text: b.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(ownerId, b.branchKey))}>{b.npc || "(no line)"}</button>
     </div>
-    {#each b.replies as r, i (r.id)}
+    {#each b.replies as r, i (replyKey(r))}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
     {/each}
 {/snippet}
@@ -658,7 +676,7 @@
      option rows) with no header; the condition lives on the options it gates. This keeps the else NPC line
      (unlike a fully flat projection, which drops it - dialog-nested-flatten-bug-class). Read-only this slice. -->
 {#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
-    {#each block as it, i (i)}
+    {#each block as it, i (blockKey(it, i))}
         {#if it.kind === "line"}
             <div class="brep" class:branchhl={inBranch(it.branchKey)} class:searchhit={isHit(it.branchKey)} class:searchcurrent={isCurrent(it.branchKey)} style="--lvl:{depth * 2 + 1}">
                 <!-- A branch's opening NPC line carries its gate: the if-branch reads [if], the else-branch reads
