@@ -507,7 +507,7 @@ describe("TP2 definition: INCLUDE directive", () => {
         expect(result?.range.start.character).toBe(0);
     });
 
-    it("returns null when included file does not exist", () => {
+    it("stays put (authoritative no-op) when the included file does not exist", () => {
         const mainPath = path.join(tempDir, "setup.tp2");
         const mainUri = pathToFileURL(mainPath).toString();
         const text = `INCLUDE ~nonexistent/file.tph~`;
@@ -515,7 +515,9 @@ describe("TP2 definition: INCLUDE directive", () => {
         const position: Position = { line: 0, character: 15 };
         const result = getDefinition(text, mainUri, position);
 
-        expect(result).toBeNull();
+        // The INCLUDE path owns the click (so the handler's symbol fallback cannot wrong-jump off the
+        // filename), but there is no target, so it points back into the same file rather than navigating.
+        expect(result?.uri).toBe(mainUri);
     });
 
     it("returns null when cursor is not on INCLUDE path", () => {

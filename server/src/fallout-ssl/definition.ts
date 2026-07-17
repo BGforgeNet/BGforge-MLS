@@ -5,15 +5,15 @@
  * Returns null if not found locally, allowing fallback to header definitions.
  */
 
-import * as fs from "fs";
 import * as path from "path";
 import type { Node } from "web-tree-sitter";
 import type { Location, Position } from "vscode-languageserver/node";
-import { pathToUri, uriToPath } from "../uri-utils";
+import { uriToPath } from "../uri-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./syntax-type";
 import { makeRange, findIdentifierNodeAtPosition } from "./utils";
 import { resolveIdentifierDefinitionNode } from "./symbol-definitions";
+import { selfLocation, fileLocation, resolveExisting } from "../shared/path-definition";
 
 /**
  * Get definition location for the symbol at the given position.
@@ -85,26 +85,18 @@ function tryIncludeDefinition(root: Node, position: Position, uri: string): Loca
         return null;
     }
 
+    // The cursor is on the #include path string, so this is AUTHORITATIVE: return non-null so the
+    // definition handler cannot fall through to its bare-word symbol lookup and wrongly jump a filename
+    // to a same-named proc/macro. selfLocation is the no-op when the include cannot be resolved.
+    const self = selfLocation(pathNode, uri);
+
     // Strip delimiters: "file.h" -> file.h, <file.h> -> file.h
-    const raw = pathNode.text;
-    const includePath = raw.replaceAll(/^["<]|[">]$/g, "");
+    const includePath = pathNode.text.replaceAll(/^["<]|[">]$/g, "");
     if (!includePath) {
-        return null;
+        return self;
     }
 
-    const currentFilePath = uriToPath(uri);
-    const currentDir = path.dirname(currentFilePath);
-    const resolvedPath = path.resolve(currentDir, includePath);
-
-    if (!fs.existsSync(resolvedPath)) {
-        return null;
-    }
-
-    return {
-        uri: pathToUri(resolvedPath),
-        range: {
-            start: { line: 0, character: 0 },
-            end: { line: 0, character: 0 },
-        },
-    };
+    const currentDir = path.dirname(uriToPath(uri));
+    const resolved = resolveExisting(path.resolve(currentDir, includePath));
+    return resolved ? fileLocation(resolved) : self;
 }

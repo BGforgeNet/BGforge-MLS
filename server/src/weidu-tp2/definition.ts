@@ -8,19 +8,14 @@
 
 import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import * as path from "path";
-import * as fs from "fs";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
-import { pathToUri, uriToPath } from "../uri-utils";
 import { SyntaxType } from "./syntax-type";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import { findLocalCallableDefinition } from "./callable-definitions";
 import { findVariableDefinition } from "./variable-symbols";
-import { findNodeAtPosition, findAncestorOfType, stripStringDelimiters } from "./tree-utils";
+import { findNodeAtPosition, findAncestorOfType } from "./tree-utils";
+import { tryFileReferenceDefinition } from "./file-references";
 import type { Symbols } from "../core/symbol-index";
-
-/** Node types for INCLUDE directives. */
-const INCLUDE_TYPES = new Set([SyntaxType.ActionInclude]);
 
 // ============================================
 // Main entry point
@@ -67,10 +62,12 @@ export function getDefinition(text: string, uri: string, position: Position, sym
         return callResult;
     }
 
-    // Check if cursor is on an INCLUDE path
-    const includeResult = tryIncludeDefinition(targetNode, uri);
-    if (includeResult) {
-        return includeResult;
+    // Check if cursor is on a COPY/COMPILE/INCLUDE file path (or inline heredoc reference).
+    // Authoritative for path strings: returns non-null so the definition handler does not fall through
+    // to its bare-word symbol lookup (which would wrongly jump to a same-named function).
+    const fileRefResult = tryFileReferenceDefinition(targetNode, text, uri);
+    if (fileRefResult) {
+        return fileRefResult;
     }
 
     return null;
@@ -221,63 +218,3 @@ function tryFunctionCallDefinition(node: SyntaxNode, text: string, uri: string, 
 // ============================================
 // INCLUDE handling
 // ============================================
-
-/**
- * Try to find definition for an INCLUDE directive.
- */
-function tryIncludeDefinition(node: SyntaxNode, uri: string): Location | null {
-    // Check if we're in an INCLUDE context
-    const includeNode = findAncestorOfType(node, INCLUDE_TYPES);
-    if (!includeNode) {
-        return null;
-    }
-
-    // Find the path string node
-    const pathNode = findPathInInclude(includeNode);
-    if (!pathNode) {
-        return null;
-    }
-
-    // Get the include path (strip quotes/tildes)
-    const includePath = stripStringDelimiters(pathNode.text);
-    if (!includePath) {
-        return null;
-    }
-
-    // Resolve the path relative to the current file
-    const currentFilePath = uriToPath(uri);
-    const currentDir = path.dirname(currentFilePath);
-    const resolvedPath = path.resolve(currentDir, includePath);
-
-    // Check if the file exists
-    if (!fs.existsSync(resolvedPath)) {
-        return null;
-    }
-
-    // Return location pointing to the start of the file
-    return {
-        uri: pathToUri(resolvedPath),
-        range: {
-            start: { line: 0, character: 0 },
-            end: { line: 0, character: 0 },
-        },
-    };
-}
-
-/**
- * Find the path node in an INCLUDE directive.
- */
-function findPathInInclude(node: SyntaxNode): SyntaxNode | null {
-    // Use the "file" field if available
-    const fileNode = node.childForFieldName("file");
-    if (fileNode) {
-        return fileNode;
-    }
-    // Fallback to finding any string child
-    for (const child of node.children) {
-        if (child.type === SyntaxType.String) {
-            return child;
-        }
-    }
-    return null;
-}

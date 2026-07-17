@@ -212,12 +212,17 @@ end
                 expect(result).toBeNull();
             });
 
-            it("returns null when included file does not exist", () => {
-                const text = `#include "nonexistent.h"\n\nprocedure main begin end`;
-                const position: Position = { line: 0, character: 15 };
+            it("stays put on an unresolvable include, never jumping to a same-named procedure", () => {
+                // A procedure named like the include's basename must not become the target: the
+                // definition handler's bare-word symbol fallback would otherwise wrong-jump there.
+                const text = `procedure ghostinc begin end\n#include "ghostinc.h"`;
+                const position: Position = { line: 1, character: 12 }; // on "ghostinc" in the path
                 const result = getLocalDefinition(text, sslUri, position);
 
-                expect(result).toBeNull();
+                // Authoritative no-op: points back into the same file (self-location at the include path
+                // line), NOT the procedure on line 0.
+                expect(result?.uri).toBe(sslUri);
+                expect(result?.range.start.line).toBe(1);
             });
         });
 
