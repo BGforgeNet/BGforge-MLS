@@ -50,6 +50,7 @@ vi.mock("fs", async (importOriginal) => {
     };
 });
 
+import { DiagnosticSeverity } from "vscode-languageserver/node";
 import { Translation, UnsupportedEncodingCharacterError } from "../src/translation";
 import { project as loadProjectSettings, type ProjectTraSettings } from "../src/settings";
 
@@ -1237,6 +1238,133 @@ translation~`;
             expect(refs.length).toBe(N);
             const files = new Set(refs.map((r) => r.uri));
             expect(files.size).toBe(N);
+        });
+    });
+
+    describe("getDiagnostics (unresolved translation references)", () => {
+        // beforeEach loads test.tra (@100/@101/@102) and test.msg (100/101/102) from tempDir.
+        // A consumer whose basename is "test" auto-resolves to those via auto_tra.
+
+        it("flags a @N ref with no entry as an Info diagnostic on the token", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const diags = translation.getDiagnostics(uri, "weidu-d", "@999");
+
+            expect(diags).toHaveLength(1);
+            const d = diags[0]!;
+            expect(d.severity).toBe(DiagnosticSeverity.Information);
+            expect(d.source).toBe("BGforge MLS (translation)");
+            expect(d.message).toBe("No translation entry 999 in test.tra.");
+            // Underlines exactly the `@999` token.
+            expect(d.range).toEqual({ start: { line: 0, character: 0 }, end: { line: 0, character: 4 } });
+        });
+
+        it("does not flag a @N reference inside a // line comment", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            // @999 has no entry, but it's commented out. Commenting dialog with // is ubiquitous in
+            // WeiDU mods (real case: BG1NPC x#brint.d), so a commented ref must never be flagged.
+            expect(translation.getDiagnostics(uri, "weidu-d", "// SAY @999")).toEqual([]);
+        });
+
+        it("does not flag a @N reference inside a /* */ block comment", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            expect(translation.getDiagnostics(uri, "weidu-d", "/* old:\n  @999\n*/")).toEqual([]);
+        });
+
+        it("emits nothing when every @N ref resolves", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            expect(translation.getDiagnostics(uri, "weidu-d", "@100 @101 @102")).toEqual([]);
+        });
+
+        it("flags only the missing ref among a mix", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const diags = translation.getDiagnostics(uri, "weidu-d", "call @100;\ncall @999;");
+
+            expect(diags).toHaveLength(1);
+            expect(diags[0]!.range.start.line).toBe(1);
+            expect(diags[0]!.message).toContain("999");
+        });
+
+        it("SUPPRESSES all refs when this document's translation file does not resolve", async () => {
+            await translation.init();
+            // basename "other" -> other.tra, which is not loaded -> file-missing -> silent.
+            const uri = `file://${tempDir}/other.d`;
+            expect(translation.getDiagnostics(uri, "weidu-d", "@100\n@999")).toEqual([]);
+        });
+
+        it("SUPPRESSES all refs when no translation data is loaded at all", async () => {
+            const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), "mls-empty-"));
+            try {
+                const t = new Translation({ directory: emptyDir, auto_tra: true }, emptyDir);
+                await t.init();
+                const uri = `file://${emptyDir}/test.d`;
+                expect(t.getDiagnostics(uri, "weidu-d", "@100\n@999")).toEqual([]);
+            } finally {
+                fs.rmSync(emptyDir, { recursive: true, force: true });
+            }
+        });
+
+        it("flags an unresolved MSG-call ref (mstr) against a loaded .msg", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.ssl`;
+            const diags = translation.getDiagnostics(uri, "fallout-ssl", "mstr(999)");
+
+            expect(diags).toHaveLength(1);
+            expect(diags[0]!.severity).toBe(DiagnosticSeverity.Information);
+            expect(diags[0]!.message).toBe("No translation entry 999 in test.msg.");
+        });
+
+        it("does not flag a prefixed *mstr function (g_mstr/my_mstr read a different file)", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.ssl`;
+            // g_mstr(x) = message_str(SCRIPT_GENERIC, x): a different function reading a generic file,
+            // not this script's own .msg. The bare `mstr` alternative must not match inside `g_mstr(`
+            // (ubiquitous in the real Fallout RP corpus: g_mstr(20000) etc.).
+            expect(translation.getDiagnostics(uri, "fallout-ssl", "g_mstr(999)\nmy_mstr(999)")).toEqual([]);
+        });
+
+        it("emits nothing for a resolved MSG-call ref", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.ssl`;
+            expect(translation.getDiagnostics(uri, "fallout-ssl", "NOption(100)")).toEqual([]);
+        });
+
+        it("re-derives per call: a fixed ref clears on the next invocation", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            expect(translation.getDiagnostics(uri, "weidu-d", "@999")).toHaveLength(1);
+            expect(translation.getDiagnostics(uri, "weidu-d", "@100")).toEqual([]);
+        });
+    });
+
+    describe("unified missing-reference handling across hover / inlay / diagnostic", () => {
+        it("hover on a missing entry returns nothing - the diagnostic is the single signal", async () => {
+            await translation.init();
+            // test.tbaf exists on disk (hover's realpath guard) and auto-resolves to test.tra.
+            const uri = `file://${tempDir}/test.tbaf`;
+            // VS Code renders the diagnostic in the hover popup already; a message here would double it.
+            expect(translation.getHover(uri, "typescript", "tra(999)", "tra(999)")).toBeNull();
+        });
+
+        it("inlay shows a preview for a resolved ref and nothing for a missing one", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const range = { start: { line: 0, character: 0 }, end: { line: 2, character: 0 } };
+            const hints = translation.getInlayHints(uri, "weidu-d", "@100\n@999", range);
+            // @100 resolves (line 0); @999 is missing and gets no inline error - the diagnostic surfaces it.
+            expect(hints).toHaveLength(1);
+            expect(hints[0]!.position.line).toBe(0);
+        });
+
+        it("inlay ignores a commented-out reference, like the diagnostic", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const range = { start: { line: 0, character: 0 }, end: { line: 1, character: 0 } };
+            expect(translation.getInlayHints(uri, "weidu-d", "// @100", range)).toEqual([]);
         });
     });
 });

@@ -32,11 +32,14 @@ const msgFunctionsPattern = MSG_FUNCTIONS.join("|");
 /** Matches MSG reference for hover detection: "mstr(123" or "NOption(123" */
 export const REGEX_MSG_HOVER = new RegExp(`^(${msgFunctionsPattern})\\((\\d+)$`);
 
+// The leading `\b` stops a listed name from matching inside a longer identifier - e.g. `mstr` inside
+// `g_mstr(` (= message_str(SCRIPT_GENERIC,...)) or `my_mstr(`, which read a different file and must not
+// be treated as a same-file reference. Without it, real Fallout scripts (RP uses g_mstr heavily) mismatch.
 /** Matches MSG reference in text for inlay hints (global) */
-export const REGEX_MSG_INLAY = new RegExp(`(${msgFunctionsPattern})\\((\\d+)`, "g");
+export const REGEX_MSG_INLAY = new RegExp(`\\b(${msgFunctionsPattern})\\((\\d+)`, "g");
 
 /** Matches floater_rand() MSG references with two translation IDs. */
-export const REGEX_MSG_INLAY_FLOATER_RAND = /floater_rand\((\d+)\s*,\s*(\d+)/g;
+export const REGEX_MSG_INLAY_FLOATER_RAND = /\bfloater_rand\((\d+)\s*,\s*(\d+)/g;
 
 // =============================================================================
 // TRA patterns (WeiDU: baf, d, tp2, etc.)
@@ -93,8 +96,10 @@ export function regexTraRef(entryNum: string): RegExp {
  */
 export function regexMsgRef(entryNum: string): RegExp {
     assertDigitEntry(entryNum);
+    // Leading `\b` on each alternative: same reason as REGEX_MSG_INLAY - don't match a listed name
+    // inside a longer identifier (e.g. `mstr` in `g_mstr(`).
     return new RegExp(
-        `(?:${msgFunctionsPattern})\\(${entryNum}(?!\\d)|floater_rand\\(\\d+\\s*,\\s*${entryNum}(?!\\d)`,
+        `\\b(?:${msgFunctionsPattern})\\(${entryNum}(?!\\d)|\\bfloater_rand\\(\\d+\\s*,\\s*${entryNum}(?!\\d)`,
         "g",
     );
 }

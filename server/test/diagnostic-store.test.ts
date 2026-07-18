@@ -55,6 +55,17 @@ describe("diagnostic-store", () => {
         expect(lastPublished(uri)).toEqual([diag("compile error"), diag("syntax error")]);
     });
 
+    it("coexists across all three sources; clearing translation keeps the others", () => {
+        const uri = "file:///three.d";
+        setDiagnostics(uri, "compiler", [diag("compile error")]);
+        setDiagnostics(uri, "tree-sitter", [diag("syntax error")]);
+        setDiagnostics(uri, "translation", [diag("no entry 999")]);
+        expect(lastPublished(uri)).toEqual([diag("compile error"), diag("syntax error"), diag("no entry 999")]);
+        // The translation source clears independently (empty array drops just its bucket).
+        setDiagnostics(uri, "translation", []);
+        expect(lastPublished(uri)).toEqual([diag("compile error"), diag("syntax error")]);
+    });
+
     it("re-setting one source replaces only that source's bucket", () => {
         const uri = "file:///replace.ssl";
         setDiagnostics(uri, "compiler", [diag("old compile")]);

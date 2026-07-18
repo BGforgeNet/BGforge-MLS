@@ -18,7 +18,7 @@ import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
 import { getConnection } from "./lsp-connection";
 
 /** Identifies which producer owns a diagnostic bucket for a URI. */
-export type DiagnosticSource = "compiler" | "tree-sitter";
+export type DiagnosticSource = "compiler" | "tree-sitter" | "translation";
 
 // Keyed by NormalizedUri (not raw string): the compiler and tree-sitter producers
 // can pass differently-encoded URIs for the same file (Windows `%3A` vs `:`), and a

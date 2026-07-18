@@ -4,7 +4,7 @@ import { type NormalizedUri, normalizeUri } from "../core/normalized-uri";
 import { registry } from "../provider-registry";
 import { getServerContext, tryGetServerContext } from "../server-context";
 import { compile } from "../compile";
-import { clearAllDiagnostics } from "../diagnostic-store";
+import { clearAllDiagnostics, setDiagnostics } from "../diagnostic-store";
 import { updateTreeSitterDiagnostics } from "../tree-sitter-validation";
 import { timeHandler } from "../shared/time-handler";
 import { handleCompileError } from "./compile-error";
@@ -55,6 +55,16 @@ export function clearDocumentSettings(): void {
     documentSettings.clear();
 }
 
+/**
+ * Publish (or clear) unresolved-translation-reference diagnostics for a consumer document. Runs beside
+ * the tree-sitter pass on open/save/change; the facade returns [] - clearing this source's bucket -
+ * when no translation file resolves for the document, so it never marks a project without translations.
+ */
+function updateTranslationDiagnostics(uri: string, langId: string, text: string): void {
+    const diags = tryGetServerContext()?.translation.getDiagnostics(uri, langId, text) ?? [];
+    setDiagnostics(uri, "translation", diags);
+}
+
 export function register(ctx: HandlerContext): void {
     ctx.documents.onDidClose(
         timeHandler(
@@ -82,6 +92,13 @@ export function register(ctx: HandlerContext): void {
                 registry.reloadFileData(langId, uri, text);
                 serverCtx.translation.reloadFile(uri, langId, text);
                 serverCtx.translation.reloadConsumer(uri, text, langId);
+
+                // Surface unresolved @N/msg references on open, so the squiggle is present before the
+                // first edit (tree-sitter runs no open-time pass; this one is translation-only).
+                const docSettings = await ctx.getDocumentSettings(uri);
+                if (docSettings.diagnostics) {
+                    updateTranslationDiagnostics(uri, langId, text);
+                }
             },
             ctx.timingOpts,
         ),
@@ -119,6 +136,7 @@ export function register(ctx: HandlerContext): void {
                 // regardless of validation mode.
                 if (docSettings.diagnostics) {
                     updateTreeSitterDiagnostics(uri, langId, text);
+                    updateTranslationDiagnostics(uri, langId, text);
                 }
                 if (shouldValidateOnSave(docSettings.validate)) {
                     // Cancel any pending debounced compile for this URI - save takes priority
@@ -166,6 +184,7 @@ export function register(ctx: HandlerContext): void {
                 // feedback ahead of (or instead of) the disk-bound external compiler.
                 if (docSettings.diagnostics) {
                     updateTreeSitterDiagnostics(uri, langId, text);
+                    updateTranslationDiagnostics(uri, langId, text);
                 }
                 if (shouldValidateOnChange(docSettings.validate)) {
                     ctx.compileDebouncer.schedule(normUri, () => {

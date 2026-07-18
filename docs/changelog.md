@@ -20,6 +20,8 @@
 
 ### Translations
 
+- Translation references that point at a missing string are now flagged in the Problems panel. An `@N` reference (WeiDU `.baf`/`.d`/`.tp2`/`.tbaf`) or a message-function call (`mstr(N)`, `NOption(N)`, `floater_rand(...)`, ... in Fallout SSL/TSSL) whose number has no entry in the resolved `.tra`/`.msg` file gets an information-level squiggle, instead of only rendering blank in-game. Nothing is flagged unless a translation file actually resolves for the file, so a project without translations set up is never marked up. Previously a missing reference showed an inline "no such string" note in the inlay hints; inlay hints now show only the resolved string previews, and this diagnostic carries the "missing" signal.
+- Fixed: message-reference features no longer mis-read a function whose name ends in a known one. A Fallout call like `g_mstr(20000)` (a generic-file read, `message_str(SCRIPT_GENERIC, ...)`) was matched as if it were a same-file `mstr(20000)` reference - so it was flagged as a missing string and counted by find-references as a use of entry 20000. Only whole-word function names are matched now.
 - `.tra`/`.msg` files now have an Outline: one entry per `@N` / `{N}` string, with the text preview - jump anywhere in a large file from the Outline panel or breadcrumbs. Multiline entries can be folded.
 - Fixed: valid `.tra` entries whose sound reference contains a variable (`[%tutu_var%SIRIN05]`), a space (`[XAN 23]`), or a `#` (`[X#BLANK]`) no longer report a false syntax error.
 - Fixed: `.tra` entries with separate male and female sound references (`~male~ [snd] ~female~ [snd]`) no longer report a false syntax error.

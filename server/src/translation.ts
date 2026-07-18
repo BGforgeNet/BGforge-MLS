@@ -12,7 +12,15 @@
 
 import { fileURLToPath } from "url";
 import * as path from "path";
-import { type Hover, type InlayHint, type Location, type Position, type Range } from "vscode-languageserver/node";
+import {
+    type Diagnostic,
+    type Hover,
+    type InlayHint,
+    type Location,
+    type Position,
+    type Range,
+    DiagnosticSeverity,
+} from "vscode-languageserver/node";
 import { conlog } from "./logger";
 import { isSubpathFullyResolved, tryRealpathSync } from "./path-utils";
 import { LANG_FALLOUT_SSL, TRANSLATION_FILE_LANGUAGES } from "./core/languages";
@@ -27,12 +35,13 @@ import {
 } from "./translation/loader";
 import { entryAtPosition } from "./translation/entries";
 import {
+    collectUnresolvedRefs,
     findReferencesInConsumers,
     generateInlayHints,
-    getTraExt,
     isTraRef,
     lookupDefinition,
     lookupHover,
+    missingEntryMessage,
     resolveTraFileKey,
     translatableLanguages,
 } from "./translation/features";
@@ -113,18 +122,30 @@ export class Translation {
     getInlayHints(uri: string, langId: string, text: string, range: Range): InlayHint[] {
         if (!this.initialized) return [];
         if (this.state.data.size === 0) return [];
+        return generateInlayHints(this.state, this.uriToPath(uri), text, langId, range);
+    }
+
+    /**
+     * Diagnose translation references (@N / tra(N) / mstr(N) ...) that point at an entry missing from
+     * the RESOLVED translation file. Info severity. Emits nothing unless a translation file resolves for
+     * the document AND is loaded, so a project without translations is never flagged.
+     * @param uri - Document URI
+     * @param langId - Language ID
+     * @param text - Full document text
+     * @returns Info diagnostics for unresolved references, or [] when suppressed
+     */
+    getDiagnostics(uri: string, langId: string, text: string): Diagnostic[] {
+        if (!this.initialized) return [];
+        if (this.state.data.size === 0) return [];
+        if (!translatableLanguages.has(langId)) return [];
 
         const filePath = this.uriToPath(uri);
-        const traFileKey = resolveTraFileKey(this.state, filePath, text, langId);
-        if (!traFileKey) return [];
-
-        const traEntries = this.state.data.get(traFileKey);
-        if (!traEntries) return [];
-
-        const traExt = getTraExt(this.state, langId, filePath, text);
-        if (!traExt) return [];
-
-        return generateInlayHints(traFileKey, traEntries, traExt, text, range, filePath);
+        return collectUnresolvedRefs(this.state, text, filePath, langId).map((ref) => ({
+            severity: DiagnosticSeverity.Information,
+            range: ref.range,
+            message: missingEntryMessage(ref.entryNum, ref.fileKey),
+            source: "BGforge MLS (translation)",
+        }));
     }
 
     /**

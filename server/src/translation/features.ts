@@ -6,14 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import {
-    type Hover,
-    type InlayHint,
-    type Location,
-    type MarkupContent,
-    type Range,
-    MarkupKind,
-} from "vscode-languageserver/node";
+import { type Hover, type InlayHint, type Location, type Range, MarkupKind } from "vscode-languageserver/node";
 import { conlog } from "../logger";
 import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_TYPESCRIPT, MSG_LANGUAGES, TRA_LANGUAGES } from "../core/languages";
 import {
@@ -161,9 +154,43 @@ export function resolveTraFileKey(
     return undefined;
 }
 
+/** One message wording for a reference to an entry absent from the resolved translation file. */
+export function missingEntryMessage(entryNum: string, fileKey: string): string {
+    return `No translation entry ${entryNum} in ${fileKey}.`;
+}
+
+/** One message wording for a translation file that resolves but is not loaded (surfaced on hover). */
+function missingFileMessage(fileKey: string): string {
+    return `Translation file ${fileKey} not found.`;
+}
+
+/** Per-document translation resolution - the single oracle shared by hover, inlay, and the diagnostic. */
+type TraResolution =
+    | { kind: "loaded"; traExt: TraExt; fileKey: string; traFile: TraEntries }
+    | { kind: "file-missing"; fileKey: string }
+    | null;
+
 /**
- * Resolve a translation reference to its entry, file key, and line key.
- * Shared by lookupHover and lookupDefinition to avoid duplicating resolution logic.
+ * Resolve the translation file for a document once: its extension, key, and loaded entry map. `null` when
+ * the document has no translation format/file for it; `file-missing` when a file resolves but is not
+ * loaded. Callers apply their own policy per case (the diagnostic stays silent unless `loaded`).
+ */
+function resolveTraContext(state: TranslationState, filePath: string, text: string, langId: string): TraResolution {
+    const traExt = getTraExt(state, langId, filePath, text);
+    if (!traExt) return null;
+
+    const fileKey = resolveTraFileKey(state, filePath, text, langId);
+    if (!fileKey) return null;
+
+    const traFile = state.data.get(fileKey);
+    if (!traFile) return { kind: "file-missing", fileKey };
+
+    return { kind: "loaded", traExt, fileKey, traFile };
+}
+
+/**
+ * Resolve a single reference (a `word` under the cursor) to its entry/file/line, on top of the shared
+ * document context. Used by lookupHover and lookupDefinition.
  */
 function resolveEntry(
     state: TranslationState,
@@ -172,29 +199,22 @@ function resolveEntry(
     relPath: string,
     langId: string,
 ): ResolveResult {
-    const ext = getTraExt(state, langId, relPath, text);
-    if (!ext) return null;
+    const ctx = resolveTraContext(state, relPath, text, langId);
+    if (!ctx) return null;
+    if (ctx.kind === "file-missing") return { kind: "file-missing", fileKey: ctx.fileKey };
 
-    const fileKey = resolveTraFileKey(state, relPath, text, langId);
-    if (!fileKey) return null;
-
-    const traFile = state.data.get(fileKey);
-    if (!traFile) {
-        return { kind: "file-missing", fileKey };
-    }
-
-    const lineKey = getLineKey(word, ext);
+    const lineKey = getLineKey(word, ctx.traExt);
     if (!lineKey) {
         conlog(`Translation: line key not found for ${word}`);
         return null;
     }
 
-    const traEntry = traFile.get(lineKey);
+    const traEntry = ctx.traFile.get(lineKey);
     if (!traEntry) {
-        return { kind: "entry-missing", fileKey, lineKey };
+        return { kind: "entry-missing", fileKey: ctx.fileKey, lineKey };
     }
 
-    return { kind: "entry", entry: traEntry, fileKey };
+    return { kind: "entry", entry: traEntry, fileKey: ctx.fileKey };
 }
 
 export function lookupHover(
@@ -208,20 +228,14 @@ export function lookupHover(
     if (!result) return null;
 
     if (result.kind === "file-missing") {
-        return {
-            contents: {
-                kind: "plaintext",
-                value: `Error: file ${result.fileKey} not found.`,
-            },
-        };
+        // No diagnostic is emitted for a missing file (that would flag every reference), so the hover is
+        // the only place to explain why nothing resolves.
+        return { contents: { kind: "plaintext", value: missingFileMessage(result.fileKey) } };
     }
     if (result.kind === "entry-missing") {
-        return {
-            contents: {
-                kind: "plaintext",
-                value: `Error: entry ${result.lineKey} not found in ${result.fileKey}.`,
-            },
-        };
+        // Defer to the diagnostic: VS Code already renders it in the hover popup, so returning a message
+        // here would show the same line twice.
+        return null;
     }
 
     return result.entry.hover;
@@ -249,112 +263,167 @@ export function lookupDefinition(
     };
 }
 
-function getHintValue(
-    traEntries: TraEntries,
-    traFileKey: string,
-    lineKey: string,
-): { label: string; tooltip?: string | MarkupContent } {
-    const traEntry = traEntries.get(lineKey);
-    if (traEntry === undefined) {
-        return { label: `/* Error: no such string ${traFileKey}:${lineKey} */`, tooltip: "" };
+/**
+ * A translation reference found on one line: the entry number and the source-text span of the token.
+ * The single scanner both inlay hints and the unresolved-reference diagnostic project from, so both agree
+ * on exactly which references exist. The set of recognized reference patterns is the single source of
+ * truth in core/patterns.ts; this only maps each match to (entryNum, start, end). Sorted by start so
+ * per-line ordering is positional for both consumers.
+ *
+ * Works because callers split by newline first, so each line is single-line. Multiline patterns would
+ * need byte-offset-to-position conversion like in weidu-tp2/rename.ts.
+ */
+interface LineRef {
+    entryNum: string;
+    start: number;
+    end: number;
+}
+
+function scanLineRefs(lineText: string, traExt: TraExt, filePath: string): LineRef[] {
+    const refs: LineRef[] = [];
+    if (traExt === "msg") {
+        for (const m of lineText.matchAll(REGEX_MSG_INLAY)) {
+            const entryNum = m[2];
+            if (!entryNum) continue;
+            refs.push({ entryNum, start: m.index, end: m.index + m[0].length });
+        }
+        // floater_rand's second argument; the first is already covered by REGEX_MSG_INLAY above.
+        for (const m of lineText.matchAll(REGEX_MSG_INLAY_FLOATER_RAND)) {
+            const entryNum = m[2];
+            if (!entryNum) continue;
+            const secondStart = m.index + m[0].lastIndexOf(entryNum);
+            refs.push({ entryNum, start: secondStart, end: secondStart + entryNum.length });
+        }
+    } else {
+        // TypeScript transpiler files (.tbaf, .td, .ts) use tra(123); native WeiDU files use @123.
+        const ext = path.extname(filePath).toLowerCase();
+        const regex =
+            ext === EXT_TBAF || ext === EXT_TD || ext === ".ts" ? REGEX_TRANSPILER_TRA_INLAY : REGEX_TRA_INLAY;
+        for (const m of lineText.matchAll(regex)) {
+            const entryNum = m[1];
+            if (!entryNum) continue;
+            refs.push({ entryNum, start: m.index, end: m.index + m[0].length });
+        }
     }
-    const tooltip = traEntry.inlayTooltip
-        ? { kind: MarkupKind.Markdown, value: "```bgforge-mls-string\n" + traEntry.inlayTooltip + "\n```" }
-        : undefined;
-    return {
-        label: traEntry.inlay,
-        tooltip,
-    };
+    refs.sort((a, b) => a.start - b.start);
+    return refs;
 }
 
 export function generateInlayHints(
-    traFileKey: string,
-    traEntries: TraEntries,
-    traExt: TraExt,
-    text: string,
-    range: Range,
+    state: TranslationState,
     filePath: string,
+    text: string,
+    langId: string,
+    range: Range,
 ): InlayHint[] {
+    const ctx = resolveTraContext(state, filePath, text, langId);
+    if (ctx?.kind !== "loaded") return [];
+
     const hints: InlayHint[] = [];
-
-    let lines = text.split("\n");
-    lines = lines.slice(range.start.line, range.end.line);
-
-    const pushHint = (line: number, character: number, lineKey: string): void => {
-        const hintValue = getHintValue(traEntries, traFileKey, lineKey);
-        hints.push({
-            position: { line, character },
-            label: hintValue.label,
-            tooltip: hintValue.tooltip,
-            kind: 2,
-            paddingLeft: true,
-            paddingRight: true,
-        });
-    };
-
-    // Determine regex based on file type
-    // keyIndex: which capture group contains the translation ID
-    let regex: RegExp;
-    let keyIndex: number;
-    if (traExt === "msg") {
-        lines.forEach((lineText, i) => {
-            const lineNumber = range.start.line + i;
-            const lineHints: Array<{ character: number; lineKey: string }> = [];
-
-            for (const match of lineText.matchAll(REGEX_MSG_INLAY)) {
-                const lineKey = match[2];
-                if (!lineKey) {
-                    continue;
-                }
-                lineHints.push({
-                    character: match.index + match[0].length,
-                    lineKey,
-                });
-            }
-
-            for (const match of lineText.matchAll(REGEX_MSG_INLAY_FLOATER_RAND)) {
-                const secondKey = match[2];
-                if (!secondKey) {
-                    continue;
-                }
-                const secondStart = match[0].lastIndexOf(secondKey);
-                lineHints.push({
-                    character: match.index + secondStart + secondKey.length,
-                    lineKey: secondKey,
-                });
-            }
-
-            lineHints.sort((a, b) => a.character - b.character);
-            for (const lineHint of lineHints) {
-                pushHint(lineNumber, lineHint.character, lineHint.lineKey);
-            }
-        });
-        return hints;
-    } else {
-        // TypeScript transpiler files (.tbaf, .td, .ts) use tra(123) syntax.
-        // Native WeiDU files (baf, d, tp2) use @123 syntax.
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext === EXT_TBAF || ext === EXT_TD || ext === ".ts") {
-            regex = REGEX_TRANSPILER_TRA_INLAY;
-        } else {
-            regex = REGEX_TRA_INLAY;
+    const lines = blankComments(text).split("\n");
+    const lastLine = Math.min(range.end.line, lines.length);
+    for (let line = range.start.line; line < lastLine; line++) {
+        for (const ref of scanLineRefs(lines[line]!, ctx.traExt, filePath)) {
+            const entry = ctx.traFile.get(ref.entryNum);
+            // A missing reference shows no preview - the diagnostic surfaces it instead (one signal, one place).
+            if (!entry) continue;
+            hints.push({
+                position: { line, character: ref.end },
+                label: entry.inlay,
+                tooltip: entry.inlayTooltip
+                    ? { kind: MarkupKind.Markdown, value: "```bgforge-mls-string\n" + entry.inlayTooltip + "\n```" }
+                    : undefined,
+                kind: 2,
+                paddingLeft: true,
+                paddingRight: true,
+            });
         }
-        keyIndex = 1;
     }
-
-    // NOTE: This works because we split by newlines first, so each line element is
-    // guaranteed single-line. If future patterns need multiline matching, this would
-    // need byte-offset-to-position conversion like in weidu-tp2/rename.ts.
-    lines.forEach((l, i) => {
-        const matches = l.matchAll(regex);
-        for (const m of matches) {
-            const char_end = m.index + m[0].length;
-            const lineKey = m[keyIndex];
-            if (!lineKey) continue;
-            pushHint(range.start.line + i, char_end, lineKey);
-        }
-    });
     return hints;
+}
+
+/** An unresolved translation reference: its source-text range and the entry/file it failed to resolve to. */
+export interface UnresolvedRef {
+    range: Range;
+    entryNum: string;
+    fileKey: string;
+}
+
+/**
+ * Blank out line and block comment content, replacing each comment character with a space (newlines
+ * kept) so every other character keeps its exact line/column - reference ranges stay accurate. Used so
+ * the diagnostic never flags a commented-out reference (commenting dialog with a line comment is
+ * ubiquitous in WeiDU mods). Not string-aware: a line-comment marker inside a `~...~` string is treated
+ * as a comment, acceptable here since a @N inside a string is not a real reference either.
+ */
+function blankComments(text: string): string {
+    const out = [...text];
+    let state: "code" | "line" | "block" = "code";
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i + 1];
+        if (state === "code") {
+            if (c === "/" && next === "/") {
+                state = "line";
+                out[i] = " ";
+                out[i + 1] = " ";
+                i++;
+            } else if (c === "/" && next === "*") {
+                state = "block";
+                out[i] = " ";
+                out[i + 1] = " ";
+                i++;
+            }
+        } else if (state === "line") {
+            if (c === "\n") state = "code";
+            else out[i] = " ";
+        } else {
+            if (c === "*" && next === "/") {
+                out[i] = " ";
+                out[i + 1] = " ";
+                state = "code";
+                i++;
+            } else if (c !== "\n") {
+                out[i] = " ";
+            }
+        }
+    }
+    return out.join("");
+}
+
+/**
+ * Scan a consumer document for translation references whose entry is absent from the RESOLVED
+ * translation file. Returns [] when no translation file resolves for the document (unconfigured, or the
+ * file for this document is not loaded) - so a project with no translations never flags every
+ * reference. Only the "file loaded, entry N missing" case yields results. References inside comments are
+ * ignored (blanked before scanning).
+ */
+export function collectUnresolvedRefs(
+    state: TranslationState,
+    text: string,
+    filePath: string,
+    langId: string,
+): UnresolvedRef[] {
+    // Only the "file loaded" case yields results: `null`/`file-missing` -> stay silent (never flag every
+    // reference in a project without translations).
+    const ctx = resolveTraContext(state, filePath, text, langId);
+    if (ctx?.kind !== "loaded") return [];
+
+    const unresolved: UnresolvedRef[] = [];
+    blankComments(text)
+        .split("\n")
+        .forEach((lineText, line) => {
+            for (const ref of scanLineRefs(lineText, ctx.traExt, filePath)) {
+                if (!ctx.traFile.has(ref.entryNum)) {
+                    unresolved.push({
+                        range: { start: { line, character: ref.start }, end: { line, character: ref.end } },
+                        entryNum: ref.entryNum,
+                        fileKey: ctx.fileKey,
+                    });
+                }
+            }
+        });
+    return unresolved;
 }
 
 /**
