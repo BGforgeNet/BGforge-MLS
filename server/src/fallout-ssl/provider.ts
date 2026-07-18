@@ -8,9 +8,12 @@
  * in local-symbols.ts, following the same pattern as TP2.
  */
 
-import { promises as fsPromises } from "node:fs";
+import { promises as fsPromises, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+    type CallHierarchyIncomingCall,
+    type CallHierarchyItem,
+    type CallHierarchyOutgoingCall,
     type CancellationToken,
     type CompletionItem,
     type DocumentSymbol,
@@ -23,7 +26,7 @@ import {
     type WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
-import { type IndexedSymbol, SourceType } from "../core/symbol";
+import { type IndexedSymbol, SourceType, SymbolKind } from "../core/symbol";
 import { getLinePrefix } from "../cursor-utils";
 import { errorMessage } from "../diagnostics";
 import { conlog } from "../logger";
@@ -50,6 +53,7 @@ import {
     type FeatureGateCapability,
     type SemanticTokenCapability,
     type WorkspaceSymbolCapability,
+    type CallHierarchyCapability,
 } from "../language-provider";
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
@@ -61,6 +65,7 @@ import { initParser, isInitialized, parseWithCache } from "../../../shared/parse
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { getDocumentSymbols } from "./symbol";
+import * as callHierarchy from "./call-hierarchy";
 import { getLocalDefinition } from "./definition";
 import { findReferences } from "./references";
 import { renameSymbol, prepareRenameSymbol, renameSymbolWorkspace, prepareRenameSymbolWorkspace } from "./rename";
@@ -106,7 +111,8 @@ class FalloutSslProvider
         IndexingCapability,
         FeatureGateCapability,
         SemanticTokenCapability,
-        WorkspaceSymbolCapability
+        WorkspaceSymbolCapability,
+        CallHierarchyCapability
 {
     readonly id = LANG_FALLOUT_SSL;
     readonly indexExtensions = [...EXT_FALLOUT_SSL_ALL];
@@ -227,6 +233,61 @@ class FalloutSslProvider
         }
         // Single-file AST traversal - bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
+    }
+
+    /**
+     * Resolve a callable name to its definition Location, cross-file. Callables are procedures and
+     * parameterized macros; a parameter-less code macro is indexed as a constant, so it does not resolve
+     * cross-file (only its same-file references do). Excludes builtins, constants, and variables.
+     */
+    private callableDef(name: string): Location | null {
+        const sym = this.fileIndex?.symbols
+            .lookupAll(name)
+            .find((s) => s.kind === SymbolKind.Procedure || s.kind === SymbolKind.Macro);
+        return sym?.location ? { uri: sym.location.uri, range: sym.location.range } : null;
+    }
+
+    /**
+     * Read a file's text synchronously (the call-hierarchy capability is sync), preferring open-document
+     * buffers over disk. Returns null if the file cannot be read.
+     */
+    private readTextSync(uri: string): string | null {
+        const buffer = this.storedContext?.getDocumentText?.(uri);
+        if (buffer !== undefined) {
+            return buffer;
+        }
+        try {
+            return readFileSync(fileURLToPath(uri), "utf-8");
+        } catch (error) {
+            conlog(`call-hierarchy readTextSync: failed to read ${uri}: ${errorMessage(error)}`, "warn");
+            return null;
+        }
+    }
+
+    prepareCallHierarchy(text: string, position: Position, uri: NormalizedUri): CallHierarchyItem[] | null {
+        if (!isInitialized()) {
+            return null;
+        }
+        return callHierarchy.prepareCallHierarchy(text, position, uri, (name) => this.callableDef(name));
+    }
+
+    incomingCalls(item: CallHierarchyItem): CallHierarchyIncomingCall[] {
+        if (!isInitialized()) {
+            return [];
+        }
+        const refs = this.fileIndex?.refs.lookup(item.name) ?? [];
+        return callHierarchy.incomingCalls(item, refs, (uri) => this.readTextSync(uri));
+    }
+
+    outgoingCalls(item: CallHierarchyItem): CallHierarchyOutgoingCall[] {
+        if (!isInitialized()) {
+            return [];
+        }
+        return callHierarchy.outgoingCalls(
+            item,
+            (uri) => this.readTextSync(uri),
+            (name) => this.callableDef(name),
+        );
     }
 
     filterCompletions(
