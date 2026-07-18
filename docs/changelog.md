@@ -15,6 +15,7 @@
 - Fixed: Ctrl+Click / F12 on a Fallout SSL `#include` path no longer jumps to an unrelated procedure or macro that happens to share the filename when the header can't be found; resolvable includes still open the header as before.
 - Fixed: hovering a file path inside a WeiDU TP2 `COPY`/`COMPILE`/`INCLUDE` directive or a Fallout SSL `#include` no longer shows the hover documentation for an unrelated function, procedure, or macro that happens to share the filename.
 - WeiDU TP2 `DEFINE_DIMORPHIC_FUNCTION` definitions are now recognized. They were previously misread as broken syntax; now Go to Definition (F12 / Ctrl+Click) from either a `LAF` or `LPF` launch jumps to the definition, the function is offered in completion in both launch contexts, its body folds, and it formats like any other function definition.
+- WeiDU TP2 now supports Call Hierarchy (Shift+Alt+H) on `DEFINE_*_FUNCTION`/macro definitions and their `LAF`/`LPF` launches: see which functions or component install blocks call a function (incoming) and which functions it launches (outgoing), resolved across the workspace's `.tp2`/`.tph`/`.tpa` files.
 
 ### Translations
 

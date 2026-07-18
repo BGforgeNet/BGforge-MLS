@@ -33,6 +33,7 @@ export function getServerCapabilities(): ServerCapabilities {
         workspaceSymbolProvider: true,
         foldingRangeProvider: true,
         selectionRangeProvider: true,
+        callHierarchyProvider: true,
         executeCommandProvider: {
             commands: [
                 COMMAND_compile,

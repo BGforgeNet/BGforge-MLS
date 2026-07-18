@@ -15,6 +15,9 @@ import {
     type CompletionItem,
     type DocumentSymbol,
     type FileChangeType,
+    type CallHierarchyIncomingCall,
+    type CallHierarchyItem,
+    type CallHierarchyOutgoingCall,
     type FoldingRange,
     type Hover,
     type Location,
@@ -178,6 +181,21 @@ class ProviderRegistry {
             return provider.selectionRanges(text, positions);
         }
         return [];
+    }
+
+    prepareCallHierarchy(langId: string, text: string, position: Position, uri: string): CallHierarchyItem[] | null {
+        const provider = this.get(langId);
+        return provider?.prepareCallHierarchy?.(text, position, normalizeUri(uri)) ?? null;
+    }
+
+    incomingCalls(langId: string, item: CallHierarchyItem): CallHierarchyIncomingCall[] {
+        const provider = this.get(langId);
+        return provider?.incomingCalls?.(item) ?? [];
+    }
+
+    outgoingCalls(langId: string, item: CallHierarchyItem): CallHierarchyOutgoingCall[] {
+        const provider = this.get(langId);
+        return provider?.outgoingCalls?.(item) ?? [];
     }
 
     async definition(langId: string, text: string, position: Position, uri: string): Promise<Location | null> {

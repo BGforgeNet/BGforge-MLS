@@ -11,6 +11,9 @@
  */
 
 import type {
+    CallHierarchyIncomingCall,
+    CallHierarchyItem,
+    CallHierarchyOutgoingCall,
     CancellationToken,
     CompletionItem,
     DocumentSymbol,
@@ -111,6 +114,12 @@ export interface FoldingCapability {
 
 export interface SelectionRangeCapability {
     selectionRanges(text: string, positions: Position[]): SelectionRange[];
+}
+
+export interface CallHierarchyCapability {
+    prepareCallHierarchy(text: string, position: Position, uri: NormalizedUri): CallHierarchyItem[] | null;
+    incomingCalls(item: CallHierarchyItem): CallHierarchyIncomingCall[];
+    outgoingCalls(item: CallHierarchyItem): CallHierarchyOutgoingCall[];
 }
 
 export interface NavigationCapability {

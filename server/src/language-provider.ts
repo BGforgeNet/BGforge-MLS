@@ -23,6 +23,7 @@ export {
     type SymbolCapability,
     type FoldingCapability,
     type SelectionRangeCapability,
+    type CallHierarchyCapability,
     type NavigationCapability,
     type RenameCapability,
     type HoverCapability,
@@ -41,6 +42,7 @@ import type {
     SymbolCapability,
     FoldingCapability,
     SelectionRangeCapability,
+    CallHierarchyCapability,
     NavigationCapability,
     RenameCapability,
     HoverCapability,
@@ -66,6 +68,7 @@ export type LanguageProvider = ProviderBase &
     Partial<SymbolCapability> &
     Partial<FoldingCapability> &
     Partial<SelectionRangeCapability> &
+    Partial<CallHierarchyCapability> &
     Partial<NavigationCapability> &
     Partial<RenameCapability> &
     Partial<HoverCapability> &

@@ -7,6 +7,9 @@
  */
 
 import {
+    type CallHierarchyIncomingCall,
+    type CallHierarchyItem,
+    type CallHierarchyOutgoingCall,
     type CancellationToken,
     type CompletionItem,
     CompletionItemKind,
@@ -19,8 +22,15 @@ import {
     type WorkspaceEdit,
     InsertTextFormat,
 } from "vscode-languageserver/node";
+import { readFileSync } from "fs";
 import { extname } from "path";
 import { fileURLToPath } from "url";
+import { uriToPath } from "../uri-utils";
+import {
+    prepareCallHierarchy as computePrepareCallHierarchy,
+    incomingCalls as computeIncomingCalls,
+    outgoingCalls as computeOutgoingCalls,
+} from "./call-hierarchy";
 import { getLinePrefix } from "../cursor-utils";
 import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
@@ -39,6 +49,7 @@ import {
     type SymbolCapability,
     type FoldingCapability,
     type SelectionRangeCapability,
+    type CallHierarchyCapability,
     type NavigationCapability,
     type RenameCapability,
     type HoverCapability,
@@ -290,6 +301,7 @@ class WeiduTp2Provider
         SymbolCapability,
         FoldingCapability,
         SelectionRangeCapability,
+        CallHierarchyCapability,
         NavigationCapability,
         RenameCapability,
         HoverCapability,
@@ -484,6 +496,41 @@ class WeiduTp2Provider
 
     selectionRanges(text: string, positions: Position[]): SelectionRange[] {
         return tp2SelectionRanges(text, positions);
+    }
+
+    prepareCallHierarchy(text: string, position: Position, uri: NormalizedUri): CallHierarchyItem[] | null {
+        return computePrepareCallHierarchy(text, position, uri, (name) => this.lookupCallableDefinition(name));
+    }
+
+    incomingCalls(item: CallHierarchyItem): CallHierarchyIncomingCall[] {
+        const refs = this.fileIndex?.refs.lookup(item.name) ?? [];
+        return computeIncomingCalls(item, refs, (fileUri) => this.readFileText(fileUri));
+    }
+
+    outgoingCalls(item: CallHierarchyItem): CallHierarchyOutgoingCall[] {
+        return computeOutgoingCalls(
+            item,
+            (fileUri) => this.readFileText(fileUri),
+            (name) => this.lookupCallableDefinition(name),
+        );
+    }
+
+    /** Cross-file callable-definition lookup for call hierarchy (name -> its definition Location). */
+    private lookupCallableDefinition(name: string): Location | null {
+        return this.fileIndex?.symbols.lookupDefinition(name) ?? null;
+    }
+
+    /**
+     * Read a workspace file for re-parsing during a call-hierarchy query. Reads from disk in latin1
+     * (TP2's legacy encoding), so an unsaved editor buffer is not reflected - acceptable for an
+     * on-demand action where the graph is over the saved installer.
+     */
+    private readFileText(fileUri: string): string | null {
+        try {
+            return readFileSync(uriToPath(fileUri), "latin1");
+        } catch {
+            return null;
+        }
     }
 
     references(
