@@ -66,6 +66,7 @@ export interface VariableInfo {
 const FUNCTION_DEF_TYPES = new Set([
     SyntaxType.ActionDefineFunction,
     SyntaxType.ActionDefinePatchFunction,
+    SyntaxType.ActionDefineDimorphicFunction,
     SyntaxType.ActionDefineMacro,
     SyntaxType.ActionDefinePatchMacro,
 ]);
@@ -324,7 +325,11 @@ function extractVariableInfo(node: SyntaxNode, uri: string): VariableInfo | null
  * Parse definition type string to context and dtype.
  */
 function parseDefType(type: string): { context: CallableContext; dtype: CallableDefType } {
-    const context = type.includes("patch") ? CallableContext.Patch : CallableContext.Action;
+    const context = type.includes("dimorphic")
+        ? CallableContext.Dimorphic
+        : type.includes("patch")
+          ? CallableContext.Patch
+          : CallableContext.Action;
     const dtype = type.includes("macro") ? CallableDefType.Macro : CallableDefType.Function;
     return { context, dtype };
 }
@@ -432,13 +437,17 @@ import { buildFunctionHover, buildVariableHover } from "./hover";
 
 /**
  * Map callable context + def type to the appropriate CompletionCategory.
- * Macros get their own categories; functions use ActionFunctions/PatchFunctions.
- * Note: DimorphicFunctions is only for static YAML data; header-parsed items
- * always have a single primary context.
+ * Macros get their own categories; functions use ActionFunctions/PatchFunctions, or
+ * DimorphicFunctions for a DEFINE_DIMORPHIC_FUNCTION - launchable via both LAF and LPF,
+ * so it is offered in both launch contexts (the same category the static YAML dimorphic
+ * builtins use). There are no dimorphic macros.
  */
 function getCompletionCategory(context: CallableContext, dtype: CallableDefType): CompletionCategory {
     if (dtype === CallableDefType.Macro) {
         return context === CallableContext.Action ? CompletionCategory.ActionMacros : CompletionCategory.PatchMacros;
+    }
+    if (context === CallableContext.Dimorphic) {
+        return CompletionCategory.DimorphicFunctions;
     }
     return context === CallableContext.Action ? CompletionCategory.ActionFunctions : CompletionCategory.PatchFunctions;
 }

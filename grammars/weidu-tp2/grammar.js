@@ -1153,6 +1153,7 @@ export default grammar({
                 $.action_define_patch_macro,
                 $.action_define_function,
                 $.action_define_patch_function,
+                $.action_define_dimorphic_function,
                 $.action_launch_macro,
                 $.action_launch_function,
                 // Arrays
@@ -1421,6 +1422,8 @@ export default grammar({
         action_define_patch_macro: defineMacro("DEFINE_PATCH_MACRO", ($) => $._patch),
         action_define_function: defineFunction("DEFINE_ACTION_FUNCTION", ($) => $._action),
         action_define_patch_function: defineFunction("DEFINE_PATCH_FUNCTION", ($) => $._patch),
+        // Dimorphic: an action-list body (per WeiDU syntax), launchable via BOTH LAF and LPF.
+        action_define_dimorphic_function: defineFunction("DEFINE_DIMORPHIC_FUNCTION", ($) => $._action),
 
         _func_decl_param: ($) => choice($.int_var_decl, $.str_var_decl, $.ret_decl, $.ret_array_decl),
 

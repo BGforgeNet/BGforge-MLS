@@ -147,6 +147,7 @@ export const COPY_ACTION_TYPES = [
 export const FUNCTION_DEF_TYPES = [
     "action_define_function",
     "action_define_patch_function",
+    "action_define_dimorphic_function",
     "action_define_macro",
     "action_define_patch_macro",
 ] as const;

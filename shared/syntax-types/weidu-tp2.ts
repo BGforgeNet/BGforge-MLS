@@ -35,6 +35,7 @@ export enum SyntaxType {
   ActionDecompressBiff = "action_decompress_biff",
   ActionDefineArray = "action_define_array",
   ActionDefineAssociativeArray = "action_define_associative_array",
+  ActionDefineDimorphicFunction = "action_define_dimorphic_function",
   ActionDefineFunction = "action_define_function",
   ActionDefineMacro = "action_define_macro",
   ActionDefinePatchFunction = "action_define_patch_function",

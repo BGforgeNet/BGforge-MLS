@@ -99,6 +99,7 @@ function getStyledTokenType(symbol: IndexedSymbol): string | undefined {
 /** TP2 block-level node types for code folding. */
 const TP2_FOLDABLE_TYPES = new Set([
     SyntaxType.ActionDefineFunction,
+    SyntaxType.ActionDefineDimorphicFunction,
     SyntaxType.ActionDefineMacro,
     SyntaxType.ActionDefinePatchFunction,
     SyntaxType.ActionDefinePatchMacro,

@@ -398,6 +398,7 @@ export function detectFunctionDefContext(node: SyntaxNode, cursorOffset: number)
         type === SyntaxType.ActionDefinePatchFunction ||
         type === SyntaxType.ActionDefinePatchMacro ||
         type === SyntaxType.ActionDefineFunction ||
+        type === SyntaxType.ActionDefineDimorphicFunction ||
         type === SyntaxType.ActionDefineMacro
     ) {
         return detectFunctionDefinitionContext(node, cursorOffset);

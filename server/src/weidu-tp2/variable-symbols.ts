@@ -83,6 +83,7 @@ export const STRING_CONTENT_TYPES: ReadonlySet<SyntaxType> = new Set([
 export const FUNCTION_DEF_TYPES: ReadonlySet<SyntaxType> = new Set([
     SyntaxType.ActionDefineFunction,
     SyntaxType.ActionDefinePatchFunction,
+    SyntaxType.ActionDefineDimorphicFunction,
     SyntaxType.ActionDefineMacro,
     SyntaxType.ActionDefinePatchMacro,
 ]);

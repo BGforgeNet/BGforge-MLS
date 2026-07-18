@@ -383,6 +383,40 @@ END
             (tilde_content)))))))
 
 ================================================================================
+DEFINE_DIMORPHIC_FUNCTION
+================================================================================
+
+DEFINE_DIMORPHIC_FUNCTION my_dim
+  INT_VAR x = 0
+  STR_VAR s = ~~
+  RET r
+BEGIN
+  PRINT ~hi~
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_define_dimorphic_function
+    name: (identifier)
+    (int_var_decl
+      (identifier)
+      (value
+        (number)))
+    (str_var_decl
+      (identifier)
+      (value
+        (string
+          (tilde_string))))
+    (ret_decl
+      (identifier))
+    (action_print
+      message: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
 LAF call
 ================================================================================
 
