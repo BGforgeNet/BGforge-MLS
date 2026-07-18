@@ -101,3 +101,62 @@ describe("TP2 call hierarchy", () => {
         expect(callers).toEqual(["My Component", "caller"]);
     });
 });
+
+const MACRO_URI = "file:///macro.tp2";
+const MACRO_TEXT = `DEFINE_ACTION_MACRO my_macro
+BEGIN
+  PRINT ~hi~
+END
+
+DEFINE_ACTION_FUNCTION uses_macro
+BEGIN
+  LAM my_macro
+END
+`;
+const macroGetText: TextLookup = (uri) => (uri === MACRO_URI ? MACRO_TEXT : null);
+
+function macroPos(needle: string, occurrence = 1): Position {
+    const lines = MACRO_TEXT.split("\n");
+    let count = 0;
+    for (let line = 0; line < lines.length; line++) {
+        const idx = lines[line]!.indexOf(needle);
+        if (idx !== -1 && ++count === occurrence) return { line, character: idx + 1 };
+    }
+    throw new Error(`occurrence ${occurrence} of "${needle}" not found`);
+}
+
+function macroRefs(name: string): Location[] {
+    const locs: Location[] = [];
+    MACRO_TEXT.split("\n").forEach((lineText, line) => {
+        let idx = lineText.indexOf(name);
+        while (idx !== -1) {
+            locs.push({
+                uri: MACRO_URI,
+                range: { start: { line, character: idx }, end: { line, character: idx + name.length } },
+            });
+            idx = lineText.indexOf(name, idx + 1);
+        }
+    });
+    return locs;
+}
+
+describe("TP2 call hierarchy - macros (DEFINE_*_MACRO / LAM / LPM)", () => {
+    it("prepare on a LAM launch resolves to the macro definition", () => {
+        const items = prepareCallHierarchy(MACRO_TEXT, macroPos("my_macro", 2), MACRO_URI, noCrossFile);
+        expect(items).not.toBeNull();
+        expect(items![0]!.name).toBe("my_macro");
+        expect(items![0]!.selectionRange.start.line).toBe(0);
+    });
+
+    it("outgoing lists a LAM launch inside a function body", () => {
+        const fn = prepareCallHierarchy(MACRO_TEXT, macroPos("uses_macro", 1), MACRO_URI, noCrossFile)![0]!;
+        const out = outgoingCalls(fn, macroGetText, noCrossFile);
+        expect(out.map((o) => o.to.name)).toEqual(["my_macro"]);
+    });
+
+    it("incoming groups a macro's launchers", () => {
+        const macro = prepareCallHierarchy(MACRO_TEXT, macroPos("my_macro", 1), MACRO_URI, noCrossFile)![0]!;
+        const callers = incomingCalls(macro, macroRefs("my_macro"), macroGetText).map((c) => c.from.name);
+        expect(callers).toEqual(["uses_macro"]);
+    });
+});
