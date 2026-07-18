@@ -7,6 +7,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+    type CallHierarchyItem,
     type CompletionItem,
     type DocumentSymbol,
     type Hover,
@@ -418,6 +419,43 @@ describe("ProviderRegistry", () => {
             const result = await registry.definition("test", "text", { line: 0, character: 5 }, "file:///test.txt");
 
             expect(result).toBe(mockLocation);
+        });
+    });
+
+    describe("call hierarchy routing", () => {
+        const range: Range = { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } };
+        const item: CallHierarchyItem = {
+            name: "foo",
+            kind: SymbolKind.Function,
+            uri: "file:///a.tp2",
+            range,
+            selectionRange: range,
+        };
+
+        it("delegates prepare/incoming/outgoing to the provider", async () => {
+            const registry = await createRegistry();
+            registry.register(
+                createMockProvider("ch-lang", {
+                    prepareCallHierarchy: vi.fn().mockReturnValue([item]),
+                    incomingCalls: vi.fn().mockReturnValue([{ from: item, fromRanges: [range] }]),
+                    outgoingCalls: vi.fn().mockReturnValue([{ to: item, fromRanges: [range] }]),
+                }),
+            );
+
+            expect(
+                registry.prepareCallHierarchy("ch-lang", "text", { line: 0, character: 0 }, "file:///a.tp2"),
+            ).toEqual([item]);
+            expect(registry.incomingCalls("ch-lang", item)).toEqual([{ from: item, fromRanges: [range] }]);
+            expect(registry.outgoingCalls("ch-lang", item)).toEqual([{ to: item, fromRanges: [range] }]);
+        });
+
+        it("returns null/empty when the provider lacks call-hierarchy support", async () => {
+            const registry = await createRegistry();
+            registry.register(createMockProvider("plain"));
+
+            expect(registry.prepareCallHierarchy("plain", "text", { line: 0, character: 0 }, "file:///a")).toBeNull();
+            expect(registry.incomingCalls("plain", item)).toEqual([]);
+            expect(registry.outgoingCalls("plain", item)).toEqual([]);
         });
     });
 

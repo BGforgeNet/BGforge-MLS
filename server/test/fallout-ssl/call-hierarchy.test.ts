@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import type { Location, Position } from "vscode-languageserver/node";
+import { SymbolKind, type Location, type Position } from "vscode-languageserver/node";
 
 import {
     prepareCallHierarchy,
@@ -227,5 +227,35 @@ describe("Fallout SSL call hierarchy - macros", () => {
         const target = prepareCallHierarchy(MAC_TEXT, macPos("target", 1), MAC_URI, noCrossFile)![0]!;
         const callers = incomingCalls(target, macRefs("target"), macGetText).map((c) => c.from.name);
         expect(callers).toEqual(["RUN"]);
+    });
+});
+
+/** Every occurrence of `name` in arbitrary `text` as a Location. */
+function locsOf(text: string, uri: string, name: string): Location[] {
+    const locs: Location[] = [];
+    text.split("\n").forEach((line, lineNo) => {
+        let idx = line.indexOf(name);
+        while (idx !== -1) {
+            locs.push({
+                uri,
+                range: { start: { line: lineNo, character: idx }, end: { line: lineNo, character: idx + name.length } },
+            });
+            idx = line.indexOf(name, idx + 1);
+        }
+    });
+    return locs;
+}
+
+describe("Fallout SSL call hierarchy - reference outside any callable", () => {
+    const FB_URI = "file:///fallback.ssl";
+    // A procedure referenced from a top-level global initializer (`@helper`), outside any procedure/macro.
+    const FB_TEXT = `variable g := @helper;\nprocedure helper begin\n   display_msg("h");\nend\n`;
+
+    it("attributes a top-level reference to the file", () => {
+        const helper = prepareCallHierarchy(FB_TEXT, { line: 1, character: 11 }, FB_URI, noCrossFile)![0]!;
+        const calls = incomingCalls(helper, locsOf(FB_TEXT, FB_URI, "helper"), (u) => (u === FB_URI ? FB_TEXT : null));
+        expect(calls).toHaveLength(1);
+        expect(calls[0]!.from.name).toBe("fallback.ssl");
+        expect(calls[0]!.from.kind).toBe(SymbolKind.File);
     });
 });

@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll, vi } from "vitest";
-import type { Location, Position } from "vscode-languageserver/node";
+import { SymbolKind, type Location, type Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/server", () => ({
     connection: { console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() }, sendDiagnostics: vi.fn() },
@@ -158,5 +158,47 @@ describe("TP2 call hierarchy - macros (DEFINE_*_MACRO / LAM / LPM)", () => {
         const macro = prepareCallHierarchy(MACRO_TEXT, macroPos("my_macro", 1), MACRO_URI, noCrossFile)![0]!;
         const callers = incomingCalls(macro, macroRefs("my_macro"), macroGetText).map((c) => c.from.name);
         expect(callers).toEqual(["uses_macro"]);
+    });
+});
+
+/** Every occurrence of `name` in arbitrary `text` as a Location. */
+function locsOf(text: string, uri: string, name: string): Location[] {
+    const locs: Location[] = [];
+    text.split("\n").forEach((line, lineNo) => {
+        let idx = line.indexOf(name);
+        while (idx !== -1) {
+            locs.push({
+                uri,
+                range: { start: { line: lineNo, character: idx }, end: { line: lineNo, character: idx + name.length } },
+            });
+            idx = line.indexOf(name, idx + 1);
+        }
+    });
+    return locs;
+}
+
+describe("TP2 call hierarchy - cross-file and top-level", () => {
+    const XF_URI = "file:///xf.tp2";
+
+    it("outgoing resolves a launch of a function defined in another file", () => {
+        const OTHER = "file:///lib.tph";
+        const cross: DefLookup = (name) =>
+            name === "lib_fn"
+                ? { uri: OTHER, range: { start: { line: 5, character: 23 }, end: { line: 5, character: 29 } } }
+                : null;
+        const text = `DEFINE_ACTION_FUNCTION caller\nBEGIN\n  LAF lib_fn END\nEND\n`;
+        const item = prepareCallHierarchy(text, { line: 0, character: 24 }, XF_URI, cross)![0]!;
+        const out = outgoingCalls(item, (u) => (u === XF_URI ? text : null), cross);
+        expect(out).toHaveLength(1);
+        expect(out[0]!.to.name).toBe("lib_fn");
+        expect(out[0]!.to.uri).toBe(OTHER);
+    });
+
+    it("incoming attributes a top-level launch (outside any function or component) to the file", () => {
+        const text = `DEFINE_ACTION_FUNCTION helper\nBEGIN\n  PRINT ~hi~\nEND\n\nLAF helper END\n`;
+        const helper = prepareCallHierarchy(text, { line: 0, character: 24 }, XF_URI, noCrossFile)![0]!;
+        const calls = incomingCalls(helper, locsOf(text, XF_URI, "helper"), (u) => (u === XF_URI ? text : null));
+        expect(calls.map((c) => c.from.name)).toEqual(["xf.tp2"]);
+        expect(calls[0]!.from.kind).toBe(SymbolKind.File);
     });
 });
