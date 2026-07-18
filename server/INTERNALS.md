@@ -754,7 +754,7 @@ The shared LSP connection mock is in `test/integration/setup.ts`, loaded via `se
 Unit coverage measures every source file the tests actually import, with two exclusions:
 
 - `src/**/format/**/*.ts` - tree-sitter format sub-modules that operate on parsed AST nodes. Exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (`infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
-- `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts`, `src/weidu-d/provider.ts` - LSP dispatcher glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files. The three provider dispatchers are treated uniformly; a fourth added later that is integration- rather than unit-tested belongs here too.
+- Every per-language `provider.ts` LSP dispatcher (`fallout-ssl`, `weidu-tp2`, `weidu-d`, `weidu-baf`, `fallout-worldmap`, `infinity-2da`, `weidu-log`) - thin glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files, and the delegated logic by each sub-module's own unit tests. Excluded uniformly so a dispatcher is not duplicated by redundant unit tests; any new provider dispatcher belongs here too.
 
 Thresholds: 91% lines, 80% branches, 96% functions, 90% statements - enforced by `pnpm exec vitest run --coverage`. Branches are held to 80% (vs 90% on the other metrics) because tree-sitter happy-path traversals dominate over error-recovery branches in the surface area; demanding 90% branch coverage would force tests for parser failure modes that are already exercised end-to-end by the integration suite.
 

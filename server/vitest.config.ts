@@ -1,14 +1,16 @@
 /**
  * Vitest configuration for server unit tests with coverage reporting.
  *
- * Coverage measures every source file the unit tests import. Exclusions:
- *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts`,
- *     `src/weidu-d/provider.ts` - LSP dispatcher glue that delegates to
- *     unit-tested sub-modules; end-to-end behaviour is verified by integration
- *     tests under `test/integration/` (weidu-d: `weidu-d.test.ts`,
- *     `weidu-d-writeback.test.ts`). The three are treated uniformly - a
- *     dispatcher whose branches are integration-tested is excluded here, not
- *     duplicated with redundant unit tests.
+ * Coverage measures every source file the unit tests import. Exclusions - the
+ * per-language `provider.ts` LSP dispatchers: thin glue that delegates every
+ * feature to unit-tested sub-modules, with end-to-end behaviour verified by
+ * integration tests under `test/integration/`. Unit-testing a dispatcher would
+ * duplicate its sub-modules' tests, so ALL provider dispatchers are excluded
+ * uniformly rather than a subset. Their delegated logic is covered elsewhere -
+ * e.g. weidu-baf via `test/integration/weidu-baf.test.ts` (plus
+ * `test/weidu-baf/*`), weidu-d via `test/integration/weidu-d.test.ts`,
+ * infinity-2da via `test/infinity-2da/semantic-tokens.test.ts`, weidu-log via
+ * `test/weidu-log/definition.test.ts`.
  *
  * See INTERNALS.md "Coverage scope".
  */
@@ -45,7 +47,15 @@ export default defineConfig({
         // the unit suite touches.
         coverage: coverageConfig({
             reportsDirectory: "coverage/server",
-            exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts", "src/weidu-d/provider.ts"],
+            exclude: [
+                "src/fallout-ssl/provider.ts",
+                "src/weidu-tp2/provider.ts",
+                "src/weidu-d/provider.ts",
+                "src/weidu-baf/provider.ts",
+                "src/fallout-worldmap/provider.ts",
+                "src/infinity-2da/provider.ts",
+                "src/weidu-log/provider.ts",
+            ],
             thresholds: {
                 lines: 91,
                 functions: 96,
