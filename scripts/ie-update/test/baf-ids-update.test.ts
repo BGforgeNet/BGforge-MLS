@@ -37,6 +37,13 @@ describe("parseIdsHtml", () => {
         ]);
     });
 
+    it("strips an unclosed tag instead of leaking markup into the name", () => {
+        // A malformed row with an unclosed tag must not yield a name that still carries `<script`.
+        // The bare `<[^>]*>` strip requires a closing `>`, so it would leave `<script` as the next
+        // token and emit it as the name; the fold-to-end strip removes it, leaving no valid pair.
+        expect(parseIdsHtml("0x0001 <script GOBLIN", "x.ids")).toEqual([]);
+    });
+
     it("keeps the first occurrence of a duplicated name", () => {
         const html = ["1 SAME<br />", "2 SAME<br />"].join("\n");
         expect(parseIdsHtml(html, "x.ids")).toEqual([{ name: "SAME", detail: "1", doc: "x.ids" }]);
