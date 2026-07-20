@@ -2,6 +2,12 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## 0.3.0
+
+### Added
+
+- The WeiDU TP2 formatter recognizes `DEFINE_DIMORPHIC_FUNCTION` definitions.
+
 ## 0.2.0
 
 ### Added

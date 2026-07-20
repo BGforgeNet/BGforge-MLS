@@ -2,6 +2,13 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## 0.4.0
+
+### Added
+
+- `getNumericTypeRange`, `getDomainRange`, and the `NumericRange` type: a scalar field's valid numeric range, derived from its integer type and any domain constraint.
+- Field presentation entries can now carry optional `description` and `docUrl` (a field's IESDP documentation text and doc link), for editor tooltips. Presentation-only - never part of the parsed record or the JSON snapshot.
+
 ## 0.3.0
 
 ### Changed
