@@ -62,10 +62,14 @@ export function parseIdsHtml(html: string, doc: string): CompletionItem[] {
     const items: CompletionItem[] = [];
     const seen = new Set<string>();
     for (const rawLine of html.split("\n")) {
-        // `>?` makes the closing bracket optional so an unclosed tag folds to end-of-line; a required
-        // `>` would leave `<tag` in place, leaking markup into the next token (and tripping CodeQL's
-        // incomplete-sanitization query).
-        const line = rawLine.replaceAll(/<[^>]*>?/g, "");
+        // Strip HTML tags to bare text, reapplying until the line stops changing so a tag reconstructed by
+        // removing an inner one cannot survive. `>?` folds an unclosed final tag to end-of-line rather than
+        // leaving `<tag` to leak into the next token.
+        let line = rawLine;
+        for (let prev = ""; prev !== line;) {
+            prev = line;
+            line = line.replaceAll(/<[^>]*>?/g, "");
+        }
         const match = /^\s*(0x[0-9A-Fa-f]+|[0-9]+)\s+(\S+)/.exec(line);
         if (match === null) {
             continue;
