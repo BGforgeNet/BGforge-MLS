@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Build a TypeScript Language Service Plugin.
 # Usage: build-ts-plugin.sh <plugin-name>
@@ -9,8 +9,6 @@ set -e
 # For VSCode: installs as a local node_modules package so tsserver can load it.
 # For npm: bundled into @bgforge/mls-server by publish-server.sh.
 # Source lives in plugins/<plugin-name>/src/.
-
-set -eu -o pipefail
 
 plugin="${1:?Usage: build-ts-plugin.sh <plugin-name>}"
 
