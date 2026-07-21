@@ -29,3 +29,4 @@ Transpiler guides are in [`transpilers/`](../transpilers/) (TSSL, TBAF, TD -- ea
 | [todo.md](todo.md)                                               | Roadmap / outstanding work                                                 |
 | [binary-editor-ui-guidelines.md](binary-editor-ui-guidelines.md) | Binary editor UI conventions and review brief                              |
 | [../binary/INTERNALS.md](../binary/INTERNALS.md)                 | Binary library internals: spec system, primitives, format adapters         |
+| [dependencies.md](dependencies.md)                               | Pinned dependency version constraints and hold rationale                   |

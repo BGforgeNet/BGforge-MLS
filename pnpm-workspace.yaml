@@ -12,8 +12,8 @@ packages:
   - transpilers/tbaf
   - transpilers/td
 
-# Mechanical enforcement for the lockstep dependency groups documented in AGENTS.md
-# (Pinned dependency constraints). A member manifest references `catalog:` instead of
+# Mechanical enforcement for the lockstep dependency groups documented in
+# docs/dependencies.md. A member manifest references `catalog:` instead of
 # a literal range, so an out-of-lockstep bump in one package.json fails `pnpm install`
 # rather than silently drifting until noticed by convention.
 catalog:
