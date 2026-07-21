@@ -23,5 +23,15 @@ await build({
     // never injected at runtime. Switching to css: "injected" would inject those <style> tags without a
     // nonce, which the strict webview CSP (style-src 'nonce-...') refuses. The render-primitives.mts harness
     // gates this but is e2e-tier (not in CI), so this is the in-build warning.
-    plugins: [esbuildSvelte({ compilerOptions: { dev } }), stubNodeOnlyImports],
+    plugins: [
+        esbuildSvelte({
+            compilerOptions: { dev },
+            // Svelte libraries ship uncompiled .svelte sources, so compiling them here inherits
+            // the Svelte compiler's lints about THEIR internal patterns (bits-ui alone emits ~49
+            // state_referenced_locally warnings) - unactionable noise that would bury a genuine
+            // warning from our own components. Drop third-party warnings; ours stay visible.
+            filterWarnings: (warning) => !warning.filename?.includes("node_modules"),
+        }),
+        stubNodeOnlyImports,
+    ],
 });
