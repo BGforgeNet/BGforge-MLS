@@ -89,7 +89,7 @@ importers:
         specifier: ^11.7.6
         version: 11.7.6
       oxfmt:
-        specifier: ^0.58.0
+        specifier: 0.58.0
         version: 0.58.0(svelte@5.56.4)
       oxlint:
         specifier: 1.73.0
