@@ -58,6 +58,7 @@
         "test:external": "./scripts/test-external.sh",
         "test:transpile-external": "./scripts/test-transpile-external.sh",
         "test:grammar": "./scripts/test-grammar.sh",
+        "lsp-probe": "tsx server/scripts/lsp-probe.mts",
         "regenerate-expected": "./scripts/regenerate-expected.sh",
         "regen:td-blocklist": "tsx scripts/utils/src/generate-td-lib-blocklist.ts",
         "test:cli": "vitest run --config scripts/vitest.cli.config.ts",
