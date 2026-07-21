@@ -86,6 +86,15 @@ describe("user-function inlining", () => {
     });
 });
 
+describe("opaque condition fallback", () => {
+    it("wraps a bare identifier condition (not a call) in a True() placeholder", async () => {
+        // Not a real BAF construct - `flag` is neither a call, negation, nor binary
+        // expression, so it falls through to the opaque-condition marker.
+        const out = await t(`if (flag) {\n    Attack(Player1);\n}\n`);
+        expect(out).toContain("IF\n  True()\nTHEN");
+    });
+});
+
 describe("switch conditions", () => {
     it("appends the case value to the switch call's arguments", async () => {
         const src = [
