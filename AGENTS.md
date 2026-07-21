@@ -71,7 +71,7 @@ snippets/                # Code snippets: fallout-ssl.json, weidu-baf.json, weid
 scripts/                 # Build, test, data generation scripts
 actions/                 # Reusable composite GitHub Actions published from this repo: binary/ (refresh/check JSON snapshots for any format @bgforge/binary supports), format/ (fgfmt in-place formatting), transpile/ (fgtp source->output regeneration). Each runs the matching CLI over the event's changed files and commits the result back (or verifies it with check: true). _shared/ holds the scripts common to all three
 transpilers/             # Transpiler implementations + user documentation
-  common/                # Shared transpiler utilities (not a package)
+  common/                # Shared transpiler utilities (workspace-internal, not published). The name predates the repo-wide "shared" term for this role; renaming would churn ~40 files plus the @bgforge/transpiler-common package name for no functional gain
   tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
   tbaf/                  # @bgforge/tbaf package: TypeScript to WeiDU BAF
   td/                    # @bgforge/td package: TypeScript to WeiDU D
