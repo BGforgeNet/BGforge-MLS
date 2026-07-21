@@ -90,8 +90,8 @@ pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, 
 pnpm build:grammar     # Build tree-sitter grammars to WASM
 pnpm build:transpile   # Build transpile library + CLI (tsdown, produces out/index.js + out/cli.js)
 pnpm build:format      # Build format library + CLI (tsdown, produces out/index.js + out/cli.js)
-pnpm test              # Partial test suite (server only): typecheck, lint, unit + coverage, transpiler samples, CLI, integration, knip
-pnpm test:all          # Full test suite: test + grammars + transpile-external. For cross-subsystem / shared-infra close-out; scope to the affected package otherwise (see Important Rules).
+pnpm test              # Dev-loop suite: typecheck, lint, knip, unit tests (no coverage), transpiler samples, CLI, smoke
+pnpm test:all          # Close-out gate: test + coverage thresholds + external corpus + integration + grammars + transpile-external. For cross-subsystem / shared-infra close-out; scope to the affected package otherwise (see Important Rules).
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
 pnpm test:cli          # CLI mode tests (check/save/stdout exit codes, diff output)
 pnpm test:e2e          # E2E tests (requires build and host Electron libraries)

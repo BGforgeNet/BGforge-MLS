@@ -85,7 +85,7 @@ clone_repos "$ROOT_DIR/external/fallout.txt" "$ROOT_DIR/external/fallout"
 step "Setting up Infinity Engine repos"
 clone_repos "$ROOT_DIR/external/infinity-engine.txt" "$ROOT_DIR/external/infinity-engine"
 
-# EXTERNAL_REPOS_CLEAN is set by test.sh and test-all.sh when they have already reset
+# EXTERNAL_REPOS_CLEAN is set by test-all.sh when it has already reset
 # repos before invoking this script; skip the redundant reset in that case.
 if [[ "${EXTERNAL_REPOS_CLEAN:-}" != "1" ]]; then
     step "Resetting repos (pre-test)"

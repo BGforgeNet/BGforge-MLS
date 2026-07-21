@@ -5,7 +5,8 @@
 ```bash
 pnpm install
 pnpm build            # Build client, server, test bundles, webviews (includes TS plugins + CLIs)
-pnpm test             # Typecheck + lint + unit tests + coverage + transpiler samples + CLI tests + knip
+pnpm test             # Dev-loop suite: typecheck + lint + unit tests + transpiler samples + CLI tests + knip
+pnpm test:all         # Close-out gate: adds coverage thresholds, external corpus, integration, grammar suites
 pnpm watch:client     # Dev mode: rebuild on change
 pnpm watch:server
 ```
