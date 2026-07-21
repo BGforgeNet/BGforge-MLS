@@ -138,6 +138,8 @@ const config: KnipConfig = {
         "external/**",
         // standalone update scripts run via pnpm exec tsx, not imported by main code
         "scripts/**",
+        // spawned as a child process by the --jobs fan-out tests, never imported
+        "shared/cli/test/fixtures/**",
     ],
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")

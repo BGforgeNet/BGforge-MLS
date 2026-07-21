@@ -281,6 +281,26 @@ describe("parseCliArgs", () => {
         expect(() => parseCliArgs("help")).toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: Not found: /nonexistent/path/xyz");
     });
+
+    it("defaults jobs to 1 and parses --jobs", () => {
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r"];
+        expect(parseCliArgs("help")?.jobs).toBe(1);
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "4"];
+        expect(parseCliArgs("help")?.jobs).toBe(4);
+    });
+
+    it("exits on a non-positive or non-numeric --jobs", () => {
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "0"];
+        expect(() => parseCliArgs("help")).toThrow("exit");
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "many"];
+        expect(() => parseCliArgs("help")).toThrow("exit");
+        expect(errorSpy).toHaveBeenCalledWith("Error: --jobs must be a positive integer, got: many");
+    });
+
+    it("parses --files-from", () => {
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--files-from", "list.txt"];
+        expect(parseCliArgs("help")?.filesFrom).toBe("list.txt");
+    });
 });
 
 describe("runCli", () => {
@@ -463,6 +483,160 @@ describe("runCli", () => {
         });
         expect(logSpy).toHaveBeenCalledWith("Found 2 test files");
         expect(logSpy).toHaveBeenCalledWith("\nSummary: 1 changed, 1 unchanged");
+    });
+
+    it("child mode (--files-from): processes the listed files, no summary, no check-mode exit", async () => {
+        const listFile = path.join(tmpDir, "list.txt");
+        fs.writeFileSync(listFile, `${path.join(tmpDir, "a.txt")}\n${path.join(tmpDir, "b.txt")}\n`);
+        const processFile = vi
+            .fn<(f: string, m: OutputMode) => FileResult>()
+            .mockReturnValueOnce("changed")
+            .mockReturnValueOnce("unchanged");
+        await runCli({
+            args: { target: tmpDir, mode: "check", recursive: true, quiet: false, jobs: 1, filesFrom: listFile },
+            extensions: [".txt"],
+            description: "test",
+            processFile,
+        });
+        expect(processFile).toHaveBeenCalledTimes(2);
+        expect(exitSpy).not.toHaveBeenCalled();
+        expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Summary:"));
+    });
+
+    it("child mode (--files-from): exits 1 on the first error", async () => {
+        const listFile = path.join(tmpDir, "list.txt");
+        fs.writeFileSync(listFile, `${path.join(tmpDir, "a.txt")}\n${path.join(tmpDir, "b.txt")}\n`);
+        const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("error");
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 1, filesFrom: listFile },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        expect(processFile).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("runCli --jobs fan-out", () => {
+    // runChild() re-invokes process.argv[1]; point it at the fixture child CLI
+    // so the real spawn/spool/IPC/replay path runs against a controlled child.
+    const fixtureCli = path.resolve("shared/cli/test/fixtures/jobs-child.cjs");
+    const tmpDir = path.resolve("tmp/cli-test-jobs");
+    const originalArgv = process.argv;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+    let logSpy: ReturnType<typeof vi.spyOn>;
+    let stdoutSpy: ReturnType<typeof vi.spyOn>;
+    let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
+        logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+        stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+        fs.mkdirSync(tmpDir, { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, "a.txt"), "alpha");
+        fs.writeFileSync(path.join(tmpDir, "b.txt"), "beta");
+        // --jobs appears in both forms so stripJobsFlag's removal is exercised;
+        // a leaked flag would make the fixture child re-fan-out.
+        process.argv = ["node", fixtureCli, tmpDir, "-r", "--save", "--jobs", "2", "--jobs=2"];
+    });
+
+    afterEach(() => {
+        process.argv = originalArgv;
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+        stdoutSpy.mockRestore();
+        stderrSpy.mockRestore();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    const unusedProcessFile = () => {
+        throw new Error("parent must not process files itself when fanning out");
+    };
+
+    it("processes every file through children and aggregates counts", async () => {
+        await runCli({
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: false, jobs: 2 },
+            extensions: [".txt"],
+            description: "test",
+            processFile: unusedProcessFile,
+        });
+        expect(fs.readFileSync(path.join(tmpDir, "a.txt"), "utf-8")).toBe("ALPHA");
+        expect(fs.readFileSync(path.join(tmpDir, "b.txt"), "utf-8")).toBe("BETA");
+        const replayed = stdoutSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("");
+        expect(replayed).toContain("Processed:");
+        expect(logSpy).toHaveBeenCalledWith("\nSummary: 2 changed, 0 unchanged");
+        expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it("skips the parent's init when fanning out", async () => {
+        const init = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+        await runCli({
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
+            extensions: [".txt"],
+            description: "test",
+            init,
+            processFile: unusedProcessFile,
+        });
+        expect(init).not.toHaveBeenCalled();
+    });
+
+    it("exits 1 and forwards stderr when a child fails", async () => {
+        fs.writeFileSync(path.join(tmpDir, "b.txt"), "fail me");
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
+                extensions: [".txt"],
+                description: "test",
+                processFile: unusedProcessFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        const forwarded = stderrSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("");
+        expect(forwarded).toContain("jobs-child: refusing");
+    });
+
+    it("check mode: exits 1 when children report changes", async () => {
+        // The fixture reports every file as changed; check mode must aggregate
+        // to a failing exit even though every child exited 0.
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 2 },
+                extensions: [".txt"],
+                description: "test",
+                processFile: unusedProcessFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it("still requires -r for a directory target", async () => {
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: false, quiet: true, jobs: 2 },
+                extensions: [".txt"],
+                description: "test",
+                processFile: unusedProcessFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it("still exits 1 when no matching files are found", async () => {
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
+                extensions: [".xyz"],
+                description: "test",
+                processFile: unusedProcessFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(exitSpy).toHaveBeenCalledWith(1);
     });
 });
 
