@@ -1,6 +1,0 @@
-IF
-  Global("test", "LOCALS", 1)
-THEN
-  RESPONSE #100
-    NoAction()
-END
