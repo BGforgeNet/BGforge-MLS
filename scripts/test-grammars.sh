@@ -18,8 +18,15 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
-step "Building format CLI"
-pnpm build:format
+# A caller that already built the format CLI sets SKIP_FORMAT_BUILD=1:
+# rebuilding here is not just redundant - tsdown cleans format/out/ first,
+# which races any concurrently-running job whose child processes re-load
+# format/out/cli.js from disk (test-all.sh runs the external-corpus job in
+# parallel with this script).
+if [[ "${SKIP_FORMAT_BUILD:-}" != "1" ]]; then
+    step "Building format CLI"
+    pnpm build:format
+fi
 
 export SKIP_FORMAT_BUILD=1
 

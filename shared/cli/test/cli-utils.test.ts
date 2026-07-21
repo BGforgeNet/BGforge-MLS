@@ -560,6 +560,11 @@ describe("runCli --jobs fan-out", () => {
     };
 
     it("processes every file through children and aggregates counts", async () => {
+        // First replay write reports backpressure so the drain wait is exercised.
+        stdoutSpy.mockImplementationOnce(() => {
+            setTimeout(() => process.stdout.emit("drain"), 0);
+            return false;
+        });
         await runCli({
             args: { target: tmpDir, mode: "save", recursive: true, quiet: false, jobs: 2 },
             extensions: [".txt"],

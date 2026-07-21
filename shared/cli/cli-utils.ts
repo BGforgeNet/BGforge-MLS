@@ -8,7 +8,6 @@ import { spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { pipeline } from "stream/promises";
 import cac from "cac";
 import { diffLines } from "diff";
 
@@ -301,9 +300,17 @@ async function runParallelJobs(files: string[], args: CliArgs): Promise<void> {
             // Non-null: the worker loop above assigned every index before Promise.all resolved.
             const result = results[i]!;
             const spool = path.join(tmpDir, `stdout-${i}`);
-            if (fs.statSync(spool).size > 0) {
-                // eslint-disable-next-line no-await-in-loop
-                await pipeline(fs.createReadStream(spool), process.stdout, { end: false });
+            // Manual pump instead of stream pipeline({ end: false }): pipeline
+            // leaves its listeners on the shared process.stdout, and one call
+            // per chunk trips the MaxListenersExceeded warning.
+            // eslint-disable-next-line no-await-in-loop
+            for await (const data of fs.createReadStream(spool)) {
+                if (!process.stdout.write(data)) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise<void>((resolve) => {
+                        process.stdout.once("drain", () => resolve());
+                    });
+                }
             }
             fs.rmSync(spool, { force: true });
             if (result.stderr) process.stderr.write(result.stderr);
