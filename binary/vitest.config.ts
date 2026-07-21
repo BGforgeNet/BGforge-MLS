@@ -16,9 +16,11 @@ export default defineConfig({
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
-        // v8 coverage instrumentation slows the binary parser tests; the 5s
-        // vitest default is too tight for them.
-        testTimeout: 15000,
+        // v8 coverage instrumentation slows the binary parser tests, and the parallel
+        // suite block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the
+        // slowest MAP round-trip (denbus1.map) runs ~19s under that starvation, so 15s
+        // times out. The timeout guards against hangs, not slowness; keep it generous.
+        testTimeout: 60000,
         // Pin the denominator to this package's source so transitive
         // workspace deps (e.g. @bgforge/format aliased above its tests)
         // cannot dilute the ratio.
