@@ -34,12 +34,15 @@ pre-commit:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,svelte}"
         - ".oxlintrc.json"
-      run: pnpm exec oxlint
+      # {staged_files} scopes the lint to the commit and keeps untracked scratch files
+      # from blocking it; both tools still apply their ignorePatterns to explicit args
+      # and exit 0 when every arg is ignored. Full-tree runs stay in test.sh/CI.
+      run: pnpm exec oxlint {staged_files}
     oxfmt-check:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,json,md,yml,yaml}"
         - ".oxfmtrc.json"
-      run: pnpm exec oxfmt --check
+      run: pnpm exec oxfmt --check {staged_files}
     lint-shell:
       glob: "*.sh"
       run: pnpm lint:shell
