@@ -11,10 +11,11 @@ export default defineConfig({
     test: {
         name: "binary-editor",
         include: [path.resolve(__dirname, "test/**/*.test.ts")],
-        // v8 coverage instrumentation roughly doubles per-test time and pushes the slowest
-        // MAP-object test past the uninstrumented 15s ceiling; give the instrumented run
-        // headroom (uninstrumented tests still finish well under this).
-        testTimeout: 30000,
+        // v8 coverage instrumentation roughly doubles per-test time, and the parallel suite
+        // block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the slowest
+        // MAP-object test runs ~33s under that starvation. Same 60s ceiling as the binary
+        // and client suites: the timeout guards against hangs, not slowness.
+        testTimeout: 60000,
         // Pin the denominator to this package's source. The repo-root-relative glob is
         // deliberate: the coverage phase runs from the repo root (scripts/test.sh), and the
         // @bgforge/binary alias above instruments the sibling binary/src tree at test time, so
