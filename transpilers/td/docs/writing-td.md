@@ -107,15 +107,16 @@ replaceState("MYDLG", 5, () => {
 
 ### `replace()` -- Replace Multiple States
 
-Replace multiple states by numeric index using a record:
+Replace multiple states by numeric index using a record. State values must be named `function`
+expressions (arrow functions are rejected):
 
 ```typescript
 replace("MYDLG", {
-  0: () => {
+  0: function replacement0() {
     say(tra(60));
     exit();
   },
-  3: () => {
+  3: function replacement3() {
     say(tra(61));
     reply(tra(62)).exit();
   },
@@ -385,16 +386,17 @@ One-shot interjections guarded by a global variable (set once, never repeated).
 
 Creates a chain guarded by a global variable, with an explicit exit point:
 
+Inside the body, use the two-argument `say(speaker, text)` form; the `from()` speaker-switch
+syntax is only understood by `chain()`:
+
 ```typescript
 interject(
   "ENTERDLG",
   "enterState",
   "MyInterjectVar",
   () => {
-    from("IMOEN2J");
-    say(tra(1));
-    from("MINSC");
-    say(tra(2));
+    say("IMOEN2J", tra(1));
+    say("MINSC", tra(2));
   },
   "EXITDLG",
   "exitState",
@@ -407,8 +409,7 @@ Like `interject`, but copies transitions from the entry state instead of using a
 
 ```typescript
 interjectCopyTrans("ENTERDLG", "enterState", "MyVar", () => {
-  from("IMOEN2J");
-  say(tra(1));
+  say("IMOEN2J", tra(1));
 });
 ```
 
