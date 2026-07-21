@@ -188,11 +188,10 @@ jobs:
           extensionFile: ${{ env.VSIX_PATH }}
           skipDuplicate: true
 
-      # @bgforge/mls-server declares a runtime dependency on @bgforge/format
-      # (workspace:*, substituted with format's concrete version on publish). The
-      # libraries publish from their own <lib>/vX.Y.Z tags (publish-library.yml),
-      # independently of this vX.Y.Z run, so publish-server.sh preflights that the
-      # resolved @bgforge/format version is already on npm before publishing.
+      # The server bundles @bgforge/format and the transpilers into server/out/server.js
+      # (esbuild externalizes only vscode and esbuild-wasm), so @bgforge/mls-server declares
+      # no @bgforge runtime dependency and publishes independently of the <lib>/vX.Y.Z library
+      # tags - no library needs to be on npm first, and publish-server.sh does no @bgforge preflight.
       - name: Publish server to npm
         if: startsWith(github.ref, 'refs/tags/')
         run: SKIP_BUILD=1 ./scripts/publish-server.sh
