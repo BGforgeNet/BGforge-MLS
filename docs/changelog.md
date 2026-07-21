@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The language server now answers the editor's startup handshake immediately instead of waiting for the full workspace file scan (previously several seconds on large mods, e.g. ~7s on the Fallout 2 Restoration Project). Indexing continues in the background: cross-file features like find references and workspace symbols return partial results until it finishes, and typing stays responsive while it runs.
+
 ## 3.11.0
 
 ### Language features

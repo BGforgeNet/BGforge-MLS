@@ -928,6 +928,58 @@ describe("ProviderRegistry", () => {
         });
     });
 
+    describe("init() workspace scan", () => {
+        it("resolves init() while the workspace scan is still running", async () => {
+            const registry = await createRegistry();
+            const mockReload = vi.fn();
+            registry.register(
+                createMockProvider("test", {
+                    indexExtensions: [".tph"],
+                    reloadFileData: mockReload,
+                }),
+            );
+
+            // Gate the tree walk so the scan cannot finish until released: init()
+            // must come back anyway (the scan runs in the background), because the
+            // initialize handshake and everything the client registers after it
+            // otherwise wait out the full workspace walk.
+            let releaseScan!: () => void;
+            const gate = new Promise<void>((resolve) => {
+                releaseScan = resolve;
+            });
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            vi.mocked(findFilesByExtensions).mockImplementation(async () => {
+                await gate;
+                return ["lib/utils.tph"];
+            });
+
+            await registry.init(mockContext);
+            expect(mockReload).not.toHaveBeenCalled();
+
+            releaseScan();
+            await registry.workspaceScanFinished();
+            expect(mockReload).toHaveBeenCalledTimes(1);
+        });
+
+        it("logs instead of rejecting when the background scan fails", async () => {
+            const registry = await createRegistry();
+            registry.register(
+                createMockProvider("test", {
+                    indexExtensions: [".tph"],
+                    reloadFileData: vi.fn(),
+                }),
+            );
+            const { findFilesByExtensions } = await import("../src/path-utils");
+            vi.mocked(findFilesByExtensions).mockRejectedValue(new Error("walk exploded"));
+
+            await registry.init(mockContext);
+            // The settled promise must not carry the rejection to awaiters.
+            await expect(registry.workspaceScanFinished()).resolves.toBeUndefined();
+            const { conlog } = await import("../src/logger");
+            expect(vi.mocked(conlog).mock.calls.some(([msg]) => String(msg).includes("walk exploded"))).toBe(true);
+        });
+    });
+
     describe("handleWatchedFileChange()", () => {
         it("should route created files using indexExtensions", async () => {
             const registry = await createRegistry();

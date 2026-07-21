@@ -61,10 +61,12 @@ export function register(ctx: HandlerContext): void {
             conlog(`workspace_root = ${workspaceRoot}`);
         }
 
-        // Load data and initialize parsers/providers here so the server is fully
-        // ready before the initialize response is sent. This closes the race window
-        // where onInitialized's async setup had not yet finished but the client was
-        // already firing requests (e.g. textDocument/inlayHint).
+        // Load data and initialize parsers/providers here so the server can answer
+        // requests the moment the initialize response is sent. This closes the race
+        // window where onInitialized's async setup had not yet finished but the client
+        // was already firing requests (e.g. textDocument/inlayHint). The workspace
+        // SCAN is the deliberate exception: registry.init() backgrounds it, so early
+        // requests see a partially populated index instead of a stalled handshake.
         const projectSettings = settings.project(workspaceRoot);
 
         // Initialize translation service. The refresh callback lets a .tra/.msg reload push

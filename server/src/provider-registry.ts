@@ -47,6 +47,8 @@ class ProviderRegistry {
     /** Maps alias language IDs to their parent provider ID */
     private aliases: Map<string, string> = new Map();
     private fileWatcher: FileWatcherManager = new FileWatcherManager();
+    /** Startup scan handle; init() replaces it and always folds rejections into a log. */
+    private workspaceScan: Promise<void> = Promise.resolve();
 
     register(provider: LanguageProvider): void {
         this.providers.set(provider.id, provider);
@@ -85,7 +87,18 @@ class ProviderRegistry {
         // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
         conlog(`Initialized ${this.providers.size} providers`);
         this.fileWatcher.buildExtensionMap(this.providers.values());
-        await scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot);
+        // Background, not awaited: awaiting would gate the initialize handshake on a full
+        // workspace walk (seconds to minutes on large mods). Requests served before it
+        // finishes read a partially populated index; failures log, never reject.
+        this.workspaceScan = scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot).catch((error) => {
+            // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
+            conlog(`Workspace scan failed: ${errorMessage(error)}`, "error");
+        });
+    }
+
+    /** Settles when the startup workspace scan is done (used by tests and explicit waiters). */
+    workspaceScanFinished(): Promise<void> {
+        return this.workspaceScan;
     }
 
     /** Update settings on the shared context so all providers see the change without a reload. */

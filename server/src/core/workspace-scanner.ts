@@ -10,6 +10,7 @@
 
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
+import { setImmediate as yieldEventLoop } from "node:timers/promises";
 import pLimit from "p-limit";
 import type { LanguageProvider } from "../language-provider";
 import { conlog } from "../logger";
@@ -86,6 +87,10 @@ export async function scanWorkspaceFiles(
                 } catch {
                     failed.set(ext, (failed.get(ext) ?? 0) + 1);
                 }
+                // reloadFileData parses synchronously; without a macrotask yield the whole
+                // backgrounded scan runs as one unbroken microtask cascade that starves the
+                // LSP connection (initialize response, first requests) until the last file.
+                await yieldEventLoop();
             }),
         ),
     );
