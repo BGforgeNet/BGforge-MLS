@@ -69,6 +69,33 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Both caches are skipped on release-tag runs so release artifacts are
+      # never built from restored state (zizmor's cache-poisoning surface).
+      # Grammar cache: generated parsers are revalidated by the content-hash
+      # stamp in scripts/grammar-generate-lib.sh, so even a stale hit is safe;
+      # ~/.cache/tree-sitter holds the wasi-sdk the WASM builds download.
+      - name: Restore generated-grammar cache (non-release only)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            grammars/*/src
+            ~/.cache/tree-sitter
+          key: grammars-${{ runner.os }}-${{ hashFiles('grammars/*/grammar.js', 'grammars/*/tree-sitter.json', 'pnpm-lock.yaml') }}
+
+      # External corpus cache: keyed strictly on the pinned-ref lists with no
+      # restore-keys - clone_repos skips already-present repos, so a stale
+      # restore at an old ref would silently test the wrong corpus. A ref bump
+      # changes the key and forces a fresh clone.
+      - name: Restore external-corpus cache (non-release only)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            external/fallout
+            external/infinity-engine
+          key: external-${{ hashFiles('external/fallout.txt', 'external/infinity-engine.txt', 'external/*-exclude.txt') }}
+
       - name: Build tree-sitter grammar
         run: pnpm build:grammar
 

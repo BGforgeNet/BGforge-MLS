@@ -12,7 +12,7 @@ rules:
       # provenance attestation against the trusted builder's published tag, so a
       # SHA pin would make the resulting attestation unverifiable. Documented
       # in-line at the `uses:` line itself (build.yml, provenance job).
-      - build.yml:221
+      - build.yml:248
   cache-poisoning:
     ignore:
       # actions/setup-node's `cache: pnpm` restores the pnpm store from the
@@ -22,6 +22,12 @@ rules:
       # cache entry would fail installation rather than silently execute.
       - build.yml:63
       - publish-library.yml:45
+      # The generated-grammar and external-corpus cache steps are gated with
+      # `if: !startsWith(github.ref, 'refs/tags/')`, so release-tag runs (the
+      # ones that publish artifacts) never restore cached state; zizmor's audit
+      # does not credit step-level ref conditionals.
+      - build.yml:79
+      - build.yml:92
   superfluous-actions:
     ignore:
       # softprops/action-gh-release predates and provides a strictly richer
@@ -29,4 +35,4 @@ rules:
       # `files:` glob input, `fail_on_unmatched_files`, templated `name:`) without
       # a hand-rolled script. Keeping the action is a readability tradeoff, not
       # an oversight.
-      - build.yml:159
+      - build.yml:186
