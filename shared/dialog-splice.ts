@@ -20,7 +20,7 @@ export interface SpliceOp {
 export function applySplices(text: string, ops: readonly SpliceOp[]): string {
     // Descending by start: each op is applied before the ops at lower offsets, so a lower-start
     // op's END must not exceed this op's START, or their spans overlap.
-    const sorted = [...ops].sort((a, b) => b.start - a.start);
+    const sorted = ops.toSorted((a, b) => b.start - a.start);
     for (let i = 0; i < sorted.length; i++) {
         const op = sorted[i]!;
         if (op.start > op.end) {

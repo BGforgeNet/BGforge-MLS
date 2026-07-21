@@ -109,7 +109,7 @@ export function encodeSemanticTokens(spans: readonly SemanticTokenSpan[]): Seman
     }
 
     const builder = new SemanticTokensBuilder();
-    const sorted = [...spans].sort(compareSpans);
+    const sorted = spans.toSorted(compareSpans);
 
     for (const span of sorted) {
         const tokenTypeIndex = tokenTypeToIndex.get(span.tokenType);

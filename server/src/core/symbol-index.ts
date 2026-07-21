@@ -288,7 +288,7 @@ export class Symbols {
         // Always sort for deterministic ordering:
         // - With context: sort by scope precedence, then URI as tiebreaker
         // - Without context: sort by URI only (alphabetical)
-        return [...candidates].sort((a, b) => this.compareScopePrecedence(a, b, context?.uri));
+        return candidates.toSorted((a, b) => this.compareScopePrecedence(a, b, context?.uri));
     }
 
     /**

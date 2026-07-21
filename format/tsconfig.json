@@ -1,7 +1,7 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "lib": ["es2022"],
+        "lib": ["es2023"],
         "allowImportingTsExtensions": true,
         "noEmit": true,
         "tsBuildInfoFile": "../tmp/format-lib.tsbuildinfo",
