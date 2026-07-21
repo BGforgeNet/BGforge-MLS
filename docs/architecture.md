@@ -892,4 +892,6 @@ The feature matrix appears in two forms serving different audiences; both are ma
   implementers.
 
 Collapsing to either form would hide information the other audience needs. Both must be
-updated when a user-visible feature ships.
+updated when a user-visible feature ships;
+`scripts/utils/test/feature-matrix-sync.test.ts` fails when the two disagree on the
+feature/language surface they share.
