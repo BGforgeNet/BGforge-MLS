@@ -118,3 +118,28 @@ describe("loop unroll: for-of destructuring", () => {
         });
     });
 });
+
+describe("TBAF loop unroll nested inside an if body", () => {
+    // A top-level for/for-of loop is unrolled by transformForStatement/
+    // transformForOfStatement, which re-invoke transformStatement per iteration.
+    // Nested inside an if's then-block, processBlock instead routes the block
+    // through transformActionsFromStatements, which calls unrollForAsActions/
+    // unrollForOfAsActions - a distinct path this suite otherwise never reaches.
+    it("unrolls a for-of loop nested inside an if body into repeated actions", async () => {
+        const src =
+            'if (See(Player1)) {\n    for (const enemy of ["Player1", "Player2"]) {\n        Attack(enemy);\n    }\n}\n';
+        const out = await tbafTranspile("/virtual/foo.tbaf", src);
+        expect(out).toContain(
+            'IF\n  See(Player1)\nTHEN\n  RESPONSE #100\n    Attack("Player1")\n    Attack("Player2")\nEND',
+        );
+    });
+
+    it("unrolls a numeric for loop nested inside an if body into repeated actions", async () => {
+        const src =
+            'if (See(Player1)) {\n    for (let i = 0; i < 3; i++) {\n        GiveItemCreate("POTN08", Player1, i, 0, 0);\n    }\n}\n';
+        const out = await tbafTranspile("/virtual/foo.tbaf", src);
+        expect(out).toContain(
+            'GiveItemCreate("POTN08", Player1, 0, 0, 0)\n    GiveItemCreate("POTN08", Player1, 1, 0, 0)\n    GiveItemCreate("POTN08", Player1, 2, 0, 0)',
+        );
+    });
+});

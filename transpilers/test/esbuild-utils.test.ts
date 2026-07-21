@@ -1,0 +1,105 @@
+/**
+ * Pure string-manipulation seams of the shared esbuild bundler
+ * (transpilers/common/esbuild-utils.ts): the marker-stripping/alias-fixup
+ * cleanup pass and its string/comment-aware scanning helpers.
+ *
+ * These run entirely on plain strings - no esbuild-wasm invocation - so they
+ * are unit-tested directly rather than through a real bundling run (which is
+ * covered by api.test.ts/bundle.test.ts).
+ */
+import { describe, expect, it } from "vitest";
+import {
+    cleanupEsbuildOutput,
+    forEachCodeSegment,
+    replaceOutsideStrings,
+    skipBlockComment,
+    skipString,
+    skipTemplateLiteral,
+} from "../common/esbuild-utils";
+
+describe("cleanupEsbuildOutput", () => {
+    const MARKER = "/* __MARK__ */";
+
+    it("strips everything before the marker", () => {
+        const code = `var __defProp = 1;\n${MARKER}\nconst x = 1;\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe("const x = 1;\n");
+    });
+
+    it("returns the code unchanged when the marker is absent", () => {
+        const code = "const x = 1;\n";
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe(code);
+    });
+
+    it("removes import declarations and renames aliased identifiers back to the original", () => {
+        const code = `${MARKER}\nimport { See as See2 } from "folib";\nif (See2(Player1)) {\n  Attack(Player1);\n}\n`;
+        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        expect(cleaned).not.toContain("import");
+        expect(cleaned).toContain("if (See(Player1))");
+    });
+
+    it("does not rename an alias-like identifier inside a string literal", () => {
+        const code = `${MARKER}\nimport { See as See2 } from "folib";\nconst label = "See2 in text";\nSee2(Player1);\n`;
+        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        expect(cleaned).toContain('const label = "See2 in text";');
+        expect(cleaned).toContain("See(Player1);");
+    });
+
+    it("restores an esbuild-renamed constant that collides with an original constant value", () => {
+        const code = `${MARKER}\nvar DIK_F42 = 62;\nAttack(DIK_F42);\n`;
+        const originalConstants = new Map([["DIK_F4", "62"]]);
+        const cleaned = cleanupEsbuildOutput(code, MARKER, originalConstants);
+        expect(cleaned).toContain("var DIK_F4 = 62;");
+        expect(cleaned).toContain("Attack(DIK_F4);");
+    });
+
+    it("leaves a renamed variable alone when its value does not match the original constant", () => {
+        const code = `${MARKER}\nvar DIK_F42 = 99;\n`;
+        const originalConstants = new Map([["DIK_F4", "62"]]);
+        expect(cleanupEsbuildOutput(code, MARKER, originalConstants)).toContain("var DIK_F42 = 99;");
+    });
+});
+
+describe("forEachCodeSegment", () => {
+    it("skips single/double/template string contents and line/block comments", () => {
+        const code = "let a = \"skip1\"; // skip2\nlet b = 'skip3'; /* skip4 */ let c = `skip5`; let real = 1;";
+        const segments: string[] = [];
+        forEachCodeSegment(code, (s) => segments.push(s));
+        const joined = segments.join("");
+        expect(joined).not.toMatch(/skip[12345]/);
+        expect(joined).toContain("real = 1;");
+    });
+});
+
+describe("replaceOutsideStrings", () => {
+    it("replaces matches only outside string/template/comment spans", () => {
+        const code = 'foo("foo"); // foo\nconst t = `foo`;\nfoo();';
+        const result = replaceOutsideStrings(code, /\bfoo\b/g, () => "bar");
+        expect(result).toBe('bar("foo"); // foo\nconst t = `foo`;\nbar();');
+    });
+});
+
+describe("skipString", () => {
+    it("returns the index past the closing quote, honoring backslash escapes", () => {
+        const code = `"a\\"b" rest`;
+        expect(skipString(code, 0)).toBe(code.indexOf(" rest"));
+    });
+});
+
+describe("skipTemplateLiteral", () => {
+    it("skips over a template expression that itself contains a nested string", () => {
+        const code = '`a${"}"}b` rest';
+        expect(skipTemplateLiteral(code, 0)).toBe(code.indexOf(" rest"));
+    });
+});
+
+describe("skipBlockComment", () => {
+    it("returns the index past the closing */", () => {
+        const code = "/* comment */ rest";
+        expect(skipBlockComment(code, 0)).toBe(code.indexOf(" rest"));
+    });
+
+    it("returns the code length when the block comment is unterminated", () => {
+        const code = "/* never closed";
+        expect(skipBlockComment(code, 0)).toBe(code.length);
+    });
+});
