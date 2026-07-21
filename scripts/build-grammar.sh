@@ -24,6 +24,9 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
+# shellcheck source=scripts/grammar-generate-lib.sh
+source "$SCRIPT_DIR/grammar-generate-lib.sh"
+
 mkdir -p server/out format/out
 
 TREE_SITTER="$ROOT_DIR/node_modules/.bin/tree-sitter"
@@ -43,9 +46,9 @@ DIAG_GRAMMARS=(fallout-msg weidu-tra)
 step "Building grammar WASMs"
 for dir in "${LSP_GRAMMARS[@]}" "${DIAG_GRAMMARS[@]}"; do
     echo "[$dir]"
+    generate_grammar_cached "$ROOT_DIR/grammars/$dir" "$TREE_SITTER"
     (
         cd "$ROOT_DIR/grammars/$dir"
-        "$TREE_SITTER" generate
         "$TREE_SITTER" build --wasm
     )
 done

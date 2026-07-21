@@ -11,6 +11,9 @@ GRAMMAR_DIR="$ROOT_DIR/grammars/$GRAMMAR_NAME"
 # shellcheck source=scripts/timing-lib.sh
 source "$ROOT_DIR/scripts/timing-lib.sh"
 
+# shellcheck source=scripts/grammar-generate-lib.sh
+source "$ROOT_DIR/scripts/grammar-generate-lib.sh"
+
 cd "$GRAMMAR_DIR" || exit 1
 
 find_samples() {
@@ -19,7 +22,7 @@ find_samples() {
 
 grammar_generate() {
     step "$GRAMMAR_NAME: Generating grammar"
-    "$TS" generate
+    generate_grammar_cached "$GRAMMAR_DIR" "$TS"
 }
 
 grammar_lint() {
