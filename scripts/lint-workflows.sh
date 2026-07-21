@@ -17,7 +17,7 @@ cd "$SCRIPT_DIR/.."
 source "$SCRIPT_DIR/tool-download-lib.sh"
 
 ACTIONLINT_VERSION="1.7.12"
-ZIZMOR_VERSION="1.26.1"
+ZIZMOR_VERSION="1.27.0"
 
 ACTIONLINT_CACHE_DIR=".dev/actionlint-${ACTIONLINT_VERSION}"
 ACTIONLINT_BIN="$ACTIONLINT_CACHE_DIR/actionlint"
@@ -34,8 +34,8 @@ declare -A ACTIONLINT_SHA256=(
 )
 declare -A ZIZMOR_SHA256=(
     # keys quoted so shfmt doesn't read the hyphens as arithmetic and reformat them
-    ["x86_64-unknown-linux-gnu"]="8556289a64e7aaf2400cd516f61a471aa91c5902cc56ad96a82fd12f90c2ef73"
-    ["aarch64-unknown-linux-gnu"]="711f5af366b299128f9a04b1470e37d990b41fbd21f14a1a4148d25004a83762"
+    ["x86_64-unknown-linux-gnu"]="277f2bd8fd37cf60c42ab7afca6faa884e65440fa31e02b44bdaae60f62a358f"
+    ["aarch64-unknown-linux-gnu"]="46fceee9a8262dca0e61f8463204e1f0f3a63bf6c20fa3ef9a5c1b3cff7b17b0"
 )
 
 os="$(uname -s)"
