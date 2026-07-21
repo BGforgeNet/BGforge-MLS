@@ -1,49 +1,47 @@
 # Changelog
 
-## Unreleased
+## 3.11.0
 
 ### Language features
 
-- Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2 files, instead of VS Code's word/bracket guesses.
-- WeiDU `.d` files now provide completion and hover for BAF triggers and actions inside embedded `IF`/`DO`/condition strings - the same engine vocabulary the `.baf` editor offers, now available in dialog code. BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`) is now syntax-highlighted too.
-- WeiDU BAF and D completion now include Enhanced Edition IDS constant values - creature allegiance (`ANYONE`, `NEUTRAL`, `ENEMY`, ...), general type (`HUMANOID`, `UNDEAD`, ...), race (`HUMAN`, `ELF`, `MINOTAUR`, ...), and gender (`MALE`, `FEMALE`, ...) - for use as trigger/action arguments such as `Allegiance(Myself,NEUTRAL)`. The same constants are syntax-highlighted from the identical set, so completion and coloring no longer disagree.
-- Fixed: IDS constants in WeiDU BAF are now highlighted consistently. Animation constants (`ABISHAI_BLACK`, `YUAN-TI_ELITE`, ...) and inventory-slot constants (`SLOT_WEAPON1`, ...) were never colored at all; other IDS constants were colored only if they appeared in a hand-maintained list, so a valid constant the list had not caught yet stayed plain. Every uppercase constant is now colored.
-- Fixed: code completions no longer pop up inside comments. When the cursor was at the end of a `//` line (exactly where it is while you type a comment), Fallout SSL, WeiDU BAF, D, and TP2 still offered header and keyword suggestions; completions are now suppressed anywhere in a comment.
-- Fixed: WeiDU BAF coordinates are now read as points. A coordinate mixing signs or variables - `ScreenShake([4.-4],20)`, `CreateCreature("x",[200.%py%],0)` - reported a syntax error on a valid script, and a plain pair like `MoveToPoint([10.10])` was read as an object reference. Coordinates are told apart from object specifiers such as `[NOTGOOD.HUMANOID]` and `[0.0.0.MAGE_ALL]` by their numeric components.
-- WeiDU BAF object specifiers and points (`[PC]`, `[ENEMY.0.0.MAGE]`, `[10.10]`) now color their brackets and dots separately from their contents, so the value stands out from the punctuation around it. Each component keeps its own color: an IDS name and its numeric equivalent both read as constants, while a `%variable%` coordinate reads as a variable rather than a number. In editors that highlight via tree-sitter (Neovim, Helix, Zed, Emacs), specifiers and coordinates were previously colored as one flat blob, brackets included.
-- WeiDU TP2 file paths are now Ctrl+Clickable: Go to Definition (F12 or Ctrl/Cmd+Click) on the source path of a `COPY`, `COMPILE`, or `INCLUDE` opens the referenced file - straight into the item/creature/spell editor for a `.itm`/`.cre`/`.spl`, or the matching editor for a `.baf`/`.d`/`.tra`/`.2da`. Paths built from variables (`%MOD_FOLDER%/...`, or a mod's own `OUTER_SPRINT` directory variable like `%my_loc%/foo.tpa`) resolve too - by the file's own name when the variable prefix can't be pinned down - and a reference to an inline `<<<<<<<< ... >>>>>>>>` block jumps to the block. When a path can't be resolved to one file (ambiguous name, `COPY_EXISTING` game resource, a type with no viewer, the copy destination), Ctrl+Click now does nothing rather than jumping to an unrelated same-named function.
-- Fixed: Ctrl+Click / F12 on a Fallout SSL `#include` path no longer jumps to an unrelated procedure or macro that happens to share the filename when the header can't be found; resolvable includes still open the header as before.
-- Fixed: hovering a file path inside a WeiDU TP2 `COPY`/`COMPILE`/`INCLUDE` directive or a Fallout SSL `#include` no longer shows the hover documentation for an unrelated function, procedure, or macro that happens to share the filename.
-- WeiDU TP2 `DEFINE_DIMORPHIC_FUNCTION` definitions are now recognized. They were previously misread as broken syntax; now Go to Definition (F12 / Ctrl+Click) from either a `LAF` or `LPF` launch jumps to the definition, the function is offered in completion in both launch contexts, its body folds, and it formats like any other function definition.
-- WeiDU TP2 now supports Call Hierarchy (Shift+Alt+H) on `DEFINE_*_FUNCTION` and `DEFINE_*_MACRO` definitions and their `LAF`/`LPF`/`LAM`/`LPM` launches: see which functions, macros, or component install blocks call a definition (incoming) and which it launches (outgoing), resolved across the workspace's `.tp2`/`.tph`/`.tpa` files.
-- Fallout SSL now supports Call Hierarchy (Shift+Alt+H) on a procedure, a code macro, or any reference to one: see what calls it (incoming) and what it calls (outgoing). Every way SSL reaches a callable counts - a `call` statement, an expression-form call (`x = foo(y)`), a `@proc` reference, and the bare target-node argument of a dialog-option macro (`NOption(msg, TargetNode, r)`) - so on a dialog script the hierarchy follows the conversation flow. Code macros participate too: a `#define` with parameters, or a parameterless one whose body invokes a function, procedure, or macro. Plain constants and builtins are excluded.
+- Expand Selection (Shift+Alt+Right/Left) now follows the syntax tree in Fallout SSL, WeiDU BAF, D, and TP2, instead of VS Code's word/bracket guesses.
+- WeiDU `.d` files now offer BAF trigger/action completion and hover inside embedded `IF`/`DO`/condition strings, and syntax-highlight BAF inside WEIGHT-guarded triggers (`IF WEIGHT #5 ~...~`).
+- WeiDU BAF and D completion now include Enhanced Edition IDS constants - allegiance (`NEUTRAL`, `ENEMY`, ...), general type, race, and gender - for trigger/action arguments like `Allegiance(Myself,NEUTRAL)`, highlighted from the same set so completion and coloring agree.
+- Fixed: every uppercase IDS constant in WeiDU BAF is now highlighted. Animation and inventory-slot constants were never colored, and others only if present in a hand-maintained list.
+- Fixed: code completions no longer pop up inside `//` comments in Fallout SSL, WeiDU BAF, D, and TP2.
+- Fixed: WeiDU BAF coordinates mixing signs or variables (`ScreenShake([4.-4],20)`) or a plain pair (`MoveToPoint([10.10])`) are now read as points instead of reporting a syntax error or being read as an object reference; they are told apart from object specifiers by their numeric components.
+- WeiDU BAF object specifiers and points (`[ENEMY.0.0.MAGE]`, `[10.10]`) now color their brackets and dots separately from their contents, each component keeping its own color. Tree-sitter editors (Neovim, Helix, Zed, Emacs) previously colored them as one flat blob.
+- WeiDU TP2 file paths in `COPY`/`COMPILE`/`INCLUDE` are now Ctrl+Clickable: Go to Definition opens the referenced file in the matching editor, including `%MOD_FOLDER%`/directory-variable paths and inline `<<<<<<<< ... >>>>>>>>` blocks. Ambiguous or non-file targets now do nothing rather than jumping to an unrelated same-named function.
+- Fixed: Ctrl+Click / F12 on a Fallout SSL `#include` no longer jumps to an unrelated procedure or macro sharing the filename when the header can't be found.
+- Fixed: hovering a file path in a WeiDU `COPY`/`COMPILE`/`INCLUDE` or Fallout SSL `#include` no longer shows an unrelated function's documentation.
+- WeiDU TP2 `DEFINE_DIMORPHIC_FUNCTION` is now recognized instead of misread as broken syntax: Go to Definition, completion, folding, and formatting all work from `LAF` and `LPF` launches.
+- WeiDU TP2 now supports Call Hierarchy (Shift+Alt+H) on `DEFINE_*_FUNCTION`/`DEFINE_*_MACRO` definitions and their `LAF`/`LPF`/`LAM`/`LPM` launches, resolved across the workspace's `.tp2`/`.tph`/`.tpa` files.
+- Fallout SSL now supports Call Hierarchy (Shift+Alt+H) on procedures and code macros, following every call form - `call`, expression-form calls, `@proc` references, and dialog-option macro target nodes - so on a dialog script the hierarchy follows the conversation flow.
 
 ### Translations
 
-- Translation references that point at a missing string are now flagged in the Problems panel. An `@N` reference (WeiDU `.baf`/`.d`/`.tp2`/`.tbaf`) or a message-function call (`mstr(N)`, `NOption(N)`, `floater_rand(...)`, ... in Fallout SSL/TSSL) whose number has no entry in the resolved `.tra`/`.msg` file gets an information-level squiggle, instead of only rendering blank in-game. Nothing is flagged unless a translation file actually resolves for the file, so a project without translations set up is never marked up. Previously a missing reference showed an inline "no such string" note in the inlay hints; inlay hints now show only the resolved string previews, and this diagnostic carries the "missing" signal.
-- Fixed: message-reference features no longer mis-read a function whose name ends in a known one. A Fallout call like `g_mstr(20000)` (a generic-file read, `message_str(SCRIPT_GENERIC, ...)`) was matched as if it were a same-file `mstr(20000)` reference - so it was flagged as a missing string and counted by find-references as a use of entry 20000. Only whole-word function names are matched now.
-- `.tra`/`.msg` files now have an Outline: one entry per `@N` / `{N}` string, with the text preview - jump anywhere in a large file from the Outline panel or breadcrumbs. Multiline entries can be folded.
-- Fixed: valid `.tra` entries whose sound reference contains a variable (`[%tutu_var%SIRIN05]`), a space (`[XAN 23]`), or a `#` (`[X#BLANK]`) no longer report a false syntax error.
-- Fixed: `.tra` entries with separate male and female sound references (`~male~ [snd] ~female~ [snd]`) no longer report a false syntax error.
-- Fixed: `.tra` entries using `%text%`-delimited strings no longer report a false syntax error.
+- Translation references to a missing string are now flagged in the Problems panel: an `@N` reference or a message-function call (`mstr(N)`, `NOption(N)`, ...) whose number has no entry in the resolved `.tra`/`.msg` gets an information-level squiggle. Files with no resolved translation are never marked. Inlay hints now show only resolved previews, no longer the inline "no such string" note.
+- Fixed: message-reference features no longer mis-read a function whose name ends in a known one - `g_mstr(20000)` is no longer treated as `mstr(20000)`; only whole-word names match.
+- `.tra`/`.msg` files now have an Outline, one entry per `@N` / `{N}` string with a text preview, with foldable multiline entries.
+- Fixed: valid `.tra` entries no longer report a false syntax error for sound references containing a variable, space, or `#`; separate male/female sound references; or `%text%`-delimited strings.
 
 ### Binary editor
 
-- Item, spell, and effect fields (ITM/SPL/EFF, and the effects embedded in CRE) now show the field's IESDP documentation in its tooltip. Fields with a longer write-up get a small `?` marker beside the label; the tooltip is capped to a readable length and the marker links to the field's full IESDP page in your browser.
-- CRE inventory slots that hold an item now turn the slot label into a link to that item's entry in the Items section - no more reading the index and switching tabs by hand.
-- Numeric fields now show their valid range in the field tooltip, and a value outside that range highlights the field with a warning outline - while you type and for as long as the value stays out of range - on every numeric field, whether it renders in a form, a grid, or a matrix.
+- Item, spell, and effect fields (ITM/SPL/EFF and CRE-embedded effects) now show their IESDP documentation in the tooltip, with a `?` marker linking to the full IESDP page for longer write-ups.
+- CRE inventory slots holding an item now link the slot label to that item's entry in the Items section.
+- Numeric fields now show their valid range in the tooltip and outline the field with a warning while the value is out of range, across form, grid, and matrix layouts.
 
 ### Dialog editor
 
-- WeiDU `.d` trigger, condition, and action fields are now syntax-highlighted as you edit them - trigger and action names, IDS constants, strings, numbers, variables, and object specifiers each get their own color, and the coloring updates live as you type. Previously these fields showed flat monochrome text.
-- Fallout SSL condition fields in the dialog editor are now syntax-highlighted too - engine functions, constants, numbers, strings, and operators each get their own color, matching how the SSL text editor colors them, and it updates live as you type. Previously these fields showed flat monochrome text.
-- The TypeScript-based dialog languages (`.td` and `.tssl`) now color their condition and trigger fields as TypeScript - engine calls, comparison and boolean operators (`==`, `&&`, `!`), numbers, strings, and ALL-CAPS constants each get their own color, matching the source. A `.td` action field holds a WeiDU action and stays colored as WeiDU. Previously a `.td`/`.tssl` condition was colored with the WeiDU or SSL rules, which do not fit TypeScript syntax.
-- The find bar has a new Code toggle: search inside node triggers, choice conditions, and actions (e.g. find every node gated on a variable), in addition to the dialogue text the search always covers.
-- Fixed: editing the source of an open dialog no longer freezes the tree view. While editing a large SSL dialog, an in-progress edit (a transient syntax error, or a moment where a linked node did not yet exist) could crash the tree, which then stayed frozen on the error even after the edit was fixed - it only recovered when the editor was closed and reopened. The tree now keeps re-rendering as you edit.
+- WeiDU `.d` trigger, condition, and action fields are now syntax-highlighted live as you edit, instead of flat monochrome text.
+- Fallout SSL condition fields are now syntax-highlighted live, matching the SSL text editor.
+- `.td` and `.tssl` condition and trigger fields now color as TypeScript (a `.td` action field stays WeiDU-colored), instead of the ill-fitting WeiDU/SSL rules.
+- The find bar has a new Code toggle to search node triggers, choice conditions, and actions in addition to dialogue text.
+- Fixed: editing the source of an open dialog no longer freezes the tree view on a transient parse error.
 
 ### Snippets
 
-- New snippets for WeiDU D files: state blocks, replies, CHAIN, INTERJECT_COPY_TRANS, APPEND, and EXTEND_BOTTOM skeletons.
+- New WeiDU `.d` snippets: state blocks, replies, CHAIN, INTERJECT_COPY_TRANS, APPEND, and EXTEND_BOTTOM.
 
 ## 3.10.1
 
