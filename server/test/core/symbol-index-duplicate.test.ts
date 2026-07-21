@@ -164,4 +164,35 @@ describe("symbol-index duplicate handling", () => {
         expect(result).toBeDefined();
         expect(result!.source.type).toBe(SourceType.Static);
     });
+
+    it("applies the same-file bonus so a same-file symbol outranks an alphabetically-earlier one", () => {
+        const uriA = "file:///headers/a.h";
+        const uriB = "file:///headers/b.h";
+
+        symbols.updateFile(normalizeUri(uriA), [makeConstantSymbol("CONST", uriA, "1")]);
+        symbols.updateFile(normalizeUri(uriB), [makeConstantSymbol("CONST", uriB, "2")]);
+
+        // Both are Workspace, so with no context a.h wins (alphabetically first URI). Pointing the
+        // context AT b.h must lift b.h above a.h via the same-file bonus - not the alphabetical default.
+        const result = symbols.lookup("CONST", { uri: uriB });
+        expect(result).toBeDefined();
+        expect(result!.source.uri).toBe(uriB);
+    });
+
+    it("ranks an open-document symbol above a cross-file workspace symbol of the same name", () => {
+        const docUri = "file:///scripts/open.ssl";
+        const headerUri = "file:///headers/lib.h";
+
+        symbols.updateFile(normalizeUri(headerUri), [makeConstantSymbol("SHARED", headerUri, "1")]);
+        const docSymbol: ConstantSymbol = {
+            ...makeConstantSymbol("SHARED", docUri, "2"),
+            source: { type: SourceType.Document, uri: docUri, displayPath: "open.ssl" },
+        };
+        symbols.updateFile(normalizeUri(docUri), [docSymbol]);
+
+        // No same-file context: precedence is decided by source type alone, Document (1000) > Workspace (100).
+        const result = symbols.lookup("SHARED");
+        expect(result).toBeDefined();
+        expect(result!.source.type).toBe(SourceType.Document);
+    });
 });

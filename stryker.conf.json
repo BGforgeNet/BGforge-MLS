@@ -14,7 +14,7 @@
     ],
     "checkers": ["typescript"],
     "tsconfigFile": "server/tsconfig.json",
-    "ignorePatterns": ["external", "tmp", ".vscode-test"],
+    "ignorePatterns": ["external", "tmp", ".vscode-test", ".dev"],
     "coverageAnalysis": "perTest",
     "thresholds": {
         "high": 80,

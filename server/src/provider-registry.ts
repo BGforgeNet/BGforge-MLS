@@ -50,12 +50,14 @@ class ProviderRegistry {
 
     register(provider: LanguageProvider): void {
         this.providers.set(provider.id, provider);
+        // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
         conlog(`Registered provider: ${provider.id}`);
     }
 
     /** Register an alias language ID that shares data with an existing provider. */
     registerAlias(aliasLangId: string, parentLangId: string): void {
         this.aliases.set(aliasLangId, parentLangId);
+        // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
         conlog(`Registered alias: ${aliasLangId} -> ${parentLangId}`);
     }
 
@@ -74,11 +76,13 @@ class ProviderRegistry {
                 await provider.init(context);
             } catch (error) {
                 const message = errorMessage(error);
+                // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
                 conlog(`Failed to initialize provider ${provider.id}: ${message}`, "error");
                 // Surface to the user so the affected language doesn't silently have empty results.
                 showError(`BGforge MLS: ${provider.id} failed to initialize: ${message}`);
             }
         }
+        // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
         conlog(`Initialized ${this.providers.size} providers`);
         this.fileWatcher.buildExtensionMap(this.providers.values());
         await scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot);
