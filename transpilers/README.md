@@ -83,3 +83,9 @@ Without `--save`, the transpiled output is printed to stdout.
 - [TSSL](./tssl/docs/) - TypeScript to Fallout SSL
 - [TBAF](./tbaf/docs/) - TypeScript to Infinity Engine BAF
 - [TD](./td/docs/) - TypeScript to Infinity Engine D
+
+## Build note
+
+TSSL imports `server/out/fallout-ssl-engine-procedures.json` - a tracked output of the server data
+pipeline, regenerated from YAML by `scripts/generate-data.sh` (see `docs/data-pipeline.md`). A fresh
+clone builds without running the generator; regenerate only after editing the YAML sources.
