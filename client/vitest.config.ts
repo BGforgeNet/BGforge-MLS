@@ -21,9 +21,12 @@ export default defineConfig({
         name: "client",
         include: ["client/test/**/*.test.ts"],
         // v8 coverage instrumentation roughly 3-4x slows the binary-format parser
-        // tests in this suite; the 5s vitest default is too tight for them under
-        // --coverage and was producing intermittent failures.
-        testTimeout: 15000,
+        // tests in this suite, and the parallel coverage block in scripts/test.sh
+        // saturates every core, starving this suite's worker-spawning and
+        // request-correlation tests (observed 19.5s on a 15s budget). The bound
+        // only limits how long a genuine hang takes to fail; green runs finish
+        // in seconds regardless of the value.
+        testTimeout: 60000,
         // Separate from the server's coverage output so the parallel
         // server+client coverage runs in scripts/test.sh don't race on
         // coverage/.tmp shard files.
