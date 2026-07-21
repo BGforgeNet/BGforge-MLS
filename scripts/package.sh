@@ -38,7 +38,10 @@ restore_node_modules() {
 
 trap restore_node_modules EXIT
 
-# Step 1: Build with full deps available.
+# Step 1: Build with full deps available, from a clean slate: client/out and
+# server/out are packaged wholesale, so stale bundles from retired features would
+# ship from a long-lived tree. prepublish regenerates both directories.
+rm -rf client/out server/out
 ./scripts/prepublish.sh
 
 # Step 2: Deref pnpm symlinks for server runtime deps.

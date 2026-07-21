@@ -89,7 +89,7 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 | `client/src/**/*.ts`                                                  | Client TypeScript source (HTML/CSS webview assets are kept)   |
 | `client/test/`, `client/testFixture/`, `client/out/test/`             | Client test files and fixtures                                |
 | `client/scripts/`, `client/tsconfig*.json`, `client/vitest.config.ts` | Client dev files                                              |
-| `client/node_modules/`                                                | Client dev dependencies                                       |
+| `client/node_modules/`, `client/coverage/`                            | Client dev dependencies and coverage reports                  |
 | `server/src/`, `server/data/`                                         | Server TypeScript source, YAML data files                     |
 | `server/test/`, `server/scripts/`, `server/coverage/`                 | Server test files and dev artifacts                           |
 | `server/tsconfig*.json`, `server/vitest.config.ts`                    | Server dev config                                             |

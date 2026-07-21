@@ -107,6 +107,7 @@ client/scripts/
 client/tsconfig*.json
 client/vitest*.config.ts
 client/node_modules/
+client/coverage/
 
 # Server dev files
 server/src/
