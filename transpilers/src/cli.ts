@@ -130,6 +130,7 @@ const HELP = `Usage: fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [
   --save-and-check  Write output and verify the result is unchanged on a re-run
   -r                Recursively transpile all .td, .tbaf, and .tssl files in directory
   -q                Quiet mode: suppress summary, only print changed files
+  --jobs <n>        Process directory files with N parallel workers
 
 Examples:
   fgtp mydialog.td              # Print D output to stdout

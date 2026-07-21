@@ -311,7 +311,7 @@ describe("runCli", () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("changed");
         await expect(
             runCli({
-                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
+                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false, jobs: 1 },
                 extensions: [".txt"],
                 description: "test",
                 processFile,
@@ -324,7 +324,7 @@ describe("runCli", () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("error");
         await expect(
             runCli({
-                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
+                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false, jobs: 1 },
                 extensions: [".txt"],
                 description: "test",
                 processFile,
@@ -336,7 +336,7 @@ describe("runCli", () => {
     it("single file check mode: does not exit on 'unchanged'", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("unchanged");
         await runCli({
-            args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
+            args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             processFile,
@@ -347,7 +347,7 @@ describe("runCli", () => {
     it("single file stdout mode: does not exit on 'changed'", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("changed");
         await runCli({
-            args: { target: path.join(tmpDir, "a.txt"), mode: "stdout", recursive: false, quiet: false },
+            args: { target: path.join(tmpDir, "a.txt"), mode: "stdout", recursive: false, quiet: false, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             processFile,
@@ -362,7 +362,7 @@ describe("runCli", () => {
             .mockReturnValueOnce("changed");
         await expect(
             runCli({
-                args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
+                args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 1 },
                 extensions: [".txt"],
                 description: "test",
                 processFile,
@@ -378,7 +378,7 @@ describe("runCli", () => {
             .mockReturnValueOnce("error");
         await expect(
             runCli({
-                args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
+                args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 1 },
                 extensions: [".txt"],
                 description: "test",
                 processFile,
@@ -390,7 +390,7 @@ describe("runCli", () => {
     it("directory check mode: does not exit when all unchanged", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("unchanged");
         await runCli({
-            args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
+            args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             processFile,
@@ -401,7 +401,7 @@ describe("runCli", () => {
     it("directory save mode: does not exit on 'changed'", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("changed");
         await runCli({
-            args: { target: tmpDir, mode: "save", recursive: true, quiet: true },
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             processFile,
@@ -413,7 +413,7 @@ describe("runCli", () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>();
         await expect(
             runCli({
-                args: { target: tmpDir, mode: "save", recursive: false, quiet: false },
+                args: { target: tmpDir, mode: "save", recursive: false, quiet: false, jobs: 1 },
                 extensions: [".txt"],
                 description: "test",
                 processFile,
@@ -426,7 +426,7 @@ describe("runCli", () => {
         const init = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("unchanged");
         await runCli({
-            args: { target: path.join(tmpDir, "a.txt"), mode: "stdout", recursive: false, quiet: false },
+            args: { target: path.join(tmpDir, "a.txt"), mode: "stdout", recursive: false, quiet: false, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             init,
@@ -440,7 +440,7 @@ describe("runCli", () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>();
         await expect(
             runCli({
-                args: { target: tmpDir, mode: "save", recursive: true, quiet: false },
+                args: { target: tmpDir, mode: "save", recursive: true, quiet: false, jobs: 1 },
                 extensions: [".xyz"],
                 description: "test",
                 processFile,
@@ -456,7 +456,7 @@ describe("runCli", () => {
             .mockReturnValueOnce("changed")
             .mockReturnValueOnce("unchanged");
         await runCli({
-            args: { target: tmpDir, mode: "save", recursive: true, quiet: false },
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: false, jobs: 1 },
             extensions: [".txt"],
             description: "test",
             processFile,

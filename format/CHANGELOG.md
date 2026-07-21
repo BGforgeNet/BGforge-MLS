@@ -2,6 +2,14 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## Unreleased
+
+### Added
+
+- `fgfmt --jobs <n>` processes directory files with `n` parallel workers. Output order matches the
+  sequential walk; with `--check`, all files are checked before the exit code instead of stopping at
+  the first mismatch.
+
 ## 0.3.0
 
 ### Added

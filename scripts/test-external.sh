@@ -55,7 +55,9 @@ test_format() {
     fi
 
     step "Formatting $name files (with idempotency check)"
-    node "$ROOT_DIR/format/out/cli.js" "$target_dir" -r --save-and-check -q
+    # --jobs: the corpus is ~17k files and the per-file work is CPU-bound;
+    # the parallel fan-out cuts the pass from minutes to well under one.
+    node "$ROOT_DIR/format/out/cli.js" "$target_dir" -r --save-and-check -q --jobs "$(nproc)"
 }
 
 # Test bin CLI on Fallout PRO files (parse only, no snapshot comparison)
@@ -67,8 +69,9 @@ test_bin() {
     fi
 
     step "Testing Fallout binary assets"
-    # Stdout mode outputs JSON - discard it, we only care about exit code (parse success)
-    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q >/dev/null
+    # Stdout mode outputs JSON - discard it, we only care about exit code (parse success).
+    # --jobs: the map decode is CPU-bound and was the longest single-core stretch of this script.
+    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q --jobs "$(nproc)" >/dev/null
 }
 
 step "Building CLIs"

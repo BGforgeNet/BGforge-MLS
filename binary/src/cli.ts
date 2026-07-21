@@ -182,6 +182,7 @@ const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [
                      is missing. Other formats (.pro/.itm/...) ignore it.
   -r        Recursively process all supported files in directory
   -q        Quiet mode: suppress summary, only print errors
+  --jobs <n>      Process directory files with N parallel workers
 
 Examples:
   fgbin file.pro                  # Parse single file, print JSON to stdout

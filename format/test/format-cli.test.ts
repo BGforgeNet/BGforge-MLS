@@ -156,6 +156,65 @@ describe("format CLI integration", () => {
         });
     });
 
+    describe("--jobs mode", () => {
+        const unformattedBaf = "IF\nTrue()\nTHEN\n  RESPONSE #100\n  NoAction()\nEND\n";
+        const unformattedTra = "@ 1  =  ~Messy whitespace~\n";
+
+        /** Two subdirs with a mix of formatted-needed files, mirrored into two trees. */
+        function makeTree(root: string): void {
+            fs.mkdirSync(path.join(root, "sub-a"), { recursive: true });
+            fs.mkdirSync(path.join(root, "sub-b"), { recursive: true });
+            fs.writeFileSync(path.join(root, "sub-a", "one.baf"), unformattedBaf);
+            fs.writeFileSync(path.join(root, "sub-a", "two.tra"), unformattedTra);
+            fs.writeFileSync(path.join(root, "sub-b", "three.baf"), unformattedBaf);
+            fs.writeFileSync(path.join(root, "sub-b", "four.tra"), unformattedTra);
+        }
+
+        function treeContents(root: string): Record<string, string> {
+            const out: Record<string, string> = {};
+            for (const sub of ["sub-a", "sub-b"]) {
+                for (const name of fs.readdirSync(path.join(root, sub))) {
+                    out[`${sub}/${name}`] = fs.readFileSync(path.join(root, sub, name), "utf-8");
+                }
+            }
+            return out;
+        }
+
+        it("produces the same files and summary as a sequential run", () => {
+            const seqRoot = path.join(tmpDir, "seq");
+            const parRoot = path.join(tmpDir, "par");
+            makeTree(seqRoot);
+            makeTree(parRoot);
+            const seq = run(seqRoot, "-r", "--save");
+            const par = run(parRoot, "-r", "--save", "--jobs", "2");
+            expect(par.code).toBe(0);
+            expect(treeContents(parRoot)).toEqual(treeContents(seqRoot));
+            // Same aggregate summary; per-file lines land in walk order either way.
+            expect(par.stdout).toContain(seq.stdout.slice(seq.stdout.indexOf("Summary:")));
+        });
+
+        it("handles more jobs than files", () => {
+            const root = path.join(tmpDir, "overshoot");
+            makeTree(root);
+            const { code, stdout } = run(root, "-r", "--save", "--jobs", "32");
+            expect(code).toBe(0);
+            expect(stdout).toContain("Summary: 4 changed, 0 unchanged");
+        });
+
+        it("check mode exits 1 when any file needs formatting", () => {
+            const root = path.join(tmpDir, "check-par");
+            makeTree(root);
+            const { code } = run(root, "-r", "--check", "-q", "--jobs", "2");
+            expect(code).toBe(1);
+        });
+
+        it("rejects a non-integer --jobs value", () => {
+            const { code, stderr } = run(tmpDir, "-r", "--save", "--jobs", "zero");
+            expect(code).toBe(1);
+            expect(stderr).toContain("--jobs must be a positive integer");
+        });
+    });
+
     describe("error handling", () => {
         it("exits 1 for unsupported file type", () => {
             const file = path.join(tmpDir, "test.xyz");

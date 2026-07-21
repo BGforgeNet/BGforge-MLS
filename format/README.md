@@ -39,7 +39,7 @@ and editorconfig discovery (`getEditorconfigSettings`).
 ## `fgfmt` CLI
 
 ```
-fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
 ```
 
 - `--save` - write formatted output back to file(s)
@@ -47,6 +47,8 @@ fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
 - `--save-and-check` - save and verify idempotency in one pass
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
+- `--jobs <n>` - process directory files with `n` parallel workers (output order matches the sequential walk;
+  with `--check`, all files are checked before the exit code instead of stopping at the first mismatch)
 
 ## Supported file types
 

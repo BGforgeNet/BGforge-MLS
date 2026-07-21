@@ -2,6 +2,14 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## Unreleased
+
+### Added
+
+- `fgtp --jobs <n>` processes directory files with `n` parallel workers. Output order matches the
+  sequential walk; with `--check`, all files are checked before the exit code instead of stopping at
+  the first mismatch.
+
 ## 0.1.2
 
 ### Fixed

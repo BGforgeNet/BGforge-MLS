@@ -2,6 +2,14 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## Unreleased
+
+### Added
+
+- `fgbin --jobs <n>` processes directory files with `n` parallel workers. Output order matches the
+  sequential walk; with `--check`, all files are checked before the exit code instead of stopping at
+  the first mismatch.
+
 ## 0.4.0
 
 ### Added

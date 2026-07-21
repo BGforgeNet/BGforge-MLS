@@ -248,13 +248,14 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: format-cli <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+const HELP = `Usage: format-cli <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
   Supported: .ssl, .baf, .d, .tp2 (/.tph/.tpa/.tpp), .tra, .msg, .2da, scripts.lst
   --save            Write formatted output back to file(s)
   --check           Check if files are formatted (exit 1 if not)
   --save-and-check  Save formatted output and verify idempotency in one pass
   -r                Recursively format all supported files in directory
   -q                Quiet mode: suppress summary, only print changed files
+  --jobs <n>        Process directory files with N parallel workers
   Without --save or --check: single file prints to stdout, directory shows what would change`;
 
 async function main() {
