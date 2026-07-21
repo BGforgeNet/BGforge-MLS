@@ -23,11 +23,10 @@ export default defineConfig({
         // from the repo root; a bare "test/**" glob resolves against process.cwd().
         include: [path.resolve(__dirname, "test/integration/**/*.test.ts")],
         setupFiles: [path.resolve(__dirname, "test/integration/setup.ts")],
-        // These tests sweep real external corpora (hundreds of tree-sitter parses), and the
-        // full suite runs them alongside the unit and transpile projects, so a CPU-contended
-        // CI runner is far slower than a local run - the corpus reachability sweep is ~3s
-        // locally but blew past the 5s default under contention. Give the class real headroom;
-        // a genuine hang still fails at 30s.
-        testTimeout: 30_000,
+        // These tests sweep real external corpora (hundreds of tree-sitter parses) while
+        // other suites run in parallel - a CPU-contended CI runner is far slower than a
+        // local run, and near-threshold tests trip stochastically. 60s like every suite
+        // in the block; the timeout guards against hangs, not slowness.
+        testTimeout: 60000,
     },
 });

@@ -11,7 +11,10 @@ export default defineConfig({
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
-        testTimeout: 30000,
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
         // and the test/td + test/tbaf fixture-driven integration suites in

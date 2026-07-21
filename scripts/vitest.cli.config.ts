@@ -25,6 +25,9 @@ export default defineConfig({
             path.resolve(root, "format/test/format-cli.test.ts"),
             path.resolve(root, "transpilers/test/transpile-cli.test.ts"),
         ],
-        testTimeout: 30000,
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
     },
 });

@@ -15,6 +15,10 @@ export default defineConfig({
         // Absolute so discovery works both from this dir and from the repo root
         // (scripts/test.sh invokes this config from root).
         include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
         coverage: coverageConfig({
             reportsDirectory: "coverage/tssl-plugin",
             thresholds: {

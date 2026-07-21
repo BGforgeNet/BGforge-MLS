@@ -11,5 +11,9 @@ export default defineConfig({
         name: "server-smoke",
         // Absolute so discovery works both from server/ and from the repo root.
         include: [path.resolve(__dirname, "test/smoke-stdio.test.ts")],
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
     },
 });

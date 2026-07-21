@@ -16,6 +16,9 @@ export default defineConfig({
         // Absolute so discovery works both from scripts/ and from the repo root
         // (pnpm test:scripts invokes this config from root).
         include: [path.resolve(__dirname, "*/test/**/*.test.ts")],
-        testTimeout: 30000,
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
     },
 });

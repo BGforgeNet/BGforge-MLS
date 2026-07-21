@@ -16,7 +16,10 @@ export default defineConfig({
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
-        testTimeout: 30000,
+        // 60s like every suite in the parallel test.sh block: core saturation makes
+        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // guards against hangs, not slowness.
+        testTimeout: 60000,
         // The tree-sitter-driven formatters (one dir per grammar) are
         // exercised by the grammar format-check fixtures run from
         // scripts/test.sh / test:grammars, not by vitest unit tests, so they
