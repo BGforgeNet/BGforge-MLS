@@ -259,11 +259,8 @@ function runChild(
  * Fan a directory run out to N child processes, each re-invoking this same CLI
  * over a contiguous chunk of the file list via --files-from. The original argv
  * is passed through (minus --jobs) so CLI-specific extra flags survive, and
- * each child's buffered output is replayed in chunk order so the combined
+ * each child's spooled output is replayed in chunk order so the combined
  * output matches the sequential walk. Counts come back over the IPC channel.
- * Buffering trades memory for ordering; the heavy corpus modes (--save,
- * --check) emit only per-file lines, and stdout-mode JSON for the largest
- * real corpus measures in tens of MB, well within reach.
  */
 async function runParallelJobs(files: string[], args: CliArgs): Promise<void> {
     const jobs = Math.min(args.jobs, files.length);
