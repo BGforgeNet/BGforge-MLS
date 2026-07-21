@@ -67,24 +67,23 @@ parallel \
 # feedback. TEST_COVERAGE=1 (set by test-all.sh) enables it, which is where
 # the coverage thresholds are enforced - the close-out/CI gate.
 if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
-    # Coverage runs are sequential: Vitest's V8 coverage provider has a known
-    # race writing shard files to `<reportsDirectory>/.tmp/coverage-N.json`
-    # when many `vitest --coverage` processes run simultaneously: a slow
-    # worker can land its writeFile after the main process has already
-    # cleaned `.tmp/`, surfacing as ENOENT (vitest-dev/vitest #4943, #5903;
-    # not fixed as of vitest 4.1.5). Each config also sets
-    # `coverage.clean: false` to skip the outer reportsDirectory wipe. The
-    # combination is the maintainer-recommended workaround.
-    step "Phase 1.5: Unit tests + coverage (sequential)"
-    (cd server && pnpm exec vitest run --coverage)
-    vitest run --config client/vitest.config.ts --coverage
-    vitest run --config plugins/tssl-plugin/vitest.config.ts --coverage
-    vitest run --config plugins/td-plugin/vitest.config.ts --coverage
-    vitest run --config transpilers/vitest.config.ts --coverage
-    vitest run --config format/vitest.config.ts --coverage
-    vitest run --config binary/vitest.config.ts --coverage
-    vitest run --config binary-editor/vitest.config.ts --coverage
-    vitest run --config shared/vitest.config.ts --coverage
+    # Vitest's V8 coverage `.tmp/coverage-N.json` shard race (vitest-dev/vitest
+    # #4943, #5903) is scoped to a shared reportsDirectory: it reproduced
+    # instantly when the two plugin configs both used the default `coverage`
+    # dir, and vanished once every config set a distinct one. With distinct
+    # dirs plus `coverage.clean: false` these runs parallelize cleanly
+    # (verified over repeated runs); worker caps mirror the no-coverage block.
+    step "Phase 1.5: Unit tests + coverage (parallel)"
+    parallel \
+        "Coverage server" "(cd server && pnpm exec vitest run --coverage --maxWorkers=3)" \
+        "Coverage client" "pnpm exec vitest run --config client/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage transpilers" "pnpm exec vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage format" "pnpm exec vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
+        "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
     # parallelize; each is capped with --maxWorkers because nine uncapped

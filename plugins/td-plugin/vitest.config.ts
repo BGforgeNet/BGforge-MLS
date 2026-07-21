@@ -13,6 +13,7 @@ export default defineConfig({
         name: "td-plugin",
         include: ["plugins/td-plugin/test/**/*.test.ts"],
         coverage: coverageConfig({
+            reportsDirectory: "coverage/td-plugin",
             thresholds: {
                 lines: 100,
                 functions: 100,

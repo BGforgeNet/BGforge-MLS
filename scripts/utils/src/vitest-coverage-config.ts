@@ -19,7 +19,10 @@ export interface CoverageThresholds {
 
 interface CoverageConfigOptions {
     thresholds: CoverageThresholds;
-    /** Omit to fall back to vitest's default `coverage` reportsDirectory (matches the two plugin configs). */
+    /**
+     * Every config must set a distinct directory: two runs sharing one
+     * reportsDirectory race on its `.tmp/` shard files when run in parallel.
+     */
     reportsDirectory?: string;
     /** Restricts the coverage denominator to the package's own source; omit for the v8 default (files loaded by tests). */
     include?: string[];

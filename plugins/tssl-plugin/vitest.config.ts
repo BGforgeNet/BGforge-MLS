@@ -13,6 +13,7 @@ export default defineConfig({
         name: "tssl-plugin",
         include: ["plugins/tssl-plugin/test/**/*.test.ts"],
         coverage: coverageConfig({
+            reportsDirectory: "coverage/tssl-plugin",
             thresholds: {
                 lines: 100,
                 functions: 100,
