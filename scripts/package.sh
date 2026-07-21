@@ -24,6 +24,9 @@ workspace_links=()
 
 restore_node_modules() {
     echo "Restoring node_modules..."
+    # pnpm's install state still reads "up to date" after the symlink strip, so a plain
+    # install no-ops and leaves server/ without its deps; remove the dir to force a rebuild.
+    rm -rf server/node_modules
     pnpm install --frozen-lockfile
     local entry path target
     for entry in "${workspace_links[@]}"; do
