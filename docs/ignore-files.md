@@ -30,10 +30,10 @@ These JSON files are generated from `server/data/*.yml` by `generate-data.sh` bu
 
 ### Generated source
 
-| Pattern                                 | What it ignores                                                                      |
-| --------------------------------------- | ------------------------------------------------------------------------------------ |
-| `grammars/*/src/`                       | Tree-sitter generated C parser sources                                               |
-| `server/src/weidu-tp2/tree-sitter.d.ts` | Generated node-type declarations for weidu-tp2 (the other 3 grammars' are committed) |
+| Pattern                         | What it ignores                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `grammars/*/src/`               | Tree-sitter generated C parser sources                                                |
+| `server/src/*/tree-sitter.d.ts` | Generated node-type declarations (all four LSP grammars; rebuilt by `generate:types`) |
 
 ### Third-party and temporary
 

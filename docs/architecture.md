@@ -544,6 +544,8 @@ converted to JSON at build time. Includes:
 - 12 primary language grammars
 - 4 tooltip grammars (hover rendering)
 - 3 injection grammars (comments, strings, docstrings)
+- 1 webview tokenizer grammar (`dialog-tsexpr` - embedded TS-expression highlighting in the dialog
+  editor; consumed directly by the webview bundle, not registered in `contributes.grammars`)
 
 ## Data Pipeline
 
@@ -665,8 +667,10 @@ The threshold is `DEFAULT_THRESHOLD_MS = 50` ms and can be overridden at startup
 The threshold is a per-request, per-call budget - not an aggregate. A single request that
 takes longer than 50 ms triggers a warning regardless of prior request history.
 
-Handlers currently wrapped: `onCompletion`, `onHover`, `onDefinition`, `onReferences`,
-`onDocumentSymbol`, `semanticTokens`, `onWorkspaceSymbol`.
+Every request-handler module under `server/src/handlers/` that serves an interactive request wraps its
+work in `timeHandler`: completion, hover, definition, references, symbols (document and workspace),
+semantic tokens, formatting, rename, folding, selection range, call hierarchy, document lifecycle,
+config, and execute-command.
 
 ### Per-Operation Targets
 
