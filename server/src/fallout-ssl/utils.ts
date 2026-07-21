@@ -606,14 +606,14 @@ export function buildMacroSymbol(macro: MacroData, uri: string, displayPath?: st
             ...base,
             kind: SymbolKind.Macro,
             callable: { parameters: macro.params?.map((p) => ({ name: p })) },
-        } as CallableSymbol;
+        } satisfies CallableSymbol;
     }
 
     return {
         ...base,
         kind: SymbolKind.Constant,
         constant: { value: macro.firstline ?? "" },
-    } as ConstantSymbol;
+    } satisfies ConstantSymbol;
 }
 
 /**

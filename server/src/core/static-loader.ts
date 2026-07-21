@@ -222,7 +222,7 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
                 | SymbolKind.Action
                 | SymbolKind.Trigger,
             callable,
-        } as CallableSymbol;
+        } satisfies CallableSymbol;
     }
 
     if (kind === SymbolKind.Variable || kind === SymbolKind.Parameter || kind === SymbolKind.LoopVariable) {
@@ -230,21 +230,21 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
             ...base,
             kind,
             variable: {},
-        } as VariableSymbol;
+        } satisfies VariableSymbol;
     }
 
     if (kind === SymbolKind.State) {
         return {
             ...base,
             kind,
-        } as StateSymbol;
+        } satisfies StateSymbol;
     }
 
     if (kind === SymbolKind.Component) {
         return {
             ...base,
             kind,
-        } as ComponentSymbol;
+        } satisfies ComponentSymbol;
     }
 
     // Default: treat as constant
@@ -254,7 +254,7 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
         constant: {
             value: "",
         },
-    } as ConstantSymbol;
+    } satisfies ConstantSymbol;
 }
 
 /**
