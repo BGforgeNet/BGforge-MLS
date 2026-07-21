@@ -23,11 +23,12 @@ import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { parserRegistry } from "../src/index";
+import { REPO_ROOT } from "./repo-root";
 
-const CLI = path.resolve("binary/out/cli.js");
+const CLI = path.join(REPO_ROOT, "binary/out/cli.js");
 const NODE = process.execPath;
-const FIXTURES = path.resolve("client/testFixture/proto");
-const RP_MAPS = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
+const RP_MAPS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps");
 
 const RUN_EXTERNAL = process.env.RUN_EXTERNAL_CLI_TESTS === "1";
 /** Use for tests that read from RP_MAPS. Skipped visibly when RUN_EXTERNAL_CLI_TESTS is unset. */
@@ -49,7 +50,7 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
 }
 
 describe("bin CLI integration", () => {
-    const tmpDir = path.resolve("tmp/cli-test-bin");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-bin");
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {
@@ -210,7 +211,7 @@ describe("bin CLI integration", () => {
             fs.mkdirSync(protoSceneryDir, { recursive: true });
 
             const mapFile = path.join(mapsDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
             fs.copyFileSync(path.join(FIXTURES, "items", "00000031.pro"), path.join(protoItemsDir, "00000031.pro"));
             fs.copyFileSync(path.join(FIXTURES, "scenery", "00000008.pro"), path.join(protoSceneryDir, "00000008.pro"));
 
@@ -222,7 +223,7 @@ describe("bin CLI integration", () => {
 
         it("emits no stats line when no sibling proto/ dir exists", () => {
             const mapFile = path.join(tmpDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
             const { code, stderr } = run(mapFile, "--save");
             expect(code).toBe(0);
             expect(stderr).not.toMatch(/proto overrides/i);
@@ -242,7 +243,10 @@ describe("bin CLI integration", () => {
             const protoItemsDir = path.join(dataDir, "proto", "items");
             fs.mkdirSync(mapsDir, { recursive: true });
             fs.mkdirSync(protoItemsDir, { recursive: true });
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), path.join(mapsDir, "artemple.map"));
+            fs.copyFileSync(
+                path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"),
+                path.join(mapsDir, "artemple.map"),
+            );
             fs.copyFileSync(path.join(FIXTURES, "items", "00000031.pro"), path.join(protoItemsDir, "00000031.pro"));
             const { stderr } = run(path.join(mapsDir, "artemple.map"), "--save", "-q");
             expect(stderr).not.toMatch(/proto overrides/i);
@@ -253,7 +257,7 @@ describe("bin CLI integration", () => {
         it("loads proto overrides from an explicit dir for a map with no sibling proto/", () => {
             // Map sits alone (no sibling proto/); the protos live in an unrelated tree.
             const mapFile = path.join(tmpDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
 
             const overrideProto = path.join(tmpDir, "mod", "proto");
             fs.mkdirSync(path.join(overrideProto, "items"), { recursive: true });
@@ -275,7 +279,7 @@ describe("bin CLI integration", () => {
 
         it("accepts the --proto-dir=<dir> form", () => {
             const mapFile = path.join(tmpDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
 
             const overrideProto = path.join(tmpDir, "mod", "proto");
             fs.mkdirSync(path.join(overrideProto, "items"), { recursive: true });
@@ -291,7 +295,7 @@ describe("bin CLI integration", () => {
 
         it("exits 1 when --proto-dir points at a nonexistent directory", () => {
             const mapFile = path.join(tmpDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
             const { code, stderr } = run(mapFile, "--save", "--proto-dir", path.join(tmpDir, "missing"));
             expect(code).toBe(1);
             expect(stderr).toContain("--proto-dir not found");
@@ -299,7 +303,7 @@ describe("bin CLI integration", () => {
 
         it("exits 1 when --proto-dir is given without a directory argument", () => {
             const mapFile = path.join(tmpDir, "artemple.map");
-            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
             const { code, stderr } = run(mapFile, "--proto-dir");
             expect(code).toBe(1);
             expect(stderr).toContain("requires a directory argument");

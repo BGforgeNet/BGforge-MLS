@@ -16,8 +16,9 @@ import * as os from "os";
 import { loadProDirResolver, composePidResolvers } from "../src/pro-resolver-loader";
 import { resolvePidSubType } from "../src/pid-resolver";
 import { MAX_FILE_SIZES } from "../src/max-file-sizes";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 let tmpDir: string;
 

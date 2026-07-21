@@ -15,8 +15,9 @@ import {
     isMapObjectListSection,
     isMapObjectRemovableEntry,
 } from "../src/map/object-ops";
+import { REPO_ROOT } from "./repo-root";
 
-const DENBUS1 = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
+const DENBUS1 = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
 const hasFixture = fs.existsSync(DENBUS1);
 
 function parseDenbus1() {
@@ -27,7 +28,7 @@ function parseDenbus1() {
 // cave6.map fully decodes its objects (no opaque objects-tail), so structure ops
 // round-trip here. denbus1 keeps an opaque tail (objects need a PRO resolver to
 // decode fully) and is used to assert ops are refused - the corruption guard.
-const CLEAN_MAP = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/cave6.map");
+const CLEAN_MAP = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/cave6.map");
 
 function parseClean() {
     const data = new Uint8Array(fs.readFileSync(CLEAN_MAP));
@@ -118,7 +119,7 @@ const CLEAN_ROUNDTRIP_MAPS = [
 
 describe.skipIf(!hasFixture)("map object-ops add/remove inverse across fixtures", () => {
     it.each(CLEAN_ROUNDTRIP_MAPS)("is byte-identity for %s", (rel) => {
-        const data = new Uint8Array(fs.readFileSync(path.resolve(rel)));
+        const data = new Uint8Array(fs.readFileSync(path.join(REPO_ROOT, rel)));
         const pr = mapParser.parse(data, { gracefulMapBoundaries: true });
         const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
         // These fixtures are selected for full object decode; assert that precondition

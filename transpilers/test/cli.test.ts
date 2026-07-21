@@ -9,9 +9,10 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import pkg from "../package.json";
+import { REPO_ROOT } from "./repo-root";
 
 const NODE = process.execPath;
-const CLI = path.resolve("transpilers", pkg.bin?.fgtp ?? "");
+const CLI = path.join(REPO_ROOT, "transpilers", pkg.bin?.fgtp ?? "");
 
 describe("@bgforge/transpile bin entry (fgtp)", () => {
     beforeAll(() => {

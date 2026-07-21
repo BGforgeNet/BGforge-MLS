@@ -16,6 +16,10 @@ export default defineConfig({
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
+        // Resets drifted external/ fixtures (mutated by a live editor session) before any
+        // test runs, so a stale fixture surfaces as a visible reset instead of a confusing
+        // byte-mismatch assertion deep in the suite.
+        globalSetup: [path.resolve(__dirname, "test/global-setup.ts")],
         // v8 coverage instrumentation slows the binary parser tests, and the parallel
         // suite block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the
         // slowest MAP round-trip (denbus1.map) runs ~19s under that starvation, so 15s

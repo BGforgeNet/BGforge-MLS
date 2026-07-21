@@ -18,6 +18,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
 import type { ParsedGroup } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
 function isGroup(x: unknown): x is ParsedGroup {
     return typeof x === "object" && x !== null && "fields" in x && Array.isArray((x as ParsedGroup).fields);
@@ -35,7 +36,7 @@ function findFirstGroupMatching(root: ParsedGroup, predicate: (g: ParsedGroup) =
 }
 
 describe("incomplete-object groups carry editingLocked", () => {
-    const arcavesPath = path.resolve("client/testFixture/maps/arcaves.map");
+    const arcavesPath = path.join(REPO_ROOT, "client/testFixture/maps/arcaves.map");
 
     it("Item / Scenery groups are flagged when the resolver returns undefined for their pid", () => {
         // Force every item/scenery pid into the unresolved branch by supplying

@@ -33,8 +33,9 @@ import {
     miscSchema,
 } from "../src/pro/schemas";
 import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/pro/types";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 function reader(data: Uint8Array, offset = 0): BufferReader {
     return new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });

@@ -15,8 +15,9 @@ import { proCanonicalDocumentSchema, proCanonicalDocumentSchemaPermissive } from
 import { proParser } from "../src/pro";
 import { flagArrayToInt, intToFlagArray } from "../src/spec/coded-projection";
 import { HeaderFlags } from "../src/pro/types";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 const validBase = (flags: string[] = []) => ({
     header: {
@@ -77,9 +78,6 @@ describe("PRO header.flags - flat-array shape", () => {
 });
 
 describe("PRO header.flags - round-trip via parser", () => {
-    // Skips when run from binary/ with no fixture symlink; pnpm test
-    // orchestrator runs from workspace root where `client/testFixture/...`
-    // resolves correctly.
     const fixtures = ["misc/00000001.pro", "critters/00000053.pro"]
         .map((rel) => ({ rel, abs: path.join(FIXTURES, rel) }))
         .filter(({ abs }) => fs.existsSync(abs));

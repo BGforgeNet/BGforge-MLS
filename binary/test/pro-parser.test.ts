@@ -11,8 +11,9 @@ import * as path from "path";
 import { parseBinaryJsonSnapshot } from "../src/json-snapshot";
 import { proParser } from "../src/pro";
 import type { ParseResult } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 /** Strip undefined values to match JSON.parse round-trip behavior */
 function jsonClean(obj: unknown): unknown {

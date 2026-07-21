@@ -8,8 +8,9 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import { REPO_ROOT } from "./repo-root";
 
-const CLI = path.resolve("format/out/cli.js");
+const CLI = path.join(REPO_ROOT, "format/out/cli.js");
 const NODE = process.execPath;
 
 /** Run the format CLI, returning exit code, stdout, stderr. */
@@ -27,7 +28,7 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
 }
 
 describe("format CLI integration", () => {
-    const tmpDir = path.resolve("tmp/cli-test-format");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-format");
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {
@@ -71,7 +72,7 @@ describe("format CLI integration", () => {
     });
 
     describe("check mode", () => {
-        const sampleDir = path.resolve("grammars/weidu-baf/test/samples-expected");
+        const sampleDir = path.join(REPO_ROOT, "grammars/weidu-baf/test/samples-expected");
         let samples: string[];
 
         beforeAll(() => {
@@ -120,7 +121,7 @@ describe("format CLI integration", () => {
         });
 
         it("does not rewrite already-formatted file", () => {
-            const sampleDir = path.resolve("grammars/weidu-baf/test/samples-expected");
+            const sampleDir = path.join(REPO_ROOT, "grammars/weidu-baf/test/samples-expected");
             const allSamples = fs.readdirSync(sampleDir);
             if (allSamples.length === 0) {
                 throw new Error(`Expected formatted BAF samples in ${sampleDir} but directory is empty`);

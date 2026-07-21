@@ -51,10 +51,7 @@ if [ ${#paths[@]} -eq 0 ]; then
 fi
 
 # Suite id -> config/script path used to verify the mapping hasn't gone stale, the command run
-# from the repo root, and the space-separated path prefixes that trigger it. binary and
-# binary-editor's vitest configs resolve fixtures relative to cwd, so they run unqualified
-# from the repo root rather than via `cd`; server's config uses cwd-relative includes and
-# needs `cd server` until that's changed to root-relative.
+# from the repo root, and the space-separated path prefixes that trigger it.
 suite_ids=(server binary binary-editor client client-unit format transpilers scripts tssl-plugin td-plugin)
 declare -A suite_label=(
     [server]="server unit tests"
@@ -81,7 +78,7 @@ declare -A suite_check=(
     ["td-plugin"]="plugins/td-plugin/vitest.config.ts"
 )
 declare -A suite_cmd=(
-    [server]="cd server && pnpm exec vitest run"
+    [server]="pnpm exec vitest run --config server/vitest.config.ts"
     [binary]="pnpm exec vitest run --config binary/vitest.config.ts"
     ["binary-editor"]="pnpm exec vitest run --config binary-editor/vitest.config.ts"
     [client]="cd client && pnpm test"

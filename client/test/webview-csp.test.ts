@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, it } from "vitest";
 import { inlineWebviewScript } from "../src/webview-assets";
+import { REPO_ROOT } from "./repo-root";
 
 describe("webview script inlining", () => {
     it("inlines the script verbatim (no String.replace $-pattern expansion)", () => {
@@ -19,9 +20,9 @@ describe("webview script inlining", () => {
     it("inlines the real built binary-editor bundle without corrupting it", () => {
         // Exercise the real producer (the esbuild-svelte bundle), not only a hand-built fixture: a synthetic
         // script understates how many `$$` and which special sequences the real bundle actually carries.
-        const built = path.resolve("client/out/binary-editor/webview/main.js");
+        const built = path.join(REPO_ROOT, "client/out/binary-editor/webview/main.js");
         if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
-        const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
+        const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
         const script = fs.readFileSync(built, "utf8");
         const before = (script.match(/\$\$/g) ?? []).length;
         expect(before).toBeGreaterThan(0); // sanity: the real bundle does contain `$$`
@@ -33,7 +34,7 @@ describe("webview script inlining", () => {
     it("binary-editor bundle installs the fatal runtime-error handler", () => {
         // A webview that throws with no error hook leaves a silently blank panel and nothing in the output
         // channel. Guard that the hooks stay wired.
-        const built = path.resolve("client/out/binary-editor/webview/main.js");
+        const built = path.join(REPO_ROOT, "client/out/binary-editor/webview/main.js");
         if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
         const out = fs.readFileSync(built, "utf8");
         expect(out).toContain("runtimeError");
@@ -41,7 +42,7 @@ describe("webview script inlining", () => {
     });
 
     it("dialog-editor bundle installs the fatal runtime-error handler (parity with the binary editor)", () => {
-        const built = path.resolve("client/out/dialog-editor/webview/main.js");
+        const built = path.join(REPO_ROOT, "client/out/dialog-editor/webview/main.js");
         if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
         const out = fs.readFileSync(built, "utf8");
         expect(out).toContain("runtimeError");
@@ -51,7 +52,7 @@ describe("webview script inlining", () => {
 
 describe("webview CSP", () => {
     it("binary editor loads styles via cspSource <link>, scripts via nonce (no unsafe-inline)", () => {
-        const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
+        const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).not.toContain("'unsafe-inline'");
         expect(html).toContain("default-src 'none'");
         // Styles MUST be authorised via cspSource, NOT a bare nonce. VS Code's webview layer silently drops
@@ -66,7 +67,7 @@ describe("webview CSP", () => {
     });
 
     it("binary editor CSP allows codicon font via cspSource", () => {
-        const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
+        const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).toContain("font-src {{cspSource}}");
     });
 });

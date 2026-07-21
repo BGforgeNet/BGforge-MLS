@@ -14,9 +14,10 @@ import { execFileSync, spawnSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { REPO_ROOT } from "./repo-root";
 
-const BUNDLE = path.resolve("transpilers/out/index.js");
-const DTS = path.resolve("transpilers/out/index.d.ts");
+const BUNDLE = path.join(REPO_ROOT, "transpilers/out/index.js");
+const DTS = path.join(REPO_ROOT, "transpilers/out/index.d.ts");
 
 function isExecError(
     err: unknown,
@@ -149,7 +150,7 @@ describe("@bgforge/transpile bundle smoke", () => {
             // Use the repo's tsc JS entry directly (not the shell wrapper in .bin/).
             // node_modules/.bin/tsc is a POSIX shell script and cannot be passed to
             // process.execPath (node) - use the actual JS entrypoint instead.
-            const tsc = path.resolve("node_modules/typescript/bin/tsc");
+            const tsc = path.join(REPO_ROOT, "node_modules/typescript/bin/tsc");
             const result = spawnSync(process.execPath, [tsc, "-p", tsconfig], { encoding: "utf-8" });
             if (result.status !== 0) {
                 throw new Error(`tsc failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);

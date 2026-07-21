@@ -19,8 +19,10 @@ export default defineConfig({
     },
     test: {
         name: "server-integration",
-        include: ["test/integration/**/*.test.ts"],
-        setupFiles: ["test/integration/setup.ts"],
+        // Absolute so discovery works both from server/ (pnpm test:integration) and
+        // from the repo root; a bare "test/**" glob resolves against process.cwd().
+        include: [path.resolve(__dirname, "test/integration/**/*.test.ts")],
+        setupFiles: [path.resolve(__dirname, "test/integration/setup.ts")],
         // These tests sweep real external corpora (hundreds of tree-sitter parses), and the
         // full suite runs them alongside the unit and transpile projects, so a CPU-contended
         // CI runner is far slower than a local run - the corpus reachability sweep is ~3s

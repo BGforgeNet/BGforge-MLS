@@ -11,6 +11,7 @@
  */
 
 import { defineConfig, mergeConfig } from "vitest/config";
+import path from "path";
 import baseConfig from "./vitest.config";
 
 export default mergeConfig(
@@ -19,12 +20,12 @@ export default mergeConfig(
         test: {
             name: "server-mutation",
             exclude: [
-                "test/smoke-stdio.test.ts",
-                "test/integration/**",
-                "test/perf/**",
-                "test/fallout-ssl/rename.test.ts",
-                "test/fallout-ssl/call-sites.test.ts",
-                "test/weidu-tp2/format.test.ts",
+                path.resolve(__dirname, "test/smoke-stdio.test.ts"),
+                path.resolve(__dirname, "test/integration/**"),
+                path.resolve(__dirname, "test/perf/**"),
+                path.resolve(__dirname, "test/fallout-ssl/rename.test.ts"),
+                path.resolve(__dirname, "test/fallout-ssl/call-sites.test.ts"),
+                path.resolve(__dirname, "test/weidu-tp2/format.test.ts"),
             ],
             coverage: { enabled: false },
         },

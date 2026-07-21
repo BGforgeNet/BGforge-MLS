@@ -16,8 +16,9 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { buildFileDerivedParseOptions } from "../src/parse-options";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 let tmpDir: string;
 

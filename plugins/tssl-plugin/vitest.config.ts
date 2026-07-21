@@ -6,12 +6,15 @@
  */
 
 import { defineConfig } from "vitest/config";
+import path from "path";
 import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     test: {
         name: "tssl-plugin",
-        include: ["plugins/tssl-plugin/test/**/*.test.ts"],
+        // Absolute so discovery works both from this dir and from the repo root
+        // (scripts/test.sh invokes this config from root).
+        include: [path.resolve(__dirname, "test/**/*.test.ts")],
         coverage: coverageConfig({
             reportsDirectory: "coverage/tssl-plugin",
             thresholds: {

@@ -16,6 +16,7 @@ import {
     type FileResult,
     type OutputMode,
 } from "../cli-utils";
+import { REPO_ROOT } from "./repo-root";
 
 describe("reportDiff", () => {
     let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -152,7 +153,7 @@ describe("safeProcess", () => {
 });
 
 describe("findFiles", () => {
-    const tmpDir = path.resolve("tmp/cli-test-findfiles");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-findfiles");
 
     beforeEach(() => {
         fs.mkdirSync(path.join(tmpDir, "sub"), { recursive: true });
@@ -223,43 +224,43 @@ describe("parseCliArgs", () => {
     });
 
     it("parses save mode", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--save"];
+        process.argv = ["node", "cli.js", __filename, "--save"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("save");
     });
 
     it("parses check mode", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--check"];
+        process.argv = ["node", "cli.js", __filename, "--check"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("check");
     });
 
     it("defaults to stdout mode", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts"];
+        process.argv = ["node", "cli.js", __filename];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("stdout");
     });
 
     it("parses save-and-check mode", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--save-and-check"];
+        process.argv = ["node", "cli.js", __filename, "--save-and-check"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("save-and-check");
     });
 
     it("parses recursive flag -r", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r"];
+        process.argv = ["node", "cli.js", __dirname, "-r"];
         const args = parseCliArgs("help");
         expect(args?.recursive).toBe(true);
     });
 
     it("parses recursive flag --recursive", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test", "--recursive"];
+        process.argv = ["node", "cli.js", __dirname, "--recursive"];
         const args = parseCliArgs("help");
         expect(args?.recursive).toBe(true);
     });
 
     it("parses quiet flag", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "-q"];
+        process.argv = ["node", "cli.js", __filename, "-q"];
         const args = parseCliArgs("help");
         expect(args?.quiet).toBe(true);
     });
@@ -283,22 +284,22 @@ describe("parseCliArgs", () => {
     });
 
     it("defaults jobs to 1 and parses --jobs", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r"];
+        process.argv = ["node", "cli.js", __dirname, "-r"];
         expect(parseCliArgs("help")?.jobs).toBe(1);
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "4"];
+        process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "4"];
         expect(parseCliArgs("help")?.jobs).toBe(4);
     });
 
     it("exits on a non-positive or non-numeric --jobs", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "0"];
+        process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "0"];
         expect(() => parseCliArgs("help")).toThrow("exit");
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--jobs", "many"];
+        process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "many"];
         expect(() => parseCliArgs("help")).toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: --jobs must be a positive integer, got: many");
     });
 
     it("parses --files-from", () => {
-        process.argv = ["node", "cli.js", "shared/cli/test", "-r", "--files-from", "list.txt"];
+        process.argv = ["node", "cli.js", __dirname, "-r", "--files-from", "list.txt"];
         expect(parseCliArgs("help")?.filesFrom).toBe("list.txt");
     });
 });
@@ -307,7 +308,7 @@ describe("runCli", () => {
     let exitSpy: ReturnType<typeof vi.spyOn>;
     let logSpy: ReturnType<typeof vi.spyOn>;
     let errorSpy: ReturnType<typeof vi.spyOn>;
-    const tmpDir = path.resolve("tmp/cli-test-runcli");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-runcli");
 
     beforeEach(() => {
         exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
@@ -523,8 +524,8 @@ describe("runCli", () => {
 describe("runCli --jobs fan-out", () => {
     // runChild() re-invokes process.argv[1]; point it at the fixture child CLI
     // so the real spawn/spool/IPC/replay path runs against a controlled child.
-    const fixtureCli = path.resolve("shared/cli/test/fixtures/jobs-child.cjs");
-    const tmpDir = path.resolve("tmp/cli-test-jobs");
+    const fixtureCli = path.join(REPO_ROOT, "shared/cli/test/fixtures/jobs-child.cjs");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-jobs");
     const originalArgv = process.argv;
     let exitSpy: ReturnType<typeof vi.spyOn>;
     let logSpy: ReturnType<typeof vi.spyOn>;

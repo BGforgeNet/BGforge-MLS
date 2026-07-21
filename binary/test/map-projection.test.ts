@@ -4,13 +4,14 @@ import * as path from "path";
 import { formatAdapterRegistry, type ProjectedEntry } from "../src/format-adapter";
 import { mapParser } from "../src/map";
 import type { ParsedField, ParsedGroup, ParseResult } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
 // Resolve the adapter through the registry (not a direct module import) so the
 // registry's eager adapter registration runs first - a direct import of
 // map/format-adapter trips the registry<->adapter module cycle in isolation.
 const mapFormatAdapter = formatAdapterRegistry.get("map")!;
 
-const DENBUS1 = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
+const DENBUS1 = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
 const hasFixture = fs.existsSync(DENBUS1);
 
 function isGroup(e: ParsedField | ParsedGroup): e is ParsedGroup {

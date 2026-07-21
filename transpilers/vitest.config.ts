@@ -1,13 +1,16 @@
 import { defineConfig } from "vitest/config";
+import path from "path";
 import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 
 export default defineConfig({
     test: {
         name: "transpile-lib",
-        include: ["transpilers/test/**/*.test.ts"],
+        // Absolute so discovery works both from transpilers/ and from the repo root
+        // (scripts/test.sh invokes this config from root).
+        include: [path.resolve(__dirname, "test/**/*.test.ts")],
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
-        exclude: ["transpilers/test/**/*-cli.test.ts"],
+        exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
         testTimeout: 30000,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,

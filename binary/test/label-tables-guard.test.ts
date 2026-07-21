@@ -30,6 +30,7 @@ import * as pro from "../src/pro/types";
 import * as map from "../src/map/types";
 import * as ieCommonTypes from "../src/ie-common/types";
 import * as ieCommonOpcodes from "../src/ie-common/opcodes";
+import { REPO_ROOT } from "./repo-root";
 
 type LabelTable = Record<number, string>;
 
@@ -171,7 +172,7 @@ const TABLE_SOURCES: Record<string, string> = {
 // at full width (so the table keys ARE the engine values). The shifted flag tables (ItemFlagsExt >>8, ActionFlags
 // low-16, WallLightFlags >>16) are deliberately excluded - their keys are transformed, so a raw subset check
 // would false-positive; they are guarded instead by the corrected per-fixture .pro.json snapshots.
-const SFALL_ENUMS_PATH = path.resolve("external/fallout/sfall/sfall/FalloutEngine/Enums.h");
+const SFALL_ENUMS_PATH = path.join(REPO_ROOT, "external/fallout/sfall/sfall/FalloutEngine/Enums.h");
 
 interface SfallCheck {
     key: string; // table key in TABLE_SOURCES / discoverTables

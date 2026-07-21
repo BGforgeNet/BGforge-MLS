@@ -8,11 +8,14 @@
  */
 
 import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
     test: {
         name: "scripts",
-        include: ["scripts/*/test/**/*.test.ts"],
+        // Absolute so discovery works both from scripts/ and from the repo root
+        // (pnpm test:scripts invokes this config from root).
+        include: [path.resolve(__dirname, "*/test/**/*.test.ts")],
         testTimeout: 30000,
     },
 });

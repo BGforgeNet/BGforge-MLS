@@ -15,6 +15,7 @@ import { mapParser } from "../src/map";
 import { resolvePidSubType } from "../src/pid-resolver";
 import { composePidResolvers, loadProDirResolver } from "../src/pro-resolver-loader";
 import type { ParsedField, ParsedGroup } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
 function isGroup(x: unknown): x is ParsedGroup {
     return typeof x === "object" && x !== null && "fields" in x && Array.isArray((x as ParsedGroup).fields);
@@ -43,7 +44,7 @@ function findField(g: ParsedGroup, name: string): ParsedField | undefined {
 }
 
 function loadFixture(name: string): ReturnType<typeof mapParser.parse> {
-    const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps", `${name}.map`)));
+    const data = new Uint8Array(fs.readFileSync(path.join(REPO_ROOT, "client/testFixture/maps", `${name}.map`)));
     return mapParser.parse(data);
 }
 
@@ -72,7 +73,7 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
         // Misc) - both produce zero trailer bytes, so pids of any type advance
         // cleanly to the next record. A real-world consumer would supply a
         // pids+protos table from their own data set.
-        const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps/artemple.map")));
+        const data = new Uint8Array(fs.readFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map")));
         const parsed = mapParser.parse(data, { pidResolver: () => 5 });
         const labels = (parsed.opaqueRanges ?? []).map((r) => r.label);
         expect(labels).not.toContain("objects-tail");
@@ -126,8 +127,8 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
         // sibling proto/ overrides - exactly what the CLI auto-applies) but
         // still returns undefined for pid=0, so what's left is the corrupt-
         // data path.
-        const { resolver: protoResolver } = loadProDirResolver(path.resolve("client/testFixture/proto"));
-        const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps/newr2.map")));
+        const { resolver: protoResolver } = loadProDirResolver(path.join(REPO_ROOT, "client/testFixture/proto"));
+        const data = new Uint8Array(fs.readFileSync(path.join(REPO_ROOT, "client/testFixture/maps/newr2.map")));
         const parsed = mapParser.parse(data, {
             pidResolver: composePidResolvers(protoResolver, resolvePidSubType),
         });

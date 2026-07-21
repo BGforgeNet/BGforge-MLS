@@ -11,8 +11,9 @@ import * as path from "path";
 import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "../src/pro/transition";
 import { proParser } from "../src/pro";
 import type { ParseResult } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
-const FIXTURES = path.resolve("client/testFixture/proto");
+const FIXTURES = path.join(REPO_ROOT, "client/testFixture/proto");
 
 function loadMisc(): ParseResult {
     const data = new Uint8Array(fs.readFileSync(path.join(FIXTURES, "misc", "00000001.pro")));

@@ -4,17 +4,18 @@ import * as path from "path";
 import { mapParser } from "../src/map";
 import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
 import type { ParseResult } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
 const REAL_MAPS = [
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/artemple.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/arvillag.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/navarro.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/vault13.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/newr1.map"),
-    path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/sftanker.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/artemple.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/arvillag.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/navarro.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/vault13.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/newr1.map"),
+    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/sftanker.map"),
 ] as const;
-const hasExternalMaps = fs.existsSync(path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps"));
+const hasExternalMaps = fs.existsSync(path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps"));
 
 const LOCAL_FIXTURE_MAPS = new Set([
     "artemple.map",
@@ -31,9 +32,9 @@ const LOCAL_GRACEFUL_FIXTURE_MAPS = [...LOCAL_STRICT_FIXTURE_MAPS, "sfsheng.map"
 
 function resolveMapPath(fileName: string): string {
     if (LOCAL_FIXTURE_MAPS.has(fileName)) {
-        return path.resolve("client/testFixture/maps", fileName);
+        return path.join(REPO_ROOT, "client/testFixture/maps", fileName);
     }
-    return path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps", fileName);
+    return path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps", fileName);
 }
 
 function loadMap(mapPath: string): Uint8Array {

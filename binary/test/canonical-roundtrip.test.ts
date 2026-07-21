@@ -23,6 +23,7 @@ import * as path from "path";
 import "../src/index";
 import { parserRegistry } from "../src/registry";
 import type { BinaryParser } from "../src/types";
+import { REPO_ROOT } from "./repo-root";
 
 interface FixtureCase {
     name: string;
@@ -40,7 +41,7 @@ function listFiles(dir: string, ext: string): FixtureCase[] {
             if (entry.name === "bad") continue;
             entries.push(...listFiles(full, ext));
         } else if (entry.isFile() && entry.name.toLowerCase().endsWith(ext)) {
-            entries.push({ name: path.relative(path.resolve("client/testFixture"), full), fullPath: full });
+            entries.push({ name: path.relative(path.join(REPO_ROOT, "client/testFixture"), full), fullPath: full });
         }
     }
     return entries;
@@ -56,7 +57,7 @@ function fixturesFor(parser: BinaryParser): FixtureCase[] {
     const cases: FixtureCase[] = [];
     for (const ext of parser.extensions) {
         for (const dir of dirs) {
-            cases.push(...listFiles(path.resolve(dir), `.${ext.toLowerCase()}`));
+            cases.push(...listFiles(path.join(REPO_ROOT, dir), `.${ext.toLowerCase()}`));
         }
     }
     // Deterministic order across machines.

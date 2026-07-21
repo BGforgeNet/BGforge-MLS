@@ -9,11 +9,12 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import transpileLibPackage from "../package.json";
+import { REPO_ROOT } from "./repo-root";
 
-const CLI = path.resolve("transpilers", transpileLibPackage.bin.fgtp);
+const CLI = path.join(REPO_ROOT, "transpilers", transpileLibPackage.bin.fgtp);
 const NODE = process.execPath;
-const SAMPLES_DIR = path.resolve("server/test/td/samples");
-const SAMPLES_EXPECTED = path.resolve("server/test/td/samples-expected");
+const SAMPLES_DIR = path.join(REPO_ROOT, "server/test/td/samples");
+const SAMPLES_EXPECTED = path.join(REPO_ROOT, "server/test/td/samples-expected");
 
 /** Run the transpile CLI, returning exit code, stdout, stderr. */
 function run(...args: string[]): { code: number; stdout: string; stderr: string } {
@@ -30,7 +31,7 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
 }
 
 describe("transpile CLI integration", () => {
-    const tmpDir = path.resolve("tmp/cli-test-transpile");
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-transpile");
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {

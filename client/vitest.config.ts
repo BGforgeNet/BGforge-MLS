@@ -19,7 +19,10 @@ export default defineConfig({
     },
     test: {
         name: "client",
-        include: ["client/test/**/*.test.ts"],
+        // Absolute so discovery works both from client/ and from the repo root
+        // (scripts/test.sh invokes this config from root); a repo-root-relative
+        // glob silently matches 0 files when run from client/.
+        include: [path.resolve(__dirname, "test/**/*.test.ts")],
         // v8 coverage instrumentation roughly 3-4x slows the binary-format parser
         // tests in this suite, and the parallel coverage block in scripts/test.sh
         // saturates every core, starving this suite's worker-spawning and

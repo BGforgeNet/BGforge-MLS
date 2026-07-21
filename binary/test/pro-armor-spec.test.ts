@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
 import { BufferReader, BufferWriter } from "typed-binary";
 import { armorSchema } from "../src/pro/schemas";
 import { ITEM_SUBTYPE_OFFSET } from "../src/pro/types";
 import { armorSpec } from "../src/pro/specs/armor";
 import { toTypedBinarySchema } from "../src/spec/derive-typed-binary";
+import { REPO_ROOT } from "./repo-root";
 
-const ARMOR_FIXTURE = resolve("external/fallout/Fallout2_Restoration_Project/data/proto/items/00000595.pro");
+const ARMOR_FIXTURE = join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/proto/items/00000595.pro");
 const hasFixture = existsSync(ARMOR_FIXTURE);
 
 describe.skipIf(!hasFixture)("armorSpec equivalence with handwritten armorSchema", () => {

@@ -9,11 +9,12 @@ import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
 import { formatAdapterRegistry } from "../src/format-adapter";
+import { REPO_ROOT } from "./repo-root";
 
 const mapFormatAdapter = formatAdapterRegistry.get("map")!;
 
 // arcaves.map carries 21 global vars; gives headroom for both add and remove tests.
-const MAP_FIXTURE = path.resolve("client/testFixture/maps/arcaves.map");
+const MAP_FIXTURE = path.join(REPO_ROOT, "client/testFixture/maps/arcaves.map");
 
 function loadMap() {
     const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));

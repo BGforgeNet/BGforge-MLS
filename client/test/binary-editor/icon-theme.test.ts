@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { REPO_ROOT } from "../repo-root";
 
-// Tests run with the repo root as cwd (see other client tests using path.resolve("client/...")).
-const repo = (p: string) => path.resolve(p);
+const repo = (p: string) => path.join(REPO_ROOT, p);
 const pkg = JSON.parse(readFileSync(repo("package.json"), "utf8"));
 const theme = JSON.parse(readFileSync(repo("themes/bgforge-icon-theme.json"), "utf8"));
 

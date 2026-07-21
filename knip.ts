@@ -44,8 +44,12 @@ const config: KnipConfig = {
             // (vitest.configFile); knip's Stryker plugin resolves runner/checker
             // package names but not vitest configFile paths, so list it explicitly.
             // src/server.ts is already covered by knip's default entry patterns, so
-            // listing it explicitly is redundant.
-            entry: ["vitest.mutation.config.ts"],
+            // listing it explicitly is redundant. Test files are explicit entries because
+            // knip's vitest plugin cannot derive them from the config's absolute
+            // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
+            // The "redundant entry" hint for lsp-probe.mts is spurious: removing that entry
+            // flips the file to an unused-files error.
+            entry: ["vitest.mutation.config.ts", "test/**/*.test.ts", "scripts/lsp-probe.mts"],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",

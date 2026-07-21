@@ -30,8 +30,12 @@ export default defineConfig({
     },
     test: {
         name: "server",
-        include: ["test/**/*.test.ts"],
-        exclude: ["test/smoke-stdio.test.ts", "test/integration/**"],
+        // Absolute so discovery works both from server/ (pnpm test:unit) and from the
+        // repo root (scripts/test.sh), which is the only invocation that also passes
+        // --coverage; a bare "test/**" glob resolves against process.cwd() and silently
+        // matches 0 files when the caller's cwd is the repo root.
+        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        exclude: [path.resolve(__dirname, "test/smoke-stdio.test.ts"), path.resolve(__dirname, "test/integration/**")],
         testTimeout: 30000,
         // Separate from the client's coverage output so the parallel
         // server+client coverage runs in scripts/test.sh don't race on

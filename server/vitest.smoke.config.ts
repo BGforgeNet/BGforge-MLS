@@ -4,10 +4,12 @@
  */
 
 import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
     test: {
         name: "server-smoke",
-        include: ["test/smoke-stdio.test.ts"],
+        // Absolute so discovery works both from server/ and from the repo root.
+        include: [path.resolve(__dirname, "test/smoke-stdio.test.ts")],
     },
 });
