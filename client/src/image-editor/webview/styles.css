@@ -63,3 +63,178 @@ body {
 .bg-green {
     background-color: #00ff00;
 }
+
+/* ---- generic form controls (buttons/select/inputs/checkbox) - themed, matches the binary-editor
+   webview's convention of one shared control theme rather than per-instance styling ---- */
+button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 0.25rem 0.7rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    line-height: 1.3;
+    white-space: nowrap;
+}
+button:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+select,
+input[type="number"] {
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.15rem 0.4rem;
+}
+input[type="checkbox"] {
+    accent-color: var(--vscode-button-background);
+}
+:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* ---- view controls / playback controls (top and bottom toolbars around the stage) ---- */
+.view-controls,
+.playback-controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+.view-controls {
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.playback-controls {
+    border-top: 1px solid var(--vscode-panel-border);
+}
+.view-field,
+.playback-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.view-label,
+.playback-label {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+.view-checkbox {
+    cursor: pointer;
+}
+.playback-value {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+/* Three-way background selector and the loop toggle: both render as a secondary/outline button that
+   flips to the primary (filled) button style while active, so the selected option reads at a glance. */
+.bg-options,
+.playback-buttons {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+.bg-option,
+.playback-loop {
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, transparent);
+}
+.bg-option:hover,
+.playback-loop:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+.bg-option.active,
+.playback-loop.active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+/* ---- stage (the compass rose / cycle grid player) ---- */
+.stage {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 0.75rem;
+}
+.compass-rose {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    grid-template-rows: repeat(3, auto);
+    gap: 0.5rem;
+    justify-content: center;
+    align-content: center;
+}
+.compass-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cycle-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.cycle-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+.cycle-cell-label {
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* ---- frame tile (one rendered frame within the rose/grid) ---- */
+.frame-tile {
+    position: relative;
+    box-sizing: border-box;
+}
+.frame-tile canvas {
+    position: absolute;
+    image-rendering: pixelated;
+}
+/* Offset/center-anchor marker: a diagnostic crosshair, not editor chrome - a fixed accent color with
+   difference blending keeps it visible over any of the three preview backgrounds (transparent/
+   checkered/green), which a single theme color could not guarantee against all three. */
+.frame-offset-marker {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+.frame-offset-marker::before,
+.frame-offset-marker::after {
+    content: "";
+    position: absolute;
+    background: #ff0055;
+    mix-blend-mode: difference;
+}
+.frame-offset-marker::before {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+.frame-offset-marker::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+}

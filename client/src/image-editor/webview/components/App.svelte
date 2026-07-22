@@ -1,9 +1,22 @@
 <script lang="ts">
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
+    import type { Background } from "../render/indexed-to-rgba";
+    import { advance, createPlayback, type PlaybackState } from "../render/playback";
+    import { layoutSequences } from "../render/compass-layout";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
+    import CompassRose from "./CompassRose.svelte";
+    import CycleGrid from "./CycleGrid.svelte";
+    import PlaybackControls from "./PlaybackControls.svelte";
+    import ViewControls from "./ViewControls.svelte";
 
-    const { bridge }: { bridge: Bridge } = $props();
+    const {
+        bridge,
+        viewState,
+    }: {
+        bridge: Bridge;
+        viewState?: { get: () => unknown; set: (state: unknown) => void };
+    } = $props();
 
     let view = $state<AnimationView | null>(null);
     let errorMessage = $state<string | undefined>();
@@ -11,6 +24,14 @@
     // "Loading..." forever. Timer mechanics shared with the binary/dialog editors' App.svelte
     // via installInitTimeout (webview-utils.ts).
     let initTimedOut = $state(false);
+
+    let playback = $state<PlaybackState | null>(null);
+    // eslint-disable-next-line prefer-const -- reassigned via onZoomChange in the ViewControls markup
+    let zoom = $state(1);
+    // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
+    let background = $state<Background>("transparent");
+    // eslint-disable-next-line prefer-const -- reassigned via onToggleOffsetMarker in the ViewControls markup
+    let showOffsetMarker = $state(false);
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -32,6 +53,29 @@
             },
         });
     });
+
+    // The whole rose steps on ONE shared timeline: a single requestAnimationFrame loop advances one
+    // `playback.frame` that every tile reads, rather than each tile keeping its own timer. This effect
+    // reads only `view` synchronously (the null-check), never `playback` - the per-tick frame writes
+    // inside `tick` happen asynchronously and so never re-trigger (and restart) this effect.
+    $effect(() => {
+        if (!view) return;
+        const frameCount = Math.max(0, ...view.sequences.map((seq) => seq.frameRefs.length));
+        playback = createPlayback({ frameCount, fps: view.meta.fps ?? 10 });
+
+        let raf: number;
+        let lastTime: number | undefined;
+        const tick = (now: number): void => {
+            if (lastTime !== undefined && playback) {
+                playback = advance(playback, now - lastTime);
+            }
+            lastTime = now;
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+
+        return () => cancelAnimationFrame(raf);
+    });
 </script>
 
 {#if errorMessage}
@@ -52,6 +96,24 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
-    <!-- Smoke check only - the player and controls land in a later task. -->
-    <p class="placeholder">{view.basename}: {view.sequences.length} sequences</p>
+    {@const layout = layoutSequences(view)}
+    <ViewControls
+        {zoom}
+        {background}
+        {showOffsetMarker}
+        onZoomChange={(z) => (zoom = z)}
+        onBackgroundChange={(b) => (background = b)}
+        onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
+        {viewState}
+    />
+    {#if playback}
+        <div class="stage">
+            {#if layout.mode === "compass"}
+                <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+            {:else}
+                <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+            {/if}
+        </div>
+        <PlaybackControls state={playback} onChange={(next) => (playback = next)} />
+    {/if}
 {/if}
