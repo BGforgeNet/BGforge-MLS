@@ -9,3 +9,4 @@ export * from "./palette/pal.ts";
 export * from "./palette/default-palette.ts";
 export * from "./load.ts";
 export * from "./convert/loss-report.ts";
+export * from "./convert/directions.ts";
