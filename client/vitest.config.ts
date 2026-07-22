@@ -59,6 +59,12 @@ export default defineConfig({
                 "client/src/binary-editor/provider.ts",
                 "client/src/binary-editor/document.ts",
                 "client/src/binary-editor/register.ts",
+                // Same reasoning for the animation (FRM/BAM) custom editor: provider/document/register are
+                // built around vscode.CustomEditorProvider/CustomDocument; their pure logic already has
+                // dedicated coverage in document-model.ts/sidecar.ts/save.ts/export-actions.ts.
+                "client/src/image-editor/provider.ts",
+                "client/src/image-editor/document.ts",
+                "client/src/image-editor/register.ts",
                 // Shared webview-context helpers (navigator/globalThis/document); like the
                 // bundle entry points above, they run only inside the webview, not in vitest.
                 "client/src/webview-utils.ts",
