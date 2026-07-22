@@ -49,6 +49,10 @@ export default defineConfig({
                 "client/src/extension.ts",
                 // Webview bundle entry points that only run inside the webview context.
                 "client/src/binary-editor/webview/main.ts",
+                // Same reasoning for the animation editor: the bundle entry runs only inside the webview,
+                // and bridge.ts is thin postMessage glue with no in-process test surface.
+                "client/src/image-editor/webview/main.ts",
+                "client/src/image-editor/webview/state/bridge.ts",
                 // worker_threads entry: runs only inside a spawned worker. Its behaviour is
                 // covered by the spawned-worker integration test (which bundles it through
                 // esbuild and runs it out of process), not by in-process vitest coverage.

@@ -1,0 +1,65 @@
+/*
+ * Animation-editor webview theme. Theme-token based (--vscode-* vars) like the binary-editor webview;
+ * the .bg-* classes are the fixed canvas backgrounds the player (a later task) switches between to
+ * preview transparency handling - deliberately NOT theme-driven, since they represent a checked
+ * rendering surface rather than editor chrome.
+ */
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+body {
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+}
+#app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.placeholder {
+    color: var(--vscode-descriptionForeground);
+    padding: 0.75rem;
+    font-style: italic;
+}
+.error-state {
+    padding: 1rem 1.25rem;
+    color: var(--vscode-errorForeground);
+}
+.error-state h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--vscode-errorForeground);
+}
+.error-state p {
+    margin: 0;
+    color: var(--vscode-foreground);
+}
+
+/* ---- canvas backgrounds (transparency preview) ---- */
+.bg-transparent {
+    background-color: transparent;
+}
+/* Standard image-editor transparency grid: a fixed grey/white checkerboard, independent of theme. */
+.bg-checkered {
+    background-image:
+        linear-gradient(45deg, #808080 25%, transparent 25%), linear-gradient(-45deg, #808080 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #808080 75%), linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 16px 16px;
+    background-position:
+        0 0,
+        0 8px,
+        8px -8px,
+        -8px 0;
+    background-color: #ffffff;
+}
+.bg-green {
+    background-color: #00ff00;
+}

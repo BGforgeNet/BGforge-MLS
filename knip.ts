@@ -27,6 +27,7 @@ const config: KnipConfig = {
                 "src/binary-editor/worker.ts",
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
+                "src/image-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
