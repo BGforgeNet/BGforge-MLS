@@ -1,8 +1,5 @@
 /*
- * Animation-editor webview theme. Theme-token based (--vscode-* vars) like the binary-editor webview;
- * the .bg-* classes are the fixed canvas backgrounds the player (a later task) switches between to
- * preview transparency handling - deliberately NOT theme-driven, since they represent a checked
- * rendering surface rather than editor chrome.
+ * Animation-editor webview theme. Theme-token based (--vscode-* vars) like the binary-editor webview.
  */
 
 html,
@@ -41,27 +38,6 @@ body {
 .error-state p {
     margin: 0;
     color: var(--vscode-foreground);
-}
-
-/* ---- canvas backgrounds (transparency preview) ---- */
-.bg-transparent {
-    background-color: transparent;
-}
-/* Standard image-editor transparency grid: a fixed grey/white checkerboard, independent of theme. */
-.bg-checkered {
-    background-image:
-        linear-gradient(45deg, #808080 25%, transparent 25%), linear-gradient(-45deg, #808080 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #808080 75%), linear-gradient(-45deg, transparent 75%, #808080 75%);
-    background-size: 16px 16px;
-    background-position:
-        0 0,
-        0 8px,
-        8px -8px,
-        -8px 0;
-    background-color: #ffffff;
-}
-.bg-green {
-    background-color: #00ff00;
 }
 
 /* ---- generic form controls (buttons/select/inputs/checkbox) - themed, matches the binary-editor

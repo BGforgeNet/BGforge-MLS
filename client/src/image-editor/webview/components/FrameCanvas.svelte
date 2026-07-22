@@ -30,6 +30,14 @@
     $effect(() => {
         const canvas = canvasEl;
         if (!canvas || frame.width <= 0 || frame.height <= 0) return;
+
+        // Sizing and drawing happen atomically in this same effect: assigning canvas.width/height
+        // resets the backing store (clears pixels, resets imageSmoothingEnabled), so if sizing lived
+        // in the template instead, a zoom-only change would resize+clear the canvas without this
+        // effect re-running (zoom wasn't a tracked read) and leave it blank until frame next changes.
+        canvas.width = frame.width * zoom;
+        canvas.height = frame.height * zoom;
+
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
@@ -67,8 +75,6 @@
 >
     <canvas
         bind:this={canvasEl}
-        width={frame.width * zoom}
-        height={frame.height * zoom}
         style:left="calc(50% - {frame.offsetX * zoom}px)"
         style:top="calc(50% - {frame.offsetY * zoom}px)"
     ></canvas>
