@@ -7,7 +7,9 @@
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
+    import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
+    import Toolbar from "./Toolbar.svelte";
     import ViewControls from "./ViewControls.svelte";
 
     const {
@@ -97,6 +99,7 @@
     {/if}
 {:else}
     {@const layout = layoutSequences(view)}
+    <Toolbar {view} {bridge} />
     <ViewControls
         {zoom}
         {background}
@@ -106,6 +109,7 @@
         onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
         {viewState}
     />
+    <MetaControls {view} {bridge} />
     {#if playback}
         <div class="stage">
             {#if layout.mode === "compass"}

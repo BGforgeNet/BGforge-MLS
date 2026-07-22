@@ -137,6 +137,57 @@ input[type="checkbox"] {
     color: var(--vscode-button-foreground);
 }
 
+/* ---- metadata controls (format-conditional fields above the stage) ---- */
+.meta-controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.meta-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.meta-label {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+.meta-checkbox {
+    cursor: pointer;
+}
+.meta-hint {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+/* ---- toolbar (save-as / import, above the view controls) ---- */
+.toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.toolbar-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+}
+.toolbar-label {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
+
 /* ---- stage (the compass rose / cycle grid player) ---- */
 .stage {
     flex: 1 1 auto;
