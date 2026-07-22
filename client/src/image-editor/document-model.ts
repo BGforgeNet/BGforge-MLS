@@ -27,6 +27,14 @@ function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     });
 }
 
+// A single undo/redo step captures ALL mutable document state a mutation can change - the
+// animation AND externalEnabled (which is not part of the Animation IR but is a saveable,
+// undoable choice); snapshotting only the animation would leave a palette toggle unrevertible.
+interface DocumentSnapshot {
+    animation: Animation;
+    externalEnabled: boolean;
+}
+
 /**
  * Pure byte-in/byte-out animation document state: no vscode, no fs. The host-side
  * vscode.CustomDocument shell wraps this and wires onChange to its own refresh event.
@@ -37,8 +45,8 @@ export class ImageDocumentModel {
     private sidecarPalette: Rgba[] | undefined;
     private hasSidecar = false;
     private externalEnabled = false;
-    private undoStack: Animation[] = [];
-    private redoStack: Animation[] = [];
+    private undoStack: DocumentSnapshot[] = [];
+    private redoStack: DocumentSnapshot[] = [];
     private dirtyValue = false;
 
     onChange?: () => void;
@@ -115,7 +123,7 @@ export class ImageDocumentModel {
     }
 
     private snapshotForUndo(): void {
-        this.undoStack.push(structuredClone(this.animationValue));
+        this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
         this.redoStack = [];
     }
 
@@ -155,8 +163,9 @@ export class ImageDocumentModel {
     undo(): void {
         const previous = this.undoStack.pop();
         if (previous === undefined) return;
-        this.redoStack.push(structuredClone(this.animationValue));
-        this.animationValue = previous;
+        this.redoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
+        this.animationValue = previous.animation;
+        this.externalEnabled = previous.externalEnabled;
         this.dirtyValue = true;
         this.onChange?.();
     }
@@ -164,8 +173,9 @@ export class ImageDocumentModel {
     redo(): void {
         const next = this.redoStack.pop();
         if (next === undefined) return;
-        this.undoStack.push(structuredClone(this.animationValue));
-        this.animationValue = next;
+        this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
+        this.animationValue = next.animation;
+        this.externalEnabled = next.externalEnabled;
         this.dirtyValue = true;
         this.onChange?.();
     }
