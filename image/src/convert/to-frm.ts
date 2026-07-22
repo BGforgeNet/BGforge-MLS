@@ -1,6 +1,6 @@
 import { type Animation, type Facing, type Frame, type Sequence, FRM_FACINGS } from "../model/animation.ts";
 import { LossReport } from "./loss-report.ts";
-import { facingsForCycleCount, partitionForFrm, frmSlotOrder } from "./directions.ts";
+import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { remapToDefault } from "./palette-remap.ts";
 
 function resolveFacings(anim: Animation, opts?: { layout?: Facing[] }): Facing[] {
@@ -33,12 +33,27 @@ export function convertToFrm(
     const report = new LossReport();
 
     if (anim.meta.sourceFormat === "frm") {
+        // Shallow clone: shares frames/sequences/palette arrays with the input, unlike the conversion
+        // paths below which deep-copy. A no-op has nothing to convert, so aliasing is acceptable here.
         return { animation: { ...anim, meta: { ...anim.meta } }, report };
     }
 
     const facings = resolveFacings(anim, opts);
 
     const { dropped } = partitionForFrm(facings);
+    // Reject an ambiguous layout: two source directions claiming the same FRM facing cannot both
+    // occupy that single FRM slot, and keeping only the first would silently drop the other with no
+    // record. (Unreachable from the sourced 6/8-cycle paths, whose facings are unique.)
+    const seenFrmFacings = new Set<Facing>();
+    for (const f of facings) {
+        if (!FRM_FACING_SET.has(f)) continue;
+        if (seenFrmFacings.has(f)) {
+            throw new Error(
+                `convertToFrm: duplicate FRM facing "${f}" in the direction layout; each facing maps to at most one source direction`,
+            );
+        }
+        seenFrmFacings.add(f);
+    }
     for (const i of dropped) {
         const facing = facings[i];
         if (facing === undefined) throw new Error(`convertToFrm: dropped facing index ${i} out of range`);

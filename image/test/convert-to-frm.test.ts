@@ -54,6 +54,8 @@ describe("convertToFrm", () => {
 
         const droppedItems = report.items.filter((i) => i.kind === "dropped-direction");
         expect(droppedItems).toHaveLength(2);
+        // synthBam's palette is the default, so the lossless remap branch (not sidecar) is taken.
+        expect(report.has("palette-remapped-to-default")).toBe(true);
     });
 
     it("pads unequal-length sequences to the max frame count and reports it", () => {
@@ -169,6 +171,12 @@ describe("convertToFrm", () => {
         );
     });
 
+    it("throws on a layout with a duplicate FRM facing", () => {
+        const src = synthBam([1, 1, 1, 1, 1, 1]);
+        const layout: Facing[] = ["NE", "NE", "SE", "SW", "W", "NW"]; // NE claimed twice
+        expect(() => convertToFrm(src, { layout })).toThrow(/duplicate FRM facing "NE"/);
+    });
+
     it("reuses a direction and reports empty-direction when a FRM facing is absent from the layout", () => {
         // Layout covers NE,E,SE,SW,W and N (no NW); the NW slot has no source and reuses slot 0.
         const src = synthBam([1, 1, 1, 1, 1, 1]);
@@ -185,6 +193,7 @@ describe("convertToFrm", () => {
         const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
         const { animation, report } = convertToFrm(src);
         expect(animation.sequences).toHaveLength(6);
-        expect(report.has("dropped-direction")).toBe(true); // the extra N is dropped
+        const dropped = report.items.find((item) => item.kind === "dropped-direction");
+        expect(dropped?.detail).toContain("facing N"); // specifically the extra N is dropped
     });
 });
