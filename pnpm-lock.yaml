@@ -183,6 +183,9 @@ importers:
       '@bgforge/binary-editor':
         specifier: workspace:*
         version: link:../binary-editor
+      '@bgforge/image':
+        specifier: workspace:*
+        version: link:../image
       '@xyflow/svelte':
         specifier: ^1.6.2
         version: 1.6.2(svelte@5.56.4)

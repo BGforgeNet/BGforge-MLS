@@ -7,7 +7,8 @@
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/client.tsbuildinfo",
         "paths": {
-            "@bgforge/binary": ["../binary/src/index.ts"]
+            "@bgforge/binary": ["../binary/src/index.ts"],
+            "@bgforge/image": ["../image/src/index.ts"]
         }
     },
     "include": ["src", "test", "../shared", "../binary/src"],

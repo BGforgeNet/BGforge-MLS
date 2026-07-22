@@ -441,6 +441,19 @@
                 "priority": "default"
             },
             {
+                "viewType": "bgforge.animationEditor",
+                "displayName": "BGforge Animation Editor",
+                "selector": [
+                    {
+                        "filenamePattern": "*.frm"
+                    },
+                    {
+                        "filenamePattern": "*.bam"
+                    }
+                ],
+                "priority": "default"
+            },
+            {
                 "viewType": "bgforge.dialogEditor",
                 "displayName": "BGforge Dialog Editor",
                 "selector": [
@@ -677,6 +690,7 @@
         ]
     },
     "activationEvents": [
+        "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",

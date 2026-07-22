@@ -15,6 +15,7 @@
     "dependencies": {
         "@bgforge/binary": "workspace:*",
         "@bgforge/binary-editor": "workspace:*",
+        "@bgforge/image": "workspace:*",
         "@xyflow/svelte": "^1.6.2",
         "elkjs": "^0.11.1",
         "vscode-languageclient": "catalog:",
