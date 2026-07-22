@@ -10,7 +10,13 @@ import {
     type Rgba,
 } from "@bgforge/image";
 import { chooseActivePalette } from "./sidecar";
-import type { AnimationView, FrameView, MetaPatch, SequenceView } from "./webview/messages";
+import {
+    encodeFramePixels,
+    type AnimationView,
+    type FrameView,
+    type MetaPatch,
+    type SequenceView,
+} from "./webview/messages";
 
 function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     if (a === b) return true;
@@ -84,7 +90,7 @@ export class ImageDocumentModel {
         const frames: FrameView[] = this.animationValue.frames.map((f) => ({
             width: f.width,
             height: f.height,
-            pixels: f.pixels,
+            pixels: encodeFramePixels(f.pixels),
             offsetX: f.offsetX,
             offsetY: f.offsetY,
         }));

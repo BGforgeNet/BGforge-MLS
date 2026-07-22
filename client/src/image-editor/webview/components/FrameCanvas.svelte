@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Rgba } from "@bgforge/image";
-    import type { FrameView } from "../messages";
+    import { decodeFramePixels, type FrameView } from "../messages";
     import { checkerboardCss, frameToRgba, GREEN, type Background } from "../render/indexed-to-rgba";
 
     // Every tile centers its frame within this fixed, unzoomed footprint so frames of differing
@@ -54,7 +54,8 @@
         // variant, which the constructor's ImageDataArray overload rejects, but .set() accepts any
         // ArrayLike<number> regardless of buffer type.
         const imageData = nctx.createImageData(frame.width, frame.height);
-        imageData.data.set(frameToRgba(frame, palette, transparentIndex));
+        const pixels = decodeFramePixels(frame.pixels);
+        imageData.data.set(frameToRgba(pixels, frame.width, frame.height, palette, transparentIndex));
         nctx.putImageData(imageData, 0, 0);
 
         ctx.imageSmoothingEnabled = false;

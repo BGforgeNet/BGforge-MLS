@@ -4,7 +4,9 @@ import type { AnimationMeta, DirectionLayout, Facing, Rgba, SourceFormat } from 
 export interface FrameView {
     width: number;
     height: number;
-    pixels: Uint8Array;
+    // base64-encoded indexed bytes: a raw Uint8Array does not survive VS Code webview postMessage in
+    // the web host (arrives as `{}`), so pixels cross the wire as a JSON/structured-clone-safe string.
+    pixels: string;
     offsetX: number;
     offsetY: number;
 }
@@ -24,6 +26,25 @@ export interface AnimationView {
     hasSidecarPal: boolean; // FRM: <basename>.pal exists on disk
     externalPaletteActive: boolean; // FRM: sidecar currently in use
     dirty: boolean;
+}
+
+/** Universal base64 codec for FrameView.pixels: btoa/atob are global in the extension host (including
+ *  the web-worker host code-server runs it in, where Node's Buffer is unavailable), the webview, and Node. */
+export function encodeFramePixels(bytes: Uint8Array): string {
+    let s = "";
+    // oxlint-disable-next-line unicorn/prefer-code-point -- btoa needs one char per raw byte, not a code point.
+    for (const byte of bytes) s += String.fromCharCode(byte);
+    return btoa(s);
+}
+
+export function decodeFramePixels(b64: string): Uint8Array {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+        // oxlint-disable-next-line unicorn/prefer-code-point -- atob's output is a byte-string; read raw bytes, not code points.
+        out[i] = bin.charCodeAt(i);
+    }
+    return out;
 }
 
 export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex" | "directionLayout">>;

@@ -8,7 +8,12 @@
  */
 import { emptyPalette, FRM_FACINGS } from "../../../image/src/model/animation";
 import type { Rgba } from "../../../image/src/model/animation";
-import type { AnimationView, FrameView, SequenceView } from "../../../client/src/image-editor/webview/messages";
+import {
+    encodeFramePixels,
+    type AnimationView,
+    type FrameView,
+    type SequenceView,
+} from "../../../client/src/image-editor/webview/messages";
 
 export const TILE_SIZE = 24;
 const MARKER_SIZE = 6;
@@ -34,7 +39,7 @@ function makeFrame(baseIndex: number, frameIndex: number): FrameView {
             pixels[(start + y) * TILE_SIZE + (start + x)] = MARKER_INDEX;
         }
     }
-    return { width: TILE_SIZE, height: TILE_SIZE, pixels, offsetX: 0, offsetY: 0 };
+    return { width: TILE_SIZE, height: TILE_SIZE, pixels: encodeFramePixels(pixels), offsetX: 0, offsetY: 0 };
 }
 
 const FRM_COLORS: [number, number, number][] = [
