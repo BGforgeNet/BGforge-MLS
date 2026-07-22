@@ -2,7 +2,8 @@ import zlib from "zlib";
 import { type Rgba } from "../model/animation.ts";
 import { PNG_SIGNATURE, writeChunk } from "./chunk.ts";
 
-function buildIhdr(width: number, height: number): Uint8Array {
+/** Colour-type-3 IHDR shared by the static and animated (APNG) encoders. */
+export function buildIhdr(width: number, height: number): Uint8Array {
     const data = new Uint8Array(13);
     const view = new DataView(data.buffer);
     view.setUint32(0, width, false);
@@ -15,7 +16,8 @@ function buildIhdr(width: number, height: number): Uint8Array {
     return data;
 }
 
-function buildPlte(palette: Rgba[]): Uint8Array {
+/** PLTE payload shared by the static and animated (APNG) encoders. */
+export function buildPlte(palette: Rgba[]): Uint8Array {
     const data = new Uint8Array(palette.length * 3);
     for (const [i, entry] of palette.entries()) {
         data[i * 3] = entry.r;
@@ -27,13 +29,19 @@ function buildPlte(palette: Rgba[]): Uint8Array {
 
 // Simplest correct form: opaque for every entry up to transparentIndex, with
 // transparentIndex itself set fully transparent. Entries beyond it default opaque.
-function buildTrns(transparentIndex: number): Uint8Array {
+// Shared by the static and animated (APNG) encoders.
+export function buildTrns(transparentIndex: number): Uint8Array {
     const data = new Uint8Array(transparentIndex + 1).fill(255);
     data[transparentIndex] = 0;
     return data;
 }
 
-function buildIdat(width: number, height: number, pixels: Uint8Array): Uint8Array {
+/**
+ * Filters every scanline with filter type 0 (none) and deflates the result.
+ * The same payload backs a static IDAT and, per animation frame, an APNG
+ * IDAT/fdAT - shared here so both encoders filter+compress identically.
+ */
+export function deflateScanlines(width: number, height: number, pixels: Uint8Array): Uint8Array {
     const raw = new Uint8Array(height * (1 + width));
     for (let row = 0; row < height; row++) {
         const rowStart = row * (1 + width);
@@ -57,7 +65,7 @@ export function encodeIndexedPng(
     const ihdr = writeChunk("IHDR", buildIhdr(width, height));
     const plte = writeChunk("PLTE", buildPlte(palette));
     const trns = writeChunk("tRNS", buildTrns(transparentIndex));
-    const idat = writeChunk("IDAT", buildIdat(width, height, pixels));
+    const idat = writeChunk("IDAT", deflateScanlines(width, height, pixels));
     const iend = writeChunk("IEND", new Uint8Array(0));
 
     const out = new Uint8Array(

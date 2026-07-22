@@ -15,4 +15,5 @@ export * from "./convert/index.ts";
 export * from "./png/crc.ts";
 export * from "./png/chunk.ts";
 export * from "./png/encode.ts";
+export * from "./png/apng.ts";
 export * from "./png/decode.ts";
