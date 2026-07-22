@@ -27,6 +27,7 @@ server/out/*
 transpilers/out
 format/out
 binary/out
+image/out
 
 plugins/*/out
 

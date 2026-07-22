@@ -271,6 +271,15 @@ importers:
 
   grammars/weidu-tra: {}
 
+  image:
+    devDependencies:
+      tsdown:
+        specifier: ^0.22.4
+        version: 0.22.4(oxc-resolver@11.21.3)(tsx@4.23.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+
   plugins/td-plugin:
     devDependencies:
       '@types/node':

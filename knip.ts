@@ -126,6 +126,9 @@ const config: KnipConfig = {
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
         },
+        image: {
+            entry: ["test/**/*.test.ts"],
+        },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.

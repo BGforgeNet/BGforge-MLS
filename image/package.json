@@ -1,0 +1,54 @@
+{
+    "name": "@bgforge/image",
+    "version": "0.1.0",
+    "description": "Library for lossless parsing and serialising of Fallout FRM and Infinity Engine BAM animation files.",
+    "keywords": [
+        "animation",
+        "bam",
+        "fallout",
+        "frm",
+        "infinity-engine",
+        "modding"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "image"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.txt"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "tsdown",
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "devDependencies": {
+        "tsdown": "^0.22.4",
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}
