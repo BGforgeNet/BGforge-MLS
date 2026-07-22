@@ -328,11 +328,11 @@
             }
         },
         {
-            // `x | 0` is a deliberate 32-bit truncation idiom in binary
-            // parsing hot paths; `Math.trunc` is not equivalent at the
-            // bytecode level. Only applicable inside `binary/` and the
-            // editor's binary-formatting helper.
-            "files": ["binary/**", "client/src/editors/binaryEditor-formatting.ts"],
+            // `x | 0` (32-bit truncation) and `x >>> 0` (unsigned 32-bit coercion) are
+            // deliberate binary-codec idioms; `Math.trunc` is not equivalent at the bytecode
+            // level. Applies inside `binary/` and `image/` (the FRM/BAM parsers and the
+            // hand-rolled PNG codec) and the editor's binary-formatting helper.
+            "files": ["binary/**", "image/**", "client/src/editors/binaryEditor-formatting.ts"],
             "rules": {
                 "unicorn/prefer-math-trunc": "off"
             }

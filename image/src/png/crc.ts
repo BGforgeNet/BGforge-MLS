@@ -23,6 +23,5 @@ export function crc32(bytes: Uint8Array): number {
     }
     // `>>> 0` is unsigned-32-bit coercion (not truncation): the XOR above can produce a
     // signed-negative JS number; Math.trunc would leave it negative, not equivalent.
-    // eslint-disable-next-line unicorn/prefer-math-trunc
     return (crc ^ 0xffffffff) >>> 0;
 }
