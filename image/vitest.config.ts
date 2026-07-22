@@ -13,7 +13,9 @@ export default defineConfig({
         coverage: coverageConfig({
             reportsDirectory: "coverage/image",
             include: ["src/**/*.ts"],
-            thresholds: { lines: 0, functions: 0, branches: 0, statements: 0 },
+            // Floor set to the measured actuals (deterministic suite, no
+            // property-test seed variance); ratchet up as coverage improves.
+            thresholds: { lines: 100, functions: 100, branches: 67.24, statements: 99.6 },
         }),
     },
 });
