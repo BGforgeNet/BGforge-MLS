@@ -7,6 +7,7 @@ export type LossKind =
     | "duplicated-shared-frames"
     | "embedded-palette"
     | "palette-remapped-to-default"
+    | "palette-nearest-remapped"
     | "palette-sidecar-required";
 
 export interface LossItem {

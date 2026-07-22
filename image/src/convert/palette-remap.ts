@@ -1,4 +1,4 @@
-import { type Frame, type Rgba } from "../model/animation.ts";
+import { type Animation, type Frame, type Rgba } from "../model/animation.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
 function colorKey(c: Rgba): string {
@@ -54,4 +54,42 @@ export function remapToDefault(
     });
 
     return { remapped: true, frames: remappedFrames, palette: DEFAULT_FALLOUT_PALETTE };
+}
+
+function nearestIndex(color: Rgba, target: Rgba[]): number {
+    let best = 0;
+    let bestDist = Infinity;
+    target.forEach((t, i) => {
+        const d = (t.r - color.r) ** 2 + (t.g - color.g) ** 2 + (t.b - color.b) ** 2;
+        if (d < bestDist) {
+            bestDist = d;
+            best = i;
+        }
+    });
+    return best;
+}
+
+// Lossy: re-index every pixel to the nearest color in `target` (the bundled default palette).
+// The transparent source index maps to 0 (the default palette's transparency slot) so
+// transparency survives. Output frames drop rawEncoding/rleEncoded (they described the old bytes).
+export function remapToNearest(anim: Animation, target: Rgba[]): { animation: Animation; remapped: true } {
+    const transparent = anim.meta.transparentIndex ?? 0;
+    // src index -> target index, one entry per palette slot, computed once.
+    const table = anim.palette.map((color, idx) => (idx === transparent ? 0 : nearestIndex(color, target)));
+    const frames = anim.frames.map((f) => {
+        const pixels = new Uint8Array(f.pixels.length);
+        f.pixels.forEach((idx, i) => {
+            pixels[i] = table[idx] ?? 0;
+        });
+        return { width: f.width, height: f.height, pixels, offsetX: f.offsetX, offsetY: f.offsetY };
+    });
+    return {
+        animation: {
+            palette: target.map((c) => ({ ...c })),
+            frames,
+            sequences: anim.sequences.map((s) => ({ ...s })),
+            meta: { ...anim.meta },
+        },
+        remapped: true,
+    };
 }
