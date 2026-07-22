@@ -1,7 +1,8 @@
 import { type Animation, type Facing, type Frame, type Sequence, FRM_FACINGS } from "../model/animation.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
-import { remapToDefault } from "./palette-remap.ts";
+import { remapToDefault, remapToNearest } from "./palette-remap.ts";
+import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
 function resolveFacings(anim: Animation, opts?: { layout?: Facing[] }): Facing[] {
     if (opts?.layout) {
@@ -28,7 +29,7 @@ function resolveFacings(anim: Animation, opts?: { layout?: Facing[] }): Facing[]
 // is a no-op (still a new object per the shallow-clone contract, matching convertToBam).
 export function convertToFrm(
     anim: Animation,
-    opts?: { layout?: Facing[] },
+    opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest" },
 ): { animation: Animation; report: LossReport } {
     const report = new LossReport();
 
@@ -133,13 +134,24 @@ export function convertToFrm(
         report.add("padded-sequence", `direction ${facingName} padded from ${from} to ${maxLen} frames`);
     }
 
-    const {
-        remapped,
-        frames: paletteFrames,
-        palette,
-    } = remapToDefault(pool, anim.palette, anim.meta.transparentIndex ?? 0);
-    if (remapped) {
+    const defaultRemap = remapToDefault(pool, anim.palette, anim.meta.transparentIndex ?? 0);
+    let paletteFrames = defaultRemap.frames;
+    let palette = defaultRemap.palette;
+    if (defaultRemap.remapped) {
         report.add("palette-remapped-to-default", "palette losslessly remapped to the default Fallout palette");
+    } else if (opts?.paletteMode === "nearest") {
+        // Exact remap failed; lossily project every used color onto its nearest default-palette
+        // neighbor instead of carrying the source palette as a sidecar.
+        const nearestRemap = remapToNearest(
+            { palette: anim.palette, frames: pool, sequences: anim.sequences, meta: anim.meta },
+            DEFAULT_FALLOUT_PALETTE,
+        );
+        paletteFrames = nearestRemap.animation.frames;
+        palette = nearestRemap.animation.palette;
+        report.add(
+            "palette-nearest-remapped",
+            "source palette could not be losslessly remapped; pixels lossily remapped to the nearest default Fallout palette color",
+        );
     } else {
         report.add(
             "palette-sidecar-required",

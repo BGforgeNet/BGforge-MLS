@@ -8,6 +8,7 @@ import {
     type Animation,
     type Facing,
     type Frame,
+    type Rgba,
     type Sequence,
 } from "@bgforge/image";
 
@@ -195,5 +196,44 @@ describe("convertToFrm", () => {
         expect(animation.sequences).toHaveLength(6);
         const dropped = report.items.find((item) => item.kind === "dropped-direction");
         expect(dropped?.detail).toContain("facing N"); // specifically the extra N is dropped
+    });
+
+    // A palette whose colors are absent from DEFAULT_FALLOUT_PALETTE, forcing the sidecar path
+    // under the default paletteMode (mirrors the oddColor fixture above, but every slot is bespoke).
+    function bespokeBam(): Animation {
+        const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({
+            r: (i * 7) % 256,
+            g: (i * 13) % 256,
+            b: (i * 29) % 256,
+            a: 255,
+        }));
+        palette[0] = { r: 0, g: 0, b: 0, a: 255 };
+        const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
+        const frames: Frame[] = facings.map(() => ({
+            width: 1,
+            height: 1,
+            pixels: Uint8Array.from([5]),
+            offsetX: 0,
+            offsetY: 0,
+        }));
+        return {
+            palette,
+            frames,
+            sequences: facings.map((facing, i) => ({ frameRefs: [i], facing })),
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+    }
+
+    it("paletteMode 'nearest' remaps to the default palette and reports it instead of a sidecar", () => {
+        const { animation, report } = convertToFrm(bespokeBam(), { paletteMode: "nearest" });
+        expect(report.has("palette-nearest-remapped")).toBe(true);
+        expect(report.has("palette-sidecar-required")).toBe(false);
+        expect(animation.palette).toEqual(DEFAULT_FALLOUT_PALETTE);
+    });
+
+    it("default paletteMode still requires a sidecar for a bespoke palette", () => {
+        const { report } = convertToFrm(bespokeBam());
+        expect(report.has("palette-sidecar-required")).toBe(true);
+        expect(report.has("palette-nearest-remapped")).toBe(false);
     });
 });

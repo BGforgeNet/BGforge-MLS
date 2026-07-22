@@ -12,7 +12,7 @@ export { convertToFrm } from "./to-frm.ts";
 export function convert(
     anim: Animation,
     target: "frm" | "bam",
-    opts?: { layout?: Facing[] },
+    opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest" },
 ): { animation: Animation; report: LossReport } {
     return target === "frm" ? convertToFrm(anim, opts) : convertToBam(anim);
 }
