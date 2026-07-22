@@ -147,4 +147,44 @@ describe("convertToFrm", () => {
         expect(animation.frames.every((f) => f.rawEncoding === undefined)).toBe(true);
         expect(animation.frames.every((f) => f.rleEncoded === undefined)).toBe(true);
     });
+
+    it("is a no-op for an already-FRM source", () => {
+        const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
+        const src: Animation = {
+            palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+            sequences: facings.map((facing) => ({ frameRefs: [0], facing })),
+            frames: [{ width: 1, height: 1, pixels: new Uint8Array([0]), offsetX: 0, offsetY: 0 }],
+            meta: { sourceFormat: "frm", directionLayout: "frm6" },
+        };
+        const { animation, report } = convertToFrm(src);
+        expect(report.lossless).toBe(true);
+        expect(animation.meta.sourceFormat).toBe("frm");
+        expect(animation).not.toBe(src); // a fresh object, per the clone contract
+    });
+
+    it("throws when opts.layout length does not match the sequence count", () => {
+        const src = synthBam([1, 1, 1, 1, 1, 1, 1, 1]); // 8 sequences
+        expect(() => convertToFrm(src, { layout: [...IE8_FACINGS].slice(0, 5) })).toThrow(
+            /opts\.layout has 5 entries, expected 8/,
+        );
+    });
+
+    it("reuses a direction and reports empty-direction when a FRM facing is absent from the layout", () => {
+        // Layout covers NE,E,SE,SW,W and N (no NW); the NW slot has no source and reuses slot 0.
+        const src = synthBam([1, 1, 1, 1, 1, 1]);
+        const layout: Facing[] = ["NE", "E", "SE", "SW", "W", "N"];
+        const { animation, report } = convertToFrm(src, { layout });
+        expect(report.has("empty-direction")).toBe(true);
+        expect(report.has("dropped-direction")).toBe(true); // N is dropped
+        expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+    });
+
+    it("uses the sequences' own facings when the cycle count is non-standard", () => {
+        // 7 sequences with real facings -> facingsForCycleCount(7) is null, so own facings drive the mapping.
+        const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "NW", "N"];
+        const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
+        const { animation, report } = convertToFrm(src);
+        expect(animation.sequences).toHaveLength(6);
+        expect(report.has("dropped-direction")).toBe(true); // the extra N is dropped
+    });
 });
