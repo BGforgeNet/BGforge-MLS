@@ -4,10 +4,24 @@
 // No palette here - palettes live in the exported PNGs (Task 7, directory layer).
 import type { Animation, AnimationMeta, DirectionLayout, Facing, Sequence, SourceFormat } from "../model/animation.ts";
 
+// Owned by this module, deliberately NOT `AnimationMeta` itself: the wire format is
+// frozen, so a new `AnimationMeta` field must be a conscious mapping decision below
+// (writeManifest/readManifest) rather than a silent addition to what gets persisted.
+export interface ManifestMetaV1 {
+    sourceFormat: SourceFormat;
+    fps?: number;
+    actionFrame?: number;
+    transparentIndex?: number;
+    directionLayout?: DirectionLayout;
+    frmVersion?: number;
+    dirOffsetsX?: number[];
+    dirOffsetsY?: number[];
+}
+
 export interface ManifestV1 {
     manifestVersion: 1;
     kind: "bgforge-animation";
-    meta: AnimationMeta;
+    meta: ManifestMetaV1;
     sequences: { id: string; facing: Facing; offsets: [number, number][] }[];
 }
 
@@ -43,7 +57,7 @@ function isOffsetPair(v: unknown): v is [number, number] {
     return Array.isArray(v) && v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number";
 }
 
-function isAnimationMeta(v: unknown): v is AnimationMeta {
+function isManifestMetaV1(v: unknown): v is ManifestMetaV1 {
     if (!isRecord(v)) return false;
     if (!isSourceFormat(v.sourceFormat)) return false;
     if (v.fps !== undefined && typeof v.fps !== "number") return false;
@@ -73,11 +87,40 @@ export function sequenceDirId(seq: Sequence, index: number): string {
     return seq.facing !== "none" ? seq.facing : String(index).padStart(2, "0");
 }
 
+// Field-by-field, not a spread of `anim.meta`: adding an `AnimationMeta` field is
+// then a compile-visible decision here (persist it, or deliberately leave it out of
+// the frozen wire format) rather than a silent addition to what gets written.
+function toManifestMetaV1(meta: AnimationMeta): ManifestMetaV1 {
+    return {
+        sourceFormat: meta.sourceFormat,
+        fps: meta.fps,
+        actionFrame: meta.actionFrame,
+        transparentIndex: meta.transparentIndex,
+        directionLayout: meta.directionLayout,
+        frmVersion: meta.frmVersion,
+        dirOffsetsX: meta.dirOffsetsX,
+        dirOffsetsY: meta.dirOffsetsY,
+    };
+}
+
+function toAnimationMeta(meta: ManifestMetaV1): AnimationMeta {
+    return {
+        sourceFormat: meta.sourceFormat,
+        fps: meta.fps,
+        actionFrame: meta.actionFrame,
+        transparentIndex: meta.transparentIndex,
+        directionLayout: meta.directionLayout,
+        frmVersion: meta.frmVersion,
+        dirOffsetsX: meta.dirOffsetsX,
+        dirOffsetsY: meta.dirOffsetsY,
+    };
+}
+
 export function writeManifest(anim: Animation): ManifestV1 {
     return {
         manifestVersion: 1,
         kind: "bgforge-animation",
-        meta: anim.meta,
+        meta: toManifestMetaV1(anim.meta),
         sequences: anim.sequences.map((seq, index) => ({
             id: sequenceDirId(seq, index),
             facing: seq.facing,
@@ -100,9 +143,9 @@ export function readManifest(m: unknown): { meta: AnimationMeta; sequences: Mani
     if (m.kind !== "bgforge-animation") {
         throw new Error(`unsupported manifest kind: ${JSON.stringify(m.kind)}`);
     }
-    if (!isAnimationMeta(m.meta)) throw new Error("manifest meta is malformed");
+    if (!isManifestMetaV1(m.meta)) throw new Error("manifest meta is malformed");
     if (!Array.isArray(m.sequences) || !m.sequences.every(isManifestSequence)) {
         throw new Error("manifest sequences are malformed");
     }
-    return { meta: m.meta, sequences: m.sequences };
+    return { meta: toAnimationMeta(m.meta), sequences: m.sequences };
 }

@@ -1,5 +1,9 @@
 // Lossless Animation -> per-sequence APNG codec: one "<id>.png" per sequence, all
 // sharing the animation's palette. Pure byte-in/byte-out - no filesystem access.
+//
+// This is a viewable PREVIEW, not a lossless export: every frame is placed at
+// x_offset = y_offset = 0, so each frame's offsetX/offsetY is NOT preserved through
+// this path. The PNG-directory codec (png-directory.ts) is the offset-lossless one.
 import type { Animation } from "../model/animation.ts";
 import { type ApngFrame, decodeApng, encodeApng } from "../png/apng.ts";
 import { sequenceDirId } from "./manifest.ts";

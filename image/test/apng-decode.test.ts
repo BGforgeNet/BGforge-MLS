@@ -71,7 +71,7 @@ describe("decodeApng", () => {
         }
     });
 
-    it("locates a transparentIndex greater than 0 by scanning the palette", () => {
+    it("locates a transparentIndex greater than 0 by scanning tRNS", () => {
         const pal = emptyPalette();
         const png = encodeApng([{ width: 1, height: 1, pixels: new Uint8Array([5]) }], pal, 5, 10);
         expect(decodeApng(png).transparentIndex).toBe(5);

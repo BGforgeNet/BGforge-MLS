@@ -1,8 +1,8 @@
 import zlib from "zlib";
-import { type Rgba, emptyPalette } from "../model/animation.ts";
+import { type Rgba } from "../model/animation.ts";
 import { PNG_SIGNATURE, readChunks, writeChunk } from "./chunk.ts";
 import { buildIhdr, buildPlte, buildTrns, deflateScanlines } from "./encode.ts";
-import { unfilterScanlines } from "./decode.ts";
+import { parseHeaderAndPalette, unfilterScanlines } from "./decode.ts";
 
 export interface ApngFrame {
     width: number;
@@ -60,9 +60,15 @@ export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentInde
     }
     const delayDen = fps || 10;
 
+    // IHDR canvas must be at least as large as every frame's fcTL region (each frame
+    // is placed at x_offset = y_offset = 0), since later frames can exceed frame 0's
+    // dimensions (e.g. FRM frames within a direction commonly differ in size).
+    const canvasWidth = Math.max(...frames.map((f) => f.width));
+    const canvasHeight = Math.max(...frames.map((f) => f.height));
+
     const parts: Uint8Array[] = [
         PNG_SIGNATURE,
-        writeChunk("IHDR", buildIhdr(first.width, first.height)),
+        writeChunk("IHDR", buildIhdr(canvasWidth, canvasHeight)),
         writeChunk("acTL", buildAcTl(frames.length)),
         writeChunk("PLTE", buildPlte(palette)),
         writeChunk("tRNS", buildTrns(transparentIndex)),
@@ -103,56 +109,13 @@ function stripFdatSequenceNumber(data: Uint8Array): Uint8Array {
  * Each fcTL starts a frame and carries that frame's width/height, plus - on
  * the first fcTL only - the delay used for fps; the frame's pixel data is the
  * next IDAT (frame 0) or fdAT (later frames) chunk that follows it.
+ * Assumes one IDAT/fdAT per frame and that the first fcTL's data chunk is the
+ * default image - both guaranteed by our own `encodeApng`; a foreign APNG that
+ * splits a frame's data across multiple fdAT chunks is unsupported.
  */
 export function decodeApng(bytes: Uint8Array): DecodedApng {
     const chunks = readChunks(bytes);
-
-    const ihdr = chunks.find((c) => c.type === "IHDR");
-    if (!ihdr) {
-        throw new Error("decodeApng: missing IHDR chunk");
-    }
-    const bitDepth = ihdr.data[8];
-    const colourType = ihdr.data[9];
-    if (bitDepth === undefined || colourType === undefined) {
-        throw new Error("decodeApng: truncated IHDR chunk");
-    }
-    if (colourType !== 3 || bitDepth !== 8) {
-        throw new Error(
-            `decodeApng: not an 8-bit indexed APNG (colour type ${colourType}); import requires indexed APNGs`,
-        );
-    }
-
-    const palette = emptyPalette();
-    const plte = chunks.find((c) => c.type === "PLTE");
-    if (plte) {
-        const entryCount = Math.min(Math.floor(plte.data.length / 3), 256);
-        for (let i = 0; i < entryCount; i++) {
-            const r = plte.data[i * 3];
-            const g = plte.data[i * 3 + 1];
-            const b = plte.data[i * 3 + 2];
-            const existing = palette[i];
-            if (r === undefined || g === undefined || b === undefined || !existing) continue;
-            palette[i] = { r, g, b, a: existing.a };
-        }
-    }
-
-    const trns = chunks.find((c) => c.type === "tRNS");
-    if (trns) {
-        const entryCount = Math.min(trns.data.length, 256);
-        for (let i = 0; i < entryCount; i++) {
-            const alpha = trns.data[i];
-            const existing = palette[i];
-            if (alpha === undefined || !existing) continue;
-            palette[i] = { ...existing, a: alpha };
-        }
-    }
-    let transparentIndex = 0;
-    for (const [i, entry] of palette.entries()) {
-        if (entry.a === 0) {
-            transparentIndex = i;
-            break;
-        }
-    }
+    const { palette, transparentIndex } = parseHeaderAndPalette(chunks, "decodeApng");
 
     const acTl = chunks.find((c) => c.type === "acTL");
     const declaredFrameCount = acTl

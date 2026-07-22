@@ -1,6 +1,6 @@
 import zlib from "zlib";
 import { type Rgba, emptyPalette } from "../model/animation.ts";
-import { readChunks } from "./chunk.ts";
+import { type PngChunk, readChunks } from "./chunk.ts";
 
 export interface DecodedIndexedPng {
     width: number;
@@ -8,6 +8,65 @@ export interface DecodedIndexedPng {
     palette: Rgba[];
     pixels: Uint8Array;
     transparentIndex: number;
+}
+
+/**
+ * Shared IHDR-guard + PLTE/tRNS parse for the static and animated (APNG) decoders.
+ * Per the IR convention, the palette stays fully opaque (a: 255 for every entry) and
+ * transparency is carried as a single `transparentIndex` - the first tRNS byte that is
+ * 0 (default 0 if no tRNS) - never written onto a palette entry's alpha.
+ */
+export function parseHeaderAndPalette(
+    chunks: PngChunk[],
+    errorPrefix: string,
+): { width: number; height: number; palette: Rgba[]; transparentIndex: number } {
+    const ihdr = chunks.find((c) => c.type === "IHDR");
+    if (!ihdr) {
+        throw new Error(`${errorPrefix}: missing IHDR chunk`);
+    }
+    const ihdrView = new DataView(ihdr.data.buffer, ihdr.data.byteOffset, ihdr.data.byteLength);
+    const width = ihdrView.getUint32(0, false);
+    const height = ihdrView.getUint32(4, false);
+    const bitDepth = ihdr.data[8];
+    const colourType = ihdr.data[9];
+    if (bitDepth === undefined || colourType === undefined) {
+        throw new Error(`${errorPrefix}: truncated IHDR chunk`);
+    }
+    if (colourType !== 3 || bitDepth !== 8) {
+        throw new Error(
+            `${errorPrefix}: not an 8-bit indexed PNG (colour type ${colourType}); import requires indexed PNGs`,
+        );
+    }
+
+    const palette = emptyPalette();
+    const plte = chunks.find((c) => c.type === "PLTE");
+    if (plte) {
+        const entryCount = Math.min(Math.floor(plte.data.length / 3), 256);
+        for (let i = 0; i < entryCount; i++) {
+            const r = plte.data[i * 3];
+            const g = plte.data[i * 3 + 1];
+            const b = plte.data[i * 3 + 2];
+            const existing = palette[i];
+            if (r === undefined || g === undefined || b === undefined || !existing) continue;
+            // Alpha stays whatever emptyPalette() seeded (255): the IR convention keeps
+            // every palette entry opaque, transparency carried only via transparentIndex.
+            palette[i] = { r, g, b, a: existing.a };
+        }
+    }
+
+    let transparentIndex = 0;
+    const trns = chunks.find((c) => c.type === "tRNS");
+    if (trns) {
+        const entryCount = Math.min(trns.data.length, 256);
+        for (let i = 0; i < entryCount; i++) {
+            if (trns.data[i] === 0) {
+                transparentIndex = i;
+                break;
+            }
+        }
+    }
+
+    return { width, height, palette, transparentIndex };
 }
 
 // Paeth predictor per the PNG spec (section 9.4): picks whichever of the three
@@ -78,56 +137,7 @@ export function unfilterScanlines(raw: Uint8Array, width: number, height: number
 /** Hand-rolled colour-type-3 (indexed) PNG decoder: parses chunks, INFLATEs IDAT, unfilters all five PNG filter types. */
 export function decodeIndexedPng(bytes: Uint8Array): DecodedIndexedPng {
     const chunks = readChunks(bytes);
-
-    const ihdr = chunks.find((c) => c.type === "IHDR");
-    if (!ihdr) {
-        throw new Error("decodeIndexedPng: missing IHDR chunk");
-    }
-    const ihdrView = new DataView(ihdr.data.buffer, ihdr.data.byteOffset, ihdr.data.byteLength);
-    const width = ihdrView.getUint32(0, false);
-    const height = ihdrView.getUint32(4, false);
-    const bitDepth = ihdr.data[8];
-    const colourType = ihdr.data[9];
-    if (bitDepth === undefined || colourType === undefined) {
-        throw new Error("decodeIndexedPng: truncated IHDR chunk");
-    }
-    if (colourType !== 3 || bitDepth !== 8) {
-        throw new Error(
-            `decodeIndexedPng: not an 8-bit indexed PNG (colour type ${colourType}); import requires indexed PNGs`,
-        );
-    }
-
-    const palette = emptyPalette();
-    const plte = chunks.find((c) => c.type === "PLTE");
-    if (plte) {
-        const entryCount = Math.min(Math.floor(plte.data.length / 3), 256);
-        for (let i = 0; i < entryCount; i++) {
-            const r = plte.data[i * 3];
-            const g = plte.data[i * 3 + 1];
-            const b = plte.data[i * 3 + 2];
-            const existing = palette[i];
-            if (r === undefined || g === undefined || b === undefined || !existing) continue;
-            palette[i] = { r, g, b, a: existing.a };
-        }
-    }
-
-    const trns = chunks.find((c) => c.type === "tRNS");
-    if (trns) {
-        const entryCount = Math.min(trns.data.length, 256);
-        for (let i = 0; i < entryCount; i++) {
-            const alpha = trns.data[i];
-            const existing = palette[i];
-            if (alpha === undefined || !existing) continue;
-            palette[i] = { ...existing, a: alpha };
-        }
-    }
-    let transparentIndex = 0;
-    for (const [i, entry] of palette.entries()) {
-        if (entry.a === 0) {
-            transparentIndex = i;
-            break;
-        }
-    }
+    const { width, height, palette, transparentIndex } = parseHeaderAndPalette(chunks, "decodeIndexedPng");
 
     const idatChunks = chunks.filter((c) => c.type === "IDAT");
     const compressedLength = idatChunks.reduce((sum, c) => sum + c.data.length, 0);

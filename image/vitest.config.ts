@@ -15,7 +15,13 @@ export default defineConfig({
             include: ["src/**/*.ts"],
             // Floor set to the measured actuals (deterministic suite, no
             // property-test seed variance); ratchet up as coverage improves.
-            thresholds: { lines: 100, functions: 100, branches: 87.86, statements: 98.34 },
+            // branches dropped from 87.86 to 87.65: the Phase 3 review's palette/tRNS
+            // dedup (parseHeaderAndPalette, shared by decodeIndexedPng/decodeApng)
+            // merged duplicate copies of a noUncheckedIndexedAccess-mandated guard that
+            // is unreachable at runtime (entryCount bounds already guarantee r/g/b and
+            // the palette slot are defined) - fewer total uncovered branches, but a
+            // smaller branch-count denominator shifts the ratio down slightly.
+            thresholds: { lines: 100, functions: 100, branches: 87.65, statements: 98.34 },
         }),
     },
 });

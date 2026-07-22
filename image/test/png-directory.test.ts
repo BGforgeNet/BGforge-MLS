@@ -4,10 +4,12 @@ import { type Animation, type Frame, emptyPalette, exportPngDirectory, importPng
 // Six sequences (one per FRM facing), with distinct frame counts, pixel content,
 // and offsets, so the round-trip test can distinguish a mixed-up ordering from a
 // correct one. transparentIndex is left undefined on purpose to exercise the
-// `anim.meta.transparentIndex ?? 0` fallback in exportPngDirectory.
+// `anim.meta.transparentIndex ?? 0` fallback in exportPngDirectory. Every palette
+// entry stays opaque (a: 255) per the IR convention - transparency is carried only
+// via the (implicit, here index 0) transparentIndex, never via palette alpha.
 function makeAnimation(): Animation {
     const palette = emptyPalette();
-    palette[0] = { r: 0, g: 0, b: 0, a: 0 }; // forced transparent by transparentIndex 0
+    palette[0] = { r: 0, g: 0, b: 0, a: 255 };
     palette[5] = { r: 10, g: 20, b: 30, a: 255 };
     palette[10] = { r: 40, g: 50, b: 60, a: 255 };
     palette[20] = { r: 70, g: 80, b: 90, a: 255 };
