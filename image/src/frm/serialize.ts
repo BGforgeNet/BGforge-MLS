@@ -29,7 +29,7 @@ export function serializeFrm(anim: Animation): Uint8Array {
         offsetByKey.set(key, region);
         for (const ref of refs) {
             const f = anim.frames[ref];
-            if (!f) continue;
+            if (!f) throw new Error(`FRM serialize: frame ref ${ref} out of range`);
             const bytes = frameBytes(f);
             const rec = new Uint8Array(0x0c + bytes.length);
             const rv = new DataView(rec.buffer);

@@ -88,7 +88,7 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
-    # parallelize; each is capped with --maxWorkers because nine uncapped
+    # parallelize; each is capped with --maxWorkers because ten uncapped
     # vitest worker pools oversubscribe the CPU badly enough to time out the
     # client worker-integration tests (spawned child workers starve). Caps are
     # sized to each suite's measured weight (binary and server are the heavy

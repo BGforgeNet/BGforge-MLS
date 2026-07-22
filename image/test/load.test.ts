@@ -11,10 +11,14 @@ describe("loadImage", () => {
         expect(() => loadImage(new Uint8Array([0, 1, 2, 3]), "mystery.dat")).toThrow();
     });
     it.skipIf(!frm)("loads an FRM by extension", () => {
-        expect(loadImage(new Uint8Array(fs.readFileSync(frm!)), frm!).meta.sourceFormat).toBe("frm");
+        const f = frm;
+        if (!f) throw new Error("expected an FRM corpus fixture");
+        expect(loadImage(new Uint8Array(fs.readFileSync(f)), f).meta.sourceFormat).toBe("frm");
     });
     it.skipIf(!bam)("loads a BAM/BAMC by signature", () => {
-        const anim = loadImage(new Uint8Array(fs.readFileSync(bam!)), bam!);
+        const b = bam;
+        if (!b) throw new Error("expected a BAM corpus fixture");
+        const anim = loadImage(new Uint8Array(fs.readFileSync(b)), b);
         expect(["bam", "bamc"]).toContain(anim.meta.sourceFormat);
     });
 });

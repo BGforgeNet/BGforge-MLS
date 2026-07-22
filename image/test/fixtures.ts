@@ -20,7 +20,3 @@ function walk(dir: string, ext: string): string[] {
 export function corpusFiles(rootDir: string, ext: string): string[] {
     return walk(rootDir, ext);
 }
-
-export function firstFixture(rootDir: string, ext: string): string | undefined {
-    return walk(rootDir, ext)[0];
-}
