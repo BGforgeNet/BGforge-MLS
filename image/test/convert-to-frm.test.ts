@@ -68,6 +68,35 @@ describe("convertToFrm", () => {
         expect(paddedItems).toHaveLength(lens.filter((n) => n !== maxLen).length);
     });
 
+    it("duplicates a frame shared across directions and reports it", () => {
+        // A 6-cycle source (positional -> FRM order) where two directions reference the same frame;
+        // FRM cannot share a frame across directions, so it must be duplicated into two entries.
+        const mk = (v: number): Frame => ({ width: 1, height: 1, pixels: new Uint8Array([v]), offsetX: 0, offsetY: 0 });
+        const source: Animation = {
+            palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+            sequences: [
+                { frameRefs: [0], facing: "none" }, // NE
+                { frameRefs: [0], facing: "none" }, // E - shares frame 0 with NE
+                { frameRefs: [1], facing: "none" },
+                { frameRefs: [2], facing: "none" },
+                { frameRefs: [3], facing: "none" },
+                { frameRefs: [4], facing: "none" },
+            ],
+            frames: [mk(1), mk(2), mk(3), mk(4), mk(5)],
+            meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "non-directional" },
+        };
+        const { animation, report } = convertToFrm(source);
+        expect(report.has("duplicated-shared-frames")).toBe(true);
+        const neRef = animation.sequences[0]?.frameRefs[0];
+        const eRef = animation.sequences[1]?.frameRefs[0];
+        if (neRef === undefined || eRef === undefined) throw new Error("missing frame refs");
+        expect(neRef).not.toBe(eRef); // two distinct pool entries, not one shared frame
+        const neFrame = animation.frames[neRef];
+        const eFrame = animation.frames[eRef];
+        if (!neFrame || !eFrame) throw new Error("missing frames");
+        expect([...neFrame.pixels]).toEqual([...eFrame.pixels]); // same pixel data, independent entries
+    });
+
     it("throws for a non-standard cycle count with no layout and no real source facings", () => {
         const source = synthBam(Array.from({ length: 9 }, () => 1));
         expect(() => convertToFrm(source)).toThrow(
