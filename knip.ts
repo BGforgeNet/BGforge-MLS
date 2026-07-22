@@ -38,9 +38,6 @@ const config: KnipConfig = {
             // globals), run via `pnpm exec tsx`, not imported by the build or tests - same
             // treatment as binary-editor/test/harness. Keep it out of knip's analysis.
             ignore: ["src/dialog-editor/test/harness/**"],
-            // @bgforge/image is wired ahead of its consumer; the animation editor
-            // provider that imports it lands in a later task.
-            ignoreDependencies: ["@bgforge/image"],
         },
         server: {
             // vitest.mutation.config.ts is referenced from stryker.conf.json
