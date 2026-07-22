@@ -9,6 +9,12 @@ export function parseFrm(bytes: Uint8Array): Animation {
     const fps = view.getUint16(0x04, be);
     const actionFrame = view.getUint16(0x06, be);
     const framesPerDirection = view.getUint16(0x08, be);
+    const dirOffsetsX: number[] = [];
+    const dirOffsetsY: number[] = [];
+    for (let d = 0; d < FRM_FACINGS.length; d++) {
+        dirOffsetsX.push(view.getInt16(0x0a + d * 2, be));
+        dirOffsetsY.push(view.getInt16(0x16 + d * 2, be));
+    }
 
     const frames: Frame[] = [];
     const sequences: Sequence[] = [];
@@ -45,6 +51,14 @@ export function parseFrm(bytes: Uint8Array): Animation {
         palette: emptyPalette(),
         sequences,
         frames,
-        meta: { sourceFormat: "frm", fps, actionFrame, frmVersion: version, directionLayout: "frm6" },
+        meta: {
+            sourceFormat: "frm",
+            fps,
+            actionFrame,
+            frmVersion: version,
+            directionLayout: "frm6",
+            dirOffsetsX,
+            dirOffsetsY,
+        },
     };
 }

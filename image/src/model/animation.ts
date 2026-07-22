@@ -27,6 +27,8 @@ export interface AnimationMeta {
     transparentIndex?: number; // BAM only
     directionLayout?: DirectionLayout;
     frmVersion?: number; // FRM header version, preserved for byte-identical round-trip
+    dirOffsetsX?: number[]; // FRM only: header x_offset[6], one per direction (0x0A)
+    dirOffsetsY?: number[]; // FRM only: header y_offset[6], one per direction (0x16)
 }
 
 export interface Animation {
