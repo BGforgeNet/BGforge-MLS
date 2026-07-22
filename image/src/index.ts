@@ -14,3 +14,4 @@ export * from "./convert/palette-remap.ts";
 export * from "./convert/index.ts";
 export * from "./png/crc.ts";
 export * from "./png/chunk.ts";
+export * from "./png/encode.ts";
