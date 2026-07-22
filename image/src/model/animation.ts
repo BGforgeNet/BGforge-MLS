@@ -13,6 +13,8 @@ export interface Frame {
     // dropped when a frame is synthesized/edited. Lets an unmodified frame
     // re-serialize verbatim (byte-identical round-trips, preserved RLE-vs-raw choice).
     rawEncoding?: Uint8Array;
+    // BAM only: frame stored RLE-compressed on disk.
+    rleEncoded?: boolean;
 }
 
 export interface Sequence {
