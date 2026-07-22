@@ -11,5 +11,4 @@ export * from "./load.ts";
 export * from "./convert/loss-report.ts";
 export * from "./convert/directions.ts";
 export * from "./convert/palette-remap.ts";
-export * from "./convert/to-bam.ts";
-export * from "./convert/to-frm.ts";
+export * from "./convert/index.ts";
