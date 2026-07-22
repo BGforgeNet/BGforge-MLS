@@ -12,3 +12,5 @@ export * from "./convert/loss-report.ts";
 export * from "./convert/directions.ts";
 export * from "./convert/palette-remap.ts";
 export * from "./convert/index.ts";
+export * from "./png/crc.ts";
+export * from "./png/chunk.ts";
