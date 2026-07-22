@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { encodeApng, readChunks, emptyPalette } from "@bgforge/image";
+import { encodeApng, decodeApng, readChunks, emptyPalette } from "@bgforge/image";
 
 describe("encodeApng", () => {
+    it("throws when given no frames", () => {
+        expect(() => encodeApng([], emptyPalette(), 0, 10)).toThrow(/at least one frame is required/);
+    });
+
+    it("falls back to a delay denominator of 10 when fps is 0", () => {
+        const frames = [{ width: 1, height: 1, pixels: new Uint8Array([0]) }];
+        const png = encodeApng(frames, emptyPalette(), 0, 0);
+        expect(decodeApng(png).fps).toBe(10);
+    });
+
     it("writes acTL/fcTL/IDAT/fdAT chunks with sequential sequence numbers", () => {
         const pal = emptyPalette();
         pal[1] = { r: 10, g: 20, b: 30, a: 255 };

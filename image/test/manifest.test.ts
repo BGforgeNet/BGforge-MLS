@@ -13,7 +13,15 @@ function makeAnimation(): Animation {
             { frameRefs: [0, 1], facing: "NE" },
             { frameRefs: [2], facing: "none" },
         ],
-        meta: { sourceFormat: "frm", fps: 10, actionFrame: 2, directionLayout: "frm6", frmVersion: 4 },
+        meta: {
+            sourceFormat: "frm",
+            fps: 10,
+            actionFrame: 2,
+            directionLayout: "frm6",
+            frmVersion: 4,
+            dirOffsetsX: [1, 2, 3, 4, 5, 6],
+            dirOffsetsY: [-1, -2, -3, -4, -5, -6],
+        },
     };
 }
 
@@ -103,5 +111,38 @@ describe("readManifest", () => {
     it("throws when sequences is not an array", () => {
         const written = writeManifest(makeAnimation());
         expect(() => readManifest({ ...written, sequences: {} })).toThrow();
+    });
+
+    it("throws when the manifest itself is not an object", () => {
+        expect(() => readManifest("not an object")).toThrow(/must be a JSON object/);
+    });
+
+    it("throws when meta is not an object", () => {
+        const written = writeManifest(makeAnimation());
+        expect(() => readManifest({ ...written, meta: null })).toThrow(/meta is malformed/);
+    });
+
+    it.each([
+        ["not a record", 5],
+        ["missing/wrong-typed id", { id: 5, facing: "NE", offsets: [] }],
+        ["invalid facing", { id: "NE", facing: "bogus", offsets: [] }],
+    ])("throws when a sequence entry is malformed (%s)", (_label, badSequence) => {
+        const written = writeManifest(makeAnimation());
+        expect(() => readManifest({ ...written, sequences: [badSequence] })).toThrow(/sequences are malformed/);
+    });
+
+    it.each([
+        ["sourceFormat", "bogus"],
+        ["fps", "not-a-number"],
+        ["actionFrame", "not-a-number"],
+        ["transparentIndex", "not-a-number"],
+        ["directionLayout", "bogus"],
+        ["frmVersion", "not-a-number"],
+        ["dirOffsetsX", "not-an-array"],
+        ["dirOffsetsY", [1, "two", 3]],
+    ])("throws when meta.%s is malformed", (field, badValue) => {
+        const written = writeManifest(makeAnimation());
+        const badMeta = { ...written.meta, [field]: badValue };
+        expect(() => readManifest({ ...written, meta: badMeta })).toThrow(/meta is malformed/);
     });
 });

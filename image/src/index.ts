@@ -19,3 +19,4 @@ export * from "./png/apng.ts";
 export * from "./png/decode.ts";
 export * from "./io/manifest.ts";
 export * from "./io/png-directory.ts";
+export * from "./io/apng-io.ts";

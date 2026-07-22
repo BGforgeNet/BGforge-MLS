@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import zlib from "zlib";
-import { encodeIndexedPng, decodeIndexedPng, writeChunk, PNG_SIGNATURE, emptyPalette } from "@bgforge/image";
+import {
+    encodeIndexedPng,
+    decodeIndexedPng,
+    unfilterScanlines,
+    writeChunk,
+    PNG_SIGNATURE,
+    emptyPalette,
+} from "@bgforge/image";
 
 function buildIhdr(width: number, height: number, colourType: number): Uint8Array {
     const data = new Uint8Array(13);
@@ -102,5 +109,66 @@ describe("decodeIndexedPng", () => {
         const png = buildFilteredIndexedPng(3, 2, filteredRows);
         const out = decodeIndexedPng(png);
         expect([...out.pixels]).toEqual([5, 10, 15, 6, 60, 20]);
+    });
+
+    it("throws when the IHDR chunk is missing", () => {
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...writeChunk("IEND", new Uint8Array(0))]);
+        expect(() => decodeIndexedPng(bytes)).toThrow(/missing IHDR chunk/);
+    });
+
+    it("throws on a truncated IHDR chunk", () => {
+        // Only 8 bytes: width+height, no bit depth/colour type byte.
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...writeChunk("IHDR", new Uint8Array(8))]);
+        expect(() => decodeIndexedPng(bytes)).toThrow(/truncated IHDR chunk/);
+    });
+
+    it("rejects a colour-type-3 PNG with a non-8-bit depth", () => {
+        const ihdrData = buildIhdr(1, 1, 3);
+        ihdrData[8] = 4; // real 4-bit-depth indexed PNGs exist in the wild
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...writeChunk("IHDR", ihdrData)]);
+        expect(() => decodeIndexedPng(bytes)).toThrow(/indexed/);
+    });
+
+    it("tolerates a PNG without PLTE or tRNS chunks (defaults to opaque black)", () => {
+        const ihdr = writeChunk("IHDR", buildIhdr(1, 1, 3));
+        const raw = new Uint8Array([0, 7]); // filter byte 0, one pixel of index 7
+        const idat = writeChunk("IDAT", new Uint8Array(zlib.deflateSync(Buffer.from(raw))));
+        const iend = writeChunk("IEND", new Uint8Array(0));
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...ihdr, ...idat, ...iend]);
+
+        const out = decodeIndexedPng(bytes);
+        expect([...out.pixels]).toEqual([7]);
+        expect(out.palette[0]).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+        expect(out.transparentIndex).toBe(0);
+    });
+});
+
+describe("unfilterScanlines", () => {
+    it("throws when a scanline's filter-type byte is missing", () => {
+        expect(() => unfilterScanlines(new Uint8Array(0), 2, 1)).toThrow(/truncated scanline data/);
+    });
+
+    it("throws when a scanline's pixel bytes are missing", () => {
+        expect(() => unfilterScanlines(new Uint8Array([0, 1]), 2, 1)).toThrow(/truncated scanline data/);
+    });
+
+    it("throws on an unsupported filter type", () => {
+        expect(() => unfilterScanlines(new Uint8Array([5, 0]), 1, 1)).toThrow(/unsupported filter type 5/);
+    });
+
+    it("Paeth predictor selects the above-left neighbour when it is the closest", () => {
+        // Derived so that row1/col1's predictor a=13 (left), b=7 (above), c=10
+        // (above-left) satisfy pa=pb=3 > pc=0, landing on the `return c` branch
+        // that the other Paeth test (row1: b, b, a) never reaches.
+        const raw = new Uint8Array([
+            4,
+            10,
+            253, // row0: decodes to [10, 7]
+            4,
+            3,
+            40, // row1: decodes to [13, 50], col1 predictor picks c=10
+        ]);
+        const pixels = unfilterScanlines(raw, 2, 2);
+        expect([...pixels]).toEqual([10, 7, 13, 50]);
     });
 });
