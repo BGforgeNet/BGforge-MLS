@@ -6,8 +6,7 @@ set -eu -o pipefail
 # webview bundles) + server. Skips CLIs (format, transpile, bin), linting,
 # and test bundles.
 
-# @bgforge/image is built before the client so a broken library build fails
-# here rather than surfacing downstream.
-pnpm --filter @bgforge/image build
+# @bgforge/image is source-consumed by the client (tsconfig + vitest aliases
+# resolve it to image/src), like @bgforge/binary - no separate build step here.
 pnpm build:client
 pnpm build:base:server --sourcemap

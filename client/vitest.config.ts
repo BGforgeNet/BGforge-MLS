@@ -15,6 +15,7 @@ export default defineConfig({
         alias: {
             "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
             "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
+            "@bgforge/image": path.resolve(__dirname, "../image/src/index.ts"),
         },
     },
     test: {
