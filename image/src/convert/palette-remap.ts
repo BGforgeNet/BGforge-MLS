@@ -48,7 +48,9 @@ export function remapToDefault(
         f.pixels.forEach((idx, i) => {
             pixels[i] = indexMap.get(idx) ?? 0;
         });
-        return { ...f, pixels };
+        // Pixels were re-indexed; rawEncoding described the OLD indices, so it must not carry over
+        // (a serializer reading rawEncoding ?? pixels would otherwise silently undo the remap).
+        return { width: f.width, height: f.height, pixels, offsetX: f.offsetX, offsetY: f.offsetY, rleEncoded: false };
     });
 
     return { remapped: true, frames: remappedFrames, palette: DEFAULT_FALLOUT_PALETTE };
