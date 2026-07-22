@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Runs the Playwright render/drive harnesses (binary-editor + dialog-editor) as regression checks.
+# Runs the Playwright render/drive harnesses (binary-editor + dialog-editor + animation-editor) as
+# regression checks.
 # Each driver mounts the REAL webview bundle in headless Chromium and asserts through PASS/FAIL gates
 # (driver-util's makeChecker, clip-gate, and per-driver `failed` counters), exiting non-zero on any
 # failure - including uncaught page errors and CSP violations. This is the automated form of the
@@ -12,7 +13,8 @@
 # checkout runs them first (the CI job does both as explicit steps):
 #   - `pnpm build:grammar` - the dialog edit drivers parse real .d through the gitignored weidu-d WASM.
 #   - `pnpm test:external` (or scripts/reset-external.sh) - the binary drivers read fixtures from the
-#     gitignored-but-reproducible external/ trees.
+#     gitignored-but-reproducible external/ trees. The animation-editor drivers (render-frm.mts,
+#     render-bam.mts) use synthetic in-memory fixtures instead and need neither prerequisite.
 #
 set -euo pipefail
 
@@ -21,11 +23,12 @@ cd "$(dirname "$0")/.." || exit 1
 echo "=== Building binary core (drivers run it in Node) ==="
 pnpm --filter @bgforge/binary build
 
-echo "=== Building harness bundles (app.html) ==="
+echo "=== Building harness bundles (app.html + image-app.html) ==="
 pnpm exec tsx binary-editor/test/harness/build.mts
 pnpm exec tsx client/src/dialog-editor/test/harness/build.mts
 
-# Every *.mts except the two build scripts is an assertion-bearing driver.
+# Every *.mts except the two build scripts is an assertion-bearing driver - this already picks up the
+# animation-editor drivers (render-frm.mts, render-bam.mts), which live alongside the binary-editor ones.
 drivers=()
 for f in binary-editor/test/harness/*.mts client/src/dialog-editor/test/harness/*.mts; do
     [[ "$f" == */build.mts ]] && continue

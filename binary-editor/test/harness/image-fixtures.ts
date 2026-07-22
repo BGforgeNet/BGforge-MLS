@@ -1,0 +1,113 @@
+/**
+ * Synthetic AnimationView fixtures for the FRM/BAM render-harness drivers. Built entirely in-memory -
+ * never gated on the gitignored `external/fallout` corpus - so the harness renders deterministically in
+ * any environment. Each sequence gets its own bright palette index so every compass/grid tile is a
+ * visibly distinct color, and every frame carries a marker block (position flips between frame indices)
+ * so no rendered tile is ever a flat single color - the zoom-redraw check in render-frm.mts relies on
+ * that variance to tell "redrawn" from "blank".
+ */
+import { emptyPalette, FRM_FACINGS } from "../../../image/src/model/animation";
+import type { Rgba } from "../../../image/src/model/animation";
+import type { AnimationView, FrameView, SequenceView } from "../../../client/src/image-editor/webview/messages";
+
+export const TILE_SIZE = 24;
+const MARKER_SIZE = 6;
+const MARKER_INDEX = 7;
+
+function setColor(palette: Rgba[], index: number, r: number, g: number, b: number): void {
+    palette[index] = { r, g, b, a: 255 };
+}
+
+function colorAt(colors: [number, number, number][], i: number): [number, number, number] {
+    const color = colors[i];
+    if (!color) throw new Error(`missing fixture color at index ${i}`);
+    return color;
+}
+
+/** frameIndex flips the marker corner (top-left on even frames, bottom-right on odd) so consecutive
+ *  frames in a sequence are visibly different without ever rendering a uniform, un-marked tile. */
+function makeFrame(baseIndex: number, frameIndex: number): FrameView {
+    const pixels = new Uint8Array(TILE_SIZE * TILE_SIZE).fill(baseIndex);
+    const start = frameIndex % 2 === 1 ? TILE_SIZE - MARKER_SIZE : 0;
+    for (let y = 0; y < MARKER_SIZE; y++) {
+        for (let x = 0; x < MARKER_SIZE; x++) {
+            pixels[(start + y) * TILE_SIZE + (start + x)] = MARKER_INDEX;
+        }
+    }
+    return { width: TILE_SIZE, height: TILE_SIZE, pixels, offsetX: 0, offsetY: 0 };
+}
+
+const FRM_COLORS: [number, number, number][] = [
+    [255, 0, 0], // NE - red
+    [255, 140, 0], // E - orange
+    [255, 215, 0], // SE - yellow
+    [0, 200, 0], // SW - green
+    [30, 144, 255], // W - blue
+    [160, 32, 240], // NW - purple
+];
+
+/** 6 sequences at FRM's compass facings, 2 frames each - renders as the 3x3 compass rose. */
+export function buildFrmFixture(): AnimationView {
+    const palette = emptyPalette();
+    setColor(palette, MARKER_INDEX, 255, 255, 255);
+    const frames: FrameView[] = [];
+    const sequences: SequenceView[] = FRM_FACINGS.map((facing, i) => {
+        const baseIndex = i + 1;
+        const [r, g, b] = colorAt(FRM_COLORS, i);
+        setColor(palette, baseIndex, r, g, b);
+        const frameRefs = [0, 1].map((frameIndex) => {
+            frames.push(makeFrame(baseIndex, frameIndex));
+            return frames.length - 1;
+        });
+        return { frameRefs, facing };
+    });
+
+    return {
+        palette,
+        frames,
+        sequences,
+        meta: { sourceFormat: "frm", fps: 10 },
+        basename: "harness-fixture",
+        sourceFormat: "frm",
+        hasSidecarPal: false,
+        externalPaletteActive: false,
+        dirty: false,
+    };
+}
+
+const BAM_COLORS: [number, number, number][] = [
+    [0, 255, 255], // cyan
+    [255, 0, 255], // magenta
+    [160, 160, 160], // gray
+    [255, 105, 180], // pink
+];
+
+/** Several sequences, all facing "none" - not a compass direction, so compass-layout falls back to the
+ *  cycle grid. Exercises that fallback path rather than duplicating the FRM compass coverage. */
+export function buildBamFixture(): AnimationView {
+    const palette = emptyPalette();
+    setColor(palette, MARKER_INDEX, 255, 255, 255);
+    const frames: FrameView[] = [];
+    const sequences: SequenceView[] = BAM_COLORS.map((_color, i) => {
+        const baseIndex = i + 1;
+        const [r, g, b] = colorAt(BAM_COLORS, i);
+        setColor(palette, baseIndex, r, g, b);
+        const frameRefs = [0, 1].map((frameIndex) => {
+            frames.push(makeFrame(baseIndex, frameIndex));
+            return frames.length - 1;
+        });
+        return { frameRefs, facing: "none" };
+    });
+
+    return {
+        palette,
+        frames,
+        sequences,
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+        basename: "harness-fixture",
+        sourceFormat: "bam",
+        hasSidecarPal: false,
+        externalPaletteActive: false,
+        dirty: false,
+    };
+}
