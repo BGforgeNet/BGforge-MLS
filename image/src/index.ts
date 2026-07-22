@@ -3,3 +3,4 @@ export * from "./model/animation.ts";
 export * from "./frm/parse.ts";
 export * from "./frm/serialize.ts";
 export * from "./bam/parse.ts";
+export * from "./bam/serialize.ts";
