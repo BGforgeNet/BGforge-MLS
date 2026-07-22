@@ -1,0 +1,9 @@
+import { parsePal } from "./pal.ts";
+import { type Rgba } from "../model/animation.ts";
+
+// Canonical Fallout 2 color.pal (256 * 3, 6-bit VGA), base64 of the 768-byte core.
+// Source: fallout2-ce data/color.pal. Do not edit by hand.
+const COLOR_PAL_BASE64 =
+    "////Ozs7Nzc3MzMzLy8vLCwsKCgoJCQkICAgHR0dGRkZFRUVEhISDg4OCgoKCAgIPzs7OzY2NzExNCwsMCgoLCQkKSAgJRwcIRgYHhUVGhERFg4OEwsLDwkJCwYGCAQEOzs/NjY7MTE3LCw0KCgwJCQsICApHBwlGBghFRUeEREaDg4WCwsTCQkPBgYLBAQIPyw8MRgqGgkYEwUSDgMNCgQJCQEJBwMGPz8yPz8fOTYDMy4HLicKKSIMJB4JHxoGGxYEFhICEg4BDQoACAYANj8nLTYhJi4cHiYXFx4SEBYNCg4IHBgUFRINDgwIGh4UHB4IHBoKGBgJExEJDgwIJysnHiUeFh8WEBoQDhYWDBMSChEPCA8LBwwJBQoGBAgEBgwGBAkDAgcBAQUAAQMAIycnHiUmGSIlFB8kEBsjDBYjCxMfChEbCA4XBwwTBgoQJykpDhIaFBYWFhohDhAULy8vKykmKCQfJR8YIhoTHxYNHBIJGQ8FFgwCPzMzPywsPyYmPx8fPxkZPxISPwwMPwAAOAAAMQAAKgAAJAAAHQAAFgAAEAAAPzgyPzElPy4ePysYPycSPyULPyIFPx8ANxsAMBgAKRQAIREAGg0AEwkADAYAPjUpNiweMigZLyQVKyARJx0NIxkKHxYHHBMFGBACFA0BEAoADQgAPzkuOjImNSsfMSQZLB0TKBcOJBMLIQ8IHgsGGwgEFwUCEgMBDwEAPzo3PjUvPTAoPCwhPCgbPCUXNiAVMBwSKhgQJBQOHhAMGAwJEgkHDgYFGTkZBSYFACkAFBQSABsAIyMhBwcHGhQODAoIIxwYEg4KAwMDDw8PGx0bHiEeIiUiJSklFhoYGBwaDz4ADjUCDS0EDCUFCh0GPz8/PDs0NC4iJh8UGhYPFBAJDQoHBgQDAAAA////////////////////////////////////////////////////////////////////////////////////////////////////////////";
+
+export const DEFAULT_FALLOUT_PALETTE: Rgba[] = parsePal(Uint8Array.from(Buffer.from(COLOR_PAL_BASE64, "base64")));

@@ -5,3 +5,5 @@ export * from "./frm/serialize.ts";
 export * from "./bam/parse.ts";
 export * from "./bam/serialize.ts";
 export * from "./bam/bamc.ts";
+export * from "./palette/pal.ts";
+export * from "./palette/default-palette.ts";
