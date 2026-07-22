@@ -9,9 +9,8 @@ export const GREEN = "#00ff00";
 const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 
 /**
- * Maps an indexed frame to RGBA pixel data via the palette. The transparent index gets alpha 0
- * (real transparency); every other pixel is opaque. Background compositing (checkerboard/green) is
- * a separate view-layer concern applied via canvas/CSS, not baked into these pixels.
+ * Maps an indexed frame to RGBA via the palette; the transparent index gets alpha 0, every other
+ * pixel is opaque. Background compositing (checkerboard/green) is a view-layer CSS concern, never baked in.
  */
 export function frameToRgba(frame: FrameView, palette: Rgba[], transparentIndex: number): Uint8ClampedArray {
     const out = new Uint8ClampedArray(frame.width * frame.height * 4);

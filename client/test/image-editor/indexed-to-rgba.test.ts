@@ -10,6 +10,15 @@ test("frameToRgba maps indices to palette RGBA and makes the transparent index a
     expect([rgba[4], rgba[5], rgba[6], rgba[7]]).toEqual([5, 0, 0, 255]); // index 5 opaque
 });
 
+test("frameToRgba keeps the transparent pixel's palette rgb, only forcing alpha 0 (not black-baked)", () => {
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
+    palette[0] = { r: 12, g: 34, b: 56, a: 255 };
+    const frame = { width: 1, height: 1, pixels: Uint8Array.from([0]), offsetX: 0, offsetY: 0 };
+    const rgba = frameToRgba(frame, palette, 0);
+    // rgb comes from palette[0], alpha is forced to 0 - a black-baked bug would give [0,0,0,0].
+    expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([12, 34, 56, 0]);
+});
+
 test("frameToRgba returns a buffer of length width*height*4", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
     const frame = { width: 3, height: 2, pixels: Uint8Array.from([1, 2, 3, 4, 5, 6]), offsetX: 0, offsetY: 0 };
