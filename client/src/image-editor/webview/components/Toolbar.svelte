@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Bridge } from "../state/bridge";
-    import type { AnimationView, ImportKind, SaveAsTarget } from "../messages";
+    import type { AnimationView, SaveAsTarget } from "../messages";
     import type { SourceFormat } from "@bgforge/image";
 
     const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
@@ -36,19 +36,10 @@
 
     const saveAsOptions = $derived(buildSaveAsOptions(view.sourceFormat));
 
-    const IMPORT_KIND_OPTIONS: { value: ImportKind; label: string }[] = [
-        { value: "png-directory", label: "PNG directory" },
-        { value: "apng", label: "APNG" },
-    ];
-
-    // eslint-disable-next-line prefer-const -- reassigned via the import-kind <select>'s onchange in the markup
-    let importKind = $state<ImportKind>("png-directory");
+    // Design choice: PNG-directory is the only import path (APNG is export/preview-only) - see the
+    // "import" message note in ../messages.ts. With a single kind there is no kind selector.
     // eslint-disable-next-line prefer-const -- reassigned via the import-mode <select>'s onchange in the markup
     let importMode = $state<"replace" | "append">("replace");
-
-    function isImportKind(v: string): v is ImportKind {
-        return v === "png-directory" || v === "apng";
-    }
 
     function handleSave(): void {
         bridge.send({ type: "save" });
@@ -67,7 +58,7 @@
     }
 
     function handleImport(): void {
-        bridge.send({ type: "import", kind: importKind, mode: importMode });
+        bridge.send({ type: "import", mode: importMode });
     }
 </script>
 
@@ -84,18 +75,6 @@
     <div class="toolbar-group" role="group" aria-label="Import">
         <span class="toolbar-label">Import</span>
         <select
-            value={importKind}
-            onchange={(e) => {
-                const next = e.currentTarget.value;
-                if (isImportKind(next)) importKind = next;
-            }}
-            aria-label="Import kind"
-        >
-            {#each IMPORT_KIND_OPTIONS as opt (opt.value)}
-                <option value={opt.value}>{opt.label}</option>
-            {/each}
-        </select>
-        <select
             value={importMode}
             onchange={(e) => {
                 const next = e.currentTarget.value;
@@ -106,6 +85,6 @@
             <option value="replace">Replace</option>
             <option value="append">Append</option>
         </select>
-        <button type="button" onclick={handleImport}>Import</button>
+        <button type="button" onclick={handleImport}>PNG directory...</button>
     </div>
 </div>

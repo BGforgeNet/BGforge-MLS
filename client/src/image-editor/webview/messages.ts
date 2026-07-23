@@ -54,10 +54,8 @@ export function decodeFramePixels(b64: string): Uint8Array {
 export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex" | "directionLayout">>;
 
 export type SaveAsTarget = "frm" | "bam" | "apng" | "png-directory";
-export type ImportKind = "png-directory" | "apng";
 
 const SAVE_AS_TARGETS = new Set<string>(["frm", "bam", "apng", "png-directory"] satisfies SaveAsTarget[]);
-const IMPORT_KINDS = new Set<string>(["png-directory", "apng"] satisfies ImportKind[]);
 const PALETTE_MODES = new Set<string>(["sidecar", "nearest"]);
 const IMPORT_MODES = new Set<string>(["replace", "append"]);
 const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] satisfies DirectionLayout[]);
@@ -69,7 +67,11 @@ export type WebviewToHost =
     | { type: "editMeta"; patch: MetaPatch }
     | { type: "setExternalPalette"; enabled: boolean } // FRM only
     | { type: "saveAs"; target: SaveAsTarget; paletteMode?: "sidecar" | "nearest" }
-    | { type: "import"; kind: ImportKind; mode: "replace" | "append" }
+    // Design choice: PNG-directory is the only import path. APNG stays export/preview-only - it round-trips
+    // poorly (a single flat sequence, no offsets/facings, palette re-quantized), and ingesting an
+    // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
+    // the library decoder (importApng in @bgforge/image) is still present.
+    | { type: "import"; mode: "replace" | "append" }
     | { type: "runtimeError"; message: string; stack?: string };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -112,12 +114,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
                 (m.paletteMode === undefined || (typeof m.paletteMode === "string" && PALETTE_MODES.has(m.paletteMode)))
             );
         case "import":
-            return (
-                typeof m.kind === "string" &&
-                IMPORT_KINDS.has(m.kind) &&
-                typeof m.mode === "string" &&
-                IMPORT_MODES.has(m.mode)
-            );
+            return typeof m.mode === "string" && IMPORT_MODES.has(m.mode);
         case "runtimeError":
             return typeof m.message === "string";
         default:

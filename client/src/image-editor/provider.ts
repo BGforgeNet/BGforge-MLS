@@ -1,26 +1,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import {
-    type Animation,
-    type LossReport,
-    convertToFrm,
-    frmDirectionMode,
-    importApng,
-    importPngDirectory,
-} from "@bgforge/image";
+import { type Animation, type LossReport, convertToFrm, frmDirectionMode, importPngDirectory } from "@bgforge/image";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
 import { sidecarPalPath } from "./sidecar";
-import {
-    type HostToWebview,
-    type ImportKind,
-    type SaveAsTarget,
-    type WebviewToHost,
-    isWebviewToHost,
-} from "./webview/messages";
+import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
@@ -117,7 +104,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 await this.handleSaveAs(document, message.target, message.paletteMode);
                 break;
             case "import":
-                await this.handleImport(document, message.kind, message.mode);
+                await this.handleImport(document, message.mode);
                 break;
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
@@ -156,8 +143,8 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
             const targetPath = path.join(dir, `${base}.${target}`); // <base>.frm | <base>.bam, auto-named
 
-            // A non-directional animation (a native non-directional BAM, or one imported from an APNG /
-            // PNG directory - frmDirectionMode reads the animation, not the source format) becomes a
+            // A non-directional animation (a native non-directional BAM, or one imported from a PNG
+            // directory - frmDirectionMode reads the animation, not the source format) becomes a
             // single-orientation FRM from ONE cycle. Auto for a single cycle; ask which for several.
             let singleCycle: number | undefined;
             if (target === "frm" && frmDirectionMode(anim) === "single-orientation" && anim.sequences.length > 1) {
@@ -193,13 +180,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         return picked === undefined ? undefined : items.indexOf(picked);
     }
 
-    private async handleImport(
-        document: ImageEditorDocument,
-        kind: ImportKind,
-        mode: "replace" | "append",
-    ): Promise<void> {
+    private async handleImport(document: ImageEditorDocument, mode: "replace" | "append"): Promise<void> {
         try {
-            const next = kind === "png-directory" ? await this.importPngDirectory() : await this.importApng(document);
+            // Design choice: PNG-directory is the only import path. APNG is export/preview-only - see
+            // the "import" message note in webview/messages.ts for why.
+            const next = await this.importPngDirectory();
             if (!next) return;
 
             // An FRM is a fixed 6-rotation format, so an import INTO one is reshaped to a valid FRM
@@ -248,29 +233,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         const manifest = selection?.[0];
         if (!manifest) return undefined;
         return importPngDirectory(await this.readDirectoryTree(vscode.Uri.file(path.dirname(manifest.fsPath))));
-    }
-
-    private async importApng(document: ImageEditorDocument): Promise<Animation | undefined> {
-        const selection = await vscode.window.showOpenDialog({
-            canSelectFolders: false,
-            canSelectFiles: true,
-            canSelectMany: false,
-            filters: { APNG: ["png"] },
-        });
-        const source = selection?.[0];
-        if (!source) return undefined;
-        const { fps, frames } = importApng(await vscode.workspace.fs.readFile(source));
-        // importApng drops its source PLTE: it re-decodes this editor's own single-sequence
-        // preview export, whose pixel indices are only meaningful against the open document's
-        // own palette. replaceSequences only reads next.frames/next.sequences (see
-        // document-model.ts), so palette/meta here are never observed - they exist only to
-        // satisfy the Animation shape.
-        return {
-            palette: document.animation.palette,
-            meta: { ...document.animation.meta, fps },
-            sequences: [{ frameRefs: frames.map((_, i) => i), facing: "none" }],
-            frames: frames.map((frame) => ({ ...frame, offsetX: 0, offsetY: 0 })),
-        };
     }
 
     /** Recursively reads a directory into a relative-path Map, the shape `importPngDirectory` expects. */
