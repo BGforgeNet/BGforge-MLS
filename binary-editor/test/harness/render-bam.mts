@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/image-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
 import { shotPath } from "./out-dir";
-import { buildBamFixture, buildMultiSequenceBamFixture } from "./image-fixtures";
+import { buildBamFixture, buildDirectionalBamFixture, buildMultiSequenceBamFixture } from "./image-fixtures";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const view = buildBamFixture();
@@ -112,6 +112,87 @@ check(
 );
 
 await page.screenshot({ path: shotPath("shot-bam-multi.png"), fullPage: true });
+
+// Directional fixture (IE base-file fingerprint): the editor must OPEN in the rose layout - the
+// detected default - with the layout selector mounted, show one 5-tile direction block, switch blocks
+// via the group picker, and flip to the flat grid via the selector.
+currentView = buildDirectionalBamFixture();
+await page.reload();
+await page.waitForSelector(".compass-rose canvas", { timeout: 5000 });
+
+const roseTiles = await page.locator(".compass-rose canvas").count();
+check(
+    "rose: detected directional BAM opens as a 5-tile rose (west arc of block 0)",
+    roseTiles === 5,
+    `count=${roseTiles}`,
+);
+
+const roseButton = page.getByRole("button", { name: "Rose", exact: true });
+check(
+    "rose: layout selector mounts with Rose active",
+    (await roseButton.count()) === 1 && (await roseButton.getAttribute("aria-pressed")) === "true",
+    `pressed=${await roseButton.getAttribute("aria-pressed")}`,
+);
+
+async function roseColors(): Promise<string[]> {
+    return page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLCanvasElement>(".compass-rose canvas"), (canvas) => {
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return "";
+            const pixel = ctx.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data;
+            return `${pixel[0]},${pixel[1]},${pixel[2]}`;
+        }),
+    );
+}
+const block0Colors = await roseColors();
+check(
+    "rose: the 5 tiles render 5 distinct colors",
+    new Set(block0Colors).size === block0Colors.length,
+    JSON.stringify(block0Colors),
+);
+
+await page.screenshot({ path: shotPath("shot-bam-rose.png"), fullPage: true });
+
+const groupSelect = page.getByLabel("Sequence group");
+check("rose: group picker mounts for the 2-block animation", (await groupSelect.count()) === 1, "");
+await groupSelect.selectOption({ index: 1 });
+await page
+    .waitForFunction(
+        (before) => {
+            const canvas = document.querySelector<HTMLCanvasElement>(".compass-rose canvas");
+            const ctx = canvas?.getContext("2d");
+            if (!canvas || !ctx) return false;
+            const pixel = ctx.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data;
+            return `${pixel[0]},${pixel[1]},${pixel[2]}` !== before;
+        },
+        block0Colors[0],
+        { timeout: 3000 },
+    )
+    .catch(() => undefined);
+const block1Colors = await roseColors();
+check(
+    "rose: switching the group re-renders the rose with the other block's cycles",
+    (await page.locator(".compass-rose canvas").count()) === 5 &&
+        JSON.stringify(block1Colors) !== JSON.stringify(block0Colors),
+    `block0=${JSON.stringify(block0Colors)} block1=${JSON.stringify(block1Colors)}`,
+);
+
+await page.getByRole("button", { name: "Grid", exact: true }).click();
+await page.waitForSelector(".cycle-grid canvas", { timeout: 5000 });
+const gridTileCount = await page.locator(".cycle-grid canvas").count();
+check(
+    "rose->grid: the selector flips to the flat grid with all 16 cycles",
+    gridTileCount === 16,
+    `count=${gridTileCount}`,
+);
+const gridControlCount = await page.locator('[aria-label="Cycle layout"]').count();
+check(
+    "rose->grid: the manual columns control appears in grid mode",
+    gridControlCount === 1,
+    `count=${gridControlCount}`,
+);
+
+await page.screenshot({ path: shotPath("shot-bam-rose-grid.png"), fullPage: true });
 
 await browser.close();
 

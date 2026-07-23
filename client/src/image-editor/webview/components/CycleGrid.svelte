@@ -1,11 +1,15 @@
 <script lang="ts">
     import type { AnimationView } from "../messages";
     import type { Background } from "../render/indexed-to-rgba";
-    import { layoutSequences } from "../render/compass-layout";
+    import type { GridTile } from "../render/compass-layout";
     import SequenceTile from "./SequenceTile.svelte";
 
+    // Presentational: the caller (App) owns the layout decision and tile derivation - the grid can hold
+    // every cycle (untagged BAM, or a rose-capable view the user flipped to grid) or a collapsed single
+    // tile (single-orientation FRM).
     const {
         view,
+        tiles,
         frame,
         zoom,
         background,
@@ -13,19 +17,13 @@
         columns = 0,
     }: {
         view: AnimationView;
+        tiles: GridTile[];
         frame: number;
         zoom: number;
         background: Background;
         showOffsetMarker?: boolean;
         columns?: number; // >0 pins the grid to that many columns (rows=sequences); 0 = auto-wrap
     } = $props();
-
-    // The grid fallback: non-directional animations, or duplicate facings that cannot share a compass
-    // cell. Recomputed from `view` for the same reason as CompassRose (a cheap pure function).
-    const tiles = $derived.by(() => {
-        const layout = layoutSequences(view);
-        return layout.mode === "grid" ? layout.tiles : [];
-    });
 </script>
 
 <div

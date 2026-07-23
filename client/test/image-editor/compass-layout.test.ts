@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { FRM_FACINGS, type Facing } from "@bgforge/image";
-import { compassPosition, layoutSequences } from "../../src/image-editor/webview/render/compass-layout";
+import { compassPosition, ieRoseTiles, layoutSequences } from "../../src/image-editor/webview/render/compass-layout";
+import { interpretIeRose } from "../../src/image-editor/webview/render/cycle-grouping";
 import type { AnimationView, SequenceView } from "../../src/image-editor/webview/messages";
 
 /** A minimal AnimationView carrying only the fields layoutSequences reads (sequences). */
@@ -98,4 +99,34 @@ test("layoutSequences falls back to a grid when facings duplicate, even though a
     expect(result.mode).toBe("grid");
     if (result.mode !== "grid") throw new Error("expected grid mode");
     expect(result.tiles.map((tile) => tile.index)).toEqual([0, 1]);
+});
+
+test("compass tiles carry the display facing (identical to the sequence's own tag for tagged views)", () => {
+    const result = layoutSequences(makeView(FRM_FACINGS));
+    if (result.mode !== "compass") throw new Error("expected compass mode");
+    expect(result.tiles.map((tile) => tile.facing)).toEqual(result.tiles.map((tile) => tile.seq.facing));
+});
+
+test("ieRoseTiles builds one direction block's rose from untagged cycles, at the IE slot facings", () => {
+    // Two stride-8 blocks: west slots real, east slots one shared filler (frame 0).
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.sequences = view.sequences.map((sequence, i) => ({
+        ...sequence,
+        frameRefs: i % 8 < 5 ? [1 + i] : [0],
+    }));
+    const interpretation = interpretIeRose(view.sequences, 17);
+    if (!interpretation) throw new Error("expected an IE interpretation");
+    expect(interpretation.detected).toBe(true);
+
+    const block0 = ieRoseTiles(view, interpretation, 0);
+    expect(block0.map((tile) => tile.facing)).toEqual(["S", "SW", "W", "NW", "N"]);
+    // The display facing comes from the slot position - the sequences themselves stay untagged.
+    expect(block0.every((tile) => tile.seq.facing === "none")).toBe(true);
+    // Every tile lands on a distinct compass position (the rose relies on facing uniqueness per block).
+    const spots = new Set(block0.map((tile) => `${tile.pos.dx.toFixed(3)},${tile.pos.dy.toFixed(3)}`));
+    expect(spots.size).toBe(5);
+
+    const block1 = ieRoseTiles(view, interpretation, 1);
+    expect(block1.map((tile) => tile.seq.frameRefs[0])).toEqual([9, 10, 11, 12, 13]);
+    expect(ieRoseTiles(view, interpretation, 99)).toEqual([]);
 });

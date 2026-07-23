@@ -86,7 +86,7 @@
         </label>
         <label
             class="meta-field"
-            title="How to arrange this animation's cycles in the preview: a 6- or 8-direction compass rose, or a plain grid (non-directional). BAM cycles carry no direction info, so you set it here; an FRM has its 6 directions built in."
+            title="Declared direction layout, saved with the animation (kept in PNG-directory manifests). BAM cycles carry no direction info, so you declare it here; 'IE8' also opens the preview in the compass-rose layout."
         >
             <span class="meta-label">Direction layout</span>
             <select

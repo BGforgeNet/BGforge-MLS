@@ -1,5 +1,6 @@
 import type { Facing } from "@bgforge/image";
 import type { AnimationView, SequenceView } from "../messages";
+import type { IeRoseInterpretation } from "./cycle-grouping";
 
 /**
  * A tile's position on the compass rose as a unit-circle offset from the centre (y points DOWN, to
@@ -34,8 +35,24 @@ export function compassPosition(facing: Facing): RosePosition | undefined {
     return { dx: Math.cos(rad), dy: -Math.sin(rad) };
 }
 
-type CompassLayout = { mode: "compass"; tiles: { seq: SequenceView; pos: RosePosition }[] };
-type GridLayout = { mode: "grid"; tiles: { seq: SequenceView; index: number }[] };
+/** What the stage renders: the compass rose or the flat cycle grid. */
+export type LayoutMode = "rose" | "grid";
+
+/** A rose cell. `facing` is the DISPLAY facing - the sequence's own tag, or the IE slot facing for an
+ *  untagged BAM cycle (whose seq.facing is "none") - and is unique within one rose. */
+export interface RoseTile {
+    seq: SequenceView;
+    pos: RosePosition;
+    facing: Facing;
+}
+
+export interface GridTile {
+    seq: SequenceView;
+    index: number;
+}
+
+type CompassLayout = { mode: "compass"; tiles: RoseTile[] };
+type GridLayout = { mode: "grid"; tiles: GridTile[] };
 
 /**
  * Compass rose when every sequence maps to a unique compass facing (FRM's 6, or an 8-facing BAM);
@@ -69,10 +86,20 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
     if (allCompass && allUnique) {
         const tiles = view.sequences.flatMap((seq) => {
             const pos = compassPosition(seq.facing);
-            return pos === undefined ? [] : [{ seq, pos }];
+            return pos === undefined ? [] : [{ seq, pos, facing: seq.facing }];
         });
         return { mode: "compass", tiles };
     }
 
     return { mode: "grid", tiles: view.sequences.map((seq, index) => ({ seq, index })) };
+}
+
+/** Rose tiles for one direction block of an IE-interpreted untagged BAM (see cycle-grouping.ts). */
+export function ieRoseTiles(view: AnimationView, interpretation: IeRoseInterpretation, group: number): RoseTile[] {
+    const slots = interpretation.groups[group] ?? [];
+    return slots.flatMap((slot) => {
+        const seq = view.sequences[slot.seqIndex];
+        const pos = compassPosition(slot.facing);
+        return seq && pos ? [{ seq, pos, facing: slot.facing }] : [];
+    });
 }

@@ -4,12 +4,13 @@
     import type { AnimationView } from "../messages";
     import type { Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
-    import { layoutSequences } from "../render/compass-layout";
-    import { analyzeCycleGrid } from "../render/cycle-grouping";
+    import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
+    import { analyzeCycleGrid, interpretIeRose } from "../render/cycle-grouping";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
+    import LayoutModeControls from "./LayoutModeControls.svelte";
     import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -49,6 +50,42 @@
         if (!v || v === columnsSeededView) return;
         columnsSeededView = v;
         cycleColumns = cycleAnalysis?.multiSequence ? cycleAnalysis.suggestedColumns : 0;
+    });
+
+    // Stage layout (rose vs grid). The default derives from detection - tagged compass facings (FRM), the
+    // IE stride-8 fingerprint, or an explicit meta "ie8" declaration - so a fresh open shows the detected
+    // choice; the selector writes `layoutChoice`, which then wins for the webview's lifetime.
+    const facingLayout = $derived(view ? layoutSequences(view) : null);
+    const ieRose = $derived(view ? interpretIeRose(view.sequences, view.frames.length) : undefined);
+    const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
+    const defaultLayoutMode: LayoutMode = $derived(
+        facingLayout?.mode === "compass" || (ieRose && (ieRose.detected || view?.meta.directionLayout === "ie8"))
+            ? "rose"
+            : "grid",
+    );
+    // eslint-disable-next-line prefer-const -- reassigned via onModeChange in the LayoutModeControls markup
+    let layoutChoice = $state<LayoutMode | undefined>();
+    const layoutMode = $derived.by((): LayoutMode => {
+        const choice = layoutChoice ?? defaultLayoutMode;
+        // A sticky "rose" choice can outlive rose-ability (e.g. an import replaced the animation).
+        return choice === "rose" && !roseAvailable ? "grid" : choice;
+    });
+    // IE rose only: which direction block the rose shows. Clamped, not reset, when the view shrinks.
+    // eslint-disable-next-line prefer-const -- reassigned via onGroupChange in the LayoutModeControls markup
+    let roseGroup = $state(0);
+    const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
+    const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
+    const roseTiles = $derived.by((): RoseTile[] => {
+        if (!view) return [];
+        if (facingLayout?.mode === "compass") return facingLayout.tiles;
+        return ieRose ? ieRoseTiles(view, ieRose, clampedRoseGroup) : [];
+    });
+    const gridTiles = $derived.by((): GridTile[] => {
+        if (!view) return [];
+        // The grid branch keeps layoutSequences' special cases (single-orientation FRM collapse); a
+        // compass-capable view forced to grid shows every sequence, labeled by its facing.
+        if (facingLayout?.mode === "grid") return facingLayout.tiles;
+        return view.sequences.map((seq, index) => ({ seq, index }));
     });
 
     $effect(() => {
@@ -148,16 +185,23 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
-    {@const layout = layoutSequences(view)}
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
          the save/import bar spans the bottom. -->
     <div class="editor-layout">
         <div class="stage" bind:this={stageEl}>
             {#if playback}
-                {#if layout.mode === "compass"}
-                    <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+                {#if layoutMode === "rose"}
+                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
                 {:else}
-                    <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} columns={cycleColumns} />
+                    <CycleGrid
+                        {view}
+                        tiles={gridTiles}
+                        frame={playback.frame}
+                        {zoom}
+                        {background}
+                        {showOffsetMarker}
+                        columns={cycleColumns}
+                    />
                 {/if}
             {/if}
         </div>
@@ -171,8 +215,17 @@
                 onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
                 {viewState}
             />
+            {#if roseAvailable}
+                <LayoutModeControls
+                    mode={layoutMode}
+                    onModeChange={(m) => (layoutChoice = m)}
+                    groupCount={roseGroupCount}
+                    group={clampedRoseGroup}
+                    onGroupChange={(g) => (roseGroup = g)}
+                />
+            {/if}
             <MetaControls {view} {bridge} />
-            {#if layout.mode === "grid" && cycleAnalysis?.multiSequence}
+            {#if layoutMode === "grid" && cycleAnalysis?.multiSequence}
                 <CycleLayoutControls
                     cycleCount={view.sequences.length}
                     suggestedColumns={cycleAnalysis.suggestedColumns}

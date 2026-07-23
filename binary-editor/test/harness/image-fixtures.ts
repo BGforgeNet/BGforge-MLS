@@ -117,6 +117,48 @@ export function buildMultiSequenceBamFixture(): AnimationView {
     };
 }
 
+/** 16 cycles in the IE base-file shape: two stride-8 direction blocks, slots 0-4 real per-slot-colored
+ *  cycles (block 1 brighter than block 0 so a group switch is visible), slots 5-7 one shared filler
+ *  frame - the fingerprint interpretIeRose detects, so the editor opens in the rose layout. */
+export function buildDirectionalBamFixture(): AnimationView {
+    const palette = emptyPalette();
+    setColor(palette, MARKER_INDEX, 255, 255, 255);
+    const frames: FrameView[] = [];
+    // Frame 0 is the shared east-slot filler (dark gray).
+    setColor(palette, 30, 60, 60, 60);
+    frames.push(makeFrame(30, 0));
+    const sequences: SequenceView[] = [];
+    for (let block = 0; block < 2; block++) {
+        for (let slot = 0; slot < 8; slot++) {
+            if (slot >= 5) {
+                sequences.push({ frameRefs: [0, 0, 0], facing: "none", dirOffsetX: 0, dirOffsetY: 0 });
+                continue;
+            }
+            const baseIndex = 1 + block * 5 + slot;
+            const [r, g, b] = colorAt(FRM_COLORS, slot); // 5 west slots reuse 5 distinct FRM colors
+            const bright = block === 0 ? 0.55 : 1; // block 0 dimmed, block 1 full - distinct per block
+            setColor(palette, baseIndex, Math.round(r * bright), Math.round(g * bright), Math.round(b * bright));
+            const frameRefs = [0, 1].map((frameIndex) => {
+                frames.push(makeFrame(baseIndex, frameIndex));
+                return frames.length - 1;
+            });
+            sequences.push({ frameRefs, facing: "none", dirOffsetX: 0, dirOffsetY: 0 });
+        }
+    }
+
+    return {
+        palette,
+        frames,
+        sequences,
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+        basename: "harness-fixture-directional",
+        sourceFormat: "bam",
+        hasSidecarPal: false,
+        externalPaletteActive: false,
+        dirty: false,
+    };
+}
+
 export function buildBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
