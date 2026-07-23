@@ -2,6 +2,7 @@ import * as path from "path";
 import {
     convert,
     DEFAULT_FALLOUT_PALETTE,
+    encodeBamc,
     exportApngPerDirection,
     exportPngDirectory,
     serializeBamV1,
@@ -30,15 +31,20 @@ function palettesEqual(a: Rgba[], b: Rgba[]): boolean {
 }
 
 /** Converts anim to the target format and serializes it, adding a `.pal` sidecar when the
- * converted FRM palette could not be losslessly remapped onto the default Fallout palette. */
+ * converted FRM palette could not be losslessly remapped onto the default Fallout palette.
+ * `bamc` is the compressed on-disk encoding of `bam`: the animation converts identically, then the
+ * serialized BAM V1 is wrapped by encodeBamc. */
 export function buildCrossFormatSave(
     anim: Animation,
-    target: "frm" | "bam",
+    target: "frm" | "bam" | "bamc",
     targetPath: string,
     opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest"; singleCycle?: number },
 ): { writes: SaveWrite[]; report: LossReport } {
-    const { animation, report } = convert(anim, target, opts);
-    const bytes = target === "frm" ? serializeFrm(animation) : serializeBamV1(animation);
+    const { animation, report } = convert(anim, target === "frm" ? "frm" : "bam", opts);
+    let bytes: Uint8Array;
+    if (target === "frm") bytes = serializeFrm(animation);
+    else if (target === "bam") bytes = serializeBamV1(animation);
+    else bytes = encodeBamc(serializeBamV1(animation));
     const writes: SaveWrite[] = [{ path: targetPath, bytes }];
     if (target === "frm" && !palettesEqual(animation.palette, DEFAULT_FALLOUT_PALETTE)) {
         writes.push({ path: sidecarPalPath(targetPath), bytes: serializePal(animation.palette) });

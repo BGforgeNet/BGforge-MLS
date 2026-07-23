@@ -7,10 +7,11 @@
     const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
 
     // "Save as" is an ACTION menu: picking an entry immediately runs the save (auto-named next to
-    // the source, host-side). FRM appears only as a target for a NON-FRM source, split by palette mode
-    // (sidecar writes a .pal, nearest remaps to the default Fallout palette) - an FRM source already has
-    // an FRM palette, so it needs neither, and in-place "Save" already covers same-format. Each format
-    // is also skipped when it IS the source's own format (that is what the plain Save button does).
+    // the source, host-side). Every format is offered EXCEPT the source's own exact format - plain "Save"
+    // already writes that in place. FRM is split by palette mode (sidecar writes a .pal, nearest remaps to
+    // the default Fallout palette). BAM has two on-disk encodings that share the .bam extension -
+    // uncompressed (bam) and compressed (bamc) - so both are offered as distinct targets, letting a source
+    // convert between them (a re-encode overwrites <base>.bam, which is intended).
     interface SaveAsOption {
         value: string;
         label: string;
@@ -26,10 +27,14 @@
                       { value: "frm-sidecar", label: "FRM (sidecar palette)", target: "frm", paletteMode: "sidecar" },
                       { value: "frm-nearest", label: "FRM (nearest match)", target: "frm", paletteMode: "nearest" },
                   ];
-        const bamVariant: SaveAsOption[] = source === "bam" ? [] : [{ value: "bam", label: "BAM", target: "bam" }];
+        const bamUncompressed: SaveAsOption[] =
+            source === "bam" ? [] : [{ value: "bam", label: "BAM (uncompressed)", target: "bam" }];
+        const bamCompressed: SaveAsOption[] =
+            source === "bamc" ? [] : [{ value: "bamc", label: "BAM (compressed)", target: "bamc" }];
         return [
             ...frmVariants,
-            ...bamVariant,
+            ...bamUncompressed,
+            ...bamCompressed,
             { value: "apng", label: "APNG", target: "apng" },
             { value: "png-directory", label: "PNG directory", target: "png-directory" },
         ];

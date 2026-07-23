@@ -33,6 +33,15 @@ describe("buildCrossFormatSave", () => {
         expect(report.has("dropped-fps")).toBe(true);
     });
 
+    test("FRM -> BAMC yields a compressed BAM (same .bam path) that re-parses as sourceFormat bamc", () => {
+        const { writes } = buildCrossFormatSave(makeMiniFrm(), "bamc", "/out/x.bam");
+        expect(writes).toHaveLength(1);
+        const main = writes[0];
+        if (!main) throw new Error("expected a main write");
+        expect(main.path).toBe("/out/x.bam");
+        expect(loadImage(main.bytes, "x.bam").meta.sourceFormat).toBe("bamc");
+    });
+
     test("BAM -> FRM with a losslessly-remappable palette needs no .pal sidecar", () => {
         const bam: Animation = {
             palette: emptyPalette(),

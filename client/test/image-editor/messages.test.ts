@@ -6,6 +6,7 @@ test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "editMeta", patch: { fps: 10 } })).toBe(true);
     expect(isWebviewToHost({ type: "setExternalPalette", enabled: true })).toBe(true);
     expect(isWebviewToHost({ type: "saveAs", target: "apng" })).toBe(true);
+    expect(isWebviewToHost({ type: "saveAs", target: "bamc" })).toBe(true);
     expect(isWebviewToHost({ type: "saveAs", target: "frm", paletteMode: "nearest" })).toBe(true);
     expect(isWebviewToHost({ type: "import", mode: "append" })).toBe(true);
 });

@@ -53,9 +53,11 @@ export function decodeFramePixels(b64: string): Uint8Array {
 
 export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex" | "directionLayout">>;
 
-export type SaveAsTarget = "frm" | "bam" | "apng" | "png-directory";
+// "bam" = uncompressed BAM V1, "bamc" = compressed BAMC - two on-disk encodings of the same animation,
+// both using the .bam extension (the host maps the extension; see provider.handleSaveAs).
+export type SaveAsTarget = "frm" | "bam" | "bamc" | "apng" | "png-directory";
 
-const SAVE_AS_TARGETS = new Set<string>(["frm", "bam", "apng", "png-directory"] satisfies SaveAsTarget[]);
+const SAVE_AS_TARGETS = new Set<string>(["frm", "bam", "bamc", "apng", "png-directory"] satisfies SaveAsTarget[]);
 const PALETTE_MODES = new Set<string>(["sidecar", "nearest"]);
 const IMPORT_MODES = new Set<string>(["replace", "append"]);
 const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] satisfies DirectionLayout[]);

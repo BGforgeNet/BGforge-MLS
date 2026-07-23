@@ -141,7 +141,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 return;
             }
 
-            const targetPath = path.join(dir, `${base}.${target}`); // <base>.frm | <base>.bam, auto-named
+            // <base>.frm | <base>.bam, auto-named. BAMC (compressed BAM) shares the .bam extension, so its
+            // output name collides with an uncompressed BAM / the source - a re-encode in place, intended.
+            const ext = target === "bamc" ? "bam" : target;
+            const targetPath = path.join(dir, `${base}.${ext}`);
 
             // A non-directional animation (a native non-directional BAM, or one imported from a PNG
             // directory - frmDirectionMode reads the animation, not the source format) becomes a
