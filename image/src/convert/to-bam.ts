@@ -1,5 +1,5 @@
 import { type Animation, type Frame, type Sequence } from "../model/animation.ts";
-import { translateFrameOffset } from "../model/frame-anchor.ts";
+import { offsetToAnchor } from "../model/frame-anchor.ts";
 import { LossReport } from "./loss-report.ts";
 
 // Converts an FRM-shaped Animation to a BAM-shaped one. Already-BAM input is a no-op
@@ -24,12 +24,28 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
     });
 
     // New Frame objects, not spread: FRM's rawEncoding describes FRM's own on-disk pixel payload and must
-    // not carry over into a BAM-shaped frame (would corrupt serializeBamV1). Translate the per-frame
-    // offset from FRM's feet-relative convention into BAM's center-pixel one so the sprite keeps its
-    // on-screen anchor.
+    // not carry over into a BAM-shaped frame (would corrupt serializeBamV1). The BAM centre pixel IS the
+    // anchor, so set it to the FRM frame's static anchor (bottom-centre + its per-direction offset);
+    // offsetToAnchor deliberately ignores the FRM per-frame offset (an animation delta), so inter-frame
+    // motion is not carried across - see INTERNALS.
     const frames: Frame[] = anim.frames.map((f, i) => {
-        const { offsetX, offsetY } = translateFrameOffset(source, "bam", f, frameDirOffset.get(i));
-        return { width: f.width, height: f.height, pixels: f.pixels, offsetX, offsetY, rleEncoded: false };
+        const dir = frameDirOffset.get(i);
+        const anchor = offsetToAnchor(source, {
+            width: f.width,
+            height: f.height,
+            offsetX: f.offsetX,
+            offsetY: f.offsetY,
+            dirOffsetX: dir?.x ?? 0,
+            dirOffsetY: dir?.y ?? 0,
+        });
+        return {
+            width: f.width,
+            height: f.height,
+            pixels: f.pixels,
+            offsetX: Math.round(anchor.ax),
+            offsetY: Math.round(anchor.ay),
+            rleEncoded: false,
+        };
     });
 
     const palette = anim.palette.map((c) => ({ ...c }));

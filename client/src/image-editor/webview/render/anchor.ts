@@ -28,7 +28,9 @@ export interface AnchorInput {
 
 // The tile pixel a frame's anchor lands on. Exhaustive by SourceFormat: a new format must DECLARE its
 // reference point here (compile error in the default arm otherwise) - the render-domain twin of
-// offsetToAnchor's format-domain switch.
+// offsetToAnchor's format-domain switch. BOTH the sprite position (frameTopLeft) AND the offset marker
+// (referenceMarkerPercent) derive from this ONE function, so they cannot disagree and a new format is
+// correct in both the moment it declares its reference here.
 function referencePoint(format: SourceFormat): { x: number; y: number } {
     switch (format) {
         case "frm":
@@ -47,4 +49,14 @@ export function frameTopLeft(a: AnchorInput): { x: number; y: number } {
     const ref = referencePoint(a.sourceFormat);
     const { ax, ay } = offsetToAnchor(a.sourceFormat, a);
     return { x: ref.x - ax, y: ref.y - ay };
+}
+
+/**
+ * The reference point as a percentage of the tile, for positioning the offset marker so it sits exactly
+ * where the sprite's anchor lands (FRM: the feet line; BAM: the tile centre). Derived from referencePoint
+ * - NOT a hardcoded 50%/50% - so the marker tracks the real anchor for every format, present and future.
+ */
+export function referenceMarkerPercent(format: SourceFormat): { x: number; y: number } {
+    const ref = referencePoint(format);
+    return { x: (ref.x / TILE_BASE_PX) * 100, y: (ref.y / TILE_BASE_PX) * 100 };
 }

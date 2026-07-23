@@ -1,5 +1,5 @@
 import { type Animation, type Facing, type Frame, type Sequence, FRM_FACINGS } from "../model/animation.ts";
-import { translateFrameOffset } from "../model/frame-anchor.ts";
+import { frmDirOffsetForAnchor, offsetToAnchor } from "../model/frame-anchor.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { remapToDefault, remapToNearest } from "./palette-remap.ts";
@@ -231,21 +231,44 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
     const outputPalette = palette.map((c) => ({ ...c }));
 
     // Final frame shape: strip rawEncoding/rleEncoded unconditionally. A carried (sidecar-path) frame's
-    // rawEncoding still describes source on-disk bytes (e.g. BAM RLE), which serializeFrm would
-    // otherwise write verbatim as FRM pixel data and corrupt the output. Translate the per-frame offset
-    // from the source format's convention into FRM's (feet-relative shift) so the sprite keeps its
-    // on-screen anchor; the source (bam/bamc) has no per-direction offset, so srcDirOffset is 0.
+    // rawEncoding still describes source on-disk bytes (e.g. BAM RLE), which serializeFrm would otherwise
+    // write verbatim as FRM pixel data and corrupt the output. The per-FRAME offset is an FRM animation
+    // motion delta, not the anchor, so a converted frame carries none - it is 0; the source's anchor (a
+    // BAM centre) is preserved in the per-DIRECTION header offset below instead.
     const source = anim.meta.sourceFormat;
-    const frames: Frame[] = paletteFrames.map((f) => {
-        const { offsetX, offsetY } = translateFrameOffset(source, "frm", f);
-        return { width: f.width, height: f.height, pixels: f.pixels, offsetX, offsetY };
-    });
+    const frames: Frame[] = paletteFrames.map((f) => ({
+        width: f.width,
+        height: f.height,
+        pixels: f.pixels,
+        offsetX: 0,
+        offsetY: 0,
+    }));
 
     const sequences: Sequence[] = FRM_FACINGS.map((facing, slot) => {
         const refs = frameRefsPerSlot[slot];
         if (!refs) throw new Error(`convertToFrm: missing frame refs for slot ${slot}`);
         return { frameRefs: [...refs], facing };
     });
+
+    // Preserve each rotation's anchor in its per-direction header offset, computed from that rotation's
+    // frame-0 source anchor (a BAM centre). FRM's static anchor is per-rotation, not per-frame, so a
+    // rotation whose frames have differing centres keeps only frame-0's; inter-frame motion (which would
+    // live in the per-frame delta) is not carried - see INTERNALS. offsetToAnchor reads the source frame's
+    // stored anchor (its BAM centre); frmDirOffsetForAnchor inverts it into FRM's header-offset field.
+    const dirOffsetsX: number[] = [];
+    const dirOffsetsY: number[] = [];
+    for (let slot = 0; slot < FRM_FACINGS.length; slot++) {
+        const first = frameRefsPerSlot[slot]?.[0];
+        const f0 = first === undefined ? undefined : paletteFrames[first];
+        if (!f0) {
+            dirOffsetsX.push(0);
+            dirOffsetsY.push(0);
+            continue;
+        }
+        const dir = frmDirOffsetForAnchor(f0.width, f0.height, offsetToAnchor(source, f0));
+        dirOffsetsX.push(dir.x);
+        dirOffsetsY.push(dir.y);
+    }
 
     const animation: Animation = {
         palette: outputPalette,
@@ -257,8 +280,8 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
             actionFrame: anim.meta.actionFrame ?? 0,
             directionLayout: "frm6",
             frmVersion: 4,
-            dirOffsetsX: [0, 0, 0, 0, 0, 0],
-            dirOffsetsY: [0, 0, 0, 0, 0, 0],
+            dirOffsetsX,
+            dirOffsetsY,
         },
     };
 

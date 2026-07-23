@@ -315,10 +315,11 @@ select {
 /* Offset/center-anchor marker: a diagnostic crosshair, not editor chrome - a fixed accent color with
    difference blending keeps it visible over any of the three preview backgrounds (transparent/
    checkered/green), which a single theme color could not guarantee against all three. */
+/* left/top come from FrameCanvas (referenceMarkerPercent) so the marker sits on the frame's real anchor
+   per format - feet line for FRM, centre for BAM - not a fixed tile centre. translate centres it on that
+   point. */
 .frame-offset-marker {
     position: absolute;
-    left: 50%;
-    top: 50%;
     width: 14px;
     height: 14px;
     transform: translate(-50%, -50%);

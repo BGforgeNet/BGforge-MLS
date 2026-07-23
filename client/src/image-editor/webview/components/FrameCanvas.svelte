@@ -2,7 +2,7 @@
     import type { Rgba, SourceFormat } from "@bgforge/image";
     import { decodeFramePixels, type FrameView } from "../messages";
     import { checkerboardCss, frameToRgba, GREEN, type Background } from "../render/indexed-to-rgba";
-    import { frameTopLeft } from "../render/anchor";
+    import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
     import { TILE_BASE_PX } from "../render/tile";
 
     const {
@@ -40,6 +40,10 @@
             dirOffsetY,
         }),
     );
+
+    // The offset marker sits on the sprite's actual anchor - the tile reference point (feet line for FRM,
+    // centre for BAM) - derived from the same referencePoint the sprite is positioned by, never a fixed 50%.
+    const markerPos = $derived(referenceMarkerPercent(sourceFormat));
 
     // eslint-disable-next-line prefer-const -- reassigned via bind:this in the template
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -93,6 +97,6 @@
 >
     <canvas bind:this={canvasEl} style:left="{topLeft.x * zoom}px" style:top="{topLeft.y * zoom}px"></canvas>
     {#if showOffsetMarker}
-        <div class="frame-offset-marker" aria-hidden="true"></div>
+        <div class="frame-offset-marker" style:left="{markerPos.x}%" style:top="{markerPos.y}%" aria-hidden="true"></div>
     {/if}
 </div>
