@@ -85,5 +85,5 @@
         items={saveAsOptions.map((o) => ({ value: o.value, label: o.label }))}
         onselect={chooseSaveAs}
     />
-    <ActionMenu label="Import..." ariaLabel="Import" items={IMPORT_ITEMS} onselect={chooseImport} />
+    <ActionMenu label="Import PNG directory..." ariaLabel="Import PNG directory" items={IMPORT_ITEMS} onselect={chooseImport} />
 </div>
