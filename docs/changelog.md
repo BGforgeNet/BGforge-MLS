@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The animation editor now opens Fallout critters stored as split direction files (`.fr0`-`.fr5`). Opening any one loads all six facings together; saving writes a single combined `.frm` (the original split files are left in place).
 - Fixed: editor startup no longer waits for the initial workspace scan (previously several seconds on large mods). Indexing runs in the background; find references and workspace symbols may return partial results until it finishes.
 
 ## 3.11.0

@@ -63,6 +63,14 @@ export class ImageDocumentModel {
         return new ImageDocumentModel(animation, basename, sidecarPalette);
     }
 
+    // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
+    // via combineFrmDirections), so the byte-sniffing loadImage path is bypassed. basename is the
+    // combined `<base>.frm` identity the editor should present and save to.
+    static fromAnimation(animation: Animation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
+        const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
+        return new ImageDocumentModel(animation, basename, sidecarPalette);
+    }
+
     private setSidecar(sidecarPalette: Rgba[] | undefined): void {
         this.sidecarPalette = sidecarPalette;
         this.hasSidecar = sidecarPalette !== undefined;
@@ -224,7 +232,12 @@ export class ImageDocumentModel {
     }
 
     reload(bytes: Uint8Array, sidecarBytes?: Uint8Array): void {
-        this.animationValue = loadImage(bytes, this.basename);
+        this.reloadAnimation(loadImage(bytes, this.basename), sidecarBytes);
+    }
+
+    // Reload from an already-combined animation (the FR-split path), skipping byte sniffing.
+    reloadAnimation(animation: Animation, sidecarBytes?: Uint8Array): void {
+        this.animationValue = animation;
         this.setSidecar(sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined);
         this.undoStack = [];
         this.redoStack = [];

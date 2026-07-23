@@ -448,6 +448,24 @@
                         "filenamePattern": "*.frm"
                     },
                     {
+                        "filenamePattern": "*.fr0"
+                    },
+                    {
+                        "filenamePattern": "*.fr1"
+                    },
+                    {
+                        "filenamePattern": "*.fr2"
+                    },
+                    {
+                        "filenamePattern": "*.fr3"
+                    },
+                    {
+                        "filenamePattern": "*.fr4"
+                    },
+                    {
+                        "filenamePattern": "*.fr5"
+                    },
+                    {
                         "filenamePattern": "*.bam"
                     }
                 ],

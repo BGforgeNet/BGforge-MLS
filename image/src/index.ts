@@ -3,6 +3,7 @@ export * from "./model/animation.ts";
 export * from "./model/frame-anchor.ts";
 export * from "./frm/parse.ts";
 export * from "./frm/serialize.ts";
+export * from "./frm/combine.ts";
 export * from "./bam/parse.ts";
 export * from "./bam/serialize.ts";
 export * from "./bam/bamc.ts";

@@ -292,7 +292,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     async saveCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {
-        await this.writeSave(document, document.uri.fsPath, document.uri);
+        // A Fallout .fr0-.fr5 split set saves to the combined <base>.frm (document.savePath), never
+        // back to the opened .frN member; the six split files are left untouched.
+        const targetPath = document.savePath;
+        const primary = targetPath === document.uri.fsPath ? document.uri : vscode.Uri.file(targetPath);
+        await this.writeSave(document, targetPath, primary);
     }
 
     async saveCustomDocumentAs(
