@@ -203,6 +203,53 @@ select {
     font-size: 0.9em;
 }
 
+/* "Save as" action menu: a button that opens an upward menu (the toolbar sits at the bottom). A native
+   <select> always highlights its current option on open, so the "Save as..." placeholder shows
+   pre-selected; a hand-rolled menu opens with nothing highlighted. */
+.saveas {
+    position: relative;
+    display: inline-flex;
+}
+.saveas-trigger::after {
+    content: "";
+    display: inline-block;
+    margin-left: 0.4rem;
+    border-left: 0.3em solid transparent;
+    border-right: 0.3em solid transparent;
+    border-top: 0.3em solid currentColor;
+    vertical-align: middle;
+}
+.saveas-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 0.25rem;
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0.15rem;
+    background: var(--vscode-menu-background, var(--vscode-input-background));
+    color: var(--vscode-menu-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+    white-space: nowrap;
+    z-index: 10;
+}
+/* Menu items read as menu rows, not filled buttons: override the generic button fill. */
+.saveas-item {
+    background: transparent;
+    color: inherit;
+    border: none;
+    border-radius: 2px;
+    text-align: left;
+    padding: 0.25rem 0.6rem;
+}
+.saveas-item:hover {
+    background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-menu-selectionForeground, inherit);
+}
+
 /* ---- stage (the compass rose / cycle grid player) ---- */
 .stage {
     flex: 1 1 auto;
