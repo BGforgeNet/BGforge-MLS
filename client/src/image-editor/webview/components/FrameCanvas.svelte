@@ -41,9 +41,9 @@
         }),
     );
 
-    // The offset marker sits on the sprite's actual anchor - the tile reference point (feet line for FRM,
-    // centre for BAM) - derived from the same referencePoint the sprite is positioned by, never a fixed 50%.
-    const markerPos = $derived(referenceMarkerPercent(sourceFormat));
+    // The offset marker sits on the sprite's actual anchor - the tile reference point the sprite is
+    // positioned by (format-independent), never a fixed 50%.
+    const markerPos = referenceMarkerPercent();
 
     // eslint-disable-next-line prefer-const -- reassigned via bind:this in the template
     let canvasEl = $state<HTMLCanvasElement | undefined>();

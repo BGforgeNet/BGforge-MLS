@@ -1,8 +1,6 @@
 import { expect, test } from "vitest";
-import { type Animation, type SourceFormat, convertToFrm, emptyPalette, offsetToAnchor } from "@bgforge/image";
+import { type Animation, convertToFrm, emptyPalette, offsetToAnchor } from "@bgforge/image";
 import { frameTopLeft, referenceMarkerPercent } from "../../src/image-editor/webview/render/anchor";
-
-const ALL_FORMATS: SourceFormat[] = ["frm", "bam", "bamc"];
 
 // TILE_BASE_PX is 96; these expectations are derived from the fallout2-ce anchor formula, not copied
 // from current output. FRM: the anchor is bottom-centre (width/2, height-1) plus the per-DIRECTION header
@@ -39,7 +37,7 @@ test("the FRM per-direction offset shifts the anchor, but the per-frame offset i
     expect(tl.y).toBeCloseTo(88.32 - 73); // 15.32
 });
 
-test("BAM places its stored center pixel on the tile center - a different convention from FRM", () => {
+test("BAM places its stored centre pixel on the SAME reference line as FRM (unified preview)", () => {
     const tl = frameTopLeft({
         sourceFormat: "bam",
         width: 40,
@@ -49,8 +47,10 @@ test("BAM places its stored center pixel on the tile center - a different conven
         dirOffsetX: 0,
         dirOffsetY: 0,
     });
+    // The reference is format-independent now: the ground line at 0.92*96 = 88.32, not the tile centre -
+    // so a BAM sprite and its FRM conversion render at the same tile position.
     expect(tl.x).toBeCloseTo(48 - 20); // 28
-    expect(tl.y).toBeCloseTo(48 - 30); // 18
+    expect(tl.y).toBeCloseTo(88.32 - 30); // 58.32
 });
 
 test("converting BAM->FRM preserves the anchor pixel via the per-direction offset (not the per-frame offset)", () => {
@@ -87,22 +87,10 @@ test("converting BAM->FRM preserves the anchor pixel via the per-direction offse
     expect(Math.abs(frmAnchor.ay - bamAnchor.ay)).toBeLessThanOrEqual(0.5);
 });
 
-test("the offset marker sits on each format's real reference: FRM at the feet line, BAM at the tile centre", () => {
-    // Derived from referencePoint, NOT a hardcoded 50%/50% - so the marker lands where the sprite actually
-    // anchors (FRM feet = 92% of the tile, BAM centre = 50%), and can't lie the way the old fixed marker did.
-    expect(referenceMarkerPercent("frm")).toEqual({ x: 50, y: 92 });
-    expect(referenceMarkerPercent("bam")).toEqual({ x: 50, y: 50 });
-    expect(referenceMarkerPercent("bamc")).toEqual({ x: 50, y: 50 });
-});
-
-test("guard: every SourceFormat yields a marker position inside the tile (a new format must declare one)", () => {
-    for (const format of ALL_FORMATS) {
-        const p = referenceMarkerPercent(format);
-        expect(p.x).toBeGreaterThanOrEqual(0);
-        expect(p.x).toBeLessThanOrEqual(100);
-        expect(p.y).toBeGreaterThanOrEqual(0);
-        expect(p.y).toBeLessThanOrEqual(100);
-    }
+test("the offset marker sits on the unified reference (ground line) - format-independent, not a fixed 50%", () => {
+    // One reference for every format, so the marker lands on the sprite's real anchor and a converted
+    // sprite's marker does not jump between the BAM and FRM previews.
+    expect(referenceMarkerPercent()).toEqual({ x: 50, y: 92 });
 });
 
 test("BAMC uses the same center-pixel anchor as BAM", () => {
