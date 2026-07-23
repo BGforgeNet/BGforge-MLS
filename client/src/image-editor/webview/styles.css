@@ -279,6 +279,19 @@ select {
     justify-content: center;
     gap: 0.75rem;
 }
+/* Multi-sequence layout: pin to a fixed column count (set inline) so each row is one sequence and each
+   column a direction, instead of width-driven wrapping. grid-template-columns comes from the control. */
+.cycle-grid.fixed-columns {
+    display: grid;
+    justify-content: center;
+}
+/* The cycle-layout hint reads as secondary guidance, not a control label. */
+.cycle-hint {
+    margin: 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    line-height: 1.35;
+}
 .cycle-cell {
     display: flex;
     flex-direction: column;

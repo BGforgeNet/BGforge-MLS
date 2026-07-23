@@ -5,9 +5,11 @@
     import type { Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { layoutSequences } from "../render/compass-layout";
+    import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
+    import CycleLayoutControls from "./CycleLayoutControls.svelte";
     import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -37,6 +39,17 @@
     let showOffsetMarker = $state(false);
     // eslint-disable-next-line prefer-const -- assigned via bind:this in the markup
     let stageEl = $state<HTMLDivElement>();
+    // Manual cycle-grid column count (0 = auto-wrap). Seeded per-view from the multi-sequence heuristic
+    // (many cycles -> lay out as rows=sequences x columns=directions), then user-overridable.
+    let cycleColumns = $state(0);
+    let columnsSeededView: AnimationView | undefined;
+    const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length) : undefined);
+    $effect(() => {
+        const v = view;
+        if (!v || v === columnsSeededView) return;
+        columnsSeededView = v;
+        cycleColumns = cycleAnalysis?.multiSequence ? cycleAnalysis.suggestedColumns : 0;
+    });
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -144,7 +157,7 @@
                 {#if layout.mode === "compass"}
                     <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
                 {:else}
-                    <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+                    <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} columns={cycleColumns} />
                 {/if}
             {/if}
         </div>
@@ -159,6 +172,14 @@
                 {viewState}
             />
             <MetaControls {view} {bridge} />
+            {#if layout.mode === "grid" && cycleAnalysis?.multiSequence}
+                <CycleLayoutControls
+                    cycleCount={view.sequences.length}
+                    suggestedColumns={cycleAnalysis.suggestedColumns}
+                    columns={cycleColumns}
+                    onColumnsChange={(c) => (cycleColumns = c)}
+                />
+            {/if}
             {#if playback}
                 <PlaybackControls state={playback} onChange={(next) => (playback = next)} />
             {/if}

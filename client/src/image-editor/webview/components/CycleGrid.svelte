@@ -10,12 +10,14 @@
         zoom,
         background,
         showOffsetMarker = false,
+        columns = 0,
     }: {
         view: AnimationView;
         frame: number;
         zoom: number;
         background: Background;
         showOffsetMarker?: boolean;
+        columns?: number; // >0 pins the grid to that many columns (rows=sequences); 0 = auto-wrap
     } = $props();
 
     // The grid fallback: non-directional animations, or duplicate facings that cannot share a compass
@@ -26,7 +28,11 @@
     });
 </script>
 
-<div class="cycle-grid">
+<div
+    class="cycle-grid"
+    class:fixed-columns={columns > 0}
+    style={columns > 0 ? `grid-template-columns: repeat(${columns}, auto)` : undefined}
+>
     {#each tiles as tile (tile.index)}
         {@const clampedIndex = Math.min(frame, tile.seq.frameRefs.length - 1)}
         {@const frameRef = tile.seq.frameRefs[clampedIndex]}
