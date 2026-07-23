@@ -160,7 +160,23 @@ export class ImageDocumentModel {
 
     applyMetaPatch(patch: MetaPatch): void {
         this.snapshotForUndo();
-        this.animationValue = { ...this.animationValue, meta: { ...this.animationValue.meta, ...patch } };
+        let frames = this.animationValue.frames;
+        // A BAM frame's cached rawEncoding is RLE-encoded against the transparent index it was parsed
+        // with; serializing it verbatim under an edited header index yields an unreadable stream. Drop
+        // the caches so the serializer writes those frames uncompressed instead.
+        if (
+            patch.transparentIndex !== undefined &&
+            patch.transparentIndex !== this.animationValue.meta.transparentIndex
+        ) {
+            frames = frames.map((f) => ({
+                width: f.width,
+                height: f.height,
+                pixels: f.pixels,
+                offsetX: f.offsetX,
+                offsetY: f.offsetY,
+            }));
+        }
+        this.animationValue = { ...this.animationValue, frames, meta: { ...this.animationValue.meta, ...patch } };
         this.markDirty();
     }
 

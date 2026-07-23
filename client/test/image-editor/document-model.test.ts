@@ -30,6 +30,37 @@ test("resolvedAnimation swaps the FRM all-black placeholder palette for the acti
     expect(model.resolvedAnimation().palette.some((c) => c.r !== 0 || c.g !== 0 || c.b !== 0)).toBe(true);
 });
 
+test("editing the transparent index keeps RLE-parsed frames decodable (cached encodings dropped)", () => {
+    // A frame as parseBamV1 produces it: rawEncoding RLE-encoded against transparent index 0
+    // ([1, 0, 2] = literal 1, then a 0-run of 3). Prove the fixture matches the real on-disk
+    // encoding first: serialize (which writes rawEncoding verbatim) and re-parse.
+    const rle = {
+        palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+        frames: [
+            {
+                width: 2,
+                height: 2,
+                pixels: Uint8Array.from([1, 0, 0, 0]),
+                offsetX: 0,
+                offsetY: 0,
+                rawEncoding: Uint8Array.from([1, 0, 2]),
+                rleEncoded: true,
+            },
+        ],
+        sequences: [{ frameRefs: [0], facing: "none" as const }],
+        meta: { sourceFormat: "bam" as const, transparentIndex: 0 },
+    };
+    expect([...loadImage(serializeBamV1(rle), "x.bam").frames[0]!.pixels]).toEqual([1, 0, 0, 0]);
+
+    const model = ImageDocumentModel.fromBytes(serializeBamV1(rle), "x.bam");
+    model.applyMetaPatch({ transparentIndex: 1 });
+    // The header now says transparent=1; the cached RLE stream (encoded under 0) must not be
+    // written verbatim beneath it or the file is unreadable.
+    const saved = loadImage(model.getBytes(), "x.bam");
+    expect(saved.meta.transparentIndex).toBe(1);
+    expect([...saved.frames[0]!.pixels]).toEqual([1, 0, 0, 0]);
+});
+
 test("applyMetaPatch sets dirty, round-trips through getBytes, and undo restores", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     let changes = 0;
