@@ -5,7 +5,6 @@ import {
     serializeFrm,
     parseFrm,
     DEFAULT_FALLOUT_PALETTE,
-    IE8_FACINGS,
     type Animation,
     type Facing,
     type Frame,
@@ -46,9 +45,9 @@ function synthBam(seqLens: number[], facings?: Facing[]): Animation {
 }
 
 describe("convertToFrm", () => {
-    it("uses an explicit 8-facing layout to select the 6 FRM directions and drop the rest", () => {
+    it("maps an 8-cycle source onto the 6 FRM directions (IE8 order) and drops the rest", () => {
         const source = synthBam([2, 2, 2, 2, 2, 2, 2, 2]);
-        const { animation, report } = convertToFrm(source, { layout: [...IE8_FACINGS] });
+        const { animation, report } = convertToFrm(source);
 
         expect(animation.meta.sourceFormat).toBe("frm");
         expect(animation.meta.directionLayout).toBe("frm6");
@@ -70,6 +69,19 @@ describe("convertToFrm", () => {
 
         const paddedItems = report.items.filter((i) => i.kind === "padded-sequence");
         expect(paddedItems).toHaveLength(lens.filter((n) => n !== maxLen).length);
+    });
+
+    it("pads a zero-frame direction with 1x1 transparent frames", () => {
+        const source = synthBam([2, 0, 2, 2, 2, 2]); // slot 1 has no frames at all
+        const { animation, report } = convertToFrm(source);
+        expect(report.has("padded-sequence")).toBe(true);
+        const seq = animation.sequences[1];
+        if (!seq) throw new Error("missing padded sequence");
+        expect(seq.frameRefs).toHaveLength(2);
+        const pad = animation.frames[seq.frameRefs[0] ?? -1];
+        if (!pad) throw new Error("missing padded frame");
+        expect([pad.width, pad.height]).toEqual([1, 1]); // no sibling frame to size from -> minimal
+        expect([...pad.pixels]).toEqual([0]);
     });
 
     it("duplicates a frame shared across directions and reports it", () => {
@@ -148,7 +160,7 @@ describe("convertToFrm", () => {
 
     it("produces an FRM animation that serializes and reparses with pixels intact", () => {
         const source = synthBam([2, 2, 2, 2, 2, 2, 2, 2]);
-        const { animation } = convertToFrm(source, { layout: [...IE8_FACINGS] });
+        const { animation } = convertToFrm(source);
 
         const bytes = serializeFrm(animation);
         const reparsed = parseFrm(bytes);
@@ -204,26 +216,20 @@ describe("convertToFrm", () => {
         expect(animation).not.toBe(src); // a fresh object, per the clone contract
     });
 
-    it("throws when opts.layout length does not match the sequence count", () => {
-        const src = synthBam([1, 1, 1, 1, 1, 1, 1, 1]); // 8 sequences
-        expect(() => convertToFrm(src, { layout: [...IE8_FACINGS].slice(0, 5) })).toThrow(
-            /opts\.layout has 5 entries, expected 8/,
-        );
+    it("throws on facing tags claiming the same FRM facing twice", () => {
+        // 7 cycles so the count-derived layouts don't apply and the sequences' own tags drive the mapping.
+        const facings: Facing[] = ["NE", "NE", "SE", "SW", "W", "NW", "N"]; // NE claimed twice
+        const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
+        expect(() => convertToFrm(src)).toThrow(/duplicate FRM facing "NE"/);
     });
 
-    it("throws on a layout with a duplicate FRM facing", () => {
-        const src = synthBam([1, 1, 1, 1, 1, 1]);
-        const layout: Facing[] = ["NE", "NE", "SE", "SW", "W", "NW"]; // NE claimed twice
-        expect(() => convertToFrm(src, { layout })).toThrow(/duplicate FRM facing "NE"/);
-    });
-
-    it("reuses a direction and reports empty-direction when a FRM facing is absent from the layout", () => {
-        // Layout covers NE,E,SE,SW,W and N (no NW); the NW slot has no source and reuses slot 0.
-        const src = synthBam([1, 1, 1, 1, 1, 1]);
-        const layout: Facing[] = ["NE", "E", "SE", "SW", "W", "N"];
-        const { animation, report } = convertToFrm(src, { layout });
+    it("reuses a direction and reports empty-direction when a FRM facing is absent from the tags", () => {
+        // Tags cover NE,E,SE,SW,W plus N and S (no NW); the NW slot has no source and reuses slot 0.
+        const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "N", "S"];
+        const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
+        const { animation, report } = convertToFrm(src);
         expect(report.has("empty-direction")).toBe(true);
-        expect(report.has("dropped-direction")).toBe(true); // N is dropped
+        expect(report.has("dropped-direction")).toBe(true); // N and S are dropped
         expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
     });
 

@@ -7,8 +7,8 @@ export { convertToBam } from "./to-bam.ts";
 export { convertToFrm, frmDirectionMode, type FrmConvertOpts } from "./to-frm.ts";
 
 // Dispatches to the target-specific converter; each already handles the already-target-format no-op
-// case. `opts` (direction layout, palette mode, or a single-orientation cycle) forwards to convertToFrm,
-// so a caller can convert a non-standard-cycle BAM through the dispatcher; convertToBam takes no options.
+// case. `opts` (palette mode or a single-orientation cycle) forwards to convertToFrm, so a caller can
+// convert a non-standard-cycle BAM through the dispatcher; convertToBam takes no options.
 export function convert(
     anim: Animation,
     target: "frm" | "bam",

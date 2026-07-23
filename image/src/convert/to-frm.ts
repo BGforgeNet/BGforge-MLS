@@ -12,7 +12,6 @@ import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./pa
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
 export interface FrmConvertOpts {
-    layout?: Facing[];
     paletteMode?: "sidecar" | "nearest";
     /** Non-directional source only: the cycle index that fills all 6 FRM rotations (single-orientation). */
     singleCycle?: number;
@@ -29,15 +28,7 @@ export function frmDirectionMode(anim: Animation): "directional" | "single-orien
     return facingsForCycleCount(anim.sequences.length) === null ? "single-orientation" : "directional";
 }
 
-function resolveFacings(anim: Animation, opts?: { layout?: Facing[] }): Facing[] {
-    if (opts?.layout) {
-        if (opts.layout.length !== anim.sequences.length) {
-            throw new Error(
-                `convertToFrm: opts.layout has ${opts.layout.length} entries, expected ${anim.sequences.length} (one per sequence)`,
-            );
-        }
-        return [...opts.layout];
-    }
+function resolveFacings(anim: Animation): Facing[] {
     const derived = facingsForCycleCount(anim.sequences.length);
     if (derived) return derived;
     const ownFacings = anim.sequences.map((s) => s.facing);
@@ -84,12 +75,8 @@ function buildSingleOrientationSlots(
  * shared across rotations (FRM cannot share a frame object across directions) and padding short
  * rotations to the longest with fully-transparent frames.
  */
-function buildDirectionalSlots(
-    anim: Animation,
-    opts: { layout?: Facing[] } | undefined,
-    report: LossReport,
-): { pool: Frame[]; frameRefsPerSlot: number[][] } {
-    const facings = resolveFacings(anim, opts);
+function buildDirectionalSlots(anim: Animation, report: LossReport): { pool: Frame[]; frameRefsPerSlot: number[][] } {
+    const facings = resolveFacings(anim);
 
     const { dropped } = partitionForFrm(facings);
     // Reject an ambiguous layout: two source directions claiming the same FRM facing cannot both occupy
@@ -214,7 +201,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
     const { pool, frameRefsPerSlot } =
         singleCycle !== undefined
             ? buildSingleOrientationSlots(anim, singleCycle, report)
-            : buildDirectionalSlots(anim, opts, report);
+            : buildDirectionalSlots(anim, report);
 
     const defaultRemap = remapToDefault(pool, anim.palette, transparentIndexOf(anim.meta));
     let paletteFrames = defaultRemap.frames;

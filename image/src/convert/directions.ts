@@ -9,7 +9,7 @@ export const IE8_FACINGS: readonly Facing[] = ["S", "SW", "W", "NW", "N", "NE", 
 export function facingsForCycleCount(count: number): Facing[] | null {
     if (count === 8) return [...IE8_FACINGS];
     if (count === 6) return [...FRM_FACINGS];
-    return null; // 5/9/16/other schemes need an explicit layout (slot-modeling deferred)
+    return null; // 5/9/16/other schemes rely on the sequences' own facing tags or a single-orientation pick
 }
 
 export function partitionForFrm(facings: Facing[]): { kept: number[]; dropped: number[] } {
