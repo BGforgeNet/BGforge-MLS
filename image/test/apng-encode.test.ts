@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { encodeApng, decodeApng, readChunks, emptyPalette } from "@bgforge/image";
+import { emptyPalette } from "@bgforge/image";
+import { decodeApng, encodeApng } from "../src/png/apng.ts";
+import { readChunks } from "../src/png/chunk.ts";
 
 describe("encodeApng", () => {
     it("throws when given no frames", () => {

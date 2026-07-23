@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET, IE8_FACINGS } from "@bgforge/image";
+import {
+    facingsForCycleCount,
+    partitionForFrm,
+    frmSlotOrder,
+    FRM_FACING_SET,
+    IE8_FACINGS,
+} from "../src/convert/directions.ts";
 describe("direction facings", () => {
     it("IE 8-dir order is S,SW,W,NW,N,NE,E,SE (0=S, CCW)", () => {
         expect(IE8_FACINGS).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);

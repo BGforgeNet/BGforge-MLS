@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-    decodeApng,
-    encodeApng,
-    emptyPalette,
-    writeChunk,
-    PNG_SIGNATURE,
-    buildIhdr,
-    deflateScanlines,
-} from "@bgforge/image";
+import { emptyPalette } from "@bgforge/image";
+import { decodeApng, encodeApng } from "../src/png/apng.ts";
+import { PNG_SIGNATURE, writeChunk } from "../src/png/chunk.ts";
+import { buildIhdr, deflateScanlines } from "../src/png/encode.ts";
 
 function concatParts(parts: Uint8Array[]): Uint8Array {
     const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0));

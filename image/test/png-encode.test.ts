@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import zlib from "zlib";
-import { encodeIndexedPng, readChunks, emptyPalette } from "@bgforge/image";
+import { emptyPalette } from "@bgforge/image";
+import { readChunks } from "../src/png/chunk.ts";
+import { encodeIndexedPng } from "../src/png/encode.ts";
 
 describe("encodeIndexedPng", () => {
     it("writes a valid colour-type-3 PNG whose IDAT unfilters to the pixels", () => {

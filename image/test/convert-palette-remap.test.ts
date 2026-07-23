@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-    normalizeTransparentToZero,
-    remapToDefault,
-    remapToNearest,
-    DEFAULT_FALLOUT_PALETTE,
-    emptyPalette,
-    type Animation,
-    type Frame,
-    type Rgba,
-} from "@bgforge/image";
+import { DEFAULT_FALLOUT_PALETTE, emptyPalette, type Animation, type Frame, type Rgba } from "@bgforge/image";
+import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "../src/convert/palette-remap.ts";
 
 function frame(pixels: number[]): Frame {
     return { width: pixels.length, height: 1, pixels: new Uint8Array(pixels), offsetX: 0, offsetY: 0 };

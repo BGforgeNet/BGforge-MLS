@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-    type Animation,
-    type Frame,
-    emptyPalette,
-    encodeIndexedPng,
-    exportPngDirectory,
-    importPngDirectory,
-} from "@bgforge/image";
+import { type Animation, type Frame, emptyPalette, exportPngDirectory, importPngDirectory } from "@bgforge/image";
+import { encodeIndexedPng } from "../src/png/encode.ts";
 
 // Six sequences (one per FRM facing), with distinct frame counts, pixel content,
 // and offsets, so the round-trip test can distinguish a mixed-up ordering from a

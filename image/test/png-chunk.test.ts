@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { crc32, writeChunk, readChunks, PNG_SIGNATURE, encodeIndexedPng, emptyPalette } from "@bgforge/image";
+import { emptyPalette } from "@bgforge/image";
+import { crc32 } from "../src/png/crc.ts";
+import { PNG_SIGNATURE, readChunks, writeChunk } from "../src/png/chunk.ts";
+import { encodeIndexedPng } from "../src/png/encode.ts";
 
 describe("png chunk primitives", () => {
     it("crc32 matches the known PNG IEND CRC", () => {

@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 import zlib from "zlib";
-import {
-    encodeIndexedPng,
-    decodeIndexedPng,
-    unfilterScanlines,
-    writeChunk,
-    PNG_SIGNATURE,
-    emptyPalette,
-} from "@bgforge/image";
+import { emptyPalette } from "@bgforge/image";
+import { PNG_SIGNATURE, writeChunk } from "../src/png/chunk.ts";
+import { decodeIndexedPng, unfilterScanlines } from "../src/png/decode.ts";
+import { encodeIndexedPng } from "../src/png/encode.ts";
 
 function buildIhdr(width: number, height: number, colourType: number): Uint8Array {
     const data = new Uint8Array(13);
