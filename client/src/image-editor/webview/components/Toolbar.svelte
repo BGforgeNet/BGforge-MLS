@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { tick } from "svelte";
     import type { Bridge } from "../state/bridge";
     import type { AnimationView, SaveAsTarget } from "../messages";
     import type { SourceFormat } from "@bgforge/image";
+    import ActionMenu from "./ActionMenu.svelte";
 
     const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
 
-    // "Save as" is an ACTION menu: picking an entry immediately runs the save (auto-named next to
-    // the source, host-side). Every format is offered EXCEPT the source's own exact format - plain "Save"
-    // already writes that in place. FRM is split by palette mode (sidecar writes a .pal, nearest remaps to
-    // the default Fallout palette). BAM has two on-disk encodings that share the .bam extension -
-    // uncompressed (bam) and compressed (bamc) - so both are offered as distinct targets, letting a source
-    // convert between them (a re-encode overwrites <base>.bam, which is intended).
+    // "Save as" and "Import" are both ActionMenu dropdowns: picking an entry immediately runs the action
+    // (host-side, auto-named next to the source). Every save format is offered EXCEPT the source's own
+    // exact format - plain "Save" already writes that in place. FRM is split by palette mode (sidecar
+    // writes a .pal, nearest remaps to the default Fallout palette). BAM has two on-disk encodings that
+    // share the .bam extension - uncompressed (bam) and compressed (bamc) - so both are offered as distinct
+    // targets, letting a source convert between them (a re-encode overwrites <base>.bam, which is intended).
     interface SaveAsOption {
         value: string;
         label: string;
@@ -42,32 +42,27 @@
 
     const saveAsOptions = $derived(buildSaveAsOptions(view.sourceFormat));
 
-    // Hand-rolled menu, not a native <select>: a native select's popup always highlights its current
-    // value, so the "Save as..." placeholder shows pre-selected the moment it opens. This menu opens
-    // with nothing highlighted, and (toolbar sits at the bottom) drops upward.
-    let saveAsOpen = $state(false);
-    // eslint-disable-next-line prefer-const -- assigned via bind:this in the markup
-    let saveAsRoot = $state<HTMLDivElement>();
+    // Import brings in a PNG directory's cycles, either replacing every current cycle or appending to them.
+    const IMPORT_ITEMS = [
+        {
+            value: "replace",
+            label: "Replace all cycles...",
+            title: "Replace every cycle with an imported PNG directory (its folder or manifest.json)",
+        },
+        {
+            value: "append",
+            label: "Append cycles...",
+            title: "Add an imported PNG directory's cycles after the existing ones",
+        },
+    ];
 
-    function menuItems(): HTMLButtonElement[] {
-        return saveAsRoot ? [...saveAsRoot.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')] : [];
-    }
-    function focusTrigger(): void {
-        saveAsRoot?.querySelector<HTMLButtonElement>(".saveas-trigger")?.focus();
-    }
-
-    function openSaveAs(focusFirst: boolean): void {
-        saveAsOpen = true;
-        // Keyboard open (ArrowDown) moves focus into the menu; mouse open leaves nothing highlighted.
-        if (focusFirst) void tick().then(() => menuItems()[0]?.focus());
-    }
-    function closeSaveAs(refocus: boolean): void {
-        saveAsOpen = false;
-        if (refocus) focusTrigger();
+    function handleSave(): void {
+        bridge.send({ type: "save" });
     }
 
-    function chooseSaveAs(option: SaveAsOption): void {
-        closeSaveAs(false);
+    function chooseSaveAs(value: string): void {
+        const option = saveAsOptions.find((o) => o.value === value);
+        if (!option) return;
         if (option.paletteMode) {
             bridge.send({ type: "saveAs", target: option.target, paletteMode: option.paletteMode });
         } else {
@@ -75,99 +70,20 @@
         }
     }
 
-    function onTriggerKeydown(event: KeyboardEvent): void {
-        if (event.key === "ArrowDown") {
-            event.preventDefault();
-            openSaveAs(true);
-        }
-    }
-    function onItemKeydown(event: KeyboardEvent): void {
-        const items = menuItems();
-        const idx = items.indexOf(document.activeElement as HTMLButtonElement);
-        if (event.key === "Escape") {
-            event.preventDefault();
-            closeSaveAs(true);
-        } else if (event.key === "ArrowDown") {
-            event.preventDefault();
-            items[Math.min(idx + 1, items.length - 1)]?.focus();
-        } else if (event.key === "ArrowUp") {
-            event.preventDefault();
-            items[Math.max(idx - 1, 0)]?.focus();
-        } else if (event.key === "Tab") {
-            closeSaveAs(false);
-        }
-    }
-    function onWindowPointerDown(event: PointerEvent): void {
-        if (saveAsOpen && saveAsRoot && !saveAsRoot.contains(event.target as Node)) closeSaveAs(false);
-    }
-
-    // eslint-disable-next-line prefer-const -- reassigned via the import-mode <select>'s onchange in the markup
-    let importMode = $state<"replace" | "append">("replace");
-
-    const IMPORT_MODE_HINT =
-        "Replace: swap the current frames for the imported ones.\nAppend: add the imported cycles after the existing ones.";
-
-    function handleSave(): void {
-        bridge.send({ type: "save" });
-    }
-    function handleImport(): void {
-        bridge.send({ type: "import", mode: importMode });
+    function chooseImport(value: string): void {
+        if (value === "replace" || value === "append") bridge.send({ type: "import", mode: value });
     }
 </script>
-
-<svelte:window onpointerdown={onWindowPointerDown} />
 
 <div class="toolbar">
     <button type="button" onclick={handleSave} title={`Save in place as ${view.sourceFormat.toUpperCase()}`}>
         Save
     </button>
-    <div class="saveas" bind:this={saveAsRoot}>
-        <button
-            type="button"
-            class="saveas-trigger"
-            aria-haspopup="menu"
-            aria-expanded={saveAsOpen}
-            onclick={() => (saveAsOpen ? closeSaveAs(false) : openSaveAs(false))}
-            onkeydown={onTriggerKeydown}
-        >
-            Save as...
-        </button>
-        {#if saveAsOpen}
-            <div class="saveas-menu" role="menu">
-                {#each saveAsOptions as option (option.value)}
-                    <button
-                        type="button"
-                        role="menuitem"
-                        class="saveas-item"
-                        onclick={() => chooseSaveAs(option)}
-                        onkeydown={onItemKeydown}
-                    >
-                        {option.label}
-                    </button>
-                {/each}
-            </div>
-        {/if}
-    </div>
-    <div class="toolbar-group" role="group" aria-label="Import">
-        <span class="toolbar-label">Import</span>
-        <select
-            value={importMode}
-            title={IMPORT_MODE_HINT}
-            onchange={(e) => {
-                const next = e.currentTarget.value;
-                if (next === "replace" || next === "append") importMode = next;
-            }}
-            aria-label="Import mode"
-        >
-            <option value="replace" title="Swap the current frames for the imported ones">Replace</option>
-            <option value="append" title="Add the imported cycles after the existing ones">Append</option>
-        </select>
-        <button
-            type="button"
-            onclick={handleImport}
-            title="Import frames from a PNG-directory export - pick its folder or its manifest.json"
-        >
-            PNG directory...
-        </button>
-    </div>
+    <ActionMenu
+        label="Save as..."
+        ariaLabel="Save as"
+        items={saveAsOptions.map((o) => ({ value: o.value, label: o.label }))}
+        onselect={chooseSaveAs}
+    />
+    <ActionMenu label="Import..." ariaLabel="Import" items={IMPORT_ITEMS} onselect={chooseImport} />
 </div>

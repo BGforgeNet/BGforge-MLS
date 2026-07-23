@@ -67,7 +67,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     replaceSequences(next: Animation, mode: "replace" | "append"): void {
         this.model.replaceSequences(next, mode);
-        this.fireEdit(mode === "append" ? "Import frames" : "Replace frames");
+        this.fireEdit(mode === "append" ? "Import cycles" : "Replace cycles");
     }
 
     toView(): AnimationView {

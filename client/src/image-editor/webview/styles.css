@@ -188,29 +188,14 @@ select {
     color: var(--vscode-button-foreground);
 }
 
-/* ---- toolbar (import) group: a horizontal bordered box in the bottom bar ---- */
-.toolbar-group {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 3px;
-}
-.toolbar-label {
-    color: var(--vscode-descriptionForeground);
-    font-size: 0.9em;
-}
-
-/* "Save as" action menu: a button that opens an upward menu (the toolbar sits at the bottom). A native
-   <select> always highlights its current option on open, so the "Save as..." placeholder shows
-   pre-selected; a hand-rolled menu opens with nothing highlighted. */
-.saveas {
+/* Action-menu dropdown (Save as / Import - see ActionMenu.svelte): a button that opens an upward menu
+   (the toolbar sits at the bottom). A native <select> always highlights its current option on open, so
+   the trigger label reads as pre-selected; a hand-rolled menu opens with nothing highlighted. */
+.dropdown {
     position: relative;
     display: inline-flex;
 }
-.saveas-trigger::after {
+.dropdown-trigger::after {
     content: "";
     display: inline-block;
     margin-left: 0.4rem;
@@ -219,7 +204,7 @@ select {
     border-top: 0.3em solid currentColor;
     vertical-align: middle;
 }
-.saveas-menu {
+.dropdown-menu {
     position: absolute;
     bottom: 100%;
     left: 0;
@@ -237,7 +222,7 @@ select {
     z-index: 10;
 }
 /* Menu items read as menu rows, not filled buttons: override the generic button fill. */
-.saveas-item {
+.dropdown-item {
     background: transparent;
     color: inherit;
     border: none;
@@ -245,7 +230,7 @@ select {
     text-align: left;
     padding: 0.25rem 0.6rem;
 }
-.saveas-item:hover {
+.dropdown-item:hover {
     background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
     color: var(--vscode-menu-selectionForeground, inherit);
 }
