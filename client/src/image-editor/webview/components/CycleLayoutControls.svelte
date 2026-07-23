@@ -15,7 +15,7 @@
     } = $props();
 </script>
 
-<div class="view-controls cycle-layout" role="group" aria-label="Cycle layout">
+<div class="view-controls" role="group" aria-label="Cycle layout">
     <p class="cycle-hint">
         {cycleCount} cycles - looks like a multi-sequence animation (e.g. an IE creature: actions x directions).
         BAM stores no direction info, so lay them out manually:

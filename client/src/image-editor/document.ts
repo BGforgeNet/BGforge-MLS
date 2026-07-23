@@ -47,7 +47,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return new ImageEditorDocument(uri, model, false);
     }
 
-    /** The path an in-place save writes to: the combined `<base>.frm` for a split set, else the source. */
+    /**
+     * The path an in-place save writes to: the combined `<base>.frm` for a split set, else the source.
+     * A split-set save deliberately overwrites any pre-existing `<base>.frm` without prompting - the
+     * split members are the source of truth for that basename.
+     */
     get savePath(): string {
         return this.isFrSplit ? frSplitCombinedPath(this.uri.fsPath) : this.uri.fsPath;
     }

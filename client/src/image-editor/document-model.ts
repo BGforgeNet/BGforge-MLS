@@ -74,7 +74,10 @@ export class ImageDocumentModel {
     private setSidecar(sidecarPalette: Rgba[] | undefined): void {
         this.sidecarPalette = sidecarPalette;
         this.hasSidecar = sidecarPalette !== undefined;
-        this.externalEnabled = this.hasSidecar; // FRM auto-on when a sidecar is present
+        // A sidecar on disk is authoritative: every (re)open enables it, even after a session that
+        // disabled it and saved - the toggle is a per-session choice, and a save with the external
+        // palette off leaves the .pal file in place rather than deleting a user file.
+        this.externalEnabled = this.hasSidecar;
     }
 
     get animation(): Animation {
