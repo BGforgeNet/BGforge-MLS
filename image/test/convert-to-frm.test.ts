@@ -329,4 +329,93 @@ describe("convertToFrm", () => {
         expect(report.has("palette-sidecar-required")).toBe(true);
         expect(report.has("palette-nearest-remapped")).toBe(false);
     });
+
+    it("tagged facings win over the count-derived order for a 6-cycle source", () => {
+        // Cycle 0 is tagged SE; the positional FRM order would have read it as NE.
+        const facings: Facing[] = ["SE", "SW", "W", "NW", "NE", "E"];
+        const src = synthBam([1, 1, 1, 1, 1, 1], facings);
+        const { animation } = convertToFrm(src);
+        const seRef = animation.sequences[2]?.frameRefs[0]; // FRM slot 2 = SE
+        if (seRef === undefined) throw new Error("missing SE frame ref");
+        // Cycle 0's traced 2x2 frame (pixel value 1 everywhere).
+        expect([...(animation.frames[seRef]?.pixels ?? [])]).toEqual([1, 1, 1, 1]);
+    });
+
+    // An IE base file: per 8-slot block, slots 0-4 (S, SW, W, NW, N) hold one traceable frame each
+    // (pixel value 1 + block*16 + slot), slots 5-7 stuff the shared filler frame 0 - the shape
+    // interpretIeDirections detects. Frame 0's pixel is 255 so a leaked filler is traceable too.
+    function baseFileBam(blocks: number): Animation {
+        const frames: Frame[] = [{ width: 1, height: 1, pixels: new Uint8Array([255]), offsetX: 0, offsetY: 0 }];
+        const sequences: Sequence[] = [];
+        for (let g = 0; g < blocks; g++) {
+            for (let slot = 0; slot < 5; slot++) {
+                frames.push({
+                    width: 1,
+                    height: 1,
+                    pixels: new Uint8Array([1 + g * 16 + slot]),
+                    offsetX: 0,
+                    offsetY: 0,
+                });
+                sequences.push({ frameRefs: [frames.length - 1], facing: "none" });
+            }
+            for (let slot = 5; slot < 8; slot++) sequences.push({ frameRefs: [0, 0], facing: "none" });
+        }
+        return {
+            palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+            sequences,
+            frames,
+            meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8" },
+        };
+    }
+
+    describe("opts.ieGroup", () => {
+        const slotPixel = (animation: Animation, slot: number): number => {
+            const ref = animation.sequences[slot]?.frameRefs[0];
+            const frame = ref === undefined ? undefined : animation.frames[ref];
+            if (!frame) throw new Error(`missing frame at FRM slot ${slot}`);
+            return frame.pixels[0] ?? -1;
+        };
+
+        it("converts one direction block to a directional FRM: west arc mapped, N/S dropped, east reused", () => {
+            const { animation, report } = convertToFrm(baseFileBam(2), { ieGroup: 1 });
+            expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+            // Block 1's SW/W/NW cycles land in their FRM slots, traced by pixel value.
+            expect(slotPixel(animation, 3)).toBe(1 + 16 + 1); // SW
+            expect(slotPixel(animation, 4)).toBe(1 + 16 + 2); // W
+            expect(slotPixel(animation, 5)).toBe(1 + 16 + 3); // NW
+            const dropped = report.items.filter((i) => i.kind === "dropped-direction").map((i) => i.detail);
+            expect(dropped.some((d) => d.includes("block 1") && d.includes("11 other cycle(s)"))).toBe(true);
+            expect(dropped.some((d) => d.includes("facing S"))).toBe(true);
+            expect(dropped.some((d) => d.includes("facing N"))).toBe(true);
+            // The east rotations had no source (dummies dropped by the interpretation) and were reused.
+            expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(3);
+            expect(report.lossless).toBe(false);
+        });
+
+        it("drops the east filler dummies instead of mapping them onto the east rotations", () => {
+            const { animation } = convertToFrm(baseFileBam(1), { ieGroup: 0 });
+            // Without ieGroup an 8-cycle source maps positionally, putting filler frame 255 in NE/E/SE;
+            // the block extraction reuses a real cycle there instead.
+            for (const slot of [0, 1, 2]) expect(slotPixel(animation, slot)).not.toBe(255);
+        });
+
+        it("filters out-of-range sentinel refs from the extracted block's cycles", () => {
+            const source = baseFileBam(1);
+            // A real-world west cycle carrying a 0xFFFF "no frame" entry; unfiltered, the directional
+            // builder would throw on the out-of-range ref.
+            source.sequences[1]?.frameRefs.push(65535);
+            const { animation } = convertToFrm(source, { ieGroup: 0 });
+            expect(slotPixel(animation, 3)).toBe(2); // SW = block 0 slot 1, sentinel dropped
+        });
+
+        it("throws for a missing block or an uninterpretable source", () => {
+            expect(() => convertToFrm(baseFileBam(2), { ieGroup: 2 })).toThrow(/no IE direction block 2/);
+            const tagged = synthBam([1, 1], ["NE", "E"]);
+            expect(() => convertToFrm(tagged, { ieGroup: 0 })).toThrow(/no IE direction block 0/);
+        });
+
+        it("rejects ieGroup combined with singleCycle", () => {
+            expect(() => convertToFrm(baseFileBam(1), { ieGroup: 0, singleCycle: 0 })).toThrow(/mutually exclusive/);
+        });
+    });
 });

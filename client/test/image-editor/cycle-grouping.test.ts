@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { analyzeCycleGrid, ieGroupLabels } from "../../src/image-editor/webview/render/cycle-grouping";
+import {
+    analyzeCycleGrid,
+    ieGroupLabels,
+    ieGroupOptionText,
+} from "../../src/image-editor/webview/render/cycle-grouping";
 
 test("a single directional set (<=8 cycles) is not flagged as multi-sequence", () => {
     for (const n of [1, 4, 6, 8]) {
@@ -38,5 +42,15 @@ describe("ieGroupLabels", () => {
     test("returns undefined for an unknown token or a count no scheme matches", () => {
         expect(ieGroupLabels("harness-fixture-directional.bam", 2)).toBeUndefined();
         expect(ieGroupLabels("usar1ca.bam", 5)).toBeUndefined(); // CA scheme is 8 blocks, not 5
+    });
+});
+
+describe("ieGroupOptionText", () => {
+    test("combines the scheme name with the group's cycle range", () => {
+        expect(ieGroupOptionText(["WK - walk", "SC - combat stance"], 1)).toBe("SC - combat stance (cycles 8-15)");
+    });
+
+    test("falls back to a numbered group without labels", () => {
+        expect(ieGroupOptionText(undefined, 0)).toBe("Group 1 (cycles 0-7)");
     });
 });

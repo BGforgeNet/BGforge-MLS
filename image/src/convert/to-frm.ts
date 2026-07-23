@@ -6,6 +6,7 @@ import {
     FRM_FACINGS,
     transparentIndexOf,
 } from "../model/animation.ts";
+import { interpretIeDirections } from "../model/ie-direction.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./palette-remap.ts";
@@ -15,6 +16,9 @@ export interface FrmConvertOpts {
     paletteMode?: "sidecar" | "nearest";
     /** Non-directional source only: the cycle index that fills all 6 FRM rotations (single-orientation). */
     singleCycle?: number;
+    /** IE multi-block source only: the 8-slot direction block whose cycles fill the FRM rotations (its
+     *  north/south cycles have no FRM slot and are dropped). Mutually exclusive with singleCycle. */
+    ieGroup?: number;
 }
 
 /**
@@ -29,17 +33,17 @@ export function frmDirectionMode(anim: Animation): "directional" | "single-orien
 }
 
 function resolveFacings(anim: Animation): Facing[] {
+    // Tagged facings are authoritative; the count-derived IE8/FRM order is only for untagged sources
+    // (a 6-cycle source tagged in a different order must not be re-read positionally).
+    const ownFacings = anim.sequences.map((s) => s.facing);
+    if (ownFacings.some((f) => f !== "none")) return ownFacings;
     const derived = facingsForCycleCount(anim.sequences.length);
     if (derived) return derived;
-    const ownFacings = anim.sequences.map((s) => s.facing);
-    if (ownFacings.every((f) => f === "none")) {
-        // Reached only for a multi-cycle non-directional source with no chosen cycle - the caller must
-        // pass opts.singleCycle (a single-cycle source auto-resolves in convertToFrm).
-        throw new Error(
-            `Cannot save this ${anim.sequences.length}-cycle animation as FRM: it has no directions - choose which cycle to use for a single-orientation FRM.`,
-        );
-    }
-    return ownFacings;
+    // Untagged with no count-derived layout: a multi-cycle non-directional source with no chosen cycle -
+    // the caller must pass opts.singleCycle (a single-cycle source auto-resolves in convertToFrm).
+    throw new Error(
+        `Cannot save this ${anim.sequences.length}-cycle animation as FRM: it has no directions - choose which cycle to use for a single-orientation FRM.`,
+    );
 }
 
 /**
@@ -68,6 +72,32 @@ function buildSingleOrientationSlots(
         );
     }
     return { pool, frameRefsPerSlot };
+}
+
+/**
+ * One IE direction block as a standalone facing-tagged source: the chosen group's slots become the
+ * sequences (the interpretation already drops east dummies and empty slots), every other cycle is
+ * reported dropped. Out-of-range refs (the 0xFFFF "no frame" sentinel) are filtered the way the
+ * interpretation ignores them, so the directional builder never chases a sentinel into the frame table.
+ */
+function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport): Animation {
+    const group = interpretIeDirections(anim.sequences, anim.frames.length)?.groups[groupIndex];
+    if (!group || group.length === 0) {
+        throw new Error(
+            `convertToFrm: no IE direction block ${groupIndex} in this ${anim.sequences.length}-cycle animation`,
+        );
+    }
+    const sequences: Sequence[] = group.map((slot) => {
+        const seq = anim.sequences[slot.seqIndex];
+        /* v8 ignore next -- the interpretation only emits slots whose sequence exists */
+        if (!seq) throw new Error(`convertToFrm: sequence ${slot.seqIndex} out of range`);
+        return { frameRefs: seq.frameRefs.filter((r) => r >= 0 && r < anim.frames.length), facing: slot.facing };
+    });
+    report.add(
+        "dropped-direction",
+        `used direction block ${groupIndex} for the FRM rotations; dropped ${anim.sequences.length - group.length} other cycle(s)`,
+    );
+    return { ...anim, sequences };
 }
 
 /**
@@ -195,18 +225,25 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
     // SourceFormat fails this narrowing instead of silently falling through as convertible.
     anim.meta.sourceFormat satisfies "bam" | "bamc";
 
+    if (opts?.ieGroup !== undefined && opts.singleCycle !== undefined) {
+        throw new Error("convertToFrm: ieGroup and singleCycle are mutually exclusive");
+    }
+    // An IE multi-block source converts ONE direction block: its slots become facing-tagged sequences
+    // feeding the directional path below.
+    const source = opts?.ieGroup === undefined ? anim : extractIeGroup(anim, opts.ieGroup, report);
+
     // A non-directional single-cycle source auto-resolves to a single-orientation FRM; a multi-cycle
     // one needs an explicit cycle (opts.singleCycle) chosen by the caller.
     const singleCycle =
         opts?.singleCycle ??
-        (frmDirectionMode(anim) === "single-orientation" && anim.sequences.length === 1 ? 0 : undefined);
+        (frmDirectionMode(source) === "single-orientation" && source.sequences.length === 1 ? 0 : undefined);
 
     const { pool, frameRefsPerSlot } =
         singleCycle !== undefined
-            ? buildSingleOrientationSlots(anim, singleCycle, report)
-            : buildDirectionalSlots(anim, report);
+            ? buildSingleOrientationSlots(source, singleCycle, report)
+            : buildDirectionalSlots(source, report);
 
-    const defaultRemap = remapToDefault(pool, anim.palette, transparentIndexOf(anim.meta));
+    const defaultRemap = remapToDefault(pool, source.palette, transparentIndexOf(source.meta));
     let paletteFrames = defaultRemap.frames;
     let palette = defaultRemap.palette;
     if (defaultRemap.remapped) {
@@ -215,7 +252,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         // Exact remap failed; lossily project every used color onto its nearest default-palette neighbor
         // instead of carrying the source palette as a sidecar.
         const nearestRemap = remapToNearest(
-            { palette: anim.palette, frames: pool, sequences: anim.sequences, meta: anim.meta },
+            { palette: source.palette, frames: pool, sequences: source.sequences, meta: source.meta },
             DEFAULT_FALLOUT_PALETTE,
         );
         paletteFrames = nearestRemap.animation.frames;
@@ -231,7 +268,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         );
         // The kept palette still marks transparency at the SOURCE's index; every FRM consumer reads
         // index 0 as transparent, so re-index (lossless 0 <-> t swap) before the palette ships.
-        const normalized = normalizeTransparentToZero(paletteFrames, palette, transparentIndexOf(anim.meta));
+        const normalized = normalizeTransparentToZero(paletteFrames, palette, transparentIndexOf(source.meta));
         paletteFrames = normalized.frames;
         palette = normalized.palette;
     }
@@ -266,8 +303,8 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         frames,
         meta: {
             sourceFormat: "frm",
-            fps: anim.meta.fps ?? 10,
-            actionFrame: anim.meta.actionFrame ?? 0,
+            fps: source.meta.fps ?? 10,
+            actionFrame: source.meta.actionFrame ?? 0,
             directionLayout: "frm6",
             frmVersion: 4,
             dirOffsetsX: [0, 0, 0, 0, 0, 0],

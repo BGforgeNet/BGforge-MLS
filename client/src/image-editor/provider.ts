@@ -6,8 +6,16 @@ import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
-import { needsCyclePick, reshapeImportToFrm, saveAsTargetPath, summarizeLoss } from "./save-as";
+import {
+    type FrmShapePick,
+    ieGroupCount,
+    needsCyclePick,
+    reshapeImportToFrm,
+    saveAsTargetPath,
+    summarizeLoss,
+} from "./save-as";
 import { sidecarPalPath } from "./sidecar";
+import { ieGroupLabels, ieGroupOptionText } from "./webview/render/cycle-grouping";
 import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
@@ -131,15 +139,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 return;
             }
 
-            // A non-directional animation (a native non-directional BAM, or one imported from a PNG
-            // directory - frmDirectionMode reads the animation, not the source format) becomes a
-            // single-orientation FRM from ONE cycle. Auto for a single cycle; ask which for several.
-            let singleCycle: number | undefined;
-            if (target === "frm" && needsCyclePick(anim)) {
-                singleCycle = await this.pickCycle(anim.sequences.length);
-                if (singleCycle === undefined) return; // user dismissed the picker
+            // How the animation fills FRM's 6 rotations: an IE base file contributes one direction
+            // block (asked by name when there are several), a non-directional animation one cycle for
+            // all rotations. Undefined only when the user dismisses a picker.
+            let pick: FrmShapePick | undefined = {};
+            if (target === "frm") {
+                pick = await this.resolveFrmShape(anim, path.basename(document.uri.fsPath));
+                if (pick === undefined) return; // user dismissed the picker
             }
-            const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, singleCycle });
+            const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, ...pick });
             if (!report.lossless) {
                 const confirmed = await vscode.window.showWarningMessage(
                     summarizeLoss(report),
@@ -159,6 +167,37 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
+    /**
+     * Resolve how a non-FRM shape fills FRM's 6 rotations. An IE base file (ie8 layout) converts one
+     * direction block - its whole rose, minus the north/south cycles FRM has no slot for; a
+     * non-directional multi-cycle animation converts one chosen cycle into all six rotations. Returns
+     * an empty pick when no choice is needed, undefined when the user dismisses a picker.
+     */
+    private async resolveFrmShape(anim: Animation, sourceName: string): Promise<FrmShapePick | undefined> {
+        const groupCount = ieGroupCount(anim);
+        if (groupCount !== undefined) {
+            if (groupCount === 1) return { ieGroup: 0 };
+            const ieGroup = await this.pickDirectionGroup(sourceName, groupCount);
+            return ieGroup === undefined ? undefined : { ieGroup };
+        }
+        if (needsCyclePick(anim)) {
+            const singleCycle = await this.pickCycle(anim.sequences.length);
+            return singleCycle === undefined ? undefined : { singleCycle };
+        }
+        return {};
+    }
+
+    /** Ask which direction block a directional FRM should use; undefined if the user dismisses the
+     *  picker. Options carry the same scheme names as the webview's group select. */
+    private async pickDirectionGroup(sourceName: string, groupCount: number): Promise<number | undefined> {
+        const labels = ieGroupLabels(sourceName, groupCount);
+        const items = Array.from({ length: groupCount }, (_, i) => ieGroupOptionText(labels, i));
+        const picked = await vscode.window.showQuickPick(items, {
+            title: "Which direction group should the FRM use? (its north/south cycles have no FRM rotation)",
+        });
+        return picked === undefined ? undefined : items.indexOf(picked);
+    }
+
     /** Ask which cycle a single-orientation FRM should use; undefined if the user dismisses the picker. */
     private async pickCycle(cycleCount: number): Promise<number | undefined> {
         const items = Array.from({ length: cycleCount }, (_, i) => `Cycle ${i}`);
@@ -176,20 +215,17 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             if (!next) return;
 
             // An FRM is a fixed 6-rotation format, so an import INTO one is reshaped to a valid FRM
-            // (single-orientation for a non-directional import, with a cycle pick when several cycles
-            // were imported) and always REPLACES - otherwise an in-place Save would serialize the
-            // non-FRM shape into a malformed .frm (rotations 1-5 empty while the header claims frames).
-            // A BAM accepts arbitrary cycles, so its import applies unchanged.
+            // (a direction block or a single chosen cycle, per resolveFrmShape) and always REPLACES -
+            // otherwise an in-place Save would serialize the non-FRM shape into a malformed .frm
+            // (rotations 1-5 empty while the header claims frames). A BAM accepts arbitrary cycles, so
+            // its import applies unchanged.
             if (document.animation.meta.sourceFormat === "frm") {
-                let singleCycle: number | undefined;
-                if (needsCyclePick(next)) {
-                    singleCycle = await this.pickCycle(next.sequences.length);
-                    if (singleCycle === undefined) return; // user dismissed the cycle picker
-                }
-                document.replaceSequences(reshapeImportToFrm(next, singleCycle), "replace");
+                const pick = await this.resolveFrmShape(next.animation, next.name);
+                if (pick === undefined) return; // user dismissed the picker
+                document.replaceSequences(reshapeImportToFrm(next.animation, pick), "replace");
                 return;
             }
-            document.replaceSequences(next, mode);
+            document.replaceSequences(next.animation, mode);
         } catch (error) {
             void vscode.window.showErrorMessage(
                 `Import failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -197,7 +233,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
-    private async importPngDirectory(): Promise<Animation | undefined> {
+    private async importPngDirectory(): Promise<{ animation: Animation; name: string } | undefined> {
         // Accept EITHER the export folder or its manifest.json - both resolve to the same directory,
         // whose frames are read relative to manifest.json.
         const selection = await vscode.window.showOpenDialog({
@@ -227,7 +263,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
 
         try {
-            return importPngDirectory(await this.readDirectoryTree(dir));
+            // The directory name feeds the group-pick labels (the export keeps the source's basename).
+            return {
+                animation: importPngDirectory(await this.readDirectoryTree(dir)),
+                name: path.basename(dir.fsPath),
+            };
         } catch (error) {
             // Malformed/incompatible manifest or a missing frame PNG - surface the cause, not a stack.
             const detail =

@@ -1,7 +1,13 @@
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { type Animation, LossReport } from "@bgforge/image";
-import { needsCyclePick, reshapeImportToFrm, saveAsTargetPath, summarizeLoss } from "../../src/image-editor/save-as";
+import {
+    ieGroupCount,
+    needsCyclePick,
+    reshapeImportToFrm,
+    saveAsTargetPath,
+    summarizeLoss,
+} from "../../src/image-editor/save-as";
 import { makeMiniBam, makeMiniFrm } from "./fixtures";
 
 function multiCycleBam(cycles: number): Animation {
@@ -59,6 +65,19 @@ describe("needsCyclePick", () => {
     });
 });
 
+describe("ieGroupCount", () => {
+    it("returns the 8-cycle block count for an ie8-resolved animation", () => {
+        const base = multiCycleBam(16);
+        const anim: Animation = { ...base, meta: { ...base.meta, directionLayout: "ie8" } };
+        expect(ieGroupCount(anim)).toBe(2);
+    });
+
+    it("is undefined for non-ie8 layouts (needsCyclePick decides instead)", () => {
+        expect(ieGroupCount(multiCycleBam(16))).toBeUndefined();
+        expect(ieGroupCount(makeMiniFrm())).toBeUndefined();
+    });
+});
+
 describe("summarizeLoss", () => {
     it("lists only real losses, not informational notes", () => {
         const report = new LossReport();
@@ -70,7 +89,7 @@ describe("summarizeLoss", () => {
 
 describe("reshapeImportToFrm", () => {
     it("builds a single-orientation FRM from the chosen cycle of a multi-cycle import", () => {
-        const reshaped = reshapeImportToFrm(multiCycleBam(3), 2);
+        const reshaped = reshapeImportToFrm(multiCycleBam(3), { singleCycle: 2 });
         expect(reshaped.meta.sourceFormat).toBe("frm");
         expect(reshaped.sequences).toHaveLength(6);
         // All six rotations share the chosen cycle's frames (the FRM shared-rotation form).
@@ -99,5 +118,15 @@ describe("reshapeImportToFrm", () => {
         const bam8 = multiCycleBam(8);
         const reshaped = reshapeImportToFrm(bam8);
         expect(reshaped.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+    });
+
+    it("converts one direction block of an IE base-file import (pick.ieGroup)", () => {
+        const anim = multiCycleBam(8);
+        // East slots (5-7) become shared-filler dummies - the IE base-file shape ieGroup extracts from.
+        for (const i of [5, 6, 7]) anim.sequences[i] = { frameRefs: [0, 0], facing: "none" };
+        const reshaped = reshapeImportToFrm(anim, { ieGroup: 0 });
+        expect(reshaped.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+        // Directional, not single-orientation: the west-arc rotations carry distinct cycles.
+        expect(new Set(reshaped.sequences.map((s) => s.frameRefs.join(","))).size).toBeGreaterThan(1);
     });
 });

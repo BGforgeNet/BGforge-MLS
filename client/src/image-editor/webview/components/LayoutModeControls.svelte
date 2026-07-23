@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { LayoutMode } from "../render/compass-layout";
+    import { ieGroupOptionText } from "../render/cycle-grouping";
 
     // Rose/grid layout selector, shown only when a rose is constructible for the current view. The
     // caller seeds `mode` from detection on open (an FRM's tagged facings, or the IE stride-8
@@ -20,9 +21,6 @@
         groupLabels?: string[]; // scheme names per group (ieGroupLabels); numbered fallback when absent
         onGroupChange: (group: number) => void;
     } = $props();
-
-    // Group i covers cycle indices [i*8, i*8+7] - the IE 8-slot direction block (cycle-grouping.ts).
-    const IE_STRIDE = 8;
 </script>
 
 <div class="view-controls" role="group" aria-label="Layout">
@@ -66,9 +64,7 @@
                 aria-label="Sequence group"
             >
                 {#each Array.from({ length: groupCount }, (_, i) => i) as i (i)}
-                    <option value={String(i)}>
-                        {groupLabels?.[i] ?? `Group ${i + 1}`} (cycles {i * IE_STRIDE}-{i * IE_STRIDE + IE_STRIDE - 1})
-                    </option>
+                    <option value={String(i)}>{ieGroupOptionText(groupLabels, i)}</option>
                 {/each}
             </select>
         </label>

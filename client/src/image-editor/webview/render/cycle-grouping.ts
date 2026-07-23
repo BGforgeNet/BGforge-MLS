@@ -65,6 +65,13 @@ const IE_SEQUENCE_NAMES: Record<string, string[]> = {
 
 const IE_SEQUENCE_TOKENS = ["g1", "g2", "ca"];
 
+/** Option text for one direction group - shared by the webview's group select and the host's FRM
+ *  save-as quick pick, so both surfaces name a block identically. Group i covers cycles [i*8, i*8+7]. */
+export function ieGroupOptionText(labels: string[] | undefined, index: number): string {
+    const first = index * MAX_SINGLE_DIRECTION_SET;
+    return `${labels?.[index] ?? `Group ${index + 1}`} (cycles ${first}-${first + MAX_SINGLE_DIRECTION_SET - 1})`;
+}
+
 /** Scheme names for a multi-block file's direction groups, from the filename's sequence token; undefined
  *  when the token or block count matches no known scheme (callers show numbered groups instead). */
 export function ieGroupLabels(basename: string, groupCount: number): string[] | undefined {

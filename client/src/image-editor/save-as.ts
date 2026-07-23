@@ -34,11 +34,27 @@ export function needsCyclePick(anim: Animation): boolean {
 }
 
 /**
- * Reshape an imported animation into a valid FRM. `nearest` keeps its pixels consistent with the
- * FRM's default palette. When `needsCyclePick` holds, the caller resolves `singleCycle` first.
+ * Number of 8-cycle direction blocks when the animation resolved as an IE base file (directionLayout
+ * "ie8"); undefined otherwise (then `needsCyclePick` decides). The ie8 layout guarantees a multiple of
+ * 8 cycles at parse; Math.ceil keeps a loosely-claiming imported manifest from truncating a block.
  */
-export function reshapeImportToFrm(next: Animation, singleCycle?: number): Animation {
+export function ieGroupCount(anim: Animation): number | undefined {
+    if (anim.meta.directionLayout !== "ie8") return undefined;
+    return Math.ceil(anim.sequences.length / 8);
+}
+
+/** How a non-FRM shape fills FRM's 6 rotations: one IE direction block, or one cycle for all rotations. */
+export interface FrmShapePick {
+    singleCycle?: number;
+    ieGroup?: number;
+}
+
+/**
+ * Reshape an imported animation into a valid FRM. `nearest` keeps its pixels consistent with the
+ * FRM's default palette. The caller resolves `pick` first (the group/cycle choice, when one is needed).
+ */
+export function reshapeImportToFrm(next: Animation, pick?: FrmShapePick): Animation {
     // Tag the source as bam so convertToFrm actually reshapes it (it no-ops on frm-tagged input).
     const src: Animation = { ...next, meta: { ...next.meta, sourceFormat: "bam" } };
-    return convertToFrm(src, { paletteMode: "nearest", singleCycle }).animation;
+    return convertToFrm(src, { paletteMode: "nearest", ...pick }).animation;
 }
