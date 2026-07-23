@@ -73,8 +73,11 @@ await selectBackground("Green");
 await page.screenshot({ path: shotPath("shot-frm-green.png"), fullPage: true });
 
 // Zoom-redraw regression: the player is paused (the default playback state - no autoplay was started),
-// so nothing else drives a redraw. Bump the zoom and confirm the tile canvas resized AND repainted.
-await page.selectOption('select[aria-label="Zoom level"]', "4");
+// so nothing else drives a redraw. Bump the zoom via the 400% preset button and confirm the tile
+// canvas resized AND repainted.
+const zoomButton = page.getByRole("button", { name: "400%", exact: true });
+await zoomButton.click();
+check("zoom: 400% preset activates", (await zoomButton.getAttribute("aria-pressed")) === "true", "aria-pressed");
 await page
     .waitForFunction(
         (expected) => {
