@@ -4,23 +4,42 @@
     const { state, onChange }: { state: PlaybackState; onChange: (next: PlaybackState) => void } = $props();
 
     const lastFrame = $derived(Math.max(0, state.frameCount - 1));
+    // Playback needs at least 2 frames and a positive fps; otherwise there is nothing to animate and every
+    // transport control is disabled. `disabledReason` is only shown while !canPlay (frameCount<=1 => the
+    // one-frame reason, else fps<1).
+    const canPlay = $derived(state.frameCount > 1 && state.fps >= 1);
+    const disabledReason = $derived(
+        state.frameCount <= 1 ? "Only one frame - nothing to play" : "FPS is below 1 - nothing to play",
+    );
 </script>
 
 <div class="playback-controls">
     <div class="playback-buttons" role="group" aria-label="Playback">
-        <button type="button" onclick={() => onChange(play(state))} disabled={state.playing} title="Play" aria-label="Play">
+        <button
+            type="button"
+            onclick={() => onChange(play(state))}
+            disabled={state.playing || !canPlay}
+            title={canPlay ? "Play" : disabledReason}
+            aria-label="Play"
+        >
             <span class="codicon codicon-play" aria-hidden="true"></span>
         </button>
         <button
             type="button"
             onclick={() => onChange(pause(state))}
-            disabled={!state.playing}
-            title="Pause"
+            disabled={!state.playing || !canPlay}
+            title={canPlay ? "Pause" : disabledReason}
             aria-label="Pause"
         >
             <span class="codicon codicon-debug-pause" aria-hidden="true"></span>
         </button>
-        <button type="button" onclick={() => onChange(stop(state))} title="Stop" aria-label="Stop">
+        <button
+            type="button"
+            onclick={() => onChange(stop(state))}
+            disabled={!canPlay}
+            title={canPlay ? "Stop" : disabledReason}
+            aria-label="Stop"
+        >
             <span class="codicon codicon-debug-stop" aria-hidden="true"></span>
         </button>
         <button
@@ -29,7 +48,8 @@
             class:active={state.loop}
             aria-pressed={state.loop}
             onclick={() => onChange(toggleLoop(state))}
-            title="Loop"
+            disabled={!canPlay}
+            title={canPlay ? "Loop" : disabledReason}
             aria-label="Loop"
         >
             <span class="codicon codicon-sync" aria-hidden="true"></span>
@@ -43,6 +63,7 @@
             max={lastFrame}
             step="1"
             value={state.frame}
+            disabled={state.frameCount <= 1}
             oninput={(e) => onChange(setFrame(state, Number(e.currentTarget.value)))}
             aria-label="Frame scrubber"
         />
