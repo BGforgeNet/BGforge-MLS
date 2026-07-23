@@ -35,6 +35,10 @@
         ".": {
             "types": "./out/index.d.ts",
             "import": "./out/index.js"
+        },
+        "./frame-anchor": {
+            "types": "./out/model/frame-anchor.d.ts",
+            "import": "./out/model/frame-anchor.js"
         }
     },
     "publishConfig": {

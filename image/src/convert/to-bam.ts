@@ -1,4 +1,5 @@
 import { type Animation, type Frame, type Sequence } from "../model/animation.ts";
+import { translateFrameOffset } from "../model/frame-anchor.ts";
 import { LossReport } from "./loss-report.ts";
 
 // Converts an FRM-shaped Animation to a BAM-shaped one. Already-BAM input is a no-op
@@ -12,16 +13,24 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
 
     const sequences: Sequence[] = anim.sequences.map((seq) => ({ ...seq, frameRefs: [...seq.frameRefs] }));
 
-    // New Frame objects, not spread: FRM's rawEncoding describes FRM's own on-disk pixel
-    // payload and must not carry over into a BAM-shaped frame (would corrupt serializeBamV1).
-    const frames: Frame[] = anim.frames.map((f) => ({
-        width: f.width,
-        height: f.height,
-        pixels: f.pixels,
-        offsetX: f.offsetX,
-        offsetY: f.offsetY,
-        rleEncoded: false,
-    }));
+    // Each frame's FRM per-direction header offset, needed to translate its anchor: a frame belongs to
+    // the first direction (sequence) that references it; the sequences are in FRM header-slot order, so
+    // the sequence index indexes dirOffsetsX/Y. Frames referenced by no direction keep a zero offset.
+    const source = anim.meta.sourceFormat;
+    const frameDirOffset = new Map<number, { x: number; y: number }>();
+    anim.sequences.forEach((seq, slot) => {
+        const dir = { x: anim.meta.dirOffsetsX?.[slot] ?? 0, y: anim.meta.dirOffsetsY?.[slot] ?? 0 };
+        for (const ref of seq.frameRefs) if (!frameDirOffset.has(ref)) frameDirOffset.set(ref, dir);
+    });
+
+    // New Frame objects, not spread: FRM's rawEncoding describes FRM's own on-disk pixel payload and must
+    // not carry over into a BAM-shaped frame (would corrupt serializeBamV1). Translate the per-frame
+    // offset from FRM's feet-relative convention into BAM's center-pixel one so the sprite keeps its
+    // on-screen anchor.
+    const frames: Frame[] = anim.frames.map((f, i) => {
+        const { offsetX, offsetY } = translateFrameOffset(source, "bam", f, frameDirOffset.get(i));
+        return { width: f.width, height: f.height, pixels: f.pixels, offsetX, offsetY, rleEncoded: false };
+    });
 
     const palette = anim.palette.map((c) => ({ ...c }));
 

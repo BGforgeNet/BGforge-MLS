@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { type Animation, convertToFrm, emptyPalette, offsetToAnchor } from "@bgforge/image";
 import { frameTopLeft } from "../../src/image-editor/webview/render/anchor";
 
 // TILE_BASE_PX is 96; these expectations are derived from the fallout2-ce anchor formula, not copied
@@ -46,6 +47,39 @@ test("BAM places its stored center pixel on the tile center - a different conven
     });
     expect(tl.x).toBeCloseTo(48 - 20); // 28
     expect(tl.y).toBeCloseTo(48 - 30); // 18
+});
+
+test("converting BAM->FRM preserves the ground-anchor pixel (offset is translated, not copied verbatim)", () => {
+    // A 63x74 BAM frame anchored at centre (39,67) - the reported real case. The converter must
+    // re-express that anchor in FRM's feet-relative convention so the SAME frame pixel stays on the
+    // object's ground point. (The two previews place that ground point at different tile heights - feet
+    // vs centre - so the rendered tile Y legitimately differs; the anchor pixel is the invariant.)
+    const width = 63;
+    const height = 74;
+    const bam: Animation = {
+        palette: emptyPalette(),
+        sequences: [{ frameRefs: [0], facing: "none" }],
+        frames: [{ width, height, pixels: new Uint8Array(width * height), offsetX: 39, offsetY: 67 }],
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    const bamAnchor = offsetToAnchor("bam", { width, height, offsetX: 39, offsetY: 67 });
+
+    const { animation: frm } = convertToFrm(bam, { singleCycle: 0 });
+    const frmFrame = frm.frames[frm.sequences[0]?.frameRefs[0] ?? 0];
+    if (!frmFrame) throw new Error("expected a converted FRM frame");
+    // Raw copy would have written offsetX=39, offsetY=67 (an FRM shift), displacing the sprite far.
+    expect(frmFrame.offsetX).not.toBe(39);
+    const frmAnchor = offsetToAnchor("frm", {
+        width: frmFrame.width,
+        height: frmFrame.height,
+        offsetX: frmFrame.offsetX,
+        offsetY: frmFrame.offsetY,
+        dirOffsetX: frm.meta.dirOffsetsX?.[0] ?? 0,
+        dirOffsetY: frm.meta.dirOffsetsY?.[0] ?? 0,
+    });
+    // Same ground-anchor pixel, within the <=0.5px integer-rounding of the odd-width centre.
+    expect(Math.abs(frmAnchor.ax - bamAnchor.ax)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(frmAnchor.ay - bamAnchor.ay)).toBeLessThanOrEqual(0.5);
 });
 
 test("BAMC uses the same center-pixel anchor as BAM", () => {

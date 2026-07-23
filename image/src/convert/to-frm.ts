@@ -1,4 +1,5 @@
 import { type Animation, type Facing, type Frame, type Sequence, FRM_FACINGS } from "../model/animation.ts";
+import { translateFrameOffset } from "../model/frame-anchor.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { remapToDefault, remapToNearest } from "./palette-remap.ts";
@@ -231,14 +232,14 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
 
     // Final frame shape: strip rawEncoding/rleEncoded unconditionally. A carried (sidecar-path) frame's
     // rawEncoding still describes source on-disk bytes (e.g. BAM RLE), which serializeFrm would
-    // otherwise write verbatim as FRM pixel data and corrupt the output.
-    const frames: Frame[] = paletteFrames.map((f) => ({
-        width: f.width,
-        height: f.height,
-        pixels: f.pixels,
-        offsetX: f.offsetX,
-        offsetY: f.offsetY,
-    }));
+    // otherwise write verbatim as FRM pixel data and corrupt the output. Translate the per-frame offset
+    // from the source format's convention into FRM's (feet-relative shift) so the sprite keeps its
+    // on-screen anchor; the source (bam/bamc) has no per-direction offset, so srcDirOffset is 0.
+    const source = anim.meta.sourceFormat;
+    const frames: Frame[] = paletteFrames.map((f) => {
+        const { offsetX, offsetY } = translateFrameOffset(source, "frm", f);
+        return { width: f.width, height: f.height, pixels: f.pixels, offsetX, offsetY };
+    });
 
     const sequences: Sequence[] = FRM_FACINGS.map((facing, slot) => {
         const refs = frameRefsPerSlot[slot];
