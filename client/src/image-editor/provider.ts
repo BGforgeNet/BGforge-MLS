@@ -1,11 +1,12 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { type Animation, type LossReport, convertToFrm, frmDirectionMode, importPngDirectory } from "@bgforge/image";
+import { type Animation, importPngDirectory } from "@bgforge/image";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
+import { needsCyclePick, reshapeImportToFrm, saveAsTargetPath, summarizeLoss } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
 import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
@@ -14,12 +15,6 @@ const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
-
-function summarizeLoss(report: LossReport): string {
-    // Only real losses - informational notes (lossless remap, embedded/sidecar palette) are excluded
-    // so the warning never lists a non-loss (and the modal only fires when report.lossless is false).
-    return `Converting will lose: ${report.losses.map((item) => item.detail).join("; ")}`;
-}
 
 /**
  * Custom editor for Fallout FRM / Infinity Engine BAM animations. Unlike the binary editor,
@@ -125,32 +120,22 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         paletteMode: "sidecar" | "nearest" | undefined,
     ): Promise<void> {
         try {
-            const srcPath = document.uri.fsPath;
-            const dir = path.dirname(srcPath);
-            const base = path.parse(srcPath).name;
             // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder, so a
             // raw-animation export would write black-silhouette PNGs / a black BAM (see document-model).
             const anim = document.resolvedAnimation();
+            const targetPath = saveAsTargetPath(document.uri.fsPath, target);
 
             if (target === "apng" || target === "png-directory") {
-                // Multi-file exports go into an auto-named directory next to the source; the -apng suffix
-                // stops the two directory exports from colliding on the same <base>/ folder.
-                const destDir = path.join(dir, target === "apng" ? `${base}-apng` : base);
-                await this.writeAll(buildExport(anim, target, destDir));
-                vscode.window.setStatusBarMessage(`Exported ${path.basename(destDir)}${path.sep}`, 3000);
+                await this.writeAll(buildExport(anim, target, targetPath));
+                vscode.window.setStatusBarMessage(`Exported ${path.basename(targetPath)}${path.sep}`, 3000);
                 return;
             }
-
-            // <base>.frm | <base>.bam, auto-named. BAMC (compressed BAM) shares the .bam extension, so its
-            // output name collides with an uncompressed BAM / the source - a re-encode in place, intended.
-            const ext = target === "bamc" ? "bam" : target;
-            const targetPath = path.join(dir, `${base}.${ext}`);
 
             // A non-directional animation (a native non-directional BAM, or one imported from a PNG
             // directory - frmDirectionMode reads the animation, not the source format) becomes a
             // single-orientation FRM from ONE cycle. Auto for a single cycle; ask which for several.
             let singleCycle: number | undefined;
-            if (target === "frm" && frmDirectionMode(anim) === "single-orientation" && anim.sequences.length > 1) {
+            if (target === "frm" && needsCyclePick(anim)) {
                 singleCycle = await this.pickCycle(anim.sequences.length);
                 if (singleCycle === undefined) return; // user dismissed the picker
             }
@@ -196,9 +181,12 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // non-FRM shape into a malformed .frm (rotations 1-5 empty while the header claims frames).
             // A BAM accepts arbitrary cycles, so its import applies unchanged.
             if (document.animation.meta.sourceFormat === "frm") {
-                const reshaped = await this.reshapeImportToFrm(next);
-                if (reshaped === undefined) return; // user dismissed the cycle picker
-                document.replaceSequences(reshaped, "replace");
+                let singleCycle: number | undefined;
+                if (needsCyclePick(next)) {
+                    singleCycle = await this.pickCycle(next.sequences.length);
+                    if (singleCycle === undefined) return; // user dismissed the cycle picker
+                }
+                document.replaceSequences(reshapeImportToFrm(next, singleCycle), "replace");
                 return;
             }
             document.replaceSequences(next, mode);
@@ -207,20 +195,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 `Import failed: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
-    }
-
-    /** Reshape an imported animation into a valid FRM. `nearest` keeps its pixels consistent with the
-     *  FRM's default palette; a multi-cycle non-directional import needs a chosen cycle. Undefined when
-     *  the cycle picker is dismissed. */
-    private async reshapeImportToFrm(next: Animation): Promise<Animation | undefined> {
-        // Tag the source as bam so convertToFrm actually reshapes it (it no-ops on frm-tagged input).
-        const src: Animation = { ...next, meta: { ...next.meta, sourceFormat: "bam" } };
-        if (frmDirectionMode(src) === "single-orientation" && src.sequences.length > 1) {
-            const cycle = await this.pickCycle(src.sequences.length);
-            if (cycle === undefined) return undefined;
-            return convertToFrm(src, { paletteMode: "nearest", singleCycle: cycle }).animation;
-        }
-        return convertToFrm(src, { paletteMode: "nearest" }).animation;
     }
 
     private async importPngDirectory(): Promise<Animation | undefined> {
