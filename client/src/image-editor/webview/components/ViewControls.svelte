@@ -113,14 +113,16 @@
                     class:active={background === opt.value}
                     aria-pressed={background === opt.value}
                     onclick={() => handleBackgroundChange(opt.value)}
-                    title={opt.label}
                 >
                     {opt.label}
                 </button>
             {/each}
         </div>
     </div>
-    <label class="view-field view-checkbox">
+    <label
+        class="view-field view-checkbox"
+        title="Show a crosshair at each frame's anchor point - the offset origin the frame is positioned from in the preview"
+    >
         <input type="checkbox" checked={showOffsetMarker} onchange={onToggleOffsetMarker} />
         <span class="view-label">Offset marker</span>
     </label>

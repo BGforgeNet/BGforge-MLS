@@ -64,7 +64,10 @@
             <span class="meta-label">Use external palette</span>
         </label>
     {:else}
-        <label class="meta-field">
+        <label
+            class="meta-field"
+            title="Palette index drawn as transparent - pixels with this index show the background instead of a colour"
+        >
             <span class="meta-label">Transparent index</span>
             <input
                 type="number"
@@ -81,7 +84,10 @@
                 aria-label="Transparent palette index"
             />
         </label>
-        <label class="meta-field">
+        <label
+            class="meta-field"
+            title="How to arrange this animation's cycles in the preview: a 6- or 8-direction compass rose, or a plain grid (non-directional). BAM cycles carry no direction info, so you set it here; an FRM has its 6 directions built in."
+        >
             <span class="meta-label">Direction layout</span>
             <select
                 value={view.meta.directionLayout ?? "non-directional"}
