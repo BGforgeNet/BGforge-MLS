@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { FRM_FACINGS, type Facing } from "@bgforge/image";
+import { interpretIeDirections } from "@bgforge/image/ie-direction";
 import { compassPosition, ieRoseTiles, layoutSequences } from "../../src/image-editor/webview/render/compass-layout";
-import { interpretIeRose } from "../../src/image-editor/webview/render/cycle-grouping";
 import type { AnimationView, SequenceView } from "../../src/image-editor/webview/messages";
 
 /** A minimal AnimationView carrying only the fields layoutSequences reads (sequences). */
@@ -114,7 +114,7 @@ test("ieRoseTiles builds one direction block's rose from untagged cycles, at the
         ...sequence,
         frameRefs: i % 8 < 5 ? [1 + i] : [0],
     }));
-    const interpretation = interpretIeRose(view.sequences, 17);
+    const interpretation = interpretIeDirections(view.sequences, 17);
     if (!interpretation) throw new Error("expected an IE interpretation");
     expect(interpretation.detected).toBe(true);
 

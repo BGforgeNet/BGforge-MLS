@@ -1,6 +1,6 @@
 import type { Facing } from "@bgforge/image";
+import type { IeDirectionAnalysis } from "@bgforge/image/ie-direction";
 import type { AnimationView, SequenceView } from "../messages";
-import type { IeRoseInterpretation } from "./cycle-grouping";
 
 /**
  * A tile's position on the compass rose as a unit-circle offset from the centre (y points DOWN, to
@@ -94,8 +94,8 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
     return { mode: "grid", tiles: view.sequences.map((seq, index) => ({ seq, index })) };
 }
 
-/** Rose tiles for one direction block of an IE-interpreted untagged BAM (see cycle-grouping.ts). */
-export function ieRoseTiles(view: AnimationView, interpretation: IeRoseInterpretation, group: number): RoseTile[] {
+/** Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction). */
+export function ieRoseTiles(view: AnimationView, interpretation: IeDirectionAnalysis, group: number): RoseTile[] {
     const slots = interpretation.groups[group] ?? [];
     return slots.flatMap((slot) => {
         const seq = view.sequences[slot.seqIndex];

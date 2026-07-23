@@ -5,7 +5,8 @@
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
-    import { analyzeCycleGrid, ieGroupLabels, interpretIeRose } from "../render/cycle-grouping";
+    import { interpretIeDirections } from "@bgforge/image/ie-direction";
+    import { analyzeCycleGrid, ieGroupLabels } from "../render/cycle-grouping";
     import { autoZoomLevel } from "../render/tile";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -58,16 +59,15 @@
         cycleColumns = cycleAnalysis?.multiSequence ? cycleAnalysis.suggestedColumns : 0;
     });
 
-    // Stage layout (rose vs grid). The default derives from detection - tagged compass facings (FRM), the
-    // IE stride-8 fingerprint, or an explicit meta "ie8" declaration - so a fresh open shows the detected
-    // choice; the selector writes `layoutChoice`, which then wins for the webview's lifetime.
+    // Stage layout (rose vs grid). The default derives from tagged compass facings (FRM) or from
+    // meta.directionLayout === "ie8" - which the BAM parser resolves via the same fingerprint the
+    // interpretation uses - so a fresh open shows the detected choice; the selector writes
+    // `layoutChoice`, which then wins for the webview's lifetime.
     const facingLayout = $derived(view ? layoutSequences(view) : null);
-    const ieRose = $derived(view ? interpretIeRose(view.sequences, view.frames.length) : undefined);
+    const ieRose = $derived(view ? interpretIeDirections(view.sequences, view.frames.length) : undefined);
     const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
     const defaultLayoutMode: LayoutMode = $derived(
-        facingLayout?.mode === "compass" || (ieRose && (ieRose.detected || view?.meta.directionLayout === "ie8"))
-            ? "rose"
-            : "grid",
+        facingLayout?.mode === "compass" || (ieRose && view?.meta.directionLayout === "ie8") ? "rose" : "grid",
     );
     // eslint-disable-next-line prefer-const -- reassigned via onModeChange in the LayoutModeControls markup
     let layoutChoice = $state<LayoutMode | undefined>();

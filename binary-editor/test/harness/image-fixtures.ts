@@ -119,7 +119,8 @@ export function buildMultiSequenceBamFixture(): AnimationView {
 
 /** 16 cycles in the IE base-file shape: two stride-8 direction blocks, slots 0-4 real per-slot-colored
  *  cycles (block 1 brighter than block 0 so a group switch is visible), slots 5-7 one shared filler
- *  frame - the fingerprint interpretIeRose detects, so the editor opens in the rose layout. */
+ *  frame - the fingerprint interpretIeDirections detects. meta carries the "ie8" the BAM parser would
+ *  resolve for this shape, so the editor opens in the rose layout. */
 export function buildDirectionalBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
@@ -150,7 +151,7 @@ export function buildDirectionalBamFixture(): AnimationView {
         palette,
         frames,
         sequences,
-        meta: { sourceFormat: "bam", transparentIndex: 0 },
+        meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8" },
         basename: "harness-fixture-directional",
         sourceFormat: "bam",
         hasSidecarPal: false,

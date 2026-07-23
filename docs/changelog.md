@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The animation editor now shows Infinity Engine creature BAMs as a compass rose. A BAM whose cycles match the IE direction-block convention (blocks of 8 with the eastern slots left unstored) opens on a rose showing one sequence at a time, with a group picker to step through walk/attack/death/etc. and a Rose/Grid switch to fall back to the flat cycle grid. For files the heuristic misses, setting Direction layout to IE8 opens the rose too.
+- The animation editor now shows Infinity Engine creature BAMs as a compass rose. A BAM whose cycles match the IE direction-block convention (blocks of 8 with the eastern slots left unstored) opens on a rose showing one sequence at a time, with a group picker to step through the packed sequences - named from the filename's scheme (cast, walk, die, ...) where recognizable - and a Rose/Grid switch to fall back to the flat cycle grid for any animation.
 - The animation editor now opens Fallout critters stored as split direction files (`.fr0`-`.fr5`). Opening any one loads all six facings together; saving writes a single combined `.frm` (the original split files are left in place).
 - Fixed: editor startup no longer waits for the initial workspace scan (previously several seconds on large mods). Indexing runs in the background; find references and workspace symbols may return partial results until it finishes.
 

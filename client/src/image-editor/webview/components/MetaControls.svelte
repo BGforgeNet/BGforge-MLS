@@ -1,19 +1,12 @@
 <script lang="ts">
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
-    import type { DirectionLayout } from "@bgforge/image";
 
     const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
 
-    const DIRECTION_LAYOUT_OPTIONS: { value: DirectionLayout; label: string }[] = [
-        { value: "frm6", label: "FRM6 (6 directions)" },
-        { value: "ie8", label: "IE8 (8 directions)" },
-        { value: "non-directional", label: "Non-directional" },
-    ];
-
-    function isDirectionLayout(v: string): v is DirectionLayout {
-        return v === "frm6" || v === "ie8" || v === "non-directional";
-    }
+    // No direction-layout control here: meta.directionLayout is RESOLVED at parse (the IE stride-8
+    // fingerprint) and a BAM has no on-disk field for it, so a manual edit would silently not survive
+    // save/reopen. The user-facing layout knob is the ephemeral Rose/Grid selector (LayoutModeControls).
 </script>
 
 <div class="meta-controls" role="group" aria-label="Metadata">
@@ -83,24 +76,6 @@
                 }}
                 aria-label="Transparent palette index"
             />
-        </label>
-        <label
-            class="meta-field"
-            title="Declared direction layout, saved with the animation (kept in PNG-directory manifests). BAM cycles carry no direction info, so you declare it here; 'IE8' also opens the preview in the compass-rose layout."
-        >
-            <span class="meta-label">Direction layout</span>
-            <select
-                value={view.meta.directionLayout ?? "non-directional"}
-                onchange={(e) => {
-                    const next = e.currentTarget.value;
-                    if (isDirectionLayout(next)) bridge.send({ type: "editMeta", patch: { directionLayout: next } });
-                }}
-                aria-label="Direction layout"
-            >
-                {#each DIRECTION_LAYOUT_OPTIONS as opt (opt.value)}
-                    <option value={opt.value}>{opt.label}</option>
-                {/each}
-            </select>
         </label>
     {/if}
 </div>

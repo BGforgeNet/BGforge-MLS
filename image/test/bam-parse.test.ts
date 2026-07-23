@@ -21,6 +21,33 @@ function synthBamBytes(): Uint8Array {
     return serializeBamV1(anim);
 }
 
+describe("parseBamV1 direction-layout resolution", () => {
+    it("stamps ie8 when the cycle structure carries the IE base-file fingerprint", () => {
+        // One stride-8 block: 5 varied west cycles over frames 1-5, 3 east slots on the frame-0 filler.
+        const frames = Array.from({ length: 6 }, (_, i) => ({
+            width: 1,
+            height: 1,
+            pixels: Uint8Array.from([i === 0 ? 0 : 1]),
+            offsetX: 0,
+            offsetY: 0,
+        }));
+        const anim: Animation = {
+            palette: emptyPalette(),
+            frames,
+            sequences: [
+                ...Array.from({ length: 5 }, (_, i) => ({ frameRefs: [i + 1], facing: "none" as const })),
+                ...Array.from({ length: 3 }, () => ({ frameRefs: [0, 0], facing: "none" as const })),
+            ],
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+        expect(parseBamV1(serializeBamV1(anim)).meta.directionLayout).toBe("ie8");
+    });
+
+    it("stamps non-directional when no fingerprint matches", () => {
+        expect(parseBamV1(synthBamBytes()).meta.directionLayout).toBe("non-directional");
+    });
+});
+
 describe("parseBamV1 hostile input", () => {
     it("rejects a truncated header", () => {
         expect(() => parseBamV1(new Uint8Array(16))).toThrow(/header truncated/);

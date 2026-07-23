@@ -18,6 +18,12 @@ export {
     transparentIndexOf,
 } from "./model/animation.ts";
 export { type Anchor, type AnchorGeom, offsetToAnchor } from "./model/frame-anchor.ts";
+export {
+    type IeDirectionAnalysis,
+    type IeDirectionSlot,
+    type SequenceShape,
+    interpretIeDirections,
+} from "./model/ie-direction.ts";
 
 // Format codecs.
 export { parseFrm } from "./frm/parse.ts";

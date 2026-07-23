@@ -1,4 +1,4 @@
-import type { AnimationMeta, DirectionLayout, Facing, Rgba, SourceFormat } from "@bgforge/image";
+import type { AnimationMeta, Facing, Rgba, SourceFormat } from "@bgforge/image";
 
 /** A single decoded frame, trimmed for the wire: no rawEncoding/rleEncoded (re-encoding is host-side). */
 export interface FrameView {
@@ -51,7 +51,9 @@ export function decodeFramePixels(b64: string): Uint8Array {
     return out;
 }
 
-export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex" | "directionLayout">>;
+// directionLayout is deliberately NOT patchable: it is resolved at parse (BAM fingerprint detection)
+// and has no on-disk BAM field, so a webview edit could not survive save/reopen anyway.
+export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex">>;
 
 // "bam" = uncompressed BAM V1, "bamc" = compressed BAMC - two on-disk encodings of the same animation,
 // both using the .bam extension (the host maps the extension; see provider.handleSaveAs).
@@ -60,7 +62,6 @@ export type SaveAsTarget = "frm" | "bam" | "bamc" | "apng" | "png-directory";
 const SAVE_AS_TARGETS = new Set<string>(["frm", "bam", "bamc", "apng", "png-directory"] satisfies SaveAsTarget[]);
 const PALETTE_MODES = new Set<string>(["sidecar", "nearest"]);
 const IMPORT_MODES = new Set<string>(["replace", "append"]);
-const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] satisfies DirectionLayout[]);
 
 /** Messages the webview posts up to the host. */
 export type WebviewToHost =
@@ -85,12 +86,6 @@ function isValidMetaPatch(patch: unknown): patch is MetaPatch {
     if ("fps" in patch && typeof patch.fps !== "number") return false;
     if ("actionFrame" in patch && typeof patch.actionFrame !== "number") return false;
     if ("transparentIndex" in patch && typeof patch.transparentIndex !== "number") return false;
-    if (
-        "directionLayout" in patch &&
-        (typeof patch.directionLayout !== "string" || !DIRECTION_LAYOUTS.has(patch.directionLayout))
-    ) {
-        return false;
-    }
     return true;
 }
 

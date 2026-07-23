@@ -38,6 +38,10 @@
         "./frame-anchor": {
             "types": "./out/model/frame-anchor.d.ts",
             "import": "./out/model/frame-anchor.js"
+        },
+        "./ie-direction": {
+            "types": "./out/model/ie-direction.d.ts",
+            "import": "./out/model/ie-direction.js"
         }
     },
     "scripts": {

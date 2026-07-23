@@ -15,11 +15,12 @@ export default defineConfig({
         alias: {
             "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
             "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
-            // The pure frame-anchor subpath must precede the barrel alias: vite matches an alias when the
-            // id starts with `key + "/"`, so "@bgforge/image" would otherwise capture this subpath and
-            // rewrite it to a bad path. The webview renderer imports this subpath to avoid pulling the
-            // barrel's Node-only codecs into a browser bundle.
+            // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts
+            // with `key + "/"`, so "@bgforge/image" would otherwise capture them and rewrite to a bad
+            // path. The webview renderer imports these subpaths to avoid pulling the barrel's Node-only
+            // codecs into a browser bundle.
             "@bgforge/image/frame-anchor": path.resolve(__dirname, "../image/src/model/frame-anchor.ts"),
+            "@bgforge/image/ie-direction": path.resolve(__dirname, "../image/src/model/ie-direction.ts"),
             "@bgforge/image": path.resolve(__dirname, "../image/src/index.ts"),
         },
     },
