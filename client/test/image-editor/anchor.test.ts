@@ -74,9 +74,10 @@ test("BAM places its stored centre pixel at the tile centre", () => {
     expect(tl.y).toBeCloseTo(18);
 });
 
-test("converting BAM->FRM makes a proper feet-anchored file that keeps the sprite's on-tile spot", () => {
-    // Bear-like: a 62x62 BAM anchored at its middle (30,30). The BAM shows it centred; the converted FRM
-    // is feet-anchored (ALL offsets 0), and the editor frames it centred too, so it lands at ~the same spot.
+test("converting BAM->FRM makes a feet-anchored file that keeps the sprite's on-tile spot", () => {
+    // Bear-like: a 62x62 BAM anchored at its middle (30,30). The BAM shows it centred; the converted
+    // FRM keeps per-frame offsets 0 (motion deltas), carries the horizontal anchor in the direction
+    // header offset (62/2 - 30 = 1 here), and the editor frames it so it lands at ~the same spot.
     const width = 62;
     const height = 62;
     const bam: Animation = {
@@ -98,10 +99,11 @@ test("converting BAM->FRM makes a proper feet-anchored file that keeps the sprit
     const { animation: frm } = convertToFrm(bam, { singleCycle: 0 });
     const frmFrame = frm.frames[frm.sequences[0]?.frameRefs[0] ?? 0];
     if (!frmFrame) throw new Error("expected a converted FRM frame");
-    // Proper feet-anchored FRM: every offset is 0 (anchor = the frame's own bottom-centre).
+    // Per-frame offsets stay 0 (they are motion deltas); the BAM's horizontal centre anchor rides the
+    // per-direction header offset instead, and the vertical anchor is the canvas bottom (feet).
     expect(frmFrame.offsetX).toBe(0);
     expect(frmFrame.offsetY).toBe(0);
-    expect(frm.meta.dirOffsetsX).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(frm.meta.dirOffsetsX).toEqual([1, 1, 1, 1, 1, 1]); // round(62/2 + (0 - 30))
     expect(frm.meta.dirOffsetsY).toEqual([0, 0, 0, 0, 0, 0]);
 
     const frmTL = frameTopLeft({
@@ -110,10 +112,11 @@ test("converting BAM->FRM makes a proper feet-anchored file that keeps the sprit
         height: frmFrame.height,
         offsetX: 0,
         offsetY: 0,
-        dirOffsetX: 0,
-        dirOffsetY: 0,
+        dirOffsetX: frm.meta.dirOffsetsX?.[0] ?? 0,
+        dirOffsetY: frm.meta.dirOffsetsY?.[0] ?? 0,
     });
-    // Same on-tile spot, within the <=1px geometric-centre-vs-stored-centre difference.
+    // Same on-tile spot: horizontally exact via the direction offset, vertically within the <=1px
+    // centre-vs-feet framing difference.
     expect(Math.abs(frmTL.x - bamTL.x)).toBeLessThanOrEqual(1);
     expect(Math.abs(frmTL.y - bamTL.y)).toBeLessThanOrEqual(1);
 });

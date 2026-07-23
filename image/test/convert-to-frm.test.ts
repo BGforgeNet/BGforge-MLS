@@ -341,6 +341,54 @@ describe("convertToFrm", () => {
         expect([...(animation.frames[seRef]?.pixels ?? [])]).toEqual([1, 1, 1, 1]);
     });
 
+    describe("uniform rotation canvas", () => {
+        it("re-composes a rotation's frames onto one anchor-aligned canvas so geometry cannot jitter", () => {
+            const mk = (w: number, px: number[], cx: number): Frame => ({
+                width: w,
+                height: 1,
+                pixels: Uint8Array.from(px),
+                offsetX: cx,
+                offsetY: 0,
+            });
+            // NE holds two frames of differing width whose BAM centre anchors align the content:
+            // A (w4, anchor x3) spans anchor-relative [-3..1], B (w1, anchor x0) spans [0..1].
+            const source: Animation = {
+                palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+                sequences: [
+                    { frameRefs: [0, 1], facing: "NE" },
+                    { frameRefs: [2], facing: "E" },
+                    { frameRefs: [3], facing: "SE" },
+                    { frameRefs: [4], facing: "SW" },
+                    { frameRefs: [5], facing: "W" },
+                    { frameRefs: [6], facing: "NW" },
+                ],
+                frames: [
+                    mk(4, [1, 2, 3, 4], 3),
+                    mk(1, [9], 0),
+                    mk(1, [5], 0),
+                    mk(1, [5], 0),
+                    mk(1, [5], 0),
+                    mk(1, [5], 0),
+                    mk(1, [5], 0),
+                ],
+                meta: { sourceFormat: "bam", transparentIndex: 0 },
+            };
+            const { animation } = convertToFrm(source);
+            const [refA, refB] = animation.sequences[0]?.frameRefs ?? [];
+            const frameA = refA === undefined ? undefined : animation.frames[refA];
+            const frameB = refB === undefined ? undefined : animation.frames[refB];
+            if (!frameA || !frameB) throw new Error("missing NE frames");
+            // Both frames share the union canvas (width 4), with content blitted at its anchor spot.
+            expect([frameA.width, frameA.height]).toEqual([4, 1]);
+            expect([frameB.width, frameB.height]).toEqual([4, 1]);
+            expect([...frameA.pixels]).toEqual([1, 2, 3, 4]);
+            expect([...frameB.pixels]).toEqual([0, 0, 0, 9]); // anchor-aligned: 9 sits under A's anchor column
+            // The rotation's direction offset moves the FRM bottom-centre onto the shared anchor.
+            expect(animation.meta.dirOffsetsX?.[0]).toBe(-1); // round(4/2 + (-3))
+            expect(animation.meta.dirOffsetsY?.[0]).toBe(0); // height 1, top 0
+        });
+    });
+
     // An IE base file: per 8-slot block, slots 0-4 (S, SW, W, NW, N) hold one traceable frame each
     // (pixel value 1 + block*16 + slot), slots 5-7 stuff the shared filler frame 0 - the shape
     // interpretIeDirections detects. Frame 0's pixel is 255 so a leaked filler is traceable too.

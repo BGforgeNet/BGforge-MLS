@@ -46,16 +46,78 @@ function resolveFacings(anim: Animation): Facing[] {
     );
 }
 
+interface SlotBuild {
+    pool: Frame[];
+    frameRefsPerSlot: number[][];
+    dirOffsetsX: number[];
+    dirOffsetsY: number[];
+}
+
+/** The union of a rotation's frames' boxes relative to the source's centre anchor (offsetX/offsetY);
+ *  undefined for an empty rotation. */
+interface AnchorBox {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+}
+
+function measureAnchorBox(pool: Frame[], refs: number[]): AnchorBox | undefined {
+    if (refs.length === 0) return undefined;
+    const box: AnchorBox = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
+    for (const ref of refs) {
+        const f = pool[ref];
+        /* v8 ignore next -- callers build refs against the pool they pass */
+        if (!f) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
+        box.left = Math.min(box.left, -f.offsetX);
+        box.top = Math.min(box.top, -f.offsetY);
+        box.right = Math.max(box.right, f.width - f.offsetX);
+        box.bottom = Math.max(box.bottom, f.height - f.offsetY);
+    }
+    return box;
+}
+
+/**
+ * Re-compose one rotation's frames onto a single shared canvas covering the union of their
+ * anchor-aligned boxes. An FRM frame anchors statically at its own bottom-centre - the per-frame
+ * offset is a motion delta, not an alignment channel - so frames of differing size or asymmetric
+ * overhang would jitter around the anchor as the animation plays; identical geometry per rotation
+ * removes the variance for the game and for every viewer. `bottom` is the anchor-relative bottom
+ * edge SHARED across the whole conversion, so every rotation's feet line sits the same distance
+ * below the anchor and the sprite stays put when turning. Replaces the composed pool entries in
+ * place; returns the direction header x-offset that puts the bottom-CENTRE anchor on the content's
+ * horizontal anchor column (the vertical anchor stays the canvas bottom - a proper feet-anchored FRM).
+ */
+function composeUniformCanvas(
+    pool: Frame[],
+    refs: number[],
+    transparent: number,
+    box: AnchorBox,
+    bottom: number,
+): number {
+    const width = box.right - box.left;
+    const height = bottom - box.top;
+    for (const ref of refs) {
+        const f = pool[ref];
+        /* v8 ignore next -- same refs as the measuring pass */
+        if (!f) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
+        const pixels = new Uint8Array(width * height).fill(transparent);
+        const dx = -f.offsetX - box.left;
+        const dy = -f.offsetY - box.top;
+        for (let y = 0; y < f.height; y++) {
+            pixels.set(f.pixels.subarray(y * f.width, (y + 1) * f.width), (dy + y) * width + dx);
+        }
+        pool[ref] = { width, height, pixels, offsetX: 0, offsetY: 0 };
+    }
+    return Math.round(width / 2 + box.left);
+}
+
 /**
  * Single-orientation slots: all six rotations share the chosen cycle's one animation. The pool holds
  * that cycle's frames once and every slot references the IDENTICAL frame-ref list, so serializeFrm
  * writes equal data_offsets (the FRM spec's shared-rotation form) rather than six copies.
  */
-function buildSingleOrientationSlots(
-    anim: Animation,
-    cycleIndex: number,
-    report: LossReport,
-): { pool: Frame[]; frameRefsPerSlot: number[][] } {
+function buildSingleOrientationSlots(anim: Animation, cycleIndex: number, report: LossReport): SlotBuild {
     const seq = anim.sequences[cycleIndex];
     if (!seq) throw new Error(`convertToFrm: single-orientation cycle index ${cycleIndex} out of range`);
     const pool: Frame[] = seq.frameRefs.map((ref) => {
@@ -64,6 +126,10 @@ function buildSingleOrientationSlots(
         return frame;
     });
     const refs = pool.map((_, i) => i);
+    // One composition covers all six slots - they share the identical ref list, so the canvas (and
+    // thus the direction offset) is the same for every rotation.
+    const box = measureAnchorBox(pool, refs);
+    const dirOffsetX = box ? composeUniformCanvas(pool, refs, transparentIndexOf(anim.meta), box, box.bottom) : 0;
     const frameRefsPerSlot = FRM_FACINGS.map(() => [...refs]);
     if (anim.sequences.length > 1) {
         report.add(
@@ -71,7 +137,12 @@ function buildSingleOrientationSlots(
             `used cycle ${cycleIndex} for a single-orientation FRM; dropped ${anim.sequences.length - 1} other cycle(s)`,
         );
     }
-    return { pool, frameRefsPerSlot };
+    return {
+        pool,
+        frameRefsPerSlot,
+        dirOffsetsX: FRM_FACINGS.map(() => dirOffsetX),
+        dirOffsetsY: FRM_FACINGS.map(() => 0),
+    };
 }
 
 // Eastern FRM rotations and the stored west cycle each mirrors across the vertical axis - what the
@@ -162,7 +233,7 @@ function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport)
  * shared across rotations (FRM cannot share a frame object across directions) and padding short
  * rotations to the longest with fully-transparent frames.
  */
-function buildDirectionalSlots(anim: Animation, report: LossReport): { pool: Frame[]; frameRefsPerSlot: number[][] } {
+function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
     const facings = resolveFacings(anim);
 
     const { dropped } = partitionForFrm(facings);
@@ -235,10 +306,26 @@ function buildDirectionalSlots(anim: Animation, report: LossReport): { pool: Fra
         );
     }
 
+    const transparent = transparentIndexOf(anim.meta);
+
+    // Uniform canvas per rotation BEFORE padding, so the pads below inherit the canvas geometry
+    // (they size themselves from the rotation's last frame). Pool entries are exclusive to their
+    // slot (the claim/duplicate loop above), so the in-place composition cannot cross rotations.
+    // The bottom extent is shared across rotations: feet lines coincide when the sprite turns.
+    const boxes = frameRefsPerSlot.map((refs) => measureAnchorBox(pool, refs));
+    const sharedBottom = boxes.reduce((max, box) => Math.max(max, box?.bottom ?? -Infinity), -Infinity);
+    const dirOffsetsX: number[] = [];
+    const dirOffsetsY: number[] = [];
+    for (let slot = 0; slot < frameRefsPerSlot.length; slot++) {
+        const box = boxes[slot];
+        const refs = frameRefsPerSlot[slot];
+        dirOffsetsX.push(box && refs ? composeUniformCanvas(pool, refs, transparent, box, sharedBottom) : 0);
+        dirOffsetsY.push(0);
+    }
+
     // Pad every direction to the longest one with synthesized fully-transparent frames. The fill is
     // the SOURCE's transparent index: the palette paths below map that index to the FRM's slot 0
     // (a bare 0 would read as the source's color 0 whenever transparentIndex != 0).
-    const transparent = transparentIndexOf(anim.meta);
     const maxLen = frameRefsPerSlot.reduce((max, refs) => Math.max(max, refs.length), 0);
     for (let slot = 0; slot < frameRefsPerSlot.length; slot++) {
         const refs = frameRefsPerSlot[slot];
@@ -264,7 +351,7 @@ function buildDirectionalSlots(anim: Animation, report: LossReport): { pool: Fra
         report.add("padded-sequence", `direction ${facingName} padded from ${from} to ${maxLen} frames`);
     }
 
-    return { pool, frameRefsPerSlot };
+    return { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY };
 }
 
 // Converts any Animation to an FRM-shaped one: 6 fixed hex rotations sharing a uniform frame count, an
@@ -295,7 +382,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         opts?.singleCycle ??
         (frmDirectionMode(source) === "single-orientation" && source.sequences.length === 1 ? 0 : undefined);
 
-    const { pool, frameRefsPerSlot } =
+    const { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY } =
         singleCycle !== undefined
             ? buildSingleOrientationSlots(source, singleCycle, report)
             : buildDirectionalSlots(source, report);
@@ -336,10 +423,9 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
 
     // Final frame shape: strip rawEncoding/rleEncoded unconditionally. A carried (sidecar-path) frame's
     // rawEncoding still describes source on-disk bytes (e.g. BAM RLE), which serializeFrm would otherwise
-    // write verbatim as FRM pixel data and corrupt the output. The output is a PROPER feet-anchored FRM:
-    // its anchor is each frame's bottom-centre, so the per-frame AND per-direction offsets are all 0.
-    // (The BAM's own centre is not carried into the file; the editor re-frames the first frame to the
-    // BAM's on-tile position at display time - see the webview anchor.ts.)
+    // write verbatim as FRM pixel data and corrupt the output. Per-frame offsets stay 0 (they are
+    // motion deltas in FRM); each rotation's frames already share one uniform canvas, and the source's
+    // centre anchor is carried by the per-DIRECTION header offsets computed in composeUniformCanvas.
     const frames: Frame[] = paletteFrames.map((f) => ({
         width: f.width,
         height: f.height,
@@ -364,8 +450,8 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
             actionFrame: source.meta.actionFrame ?? 0,
             directionLayout: "frm6",
             frmVersion: 4,
-            dirOffsetsX: [0, 0, 0, 0, 0, 0],
-            dirOffsetsY: [0, 0, 0, 0, 0, 0],
+            dirOffsetsX,
+            dirOffsetsY,
         },
     };
 
