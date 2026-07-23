@@ -16,18 +16,30 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
     // Each frame's FRM per-direction header offset, needed to translate its anchor: a frame belongs to
     // the first direction (sequence) that references it; the sequences are in FRM header-slot order, so
     // the sequence index indexes dirOffsetsX/Y. Frames referenced by no direction keep a zero offset.
-    const source = anim.meta.sourceFormat;
+    // The "frm" annotation is the compile-time proof the no-op above covered every other SourceFormat.
+    const source: "frm" = anim.meta.sourceFormat;
     const frameDirOffset = new Map<number, { x: number; y: number }>();
+    let sharedOffsetConflicts = 0;
     anim.sequences.forEach((seq, slot) => {
         const dir = { x: anim.meta.dirOffsetsX?.[slot] ?? 0, y: anim.meta.dirOffsetsY?.[slot] ?? 0 };
-        for (const ref of seq.frameRefs) if (!frameDirOffset.has(ref)) frameDirOffset.set(ref, dir);
+        for (const ref of seq.frameRefs) {
+            const existing = frameDirOffset.get(ref);
+            if (!existing) frameDirOffset.set(ref, dir);
+            else if (existing.x !== dir.x || existing.y !== dir.y) sharedOffsetConflicts++;
+        }
     });
+    if (sharedOffsetConflicts > 0) {
+        report.add(
+            "shared-frame-direction-offset",
+            `${sharedOffsetConflicts} shared frame reference(s) keep the first referencing direction's offset; the other directions' differing offsets are dropped (BAM stores one anchor per frame)`,
+        );
+    }
 
     // New Frame objects, not spread: FRM's rawEncoding describes FRM's own on-disk pixel payload and must
     // not carry over into a BAM-shaped frame (would corrupt serializeBamV1). The BAM centre pixel IS the
     // anchor, so set it to the FRM frame's static anchor (bottom-centre + its per-direction offset);
     // offsetToAnchor deliberately ignores the FRM per-frame offset (an animation delta), so inter-frame
-    // motion is not carried across - see INTERNALS.
+    // motion is not carried across - see model/frame-anchor.ts.
     const frames: Frame[] = anim.frames.map((f, i) => {
         const dir = frameDirOffset.get(i);
         const anchor = offsetToAnchor(source, {

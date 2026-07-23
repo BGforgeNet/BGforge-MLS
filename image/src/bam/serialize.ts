@@ -36,6 +36,10 @@ export function serializeBamV1(anim: Animation): Uint8Array {
         cursor += p.length;
     }
     const total = cursor;
+    // Data offsets pack into 31 bits (bit 31 is the uncompressed flag); past 2 GiB the mask below
+    // would silently truncate them.
+    /* v8 ignore next -- a >2 GiB fixture is not practically constructible in a test */
+    if (total > 0x7fffffff) throw new Error("serializeBamV1: output exceeds the 2 GiB BAM offset limit");
 
     const out = new Uint8Array(total);
     const view = new DataView(out.buffer);

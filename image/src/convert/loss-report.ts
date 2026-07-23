@@ -5,6 +5,7 @@ export type LossKind =
     | "empty-direction"
     | "padded-sequence"
     | "duplicated-shared-frames"
+    | "shared-frame-direction-offset"
     | "embedded-palette"
     | "palette-remapped-to-default"
     | "palette-nearest-remapped"

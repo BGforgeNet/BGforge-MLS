@@ -191,6 +191,9 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         // below. A no-op has nothing to convert, so aliasing is acceptable here.
         return { animation: { ...anim, meta: { ...anim.meta } }, report };
     }
+    // Compile-time proof the no-op above covered the only non-convertible case: a 4th member of
+    // SourceFormat fails this narrowing instead of silently falling through as convertible.
+    anim.meta.sourceFormat satisfies "bam" | "bamc";
 
     // A non-directional single-cycle source auto-resolves to a single-orientation FRM; a multi-cycle
     // one needs an explicit cycle (opts.singleCycle) chosen by the caller.

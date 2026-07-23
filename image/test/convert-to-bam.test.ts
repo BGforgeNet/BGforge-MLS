@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
-import { convertToBam, parseFrm, parseBamV1, serializeBamV1 } from "@bgforge/image";
+import {
+    type Animation,
+    FRM_FACINGS,
+    convertToBam,
+    emptyPalette,
+    parseFrm,
+    parseBamV1,
+    serializeBamV1,
+} from "@bgforge/image";
 import { corpusFiles, FALLOUT_ART } from "./fixtures.ts";
+
+// A 6-direction FRM whose every direction shares frame 0, with per-direction header offsets from the caller.
+function frmSharingOneFrame(dirOffsetsX: number[]): Animation {
+    return {
+        palette: emptyPalette(),
+        frames: [{ width: 1, height: 1, pixels: new Uint8Array([0]), offsetX: 0, offsetY: 0 }],
+        sequences: FRM_FACINGS.map((facing) => ({ frameRefs: [0], facing })),
+        meta: { sourceFormat: "frm", directionLayout: "frm6", dirOffsetsX, dirOffsetsY: [0, 0, 0, 0, 0, 0] },
+    };
+}
+
+describe("convertToBam shared-frame offsets", () => {
+    it("reports when directions sharing a frame carry differing per-direction offsets", () => {
+        const { report } = convertToBam(frmSharingOneFrame([0, 5, 0, 0, 0, 0]));
+        expect(report.has("shared-frame-direction-offset")).toBe(true);
+        expect(report.lossless).toBe(false); // a real precision loss, not an informational note
+    });
+
+    it("stays silent when the shared directions' offsets match", () => {
+        const { report } = convertToBam(frmSharingOneFrame([0, 0, 0, 0, 0, 0]));
+        expect(report.has("shared-frame-direction-offset")).toBe(false);
+    });
+});
 
 // hanpwroe.frm carries a non-zero fps (10) and action frame (2) in its header, so both
 // dropped-* loss items are exercised alongside the always-present embedded-palette one.
