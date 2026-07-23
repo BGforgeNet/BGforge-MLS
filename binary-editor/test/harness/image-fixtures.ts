@@ -64,7 +64,7 @@ export function buildFrmFixture(): AnimationView {
             frames.push(makeFrame(baseIndex, frameIndex));
             return frames.length - 1;
         });
-        return { frameRefs, facing };
+        return { frameRefs, facing, dirOffsetX: 0, dirOffsetY: 0 };
     });
 
     return {
@@ -101,7 +101,7 @@ export function buildBamFixture(): AnimationView {
             frames.push(makeFrame(baseIndex, frameIndex));
             return frames.length - 1;
         });
-        return { frameRefs, facing: "none" };
+        return { frameRefs, facing: "none", dirOffsetX: 0, dirOffsetY: 0 };
     });
 
     return {

@@ -94,6 +94,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return this.model.animation;
     }
 
+    /** Animation with the active palette resolved in - use for exports/conversions (see model). */
+    resolvedAnimation(): Animation {
+        return this.model.resolvedAnimation();
+    }
+
     async reload(): Promise<void> {
         const bytes = await vscode.workspace.fs.readFile(this.uri);
         const sidecarBytes = await ImageEditorDocument.readSidecar(this.uri);

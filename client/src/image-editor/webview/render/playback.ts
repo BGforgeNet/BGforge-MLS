@@ -17,7 +17,10 @@ export function createPlayback(opts: { frameCount: number; fps: number }): Playb
 }
 
 export function play(state: PlaybackState): PlaybackState {
-    return { ...state, playing: true };
+    // Restart from the top when Play is pressed on a finished, non-looping playthrough (sitting on the
+    // last frame): otherwise the next tick immediately re-hits the end and stops, so Play does nothing.
+    const atEnd = state.frame >= state.frameCount - 1;
+    return { ...state, playing: true, frame: atEnd ? 0 : state.frame };
 }
 
 export function pause(state: PlaybackState): PlaybackState {
@@ -32,8 +35,8 @@ export function toggleLoop(state: PlaybackState): PlaybackState {
     return { ...state, loop: !state.loop };
 }
 
-export function setFps(state: PlaybackState, fps: number): PlaybackState {
-    return { ...state, fps };
+export function msPerFrame(fps: number): number {
+    return 1000 / fps;
 }
 
 function clampFrame(frame: number, frameCount: number): number {
@@ -53,11 +56,26 @@ export function setFrame(state: PlaybackState, frame: number): PlaybackState {
 export function advance(state: PlaybackState, elapsedMs: number): PlaybackState {
     if (!state.playing || state.frameCount <= 0 || state.fps <= 0) return state;
 
-    const steps = Math.floor(elapsedMs / (1000 / state.fps));
+    const steps = Math.floor(elapsedMs / msPerFrame(state.fps));
     if (steps <= 0) return state;
 
     const next = state.frame + steps;
     if (next < state.frameCount) return { ...state, frame: next };
     if (state.loop) return { ...state, frame: next % state.frameCount };
     return { ...state, frame: state.frameCount - 1, playing: false };
+}
+
+/**
+ * rAF-friendly stepping. A requestAnimationFrame loop fires ~every 16ms; at any fps whose frame
+ * interval exceeds that (fps < ~62, i.e. every realistic value), flooring each 16ms delta to whole
+ * frames yields 0 and playback never advances - unless the unconsumed remainder is carried forward.
+ * `tick` returns the advanced state plus the leftover ms not yet consumed by a whole frame; the caller
+ * feeds `leftover + delta` back in next frame so time accumulates instead of being discarded per tick.
+ */
+export function tick(state: PlaybackState, elapsedMs: number): { state: PlaybackState; leftoverMs: number } {
+    if (!state.playing || state.frameCount <= 0 || state.fps <= 0) return { state, leftoverMs: 0 };
+    const per = msPerFrame(state.fps);
+    const steps = Math.floor(elapsedMs / per);
+    if (steps <= 0) return { state, leftoverMs: elapsedMs };
+    return { state: advance(state, elapsedMs), leftoverMs: elapsedMs - steps * per };
 }

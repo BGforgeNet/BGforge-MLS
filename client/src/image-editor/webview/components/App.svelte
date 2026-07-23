@@ -2,7 +2,7 @@
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
     import type { Background } from "../render/indexed-to-rgba";
-    import { advance, createPlayback, type PlaybackState } from "../render/playback";
+    import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { layoutSequences } from "../render/compass-layout";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -67,14 +67,20 @@
 
         let raf: number;
         let lastTime: number | undefined;
-        const tick = (now: number): void => {
+        // `leftover` carries the sub-frame remainder between ticks: a ~16ms rAF delta floors to 0 whole
+        // frames at any realistic fps, so discarding it (resetting the clock each tick) would stall
+        // playback entirely - the bug that made Play do nothing. See playback.tick.
+        let leftover = 0;
+        const onFrame = (now: number): void => {
             if (lastTime !== undefined && playback) {
-                playback = advance(playback, now - lastTime);
+                const stepped = tick(playback, leftover + (now - lastTime));
+                playback = stepped.state;
+                leftover = stepped.leftoverMs;
             }
             lastTime = now;
-            raf = requestAnimationFrame(tick);
+            raf = requestAnimationFrame(onFrame);
         };
-        raf = requestAnimationFrame(tick);
+        raf = requestAnimationFrame(onFrame);
 
         return () => cancelAnimationFrame(raf);
     });
@@ -99,25 +105,33 @@
     {/if}
 {:else}
     {@const layout = layoutSequences(view)}
-    <Toolbar {view} {bridge} />
-    <ViewControls
-        {zoom}
-        {background}
-        {showOffsetMarker}
-        onZoomChange={(z) => (zoom = z)}
-        onBackgroundChange={(b) => (background = b)}
-        onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
-        {viewState}
-    />
-    <MetaControls {view} {bridge} />
-    {#if playback}
+    <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
+         the save/import bar spans the bottom. -->
+    <div class="editor-layout">
         <div class="stage">
-            {#if layout.mode === "compass"}
-                <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
-            {:else}
-                <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+            {#if playback}
+                {#if layout.mode === "compass"}
+                    <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+                {:else}
+                    <CycleGrid {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+                {/if}
             {/if}
         </div>
-        <PlaybackControls state={playback} onChange={(next) => (playback = next)} />
-    {/if}
+        <aside class="controls-column">
+            <ViewControls
+                {zoom}
+                {background}
+                {showOffsetMarker}
+                onZoomChange={(z) => (zoom = z)}
+                onBackgroundChange={(b) => (background = b)}
+                onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
+                {viewState}
+            />
+            <MetaControls {view} {bridge} />
+            {#if playback}
+                <PlaybackControls state={playback} onChange={(next) => (playback = next)} />
+            {/if}
+        </aside>
+    </div>
+    <Toolbar {view} {bridge} />
 {/if}

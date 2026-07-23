@@ -39,6 +39,9 @@
                     transparentIndex={view.meta.transparentIndex ?? 0}
                     {zoom}
                     {background}
+                    sourceFormat={view.sourceFormat}
+                    dirOffsetX={tile.seq.dirOffsetX}
+                    dirOffsetY={tile.seq.dirOffsetY}
                     {showOffsetMarker}
                 />
             {/if}

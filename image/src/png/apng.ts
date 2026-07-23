@@ -48,6 +48,20 @@ function buildFdAt(sequenceNumber: number, payload: Uint8Array): Uint8Array {
     return data;
 }
 
+/** Centre `frame` on a canvasWidth x canvasHeight buffer filled with `fill` (the transparent index).
+ *  Returns the pixels unchanged when the frame already fills the canvas. */
+function padFrameToCanvas(frame: ApngFrame, canvasWidth: number, canvasHeight: number, fill: number): Uint8Array {
+    if (frame.width === canvasWidth && frame.height === canvasHeight) return frame.pixels;
+    const out = new Uint8Array(canvasWidth * canvasHeight).fill(fill);
+    const dx = Math.floor((canvasWidth - frame.width) / 2);
+    const dy = Math.floor((canvasHeight - frame.height) / 2);
+    for (let y = 0; y < frame.height; y++) {
+        const src = y * frame.width;
+        out.set(frame.pixels.subarray(src, src + frame.width), (y + dy) * canvasWidth + dx);
+    }
+    return out;
+}
+
 /**
  * Hand-rolled colour-type-3 (indexed) APNG encoder: default image is frame 0
  * (IHDR/IDAT), later frames ride fdAT chunks, all sharing one PLTE/tRNS.
@@ -60,9 +74,10 @@ export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentInde
     }
     const delayDen = fps || 10;
 
-    // IHDR canvas must be at least as large as every frame's fcTL region (each frame
-    // is placed at x_offset = y_offset = 0), since later frames can exceed frame 0's
-    // dimensions (e.g. FRM frames within a direction commonly differ in size).
+    // The IHDR canvas is the max frame size, and EVERY frame - the IDAT default image included - is
+    // padded to it (centred, transparent). A default image (or any frame) smaller than IHDR is a
+    // malformed PNG that spec-compliant decoders (Chromium / the VS Code image viewer) reject outright;
+    // FRM frames within a direction differ in size, so this padding is what keeps the export loadable.
     const canvasWidth = Math.max(...frames.map((f) => f.width));
     const canvasHeight = Math.max(...frames.map((f) => f.height));
 
@@ -76,9 +91,10 @@ export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentInde
 
     let sequenceNumber = 0;
     for (const [index, frame] of frames.entries()) {
-        parts.push(writeChunk("fcTL", buildFcTl(sequenceNumber, frame.width, frame.height, delayDen)));
+        const pixels = padFrameToCanvas(frame, canvasWidth, canvasHeight, transparentIndex);
+        parts.push(writeChunk("fcTL", buildFcTl(sequenceNumber, canvasWidth, canvasHeight, delayDen)));
         sequenceNumber++;
-        const payload = deflateScanlines(frame.width, frame.height, frame.pixels);
+        const payload = deflateScanlines(canvasWidth, canvasHeight, pixels);
         if (index === 0) {
             parts.push(writeChunk("IDAT", payload));
         } else {

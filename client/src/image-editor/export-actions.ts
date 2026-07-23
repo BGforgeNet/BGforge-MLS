@@ -35,7 +35,7 @@ export function buildCrossFormatSave(
     anim: Animation,
     target: "frm" | "bam",
     targetPath: string,
-    opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest" },
+    opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest"; singleCycle?: number },
 ): { writes: SaveWrite[]; report: LossReport } {
     const { animation, report } = convert(anim, target, opts);
     const bytes = target === "frm" ? serializeFrm(animation) : serializeBamV1(animation);

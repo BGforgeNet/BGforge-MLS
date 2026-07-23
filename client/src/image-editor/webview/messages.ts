@@ -14,6 +14,10 @@ export interface FrameView {
 export interface SequenceView {
     frameRefs: number[];
     facing: Facing;
+    // FRM per-direction header offset (0 for BAM/BAMC); shifts this direction's feet anchor. See
+    // render/anchor.ts. Carried per-sequence because a frame can be shared across directions.
+    dirOffsetX: number;
+    dirOffsetY: number;
 }
 
 export interface AnimationView {
@@ -61,6 +65,7 @@ const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] sat
 /** Messages the webview posts up to the host. */
 export type WebviewToHost =
     | { type: "ready" }
+    | { type: "save" } // in-place save, original format (routes to VS Code's native save)
     | { type: "editMeta"; patch: MetaPatch }
     | { type: "setExternalPalette"; enabled: boolean } // FRM only
     | { type: "saveAs"; target: SaveAsTarget; paletteMode?: "sidecar" | "nearest" }
@@ -94,6 +99,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
     if (!isRecord(m) || typeof m.type !== "string") return false;
     switch (m.type) {
         case "ready":
+        case "save":
             return true;
         case "editMeta":
             return isValidMetaPatch(m.patch);

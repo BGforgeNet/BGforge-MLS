@@ -73,6 +73,16 @@ export class ImageDocumentModel {
         return this.animationValue;
     }
 
+    /**
+     * The animation with its ACTIVE palette resolved in. An FRM carries no palette of its own -
+     * `animationValue.palette` is an all-black placeholder - so the real colours come from the
+     * default Fallout / sidecar palette (the same one toView uses). Every export/convert path MUST
+     * use this, not the raw `animation`, or an FRM exports as a black silhouette.
+     */
+    resolvedAnimation(): Animation {
+        return { ...this.animationValue, palette: this.activePalette() };
+    }
+
     get dirty(): boolean {
         return this.dirtyValue;
     }
@@ -102,9 +112,14 @@ export class ImageDocumentModel {
             offsetX: f.offsetX,
             offsetY: f.offsetY,
         }));
-        const sequences: SequenceView[] = this.animationValue.sequences.map((s) => ({
+        // FRM sequences are built in header-direction order, so the sequence index selects its
+        // dirOffsets entry; BAM/BAMC have none, so the anchor's direction shift is 0.
+        const { dirOffsetsX, dirOffsetsY } = this.animationValue.meta;
+        const sequences: SequenceView[] = this.animationValue.sequences.map((s, i) => ({
             frameRefs: s.frameRefs,
             facing: s.facing,
+            dirOffsetX: dirOffsetsX?.[i] ?? 0,
+            dirOffsetY: dirOffsetsY?.[i] ?? 0,
         }));
         return {
             palette: this.activePalette(),

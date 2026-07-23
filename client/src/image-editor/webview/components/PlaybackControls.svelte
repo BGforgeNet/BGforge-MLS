@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { pause, play, setFps, setFrame, stop, toggleLoop, type PlaybackState } from "../render/playback";
+    import { pause, play, setFrame, stop, toggleLoop, type PlaybackState } from "../render/playback";
 
     const { state, onChange }: { state: PlaybackState; onChange: (next: PlaybackState) => void } = $props();
 
@@ -47,20 +47,5 @@
             aria-label="Frame scrubber"
         />
         <span class="playback-value">{state.frame + 1} / {state.frameCount}</span>
-    </label>
-    <label class="playback-field">
-        <span class="playback-label">FPS</span>
-        <input
-            type="number"
-            min="1"
-            max="60"
-            step="1"
-            value={state.fps}
-            onchange={(e) => {
-                const next = Number(e.currentTarget.value);
-                if (Number.isFinite(next) && next > 0) onChange(setFps(state, next));
-            }}
-            aria-label="Frames per second"
-        />
     </label>
 </div>

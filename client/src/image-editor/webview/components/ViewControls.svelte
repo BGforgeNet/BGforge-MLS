@@ -6,7 +6,19 @@
         { value: "checkered", label: "Checkered" },
         { value: "green", label: "Green" },
     ];
-    const ZOOM_OPTIONS = [1, 2, 3, 4, 6, 8];
+    // Continuous fractional zoom, 50% - 400%. Step 0.05 = 5% increments.
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 4;
+    const ZOOM_STEP = 0.05;
+    const ZOOM_PRESETS = [0.5, 1, 2, 4]; // 50% / 100% / 200% / 400% - one-click common levels
+
+    function isPreset(preset: number): boolean {
+        return Math.abs(zoom - preset) < 0.001;
+    }
+
+    function clampZoom(z: number): number {
+        return Math.min(Math.max(z, ZOOM_MIN), ZOOM_MAX);
+    }
 
     /** Persisted subset of the view choices, read/written through `vscode.getState()`/`setState()`. */
     interface PersistedViewState {
@@ -45,7 +57,7 @@
     $effect(() => {
         const persisted = viewState?.get();
         if (!isRecord(persisted)) return;
-        if (typeof persisted.zoom === "number") onZoomChange(persisted.zoom);
+        if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom));
         if (isBackground(persisted.background)) onBackgroundChange(persisted.background);
     });
 
@@ -67,12 +79,30 @@
 <div class="view-controls" role="group" aria-label="View options">
     <label class="view-field">
         <span class="view-label">Zoom</span>
-        <select value={zoom} onchange={(e) => handleZoomChange(Number(e.currentTarget.value))} aria-label="Zoom level">
-            {#each ZOOM_OPTIONS as z (z)}
-                <option value={z}>{z}x</option>
-            {/each}
-        </select>
+        <input
+            type="range"
+            min={ZOOM_MIN}
+            max={ZOOM_MAX}
+            step={ZOOM_STEP}
+            value={zoom}
+            oninput={(e) => handleZoomChange(clampZoom(Number(e.currentTarget.value)))}
+            aria-label="Zoom level"
+        />
+        <span class="view-value">{Math.round(zoom * 100)}%</span>
     </label>
+    <div class="view-field zoom-presets" role="group" aria-label="Zoom presets">
+        {#each ZOOM_PRESETS as preset (preset)}
+            <button
+                type="button"
+                class="bg-option"
+                class:active={isPreset(preset)}
+                aria-pressed={isPreset(preset)}
+                onclick={() => handleZoomChange(preset)}
+            >
+                {Math.round(preset * 100)}%
+            </button>
+        {/each}
+    </div>
     <div class="view-field" role="radiogroup" aria-label="Background">
         <span class="view-label">Background</span>
         <div class="bg-options">

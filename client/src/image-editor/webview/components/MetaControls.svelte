@@ -33,7 +33,7 @@
                 aria-label="Frames per second"
             />
         </label>
-        <label class="meta-field">
+        <label class="meta-field" title="Marks the action frame in playback">
             <span class="meta-label">Action frame</span>
             <input
                 type="number"
@@ -48,16 +48,20 @@
                 }}
                 aria-label="Action frame"
             />
-            <span class="meta-hint">marks the action frame in playback</span>
         </label>
-        <label class="meta-field meta-checkbox">
+        <label
+            class="meta-field meta-checkbox"
+            title={view.hasSidecarPal
+                ? "Render with the sidecar .pal palette instead of the default Fallout palette"
+                : "Disabled: no sidecar .pal file found next to this .frm"}
+        >
             <input
                 type="checkbox"
                 checked={view.externalPaletteActive}
                 disabled={!view.hasSidecarPal}
                 onchange={(e) => bridge.send({ type: "setExternalPalette", enabled: e.currentTarget.checked })}
             />
-            <span class="meta-label">Use external palette ({view.basename}.pal)</span>
+            <span class="meta-label">Use external palette</span>
         </label>
     {:else}
         <label class="meta-field">

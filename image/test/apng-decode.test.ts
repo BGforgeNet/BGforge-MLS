@@ -47,12 +47,15 @@ function buildFcTl(
 }
 
 describe("decodeApng", () => {
-    it("round-trips frames of distinct content and per-frame dimensions, with fps and palette intact", () => {
+    it("pads a differently-sized frame set to the canvas (centred, transparent) so it round-trips as valid frames", () => {
+        // APNG is a viewable preview, and a valid PNG requires every frame (the IDAT default included) to
+        // fill the IHDR canvas - so smaller frames are padded to the max size, centred, with index 0. The
+        // round-trip therefore returns canvas-sized frames, not the source per-frame dimensions.
         const pal = emptyPalette();
         pal[1] = { r: 10, g: 20, b: 30, a: 255 };
         const frames = [
             { width: 2, height: 2, pixels: new Uint8Array([0, 1, 1, 0]) },
-            { width: 2, height: 3, pixels: new Uint8Array([1, 0, 0, 1, 1, 0]) }, // multi-row, distinct dims
+            { width: 2, height: 3, pixels: new Uint8Array([1, 0, 0, 1, 1, 0]) }, // the tallest -> sets canvas height
             { width: 2, height: 2, pixels: new Uint8Array([0, 0, 1, 1]) },
         ];
         const png = encodeApng(frames, pal, 0, 12);
@@ -61,14 +64,15 @@ describe("decodeApng", () => {
         expect(out.fps).toBe(12);
         expect(out.transparentIndex).toBe(0);
         expect(out.palette[1]).toEqual({ r: 10, g: 20, b: 30, a: 255 });
-        expect(out.frames).toHaveLength(3);
-        for (const [i, frame] of out.frames.entries()) {
-            const expected = frames[i];
-            if (!expected) throw new Error("test setup: missing expected frame");
-            expect(frame.width).toBe(expected.width);
-            expect(frame.height).toBe(expected.height);
-            expect([...frame.pixels]).toEqual([...expected.pixels]);
-        }
+        // All three come back at the 2x3 canvas; the 2x2 frames gain a transparent row (dy = floor((3-2)/2) = 0).
+        expect(out.frames.map((f) => [f.width, f.height])).toEqual([
+            [2, 3],
+            [2, 3],
+            [2, 3],
+        ]);
+        expect([...out.frames[0]!.pixels]).toEqual([0, 1, 1, 0, 0, 0]);
+        expect([...out.frames[1]!.pixels]).toEqual([1, 0, 0, 1, 1, 0]);
+        expect([...out.frames[2]!.pixels]).toEqual([0, 0, 1, 1, 0, 0]);
     });
 
     it("locates a transparentIndex greater than 0 by scanning tRNS", () => {

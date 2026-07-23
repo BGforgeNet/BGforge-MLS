@@ -1,6 +1,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { type Animation, type LossReport, importApng, importPngDirectory } from "@bgforge/image";
+import {
+    type Animation,
+    type LossReport,
+    convertToFrm,
+    frmDirectionMode,
+    importApng,
+    importPngDirectory,
+} from "@bgforge/image";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ImageEditorDocument } from "./document";
@@ -21,13 +28,10 @@ const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
-const SAVE_DIALOG_FILTERS: Record<"frm" | "bam", Record<string, string[]>> = {
-    frm: { "Fallout FRM": ["frm"] },
-    bam: { "Infinity Engine BAM": ["bam"] },
-};
-
 function summarizeLoss(report: LossReport): string {
-    return `Converting will lose: ${report.items.map((item) => item.detail).join("; ")}`;
+    // Only real losses - informational notes (lossless remap, embedded/sidecar palette) are excluded
+    // so the warning never lists a non-loss (and the modal only fires when report.lossless is false).
+    return `Converting will lose: ${report.losses.map((item) => item.detail).join("; ")}`;
 }
 
 /**
@@ -98,6 +102,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "ready":
                 this.post(panel, { type: "init", view: document.toView() });
                 break;
+            case "save":
+                // Route through VS Code's own save so its dirty tracking clears; the webview panel is
+                // active (the user just clicked in it), so this saves THIS custom document in place.
+                await vscode.commands.executeCommand("workbench.action.files.save");
+                break;
             case "editMeta":
                 document.applyMetaPatch(message.patch);
                 break;
@@ -105,10 +114,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 document.setExternalPalette(message.enabled);
                 break;
             case "saveAs":
-                await this.handleSaveAs(document, panel, message.target, message.paletteMode);
+                await this.handleSaveAs(document, message.target, message.paletteMode);
                 break;
             case "import":
-                await this.handleImport(document, panel, message.kind, message.mode);
+                await this.handleImport(document, message.kind, message.mode);
                 break;
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
@@ -125,29 +134,37 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     private async handleSaveAs(
         document: ImageEditorDocument,
-        panel: vscode.WebviewPanel,
         target: SaveAsTarget,
         paletteMode: "sidecar" | "nearest" | undefined,
     ): Promise<void> {
         try {
+            const srcPath = document.uri.fsPath;
+            const dir = path.dirname(srcPath);
+            const base = path.parse(srcPath).name;
+            // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder, so a
+            // raw-animation export would write black-silhouette PNGs / a black BAM (see document-model).
+            const anim = document.resolvedAnimation();
+
             if (target === "apng" || target === "png-directory") {
-                const selection = await vscode.window.showOpenDialog({
-                    canSelectFolders: true,
-                    canSelectFiles: false,
-                    canSelectMany: false,
-                    openLabel: "Export Here",
-                });
-                const destDir = selection?.[0];
-                if (!destDir) return;
-                await this.writeAll(buildExport(document.animation, target, destDir.fsPath));
+                // Multi-file exports go into an auto-named directory next to the source; the -apng suffix
+                // stops the two directory exports from colliding on the same <base>/ folder.
+                const destDir = path.join(dir, target === "apng" ? `${base}-apng` : base);
+                await this.writeAll(buildExport(anim, target, destDir));
+                vscode.window.setStatusBarMessage(`Exported ${path.basename(destDir)}${path.sep}`, 3000);
                 return;
             }
 
-            const destination = await vscode.window.showSaveDialog({ filters: SAVE_DIALOG_FILTERS[target] });
-            if (!destination) return;
-            const { writes, report } = buildCrossFormatSave(document.animation, target, destination.fsPath, {
-                paletteMode,
-            });
+            const targetPath = path.join(dir, `${base}.${target}`); // <base>.frm | <base>.bam, auto-named
+
+            // A non-directional animation (a native non-directional BAM, or one imported from an APNG /
+            // PNG directory - frmDirectionMode reads the animation, not the source format) becomes a
+            // single-orientation FRM from ONE cycle. Auto for a single cycle; ask which for several.
+            let singleCycle: number | undefined;
+            if (target === "frm" && frmDirectionMode(anim) === "single-orientation" && anim.sequences.length > 1) {
+                singleCycle = await this.pickCycle(anim.sequences.length);
+                if (singleCycle === undefined) return; // user dismissed the picker
+            }
+            const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, singleCycle });
             if (!report.lossless) {
                 const confirmed = await vscode.window.showWarningMessage(
                     summarizeLoss(report),
@@ -157,36 +174,80 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 if (confirmed !== "Save anyway") return;
             }
             await this.writeAll(writes);
+            vscode.window.setStatusBarMessage(`Saved ${path.basename(targetPath)}`, 3000);
         } catch (error) {
-            this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+            // A save-as failure is a transient action error - surface it as a notification, NOT the
+            // webview's fatal "Could not open file" state, which would wrongly blow away a working editor.
+            void vscode.window.showErrorMessage(
+                `Save failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
+    }
+
+    /** Ask which cycle a single-orientation FRM should use; undefined if the user dismisses the picker. */
+    private async pickCycle(cycleCount: number): Promise<number | undefined> {
+        const items = Array.from({ length: cycleCount }, (_, i) => `Cycle ${i}`);
+        const picked = await vscode.window.showQuickPick(items, {
+            title: "This animation has no directions - which cycle should the single-orientation FRM use?",
+        });
+        return picked === undefined ? undefined : items.indexOf(picked);
     }
 
     private async handleImport(
         document: ImageEditorDocument,
-        panel: vscode.WebviewPanel,
         kind: ImportKind,
         mode: "replace" | "append",
     ): Promise<void> {
         try {
             const next = kind === "png-directory" ? await this.importPngDirectory() : await this.importApng(document);
             if (!next) return;
+
+            // An FRM is a fixed 6-rotation format, so an import INTO one is reshaped to a valid FRM
+            // (single-orientation for a non-directional import, with a cycle pick when several cycles
+            // were imported) and always REPLACES - otherwise an in-place Save would serialize the
+            // non-FRM shape into a malformed .frm (rotations 1-5 empty while the header claims frames).
+            // A BAM accepts arbitrary cycles, so its import applies unchanged.
+            if (document.animation.meta.sourceFormat === "frm") {
+                const reshaped = await this.reshapeImportToFrm(next);
+                if (reshaped === undefined) return; // user dismissed the cycle picker
+                document.replaceSequences(reshaped, "replace");
+                return;
+            }
             document.replaceSequences(next, mode);
         } catch (error) {
-            this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+            void vscode.window.showErrorMessage(
+                `Import failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
 
+    /** Reshape an imported animation into a valid FRM. `nearest` keeps its pixels consistent with the
+     *  FRM's default palette; a multi-cycle non-directional import needs a chosen cycle. Undefined when
+     *  the cycle picker is dismissed. */
+    private async reshapeImportToFrm(next: Animation): Promise<Animation | undefined> {
+        // Tag the source as bam so convertToFrm actually reshapes it (it no-ops on frm-tagged input).
+        const src: Animation = { ...next, meta: { ...next.meta, sourceFormat: "bam" } };
+        if (frmDirectionMode(src) === "single-orientation" && src.sequences.length > 1) {
+            const cycle = await this.pickCycle(src.sequences.length);
+            if (cycle === undefined) return undefined;
+            return convertToFrm(src, { paletteMode: "nearest", singleCycle: cycle }).animation;
+        }
+        return convertToFrm(src, { paletteMode: "nearest" }).animation;
+    }
+
     private async importPngDirectory(): Promise<Animation | undefined> {
+        // A PNG-directory export is defined by its manifest.json, so point the picker straight at it
+        // rather than a bare folder; the frames are read relative to the manifest's directory.
         const selection = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
+            canSelectFolders: false,
+            canSelectFiles: true,
             canSelectMany: false,
-            openLabel: "Import Folder",
+            filters: { "PNG-directory manifest": ["json"] },
+            openLabel: "Select manifest.json",
         });
-        const dir = selection?.[0];
-        if (!dir) return undefined;
-        return importPngDirectory(await this.readDirectoryTree(dir));
+        const manifest = selection?.[0];
+        if (!manifest) return undefined;
+        return importPngDirectory(await this.readDirectoryTree(vscode.Uri.file(path.dirname(manifest.fsPath))));
     }
 
     private async importApng(document: ImageEditorDocument): Promise<Animation | undefined> {
@@ -289,13 +350,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      *  destination folder does not yet contain the sequence subdirectories. createDirectory has
      *  mkdirp semantics and is a no-op when the directory already exists. */
     private async writeAll(writes: SaveWrite[]): Promise<void> {
-        for (const write of writes) {
-            const target = vscode.Uri.file(write.path);
-            // eslint-disable-next-line no-await-in-loop
-            await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(write.path)));
-            // eslint-disable-next-line no-await-in-loop
-            await vscode.workspace.fs.writeFile(target, write.bytes);
-        }
+        // Create each unique parent directory once (createDirectory is mkdirp + idempotent), then write
+        // every file in parallel. A per-file sequential create+write made a 60-file PNG-directory export
+        // visibly slow over the remote filesystem (directories appearing one by one); this is two fan-outs.
+        const dirs = [...new Set(writes.map((write) => path.dirname(write.path)))];
+        await Promise.all(dirs.map((dir) => vscode.workspace.fs.createDirectory(vscode.Uri.file(dir))));
+        await Promise.all(
+            writes.map((write) => vscode.workspace.fs.writeFile(vscode.Uri.file(write.path), write.bytes)),
+        );
     }
 
     private post(panel: vscode.WebviewPanel, message: HostToWebview): void {

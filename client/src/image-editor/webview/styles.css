@@ -20,6 +20,21 @@ body {
     box-sizing: border-box;
 }
 
+/* ---- editor layout: the stage fills the left, all controls stack in a column on the right ---- */
+.editor-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+}
+.controls-column {
+    flex: 0 0 18rem;
+    overflow-y: auto;
+    border-left: 1px solid var(--vscode-panel-border);
+    display: flex;
+    flex-direction: column;
+}
+
 .placeholder {
     color: var(--vscode-descriptionForeground);
     padding: 0.75rem;
@@ -70,6 +85,11 @@ input[type="number"] {
     border-radius: 2px;
     padding: 0.15rem 0.4rem;
 }
+/* Every numeric field here holds at most a few digits (fps <=2, index <=3, action-frame <=~4); size to
+   that, not the browser default (~20 chars wide), so the value column reads as deliberate. */
+input[type="number"] {
+    width: 4rem;
+}
 input[type="checkbox"] {
     accent-color: var(--vscode-button-background);
 }
@@ -78,47 +98,78 @@ input[type="checkbox"] {
     outline-offset: -1px;
 }
 
-/* ---- view controls / playback controls (top and bottom toolbars around the stage) ---- */
+/* ---- control groups: each stacks vertically as a section in the right-hand column ---- */
 .view-controls,
+.meta-controls,
 .playback-controls {
     flex: 0 0 auto;
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 0.5rem 0.75rem;
-}
-.view-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
     border-bottom: 1px solid var(--vscode-panel-border);
 }
-.playback-controls {
+/* The save/import toolbar is a single horizontal bar spanning the bottom, not a column section. */
+.toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-top: 1px solid var(--vscode-panel-border);
 }
+/* Label on the left, value on the right; a control too wide for the row wraps below its label. */
 .view-field,
+.meta-field,
 .playback-field {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.35rem;
+    justify-content: space-between;
+    gap: 0.35rem 0.5rem;
 }
 .view-label,
+.meta-label,
 .playback-label {
     color: var(--vscode-descriptionForeground);
     font-size: 0.9em;
 }
-.view-checkbox {
-    cursor: pointer;
-}
+.view-value,
 .playback-value {
     color: var(--vscode-descriptionForeground);
     font-size: 0.9em;
     white-space: nowrap;
+}
+/* Checkbox rows keep the box next to its text (not split to opposite edges). */
+.view-checkbox,
+.meta-checkbox {
+    cursor: pointer;
+    justify-content: flex-start;
+    gap: 0.4rem;
+}
+select {
+    max-width: 100%;
+}
+/* Sliders (zoom, frame scrubber) grow to fill the row between their label and value. */
+.view-field input[type="range"],
+.playback-field input[type="range"] {
+    flex: 1 1 6rem;
+    min-width: 5rem;
+}
+/* Zoom preset buttons pack left under the slider (reusing the .bg-option secondary/active styling). */
+.zoom-presets {
+    justify-content: flex-start;
 }
 
 /* Three-way background selector and the loop toggle: both render as a secondary/outline button that
    flips to the primary (filled) button style while active, so the selected option reads at a glance. */
 .bg-options,
 .playback-buttons {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.25rem;
 }
 .bg-option,
@@ -137,46 +188,10 @@ input[type="checkbox"] {
     color: var(--vscode-button-foreground);
 }
 
-/* ---- metadata controls (format-conditional fields above the stage) ---- */
-.meta-controls {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--vscode-panel-border);
-}
-.meta-field {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-}
-.meta-label {
-    color: var(--vscode-descriptionForeground);
-    font-size: 0.9em;
-}
-.meta-checkbox {
-    cursor: pointer;
-}
-.meta-hint {
-    color: var(--vscode-descriptionForeground);
-    font-size: 0.85em;
-    font-style: italic;
-}
-
-/* ---- toolbar (save-as / import, above the view controls) ---- */
-.toolbar {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--vscode-panel-border);
-}
+/* ---- toolbar (import) group: a horizontal bordered box in the bottom bar ---- */
 .toolbar-group {
     display: inline-flex;
+    flex-direction: row;
     align-items: center;
     gap: 0.4rem;
     padding: 0.25rem 0.5rem;
@@ -191,18 +206,27 @@ input[type="checkbox"] {
 /* ---- stage (the compass rose / cycle grid player) ---- */
 .stage {
     flex: 1 1 auto;
+    min-width: 0;
     overflow: auto;
     padding: 0.75rem;
+    /* Flex + margin:auto on the child centres the content on BOTH axes and stays scroll-safe when the
+       content is larger than the stage (align-items:center would clip the overflowing top). Applies to
+       the compass rose AND the cycle grid (non-creature animations). */
+    display: flex;
+}
+.compass-rose,
+.cycle-grid {
+    margin: auto;
 }
 .compass-rose {
-    display: grid;
-    grid-template-columns: repeat(3, auto);
-    grid-template-rows: repeat(3, auto);
-    gap: 0.5rem;
-    justify-content: center;
-    align-content: center;
+    /* Radial layout: cells are absolutely positioned on a circle by CompassRose (width/height set per
+       zoom there). */
+    position: relative;
 }
 .compass-cell {
+    position: absolute;
+    /* left/top place the cell CENTRE on the circle point; pull back by half its own size to centre. */
+    transform: translate(-50%, -50%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -210,6 +234,7 @@ input[type="checkbox"] {
 .cycle-grid {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 0.75rem;
 }
 .cycle-cell {

@@ -20,6 +20,16 @@ test("toView trims frames and carries the active palette", () => {
     expect(view.dirty).toBe(false);
 });
 
+test("resolvedAnimation swaps the FRM all-black placeholder palette for the active one (export fix)", () => {
+    // FRM parses to an all-black placeholder palette; exporting THAT gives black-silhouette PNGs. The
+    // export path must use resolvedAnimation, whose palette is the real active one (default Fallout here).
+    const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
+    const rawIsAllBlack = model.animation.palette.every((c) => c.r === 0 && c.g === 0 && c.b === 0);
+    expect(rawIsAllBlack).toBe(true);
+    expect(model.resolvedAnimation().palette).toEqual(DEFAULT_FALLOUT_PALETTE);
+    expect(model.resolvedAnimation().palette.some((c) => c.r !== 0 || c.g !== 0 || c.b !== 0)).toBe(true);
+});
+
 test("applyMetaPatch sets dirty, round-trips through getBytes, and undo restores", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     let changes = 0;

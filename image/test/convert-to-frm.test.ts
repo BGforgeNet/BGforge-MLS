@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     convertToFrm,
+    frmDirectionMode,
     serializeFrm,
     parseFrm,
     DEFAULT_FALLOUT_PALETTE,
@@ -100,11 +101,49 @@ describe("convertToFrm", () => {
         expect([...neFrame.pixels]).toEqual([...eFrame.pixels]); // same pixel data, independent entries
     });
 
-    it("throws for a non-standard cycle count with no layout and no real source facings", () => {
+    it("throws for a multi-cycle non-directional source with no chosen cycle (needs opts.singleCycle)", () => {
         const source = synthBam(Array.from({ length: 9 }, () => 1));
         expect(() => convertToFrm(source)).toThrow(
-            /convertToFrm: 9-cycle BAM has no standard direction mapping; pass opts\.layout/,
+            /9-cycle animation as FRM: it has no directions - choose which cycle/,
         );
+    });
+
+    it("a directional conversion with only a lossless palette remap reports lossless (no false 'will lose')", () => {
+        const source = synthBam([2, 2, 2, 2, 2, 2]); // 6 cycles, default palette, distinct frames
+        const { report } = convertToFrm(source);
+        expect(report.has("palette-remapped-to-default")).toBe(true); // the remap IS recorded
+        expect(report.lossless).toBe(true); // but it loses nothing -> no warning modal
+        expect(report.losses).toEqual([]);
+    });
+
+    it("frmDirectionMode: 6/8 cycles or facing-tagged are directional; other non-directional are single-orientation", () => {
+        expect(frmDirectionMode(synthBam([2, 2, 2, 2, 2, 2]))).toBe("directional"); // 6 cycles
+        expect(frmDirectionMode(synthBam([2, 2, 2, 2, 2, 2, 2, 2]))).toBe("directional"); // 8 cycles
+        expect(frmDirectionMode(synthBam([2, 2], ["NE", "E"]))).toBe("directional"); // facing-tagged
+        expect(frmDirectionMode(synthBam([3]))).toBe("single-orientation"); // 1 cycle
+        expect(frmDirectionMode(synthBam([2, 2, 2, 2]))).toBe("single-orientation"); // 4 cycles
+    });
+
+    it("converts a single-cycle non-directional source to a shared single-orientation FRM (one copy, all 6 rotations)", () => {
+        const source = synthBam([3]); // 1 cycle, 3 frames, non-directional
+        const { animation } = convertToFrm(source);
+        expect(animation.meta.sourceFormat).toBe("frm");
+        expect(animation.sequences).toHaveLength(6);
+        // All 6 rotations reference the IDENTICAL frame-ref list -> shared data_offsets, one frame copy.
+        expect(new Set(animation.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
+        expect(animation.frames).toHaveLength(3); // one animation, not six copies
+        // Still shared after a real FRM serialize/reparse round-trip.
+        const reparsed = parseFrm(serializeFrm(animation));
+        expect(reparsed.sequences).toHaveLength(6);
+        expect(new Set(reparsed.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
+    });
+
+    it("opts.singleCycle builds a single-orientation FRM from the chosen cycle and reports the dropped cycles", () => {
+        const source = synthBam([2, 2, 2, 2]); // 4 non-directional cycles
+        const { animation, report } = convertToFrm(source, { singleCycle: 2 });
+        expect(animation.sequences).toHaveLength(6);
+        expect(new Set(animation.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
+        expect(report.items.some((i) => i.detail.includes("cycle 2") && i.detail.includes("dropped"))).toBe(true);
     });
 
     it("produces an FRM animation that serializes and reparses with pixels intact", () => {

@@ -1,12 +1,9 @@
 <script lang="ts">
-    import type { Rgba } from "@bgforge/image";
+    import type { Rgba, SourceFormat } from "@bgforge/image";
     import { decodeFramePixels, type FrameView } from "../messages";
     import { checkerboardCss, frameToRgba, GREEN, type Background } from "../render/indexed-to-rgba";
-
-    // Every tile centers its frame within this fixed, unzoomed footprint so frames of differing
-    // width/height within the same sequence all anchor at the same on-screen point (see the
-    // offsetX/offsetY positioning below) instead of jittering as the shared frame index advances.
-    const TILE_BASE_PX = 96;
+    import { frameTopLeft } from "../render/anchor";
+    import { TILE_BASE_PX } from "../render/tile";
 
     const {
         frame,
@@ -14,6 +11,9 @@
         transparentIndex,
         zoom,
         background,
+        sourceFormat,
+        dirOffsetX,
+        dirOffsetY,
         showOffsetMarker = false,
     }: {
         frame: FrameView;
@@ -21,8 +21,25 @@
         transparentIndex: number;
         zoom: number;
         background: Background;
+        sourceFormat: SourceFormat;
+        dirOffsetX: number;
+        dirOffsetY: number;
         showOffsetMarker?: boolean;
     } = $props();
+
+    // Game-accurate top-left within the tile (feet-anchored for FRM, center-pixel for BAM); zoom scales
+    // both the footprint and the anchor. See render/anchor.ts.
+    const topLeft = $derived(
+        frameTopLeft({
+            sourceFormat,
+            width: frame.width,
+            height: frame.height,
+            offsetX: frame.offsetX,
+            offsetY: frame.offsetY,
+            dirOffsetX,
+            dirOffsetY,
+        }),
+    );
 
     // eslint-disable-next-line prefer-const -- reassigned via bind:this in the template
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -74,11 +91,7 @@
     style:height="{TILE_BASE_PX * zoom}px"
     style:background={tileBackground}
 >
-    <canvas
-        bind:this={canvasEl}
-        style:left="calc(50% - {frame.offsetX * zoom}px)"
-        style:top="calc(50% - {frame.offsetY * zoom}px)"
-    ></canvas>
+    <canvas bind:this={canvasEl} style:left="{topLeft.x * zoom}px" style:top="{topLeft.y * zoom}px"></canvas>
     {#if showOffsetMarker}
         <div class="frame-offset-marker" aria-hidden="true"></div>
     {/if}
