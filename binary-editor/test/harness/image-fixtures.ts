@@ -151,7 +151,7 @@ export function buildDirectionalBamFixture(): AnimationView {
         palette,
         frames,
         sequences,
-        meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8" },
+        meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8", fps: 15 },
         basename: "harness-fixture-directional",
         sourceFormat: "bam",
         hasSidecarPal: false,

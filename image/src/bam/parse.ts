@@ -133,6 +133,8 @@ export function parseBamV1(bytes: Uint8Array): Animation {
         palette,
         sequences,
         frames,
-        meta: { sourceFormat: "bam", transparentIndex, directionLayout },
+        // A BAM stores no frame rate; the engine plays them at a fixed 15 fps. Resolved here so every
+        // consumer (playback, APNG export, FRM conversion) reads one value instead of re-defaulting.
+        meta: { sourceFormat: "bam", transparentIndex, directionLayout, fps: 15 },
     };
 }

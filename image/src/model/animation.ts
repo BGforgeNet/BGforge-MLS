@@ -24,7 +24,7 @@ export interface Sequence {
 
 export interface AnimationMeta {
     sourceFormat: SourceFormat;
-    fps?: number; // FRM only
+    fps?: number; // FRM: stored header field; BAM: the engine's fixed 15, resolved at parse
     actionFrame?: number; // FRM only
     transparentIndex?: number; // BAM only
     directionLayout?: DirectionLayout;

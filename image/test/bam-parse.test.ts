@@ -46,6 +46,10 @@ describe("parseBamV1 direction-layout resolution", () => {
     it("stamps non-directional when no fingerprint matches", () => {
         expect(parseBamV1(synthBamBytes()).meta.directionLayout).toBe("non-directional");
     });
+
+    it("resolves the engine's fixed 15 fps at parse (BAM stores no frame rate)", () => {
+        expect(parseBamV1(synthBamBytes()).meta.fps).toBe(15);
+    });
 });
 
 describe("parseBamV1 hostile input", () => {
