@@ -3,6 +3,7 @@ export type LossKind =
     | "dropped-action-frame"
     | "dropped-direction"
     | "empty-direction"
+    | "mirrored-directions"
     | "padded-sequence"
     | "duplicated-shared-frames"
     | "shared-frame-direction-offset"
@@ -26,6 +27,8 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     "embedded-palette",
     "duplicated-shared-frames",
     "palette-sidecar-required",
+    // Mirrored east rotations ADD engine-faithful data (what playback shows anyway); nothing is lost.
+    "mirrored-directions",
 ]);
 
 export class LossReport {

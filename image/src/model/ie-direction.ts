@@ -8,7 +8,10 @@ import type { Facing } from "./animation.ts";
 // (IESDP ini_anim.htm, "Available orientations".)
 const IE_SLOT_FACINGS: Facing[] = ["S", "SW", "W", "NW", "N", "NE", "E", "SE"];
 
-const IE_STRIDE = 8;
+/** Cycles per direction block. */
+export const IE_STRIDE = 8;
+/** Slots 0-4 are the stored west arc (S..N); 5-7 are the eastern slots a base file leaves as dummies. */
+export const IE_WEST_SLOTS = 5;
 
 /** The subset of a sequence this analysis reads - satisfied by both the model's Sequence and the
  *  editor's SequenceView. */
@@ -62,7 +65,7 @@ export function interpretIeDirections(sequences: SequenceShape[], frameCount: nu
             const seq = sequences[g * IE_STRIDE + slot];
             if (!seq) continue;
             const refs = realRefs(seq);
-            if (slot < 5) {
+            if (slot < IE_WEST_SLOTS) {
                 if (refs.length > 0) blockHasWest = true;
                 continue;
             }
@@ -89,7 +92,7 @@ export function interpretIeDirections(sequences: SequenceShape[], frameCount: nu
             const seq = sequences[seqIndex];
             if (!seq || realRefs(seq).length === 0) continue;
             // In a detected base file the east slots hold filler frames, not east-facing data - drop them.
-            if (detected && slot >= 5) continue;
+            if (detected && slot >= IE_WEST_SLOTS) continue;
             slots.push({ seqIndex, facing });
         }
         groups.push(slots);

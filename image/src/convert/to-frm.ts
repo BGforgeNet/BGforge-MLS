@@ -74,11 +74,38 @@ function buildSingleOrientationSlots(
     return { pool, frameRefsPerSlot };
 }
 
+// Eastern FRM rotations and the stored west cycle each mirrors across the vertical axis - what the
+// engine does at render time for animations without a *E companion file.
+const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = [
+    { east: "NE", west: "NW" },
+    { east: "E", west: "W" },
+    { east: "SE", west: "SW" },
+];
+
+/** Horizontal flip. A BAM anchor is the centre PIXEL (offsetX = centerX), so it mirrors with the row. */
+function mirrorFrame(frame: Frame): Frame {
+    const pixels = new Uint8Array(frame.width * frame.height);
+    for (let y = 0; y < frame.height; y++) {
+        for (let x = 0; x < frame.width; x++) {
+            pixels[y * frame.width + (frame.width - 1 - x)] = frame.pixels[y * frame.width + x] ?? 0;
+        }
+    }
+    return {
+        width: frame.width,
+        height: frame.height,
+        pixels,
+        offsetX: frame.width - 1 - frame.offsetX,
+        offsetY: frame.offsetY,
+    };
+}
+
 /**
  * One IE direction block as a standalone facing-tagged source: the chosen group's slots become the
  * sequences (the interpretation already drops east dummies and empty slots), every other cycle is
- * reported dropped. Out-of-range refs (the 0xFFFF "no frame" sentinel) are filtered the way the
- * interpretation ignores them, so the directional builder never chases a sentinel into the frame table.
+ * reported dropped. An eastern slot the block does not store (a base file without its *E companion
+ * loaded) is synthesized by mirroring its west counterpart, matching engine playback. Out-of-range
+ * refs (the 0xFFFF "no frame" sentinel) are filtered the way the interpretation ignores them, so the
+ * directional builder never chases a sentinel into the frame table.
  */
 function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport): Animation {
     const group = interpretIeDirections(anim.sequences, anim.frames.length)?.groups[groupIndex];
@@ -97,7 +124,37 @@ function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport)
         "dropped-direction",
         `used direction block ${groupIndex} for the FRM rotations; dropped ${anim.sequences.length - group.length} other cycle(s)`,
     );
-    return { ...anim, sequences };
+
+    const frames = [...anim.frames];
+    const mirroredByRef = new Map<number, number>();
+    const present = new Set(sequences.map((s) => s.facing));
+    const mirrored: Facing[] = [];
+    for (const { east, west } of MIRROR_EAST) {
+        if (present.has(east)) continue;
+        const source = sequences.find((s) => s.facing === west);
+        if (!source) continue;
+        const refs = source.frameRefs.map((ref) => {
+            let mirroredRef = mirroredByRef.get(ref);
+            if (mirroredRef === undefined) {
+                const frame = frames[ref];
+                /* v8 ignore next -- source refs were range-filtered above */
+                if (!frame) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
+                frames.push(mirrorFrame(frame));
+                mirroredRef = frames.length - 1;
+                mirroredByRef.set(ref, mirroredRef);
+            }
+            return mirroredRef;
+        });
+        sequences.push({ frameRefs: refs, facing: east });
+        mirrored.push(east);
+    }
+    if (mirrored.length > 0) {
+        report.add(
+            "mirrored-directions",
+            `eastern rotation(s) ${mirrored.join("/")} mirrored from the west cycles (the block stores no eastern data)`,
+        );
+    }
+    return { ...anim, frames, sequences };
 }
 
 /**

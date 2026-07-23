@@ -31,6 +31,7 @@ export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";
 export { parseBamV1 } from "./bam/parse.ts";
 export { serializeBamV1 } from "./bam/serialize.ts";
+export { combineIeBamPair, splitIeBamPair } from "./bam/pair.ts";
 export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";
 export { parsePal, serializePal } from "./palette/pal.ts";
 export { DEFAULT_FALLOUT_PALETTE } from "./palette/default-palette.ts";

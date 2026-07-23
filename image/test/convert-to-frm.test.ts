@@ -376,27 +376,64 @@ describe("convertToFrm", () => {
             return frame.pixels[0] ?? -1;
         };
 
-        it("converts one direction block to a directional FRM: west arc mapped, N/S dropped, east reused", () => {
+        it("converts one direction block to a directional FRM: west arc mapped, N/S dropped, east mirrored", () => {
             const { animation, report } = convertToFrm(baseFileBam(2), { ieGroup: 1 });
             expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
             // Block 1's SW/W/NW cycles land in their FRM slots, traced by pixel value.
             expect(slotPixel(animation, 3)).toBe(1 + 16 + 1); // SW
             expect(slotPixel(animation, 4)).toBe(1 + 16 + 2); // W
             expect(slotPixel(animation, 5)).toBe(1 + 16 + 3); // NW
+            // The unstored east rotations mirror their west counterparts: NE<-NW, E<-W, SE<-SW.
+            expect(slotPixel(animation, 0)).toBe(1 + 16 + 3); // NE = mirrored NW
+            expect(slotPixel(animation, 1)).toBe(1 + 16 + 2); // E = mirrored W
+            expect(slotPixel(animation, 2)).toBe(1 + 16 + 1); // SE = mirrored SW
             const dropped = report.items.filter((i) => i.kind === "dropped-direction").map((i) => i.detail);
             expect(dropped.some((d) => d.includes("block 1") && d.includes("11 other cycle(s)"))).toBe(true);
             expect(dropped.some((d) => d.includes("facing S"))).toBe(true);
             expect(dropped.some((d) => d.includes("facing N"))).toBe(true);
-            // The east rotations had no source (dummies dropped by the interpretation) and were reused.
-            expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(3);
+            expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(0);
+            expect(report.has("mirrored-directions")).toBe(true);
             expect(report.lossless).toBe(false);
         });
 
         it("drops the east filler dummies instead of mapping them onto the east rotations", () => {
             const { animation } = convertToFrm(baseFileBam(1), { ieGroup: 0 });
             // Without ieGroup an 8-cycle source maps positionally, putting filler frame 255 in NE/E/SE;
-            // the block extraction reuses a real cycle there instead.
+            // the block extraction mirrors the west cycles there instead.
             for (const slot of [0, 1, 2]) expect(slotPixel(animation, slot)).not.toBe(255);
+        });
+
+        it("mirrors east pixels horizontally", () => {
+            const source = baseFileBam(1);
+            // Make W (block 0 slot 2) an asymmetric 2x1 frame so the flip is observable.
+            const wRef = source.sequences[2]?.frameRefs[0];
+            if (wRef === undefined) throw new Error("missing W frame ref");
+            source.frames[wRef] = { width: 2, height: 1, pixels: new Uint8Array([7, 9]), offsetX: 0, offsetY: 0 };
+            const { animation } = convertToFrm(source, { ieGroup: 0 });
+            const eRef = animation.sequences[1]?.frameRefs[0]; // FRM slot 1 = E, mirrored from W
+            const eFrame = eRef === undefined ? undefined : animation.frames[eRef];
+            if (!eFrame) throw new Error("missing mirrored E frame");
+            expect([...eFrame.pixels]).toEqual([9, 7]);
+        });
+
+        it("uses stored east cycles when the block has them, without mirroring", () => {
+            // A combined base+E-file shape: all 8 slots real.
+            const source = baseFileBam(1);
+            for (const slot of [5, 6, 7]) {
+                source.frames.push({
+                    width: 1,
+                    height: 1,
+                    pixels: new Uint8Array([100 + slot]),
+                    offsetX: 0,
+                    offsetY: 0,
+                });
+                source.sequences[slot] = { frameRefs: [source.frames.length - 1], facing: "none" };
+            }
+            const { animation, report } = convertToFrm(source, { ieGroup: 0 });
+            expect(report.has("mirrored-directions")).toBe(false);
+            expect(slotPixel(animation, 0)).toBe(105); // NE from the stored cycle (slot 5)
+            expect(slotPixel(animation, 1)).toBe(106); // E (slot 6)
+            expect(slotPixel(animation, 2)).toBe(107); // SE (slot 7)
         });
 
         it("filters out-of-range sentinel refs from the extracted block's cycles", () => {

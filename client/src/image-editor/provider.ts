@@ -347,6 +347,21 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         targetPath: string,
         primaryDestination: vscode.Uri,
     ): Promise<void> {
+        // An IE base/east pair saves in place by splitting back into its two member files; a Save As
+        // to another destination falls through and writes the single combined form instead.
+        if (targetPath === document.savePath) {
+            const pairWrites = document.pairSaveWrites();
+            if (pairWrites) {
+                // Sequential by design: the base lands before the companion so a crash never leaves a
+                // fresh east file next to a stale base.
+                for (const write of pairWrites) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await vscode.workspace.fs.writeFile(vscode.Uri.file(write.path), write.bytes);
+                }
+                document.markSaved();
+                return;
+            }
+        }
         const bytes = document.getBytes();
         const sidecarBytes = document.sidecarBytes();
         const sidecar = sidecarBytes ? { path: sidecarPalPath(targetPath), bytes: sidecarBytes } : undefined;
