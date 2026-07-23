@@ -59,6 +59,17 @@ test("layoutSequences maps an FRM's 6 unique compass facings to a rose with no N
     expect(spots.size).toBe(6);
 });
 
+test("layoutSequences collapses a single-orientation FRM (all rotations share frames) to one grid cell", () => {
+    // The shared-data-offset form: 6 FRM facings, every rotation referencing the SAME frame.
+    const view = makeView(FRM_FACINGS);
+    view.sequences = view.sequences.map((seq) => ({ ...seq, frameRefs: [0] }));
+    const result = layoutSequences(view);
+    expect(result.mode).toBe("grid");
+    if (result.mode !== "grid") throw new Error("expected grid mode");
+    expect(result.tiles).toHaveLength(1);
+    expect(result.tiles[0]?.seq.frameRefs).toEqual([0]);
+});
+
 test("layoutSequences falls back to a grid for a non-directional BAM, one tile per cycle in order", () => {
     const view = makeView(["none", "none", "none"]);
     const result = layoutSequences(view);

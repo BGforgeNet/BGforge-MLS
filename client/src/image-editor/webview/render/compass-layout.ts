@@ -41,7 +41,27 @@ type GridLayout = { mode: "grid"; tiles: { seq: SequenceView; index: number }[] 
  * Compass rose when every sequence maps to a unique compass facing (FRM's 6, or an 8-facing BAM);
  * grid fallback otherwise (non-directional, or duplicate facings, which cannot share one position).
  */
+/** True when every sequence references the exact same frames - a single-orientation FRM (all six
+ *  rotation slots share one data offset) or a degenerate all-identical animation. */
+function allSequencesShareFrames(sequences: SequenceView[]): boolean {
+    const [first, ...rest] = sequences;
+    if (!first) return false;
+    return rest.every(
+        (seq) =>
+            seq.frameRefs.length === first.frameRefs.length &&
+            seq.frameRefs.every((ref, i) => ref === first.frameRefs[i]),
+    );
+}
+
 export function layoutSequences(view: AnimationView): CompassLayout | GridLayout {
+    // Single-orientation FRM: all six rotation slots share one data offset, so the parser gives every
+    // sequence the SAME frames (differing only by facing). A 6-cell rose of identical sprites is noise -
+    // collapse to one cell. The model keeps its six shared rotations, so the save stays faithful.
+    if (view.sequences.length > 1 && allSequencesShareFrames(view.sequences)) {
+        const [first] = view.sequences;
+        return { mode: "grid", tiles: first ? [{ seq: first, index: 0 }] : [] };
+    }
+
     const facings = view.sequences.map((seq) => seq.facing);
     const allCompass = facings.every((facing) => compassPosition(facing) !== undefined);
     const allUnique = new Set(facings).size === facings.length;

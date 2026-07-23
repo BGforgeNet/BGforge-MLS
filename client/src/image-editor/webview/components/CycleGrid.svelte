@@ -45,7 +45,11 @@
                     {showOffsetMarker}
                 />
             {/if}
-            <span class="cycle-cell-label">{tile.seq.facing === "none" ? `Cycle ${tile.index}` : tile.seq.facing}</span>
+            {#if tiles.length > 1}
+                <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
+                     there is nothing to distinguish it from. -->
+                <span class="cycle-cell-label">{tile.seq.facing === "none" ? `Cycle ${tile.index}` : tile.seq.facing}</span>
+            {/if}
         </div>
     {/each}
 </div>
