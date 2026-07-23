@@ -36,15 +36,17 @@ export function analyzeCycleGrid(cycleCount: number): CycleGridAnalysis {
  * falls back to numbered groups. The optional trailing "e" covers eastern *E.BAM companions.
  */
 const IE_SEQUENCE_NAMES: Record<string, string[]> = {
+    // The FIRST block of each pair is the conjure loop played while casting, the SECOND the one-shot
+    // release (engine playback order; note IESDP's CA/SP block names invert it).
     "ca/8": [
-        "CA - cast",
-        "SP1 - spell loop",
-        "CA2 - cast",
-        "SP2 - spell loop",
-        "CA3 - cast",
-        "SP3 - spell loop",
-        "CA4 - cast",
-        "SP4 - spell loop",
+        "Conjure spell 1 (loop)",
+        "Cast spell 1 (release)",
+        "Conjure spell 2 (loop)",
+        "Cast spell 2 (release)",
+        "Conjure spell 3 (loop)",
+        "Cast spell 3 (release)",
+        "Conjure spell 4 (loop)",
+        "Cast spell 4 (release)",
     ],
     "g1/9": [
         "WK - walk",

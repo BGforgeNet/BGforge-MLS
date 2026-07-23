@@ -23,8 +23,10 @@ test("a count divisible by 6 but not 8 suggests 6 columns", () => {
 describe("ieGroupLabels", () => {
     test("names usar1ca's 8 blocks from the CA scheme, and the E-companion identically", () => {
         const labels = ieGroupLabels("usar1ca.bam", 8);
-        expect(labels?.[0]).toBe("CA - cast");
-        expect(labels?.[7]).toBe("SP4 - spell loop");
+        // Engine playback order: loop first, release second per pair.
+        expect(labels?.[0]).toBe("Conjure spell 1 (loop)");
+        expect(labels?.[1]).toBe("Cast spell 1 (release)");
+        expect(labels?.[7]).toBe("Cast spell 4 (release)");
         expect(ieGroupLabels("USAR1CAE.BAM", 8)).toEqual(labels);
     });
 
