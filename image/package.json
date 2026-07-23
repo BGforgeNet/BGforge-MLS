@@ -1,6 +1,7 @@
 {
     "name": "@bgforge/image",
     "version": "0.1.0",
+    "private": true,
     "description": "Library for lossless parsing and serialising of Fallout FRM and Infinity Engine BAM animation files.",
     "keywords": [
         "animation",
@@ -24,9 +25,7 @@
     "files": [
         "out/",
         "!out/*.map",
-        "README.md",
-        "CHANGELOG.md",
-        "LICENSE.txt"
+        "README.md"
     ],
     "type": "module",
     "main": "out/index.js",
@@ -40,9 +39,6 @@
             "types": "./out/model/frame-anchor.d.ts",
             "import": "./out/model/frame-anchor.js"
         }
-    },
-    "publishConfig": {
-        "access": "public"
     },
     "scripts": {
         "build": "tsdown",
