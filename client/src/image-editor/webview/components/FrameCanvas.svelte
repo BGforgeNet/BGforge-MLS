@@ -42,8 +42,8 @@
     );
 
     // The offset marker sits on the sprite's actual anchor - the tile reference point the sprite is
-    // positioned by (format-independent), never a fixed 50%.
-    const markerPos = referenceMarkerPercent();
+    // positioned by (BAM: tile centre; FRM: the feet line, which depends on the frame height).
+    const markerPos = $derived(referenceMarkerPercent(sourceFormat, frame.height));
 
     // eslint-disable-next-line prefer-const -- reassigned via bind:this in the template
     let canvasEl = $state<HTMLCanvasElement | undefined>();

@@ -5,21 +5,38 @@ import { offsetToAnchor } from "@bgforge/image/frame-anchor";
 import { TILE_BASE_PX } from "./tile";
 
 /**
- * Where a frame's top-left corner sits (unzoomed px) within its TILE_BASE_PX tile, so it renders as the
- * game positions it. topLeft = REFERENCE - anchor, where the anchor (which frame pixel lands on the
- * reference) is computed per-format by `offsetToAnchor` in @bgforge/image - the SAME function the
- * cross-format converters use, so a preview and a Save-As can never disagree on where a sprite sits.
+ * Where a frame's top-left corner sits (unzoomed px) within its TILE_BASE_PX tile: topLeft =
+ * referencePoint - anchor, where the anchor (which frame pixel lands on the reference) is computed
+ * per-format by `offsetToAnchor` in @bgforge/image.
  *
- * The REFERENCE point (the object's placement position within the tile) is format-INDEPENDENT. Both the
- * Fallout and Infinity Engine engines draw a sprite anchored at the same placement point, so using ONE
- * reference for every format makes the preview reflect that consistent cross-engine display: a sprite and
- * its BAM<->FRM conversion render identically here, the way both engines actually draw them. It sits low
- * in the tile (a "ground line") so a feet-anchored sprite stands on it, while a centre-anchored one (a
- * spell effect, projectile) hangs relative to it - exactly as each does in-game. The per-FORMAT quantity
- * is the ANCHOR (offsetToAnchor's FRM-bottom-centre vs BAM-centre), never this reference.
+ * The reference point (where the anchor lands in the tile) is per-format so that a sprite keeps its
+ * on-tile spot when it is converted:
+ * - BAM/BAMC: the tile CENTRE. The stored centre pixel is the anchor, so the sprite is centred on the
+ *   tile by its anchor.
+ * - FRM: a "feet line" placed so the frame is VERTICALLY CENTRED (`TILE/2 + height/2 - 1`). An FRM anchors
+ *   by its bottom-centre (feet); putting the feet there centres the frame, matching where a centre-anchored
+ *   BAM of the same content sat - so a BAM->FRM conversion does not move the art, only relocates the anchor
+ *   from the centre down to the feet.
  */
-const GROUND_LINE_FRACTION = 0.92;
-const REFERENCE = { x: TILE_BASE_PX / 2, y: TILE_BASE_PX * GROUND_LINE_FRACTION };
+const REFERENCE_X = TILE_BASE_PX / 2;
+
+// The reference point for a frame of the given height. Exhaustive by SourceFormat: a new format must
+// DECLARE its reference here (compile error in the default arm otherwise).
+function referencePoint(format: SourceFormat, height: number): { x: number; y: number } {
+    switch (format) {
+        case "frm":
+            // Feet line = the tile-centre pushed down by half the frame, so the bottom-anchored frame ends
+            // up vertically centred (matching a centre-anchored BAM's position).
+            return { x: REFERENCE_X, y: TILE_BASE_PX / 2 + height / 2 - 1 };
+        case "bam":
+        case "bamc":
+            return { x: REFERENCE_X, y: TILE_BASE_PX / 2 };
+        default: {
+            const unhandled: never = format;
+            throw new Error(`referencePoint: unhandled sourceFormat ${String(unhandled)}`);
+        }
+    }
+}
 
 export interface AnchorInput {
     sourceFormat: SourceFormat;
@@ -32,14 +49,16 @@ export interface AnchorInput {
 }
 
 export function frameTopLeft(a: AnchorInput): { x: number; y: number } {
+    const ref = referencePoint(a.sourceFormat, a.height);
     const { ax, ay } = offsetToAnchor(a.sourceFormat, a);
-    return { x: REFERENCE.x - ax, y: REFERENCE.y - ay };
+    return { x: ref.x - ax, y: ref.y - ay };
 }
 
 /**
- * The reference point as a percentage of the tile, for positioning the offset marker so it sits exactly
- * where the sprite's anchor lands. Format-independent, like REFERENCE itself - NOT a hardcoded 50%/50%.
+ * The reference point as a percentage of the tile, for positioning the offset marker so it sits on the
+ * frame's anchor (BAM: the tile centre; FRM: the feet line). Derived from referencePoint, never a fixed 50%.
  */
-export function referenceMarkerPercent(): { x: number; y: number } {
-    return { x: (REFERENCE.x / TILE_BASE_PX) * 100, y: (REFERENCE.y / TILE_BASE_PX) * 100 };
+export function referenceMarkerPercent(format: SourceFormat, height: number): { x: number; y: number } {
+    const ref = referencePoint(format, height);
+    return { x: (ref.x / TILE_BASE_PX) * 100, y: (ref.y / TILE_BASE_PX) * 100 };
 }

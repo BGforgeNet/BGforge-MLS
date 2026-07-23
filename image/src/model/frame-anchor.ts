@@ -49,13 +49,3 @@ export function offsetToAnchor(format: SourceFormat, g: AnchorGeom): Anchor {
         }
     }
 }
-
-/**
- * The FRM per-DIRECTION header offset that makes a frame of this size anchor at the given pixel. FRM
- * encodes a non-bottom-centre anchor in the per-direction base offset (a STATIC adjustment), never the
- * per-frame offset (a motion delta). Exact inverse of offsetToAnchor's FRM case; rounds to the int16 the
- * header stores (the <=0.5px error is unavoidable for an odd width).
- */
-export function frmDirOffsetForAnchor(width: number, height: number, a: Anchor): { x: number; y: number } {
-    return { x: Math.round(width / 2 - a.ax), y: Math.round(height - 1 - a.ay) };
-}
