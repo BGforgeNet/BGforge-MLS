@@ -129,6 +129,20 @@ describe("decodeIndexedPng", () => {
         expect(() => decodeIndexedPng(bytes)).toThrow(/indexed/);
     });
 
+    it("rejects implausible IHDR dimensions before allocating", () => {
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...writeChunk("IHDR", buildIhdr(65536, 65536, 3))]);
+        expect(() => decodeIndexedPng(bytes)).toThrow(/implausible image dimensions 65536x65536/);
+    });
+
+    it("caps IDAT decompression at the image's expected raw size (zlib-bomb guard)", () => {
+        // A 2x2 image whose IDAT inflates to 100 bytes - far past the 2 x (1 + 2) the image needs.
+        const ihdr = writeChunk("IHDR", buildIhdr(2, 2, 3));
+        const idat = writeChunk("IDAT", new Uint8Array(zlib.deflateSync(Buffer.alloc(100))));
+        const iend = writeChunk("IEND", new Uint8Array(0));
+        const bytes = new Uint8Array([...PNG_SIGNATURE, ...ihdr, ...idat, ...iend]);
+        expect(() => decodeIndexedPng(bytes)).toThrow(/IDAT decompression failed/);
+    });
+
     it("tolerates a PNG without PLTE or tRNS chunks (defaults to opaque black)", () => {
         const ihdr = writeChunk("IHDR", buildIhdr(1, 1, 3));
         const raw = new Uint8Array([0, 7]); // filter byte 0, one pixel of index 7

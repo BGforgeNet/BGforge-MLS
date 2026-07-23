@@ -13,6 +13,42 @@ describe("BAMC", () => {
     });
 });
 
+describe("decodeBamc hostile input", () => {
+    it("isBamc is false for short or non-BAMC input", () => {
+        expect(isBamc(new Uint8Array(0))).toBe(false);
+        expect(isBamc(new TextEncoder().encode("BA"))).toBe(false);
+        expect(isBamc(new TextEncoder().encode("BAMX"))).toBe(false);
+    });
+
+    it("rejects a truncated header", () => {
+        expect(() => decodeBamc(new Uint8Array(8))).toThrow(/header truncated/);
+    });
+
+    it("rejects an unsupported BAMC version", () => {
+        const bytes = encodeBamc(new Uint8Array([1, 2, 3]));
+        bytes.set(new TextEncoder().encode("V2  "), 0x04);
+        expect(() => decodeBamc(bytes)).toThrow(/unsupported BAMC version "V2"/);
+    });
+
+    it("rejects an implausibly large declared uncompressed size before inflating", () => {
+        const bytes = encodeBamc(new Uint8Array([1, 2, 3]));
+        new DataView(bytes.buffer).setUint32(0x08, 0xffffffff, true);
+        expect(() => decodeBamc(bytes)).toThrow(/exceeds/);
+    });
+
+    it("surfaces a corrupt zlib stream as a clear decompression error", () => {
+        const bytes = encodeBamc(new Uint8Array([1, 2, 3]));
+        bytes.fill(0xff, 12);
+        expect(() => decodeBamc(bytes)).toThrow(/decompression failed/);
+    });
+
+    it("stops inflating once the output exceeds the declared size (zlib-bomb guard)", () => {
+        const bytes = encodeBamc(new Uint8Array(1000));
+        new DataView(bytes.buffer).setUint32(0x08, 10, true); // claims 10 bytes, stream holds 1000
+        expect(() => decodeBamc(bytes)).toThrow(/decompression failed/);
+    });
+});
+
 describe.skipIf(bamcs.length === 0)("BAMC corpus", () => {
     it("detects and decodes real BAMC files to parseable BAM v1", () => {
         const first = bamcs[0];

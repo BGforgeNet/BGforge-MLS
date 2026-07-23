@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { type Animation, type Frame, emptyPalette, exportPngDirectory, importPngDirectory } from "@bgforge/image";
+import {
+    type Animation,
+    type Frame,
+    emptyPalette,
+    encodeIndexedPng,
+    exportPngDirectory,
+    importPngDirectory,
+} from "@bgforge/image";
 
 // Six sequences (one per FRM facing), with distinct frame counts, pixel content,
 // and offsets, so the round-trip test can distinguish a mixed-up ordering from a
@@ -112,6 +119,19 @@ describe("importPngDirectory(exportPngDirectory(anim))", () => {
         files.delete(framePath);
 
         expect(() => importPngDirectory(files)).toThrow(new RegExp(framePath.replaceAll(/[/.]/g, "\\$&")));
+    });
+
+    it("rejects a frame PNG whose palette differs from the first frame's", () => {
+        const anim = makeAnimation();
+        const files = exportPngDirectory(anim);
+        const pngPaths = [...files.keys()].filter((path) => path !== "manifest.json");
+        const last = pngPaths[pngPaths.length - 1];
+        if (!last) throw new Error("test setup: expected frame PNGs");
+        // Simulates an external tool re-saving one frame with a reordered/altered palette.
+        const other = emptyPalette();
+        other[5] = { r: 99, g: 98, b: 97, a: 255 };
+        files.set(last, encodeIndexedPng(2, 2, new Uint8Array([5, 0, 0, 5]), other, 0));
+        expect(() => importPngDirectory(files)).toThrow(/different palette/);
     });
 
     it("throws a clear error when manifest.json is missing", () => {

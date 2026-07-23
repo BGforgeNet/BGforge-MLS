@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    normalizeTransparentToZero,
     remapToDefault,
     remapToNearest,
     DEFAULT_FALLOUT_PALETTE,
@@ -12,6 +13,12 @@ import {
 function frame(pixels: number[]): Frame {
     return { width: pixels.length, height: 1, pixels: new Uint8Array(pixels), offsetX: 0, offsetY: 0 };
 }
+
+describe("normalizeTransparentToZero", () => {
+    it("throws when the transparent index is outside the palette", () => {
+        expect(() => normalizeTransparentToZero([], [{ r: 0, g: 0, b: 0, a: 255 }], 5)).toThrow(/out of palette range/);
+    });
+});
 
 describe("remapToDefault", () => {
     it("remaps losslessly when used colors exist in the default palette", () => {

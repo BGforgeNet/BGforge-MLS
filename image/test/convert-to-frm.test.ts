@@ -292,15 +292,20 @@ describe("convertToFrm", () => {
         const second = source.frames[1];
         if (!second) throw new Error("missing frame");
         second.pixels = Uint8Array.from([9]);
+        const third = source.frames[2];
+        if (!third) throw new Error("missing frame");
+        third.pixels = Uint8Array.from([0]); // a real color at slot 0, displaced by the swap
 
         const { animation, report } = convertToFrm(source);
         expect(report.has("palette-sidecar-required")).toBe(true);
 
         const outFirst = animation.frames[animation.sequences[0]?.frameRefs[0] ?? -1];
         const outSecond = animation.frames[animation.sequences[1]?.frameRefs[0] ?? -1];
-        if (!outFirst || !outSecond) throw new Error("missing converted frames");
+        const outThird = animation.frames[animation.sequences[2]?.frameRefs[0] ?? -1];
+        if (!outFirst || !outSecond || !outThird) throw new Error("missing converted frames");
         expect([...outFirst.pixels]).toEqual([0]); // transparent pixel moved to FRM's slot 0
         expect([...outSecond.pixels]).toEqual([9]); // untouched color index
+        expect([...outThird.pixels]).toEqual([5]); // the displaced slot-0 color follows its palette entry
         // Palette entries swapped alongside the pixels - the permutation is lossless.
         expect(animation.palette[0]).toEqual(source.palette[5]);
         expect(animation.palette[5]).toEqual(source.palette[0]);

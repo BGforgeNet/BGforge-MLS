@@ -1,5 +1,6 @@
 import zlib from "zlib";
 import { type Rgba, emptyPalette } from "../model/animation.ts";
+import { MAX_FRAME_PIXELS } from "../limits.ts";
 import { type PngChunk, readChunks } from "./chunk.ts";
 
 export interface DecodedIndexedPng {
@@ -36,6 +37,9 @@ export function parseHeaderAndPalette(
         throw new Error(
             `${errorPrefix}: not an 8-bit indexed PNG (colour type ${colourType}); import requires indexed PNGs`,
         );
+    }
+    if (width === 0 || height === 0 || width * height > MAX_FRAME_PIXELS) {
+        throw new Error(`${errorPrefix}: implausible image dimensions ${width}x${height}`);
     }
 
     const palette = emptyPalette();
@@ -147,7 +151,19 @@ export function decodeIndexedPng(bytes: Uint8Array): DecodedIndexedPng {
         compressed.set(c.data, compressedOffset);
         compressedOffset += c.data.length;
     }
-    const raw = new Uint8Array(zlib.inflateSync(Buffer.from(compressed)));
+    // 8-bit indexed, non-interlaced: the raw stream is exactly height x (1 filter byte + width).
+    // Capping the inflate there stops zlib bombs (and rejects interlaced data loudly).
+    let raw: Uint8Array;
+    try {
+        raw = new Uint8Array(zlib.inflateSync(Buffer.from(compressed), { maxOutputLength: height * (width + 1) }));
+    } catch (error) {
+        throw new Error(
+            `decodeIndexedPng: IDAT decompression failed: ${error instanceof Error ? error.message : String(error)}`,
+            {
+                cause: error,
+            },
+        );
+    }
     const pixels = unfilterScanlines(raw, width, height);
 
     return { width, height, palette, pixels, transparentIndex };

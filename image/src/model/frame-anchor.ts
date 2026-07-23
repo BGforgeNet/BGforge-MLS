@@ -43,9 +43,11 @@ export function offsetToAnchor(format: SourceFormat, g: AnchorGeom): Anchor {
         case "bam":
         case "bamc":
             return { ax: g.offsetX, ay: g.offsetY };
+        /* v8 ignore start -- unreachable: the never narrowing makes a new SourceFormat a compile error here */
         default: {
             const unhandled: never = format;
             throw new Error(`offsetToAnchor: unhandled sourceFormat ${String(unhandled)}`);
         }
+        /* v8 ignore stop */
     }
 }

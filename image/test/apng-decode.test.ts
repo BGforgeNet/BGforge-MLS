@@ -46,6 +46,28 @@ function buildFcTl(
     return data;
 }
 
+describe("decodeApng hostile input", () => {
+    it("rejects an fcTL claiming implausible frame dimensions before allocating", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(2, 2)),
+            writeChunk("fcTL", buildFcTl(0, 65536, 65536, 1, 10)),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/implausible frame dimensions 65536x65536/);
+    });
+
+    it("caps frame decompression at the expected raw size (zlib-bomb guard)", () => {
+        const oversized = deflateScanlines(10, 10, new Uint8Array(100)); // inflates far past a 2x2 frame
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(2, 2)),
+            writeChunk("fcTL", buildFcTl(0, 2, 2, 1, 10)),
+            writeChunk("IDAT", oversized),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/frame decompression failed/);
+    });
+});
+
 describe("decodeApng", () => {
     it("pads a differently-sized frame set to the canvas (centred, transparent) so it round-trips as valid frames", () => {
         // APNG is a viewable preview, and a valid PNG requires every frame (the IDAT default included) to

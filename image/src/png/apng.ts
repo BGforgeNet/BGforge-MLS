@@ -1,5 +1,6 @@
 import zlib from "zlib";
 import { type Rgba } from "../model/animation.ts";
+import { MAX_FRAME_PIXELS } from "../limits.ts";
 import { PNG_SIGNATURE, readChunks, writeChunk } from "./chunk.ts";
 import { buildIhdr, buildPlte, buildTrns, deflateScanlines } from "./encode.ts";
 import { parseHeaderAndPalette, unfilterScanlines } from "./decode.ts";
@@ -147,6 +148,9 @@ export function decodeApng(bytes: Uint8Array): DecodedApng {
         const view = new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength);
         const width = view.getUint32(4, false);
         const height = view.getUint32(8, false);
+        if (width === 0 || height === 0 || width * height > MAX_FRAME_PIXELS) {
+            throw new Error(`decodeApng: implausible frame dimensions ${width}x${height}`);
+        }
         if (!sawFirstFcTl) {
             sawFirstFcTl = true;
             const delayNum = view.getUint16(20, false);
@@ -160,7 +164,18 @@ export function decodeApng(bytes: Uint8Array): DecodedApng {
             throw new Error("decodeApng: fcTL chunk has no following IDAT/fdAT data");
         }
         const compressed = isFirstFrame ? dataChunk.data : stripFdatSequenceNumber(dataChunk.data);
-        const raw = new Uint8Array(zlib.inflateSync(Buffer.from(compressed)));
+        // Same inflate cap as decodeIndexedPng: exact raw size for 8-bit indexed, stops zlib bombs.
+        let raw: Uint8Array;
+        try {
+            raw = new Uint8Array(zlib.inflateSync(Buffer.from(compressed), { maxOutputLength: height * (width + 1) }));
+        } catch (error) {
+            throw new Error(
+                `decodeApng: frame decompression failed: ${error instanceof Error ? error.message : String(error)}`,
+                {
+                    cause: error,
+                },
+            );
+        }
         const pixels = unfilterScanlines(raw, width, height);
         frames.push({ width, height, pixels });
     }

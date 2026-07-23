@@ -8,7 +8,10 @@ const bam = corpusFiles(IE_CORPUS, ".bam")[0];
 
 describe("loadImage", () => {
     it("throws on unrecognized input", () => {
-        expect(() => loadImage(new Uint8Array([0, 1, 2, 3]), "mystery.dat")).toThrow();
+        expect(() => loadImage(new Uint8Array([0, 1, 2, 3]), "mystery.dat")).toThrow(/Unrecognized image format/);
+    });
+    it("throws on input shorter than a signature", () => {
+        expect(() => loadImage(new Uint8Array([1]), "short.dat")).toThrow(/Unrecognized image format/);
     });
     it.skipIf(!frm)("loads an FRM by extension", () => {
         const f = frm;

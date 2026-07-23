@@ -33,6 +33,14 @@ export function exportPngDirectory(anim: Animation): Map<string, Uint8Array> {
     return files;
 }
 
+function samePalette(a: Rgba[], b: Rgba[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((c, i) => {
+        const o = b[i];
+        return o !== undefined && c.r === o.r && c.g === o.g && c.b === o.b;
+    });
+}
+
 export function importPngDirectory(files: Map<string, Uint8Array>): Animation {
     const manifestBytes = files.get("manifest.json");
     if (!manifestBytes) throw new Error("importPngDirectory: missing manifest.json");
@@ -51,6 +59,13 @@ export function importPngDirectory(files: Map<string, Uint8Array>): Animation {
             if (!bytes) throw new Error(`importPngDirectory: missing referenced PNG at ${path}`);
             const decoded = decodeIndexedPng(bytes);
             if (!palette) palette = decoded.palette;
+            else if (!samePalette(palette, decoded.palette)) {
+                // Each PNG is independently hand-editable; a frame re-saved with a different or
+                // reordered palette would silently attach its indices to the first frame's colors.
+                throw new Error(
+                    `importPngDirectory: ${path} uses a different palette than the first frame - all frames of one animation must share a palette`,
+                );
+            }
             const [offsetX, offsetY] = offset;
             frames.push({ width: decoded.width, height: decoded.height, pixels: decoded.pixels, offsetX, offsetY });
             frameRefs.push(frames.length - 1);
