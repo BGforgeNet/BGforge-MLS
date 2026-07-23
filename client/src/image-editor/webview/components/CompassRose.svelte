@@ -35,8 +35,8 @@
     {#each tiles as tile (tile.facing)}
         <div
             class="compass-cell"
-            style:left="calc(50% + {tile.pos.dx * radiusPx}px)"
-            style:top="calc(50% + {tile.pos.dy * radiusPx}px)"
+            style:left="calc(50% + {tile.pos.dx * radiusPx - tilePx / 2}px)"
+            style:top="calc(50% + {tile.pos.dy * radiusPx - tilePx / 2}px)"
         >
             <SequenceTile {view} seq={tile.seq} {frame} {zoom} {showOffsetMarker} />
         </div>

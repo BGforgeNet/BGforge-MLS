@@ -267,8 +267,9 @@ select {
 }
 .compass-cell {
     position: absolute;
-    /* left/top place the cell CENTRE on the circle point; pull back by half its own size to centre. */
-    transform: translate(-50%, -50%);
+    /* left/top already centre the cell on its circle point (CompassRose subtracts half a tile). No
+       transform here: a transformed cell becomes its own stacking context, which would defeat the
+       global backdrop-under-sprite layering of .frame-tile-bg / canvas. */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -308,8 +309,18 @@ select {
     position: relative;
     box-sizing: border-box;
 }
+/* Backdrop/sprite layering: every tile backdrop at z-index 0, every canvas at 1, in ONE shared stacking
+   context (no cell or tile creates its own), so a neighbouring tile's backdrop can never paint over an
+   anchor-shifted canvas overhanging its 96px box. The backdrop value is the stage's --tile-bg. */
+.frame-tile-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--tile-bg, transparent);
+}
 .frame-tile canvas {
     position: absolute;
+    z-index: 1;
     image-rendering: pixelated;
 }
 /* Offset/center-anchor marker: a diagnostic crosshair, not editor chrome - a fixed accent color with
@@ -323,6 +334,7 @@ select {
     width: 14px;
     height: 14px;
     transform: translate(-50%, -50%);
+    z-index: 2; /* above the z-index 1 canvases it diagnoses */
     pointer-events: none;
 }
 .frame-offset-marker::before,

@@ -38,9 +38,10 @@
     let zoom = $state(1);
     // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
     let background = $state<Background>("transparent");
-    // Backdrop lives on the STAGE, not per tile: a per-tile background paints over neighboring tiles'
-    // overhanging sprites (see FrameCanvas). Transparent pixels are alpha-0, so this shows through them.
-    const stageBackground = $derived(
+    // Backdrop is PER TILE (each frame keeps its own checkered/green square), delivered as a CSS
+    // variable the tiles read (.frame-tile-bg) instead of a prop threaded through every layout
+    // component. The tile backdrops layer UNDER every sprite via z-index - see styles.css.
+    const tileBackground = $derived(
         background === "checkered" ? checkerboardCss() : background === "green" ? GREEN : undefined,
     );
     // eslint-disable-next-line prefer-const -- reassigned via onToggleOffsetMarker in the ViewControls markup
@@ -205,7 +206,7 @@
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
          the save/import bar spans the bottom. -->
     <div class="editor-layout">
-        <div class="stage" bind:this={stageEl} style:background={stageBackground}>
+        <div class="stage" bind:this={stageEl} style:--tile-bg={tileBackground}>
             {#if playback}
                 {#if layoutMode === "rose"}
                     <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {showOffsetMarker} />

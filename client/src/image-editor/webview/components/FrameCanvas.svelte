@@ -5,10 +5,11 @@
     import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
     import { TILE_BASE_PX } from "../render/tile";
 
-    // No per-tile background: overlapping tiles (anchor-shifted canvases overhang their 96px box, and
-    // each rose/grid cell is its own stacking context) would paint a later tile's backdrop OVER an
-    // earlier tile's sprite. The checkered/green backdrop lives on the stage (App) instead; transparent
-    // pixels are alpha-0 in the bitmap and simply show it through.
+    // The per-tile backdrop (.frame-tile-bg, fed by the stage's --tile-bg variable) must stay UNDER
+    // every sprite: anchor-shifted canvases overhang their 96px box, so backdrops and canvases carry
+    // z-indexes in one shared stacking context (styles.css) rather than relying on DOM order, which
+    // would paint a later tile's backdrop over an earlier tile's overhang. Transparent pixels are
+    // alpha-0 in the bitmap and show the backdrop through.
     const {
         frame,
         palette,
@@ -89,6 +90,7 @@
 </script>
 
 <div class="frame-tile" style:width="{TILE_BASE_PX * zoom}px" style:height="{TILE_BASE_PX * zoom}px">
+    <div class="frame-tile-bg" aria-hidden="true"></div>
     <canvas bind:this={canvasEl} style:left="{topLeft.x * zoom}px" style:top="{topLeft.y * zoom}px"></canvas>
     {#if showOffsetMarker}
         <div class="frame-offset-marker" style:left="{markerPos.x}%" style:top="{markerPos.y}%" aria-hidden="true"></div>
