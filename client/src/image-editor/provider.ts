@@ -221,18 +221,52 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     private async importPngDirectory(): Promise<Animation | undefined> {
-        // A PNG-directory export is defined by its manifest.json, so point the picker straight at it
-        // rather than a bare folder; the frames are read relative to the manifest's directory.
+        // Accept EITHER the export folder or its manifest.json - both resolve to the same directory,
+        // whose frames are read relative to manifest.json.
         const selection = await vscode.window.showOpenDialog({
-            canSelectFolders: false,
+            canSelectFolders: true,
             canSelectFiles: true,
             canSelectMany: false,
             filters: { "PNG-directory manifest": ["json"] },
-            openLabel: "Select manifest.json",
+            openLabel: "Import",
+            title: "Import PNG directory - pick its folder or its manifest.json",
         });
-        const manifest = selection?.[0];
-        if (!manifest) return undefined;
-        return importPngDirectory(await this.readDirectoryTree(vscode.Uri.file(path.dirname(manifest.fsPath))));
+        const picked = selection?.[0];
+        if (!picked) return undefined;
+
+        const stat = await vscode.workspace.fs.stat(picked);
+        const dir = stat.type === vscode.FileType.Directory ? picked : vscode.Uri.file(path.dirname(picked.fsPath));
+
+        // Sanity check the selection BEFORE reading the tree: a PNG-directory export is defined by its
+        // manifest.json. Guide the user to the right pick instead of leaking the codec's internal throw,
+        // and avoid recursively slurping an unrelated folder they picked by mistake.
+        const manifestUri = vscode.Uri.joinPath(dir, "manifest.json");
+        if (!(await this.fileExists(manifestUri))) {
+            void vscode.window.showWarningMessage(
+                `"${path.basename(dir.fsPath)}" is not a PNG-directory export (no manifest.json inside). ` +
+                    `Pick the folder written by "Save as > PNG directory", or its manifest.json.`,
+            );
+            return undefined;
+        }
+
+        try {
+            return importPngDirectory(await this.readDirectoryTree(dir));
+        } catch (error) {
+            // Malformed/incompatible manifest or a missing frame PNG - surface the cause, not a stack.
+            const detail =
+                error instanceof Error ? error.message.replace(/^importPngDirectory:\s*/, "") : String(error);
+            void vscode.window.showWarningMessage(`Can't import "${path.basename(dir.fsPath)}": ${detail}`);
+            return undefined;
+        }
+    }
+
+    private async fileExists(uri: vscode.Uri): Promise<boolean> {
+        try {
+            await vscode.workspace.fs.stat(uri);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /** Recursively reads a directory into a relative-path Map, the shape `importPngDirectory` expects. */

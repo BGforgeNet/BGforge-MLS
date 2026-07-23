@@ -99,6 +99,9 @@
     // eslint-disable-next-line prefer-const -- reassigned via the import-mode <select>'s onchange in the markup
     let importMode = $state<"replace" | "append">("replace");
 
+    const IMPORT_MODE_HINT =
+        "Replace: swap the current frames for the imported ones.\nAppend: add the imported cycles after the existing ones.";
+
     function handleSave(): void {
         bridge.send({ type: "save" });
     }
@@ -144,15 +147,22 @@
         <span class="toolbar-label">Import</span>
         <select
             value={importMode}
+            title={IMPORT_MODE_HINT}
             onchange={(e) => {
                 const next = e.currentTarget.value;
                 if (next === "replace" || next === "append") importMode = next;
             }}
             aria-label="Import mode"
         >
-            <option value="replace">Replace</option>
-            <option value="append">Append</option>
+            <option value="replace" title="Swap the current frames for the imported ones">Replace</option>
+            <option value="append" title="Add the imported cycles after the existing ones">Append</option>
         </select>
-        <button type="button" onclick={handleImport}>PNG directory...</button>
+        <button
+            type="button"
+            onclick={handleImport}
+            title="Import frames from a PNG-directory export - pick its folder or its manifest.json"
+        >
+            PNG directory...
+        </button>
     </div>
 </div>
