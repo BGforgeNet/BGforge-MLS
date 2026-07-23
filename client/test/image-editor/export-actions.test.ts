@@ -49,7 +49,7 @@ describe("buildCrossFormatSave", () => {
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([0]), offsetX: 0, offsetY: 0 }],
             meta: { sourceFormat: "bam", transparentIndex: 0 },
         };
-        const { writes, report } = buildCrossFormatSave(bam, "frm", "/out/y.frm", { layout: ["NE"] });
+        const { writes, report } = buildCrossFormatSave(bam, "frm", "/out/y.frm");
         expect(writes).toHaveLength(1);
         expect(writes[0]?.path).toBe("/out/y.frm");
         expect(report.has("palette-remapped-to-default")).toBe(true);
@@ -64,7 +64,7 @@ describe("buildCrossFormatSave", () => {
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([1]), offsetX: 0, offsetY: 0 }],
             meta: { sourceFormat: "bam", transparentIndex: 0 },
         };
-        const { writes, report } = buildCrossFormatSave(bam, "frm", "/out/y.frm", { layout: ["NE"] });
+        const { writes, report } = buildCrossFormatSave(bam, "frm", "/out/y.frm");
         expect(writes).toHaveLength(2);
         expect(writes[0]?.path).toBe("/out/y.frm");
         expect(writes[1]?.path).toBe("/out/y.pal");

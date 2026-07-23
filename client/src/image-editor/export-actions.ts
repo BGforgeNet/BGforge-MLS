@@ -9,7 +9,6 @@ import {
     serializeFrm,
     serializePal,
     type Animation,
-    type Facing,
     type LossReport,
     type Rgba,
 } from "@bgforge/image";
@@ -38,7 +37,7 @@ export function buildCrossFormatSave(
     anim: Animation,
     target: "frm" | "bam" | "bamc",
     targetPath: string,
-    opts?: { layout?: Facing[]; paletteMode?: "sidecar" | "nearest"; singleCycle?: number; ieGroup?: number },
+    opts?: { paletteMode?: "sidecar" | "nearest"; singleCycle?: number; ieGroup?: number },
 ): { writes: SaveWrite[]; report: LossReport } {
     const { animation, report } = convert(anim, target === "frm" ? "frm" : "bam", opts);
     let bytes: Uint8Array;
