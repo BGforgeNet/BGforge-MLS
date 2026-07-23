@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Facing } from "@bgforge/image";
-import { analyzeCycleGrid, interpretIeRose } from "../../src/image-editor/webview/render/cycle-grouping";
+import { analyzeCycleGrid, ieGroupLabels, interpretIeRose } from "../../src/image-editor/webview/render/cycle-grouping";
 import type { SequenceView } from "../../src/image-editor/webview/messages";
 
 function seq(frameRefs: number[], facing: Facing = "none"): SequenceView {
@@ -110,5 +110,24 @@ describe("interpretIeRose", () => {
         for (let slot = 0; slot < 5; slot++) sequences[8 + slot] = seq([]);
         const result = interpretIeRose(sequences, frameCount);
         expect(result?.detected).toBe(false);
+    });
+});
+
+describe("ieGroupLabels", () => {
+    test("names usar1ca's 8 blocks from the CA scheme, and the E-companion identically", () => {
+        const labels = ieGroupLabels("usar1ca.bam", 8);
+        expect(labels?.[0]).toBe("CA - cast");
+        expect(labels?.[7]).toBe("SP4 - spell loop");
+        expect(ieGroupLabels("USAR1CAE.BAM", 8)).toEqual(labels);
+    });
+
+    test("disambiguates the shared G1 token by block count (character_old 9 vs monster_layered 6)", () => {
+        expect(ieGroupLabels("chmb1g1.bam", 9)?.[8]).toBe("SL - sleep");
+        expect(ieGroupLabels("mogrg1.bam", 6)?.[5]).toBe("TW - twitch");
+    });
+
+    test("returns undefined for an unknown token or a count no scheme matches", () => {
+        expect(ieGroupLabels("harness-fixture-directional.bam", 2)).toBeUndefined();
+        expect(ieGroupLabels("usar1ca.bam", 5)).toBeUndefined(); // CA scheme is 8 blocks, not 5
     });
 });

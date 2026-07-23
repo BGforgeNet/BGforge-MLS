@@ -2,10 +2,11 @@
     import { tick as svelteTick } from "svelte";
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
-    import type { Background } from "../render/indexed-to-rgba";
+    import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
-    import { analyzeCycleGrid, interpretIeRose } from "../render/cycle-grouping";
+    import { analyzeCycleGrid, ieGroupLabels, interpretIeRose } from "../render/cycle-grouping";
+    import { autoZoomLevel } from "../render/tile";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
@@ -36,6 +37,11 @@
     let zoom = $state(1);
     // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
     let background = $state<Background>("transparent");
+    // Backdrop lives on the STAGE, not per tile: a per-tile background paints over neighboring tiles'
+    // overhanging sprites (see FrameCanvas). Transparent pixels are alpha-0, so this shows through them.
+    const stageBackground = $derived(
+        background === "checkered" ? checkerboardCss() : background === "green" ? GREEN : undefined,
+    );
     // eslint-disable-next-line prefer-const -- reassigned via onToggleOffsetMarker in the ViewControls markup
     let showOffsetMarker = $state(false);
     // eslint-disable-next-line prefer-const -- assigned via bind:this in the markup
@@ -74,6 +80,9 @@
     // eslint-disable-next-line prefer-const -- reassigned via onGroupChange in the LayoutModeControls markup
     let roseGroup = $state(0);
     const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
+    const roseGroupLabels = $derived(
+        view && roseGroupCount > 1 ? ieGroupLabels(view.basename, roseGroupCount) : undefined,
+    );
     const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
         if (!view) return [];
@@ -138,11 +147,10 @@
         return () => cancelAnimationFrame(raf);
     });
 
-    // Auto-zoom on open: while the rendered animation's width AND height are BOTH under half the stage,
-    // double the zoom and re-check - content dimensions scale linearly with zoom - so a small sprite
-    // lands at 200% or 400%. Runs once per opened view, and only while zoom is still the default 1 - a
-    // restored or user-chosen zoom is left alone. Reads only `view`, never `playback`, so a per-frame
-    // playback write can't re-trigger it.
+    // Auto-zoom on open: size for the largest FRAME (sprite legibility), bounded so the whole composite
+    // layout still fits the stage - see autoZoomLevel in render/tile.ts. Runs once per opened view, and
+    // only while zoom is still the default 1 - a restored or user-chosen zoom is left alone. Reads only
+    // `view`, never `playback`, so a per-frame playback write can't re-trigger it.
     const AUTO_ZOOM_CAP = 4; // top zoom preset - see ViewControls ZOOM_MAX
     let autoZoomedView: AnimationView | undefined;
     $effect(() => {
@@ -154,15 +162,24 @@
         await svelteTick();
         if (view !== v || !stageEl) return;
         const content = stageEl.firstElementChild;
-        const availW = stageEl.clientWidth;
-        const availH = stageEl.clientHeight;
+        // The stage's own padding is part of clientWidth/Height but not available to content.
+        const stageStyle = getComputedStyle(stageEl);
+        const availW = stageEl.clientWidth - parseFloat(stageStyle.paddingLeft) - parseFloat(stageStyle.paddingRight);
+        const availH = stageEl.clientHeight - parseFloat(stageStyle.paddingTop) - parseFloat(stageStyle.paddingBottom);
         // Not laid out yet (e.g. opened in a hidden tab): leave unmarked so a later view can retry.
         if (!(content instanceof HTMLElement) || availW <= 0 || availH <= 0) return;
         autoZoomedView = v;
         if (zoom !== 1) return; // a persisted or user-chosen zoom wins
         const box = content.getBoundingClientRect(); // measured at zoom 1; both dims scale with zoom
-        let z = 1;
-        while (z < AUTO_ZOOM_CAP && box.width * z < availW / 2 && box.height * z < availH / 2) z *= 2;
+        const z = autoZoomLevel({
+            maxFrameW: Math.max(0, ...v.frames.map((f) => f.width)),
+            maxFrameH: Math.max(0, ...v.frames.map((f) => f.height)),
+            contentW: box.width,
+            contentH: box.height,
+            availW,
+            availH,
+            cap: AUTO_ZOOM_CAP,
+        });
         if (z !== 1) zoom = z;
     }
 </script>
@@ -188,17 +205,16 @@
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
          the save/import bar spans the bottom. -->
     <div class="editor-layout">
-        <div class="stage" bind:this={stageEl}>
+        <div class="stage" bind:this={stageEl} style:background={stageBackground}>
             {#if playback}
                 {#if layoutMode === "rose"}
-                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
+                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {showOffsetMarker} />
                 {:else}
                     <CycleGrid
                         {view}
                         tiles={gridTiles}
                         frame={playback.frame}
                         {zoom}
-                        {background}
                         {showOffsetMarker}
                         columns={cycleColumns}
                     />
@@ -221,6 +237,7 @@
                     onModeChange={(m) => (layoutChoice = m)}
                     groupCount={roseGroupCount}
                     group={clampedRoseGroup}
+                    groupLabels={roseGroupLabels}
                     onGroupChange={(g) => (roseGroup = g)}
                 />
             {/if}

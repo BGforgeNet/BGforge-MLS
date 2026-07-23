@@ -1,16 +1,19 @@
 <script lang="ts">
     import type { Rgba, SourceFormat } from "@bgforge/image";
     import { decodeFramePixels, type FrameView } from "../messages";
-    import { checkerboardCss, frameToRgba, GREEN, type Background } from "../render/indexed-to-rgba";
+    import { frameToRgba } from "../render/indexed-to-rgba";
     import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
     import { TILE_BASE_PX } from "../render/tile";
 
+    // No per-tile background: overlapping tiles (anchor-shifted canvases overhang their 96px box, and
+    // each rose/grid cell is its own stacking context) would paint a later tile's backdrop OVER an
+    // earlier tile's sprite. The checkered/green backdrop lives on the stage (App) instead; transparent
+    // pixels are alpha-0 in the bitmap and simply show it through.
     const {
         frame,
         palette,
         transparentIndex,
         zoom,
-        background,
         sourceFormat,
         dirOffsetX,
         dirOffsetY,
@@ -20,7 +23,6 @@
         palette: Rgba[];
         transparentIndex: number;
         zoom: number;
-        background: Background;
         sourceFormat: SourceFormat;
         dirOffsetX: number;
         dirOffsetY: number;
@@ -84,17 +86,9 @@
         ctx.drawImage(native, 0, 0, canvas.width, canvas.height);
     });
 
-    const tileBackground = $derived(
-        background === "checkered" ? checkerboardCss() : background === "green" ? GREEN : "transparent",
-    );
 </script>
 
-<div
-    class="frame-tile"
-    style:width="{TILE_BASE_PX * zoom}px"
-    style:height="{TILE_BASE_PX * zoom}px"
-    style:background={tileBackground}
->
+<div class="frame-tile" style:width="{TILE_BASE_PX * zoom}px" style:height="{TILE_BASE_PX * zoom}px">
     <canvas bind:this={canvasEl} style:left="{topLeft.x * zoom}px" style:top="{topLeft.y * zoom}px"></canvas>
     {#if showOffsetMarker}
         <div class="frame-offset-marker" style:left="{markerPos.x}%" style:top="{markerPos.y}%" aria-hidden="true"></div>

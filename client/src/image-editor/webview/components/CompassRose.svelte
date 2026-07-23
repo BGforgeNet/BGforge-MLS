@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { AnimationView } from "../messages";
-    import type { Background } from "../render/indexed-to-rgba";
     import type { RoseTile } from "../render/compass-layout";
     import { TILE_BASE_PX } from "../render/tile";
     import SequenceTile from "./SequenceTile.svelte";
@@ -12,14 +11,12 @@
         tiles,
         frame,
         zoom,
-        background,
         showOffsetMarker = false,
     }: {
         view: AnimationView;
         tiles: RoseTile[];
         frame: number;
         zoom: number;
-        background: Background;
         showOffsetMarker?: boolean;
     } = $props();
 
@@ -41,7 +38,7 @@
             style:left="calc(50% + {tile.pos.dx * radiusPx}px)"
             style:top="calc(50% + {tile.pos.dy * radiusPx}px)"
         >
-            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {background} {showOffsetMarker} />
+            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {showOffsetMarker} />
         </div>
     {/each}
 </div>

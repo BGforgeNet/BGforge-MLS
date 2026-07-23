@@ -10,12 +10,14 @@
         onModeChange,
         groupCount,
         group,
+        groupLabels,
         onGroupChange,
     }: {
         mode: LayoutMode;
         onModeChange: (mode: LayoutMode) => void;
         groupCount: number; // 0 or 1 = no group picker
         group: number;
+        groupLabels?: string[]; // scheme names per group (ieGroupLabels); numbered fallback when absent
         onGroupChange: (group: number) => void;
     } = $props();
 
@@ -64,7 +66,9 @@
                 aria-label="Sequence group"
             >
                 {#each Array.from({ length: groupCount }, (_, i) => i) as i (i)}
-                    <option value={String(i)}>Group {i + 1} (cycles {i * IE_STRIDE}-{i * IE_STRIDE + IE_STRIDE - 1})</option>
+                    <option value={String(i)}>
+                        {groupLabels?.[i] ?? `Group ${i + 1}`} (cycles {i * IE_STRIDE}-{i * IE_STRIDE + IE_STRIDE - 1})
+                    </option>
                 {/each}
             </select>
         </label>

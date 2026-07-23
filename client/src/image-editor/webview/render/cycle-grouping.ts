@@ -56,6 +56,53 @@ export interface IeRoseInterpretation {
 }
 
 /**
+ * Known multi-sequence file layouts from the IE animation schemes (IESDP ini_anim.htm), keyed by the
+ * filename's trailing sequence token plus the block count - the same token names both the character_old
+ * CA/G1 files and the type-2000 monster G1/G2 files, so the count disambiguates. A BAM stores no
+ * sequence names; the filename convention is the only in-reach source, so an unmatched token or count
+ * falls back to numbered groups. The optional trailing "e" covers eastern *E.BAM companions.
+ */
+const IE_SEQUENCE_NAMES: Record<string, string[]> = {
+    "ca/8": [
+        "CA - cast",
+        "SP1 - spell loop",
+        "CA2 - cast",
+        "SP2 - spell loop",
+        "CA3 - cast",
+        "SP3 - spell loop",
+        "CA4 - cast",
+        "SP4 - spell loop",
+    ],
+    "g1/9": [
+        "WK - walk",
+        "SC1 - combat stance (1-h)",
+        "SD1 - stand (1-h)",
+        "SC2 - combat stance (2-h)",
+        "SD2 - stand (2-h)",
+        "GH - get hit",
+        "DE - die",
+        "TW - twitch",
+        "SL - sleep",
+    ],
+    "g1/6": ["WK - walk", "SC - combat stance", "SD - stand", "GH - get hit", "DE - die", "TW - twitch"],
+    "g2/3": ["A1 - attack", "A2/CA - attack or cast", "A3/SP - attack or spell"],
+};
+
+const IE_SEQUENCE_TOKENS = ["g1", "g2", "ca"];
+
+/** Scheme names for a multi-block file's direction groups, from the filename's sequence token; undefined
+ *  when the token or block count matches no known scheme (callers show numbered groups instead). */
+export function ieGroupLabels(basename: string, groupCount: number): string[] | undefined {
+    const stem = basename.toLowerCase().replace(/\.[^.]*$/, "");
+    for (const candidate of [stem, stem.replace(/e$/, "")]) {
+        for (const token of IE_SEQUENCE_TOKENS) {
+            if (candidate.endsWith(token)) return IE_SEQUENCE_NAMES[`${token}/${groupCount}`];
+        }
+    }
+    return undefined;
+}
+
+/**
  * Interpret an untagged (all facings "none") cycle list as IE direction blocks. Returns undefined when
  * the shape cannot map onto 8-slot blocks at all (tagged facings, zero cycles, or a >8 count that is
  * not a multiple of 8) - then only the flat grid makes sense.

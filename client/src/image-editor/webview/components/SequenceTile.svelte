@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { AnimationView, SequenceView } from "../messages";
-    import type { Background } from "../render/indexed-to-rgba";
     import FrameCanvas from "./FrameCanvas.svelte";
 
     // The one frame-resolution path for every layout (rose, grid): resolves the shared playback
@@ -10,14 +9,12 @@
         seq,
         frame,
         zoom,
-        background,
         showOffsetMarker,
     }: {
         view: AnimationView;
         seq: SequenceView;
         frame: number;
         zoom: number;
-        background: Background;
         showOffsetMarker: boolean;
     } = $props();
 
@@ -35,7 +32,6 @@
         palette={view.palette}
         transparentIndex={view.meta.transparentIndex ?? 0}
         {zoom}
-        {background}
         sourceFormat={view.sourceFormat}
         dirOffsetX={seq.dirOffsetX}
         dirOffsetY={seq.dirOffsetY}
