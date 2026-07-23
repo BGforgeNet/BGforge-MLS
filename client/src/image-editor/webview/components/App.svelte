@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick as svelteTick } from "svelte";
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
     import type { Background } from "../render/indexed-to-rgba";
@@ -34,6 +35,8 @@
     let background = $state<Background>("transparent");
     // eslint-disable-next-line prefer-const -- reassigned via onToggleOffsetMarker in the ViewControls markup
     let showOffsetMarker = $state(false);
+    // eslint-disable-next-line prefer-const -- assigned via bind:this in the markup
+    let stageEl = $state<HTMLDivElement>();
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -84,6 +87,34 @@
 
         return () => cancelAnimationFrame(raf);
     });
+
+    // Auto-zoom on open: while the rendered animation's width AND height are BOTH under half the stage,
+    // double the zoom and re-check - content dimensions scale linearly with zoom - so a small sprite
+    // lands at 200% or 400%. Runs once per opened view, and only while zoom is still the default 1 - a
+    // restored or user-chosen zoom is left alone. Reads only `view`, never `playback`, so a per-frame
+    // playback write can't re-trigger it.
+    const AUTO_ZOOM_CAP = 4; // top zoom preset - see ViewControls ZOOM_MAX
+    let autoZoomedView: AnimationView | undefined;
+    $effect(() => {
+        const v = view;
+        if (v && v !== autoZoomedView) void applyAutoZoom(v);
+    });
+    async function applyAutoZoom(v: AnimationView): Promise<void> {
+        // Wait for the stage content to render and for ViewControls' persisted-zoom hydration to settle.
+        await svelteTick();
+        if (view !== v || !stageEl) return;
+        const content = stageEl.firstElementChild;
+        const availW = stageEl.clientWidth;
+        const availH = stageEl.clientHeight;
+        // Not laid out yet (e.g. opened in a hidden tab): leave unmarked so a later view can retry.
+        if (!(content instanceof HTMLElement) || availW <= 0 || availH <= 0) return;
+        autoZoomedView = v;
+        if (zoom !== 1) return; // a persisted or user-chosen zoom wins
+        const box = content.getBoundingClientRect(); // measured at zoom 1; both dims scale with zoom
+        let z = 1;
+        while (z < AUTO_ZOOM_CAP && box.width * z < availW / 2 && box.height * z < availH / 2) z *= 2;
+        if (z !== 1) zoom = z;
+    }
 </script>
 
 {#if errorMessage}
@@ -108,7 +139,7 @@
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
          the save/import bar spans the bottom. -->
     <div class="editor-layout">
-        <div class="stage">
+        <div class="stage" bind:this={stageEl}>
             {#if playback}
                 {#if layout.mode === "compass"}
                     <CompassRose {view} frame={playback.frame} {zoom} {background} {showOffsetMarker} />
