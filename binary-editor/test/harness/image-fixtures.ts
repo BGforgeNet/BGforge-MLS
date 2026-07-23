@@ -89,6 +89,34 @@ const BAM_COLORS: [number, number, number][] = [
 
 /** Several sequences, all facing "none" - not a compass direction, so compass-layout falls back to the
  *  cycle grid. Exercises that fallback path rather than duplicating the FRM compass coverage. */
+/** 12 cycles, all facing "none" - past the >8 multi-sequence threshold, so CycleLayoutControls mounts
+ *  and the grid seeds its column count from the heuristic (12 % 6 === 0 -> 6). */
+export function buildMultiSequenceBamFixture(): AnimationView {
+    const palette = emptyPalette();
+    setColor(palette, MARKER_INDEX, 255, 255, 255);
+    const frames: FrameView[] = [];
+    const sequences: SequenceView[] = Array.from({ length: 12 }, (_, i) => {
+        const colorIdx = i % BAM_COLORS.length;
+        const baseIndex = colorIdx + 1;
+        const [r, g, b] = colorAt(BAM_COLORS, colorIdx);
+        setColor(palette, baseIndex, r, g, b);
+        frames.push(makeFrame(baseIndex, 0));
+        return { frameRefs: [frames.length - 1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 };
+    });
+
+    return {
+        palette,
+        frames,
+        sequences,
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+        basename: "harness-fixture-multi",
+        sourceFormat: "bam",
+        hasSidecarPal: false,
+        externalPaletteActive: false,
+        dirty: false,
+    };
+}
+
 export function buildBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);

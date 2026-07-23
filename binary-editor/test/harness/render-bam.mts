@@ -10,13 +10,15 @@ import { fileURLToPath } from "node:url";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/image-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
 import { shotPath } from "./out-dir";
-import { buildBamFixture } from "./image-fixtures";
+import { buildBamFixture, buildMultiSequenceBamFixture } from "./image-fixtures";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const view = buildBamFixture();
+// Swapped before the reload below, so the same host stub serves both fixtures.
+let currentView = view;
 
 function hostUp(m: WebviewToHost): HostToWebview[] {
-    return m.type === "ready" ? [{ type: "init", view }] : [];
+    return m.type === "ready" ? [{ type: "init", view: currentView }] : [];
 }
 
 const results: string[] = [];
@@ -63,6 +65,53 @@ const colors = await page.evaluate(() =>
 check("grid: every sequence renders a distinct color", new Set(colors).size === colors.length, JSON.stringify(colors));
 
 await page.screenshot({ path: shotPath("shot-bam.png"), fullPage: true });
+
+// Multi-sequence fixture: past the >8-cycle threshold the manual grid-columns control must mount,
+// seed the grid from the heuristic's suggestion, and re-lay the grid on a manual override.
+currentView = buildMultiSequenceBamFixture();
+await page.reload();
+await page.waitForSelector(".cycle-grid canvas", { timeout: 5000 });
+
+const multiTiles = await page.locator(".cycle-grid canvas").count();
+check("multi: all 12 cycles render", multiTiles === 12, `count=${multiTiles}`);
+
+const layoutGroupCount = await page.locator('[aria-label="Cycle layout"]').count();
+check("multi: cycle-layout control mounts for >8 cycles", layoutGroupCount === 1, `count=${layoutGroupCount}`);
+
+async function gridColumnCount(): Promise<number> {
+    return page.evaluate(() => {
+        const grid = document.querySelector(".cycle-grid");
+        return grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0;
+    });
+}
+const columnsInput = page.getByLabel("Cycle grid columns (0 for auto)");
+const seededValue = await columnsInput.inputValue();
+check("multi: columns seeded from the 12-cycle suggestion", seededValue === "6", `value=${seededValue}`);
+check(
+    "multi: grid lays out with the seeded column count",
+    (await gridColumnCount()) === 6,
+    `tracks=${await gridColumnCount()}`,
+);
+
+await columnsInput.fill("4");
+await columnsInput.press("Enter");
+await page
+    .waitForFunction(
+        () => {
+            const grid = document.querySelector(".cycle-grid");
+            return !!grid && getComputedStyle(grid).gridTemplateColumns.split(" ").length === 4;
+        },
+        undefined,
+        { timeout: 3000 },
+    )
+    .catch(() => undefined);
+check(
+    "multi: manual column override re-lays the grid",
+    (await gridColumnCount()) === 4,
+    `tracks=${await gridColumnCount()}`,
+);
+
+await page.screenshot({ path: shotPath("shot-bam-multi.png"), fullPage: true });
 
 await browser.close();
 
