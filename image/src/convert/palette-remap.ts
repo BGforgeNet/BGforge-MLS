@@ -1,5 +1,33 @@
-import { type Animation, type Frame, type Rgba } from "../model/animation.ts";
+import { type Animation, type Frame, type Rgba, transparentIndexOf } from "../model/animation.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
+
+// FRM's transparency convention is index 0. When a source marks another slot transparent, swap
+// indices 0 <-> transparentIndex in pixels and palette - a lossless permutation that lets an FRM
+// output (and its .pal sidecar) keep the source's transparency without a color remap.
+export function normalizeTransparentToZero(
+    frames: Frame[],
+    palette: Rgba[],
+    transparentIndex: number,
+): { frames: Frame[]; palette: Rgba[] } {
+    if (transparentIndex === 0) return { frames, palette };
+    const swappedPalette = palette.map((c) => ({ ...c }));
+    const zeroColor = swappedPalette[0];
+    const transparentColor = swappedPalette[transparentIndex];
+    if (!zeroColor || !transparentColor) {
+        throw new Error(`normalizeTransparentToZero: transparent index ${transparentIndex} out of palette range`);
+    }
+    swappedPalette[0] = transparentColor;
+    swappedPalette[transparentIndex] = zeroColor;
+    const swappedFrames = frames.map((f) => {
+        const pixels = new Uint8Array(f.pixels.length);
+        f.pixels.forEach((idx, i) => {
+            pixels[i] = idx === 0 ? transparentIndex : idx === transparentIndex ? 0 : idx;
+        });
+        // Pixels were re-indexed; rawEncoding described the old indices and must not carry over.
+        return { width: f.width, height: f.height, pixels, offsetX: f.offsetX, offsetY: f.offsetY };
+    });
+    return { frames: swappedFrames, palette: swappedPalette };
+}
 
 function colorKey(c: Rgba): string {
     return `${c.r},${c.g},${c.b}`;
@@ -73,7 +101,7 @@ function nearestIndex(color: Rgba, target: Rgba[]): number {
 // The transparent source index maps to 0 (the default palette's transparency slot) so
 // transparency survives. Output frames drop rawEncoding/rleEncoded (they described the old bytes).
 export function remapToNearest(anim: Animation, target: Rgba[]): { animation: Animation; remapped: true } {
-    const transparent = anim.meta.transparentIndex ?? 0;
+    const transparent = transparentIndexOf(anim.meta);
     // src index -> target index, one entry per palette slot, computed once.
     const table = anim.palette.map((color, idx) => (idx === transparent ? 0 : nearestIndex(color, target)));
     const frames = anim.frames.map((f) => {

@@ -4,13 +4,13 @@
 // This is a viewable PREVIEW, not a lossless export: every frame is placed at
 // x_offset = y_offset = 0, so each frame's offsetX/offsetY is NOT preserved through
 // this path. The PNG-directory codec (png-directory.ts) is the offset-lossless one.
-import type { Animation } from "../model/animation.ts";
+import { type Animation, transparentIndexOf } from "../model/animation.ts";
 import { type ApngFrame, decodeApng, encodeApng } from "../png/apng.ts";
 import { sequenceDirId } from "./manifest.ts";
 
 export function exportApngPerDirection(anim: Animation): Map<string, Uint8Array> {
     const files = new Map<string, Uint8Array>();
-    const transparentIndex = anim.meta.transparentIndex ?? 0;
+    const transparentIndex = transparentIndexOf(anim.meta);
     const fps = anim.meta.fps ?? 10;
 
     for (const [s, seq] of anim.sequences.entries()) {

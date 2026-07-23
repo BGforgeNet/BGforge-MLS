@@ -1,7 +1,14 @@
-import { type Animation, type Facing, type Frame, type Sequence, FRM_FACINGS } from "../model/animation.ts";
+import {
+    type Animation,
+    type Facing,
+    type Frame,
+    type Sequence,
+    FRM_FACINGS,
+    transparentIndexOf,
+} from "../model/animation.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
-import { remapToDefault, remapToNearest } from "./palette-remap.ts";
+import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./palette-remap.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
 export interface FrmConvertOpts {
@@ -154,7 +161,10 @@ function buildDirectionalSlots(
         );
     }
 
-    // Pad every direction to the longest one with synthesized fully-transparent frames.
+    // Pad every direction to the longest one with synthesized fully-transparent frames. The fill is
+    // the SOURCE's transparent index: the palette paths below map that index to the FRM's slot 0
+    // (a bare 0 would read as the source's color 0 whenever transparentIndex != 0).
+    const transparent = transparentIndexOf(anim.meta);
     const maxLen = frameRefsPerSlot.reduce((max, refs) => Math.max(max, refs.length), 0);
     for (let slot = 0; slot < frameRefsPerSlot.length; slot++) {
         const refs = frameRefsPerSlot[slot];
@@ -166,7 +176,13 @@ function buildDirectionalSlots(
         const width = lastFrame?.width ?? 1;
         const height = lastFrame?.height ?? 1;
         while (refs.length < maxLen) {
-            pool.push({ width, height, pixels: new Uint8Array(width * height), offsetX: 0, offsetY: 0 });
+            pool.push({
+                width,
+                height,
+                pixels: new Uint8Array(width * height).fill(transparent),
+                offsetX: 0,
+                offsetY: 0,
+            });
             refs.push(pool.length - 1);
         }
         const facingName = FRM_FACINGS[slot];
@@ -200,7 +216,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
             ? buildSingleOrientationSlots(anim, singleCycle, report)
             : buildDirectionalSlots(anim, opts, report);
 
-    const defaultRemap = remapToDefault(pool, anim.palette, anim.meta.transparentIndex ?? 0);
+    const defaultRemap = remapToDefault(pool, anim.palette, transparentIndexOf(anim.meta));
     let paletteFrames = defaultRemap.frames;
     let palette = defaultRemap.palette;
     if (defaultRemap.remapped) {
@@ -223,6 +239,11 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
             "palette-sidecar-required",
             "source palette could not be losslessly remapped onto the default; kept as a sidecar",
         );
+        // The kept palette still marks transparency at the SOURCE's index; every FRM consumer reads
+        // index 0 as transparent, so re-index (lossless 0 <-> t swap) before the palette ships.
+        const normalized = normalizeTransparentToZero(paletteFrames, palette, transparentIndexOf(anim.meta));
+        paletteFrames = normalized.frames;
+        palette = normalized.palette;
     }
     // Clone rather than alias: the remapped branch returns the shared DEFAULT_FALLOUT_PALETTE constant,
     // and the sidecar branch returns anim.palette itself - either would let a caller's mutation of the

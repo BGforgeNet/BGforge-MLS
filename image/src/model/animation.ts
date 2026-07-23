@@ -46,3 +46,9 @@ export const FRM_FACINGS: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
 export function emptyPalette(): Rgba[] {
     return Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
 }
+
+// The one resolution of the optional field: absent means the format's convention (FRM: index 0).
+// Consumers must resolve through this rather than re-deriving the fallback per call site.
+export function transparentIndexOf(meta: AnimationMeta): number {
+    return meta.transparentIndex ?? 0;
+}

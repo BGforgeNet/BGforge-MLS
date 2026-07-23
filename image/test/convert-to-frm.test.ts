@@ -263,6 +263,49 @@ describe("convertToFrm", () => {
         };
     }
 
+    it("pads with the source's transparent index, so padding stays transparent when that index is non-zero", () => {
+        const source = synthBam([2, 1, 2, 2, 2, 2]); // slot 1 is short -> padded
+        source.meta.transparentIndex = 5;
+        const { animation, report } = convertToFrm(source);
+
+        // The default palette resolves losslessly, so padding must not force the sidecar path either.
+        expect(report.has("palette-remapped-to-default")).toBe(true);
+        expect(report.has("padded-sequence")).toBe(true);
+
+        const padSeq = animation.sequences[1];
+        if (!padSeq) throw new Error("missing padded sequence");
+        const padRef = padSeq.frameRefs[1];
+        if (padRef === undefined) throw new Error("missing padded frame ref");
+        const padFrame = animation.frames[padRef];
+        if (!padFrame) throw new Error("missing padded frame");
+        // Transparent in FRM terms is index 0; a raw zero-fill would have read as the source's color 0.
+        expect([...padFrame.pixels].every((p) => p === 0)).toBe(true);
+    });
+
+    it("re-indexes transparency to slot 0 on the sidecar path (0 <-> transparentIndex swap)", () => {
+        const source = bespokeBam(); // bespoke palette -> sidecar path
+        source.meta.transparentIndex = 5;
+        // First frame mixes a transparent pixel (5) with a color pixel (9).
+        const first = source.frames[0];
+        if (!first) throw new Error("missing frame");
+        first.pixels = Uint8Array.from([5]);
+        const second = source.frames[1];
+        if (!second) throw new Error("missing frame");
+        second.pixels = Uint8Array.from([9]);
+
+        const { animation, report } = convertToFrm(source);
+        expect(report.has("palette-sidecar-required")).toBe(true);
+
+        const outFirst = animation.frames[animation.sequences[0]?.frameRefs[0] ?? -1];
+        const outSecond = animation.frames[animation.sequences[1]?.frameRefs[0] ?? -1];
+        if (!outFirst || !outSecond) throw new Error("missing converted frames");
+        expect([...outFirst.pixels]).toEqual([0]); // transparent pixel moved to FRM's slot 0
+        expect([...outSecond.pixels]).toEqual([9]); // untouched color index
+        // Palette entries swapped alongside the pixels - the permutation is lossless.
+        expect(animation.palette[0]).toEqual(source.palette[5]);
+        expect(animation.palette[5]).toEqual(source.palette[0]);
+    });
+
     it("paletteMode 'nearest' remaps to the default palette and reports it instead of a sidecar", () => {
         const { animation, report } = convertToFrm(bespokeBam(), { paletteMode: "nearest" });
         expect(report.has("palette-nearest-remapped")).toBe(true);
