@@ -3,7 +3,7 @@
     import type { Background } from "../render/indexed-to-rgba";
     import { layoutSequences } from "../render/compass-layout";
     import { TILE_BASE_PX } from "../render/tile";
-    import FrameCanvas from "./FrameCanvas.svelte";
+    import SequenceTile from "./SequenceTile.svelte";
 
     const {
         view,
@@ -39,27 +39,12 @@
      as a hexagon (no N/S) and 8 as an octagon - a real rose, not two columns. See compass-layout.ts. -->
 <div class="compass-rose" style:width="{rosePx}px" style:height="{rosePx}px">
     {#each tiles as tile (tile.seq.facing)}
-        {@const clampedIndex = Math.min(frame, tile.seq.frameRefs.length - 1)}
-        {@const frameRef = tile.seq.frameRefs[clampedIndex]}
-        {@const frameView = frameRef === undefined ? undefined : view.frames[frameRef]}
         <div
             class="compass-cell"
             style:left="calc(50% + {tile.pos.dx * radiusPx}px)"
             style:top="calc(50% + {tile.pos.dy * radiusPx}px)"
         >
-            {#if frameView}
-                <FrameCanvas
-                    frame={frameView}
-                    palette={view.palette}
-                    transparentIndex={view.meta.transparentIndex ?? 0}
-                    {zoom}
-                    {background}
-                    sourceFormat={view.sourceFormat}
-                    dirOffsetX={tile.seq.dirOffsetX}
-                    dirOffsetY={tile.seq.dirOffsetY}
-                    {showOffsetMarker}
-                />
-            {/if}
+            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {background} {showOffsetMarker} />
         </div>
     {/each}
 </div>

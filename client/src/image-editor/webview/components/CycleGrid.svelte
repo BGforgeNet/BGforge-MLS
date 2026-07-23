@@ -2,7 +2,7 @@
     import type { AnimationView } from "../messages";
     import type { Background } from "../render/indexed-to-rgba";
     import { layoutSequences } from "../render/compass-layout";
-    import FrameCanvas from "./FrameCanvas.svelte";
+    import SequenceTile from "./SequenceTile.svelte";
 
     const {
         view,
@@ -34,23 +34,8 @@
     style={columns > 0 ? `grid-template-columns: repeat(${columns}, auto)` : undefined}
 >
     {#each tiles as tile (tile.index)}
-        {@const clampedIndex = Math.min(frame, tile.seq.frameRefs.length - 1)}
-        {@const frameRef = tile.seq.frameRefs[clampedIndex]}
-        {@const frameView = frameRef === undefined ? undefined : view.frames[frameRef]}
         <div class="cycle-cell">
-            {#if frameView}
-                <FrameCanvas
-                    frame={frameView}
-                    palette={view.palette}
-                    transparentIndex={view.meta.transparentIndex ?? 0}
-                    {zoom}
-                    {background}
-                    sourceFormat={view.sourceFormat}
-                    dirOffsetX={tile.seq.dirOffsetX}
-                    dirOffsetY={tile.seq.dirOffsetY}
-                    {showOffsetMarker}
-                />
-            {/if}
+            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {background} {showOffsetMarker} />
             {#if tiles.length > 1}
                 <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
                      there is nothing to distinguish it from. -->
