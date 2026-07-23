@@ -187,6 +187,16 @@ select {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
 }
+/* Transport buttons are icon-only: flex-center the codicon in the button box. Default inline layout
+   leaves the glyph a couple px above centre (its font leading), reading as vertically misaligned. */
+.playback-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.playback-buttons .codicon {
+    line-height: 1;
+}
 
 /* Action-menu dropdown (Save as / Import - see ActionMenu.svelte): a button that opens an upward menu
    (the toolbar sits at the bottom). A native <select> always highlights its current option on open, so
