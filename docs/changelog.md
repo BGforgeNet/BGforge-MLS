@@ -6,6 +6,7 @@
 - Opening either member of an IE base/east BAM pair (`usar1ca.bam` / `usar1cae.bam`) now loads both together, so the rose shows all 8 directions - the same treatment Fallout `.fr0`-`.fr5` split critters get. Saving writes both files back.
 - Save as FRM can now convert a whole direction group of such a BAM: instead of picking one cycle, pick a named sequence group and its west-arc cycles fill the FRM's rotations (north/south cycles have no FRM slot and are dropped). Eastern rotations come from the east companion when one is loaded, and are mirrored from the west cycles otherwise - matching engine playback. The same choice applies when importing a PNG directory into an FRM.
 - The animation editor now opens Fallout critters stored as split direction files (`.fr0`-`.fr5`). Opening any one loads all six facings together; saving writes a single combined `.frm` (the original split files are left in place).
+- The animation editor's Save as / export now asks before overwriting a file or folder that already exists next to the source. Deliberate in-place saves (a BAM re-encoded as BAMC over itself, a split set's combined `.frm`) stay prompt-free.
 - Fixed: editor startup no longer waits for the initial workspace scan (previously several seconds on large mods). Indexing runs in the background; find references and workspace symbols may return partial results until it finishes.
 
 ## 3.11.0

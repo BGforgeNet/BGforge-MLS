@@ -133,6 +133,20 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             const anim = document.resolvedAnimation();
             const targetPath = saveAsTargetPath(document.uri.fsPath, target);
 
+            // Save As auto-names its destination instead of showing a dialog, so overwrite consent
+            // needs its own gate. In-place targets are exempt: BAMC's .bam collision is a deliberate
+            // re-encode of the source (see saveAsTargetPath), and a split set's combined <base>.frm
+            // is overwrite-by-design (see document.savePath).
+            const inPlace = targetPath === document.uri.fsPath || targetPath === document.savePath;
+            if (!inPlace && (await this.destinationExists(targetPath))) {
+                const overwrite = await vscode.window.showWarningMessage(
+                    `${path.basename(targetPath)} already exists - overwrite?`,
+                    { modal: true },
+                    "Overwrite",
+                );
+                if (overwrite !== "Overwrite") return;
+            }
+
             if (target === "apng" || target === "png-directory") {
                 await this.writeAll(buildExport(anim, target, targetPath));
                 vscode.window.setStatusBarMessage(`Exported ${path.basename(targetPath)}${path.sep}`, 3000);
@@ -372,6 +386,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // never leaves a sidecar describing a palette for a file that was never written.
             // eslint-disable-next-line no-await-in-loop
             await vscode.workspace.fs.writeFile(target, write.bytes);
+        }
+    }
+
+    /** True when the Save As destination already exists on disk (file or directory). */
+    private async destinationExists(fsPath: string): Promise<boolean> {
+        try {
+            await vscode.workspace.fs.stat(vscode.Uri.file(fsPath));
+            return true;
+        } catch {
+            return false;
         }
     }
 
