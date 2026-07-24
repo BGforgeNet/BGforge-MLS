@@ -9,7 +9,7 @@ import {
 import { interpretIeDirections } from "../model/ie-direction.ts";
 import { type AnchorBox, type PlacedFrame, blitToBox, unionAnchorBox } from "../model/anchor-align.ts";
 import { LossReport } from "./loss-report.ts";
-import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
+import { facingsForCycleCount, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./palette-remap.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
@@ -214,7 +214,6 @@ function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport)
 function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
     const facings = resolveFacings(anim);
 
-    const { dropped } = partitionForFrm(facings);
     // Reject an ambiguous layout: two source directions claiming the same FRM facing cannot both occupy
     // that single slot, and keeping only the first would silently drop the other.
     const seenFrmFacings = new Set<Facing>();
@@ -227,17 +226,8 @@ function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
         }
         seenFrmFacings.add(f);
     }
-    if (dropped.length > 0) {
-        // One counted item, not one per cycle: a many-cycle source would otherwise flood the loss
-        // report with near-identical lines. The enumeration is capped so the line stays readable.
-        const parts = dropped.slice(0, 8).map((i) => {
-            const facing = facings[i];
-            if (facing === undefined) throw new Error(`convertToFrm: dropped facing index ${i} out of range`);
-            return `cycle ${i} (facing ${facing})`;
-        });
-        if (dropped.length > parts.length) parts.push(`+${dropped.length - parts.length} more`);
-        report.add("dropped-direction", `${dropped.length} cycle(s) have no FRM slot: ${parts.join(", ")}`);
-    }
+    // Cycles with no FRM slot (N/S and any untagged extras) are dropped silently: the 6-rotation
+    // format structurally cannot hold them, so a warning would fire on every rose conversion.
 
     const rawSlotOrder = frmSlotOrder(facings);
 
@@ -378,17 +368,14 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         report.add("palette-remapped-to-default", "palette losslessly remapped to the default Fallout palette");
     } else if (opts?.paletteMode === "nearest") {
         // Exact remap failed; lossily project every used color onto its nearest default-palette neighbor
-        // instead of carrying the source palette as a sidecar.
+        // instead of carrying the source palette as a sidecar. Deliberately unreported: nearest-match
+        // is the caller's explicit mode choice, so the projection it implies is not warned about.
         const nearestRemap = remapToNearest(
             { palette: source.palette, frames: pool, sequences: source.sequences, meta: source.meta },
             DEFAULT_FALLOUT_PALETTE,
         );
         paletteFrames = nearestRemap.animation.frames;
         palette = nearestRemap.animation.palette;
-        report.add(
-            "palette-nearest-remapped",
-            "source palette could not be losslessly remapped; pixels lossily remapped to the nearest default Fallout palette color",
-        );
     } else {
         report.add(
             "palette-sidecar-required",

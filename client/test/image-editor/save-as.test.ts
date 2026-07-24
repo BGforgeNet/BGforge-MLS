@@ -81,21 +81,21 @@ describe("ieGroupCount", () => {
 describe("summarizeLoss", () => {
     it("renders one bulleted detail line per loss", () => {
         const report = new LossReport();
-        report.add("dropped-direction", "3 cycle(s) have no FRM slot: cycle 5 (facing N), cycle 6 (facing S), +1 more");
-        report.add("dropped-action-frame", "source action frame 2 has no BAM equivalent");
+        report.add("padded-sequence", "direction W padded from 2 to 4 frames");
+        report.add("empty-direction", "FRM slot NW has no source direction; reused slot 0's sequence");
         const { message, detail } = summarizeLoss(report);
         expect(message).toBe("Converting will lose data.");
         expect(detail.split("\n")).toEqual([
-            "- 3 cycle(s) have no FRM slot: cycle 5 (facing N), cycle 6 (facing S), +1 more",
-            "- source action frame 2 has no BAM equivalent",
+            "- direction W padded from 2 to 4 frames",
+            "- FRM slot NW has no source direction; reused slot 0's sequence",
         ]);
     });
 
     it("lists only real losses, not informational notes", () => {
         const report = new LossReport();
         report.add("embedded-palette", "palette embedded directly in the BAM output");
-        report.add("dropped-action-frame", "source action frame 2 has no BAM equivalent");
-        expect(summarizeLoss(report).detail).toBe("- source action frame 2 has no BAM equivalent");
+        report.add("padded-sequence", "direction W padded from 2 to 4 frames");
+        expect(summarizeLoss(report).detail).toBe("- direction W padded from 2 to 4 frames");
     });
 });
 

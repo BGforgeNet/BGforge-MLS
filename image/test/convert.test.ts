@@ -52,7 +52,8 @@ describe.skipIf(frms.length === 0)("convert", () => {
 
         const { animation: bamAnim, report: toBamReport } = convert(source, "bam");
         expect(bamAnim.meta.sourceFormat).toBe("bam");
-        expect(toBamReport.has("dropped-action-frame")).toBe(true);
+        // fps/action-frame drops are deliberately unreported (BAM has no field for either).
+        expect(toBamReport.lossless).toBe(true);
         expect(toBamReport.has("embedded-palette")).toBe(true);
 
         const bamReparsed = parseBamV1(serializeBamV1(bamAnim));
@@ -60,7 +61,6 @@ describe.skipIf(frms.length === 0)("convert", () => {
         const { animation: frmAnim2, report: toFrmReport } = convert(bamReparsed, "frm");
         expect(frmAnim2.meta.sourceFormat).toBe("frm");
         expect(toFrmReport.has("palette-sidecar-required")).toBe(true);
-        expect(toFrmReport.has("dropped-direction")).toBe(false);
         expect(toFrmReport.has("duplicated-shared-frames")).toBe(false);
         expect(toFrmReport.has("padded-sequence")).toBe(false);
 

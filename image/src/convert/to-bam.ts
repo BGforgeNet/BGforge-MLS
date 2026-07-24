@@ -84,11 +84,9 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
 
     const palette = anim.palette.map((c) => ({ ...c }));
 
-    // The FRM fps is dropped silently: BAM has no rate field at all (playback is the engine's fixed
-    // 15 fps), and warning about a field the target format cannot store is noise on every conversion.
-    if (anim.meta.actionFrame) {
-        report.add("dropped-action-frame", `source action frame ${anim.meta.actionFrame} has no BAM equivalent`);
-    }
+    // The FRM fps and action frame are dropped silently: BAM has no field for either (playback is the
+    // engine's fixed 15 fps), and warning about fields the target format cannot store is noise on
+    // every conversion.
     report.add("embedded-palette", "palette embedded directly in the BAM output");
 
     const animation: Animation = {

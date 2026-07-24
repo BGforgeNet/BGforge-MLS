@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-    facingsForCycleCount,
-    partitionForFrm,
-    frmSlotOrder,
-    FRM_FACING_SET,
-    IE8_FACINGS,
-} from "../src/convert/directions.ts";
+import { facingsForCycleCount, frmSlotOrder, FRM_FACING_SET, IE8_FACINGS } from "../src/convert/directions.ts";
 describe("direction facings", () => {
     it("IE 8-dir order is S,SW,W,NW,N,NE,E,SE (0=S, CCW)", () => {
         expect(IE8_FACINGS).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);
@@ -20,11 +14,6 @@ describe("direction facings", () => {
         expect(facingsForCycleCount(6)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
         expect(facingsForCycleCount(9)).toBeNull();
         expect(facingsForCycleCount(16)).toBeNull();
-    });
-    it("partitions an 8-facing set: drops S(0) and N(4)", () => {
-        const { kept, dropped } = partitionForFrm([...IE8_FACINGS]);
-        expect(dropped).toEqual([0, 4]);
-        expect(kept).toEqual([1, 2, 3, 5, 6, 7]);
     });
     it("frmSlotOrder maps each FRM header slot to its source index", () => {
         // IE8 kept facings placed into FRM order NE,E,SE,SW,W,NW

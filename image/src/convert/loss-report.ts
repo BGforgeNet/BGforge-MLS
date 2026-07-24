@@ -1,6 +1,4 @@
 export type LossKind =
-    | "dropped-action-frame"
-    | "dropped-direction"
     | "empty-direction"
     | "mirrored-directions"
     | "padded-sequence"
@@ -8,7 +6,6 @@ export type LossKind =
     | "shared-frame-direction-offset"
     | "embedded-palette"
     | "palette-remapped-to-default"
-    | "palette-nearest-remapped"
     | "palette-sidecar-required";
 
 export interface LossItem {

@@ -12,13 +12,6 @@ export function facingsForCycleCount(count: number): Facing[] | null {
     return null; // 5/9/16/other schemes rely on the sequences' own facing tags or a single-orientation pick
 }
 
-export function partitionForFrm(facings: Facing[]): { kept: number[]; dropped: number[] } {
-    const kept: number[] = [];
-    const dropped: number[] = [];
-    facings.forEach((f, i) => (FRM_FACING_SET.has(f) ? kept : dropped).push(i));
-    return { kept, dropped };
-}
-
 export function frmSlotOrder(facings: Facing[]): number[] {
     return FRM_FACINGS.map((slot) => facings.indexOf(slot));
 }

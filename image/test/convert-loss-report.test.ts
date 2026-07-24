@@ -5,10 +5,10 @@ describe("LossReport", () => {
     it("starts lossless and records items", () => {
         const r = new LossReport();
         expect(r.lossless).toBe(true);
-        r.add("dropped-action-frame", "action frame 2 has no BAM equivalent");
+        r.add("padded-sequence", "direction W padded from 2 to 4 frames");
         expect(r.lossless).toBe(false);
-        expect(r.has("dropped-action-frame")).toBe(true);
-        expect(r.items).toEqual([{ kind: "dropped-action-frame", detail: "action frame 2 has no BAM equivalent" }]);
+        expect(r.has("padded-sequence")).toBe(true);
+        expect(r.items).toEqual([{ kind: "padded-sequence", detail: "direction W padded from 2 to 4 frames" }]);
     });
 
     it("informational notes (lossless remap, embedded/sidecar palette) are recorded but not counted as loss", () => {
@@ -18,8 +18,8 @@ describe("LossReport", () => {
         expect(r.items).toHaveLength(2); // still recorded
         expect(r.lossless).toBe(true); // but nothing was actually lost
         expect(r.losses).toEqual([]);
-        r.add("dropped-direction", "dropped a cycle");
+        r.add("empty-direction", "FRM slot NW has no source direction; reused slot 0's sequence");
         expect(r.lossless).toBe(false);
-        expect(r.losses.map((i) => i.kind)).toEqual(["dropped-direction"]); // only the real loss surfaces
+        expect(r.losses.map((i) => i.kind)).toEqual(["empty-direction"]); // only the real loss surfaces
     });
 });

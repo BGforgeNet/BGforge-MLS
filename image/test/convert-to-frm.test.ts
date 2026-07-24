@@ -53,14 +53,10 @@ describe("convertToFrm", () => {
         expect(animation.meta.directionLayout).toBe("frm6");
         expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
 
-        // The two slotless cycles (N and S) aggregate into ONE counted item, not a line per cycle.
-        const droppedItems = report.items.filter((i) => i.kind === "dropped-direction");
-        expect(droppedItems).toHaveLength(1);
-        expect(droppedItems[0]?.detail).toContain("2 cycle(s) have no FRM slot");
-        expect(droppedItems[0]?.detail).toContain("facing N");
-        expect(droppedItems[0]?.detail).toContain("facing S");
-        // synthBam's palette is the default, so the lossless remap branch (not sidecar) is taken.
+        // The slotless N/S drop is structural to the 6-rotation format and deliberately unreported;
+        // synthBam's palette is the default, so the whole conversion counts as lossless (no modal).
         expect(report.has("palette-remapped-to-default")).toBe(true);
+        expect(report.lossless).toBe(true);
     });
 
     it("pads unequal-length sequences to the max frame count and reports it", () => {
@@ -160,7 +156,7 @@ describe("convertToFrm", () => {
         expect(animation.sequences).toHaveLength(6);
         expect(new Set(animation.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
         // The cycle is the caller's explicit pick; dropping the others is not reported as a loss.
-        expect(report.has("dropped-direction")).toBe(false);
+        expect(report.lossless).toBe(true);
     });
 
     it("produces an FRM animation that serializes and reparses with pixels intact", () => {
@@ -233,19 +229,18 @@ describe("convertToFrm", () => {
         const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "N", "S"];
         const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
         const { animation, report } = convertToFrm(src);
-        expect(report.has("empty-direction")).toBe(true);
-        expect(report.has("dropped-direction")).toBe(true); // N and S are dropped
+        expect(report.has("empty-direction")).toBe(true); // NW synthesized; the N/S drop is unreported
         expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
     });
 
     it("uses the sequences' own facings when the cycle count is non-standard", () => {
-        // 7 sequences with real facings -> facingsForCycleCount(7) is null, so own facings drive the mapping.
+        // 7 sequences with real facings -> facingsForCycleCount(7) is null, so own facings drive the
+        // mapping; the extra N cycle has no FRM slot and is dropped silently (structural, unreported).
         const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "NW", "N"];
         const src = synthBam([1, 1, 1, 1, 1, 1, 1], facings);
         const { animation, report } = convertToFrm(src);
         expect(animation.sequences).toHaveLength(6);
-        const dropped = report.items.find((item) => item.kind === "dropped-direction");
-        expect(dropped?.detail).toContain("facing N"); // specifically the extra N is dropped
+        expect(report.lossless).toBe(true);
     });
 
     // A palette whose colors are absent from DEFAULT_FALLOUT_PALETTE, forcing the sidecar path
@@ -322,17 +317,17 @@ describe("convertToFrm", () => {
         expect(animation.palette[5]).toEqual(source.palette[0]);
     });
 
-    it("paletteMode 'nearest' remaps to the default palette and reports it instead of a sidecar", () => {
+    it("paletteMode 'nearest' remaps to the default palette without a warning or a sidecar", () => {
         const { animation, report } = convertToFrm(bespokeBam(), { paletteMode: "nearest" });
-        expect(report.has("palette-nearest-remapped")).toBe(true);
+        // Nearest-match is the caller's explicit mode choice, so the lossy projection is unreported.
         expect(report.has("palette-sidecar-required")).toBe(false);
+        expect(report.lossless).toBe(true);
         expect(animation.palette).toEqual(DEFAULT_FALLOUT_PALETTE);
     });
 
     it("default paletteMode still requires a sidecar for a bespoke palette", () => {
         const { report } = convertToFrm(bespokeBam());
         expect(report.has("palette-sidecar-required")).toBe(true);
-        expect(report.has("palette-nearest-remapped")).toBe(false);
     });
 
     it("tagged facings win over the count-derived order for a 6-cycle source", () => {
@@ -440,14 +435,11 @@ describe("convertToFrm", () => {
             expect(slotPixel(animation, 0)).toBe(1 + 16 + 3); // NE = mirrored NW
             expect(slotPixel(animation, 1)).toBe(1 + 16 + 2); // E = mirrored W
             expect(slotPixel(animation, 2)).toBe(1 + 16 + 1); // SE = mirrored SW
-            // The chosen block itself is the user's pick (unreported); only the structural N/S drop
-            // (no FRM slot for those facings) still surfaces as a loss.
-            const dropped = report.items.filter((i) => i.kind === "dropped-direction").map((i) => i.detail);
-            expect(dropped.some((d) => d.includes("facing S"))).toBe(true);
-            expect(dropped.some((d) => d.includes("facing N"))).toBe(true);
+            // The chosen block is the user's pick and the N/S drop is structural - both unreported;
+            // with the bespoke palette kept as a sidecar (informational), nothing counts as a loss.
             expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(0);
             expect(report.has("mirrored-directions")).toBe(true);
-            expect(report.lossless).toBe(false);
+            expect(report.lossless).toBe(true);
         });
 
         it("drops the east filler dummies instead of mapping them onto the east rotations", () => {
