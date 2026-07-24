@@ -79,9 +79,9 @@ describe("describeAnimationName - BAM", () => {
     });
 
     it("decodes BG1 monster-style G-codes with the scheme named", () => {
-        expect(bam("mrakg2.bam")).toBe("G2: attack - BG1 monster naming");
-        expect(bam("mcarg11.bam")).toBe("G11: walk - BG1 monster naming");
-        expect(bam("msirg1e.bam")).toBe("G1: stand (combat) - BG1 monster naming, east-facing half");
+        expect(bam("mrakg2.bam")).toBe("G2: BG1 monster attack");
+        expect(bam("mcarg11.bam")).toBe("G11: BG1 monster walk");
+        expect(bam("msirg1e.bam")).toBe("G1: BG1 monster stand (combat), east-facing half");
     });
 
     it("decodes the character-animation scheme", () => {
