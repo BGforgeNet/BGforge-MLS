@@ -18,6 +18,9 @@ describe("palette", () => {
         expect(DEFAULT_FALLOUT_PALETTE[0]).toEqual({ r: 255, g: 255, b: 255, a: 255 });
         expect(DEFAULT_FALLOUT_PALETTE[1]).toEqual({ r: 239, g: 239, b: 239, a: 255 });
     });
+    it("rejects a truncated .pal with a descriptive error", () => {
+        expect(() => parsePal(new Uint8Array(767))).toThrow(/parsePal: \.pal truncated/);
+    });
     it("round-trips a synthesized 6-bit palette core", () => {
         // 768-byte 6-bit RGB core, values 0..63.
         const core = new Uint8Array(768);

@@ -14,6 +14,9 @@ function to6(v8: number): number {
 }
 
 export function parsePal(bytes: Uint8Array): Rgba[] {
+    if (bytes.byteLength < 768) {
+        throw new Error(`parsePal: .pal truncated (need 768 bytes for 256 RGB entries, got ${bytes.byteLength})`);
+    }
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const palette: Rgba[] = [];
     for (let i = 0; i < 256; i++) {
