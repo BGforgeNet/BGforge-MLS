@@ -277,7 +277,9 @@ function describeBam(stem: string): string | undefined {
     if (gMatch) {
         const [, code = "", east = ""] = gMatch;
         const label = BAM_G_CODES[code];
-        if (label !== undefined) return `G${code}: ${label}${east === "e" ? EAST_NOTE : ""}`;
+        // Named schemes get an attribution: a G-code's meaning holds only under the BG1 monster
+        // scheme (the same "G1" in a BG1 character-style file is just its first orientation file).
+        if (label !== undefined) return `G${code}: ${label} - BG1 monster naming${east === "e" ? EAST_NOTE : ""}`;
     }
 
     return describeBamSequenceCode(stem);

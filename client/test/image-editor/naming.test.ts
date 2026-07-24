@@ -78,10 +78,10 @@ describe("describeAnimationName - BAM", () => {
         expect(bam("morasde.bam")).toBe("DE: die");
     });
 
-    it("decodes BG1 monster-style G-codes", () => {
-        expect(bam("mrakg2.bam")).toBe("G2: attack");
-        expect(bam("mcarg11.bam")).toBe("G11: walk");
-        expect(bam("msirg1e.bam")).toBe("G1: stand (combat), east-facing half");
+    it("decodes BG1 monster-style G-codes with the scheme named", () => {
+        expect(bam("mrakg2.bam")).toBe("G2: attack - BG1 monster naming");
+        expect(bam("mcarg11.bam")).toBe("G11: walk - BG1 monster naming");
+        expect(bam("msirg1e.bam")).toBe("G1: stand (combat) - BG1 monster naming, east-facing half");
     });
 
     it("decodes the character-animation scheme", () => {
