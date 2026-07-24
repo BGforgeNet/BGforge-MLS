@@ -21,6 +21,8 @@ Internal workspace package - not currently published to npm.
 - `parsePal` / `serializePal`, `DEFAULT_FALLOUT_PALETTE` - palette handling.
 - `@bgforge/image/frame-anchor` - Buffer/zlib-free subpath with the anchor math, safe for
   browser bundles (used by the editor webview).
+- `@bgforge/image/ie-direction` - Buffer/zlib-free subpath with the IE direction-block
+  analysis (used by the editor webview's compass layout).
 
 ## Development
 
