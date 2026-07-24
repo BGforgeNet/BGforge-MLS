@@ -3,7 +3,7 @@ import fs from "fs";
 import { type Animation, emptyPalette, parseBamV1, serializeBamV1 } from "@bgforge/image";
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
-// Uncompressed 'BAM ' files only here; BAMC is Task 8.
+// Uncompressed 'BAM ' files only here; the BAMC container is covered in bamc.test.ts.
 const bams = corpusFiles(IE_CORPUS, ".bam").filter((f) => {
     const sig = fs.readFileSync(f).subarray(0, 4).toString("latin1");
     return sig === "BAM ";
