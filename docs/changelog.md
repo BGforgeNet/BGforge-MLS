@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.12.0
 
 - New animation viewer/player/converter: Fallout FRM and Infinity Engine BAM files.
   - FR0-5 files are supported, they load together; save only saves to combined FRM.
