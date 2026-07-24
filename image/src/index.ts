@@ -1,7 +1,6 @@
 // Curated public surface. The PNG codec, palette-remap, and direction-order helpers are
 // implementation details of the io/convert layers - import them by module path in-package;
 // they are deliberately not re-exported here.
-export const IMAGE_LIB_VERSION = "0.1.0";
 
 // Shared model.
 export {
