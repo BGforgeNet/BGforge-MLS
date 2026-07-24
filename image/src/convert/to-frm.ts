@@ -233,10 +233,16 @@ function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
         }
         seenFrmFacings.add(f);
     }
-    for (const i of dropped) {
-        const facing = facings[i];
-        if (facing === undefined) throw new Error(`convertToFrm: dropped facing index ${i} out of range`);
-        report.add("dropped-direction", `sequence ${i} (facing ${facing}) has no FRM slot`);
+    if (dropped.length > 0) {
+        // One counted item, not one per cycle: a many-cycle source would otherwise flood the loss
+        // report with near-identical lines. The enumeration is capped so the line stays readable.
+        const parts = dropped.slice(0, 8).map((i) => {
+            const facing = facings[i];
+            if (facing === undefined) throw new Error(`convertToFrm: dropped facing index ${i} out of range`);
+            return `cycle ${i} (facing ${facing})`;
+        });
+        if (dropped.length > parts.length) parts.push(`+${dropped.length - parts.length} more`);
+        report.add("dropped-direction", `${dropped.length} cycle(s) have no FRM slot: ${parts.join(", ")}`);
     }
 
     const rawSlotOrder = frmSlotOrder(facings);

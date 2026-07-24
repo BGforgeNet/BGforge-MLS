@@ -53,8 +53,12 @@ describe("convertToFrm", () => {
         expect(animation.meta.directionLayout).toBe("frm6");
         expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
 
+        // The two slotless cycles (N and S) aggregate into ONE counted item, not a line per cycle.
         const droppedItems = report.items.filter((i) => i.kind === "dropped-direction");
-        expect(droppedItems).toHaveLength(2);
+        expect(droppedItems).toHaveLength(1);
+        expect(droppedItems[0]?.detail).toContain("2 cycle(s) have no FRM slot");
+        expect(droppedItems[0]?.detail).toContain("facing N");
+        expect(droppedItems[0]?.detail).toContain("facing S");
         // synthBam's palette is the default, so the lossless remap branch (not sidecar) is taken.
         expect(report.has("palette-remapped-to-default")).toBe(true);
     });
