@@ -44,7 +44,9 @@ const FRM_ART_DIRS: Record<string, string> = {
 // Weapon-animation letters d..m (frm.md); "a" is the unarmed path. sfall extends the weapon codes
 // to 11-15 - mod-defined slots with no fixed weapon type - lettered around the taken 'n' (called
 // shot) and 'r' (death poses): 11 -> s, 12 -> o, 13 -> p, 14 -> q, 15 -> t (ddraw.ini
-// AdditionalWeaponAnims + MiscPatches.cpp WeaponAnimHook).
+// AdditionalWeaponAnims + MiscPatches.cpp WeaponAnimHook). The RP hints are what the Restoration
+// Project assigns them to (its weapon protos + rifle/wakizashi animation components); other mods
+// may assign anything.
 const FRM_WEAPONS: Record<string, string> = {
     d: "knife",
     e: "club",
@@ -56,11 +58,11 @@ const FRM_WEAPONS: Record<string, string> = {
     k: "big gun",
     l: "minigun",
     m: "rocket launcher",
-    s: "custom weapon 11 (sfall)",
-    o: "custom weapon 12 (sfall)",
-    p: "custom weapon 13 (sfall)",
-    q: "custom weapon 14 (sfall)",
-    t: "custom weapon 15 (sfall)",
+    s: "sfall weapon code 11 (RP: lightsaber)",
+    o: "sfall weapon code 12 (RP: lightsaber)",
+    p: "sfall weapon code 13 (RP: alternative rifle)",
+    q: "sfall weapon code 14 (RP: wakizashi)",
+    t: "sfall weapon code 15",
 };
 
 // Unarmed basic animations: second letter is 'a' + Animation enum value (0..19).
@@ -119,9 +121,10 @@ const FRM_ARMED: Record<string, string> = {
     g: "swing",
     h: "point (aim)",
     i: "unpoint",
-    j: "fire single",
-    k: "fire burst",
-    l: "fire continuous",
+    // Engine enum names are fire_single/fire_burst/fire_continuous; shown as the in-game fire modes.
+    j: "single shot",
+    k: "burst fire",
+    l: "continuous fire",
     m: "throw",
 };
 

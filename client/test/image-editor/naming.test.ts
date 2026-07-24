@@ -21,14 +21,15 @@ describe("describeAnimationName - FRM", () => {
     });
 
     it("decodes weapon + action pairs", () => {
-        expect(frm("hanpwrjj.frm", "critters")).toBe("jj: fire single, rifle");
+        expect(frm("hanpwrjj.frm", "critters")).toBe("jj: single shot, rifle");
         expect(frm("hmjmpsdm.frm", "critters")).toBe("dm: throw, knife");
         expect(frm("hmjmpsge.frm", "critters")).toBe("ge: parry (dodge), spear");
     });
 
-    it("decodes the sfall extended weapon letters (codes 11-15)", () => {
-        expect(frm("hmjmpssj.frm", "critters")).toBe("sj: fire single, custom weapon 11 (sfall)");
-        expect(frm("hmjmpstb.frm", "critters")).toBe("tb: walk, custom weapon 15 (sfall)");
+    it("decodes the sfall extended weapon letters (codes 11-15) with the RP assignment as a hint", () => {
+        expect(frm("hmjmpssj.frm", "critters")).toBe("sj: single shot, sfall weapon code 11 (RP: lightsaber)");
+        expect(frm("hmmetlpj.frm", "critters")).toBe("pj: single shot, sfall weapon code 13 (RP: alternative rifle)");
+        expect(frm("hmjmpstb.frm", "critters")).toBe("tb: walk, sfall weapon code 15");
     });
 
     it("decodes knockdown/death and single-frame death poses", () => {
