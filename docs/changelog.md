@@ -9,6 +9,7 @@
   - Import from a PNG directory.
   - The only editable option is FPS.
   - The filename's meaning is decoded and shown above the preview when it follows a known scheme: Fallout critter suffixes (weapon/animation codes, including the sfall extended weapon letters) and art directory categories, IE avatar naming (character scheme, G-codes, trailing sequence codes like CA/WK).
+  - The BGforge icon theme gives FRM (including FR0-FR5) and BAM files their own file icon.
 
 ## 3.11.0
 
