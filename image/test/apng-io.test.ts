@@ -66,6 +66,45 @@ describe("importApng(exportApngPerDirection(anim).get(id))", () => {
         }
     });
 
+    it("re-composes varying-geometry BAM frames onto one anchor-aligned canvas (steady playback)", () => {
+        // Two frames whose BAM centre anchors align the content: A (w4, anchor x3) spans
+        // anchor-relative [-3..1], B (w1, anchor x0) spans [0..1] -> shared canvas width 4, with B's
+        // pixel landing under A's anchor column instead of being geometrically centred.
+        const palette = emptyPalette();
+        const anim: Animation = {
+            palette,
+            frames: [
+                { width: 4, height: 1, pixels: Uint8Array.from([1, 2, 3, 4]), offsetX: 3, offsetY: 0 },
+                { width: 1, height: 1, pixels: Uint8Array.from([9]), offsetX: 0, offsetY: 0 },
+            ],
+            sequences: [{ frameRefs: [0, 1], facing: "none" }],
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+        const bytes = exportApngPerDirection(anim).get("00.png");
+        if (!bytes) throw new Error("expected 00.png");
+        const imported = importApng(bytes);
+        expect(imported.frames.map((f) => [f.width, f.height])).toEqual([
+            [4, 1],
+            [4, 1],
+        ]);
+        expect([...(imported.frames[0]?.pixels ?? [])]).toEqual([1, 2, 3, 4]);
+        expect([...(imported.frames[1]?.pixels ?? [])]).toEqual([0, 0, 0, 9]);
+    });
+
+    it("skips empty sequences instead of failing the whole export", () => {
+        const anim: Animation = {
+            palette: emptyPalette(),
+            frames: [{ width: 1, height: 1, pixels: Uint8Array.from([5]), offsetX: 0, offsetY: 0 }],
+            sequences: [
+                { frameRefs: [], facing: "none" }, // a base-file dummy cycle
+                { frameRefs: [0], facing: "none" },
+            ],
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+        const files = exportApngPerDirection(anim);
+        expect([...files.keys()]).toEqual(["01.png"]);
+    });
+
     it("throws a clear error when a sequence references an out-of-range frame index", () => {
         const anim: Animation = {
             palette: emptyPalette(),

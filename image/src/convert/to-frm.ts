@@ -7,6 +7,7 @@ import {
     transparentIndexOf,
 } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
+import { type AnchorBox, type PlacedFrame, blitToBox, unionAnchorBox } from "../model/anchor-align.ts";
 import { LossReport } from "./loss-report.ts";
 import { facingsForCycleCount, partitionForFrm, frmSlotOrder, FRM_FACING_SET } from "./directions.ts";
 import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./palette-remap.ts";
@@ -53,28 +54,18 @@ interface SlotBuild {
     dirOffsetsY: number[];
 }
 
-/** The union of a rotation's frames' boxes relative to the source's centre anchor (offsetX/offsetY);
- *  undefined for an empty rotation. */
-interface AnchorBox {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
+// The rotation's frames as anchor-placed entries (a BAM's centre anchor IS offsetX/offsetY).
+function bamPlaced(pool: Frame[], refs: number[]): PlacedFrame[] {
+    return refs.map((ref) => {
+        const frame = pool[ref];
+        /* v8 ignore next -- callers build refs against the pool they pass */
+        if (!frame) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
+        return { frame, ax: frame.offsetX, ay: frame.offsetY };
+    });
 }
 
 function measureAnchorBox(pool: Frame[], refs: number[]): AnchorBox | undefined {
-    if (refs.length === 0) return undefined;
-    const box: AnchorBox = { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity };
-    for (const ref of refs) {
-        const f = pool[ref];
-        /* v8 ignore next -- callers build refs against the pool they pass */
-        if (!f) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
-        box.left = Math.min(box.left, -f.offsetX);
-        box.top = Math.min(box.top, -f.offsetY);
-        box.right = Math.max(box.right, f.width - f.offsetX);
-        box.bottom = Math.max(box.bottom, f.height - f.offsetY);
-    }
-    return box;
+    return unionAnchorBox(bamPlaced(pool, refs));
 }
 
 /**
@@ -95,21 +86,14 @@ function composeUniformCanvas(
     box: AnchorBox,
     bottom: number,
 ): number {
-    const width = box.right - box.left;
-    const height = bottom - box.top;
-    for (const ref of refs) {
-        const f = pool[ref];
-        /* v8 ignore next -- same refs as the measuring pass */
-        if (!f) throw new Error(`convertToFrm: frame ref ${ref} out of range`);
-        const pixels = new Uint8Array(width * height).fill(transparent);
-        const dx = -f.offsetX - box.left;
-        const dy = -f.offsetY - box.top;
-        for (let y = 0; y < f.height; y++) {
-            pixels.set(f.pixels.subarray(y * f.width, (y + 1) * f.width), (dy + y) * width + dx);
-        }
-        pool[ref] = { width, height, pixels, offsetX: 0, offsetY: 0 };
+    const canvas: AnchorBox = { ...box, bottom };
+    for (const [i, placed] of bamPlaced(pool, refs).entries()) {
+        const ref = refs[i];
+        /* v8 ignore next -- entries() indexes stay within refs */
+        if (ref === undefined) throw new Error(`convertToFrm: missing ref at ${i}`);
+        pool[ref] = blitToBox(placed, canvas, transparent);
     }
-    return Math.round(width / 2 + box.left);
+    return Math.round((box.right - box.left) / 2 + box.left);
 }
 
 /**
