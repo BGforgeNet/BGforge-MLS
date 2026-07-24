@@ -93,9 +93,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 this.post(panel, { type: "init", view: document.toView() });
                 break;
             case "save":
-                // Route through VS Code's own save so its dirty tracking clears; the webview panel is
-                // active (the user just clicked in it), so this saves THIS custom document in place.
-                await vscode.commands.executeCommand("workbench.action.files.save");
+                // Route through VS Code's own save so its dirty tracking clears - scoped to this
+                // document's URI, so it saves the right one even if focus moved since the click.
+                await vscode.workspace.save(document.uri);
                 break;
             case "editMeta":
                 document.applyMetaPatch(message.patch);
