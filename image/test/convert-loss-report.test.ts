@@ -5,10 +5,10 @@ describe("LossReport", () => {
     it("starts lossless and records items", () => {
         const r = new LossReport();
         expect(r.lossless).toBe(true);
-        r.add("dropped-fps", "fps 10 has no BAM equivalent");
+        r.add("dropped-action-frame", "action frame 2 has no BAM equivalent");
         expect(r.lossless).toBe(false);
-        expect(r.has("dropped-fps")).toBe(true);
-        expect(r.items).toEqual([{ kind: "dropped-fps", detail: "fps 10 has no BAM equivalent" }]);
+        expect(r.has("dropped-action-frame")).toBe(true);
+        expect(r.items).toEqual([{ kind: "dropped-action-frame", detail: "action frame 2 has no BAM equivalent" }]);
     });
 
     it("informational notes (lossless remap, embedded/sidecar palette) are recorded but not counted as loss", () => {

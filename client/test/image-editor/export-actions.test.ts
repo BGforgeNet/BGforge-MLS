@@ -22,7 +22,7 @@ describe("buildExport", () => {
 });
 
 describe("buildCrossFormatSave", () => {
-    test("FRM -> BAM re-parses as a BAM and reports the dropped fps", () => {
+    test("FRM -> BAM re-parses as a BAM with no loss warning (fps is deliberately unreported)", () => {
         const { writes, report } = buildCrossFormatSave(makeMiniFrm(), "bam", "/out/x.bam");
         expect(writes).toHaveLength(1);
         const main = writes[0];
@@ -30,7 +30,9 @@ describe("buildCrossFormatSave", () => {
         if (!main) throw new Error("expected a main write");
         const reparsed = loadImage(main.bytes, "x.bam");
         expect(reparsed.meta.sourceFormat).toBe("bam");
-        expect(report.has("dropped-fps")).toBe(true);
+        // The mini FRM's fps-10 drop is deliberately unreported (BAM cannot store a rate), so the
+        // whole conversion counts as lossless and the editor shows no warning modal.
+        expect(report.lossless).toBe(true);
     });
 
     test("FRM -> BAMC yields a compressed BAM (same .bam path) that re-parses as sourceFormat bamc", () => {

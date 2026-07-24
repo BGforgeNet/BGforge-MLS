@@ -154,12 +154,13 @@ describe("convertToFrm", () => {
         expect(new Set(reparsed.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
     });
 
-    it("opts.singleCycle builds a single-orientation FRM from the chosen cycle and reports the dropped cycles", () => {
+    it("opts.singleCycle builds a single-orientation FRM without warning about the unchosen cycles", () => {
         const source = synthBam([2, 2, 2, 2]); // 4 non-directional cycles
         const { animation, report } = convertToFrm(source, { singleCycle: 2 });
         expect(animation.sequences).toHaveLength(6);
         expect(new Set(animation.sequences.map((s) => s.frameRefs.join(","))).size).toBe(1);
-        expect(report.items.some((i) => i.detail.includes("cycle 2") && i.detail.includes("dropped"))).toBe(true);
+        // The cycle is the caller's explicit pick; dropping the others is not reported as a loss.
+        expect(report.has("dropped-direction")).toBe(false);
     });
 
     it("produces an FRM animation that serializes and reparses with pixels intact", () => {
@@ -439,8 +440,9 @@ describe("convertToFrm", () => {
             expect(slotPixel(animation, 0)).toBe(1 + 16 + 3); // NE = mirrored NW
             expect(slotPixel(animation, 1)).toBe(1 + 16 + 2); // E = mirrored W
             expect(slotPixel(animation, 2)).toBe(1 + 16 + 1); // SE = mirrored SW
+            // The chosen block itself is the user's pick (unreported); only the structural N/S drop
+            // (no FRM slot for those facings) still surfaces as a loss.
             const dropped = report.items.filter((i) => i.kind === "dropped-direction").map((i) => i.detail);
-            expect(dropped.some((d) => d.includes("block 1") && d.includes("11 other cycle(s)"))).toBe(true);
             expect(dropped.some((d) => d.includes("facing S"))).toBe(true);
             expect(dropped.some((d) => d.includes("facing N"))).toBe(true);
             expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(0);

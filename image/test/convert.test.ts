@@ -52,7 +52,6 @@ describe.skipIf(frms.length === 0)("convert", () => {
 
         const { animation: bamAnim, report: toBamReport } = convert(source, "bam");
         expect(bamAnim.meta.sourceFormat).toBe("bam");
-        expect(toBamReport.has("dropped-fps")).toBe(true);
         expect(toBamReport.has("dropped-action-frame")).toBe(true);
         expect(toBamReport.has("embedded-palette")).toBe(true);
 

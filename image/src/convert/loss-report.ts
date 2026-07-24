@@ -1,5 +1,4 @@
 export type LossKind =
-    | "dropped-fps"
     | "dropped-action-frame"
     | "dropped-direction"
     | "empty-direction"

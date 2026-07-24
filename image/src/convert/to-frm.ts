@@ -101,7 +101,7 @@ function composeUniformCanvas(
  * that cycle's frames once and every slot references the IDENTICAL frame-ref list, so serializeFrm
  * writes equal data_offsets (the FRM spec's shared-rotation form) rather than six copies.
  */
-function buildSingleOrientationSlots(anim: Animation, cycleIndex: number, report: LossReport): SlotBuild {
+function buildSingleOrientationSlots(anim: Animation, cycleIndex: number): SlotBuild {
     const seq = anim.sequences[cycleIndex];
     if (!seq) throw new Error(`convertToFrm: single-orientation cycle index ${cycleIndex} out of range`);
     const pool: Frame[] = seq.frameRefs.map((ref) => {
@@ -115,12 +115,8 @@ function buildSingleOrientationSlots(anim: Animation, cycleIndex: number, report
     const box = measureAnchorBox(pool, refs);
     const dirOffsetX = box ? composeUniformCanvas(pool, refs, transparentIndexOf(anim.meta), box, box.bottom) : 0;
     const frameRefsPerSlot = FRM_FACINGS.map(() => [...refs]);
-    if (anim.sequences.length > 1) {
-        report.add(
-            "dropped-direction",
-            `used cycle ${cycleIndex} for a single-orientation FRM; dropped ${anim.sequences.length - 1} other cycle(s)`,
-        );
-    }
+    // Deliberately unreported: the cycle was the caller's explicit pick (the editor's quick pick),
+    // so "dropped the other cycles" would warn about the user's own choice.
     return {
         pool,
         frameRefsPerSlot,
@@ -175,10 +171,8 @@ function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport)
         if (!seq) throw new Error(`convertToFrm: sequence ${slot.seqIndex} out of range`);
         return { frameRefs: seq.frameRefs.filter((r) => r >= 0 && r < anim.frames.length), facing: slot.facing };
     });
-    report.add(
-        "dropped-direction",
-        `used direction block ${groupIndex} for the FRM rotations; dropped ${anim.sequences.length - group.length} other cycle(s)`,
-    );
+    // Deliberately unreported: the direction block was the caller's explicit pick (the editor's group
+    // quick pick), so "dropped the other blocks' cycles" would warn about the user's own choice.
 
     const frames = [...anim.frames];
     const mirroredByRef = new Map<number, number>();
@@ -374,7 +368,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
 
     const { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY } =
         singleCycle !== undefined
-            ? buildSingleOrientationSlots(source, singleCycle, report)
+            ? buildSingleOrientationSlots(source, singleCycle)
             : buildDirectionalSlots(source, report);
 
     const defaultRemap = remapToDefault(pool, source.palette, transparentIndexOf(source.meta));

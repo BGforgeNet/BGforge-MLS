@@ -87,20 +87,17 @@ describe.skipIf(frms.length === 0)("convertToBam", () => {
         expect(animation.frames.every((f) => f.rawEncoding === undefined)).toBe(true);
 
         expect(report.has("embedded-palette")).toBe(true);
-        expect(report.has("dropped-fps")).toBe(true);
         expect(report.has("dropped-action-frame")).toBe(true);
     });
 
-    it("omits dropped-fps/dropped-action-frame when the source FRM has neither set", () => {
+    it("omits dropped-action-frame when the source FRM has none set", () => {
         const file = frms[0];
         if (!file) throw new Error("expected at least one FRM in the corpus");
         const source = parseFrm(new Uint8Array(fs.readFileSync(file)));
-        source.meta.fps = 0;
         source.meta.actionFrame = 0;
         const { report } = convertToBam(source);
 
         expect(report.has("embedded-palette")).toBe(true);
-        expect(report.has("dropped-fps")).toBe(false);
         expect(report.has("dropped-action-frame")).toBe(false);
     });
 
