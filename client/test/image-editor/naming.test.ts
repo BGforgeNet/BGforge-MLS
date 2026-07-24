@@ -39,11 +39,12 @@ describe("describeAnimationName - FRM", () => {
 
     it("decodes position changes and the targeting picture", () => {
         expect(frm("hmjmpsch.frm", "critters")).toBe("ch: prone to standing");
+        expect(frm("hmjmpscj.frm", "critters")).toBe("cj: back to standing");
         expect(frm("hmwarrna.frm", "critters")).toBe("na: targeting picture (called shot)");
     });
 
     it("decodes the suffix without a critters directory when the art is directional", () => {
-        expect(frm("hanpwrjj.frm", undefined, distinct)).toBe("jj: fire single, rifle");
+        expect(frm("hanpwrjj.frm", undefined, distinct)).toBe("jj: single shot, rifle");
     });
 
     it("leaves single-orientation art outside critters undecoded (no false minigun on a windmill)", () => {
@@ -54,6 +55,10 @@ describe("describeAnimationName - FRM", () => {
     it("falls back to the art category when the suffix does not decode", () => {
         expect(frm("elderbf3.frm", "critters")).toBe("critter animation");
         expect(frm("iisxxxx1.frm", "intrface")).toBe("interface art");
+        // Out-of-range letters in an otherwise valid-looking pair: 'az' exceeds the basic table,
+        // 'cz' is not a defined position change.
+        expect(frm("hmjmpsaz.frm", "critters")).toBe("critter animation");
+        expect(frm("hmjmpscz.frm", "critters")).toBe("critter animation");
     });
 
     it("returns undefined with neither a known directory nor a decodable suffix", () => {
@@ -89,6 +94,7 @@ describe("describeAnimationName - BAM", () => {
         expect(bam("chmf4a5.bam")).toBe("human male fighter, plate mail - attack (1-handed thrust)");
         expect(bam("cimt1sx.bam")).toBe("halfling male thief/bard, no armor - shoot (crossbow)");
         expect(bam("cefw3w.bam")).toBe("elf female mage, robe - walk");
+        expect(bam("cdmc2sxe.bam")).toBe("dwarf/gnome male cleric, leather - shoot (crossbow), east-facing half");
     });
 
     it("falls through a near-miss character parse to the sequence code", () => {
