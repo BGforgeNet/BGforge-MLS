@@ -12,8 +12,15 @@ export interface PlaybackState {
     frameCount: number;
 }
 
+// Playback rate for sources without a usable one: FRM headers can store fps 0, and imported
+// animations may carry none. Matches the BAM engine rate the parser resolves.
+export const DEFAULT_PLAYBACK_FPS = 15;
+
 export function createPlayback(opts: { frameCount: number; fps: number }): PlaybackState {
-    return { playing: false, loop: false, frame: 0, fps: opts.fps, frameCount: opts.frameCount };
+    // Resolved once here so the transport controls and tick never see a sub-1 fps; the source's
+    // stored fps metadata is untouched (a 0-fps FRM still shows and saves 0).
+    const fps = opts.fps >= 1 ? opts.fps : DEFAULT_PLAYBACK_FPS;
+    return { playing: false, loop: false, frame: 0, fps, frameCount: opts.frameCount };
 }
 
 export function play(state: PlaybackState): PlaybackState {

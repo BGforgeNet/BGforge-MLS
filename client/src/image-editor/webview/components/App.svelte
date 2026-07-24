@@ -126,7 +126,7 @@
     $effect(() => {
         if (!view) return;
         const frameCount = Math.max(0, ...view.sequences.map((seq) => seq.frameRefs.length));
-        playback = createPlayback({ frameCount, fps: view.meta.fps ?? 10 });
+        playback = createPlayback({ frameCount, fps: view.meta.fps ?? 0 });
 
         let raf: number;
         let lastTime: number | undefined;

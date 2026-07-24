@@ -17,6 +17,12 @@ test("createPlayback returns a stopped state at frame 0", () => {
     expect(state).toEqual({ playing: false, loop: false, frame: 0, fps: 10, frameCount: 5 });
 });
 
+test("createPlayback resolves a zero or negative fps to the 15 fps default", () => {
+    // FRM headers can store fps 0; the animation must still play rather than disabling the transport.
+    expect(createPlayback({ frameCount: 5, fps: 0 }).fps).toBe(15);
+    expect(createPlayback({ frameCount: 5, fps: -3 }).fps).toBe(15);
+});
+
 test("play sets playing true without mutating the input", () => {
     const state = createPlayback({ frameCount: 5, fps: 10 });
     const result = play(state);

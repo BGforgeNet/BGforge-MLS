@@ -4,13 +4,10 @@
     const { state, onChange }: { state: PlaybackState; onChange: (next: PlaybackState) => void } = $props();
 
     const lastFrame = $derived(Math.max(0, state.frameCount - 1));
-    // Playback needs at least 2 frames and a positive fps; otherwise there is nothing to animate and every
-    // transport control is disabled. `disabledReason` is only shown while !canPlay (frameCount<=1 => the
-    // one-frame reason, else fps<1).
-    const canPlay = $derived(state.frameCount > 1 && state.fps >= 1);
-    const disabledReason = $derived(
-        state.frameCount <= 1 ? "Only one frame - nothing to play" : "FPS is below 1 - nothing to play",
-    );
+    // Playback needs at least 2 frames; a zero/missing source fps no longer disables the transport -
+    // createPlayback resolves it to DEFAULT_PLAYBACK_FPS.
+    const canPlay = $derived(state.frameCount > 1);
+    const disabledReason = "Only one frame - nothing to play";
 </script>
 
 <div class="playback-controls">
