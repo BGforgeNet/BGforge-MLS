@@ -53,6 +53,8 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
         return {
             width: f.width,
             height: f.height,
+            // Shares the source frame's buffer: frame pixels are immutable by convention across the
+            // library (every mutation path builds new buffers), so a copy would only spend memory.
             pixels: f.pixels,
             offsetX: Math.round(anchor.ax),
             offsetY: Math.round(anchor.ay),
