@@ -86,8 +86,6 @@ const BAM_COLORS: [number, number, number][] = [
     [255, 105, 180], // pink
 ];
 
-/** Several sequences, all facing "none" - not a compass direction, so compass-layout falls back to the
- *  cycle grid. Exercises that fallback path rather than duplicating the FRM compass coverage. */
 /** 12 cycles, all facing "none" - past the >8 multi-sequence threshold, so CycleLayoutControls mounts
  *  and the grid seeds its column count from the heuristic (12 % 6 === 0 -> 6). */
 export function buildMultiSequenceBamFixture(): AnimationView {
