@@ -19,6 +19,7 @@
         dirOffsetX,
         dirOffsetY,
         showOffsetMarker = false,
+        ariaLabel = "Animation frame",
     }: {
         frame: FrameView;
         palette: Rgba[];
@@ -28,6 +29,7 @@
         dirOffsetX: number;
         dirOffsetY: number;
         showOffsetMarker?: boolean;
+        ariaLabel?: string;
     } = $props();
 
     // Game-accurate top-left within the tile (feet-anchored for FRM, center-pixel for BAM); zoom scales
@@ -91,7 +93,13 @@
 
 <div class="frame-tile" style:width="{TILE_BASE_PX * zoom}px" style:height="{TILE_BASE_PX * zoom}px">
     <div class="frame-tile-bg" aria-hidden="true"></div>
-    <canvas bind:this={canvasEl} style:left="{topLeft.x * zoom}px" style:top="{topLeft.y * zoom}px"></canvas>
+    <canvas
+        bind:this={canvasEl}
+        role="img"
+        aria-label={ariaLabel}
+        style:left="{topLeft.x * zoom}px"
+        style:top="{topLeft.y * zoom}px"
+    ></canvas>
     {#if showOffsetMarker}
         <div class="frame-offset-marker" style:left="{markerPos.x}%" style:top="{markerPos.y}%" aria-hidden="true"></div>
     {/if}

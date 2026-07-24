@@ -36,5 +36,6 @@
         dirOffsetX={seq.dirOffsetX}
         dirOffsetY={seq.dirOffsetY}
         {showOffsetMarker}
+        ariaLabel={seq.facing === "none" ? "Animation frame" : `Animation frame facing ${seq.facing}`}
     />
 {/if}
