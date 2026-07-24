@@ -26,6 +26,9 @@ export interface AnimationView {
     sequences: SequenceView[];
     meta: AnimationMeta;
     basename: string;
+    // Name of the containing directory (from the document's save path). Fallout art derives its
+    // category from the art directory (art/critters, art/scenery, ...) - see render/naming.ts.
+    dirName?: string;
     sourceFormat: SourceFormat;
     hasSidecarPal: boolean; // FRM: <basename>.pal exists on disk
     externalPaletteActive: boolean; // FRM: sidecar currently in use

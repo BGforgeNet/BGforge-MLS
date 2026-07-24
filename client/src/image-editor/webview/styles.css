@@ -20,6 +20,29 @@ body {
     box-sizing: border-box;
 }
 
+/* Decoded filename meaning (critter/avatar naming schemes - see render/naming.ts): a slim
+   informational strip above the stage, rendered only when a scheme matched. */
+.name-banner {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    white-space: nowrap;
+    overflow: hidden;
+}
+.name-banner-file {
+    font-weight: 600;
+}
+.name-banner-meaning {
+    color: var(--vscode-descriptionForeground);
+    /* min-width: 0 lets the flex item shrink below its text so the ellipsis can engage. */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ---- editor layout: the stage fills the left, all controls stack in a column on the right ---- */
 .editor-layout {
     flex: 1 1 auto;

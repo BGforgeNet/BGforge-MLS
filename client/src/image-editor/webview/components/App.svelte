@@ -7,6 +7,7 @@
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
     import { interpretIeDirections } from "@bgforge/image/ie-direction";
     import { analyzeCycleGrid, ieGroupLabels } from "../render/cycle-grouping";
+    import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
     import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
@@ -57,6 +58,8 @@
     // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
     const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
+    // Decoded filename meaning (critter/avatar naming schemes) - shown in a banner when a scheme matches.
+    const nameMeaning = $derived(view ? describeAnimationName(view) : undefined);
     $effect(() => {
         const v = view;
         if (!v || v === columnsSeededView) return;
@@ -207,6 +210,12 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
+    {#if nameMeaning}
+        <header class="name-banner">
+            <span class="name-banner-file">{view.basename}</span>
+            <span class="name-banner-meaning">{nameMeaning}</span>
+        </header>
+    {/if}
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
          the save/import bar spans the bottom. -->
     <div class="editor-layout">

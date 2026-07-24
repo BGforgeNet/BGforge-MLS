@@ -225,7 +225,9 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     toView(): AnimationView {
-        return this.model.toView();
+        // dirName lives here, not in the model: the model is deliberately path-free, and the
+        // document owns the file identity (see savePath).
+        return { ...this.model.toView(), dirName: path.basename(path.dirname(this.savePath)) };
     }
 
     getBytes(): Uint8Array {

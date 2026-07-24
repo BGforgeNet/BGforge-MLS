@@ -8,6 +8,7 @@
   - Cross-format save, including PNG (directory), as well as animated PNG.
   - Import from a PNG directory.
   - The only editable option is FPS.
+  - The filename's meaning is decoded and shown above the preview when it follows a known scheme: Fallout critter suffixes (weapon/animation codes, including the sfall extended weapon letters) and art directory categories, IE avatar naming (character scheme, G-codes, trailing sequence codes like CA/WK).
 
 ## 3.11.0
 
