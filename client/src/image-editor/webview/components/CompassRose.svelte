@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { AnimationView } from "../messages";
     import type { RoseTile } from "../render/compass-layout";
-    import { TILE_BASE_PX } from "../render/tile";
     import SequenceTile from "./SequenceTile.svelte";
 
     // Presentational: the caller (App) owns the layout decision and tile derivation - the same view can
@@ -11,19 +10,21 @@
         tiles,
         frame,
         zoom,
+        tileBase,
         showOffsetMarker = false,
     }: {
         view: AnimationView;
         tiles: RoseTile[];
         frame: number;
         zoom: number;
+        tileBase: number;
         showOffsetMarker?: boolean;
     } = $props();
 
     // Tiles sit on a circle of this radius (in tile-widths) around the rose centre. 1.5 keeps the
     // 45-degree-adjacent tiles (e.g. E and NE) from overlapping while staying compact.
     const RADIUS_TILES = 1.5;
-    const tilePx = $derived(TILE_BASE_PX * zoom);
+    const tilePx = $derived(tileBase * zoom);
     const radiusPx = $derived(tilePx * RADIUS_TILES);
     // Square box big enough for a tile centred at the far edge of the circle: 2*radius + one tile.
     const rosePx = $derived(radiusPx * 2 + tilePx);
@@ -38,7 +39,7 @@
             style:left="calc(50% + {tile.pos.dx * radiusPx - tilePx / 2}px)"
             style:top="calc(50% + {tile.pos.dy * radiusPx - tilePx / 2}px)"
         >
-            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {showOffsetMarker} />
+            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
         </div>
     {/each}
 </div>

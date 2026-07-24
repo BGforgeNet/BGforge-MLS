@@ -3,7 +3,6 @@
     import { decodeFramePixels, type FrameView } from "../messages";
     import { frameToRgba } from "../render/indexed-to-rgba";
     import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
-    import { TILE_BASE_PX } from "../render/tile";
 
     // The per-tile backdrop (.frame-tile-bg, fed by the stage's --tile-bg variable) must stay UNDER
     // every sprite: anchor-shifted canvases overhang their 96px box, so backdrops and canvases carry
@@ -18,6 +17,7 @@
         sourceFormat,
         dirOffsetX,
         dirOffsetY,
+        tileBase,
         showOffsetMarker = false,
         ariaLabel = "Animation frame",
     }: {
@@ -28,6 +28,7 @@
         sourceFormat: SourceFormat;
         dirOffsetX: number;
         dirOffsetY: number;
+        tileBase: number; // unzoomed tile footprint (tileSizePx of the whole view, uniform per animation)
         showOffsetMarker?: boolean;
         ariaLabel?: string;
     } = $props();
@@ -35,20 +36,23 @@
     // Game-accurate top-left within the tile (feet-anchored for FRM, center-pixel for BAM); zoom scales
     // both the footprint and the anchor. See render/anchor.ts.
     const topLeft = $derived(
-        frameTopLeft({
-            sourceFormat,
-            width: frame.width,
-            height: frame.height,
-            offsetX: frame.offsetX,
-            offsetY: frame.offsetY,
-            dirOffsetX,
-            dirOffsetY,
-        }),
+        frameTopLeft(
+            {
+                sourceFormat,
+                width: frame.width,
+                height: frame.height,
+                offsetX: frame.offsetX,
+                offsetY: frame.offsetY,
+                dirOffsetX,
+                dirOffsetY,
+            },
+            tileBase,
+        ),
     );
 
     // The offset marker sits on the sprite's actual anchor - the tile reference point the sprite is
     // positioned by (BAM: tile centre; FRM: the feet line, which depends on the frame height).
-    const markerPos = $derived(referenceMarkerPercent(sourceFormat, frame.height));
+    const markerPos = $derived(referenceMarkerPercent(sourceFormat, frame.height, tileBase));
 
     // eslint-disable-next-line prefer-const -- reassigned via bind:this in the template
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -91,11 +95,10 @@
 
 </script>
 
-<div class="frame-tile" style:width="{TILE_BASE_PX * zoom}px" style:height="{TILE_BASE_PX * zoom}px">
+<div class="frame-tile" style:width="{tileBase * zoom}px" style:height="{tileBase * zoom}px">
     <div class="frame-tile-bg" aria-hidden="true"></div>
     <canvas
         bind:this={canvasEl}
-        role="img"
         aria-label={ariaLabel}
         style:left="{topLeft.x * zoom}px"
         style:top="{topLeft.y * zoom}px"

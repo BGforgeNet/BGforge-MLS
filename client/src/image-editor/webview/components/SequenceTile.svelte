@@ -9,12 +9,14 @@
         seq,
         frame,
         zoom,
+        tileBase,
         showOffsetMarker,
     }: {
         view: AnimationView;
         seq: SequenceView;
         frame: number;
         zoom: number;
+        tileBase: number;
         showOffsetMarker: boolean;
     } = $props();
 
@@ -35,6 +37,7 @@
         sourceFormat={view.sourceFormat}
         dirOffsetX={seq.dirOffsetX}
         dirOffsetY={seq.dirOffsetY}
+        {tileBase}
         {showOffsetMarker}
         ariaLabel={seq.facing === "none" ? "Animation frame" : `Animation frame facing ${seq.facing}`}
     />

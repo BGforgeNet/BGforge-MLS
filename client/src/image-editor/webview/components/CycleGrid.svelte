@@ -11,6 +11,7 @@
         tiles,
         frame,
         zoom,
+        tileBase,
         showOffsetMarker = false,
         columns = 0,
     }: {
@@ -18,6 +19,7 @@
         tiles: GridTile[];
         frame: number;
         zoom: number;
+        tileBase: number;
         showOffsetMarker?: boolean;
         columns?: number; // >0 pins the grid to that many columns (rows=sequences); 0 = auto-wrap
     } = $props();
@@ -30,7 +32,7 @@
 >
     {#each tiles as tile (tile.index)}
         <div class="cycle-cell">
-            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {showOffsetMarker} />
+            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
             {#if tiles.length > 1}
                 <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
                      there is nothing to distinguish it from. -->

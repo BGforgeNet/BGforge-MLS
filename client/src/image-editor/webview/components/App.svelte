@@ -7,7 +7,8 @@
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
     import { interpretIeDirections } from "@bgforge/image/ie-direction";
     import { analyzeCycleGrid, ieGroupLabels } from "../render/cycle-grouping";
-    import { autoZoomLevel } from "../render/tile";
+    import { tileSizePx } from "../render/anchor";
+    import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
@@ -53,6 +54,9 @@
     let cycleColumns = $state(0);
     let columnsSeededView: AnimationView | undefined;
     const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length) : undefined);
+    // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
+    // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
+    const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
     $effect(() => {
         const v = view;
         if (!v || v === columnsSeededView) return;
@@ -209,13 +213,14 @@
         <div class="stage" bind:this={stageEl} style:--tile-bg={tileBackground}>
             {#if playback}
                 {#if layoutMode === "rose"}
-                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {showOffsetMarker} />
+                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {tileBase} {showOffsetMarker} />
                 {:else}
                     <CycleGrid
                         {view}
                         tiles={gridTiles}
                         frame={playback.frame}
                         {zoom}
+                        {tileBase}
                         {showOffsetMarker}
                         columns={cycleColumns}
                     />
