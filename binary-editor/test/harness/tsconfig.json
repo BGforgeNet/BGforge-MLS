@@ -10,7 +10,12 @@
         "tsBuildInfoFile": "../../../tmp/binary-editor-harness.tsbuildinfo",
         "paths": {
             "@bgforge/binary": ["../../../binary/src/index.ts"],
-            "@bgforge/binary-editor": ["../../../binary-editor/src/index.ts"]
+            "@bgforge/binary-editor": ["../../../binary-editor/src/index.ts"],
+            // Source mappings (mirroring client/tsconfig.json) so the image-editor harness typechecks
+            // before image/out exists - node_modules resolution needs the built d.ts.
+            "@bgforge/image": ["../../../image/src/index.ts"],
+            "@bgforge/image/frame-anchor": ["../../../image/src/model/frame-anchor.ts"],
+            "@bgforge/image/ie-direction": ["../../../image/src/model/ie-direction.ts"]
         }
     },
     "include": ["."]
