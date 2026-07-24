@@ -35,6 +35,37 @@ describe("convertToBam shared-frame offsets", () => {
     });
 });
 
+describe("convertToBam anchor placement", () => {
+    // Two same-sequence frames of differing heights, feet on one ground line (FRM convention).
+    const twoHeights: Animation = {
+        palette: emptyPalette(),
+        frames: [
+            { width: 4, height: 10, pixels: new Uint8Array(40), offsetX: 0, offsetY: 0 },
+            { width: 4, height: 6, pixels: new Uint8Array(24), offsetX: 0, offsetY: 0 },
+        ],
+        sequences: [{ frameRefs: [0, 1], facing: "NE" }],
+        meta: { sourceFormat: "frm", directionLayout: "frm6" },
+    };
+
+    it("centres the anchors on the animation's union box instead of the FRM feet line", () => {
+        const { animation } = convertToBam(twoHeights);
+        // Union extent above the shared ground line is the tall frame's 10 rows; its centre sits
+        // 4.5 rows above ground, so the tall frame's anchor lands mid-frame, not at its last row.
+        expect(animation.frames[0]?.offsetY).toBe(5);
+        expect(animation.frames[0]?.offsetX).toBe(2);
+    });
+
+    it("keeps differing-size frames registered: one shared translation, not per-frame centring", () => {
+        const { animation } = convertToBam(twoHeights);
+        const tall = animation.frames[0];
+        const short = animation.frames[1];
+        // Both anchors must still point at the same world point (the old ground line, shifted once):
+        // their difference stays the feet-line difference. Per-frame centring (offsetY = h/2 each)
+        // would break this and make a walk cycle bob.
+        expect((tall?.offsetY ?? 0) - (short?.offsetY ?? 0)).toBe(10 - 6);
+    });
+});
+
 // hanpwroe.frm carries a non-zero fps (10) and action frame (2) in its header, so both
 // dropped-* loss items are exercised alongside the always-present embedded-palette one.
 const frms = corpusFiles(FALLOUT_ART, ".frm");
