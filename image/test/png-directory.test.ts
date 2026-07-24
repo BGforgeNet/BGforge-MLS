@@ -112,7 +112,9 @@ describe("importPngDirectory(exportPngDirectory(anim))", () => {
         if (!framePath) throw new Error("test setup: expected at least one frame PNG");
         files.delete(framePath);
 
-        expect(() => importPngDirectory(files)).toThrow(new RegExp(framePath.replaceAll(/[/.]/g, "\\$&")));
+        // toThrow(string) does a substring match on the message, which carries the path
+        // verbatim ("...missing referenced PNG at <path>") - no regex escaping needed.
+        expect(() => importPngDirectory(files)).toThrow(framePath);
     });
 
     it("rejects a frame PNG whose palette differs from the first frame's", () => {
