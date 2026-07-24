@@ -79,11 +79,23 @@ describe("ieGroupCount", () => {
 });
 
 describe("summarizeLoss", () => {
+    it("renders one bulleted detail line per loss", () => {
+        const report = new LossReport();
+        report.add("dropped-direction", "3 cycle(s) have no FRM slot: cycle 5 (facing N), cycle 6 (facing S), +1 more");
+        report.add("dropped-fps", "source fps 10 has no BAM equivalent");
+        const { message, detail } = summarizeLoss(report);
+        expect(message).toBe("Converting will lose data.");
+        expect(detail.split("\n")).toEqual([
+            "- 3 cycle(s) have no FRM slot: cycle 5 (facing N), cycle 6 (facing S), +1 more",
+            "- source fps 10 has no BAM equivalent",
+        ]);
+    });
+
     it("lists only real losses, not informational notes", () => {
         const report = new LossReport();
         report.add("embedded-palette", "palette embedded directly in the BAM output");
         report.add("dropped-fps", "source fps 10 has no BAM equivalent");
-        expect(summarizeLoss(report)).toBe("Converting will lose: source fps 10 has no BAM equivalent");
+        expect(summarizeLoss(report).detail).toBe("- source fps 10 has no BAM equivalent");
     });
 });
 

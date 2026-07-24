@@ -163,9 +163,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
             const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, ...pick });
             if (!report.lossless) {
+                const { message, detail } = summarizeLoss(report);
                 const confirmed = await vscode.window.showWarningMessage(
-                    summarizeLoss(report),
-                    { modal: true },
+                    message,
+                    { modal: true, detail },
                     "Save anyway",
                 );
                 if (confirmed !== "Save anyway") return;

@@ -2,11 +2,15 @@ import * as path from "path";
 import { type Animation, type LossReport, convertToFrm, frmDirectionMode } from "@bgforge/image";
 import type { SaveAsTarget } from "./webview/messages";
 
-/** The user-facing summary behind the lossy-conversion confirmation modal. */
-export function summarizeLoss(report: LossReport): string {
+/** The user-facing summary behind the lossy-conversion confirmation modal: a headline for the
+ *  modal's message and one bulleted line per loss for its detail block. */
+export function summarizeLoss(report: LossReport): { message: string; detail: string } {
     // Only real losses - informational notes (lossless remap, embedded/sidecar palette) are excluded
     // so the warning never lists a non-loss (and the modal only fires when report.lossless is false).
-    return `Converting will lose: ${report.losses.map((item) => item.detail).join("; ")}`;
+    return {
+        message: "Converting will lose data.",
+        detail: report.losses.map((item) => `- ${item.detail}`).join("\n"),
+    };
 }
 
 /**
