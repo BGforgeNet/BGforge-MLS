@@ -236,14 +236,6 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return this.model.sidecarBytes();
     }
 
-    markSaved(): void {
-        this.model.markSaved();
-    }
-
-    get dirty(): boolean {
-        return this.model.dirty;
-    }
-
     get animation(): Animation {
         return this.model.animation;
     }

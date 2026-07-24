@@ -358,7 +358,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                     // eslint-disable-next-line no-await-in-loop
                     await vscode.workspace.fs.writeFile(vscode.Uri.file(write.path), write.bytes);
                 }
-                document.markSaved();
                 return;
             }
         }
@@ -374,7 +373,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // eslint-disable-next-line no-await-in-loop
             await vscode.workspace.fs.writeFile(target, write.bytes);
         }
-        document.markSaved();
     }
 
     /** Writes an arbitrary set of paths, creating each write's parent directory first - needed for

@@ -29,7 +29,6 @@ export interface AnimationView {
     sourceFormat: SourceFormat;
     hasSidecarPal: boolean; // FRM: <basename>.pal exists on disk
     externalPaletteActive: boolean; // FRM: sidecar currently in use
-    dirty: boolean;
 }
 
 /** Universal base64 codec for FrameView.pixels: btoa/atob are global in the extension host (including

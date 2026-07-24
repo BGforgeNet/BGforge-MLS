@@ -47,7 +47,6 @@ export class ImageDocumentModel {
     private externalEnabled = false;
     private undoStack: DocumentSnapshot[] = [];
     private redoStack: DocumentSnapshot[] = [];
-    private dirtyValue = false;
 
     onChange?: () => void;
 
@@ -94,18 +93,6 @@ export class ImageDocumentModel {
         return { ...this.animationValue, palette: this.activePalette() };
     }
 
-    get dirty(): boolean {
-        return this.dirtyValue;
-    }
-
-    get canUndo(): boolean {
-        return this.undoStack.length > 0;
-    }
-
-    get canRedo(): boolean {
-        return this.redoStack.length > 0;
-    }
-
     private activePalette(): Rgba[] {
         return chooseActivePalette({
             sourceFormat: this.animationValue.meta.sourceFormat,
@@ -144,18 +131,12 @@ export class ImageDocumentModel {
                 this.animationValue.meta.sourceFormat === "frm" &&
                 this.externalEnabled &&
                 this.sidecarPalette !== undefined,
-            dirty: this.dirtyValue,
         };
     }
 
     private snapshotForUndo(): void {
         this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
         this.redoStack = [];
-    }
-
-    private markDirty(): void {
-        this.dirtyValue = true;
-        this.onChange?.();
     }
 
     applyMetaPatch(patch: MetaPatch): void {
@@ -177,13 +158,13 @@ export class ImageDocumentModel {
             }));
         }
         this.animationValue = { ...this.animationValue, frames, meta: { ...this.animationValue.meta, ...patch } };
-        this.markDirty();
+        this.onChange?.();
     }
 
     setExternalPalette(enabled: boolean): void {
         this.snapshotForUndo();
         this.externalEnabled = enabled;
-        this.markDirty();
+        this.onChange?.();
     }
 
     replaceSequences(next: Animation, mode: "replace" | "append"): void {
@@ -199,7 +180,7 @@ export class ImageDocumentModel {
             ];
             this.animationValue = { ...this.animationValue, frames, sequences };
         }
-        this.markDirty();
+        this.onChange?.();
     }
 
     undo(): void {
@@ -208,7 +189,6 @@ export class ImageDocumentModel {
         this.redoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
         this.animationValue = previous.animation;
         this.externalEnabled = previous.externalEnabled;
-        this.dirtyValue = true;
         this.onChange?.();
     }
 
@@ -218,7 +198,6 @@ export class ImageDocumentModel {
         this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
         this.animationValue = next.animation;
         this.externalEnabled = next.externalEnabled;
-        this.dirtyValue = true;
         this.onChange?.();
     }
 
@@ -246,10 +225,6 @@ export class ImageDocumentModel {
         return serializePal(active);
     }
 
-    markSaved(): void {
-        this.dirtyValue = false;
-    }
-
     reload(bytes: Uint8Array, sidecarBytes?: Uint8Array): void {
         this.reloadAnimation(loadImage(bytes, this.basename), sidecarBytes);
     }
@@ -260,6 +235,5 @@ export class ImageDocumentModel {
         this.setSidecar(sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined);
         this.undoStack = [];
         this.redoStack = [];
-        this.dirtyValue = false;
     }
 }

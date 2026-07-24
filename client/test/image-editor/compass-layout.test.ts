@@ -21,7 +21,6 @@ function makeView(facings: Facing[]): AnimationView {
         sourceFormat: "frm",
         hasSidecarPal: false,
         externalPaletteActive: false,
-        dirty: false,
     };
 }
 

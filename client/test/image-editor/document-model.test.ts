@@ -17,7 +17,6 @@ test("toView trims frames and carries the active palette", () => {
     expect(view.palette).toHaveLength(256);
     expect(view.frames[0]).not.toHaveProperty("rawEncoding");
     expect(view.frames[0]).not.toHaveProperty("rleEncoded");
-    expect(view.dirty).toBe(false);
 });
 
 test("resolvedAnimation swaps the FRM all-black placeholder palette for the active one (export fix)", () => {
@@ -61,14 +60,13 @@ test("editing the transparent index keeps RLE-parsed frames decodable (cached en
     expect([...saved.frames[0]!.pixels]).toEqual([1, 0, 0, 0]);
 });
 
-test("applyMetaPatch sets dirty, round-trips through getBytes, and undo restores", () => {
+test("applyMetaPatch fires onChange, round-trips through getBytes, and undo restores", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     let changes = 0;
     model.onChange = () => {
         changes++;
     };
     model.applyMetaPatch({ fps: 20 });
-    expect(model.dirty).toBe(true);
     expect(changes).toBe(1);
     expect(loadImage(model.getBytes(), "hero.frm").meta.fps).toBe(20);
     model.undo();
@@ -76,19 +74,12 @@ test("applyMetaPatch sets dirty, round-trips through getBytes, and undo restores
 });
 
 describe("undo/redo", () => {
-    test("canUndo/canRedo track stack occupancy across mutate, undo, redo", () => {
+    test("undo restores the previous state and redo reapplies the mutation", () => {
         const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
-        expect(model.canUndo).toBe(false);
-        expect(model.canRedo).toBe(false);
         model.applyMetaPatch({ fps: 15 });
-        expect(model.canUndo).toBe(true);
-        expect(model.canRedo).toBe(false);
         model.undo();
-        expect(model.canUndo).toBe(false);
-        expect(model.canRedo).toBe(true);
+        expect(model.animation.meta.fps).toBe(makeMiniFrm().meta.fps);
         model.redo();
-        expect(model.canUndo).toBe(true);
-        expect(model.canRedo).toBe(false);
         expect(model.animation.meta.fps).toBe(15);
     });
 
@@ -96,16 +87,21 @@ describe("undo/redo", () => {
         const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
         model.applyMetaPatch({ fps: 15 });
         model.undo();
-        expect(model.canRedo).toBe(true);
         model.applyMetaPatch({ fps: 25 });
-        expect(model.canRedo).toBe(false);
+        // The 15-fps snapshot is unreachable now: redo must not resurrect it past the newer edit.
+        model.redo();
+        expect(model.animation.meta.fps).toBe(25);
     });
 
     test("undo/redo on an empty stack is a no-op", () => {
         const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
+        let changes = 0;
+        model.onChange = () => {
+            changes++;
+        };
         model.undo();
         model.redo();
-        expect(model.dirty).toBe(false);
+        expect(changes).toBe(0);
         expect(model.animation.meta.fps).toBe(10);
     });
 });
@@ -167,7 +163,6 @@ test("replaceSequences replace mode swaps frames and sequences wholesale", () =>
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     const replacement = makeMiniBam();
     model.replaceSequences(replacement, "replace");
-    expect(model.dirty).toBe(true);
     expect(model.animation.frames).toHaveLength(1);
     expect(model.animation.sequences).toEqual(replacement.sequences);
 });
@@ -181,21 +176,13 @@ test("replaceSequences append mode offsets the incoming frameRefs past the exist
     expect(model.animation.sequences.at(-1)?.frameRefs).toEqual([existingFrameCount]);
 });
 
-test("markSaved clears dirty without touching the undo stack", () => {
-    const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
-    model.applyMetaPatch({ fps: 15 });
-    model.markSaved();
-    expect(model.dirty).toBe(false);
-    expect(model.canUndo).toBe(true);
-});
-
-test("reload replaces the animation, sidecar, and history, and clears dirty", () => {
+test("reload replaces the animation, sidecar, and history", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     model.applyMetaPatch({ fps: 15 });
     const sidecar = Array.from({ length: 256 }, () => ({ r: 4, g: 5, b: 6, a: 255 }));
     model.reload(serializeFrm(makeMiniFrm()), serializePal(sidecar));
-    expect(model.dirty).toBe(false);
-    expect(model.canUndo).toBe(false);
-    expect(model.canRedo).toBe(false);
+    // History is gone with the old document state: undo must not resurrect the pre-reload edit.
+    model.undo();
+    expect(model.animation.meta.fps).toBe(makeMiniFrm().meta.fps);
     expect(model.toView().hasSidecarPal).toBe(true);
 });

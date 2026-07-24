@@ -76,7 +76,6 @@ export function buildFrmFixture(): AnimationView {
         sourceFormat: "frm",
         hasSidecarPal: false,
         externalPaletteActive: false,
-        dirty: false,
     };
 }
 
@@ -113,7 +112,6 @@ export function buildMultiSequenceBamFixture(): AnimationView {
         sourceFormat: "bam",
         hasSidecarPal: false,
         externalPaletteActive: false,
-        dirty: false,
     };
 }
 
@@ -156,7 +154,6 @@ export function buildDirectionalBamFixture(): AnimationView {
         sourceFormat: "bam",
         hasSidecarPal: false,
         externalPaletteActive: false,
-        dirty: false,
     };
 }
 
@@ -184,6 +181,5 @@ export function buildBamFixture(): AnimationView {
         sourceFormat: "bam",
         hasSidecarPal: false,
         externalPaletteActive: false,
-        dirty: false,
     };
 }
