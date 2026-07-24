@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Animation, frameFileName, readManifest, sequenceDirId, writeManifest } from "@bgforge/image";
+import { type Animation } from "@bgforge/image";
+import { frameFileName, readManifest, sequenceDirId, writeManifest } from "../src/io/manifest.ts";
 
 function makeAnimation(): Animation {
     return {

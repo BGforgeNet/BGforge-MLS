@@ -40,14 +40,7 @@ export { loadImage } from "./load.ts";
 export { type LossItem, type LossKind, LossReport } from "./convert/loss-report.ts";
 export { type FrmConvertOpts, convert, convertToBam, convertToFrm, frmDirectionMode } from "./convert/index.ts";
 
-// Import/export codecs (PNG directory with manifest, APNG preview).
+// Import/export codecs (PNG directory with manifest, APNG preview). The manifest wire-format
+// internals (readManifest/writeManifest and friends) stay io/-internal, like the PNG codec.
 export { exportPngDirectory, importPngDirectory } from "./io/png-directory.ts";
 export { exportApngPerDirection, importApng } from "./io/apng-io.ts";
-export {
-    type ManifestMetaV1,
-    type ManifestV1,
-    frameFileName,
-    readManifest,
-    sequenceDirId,
-    writeManifest,
-} from "./io/manifest.ts";
