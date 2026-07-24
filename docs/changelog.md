@@ -2,13 +2,12 @@
 
 ## Unreleased
 
-- New animation editor: Fallout `.frm` (including `.fr0`-`.fr5` split critters) and Infinity Engine `.bam`/BAMC files now open in a dedicated editor with animation playback, per-direction views, zoom and background controls, palette handling (embedded, default Fallout, or a `.pal` sidecar), and editable metadata (fps, action frame, transparent index). Animations convert and export between FRM, BAM, BAMC, APNG, and PNG directories, with a warning listing exactly what a lossy conversion would drop.
-- The animation editor now shows Infinity Engine creature BAMs as a compass rose. A BAM whose cycles match the IE direction-block convention (blocks of 8 with the eastern slots left unstored) opens on a rose showing one sequence at a time, with a group picker to step through the packed sequences - named from the filename's scheme (cast, walk, die, ...) where recognizable - and a Rose/Grid switch to fall back to the flat cycle grid for any animation. BAMs play at the engine's 15 fps.
-- Opening either member of an IE base/east BAM pair (`usar1ca.bam` / `usar1cae.bam`) now loads both together, so the rose shows all 8 directions - the same treatment Fallout `.fr0`-`.fr5` split critters get. Saving writes both files back.
-- Save as FRM can now convert a whole direction group of such a BAM: instead of picking one cycle, pick a named sequence group and its west-arc cycles fill the FRM's rotations (north/south cycles have no FRM slot and are dropped). Eastern rotations come from the east companion when one is loaded, and are mirrored from the west cycles otherwise - matching engine playback. The same choice applies when importing a PNG directory into an FRM.
-- The animation editor now opens Fallout critters stored as split direction files (`.fr0`-`.fr5`). Opening any one loads all six facings together; saving writes a single combined `.frm` (the original split files are left in place).
-- The animation editor's Save as / export now asks before overwriting a file or folder that already exists next to the source. Deliberate in-place saves (a BAM re-encoded as BAMC over itself, a split set's combined `.frm`) stay prompt-free.
-- Fixed: editor startup no longer waits for the initial workspace scan (previously several seconds on large mods). Indexing runs in the background; find references and workspace symbols may return partial results until it finishes.
+- New animation viewer/converter: Fallout FRM and Infinity Engine BAM files.
+  - FR0-5 files are loaded together; save only saves to combined FRM.
+  - BAMC and BAM E orientation files are also supported.
+  - Cross-format save, including PNG (directory), as well as animated PNG.
+  - Import from a PNG directory.
+  - The only editable option is FPS.
 
 ## 3.11.0
 
