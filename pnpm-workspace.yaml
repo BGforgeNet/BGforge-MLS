@@ -3,6 +3,7 @@ packages:
   - binary-editor
   - client
   - format
+  - image
   - server
   - grammars/*
   - plugins/*

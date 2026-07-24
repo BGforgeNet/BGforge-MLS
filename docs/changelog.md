@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- Fixed: editor startup no longer waits for the initial workspace scan (previously several seconds on large mods). Indexing runs in the background; find references and workspace symbols may return partial results until it finishes.
+- New animation viewer/player/converter: Fallout FRM and Infinity Engine BAM files.
+  - FR0-5 files are supported, they load together; save only saves to combined FRM.
+  - BAMC and BAM E orientation files are also supported.
+  - Cross-format save, including PNG (directory), as well as animated PNG.
+  - Import from a PNG directory.
+  - The only editable option is FPS.
 
 ## 3.11.0
 

@@ -1,0 +1,58 @@
+{
+    "name": "@bgforge/image",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Library for lossless parsing and serialising of Fallout FRM and Infinity Engine BAM animation files.",
+    "keywords": [
+        "animation",
+        "bam",
+        "fallout",
+        "frm",
+        "infinity-engine",
+        "modding"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "image"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        },
+        "./frame-anchor": {
+            "types": "./out/model/frame-anchor.d.ts",
+            "import": "./out/model/frame-anchor.js"
+        },
+        "./ie-direction": {
+            "types": "./out/model/ie-direction.d.ts",
+            "import": "./out/model/ie-direction.js"
+        }
+    },
+    "scripts": {
+        "build": "tsdown",
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "devDependencies": {
+        "tsdown": "^0.22.4",
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

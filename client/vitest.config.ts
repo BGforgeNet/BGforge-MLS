@@ -15,6 +15,13 @@ export default defineConfig({
         alias: {
             "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
             "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
+            // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts
+            // with `key + "/"`, so "@bgforge/image" would otherwise capture them and rewrite to a bad
+            // path. The webview renderer imports these subpaths to avoid pulling the barrel's Node-only
+            // codecs into a browser bundle.
+            "@bgforge/image/frame-anchor": path.resolve(__dirname, "../image/src/model/frame-anchor.ts"),
+            "@bgforge/image/ie-direction": path.resolve(__dirname, "../image/src/model/ie-direction.ts"),
+            "@bgforge/image": path.resolve(__dirname, "../image/src/index.ts"),
         },
     },
     test: {
@@ -48,6 +55,10 @@ export default defineConfig({
                 "client/src/extension.ts",
                 // Webview bundle entry points that only run inside the webview context.
                 "client/src/binary-editor/webview/main.ts",
+                // Same reasoning for the animation editor: the bundle entry runs only inside the webview,
+                // and bridge.ts is thin postMessage glue with no in-process test surface.
+                "client/src/image-editor/webview/main.ts",
+                "client/src/image-editor/webview/state/bridge.ts",
                 // worker_threads entry: runs only inside a spawned worker. Its behaviour is
                 // covered by the spawned-worker integration test (which bundles it through
                 // esbuild and runs it out of process), not by in-process vitest coverage.
@@ -59,6 +70,12 @@ export default defineConfig({
                 "client/src/binary-editor/provider.ts",
                 "client/src/binary-editor/document.ts",
                 "client/src/binary-editor/register.ts",
+                // Same reasoning for the animation (FRM/BAM) custom editor: provider/document/register are
+                // built around vscode.CustomEditorProvider/CustomDocument; their pure logic already has
+                // dedicated coverage in document-model.ts/sidecar.ts/save.ts/export-actions.ts.
+                "client/src/image-editor/provider.ts",
+                "client/src/image-editor/document.ts",
+                "client/src/image-editor/register.ts",
                 // Shared webview-context helpers (navigator/globalThis/document); like the
                 // bundle entry points above, they run only inside the webview, not in vitest.
                 "client/src/webview-utils.ts",

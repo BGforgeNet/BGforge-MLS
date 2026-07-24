@@ -52,6 +52,7 @@ parallel \
     "Typecheck binary-editor" "(cd binary-editor && pnpm exec tsc --noEmit)" \
     "Typecheck binary-editor harness" "pnpm exec tsc --project binary-editor/test/harness/tsconfig.json" \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
+    "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
@@ -83,10 +84,11 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage format" "pnpm exec vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
         "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
-    # parallelize; each is capped with --maxWorkers because nine uncapped
+    # parallelize; each is capped with --maxWorkers because ten uncapped
     # vitest worker pools oversubscribe the CPU badly enough to time out the
     # client worker-integration tests (spawned child workers starve). Caps are
     # sized to each suite's measured weight (binary and server are the heavy
@@ -101,6 +103,7 @@ else
         "Unit format" "pnpm exec vitest run --config format/vitest.config.ts --maxWorkers=1" \
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
         "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
+        "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
         "Unit shared" "pnpm exec vitest run --config shared/vitest.config.ts --maxWorkers=1"
 fi
 

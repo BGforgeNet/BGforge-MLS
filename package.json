@@ -441,6 +441,37 @@
                 "priority": "default"
             },
             {
+                "viewType": "bgforge.animationEditor",
+                "displayName": "BGforge Animation Editor",
+                "selector": [
+                    {
+                        "filenamePattern": "*.frm"
+                    },
+                    {
+                        "filenamePattern": "*.fr0"
+                    },
+                    {
+                        "filenamePattern": "*.fr1"
+                    },
+                    {
+                        "filenamePattern": "*.fr2"
+                    },
+                    {
+                        "filenamePattern": "*.fr3"
+                    },
+                    {
+                        "filenamePattern": "*.fr4"
+                    },
+                    {
+                        "filenamePattern": "*.fr5"
+                    },
+                    {
+                        "filenamePattern": "*.bam"
+                    }
+                ],
+                "priority": "default"
+            },
+            {
                 "viewType": "bgforge.dialogEditor",
                 "displayName": "BGforge Dialog Editor",
                 "selector": [
@@ -677,6 +708,7 @@
         ]
     },
     "activationEvents": [
+        "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",

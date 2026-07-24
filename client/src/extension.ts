@@ -19,6 +19,7 @@ import {
 } from "../../shared/protocol";
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
+import { registerImageEditor } from "./image-editor/register";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 
 // Initialized in activate(), undefined until then
@@ -57,9 +58,9 @@ export async function activate(context: ExtensionContext) {
     const disposable = vscode.commands.registerCommand(cmd_compile, compile);
     context.subscriptions.push(disposable);
 
-    // Register binary file editor
+    // Register binary file and animation editors
     // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
-    context.subscriptions.push(registerBinaryEditor(context));
+    context.subscriptions.push(registerBinaryEditor(context), registerImageEditor(context));
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used

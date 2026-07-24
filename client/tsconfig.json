@@ -7,7 +7,10 @@
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/client.tsbuildinfo",
         "paths": {
-            "@bgforge/binary": ["../binary/src/index.ts"]
+            "@bgforge/binary": ["../binary/src/index.ts"],
+            "@bgforge/image": ["../image/src/index.ts"],
+            "@bgforge/image/frame-anchor": ["../image/src/model/frame-anchor.ts"],
+            "@bgforge/image/ie-direction": ["../image/src/model/ie-direction.ts"]
         }
     },
     "include": ["src", "test", "../shared", "../binary/src"],

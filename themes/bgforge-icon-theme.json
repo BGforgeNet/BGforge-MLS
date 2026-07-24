@@ -31,6 +31,9 @@
 		"fallout-map": {
 			"iconPath": "./icons/fallout-map.svg"
 		},
+		"frm-bam": {
+			"iconPath": "./icons/frm-bam.svg"
+		},
 		"infinity-itm": {
 			"iconPath": "./icons/infinity-itm.svg"
 		},
@@ -1591,6 +1594,14 @@
 	"fileExtensions": {
 		"tpp": "weidu-tp2-patch",
 		"map": "fallout-map",
+		"frm": "frm-bam",
+		"fr0": "frm-bam",
+		"fr1": "frm-bam",
+		"fr2": "frm-bam",
+		"fr3": "frm-bam",
+		"fr4": "frm-bam",
+		"fr5": "frm-bam",
+		"bam": "frm-bam",
 		"itm": "infinity-itm",
 		"spl": "infinity-spl",
 		"eff": "infinity-eff",
@@ -2033,6 +2044,14 @@
 		"file": "_default_light",
 		"fileExtensions": {
 			"map": "fallout-map",
+			"frm": "frm-bam",
+			"fr0": "frm-bam",
+			"fr1": "frm-bam",
+			"fr2": "frm-bam",
+			"fr3": "frm-bam",
+			"fr4": "frm-bam",
+			"fr5": "frm-bam",
+			"bam": "frm-bam",
 			"itm": "infinity-itm",
 			"spl": "infinity-spl",
 			"eff": "infinity-eff",

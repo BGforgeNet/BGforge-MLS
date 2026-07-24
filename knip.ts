@@ -27,6 +27,7 @@ const config: KnipConfig = {
                 "src/binary-editor/worker.ts",
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
+                "src/image-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
@@ -125,6 +126,9 @@ const config: KnipConfig = {
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
+        },
+        image: {
+            entry: ["test/**/*.test.ts"],
         },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],

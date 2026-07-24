@@ -34,10 +34,12 @@ pre-commit:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,svelte}"
         - ".oxlintrc.json"
-      # {staged_files} scopes the lint to the commit and keeps untracked scratch files
-      # from blocking it; both tools still apply their ignorePatterns to explicit args
-      # and exit 0 when every arg is ignored. Full-tree runs stay in test.sh/CI.
-      run: pnpm exec oxlint {staged_files}
+      # {staged_files} scopes the lint to the commit and keeps untracked scratch files from
+      # blocking it. oxlint applies its ignorePatterns to explicit args too, so a commit whose
+      # staged files are ALL inside an ignored path (e.g. binary-editor/test/harness/**) leaves
+      # zero files for it to check - --no-error-on-unmatched-pattern keeps that a pass rather
+      # than an error. Full-tree runs stay in test.sh/CI.
+      run: pnpm exec oxlint --no-error-on-unmatched-pattern {staged_files}
     oxfmt-check:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,json,md,yml,yaml}"
@@ -104,6 +106,14 @@ pre-commit:
         - "pnpm-workspace.yaml"
         - "pnpm-lock.yaml"
       run: pnpm exec tsc --noEmit --project binary/tsconfig.json
+    typecheck-image:
+      glob:
+        - "image/**"
+        - "tsconfig*.json"
+        - "package.json"
+        - "pnpm-workspace.yaml"
+        - "pnpm-lock.yaml"
+      run: pnpm exec tsc --noEmit --project image/tsconfig.json
     typecheck-binary-editor:
       glob:
         - "binary-editor/**"

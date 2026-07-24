@@ -57,6 +57,7 @@ transpilers/
 binary/
 binary-editor/
 format/
+image/
 shared/
 
 # Reusable GitHub Actions and hand-written editor syntax inputs - build/CI inputs,

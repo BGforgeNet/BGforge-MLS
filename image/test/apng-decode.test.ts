@@ -1,0 +1,181 @@
+import { describe, expect, it } from "vitest";
+import { emptyPalette } from "@bgforge/image";
+import { decodeApng, encodeApng } from "../src/png/apng.ts";
+import { PNG_SIGNATURE, writeChunk } from "../src/png/chunk.ts";
+import { buildIhdr, deflateScanlines } from "../src/png/encode.ts";
+
+function concatParts(parts: Uint8Array[]): Uint8Array {
+    const out = new Uint8Array(parts.reduce((sum, p) => sum + p.length, 0));
+    let offset = 0;
+    for (const part of parts) {
+        out.set(part, offset);
+        offset += part.length;
+    }
+    return out;
+}
+
+// Mirrors apng.ts's private buildAcTl/buildFcTl, needed here to hand-assemble
+// malformed or non-standard APNG fixtures the encoder itself never produces.
+function buildAcTl(numFrames: number): Uint8Array {
+    const data = new Uint8Array(8);
+    new DataView(data.buffer).setUint32(0, numFrames, false);
+    return data;
+}
+
+function buildFcTl(
+    sequenceNumber: number,
+    width: number,
+    height: number,
+    delayNum: number,
+    delayDen: number,
+): Uint8Array {
+    const data = new Uint8Array(26);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, sequenceNumber, false);
+    view.setUint32(4, width, false);
+    view.setUint32(8, height, false);
+    view.setUint16(20, delayNum, false);
+    view.setUint16(22, delayDen, false);
+    data[24] = 1; // dispose_op: background
+    data[25] = 0; // blend_op: source
+    return data;
+}
+
+describe("decodeApng hostile input", () => {
+    it("rejects an fcTL claiming implausible frame dimensions before allocating", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(2, 2)),
+            writeChunk("fcTL", buildFcTl(0, 65536, 65536, 1, 10)),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/implausible frame dimensions 65536x65536/);
+    });
+
+    it("caps frame decompression at the expected raw size (zlib-bomb guard)", () => {
+        const oversized = deflateScanlines(10, 10, new Uint8Array(100)); // inflates far past a 2x2 frame
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(2, 2)),
+            writeChunk("fcTL", buildFcTl(0, 2, 2, 1, 10)),
+            writeChunk("IDAT", oversized),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/frame decompression failed/);
+    });
+});
+
+describe("decodeApng", () => {
+    it("pads a differently-sized frame set to the canvas (centred, transparent) so it round-trips as valid frames", () => {
+        // APNG is a viewable preview, and a valid PNG requires every frame (the IDAT default included) to
+        // fill the IHDR canvas - so smaller frames are padded to the max size, centred, with index 0. The
+        // round-trip therefore returns canvas-sized frames, not the source per-frame dimensions.
+        const pal = emptyPalette();
+        pal[1] = { r: 10, g: 20, b: 30, a: 255 };
+        const frames = [
+            { width: 2, height: 2, pixels: new Uint8Array([0, 1, 1, 0]) },
+            { width: 2, height: 3, pixels: new Uint8Array([1, 0, 0, 1, 1, 0]) }, // the tallest -> sets canvas height
+            { width: 2, height: 2, pixels: new Uint8Array([0, 0, 1, 1]) },
+        ];
+        const png = encodeApng(frames, pal, 0, 12);
+        const out = decodeApng(png);
+
+        expect(out.fps).toBe(12);
+        expect(out.transparentIndex).toBe(0);
+        expect(out.palette[1]).toEqual({ r: 10, g: 20, b: 30, a: 255 });
+        // All three come back at the 2x3 canvas; the 2x2 frames gain a transparent row (dy = floor((3-2)/2) = 0).
+        expect(out.frames.map((f) => [f.width, f.height])).toEqual([
+            [2, 3],
+            [2, 3],
+            [2, 3],
+        ]);
+        expect([...out.frames[0]!.pixels]).toEqual([0, 1, 1, 0, 0, 0]);
+        expect([...out.frames[1]!.pixels]).toEqual([1, 0, 0, 1, 1, 0]);
+        expect([...out.frames[2]!.pixels]).toEqual([0, 0, 1, 1, 0, 0]);
+    });
+
+    it("locates a transparentIndex greater than 0 by scanning tRNS", () => {
+        const pal = emptyPalette();
+        const png = encodeApng([{ width: 1, height: 1, pixels: new Uint8Array([5]) }], pal, 5, 10);
+        expect(decodeApng(png).transparentIndex).toBe(5);
+    });
+
+    it("throws when the IHDR chunk is missing", () => {
+        const bytes = concatParts([PNG_SIGNATURE, writeChunk("IEND", new Uint8Array(0))]);
+        expect(() => decodeApng(bytes)).toThrow(/missing IHDR chunk/);
+    });
+
+    it("throws on a truncated IHDR chunk", () => {
+        const bytes = concatParts([PNG_SIGNATURE, writeChunk("IHDR", new Uint8Array(8))]);
+        expect(() => decodeApng(bytes)).toThrow(/truncated IHDR chunk/);
+    });
+
+    it("rejects a non-indexed colour type", () => {
+        const ihdrData = buildIhdr(1, 1);
+        ihdrData[9] = 2; // truecolour, not indexed
+        const bytes = concatParts([PNG_SIGNATURE, writeChunk("IHDR", ihdrData)]);
+        expect(() => decodeApng(bytes)).toThrow(/indexed/);
+    });
+
+    it("falls back to fps 10 when the first fcTL's delay_num is 0", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(1, 1)),
+            writeChunk("acTL", buildAcTl(1)),
+            writeChunk("fcTL", buildFcTl(0, 1, 1, 0, 10)), // delay_num 0: a real APNG would never use this delay
+            writeChunk("IDAT", deflateScanlines(1, 1, new Uint8Array([5]))),
+            writeChunk("IEND", new Uint8Array(0)),
+        ]);
+        expect(decodeApng(bytes).fps).toBe(10);
+    });
+
+    it("tolerates a missing acTL chunk (skips the frame-count cross-check)", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(1, 1)),
+            writeChunk("fcTL", buildFcTl(0, 1, 1, 1, 10)),
+            writeChunk("IDAT", deflateScanlines(1, 1, new Uint8Array([5]))),
+            writeChunk("IEND", new Uint8Array(0)),
+        ]);
+        const out = decodeApng(bytes);
+        expect(out.frames).toHaveLength(1);
+        expect([...(out.frames[0]?.pixels ?? [])]).toEqual([5]);
+        expect(out.fps).toBe(10);
+    });
+
+    it("throws when acTL declares a frame count that does not match the decoded frames", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(1, 1)),
+            writeChunk("acTL", buildAcTl(2)), // declares 2, but only 1 fcTL/IDAT pair follows
+            writeChunk("fcTL", buildFcTl(0, 1, 1, 1, 10)),
+            writeChunk("IDAT", deflateScanlines(1, 1, new Uint8Array([5]))),
+            writeChunk("IEND", new Uint8Array(0)),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/acTL declared 2 frames but found 1/);
+    });
+
+    it("throws when an fcTL chunk has no following IDAT/fdAT data", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(1, 1)),
+            writeChunk("acTL", buildAcTl(1)),
+            writeChunk("fcTL", buildFcTl(0, 1, 1, 1, 10)),
+            writeChunk("IEND", new Uint8Array(0)),
+        ]);
+        expect(() => decodeApng(bytes)).toThrow(/fcTL chunk has no following IDAT\/fdAT data/);
+    });
+
+    it("tolerates missing PLTE/tRNS chunks (defaults to opaque black, transparentIndex 0)", () => {
+        const bytes = concatParts([
+            PNG_SIGNATURE,
+            writeChunk("IHDR", buildIhdr(1, 1)),
+            writeChunk("acTL", buildAcTl(1)),
+            writeChunk("fcTL", buildFcTl(0, 1, 1, 1, 10)),
+            writeChunk("IDAT", deflateScanlines(1, 1, new Uint8Array([9]))),
+            writeChunk("IEND", new Uint8Array(0)),
+        ]);
+        const out = decodeApng(bytes);
+        expect(out.palette[0]).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+        expect(out.transparentIndex).toBe(0);
+        expect([...(out.frames[0]?.pixels ?? [])]).toEqual([9]);
+    });
+});
