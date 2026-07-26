@@ -13,10 +13,11 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**Transpilers**](#transpilers): TSSL, TBAF, TD.
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
 - [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
+- [**Animations**](#animations): Fallout FRM; Infinity BAM.
 - [**GitHub Actions**](#github-actions): format, transpile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
-- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog editor](#dialog-editor).
+- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog editor](#dialog-editor), [animation viewer](#animation-viewer).
 - [**Forum**](https://forums.bgforge.net/viewforum.php?f=35)
 
 ## Languages
@@ -120,5 +121,7 @@ Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or
 ![binary editor example](docs/binary-editor.png)
 
 ### Animation viewer
+
+Supported animation formats are BAM and FRM. PNG import/export is available, as well as cross-format save (conversion).
 
 ![animation viewer example](docs/animation-viewer.png)
