@@ -16,7 +16,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**GitHub Actions**](#github-actions): format, transpile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
-- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [Dialog Editor](#dialog-editor).
+- **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog editor](#dialog-editor).
 - [**Forum**](https://forums.bgforge.net/viewforum.php?f=35)
 
 ## Languages
@@ -105,7 +105,7 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 
 ![fallout highlighting and hover example](docs/fallout.png)
 
-### Dialog Editor
+### Dialog editor
 
 Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
 
@@ -118,3 +118,7 @@ Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or
 ### Binary editor
 
 ![binary editor example](docs/binary-editor.png)
+
+### Animation viewer
+
+![animation viewer example](docs/animation-viewer.png)
