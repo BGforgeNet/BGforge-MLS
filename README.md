@@ -13,7 +13,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**Transpilers**](#transpilers): TSSL, TBAF, TD.
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
 - [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
-- [**Animations**](#animations): Fallout FRM; Infinity BAM.
+- [**Animations**](#animation-viewer): Fallout FRM; Infinity BAM.
 - [**GitHub Actions**](#github-actions): format, transpile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
