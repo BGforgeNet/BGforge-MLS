@@ -63,6 +63,13 @@ allowBuilds:
 # GHSA-hmw2-7cc7-3qxx) pins, all dev/test/packaging-only and now resolving patched
 # naturally through @vscode/vsce and the Stryker -> vitest -> vite chain; and the
 # uuid pin (GHSA-w5hq-g745-h8pq), since msal-node no longer pulls uuid into the tree.
+# Accepted, deliberately NOT pinned: brace-expansion@2.1.2 via minimatch@9 (mocha,
+# remark-cli, glob) - GHSA-mh99-v99m-4gvg, a dev-tooling-only DoS via crafted brace
+# patterns with no untrusted-input path. The advisory patches only 5.0.8 (no 2.x
+# backport), and minimatch@9 default-imports brace-expansion whereas 5.x is named-export
+# only, so a `brace-expansion: ">=5.0.8"` override breaks the build. Clearing it needs a
+# minimatch@10 major bump across that tooling; not worth the cascade risk for a build-time
+# DoS. `pnpm audit` will show this one high until minimatch@9 leaves the dev tree.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
