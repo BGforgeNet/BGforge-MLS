@@ -54,7 +54,6 @@
     const strrefLine = $derived(compact ? undefined : row.strrefText);
     // In a compact cell the line still reaches the user, as the tooltip - it just does not widen the cell.
     const compactStrrefTitle = $derived(compact ? row.strrefText : undefined);
-    const idleText = $derived(strrefLine === undefined ? "" : `${raw} ${strrefLine}`);
     let editing = $state(false);
     const strrefTitle = $derived(
         strrefLine === undefined ? rangeTitle : rangeTitle === undefined ? strrefLine : `${strrefLine}\n${rangeTitle}`,
@@ -67,7 +66,7 @@
     }
     function blurStrref(e: FocusEvent) {
         editing = false;
-        (e.target as HTMLInputElement).value = idleText;
+        (e.target as HTMLInputElement).value = strrefLine ?? "";
     }
 </script>
 
@@ -89,21 +88,26 @@
         />
     </span>
 {:else if strrefLine !== undefined}
-    <!-- type=text, not number: the idle state renders the resolved line beside the value, which a number input
-         cannot hold. Editing still commits a number - commitPlain rejects anything non-finite. -->
-    <input
-        class="strref"
-        type="text"
-        inputmode="numeric"
-        spellcheck="false"
-        value={editing ? raw : idleText}
-        disabled={!row.editable}
-        title={strrefTitle}
-        aria-invalid={outOfRange || undefined}
-        onfocus={focusStrref}
-        onblur={blurStrref}
-        onchange={commitPlain}
-    />
+    <!-- Same wrapper shape as the hex field: a static span beside a borderless input, reading as one control.
+         Here the span holds the strref itself, dimmed, so the dialog.tlk line is what the eye lands on. Focus
+         hides the span (CSS) and swaps the input to the bare number, so what is edited is what is stored - one
+         focusable element throughout, no element swap to juggle focus around. -->
+    <span class="strref-input" class:disabled={!row.editable}>
+        <span class="strref-num">{raw}</span>
+        <input
+            class="strref-line"
+            type="text"
+            inputmode="numeric"
+            spellcheck="false"
+            value={editing ? raw : strrefLine}
+            disabled={!row.editable}
+            title={strrefTitle}
+            aria-invalid={outOfRange || undefined}
+            onfocus={focusStrref}
+            onblur={blurStrref}
+            onchange={commitPlain}
+        />
+    </span>
 {:else}
     <input
         type="number"

@@ -20,9 +20,12 @@ kind the layout schema happened to place it in.
 ## Resolved strrefs: idle text in roomy controls, tooltip in dense ones
 
 A field the spec marks `strref` (see `binary/src/AGENTS.md`) carries the host-resolved `dialog.tlk` line in
-`row.strrefText` when the record was opened from an installed game. `NumberField.svelte` renders it: idle shows
-`<number> <line>` (tier L, ellipsized), focus swaps to the bare number so what you edit is what is stored, and
-the title carries the full line. A record outside a game has no `strrefText` and renders an ordinary number.
+`row.strrefText` when the record was opened from an installed game. `NumberField.svelte` renders it with the
+hex field's wrapper shape - a dimmed static span holding the number beside a borderless input holding the line,
+chromed as one control (tier L, line ellipsized), so the eye lands on the text rather than the number. Focus
+hides the span and swaps the input to the bare number, so what you edit is what is stored and the value is
+never shown twice; the title carries the full line. A record outside a game has no `strrefText` and renders an
+ordinary number.
 
 Cells that CANNOT grow opt out via `compact` on `CellControl`: the fixed-width matrix, and a `GridBlock` with
 more than one column (the CRE sound slots are 100 strrefs across 4 columns). Those keep the number in the cell

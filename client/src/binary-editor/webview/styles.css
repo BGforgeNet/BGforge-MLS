@@ -1519,11 +1519,43 @@ input[type="text"]::placeholder {
 .layout-root .field-control.tier-l {
     --val-ch: 34ch;
 }
-/* A resolved strref shows "<number> <dialog.tlk line>" while idle. The line is unbounded, so it ellipsizes
-   rather than widening the column - the full text stays reachable in the title, and focusing the field swaps
-   it for the bare number (see NumberField.svelte). Ellipsis applies only while unfocused, which is exactly
-   the idle state this text belongs to. */
-.layout-root input.strref {
+/* A resolved strref reads "<number> <dialog.tlk line>" while idle, sharing the hex field's wrapper shape: the
+   number is a dimmed static span, the line a borderless input, the pair chromed as one control. Focus hides the
+   span and the input swaps to the bare number (see NumberField.svelte), so the value being edited is never
+   shown twice. The line is unbounded, so it ellipsizes rather than widening the column - the full text stays in
+   the title. */
+.layout-root .strref-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35ch;
+    width: var(--val-ch, 16ch);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+    box-sizing: border-box;
+}
+.layout-root .strref-input:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.layout-root .strref-input.disabled {
+    opacity: 0.6;
+}
+.layout-root .strref-num {
+    color: var(--vscode-descriptionForeground);
+    user-select: none;
+    flex: 0 0 auto;
+}
+/* Editing shows the number in the input itself, so the dimmed copy would be a duplicate. */
+.layout-root .strref-input:focus-within .strref-num {
+    display: none;
+}
+.layout-root .strref-input input.strref-line {
+    border: none;
+    background: transparent;
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     text-overflow: ellipsis;
 }
 /* Dropdown widths (enums only; see controls.ts dropdownWidth). A dropdown shares its column with hex/resref/
