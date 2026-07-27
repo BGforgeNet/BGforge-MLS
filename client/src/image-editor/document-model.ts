@@ -9,6 +9,7 @@ import {
     type Animation,
     type Rgba,
 } from "@bgforge/image";
+import type { DocumentBackup } from "./backup";
 import { chooseActivePalette } from "./sidecar";
 import {
     encodeFramePixels,
@@ -60,6 +61,15 @@ export class ImageDocumentModel {
         const animation = loadImage(bytes, basename);
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
+    }
+
+    // Restore an unsaved document from its hot-exit backup. The sidecar still comes from disk (a dirty
+    // document wrote nothing), but the toggle must be replayed over setSidecar's auto-on default, which
+    // otherwise silently re-enables a palette the pending edit had turned off.
+    static fromBackup(backup: DocumentBackup, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
+        const model = ImageDocumentModel.fromBytes(backup.bytes, basename, sidecarBytes);
+        model.externalEnabled = backup.externalPalette;
+        return model;
     }
 
     // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
@@ -216,6 +226,11 @@ export class ImageDocumentModel {
                 throw new Error(`getBytes: unhandled sourceFormat ${String(unhandled)}`);
             }
         }
+    }
+
+    /** Snapshot for a hot-exit backup: the serialized animation plus the state its bytes cannot carry. */
+    backup(): DocumentBackup {
+        return { bytes: this.getBytes(), externalPalette: this.externalEnabled };
     }
 
     sidecarBytes(): Uint8Array | undefined {

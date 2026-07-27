@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { type Animation, importPngDirectory } from "@bgforge/image";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
+import { decodeBackup, encodeBackup } from "./backup";
 import { ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
@@ -48,10 +49,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     async openCustomDocument(
         uri: vscode.Uri,
-        _openContext: vscode.CustomDocumentOpenContext,
+        openContext: vscode.CustomDocumentOpenContext,
         _token: vscode.CancellationToken,
     ): Promise<ImageEditorDocument> {
-        const document = await ImageEditorDocument.open(uri);
+        // A hot-exit restore hands back the backup written by backupCustomDocument, whose payload carries
+        // the unsaved edits; reading the files instead would silently discard them while the editor still
+        // shows as dirty.
+        const backup = openContext.backupId
+            ? decodeBackup(await vscode.workspace.fs.readFile(vscode.Uri.parse(openContext.backupId)))
+            : undefined;
+        const document = await ImageEditorDocument.open(uri, backup);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: document.toView() }));
         return document;
@@ -346,7 +353,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         context: vscode.CustomDocumentBackupContext,
         _token: vscode.CancellationToken,
     ): Promise<vscode.CustomDocumentBackup> {
-        await vscode.workspace.fs.writeFile(context.destination, document.getBytes());
+        await vscode.workspace.fs.writeFile(context.destination, encodeBackup(document.backup()));
         return {
             id: context.destination.toString(),
             delete: () =>

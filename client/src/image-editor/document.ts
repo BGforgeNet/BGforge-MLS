@@ -9,6 +9,7 @@ import {
     serializeBamV1,
     splitIeBamPair,
 } from "@bgforge/image";
+import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
@@ -62,12 +63,19 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.model.onChange = () => this._onDidRefresh.fire();
     }
 
-    static async open(uri: vscode.Uri): Promise<ImageEditorDocument> {
+    /**
+     * Opens `uri`, or restores it from `backup` when VS Code re-opens a document that was dirty at
+     * shutdown. A restore takes only the animation from the backup: the split-set / pair identity and
+     * the sidecar palette still come from disk, which the unsaved edits never touched.
+     */
+    static async open(uri: vscode.Uri, backup?: DocumentBackup): Promise<ImageEditorDocument> {
         if (isFrSplitPath(uri.fsPath)) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(uri.fsPath);
             // Present and save under the combined <base>.frm identity, not the opened .frN member.
             const basename = path.basename(frSplitCombinedPath(uri.fsPath));
-            const model = ImageDocumentModel.fromAnimation(animation, basename, sidecarBytes);
+            const model = backup
+                ? ImageDocumentModel.fromBackup(backup, basename, sidecarBytes)
+                : ImageDocumentModel.fromAnimation(animation, basename, sidecarBytes);
             return new ImageEditorDocument(uri, model, true);
         }
         const bytes = await vscode.workspace.fs.readFile(uri);
@@ -75,12 +83,18 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             const pair = await ImageEditorDocument.tryReadIePair(uri.fsPath, bytes);
             if (pair) {
                 // Present under the base file's identity, whichever member was opened.
-                const model = ImageDocumentModel.fromAnimation(pair.animation, path.basename(pair.info.basePath));
+                const basename = path.basename(pair.info.basePath);
+                const model = backup
+                    ? ImageDocumentModel.fromBackup(backup, basename)
+                    : ImageDocumentModel.fromAnimation(pair.animation, basename);
                 return new ImageEditorDocument(uri, model, false, pair.info);
             }
         }
         const sidecarBytes = await ImageEditorDocument.readSidecar(uri);
-        const model = ImageDocumentModel.fromBytes(bytes, path.basename(uri.fsPath), sidecarBytes);
+        const basename = path.basename(uri.fsPath);
+        const model = backup
+            ? ImageDocumentModel.fromBackup(backup, basename, sidecarBytes)
+            : ImageDocumentModel.fromBytes(bytes, basename, sidecarBytes);
         return new ImageEditorDocument(uri, model, false);
     }
 
@@ -232,6 +246,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     getBytes(): Uint8Array {
         return this.model.getBytes();
+    }
+
+    backup(): DocumentBackup {
+        return this.model.backup();
     }
 
     sidecarBytes(): Uint8Array | undefined {
