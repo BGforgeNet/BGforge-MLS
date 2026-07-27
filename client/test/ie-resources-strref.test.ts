@@ -31,8 +31,10 @@ describe("createStrrefResolver", () => {
         expect(createStrrefResolver(session())(gameUri(), 6348)).toBe("Ring of Protection +1");
     });
 
+    // Carries a `g=` query, so it differs from a game URI ONLY by scheme: with an empty query the later
+    // "no gameDir" check rejects it too, and the test passes even with the scheme guard gone.
     it("resolves nothing for a document outside a game", () => {
-        const fileUri = { scheme: "file", query: "", path: "/mods/sw1h01.itm" } as never;
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
 
         expect(createStrrefResolver(session())(fileUri, 6348)).toBeUndefined();
     });
