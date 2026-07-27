@@ -65,11 +65,14 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     async openCustomDocument(
         uri: vscode.Uri,
-        _openContext: vscode.CustomDocumentOpenContext,
+        openContext: vscode.CustomDocumentOpenContext,
         _token: vscode.CancellationToken,
     ): Promise<BinaryEditorDocument> {
         const workerScript = path.join(this.extensionUri.fsPath, WORKER_SCRIPT);
-        const document = await BinaryEditorDocument.open(uri, workerScript);
+        // A hot-exit restore hands back the backup written by backupCustomDocument, whose bytes carry the unsaved
+        // edits; reading the file instead would silently discard them while the editor still shows as dirty.
+        const backup = openContext.backupId ? vscode.Uri.parse(openContext.backupId) : undefined;
+        const document = await BinaryEditorDocument.open(uri, workerScript, backup);
         document.onDidChange((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh((changeSet) => this.refreshDocumentPanels(document, changeSet));
         return document;

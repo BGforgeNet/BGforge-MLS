@@ -32,8 +32,13 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
         this.sessionId = openResult.sessionId;
     }
 
-    static async open(uri: vscode.Uri, workerScript: string): Promise<BinaryEditorDocument> {
-        const bytes = await vscode.workspace.fs.readFile(uri);
+    /**
+     * Opens a parse session for `uri`. `byteSource` overrides only where the bytes are read from, leaving the
+     * document's identity (and therefore the save target and the worker's format detection) on `uri` - a hot-exit
+     * restore parses the backup while still saving to the original file.
+     */
+    static async open(uri: vscode.Uri, workerScript: string, byteSource?: vscode.Uri): Promise<BinaryEditorDocument> {
+        const bytes = await vscode.workspace.fs.readFile(byteSource ?? uri);
         const worker = new Worker(workerScript);
         const bridge = new WorkerBridge(workerPort(worker));
         const response = await bridge.send({
