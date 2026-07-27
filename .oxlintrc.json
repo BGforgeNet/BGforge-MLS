@@ -278,6 +278,15 @@
             }
         },
         {
+            // The IE resource viewer follows the same VS Code editor idioms: `_onDidX` EventEmitters, and
+            // `vscode.FileSystemError.FileNotFound(...)` factory calls (uppercase names called without `new`).
+            "files": ["client/src/ie-resources/**/*.ts"],
+            "rules": {
+                "no-underscore-dangle": "off",
+                "new-cap": "off"
+            }
+        },
+        {
             // `document.getElementById` is clearer and faster than
             // `.querySelector('#id')`; the rule's premise doesn't hold.
             // Webview scripts are the only DOM consumers in the codebase.

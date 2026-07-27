@@ -51,8 +51,12 @@ function nextId(): SessionId {
 }
 
 function extOf(uri: string): string {
-    const dot = uri.lastIndexOf(".");
-    return dot === -1 ? "" : uri.slice(dot + 1);
+    // Derive the extension from the last path segment only: strip any query/fragment (game-resource URIs carry
+    // the game dir in ?g=...) and any directory prefix, so a "." in the query or a parent dir can't leak in.
+    const pathPart = uri.split(/[?#]/, 1)[0]!;
+    const base = pathPart.slice(Math.max(pathPart.lastIndexOf("/"), pathPart.lastIndexOf("\\")) + 1);
+    const dot = base.lastIndexOf(".");
+    return dot === -1 ? "" : base.slice(dot + 1);
 }
 
 export function closeSession(id: SessionId): void {

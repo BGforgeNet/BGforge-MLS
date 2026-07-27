@@ -110,6 +110,39 @@ export {
 export { OpcodeRelationships } from "./ie-common/opcode-relationships";
 export type { OpcodeRelationship } from "./ie-common/opcode-relationships";
 
+// Infinity Engine KEY/BIF archives: read an installed game's resource namespace (chitin.key + its BIFs).
+// Read-only and streamed - a large BIF is never bulk-loaded. Entry point: openGame(dir).
+export {
+    parseKey,
+    openBif,
+    parseBif,
+    openTlk,
+    parseTlk,
+    openGame,
+    engineOverrideFolders,
+    detectGameIdentity,
+    bufferSource,
+    fileSource,
+    resourceTypeExt,
+    resourceTypeCode,
+} from "./archive";
+export type {
+    KeyIndex,
+    KeyBifEntry,
+    KeyResource,
+    BifArchive,
+    BifFileEntry,
+    BifTilesetEntry,
+    Tlk,
+    ByteSource,
+    Game,
+    GameResourceRef,
+    OpenGameOptions,
+    GameIdentity,
+    IeVariant,
+    IeScriptStyle,
+} from "./archive";
+
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";
 import { mapParser } from "./map";

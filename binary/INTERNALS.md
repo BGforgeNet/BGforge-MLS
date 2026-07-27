@@ -418,6 +418,86 @@ fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--l
 
 CLI tests live in `binary/test/bin-cli.test.ts` and run as `pnpm test:cli`.
 
+## KEY/BIF archives (`src/archive/`)
+
+Read an installed Infinity Engine game's resource namespace: `chitin.key` (the master index) plus the `.bif`
+archives it points into. Read-only; this is groundwork for the TypeScript installer (which needs to see what a
+resref actually resolves to in a real install), not an editor format - so it deliberately does NOT go through
+the `BinaryParser` / `BinaryFormatAdapter` editor path. Formats: IESDP `key_v1.htm` / `bif_v1.htm`.
+
+- **`byte-source.ts`** - `ByteSource` (`read(offset, length)` positioned reads). `bufferSource` (in-memory) and
+  `fileSource` (fd-backed `fs.readSync`). The efficiency seam: a large plain BIF is read a resource at a time,
+  never bulk-loaded.
+- **`key.ts`** - `parseKey(bytes): KeyIndex`. Reads the BIF table (names normalized to `/`) and the resource
+  table, unpacking each 32-bit locator into `bifIndex` (bits 31-20) / `tilesetIndex` (19-14) / `fileIndex`
+  (13-0). `KeyIndex.lookup(resref, type?)` resolves case-insensitively.
+- **`bif.ts`** - `openBif(source): BifArchive` / `parseBif(bytes)`. Detects the three on-disk shapes by
+  signature: plain `BIFF` V1 (streamed - only the header + directory table + the requested resource bytes are
+  read), and the two compressed wrappers `BIF ` V1 (whole zlib stream) and `BIFC` V1.0 (zlib blocks), which have
+  no random access so they inflate fully once. `readFile(fileIndex)` / `readTileset(tilesetIndex)`.
+- **`game.ts`** - `openGame(dir, options?): Game` ties it together. At open it builds **one in-memory
+  resolution tree** - `Map<resref\0type, {sources: Source[]}>`, each key's sources ordered by precedence
+  (override folders high -> low, then the BIF locator at the bottom); the winner is `sources[0]`. `read` /
+  `list` consume the tree; `write` / `remove` mutate it in place. BIFs open lazily (cached) and read a resource
+  at a time; `close()` releases the fds.
+
+  **Resolution matches WeiDU** (the toolchain this emulates), verified against its behavior:
+  - Override loose files win over BIFs (override paths are checked before the KEY index).
+  - Among BIF duplicates, the **last** KEY entry wins. Near Infinity agrees; GemRB keeps the first, so it
+    differs. `KeyIndex.lookupAll` exposes every duplicate in KEY order.
+  - **Two override-search modes** via `OpenGameOptions.mode`: `"weidu"` (default) searches `<game>/override`
+    alone - WeiDU's actual default (only `<game>/override`, with no extra override paths) - and is what the
+    installer uses; `"engine"` searches the fuller engine stack from IESDP
+    `appendices/override.htm` (movies, characters, portraits/portrait, sounds, scripts, override, plus
+    `lang/<lang>/{movies,sounds}` when `lang` is set) and is what the viewer uses to resolve what the running
+    game would. `engineOverrideFolders(lang?)` builds that stack; `overrideFolders` overrides mode entirely.
+  - Filenames match case-insensitively (WeiDU matches resrefs and paths case-insensitively too).
+  - **A biffed archive is searched across data roots, not just `<game>/`** - a KEY biff name like
+    `data/cdcreani.bif` may live under a CD root (`<game>/data/data/cdcreani.bif`). `bifSearchRelRoots` combines
+    `baldur.ini`'s `[Alias]` CD/HD0 mappings (reduced to paths relative to HD0, since their absolute Windows
+    values don't transfer) with the standard `data`/`cache`/`CD1`..`CD6` roots, game root first; the biff name
+    resolves against each, first hit wins (memoized). Some KEYs still list absent developer archives (e.g.
+    `PROGTEST.BIF`); `canRead(resref, type)` reports whether the winning source is actually installed, so callers
+    can flag or skip an unopenable resource instead of failing on read.
+
+  **Mutation is atomic and rescan-free.** `write(resref, type, bytes, {folder})` writes the loose file via
+  temp+rename (a crash never exposes a half-written resource), then splices a file source into the key's stack
+  at that folder's precedence rank - a single consistent tree edit, so a later `read` returns the new bytes with
+  no directory rescan. `remove` unlinks and drops the source; the winner falls back to what it shadowed (a lower
+  folder or the BIF). Writes target `override` by default and must name a folder in the configured stack; BIF
+  content is read-only. The tree is the source of truth after open, so externally-written files (outside this
+  API) are not seen until re-open. `writeAuxFile` / `readAuxFile` round-trip a non-resource loose file (e.g. a
+  `<resref>.<ext>.json` snapshot sidecar) in `override` under an exact name; it is not indexed and the open scan
+  skips it (its extension has no resType), so it never appears in `list()`.
+
+- **`tlk.ts`** - `openTlk(source, {encoding?})` / `parseTlk(bytes, {encoding?}): Tlk`, the `dialog.tlk` string
+  table (IESDP `tlk_v1.htm`). Records reference strings by strref; `Tlk.get(strref)` resolves one to text
+  (NUL-trimmed). A TLK is uniformly one encoding; the caller passes it (with no encoding, falls back to a
+  UTF-8-then-windows-1252 guess). dialog.tlk holds hundreds of thousands of strings, so it reads the header once
+  and does a positioned read per strref - never bulk-loaded. `openGame().tlk(variant?)` opens the game's TLK
+  lazily - `"male"`/default `dialog.tlk` or `"female"` `dialogF.tlk`, under `lang/<lang>/` for EE games else the
+  game root. The EE language folder is resolved WeiDU-style: an explicit `OpenGameOptions.lang` wins, else
+  `weidu.conf`'s `lang_dir`, else the sorted-first `lang/<x>` that has a `dialog.tlk` - so the viewer resolves EE
+  strings without knowing the language. **Encoding is chosen the way WeiDU distinguishes EE from classic**: EE
+  iff the KEY holds a marker resource (`OH1000.ARE`/`OH6000.ARE`/`PSTCHAR.2DA`/`HOWPARTY.2DA`, probed via the KEY
+  only) -> UTF-8; else classic -> windows-1252 by default, overridable via `OpenGameOptions.encoding` for
+  non-Western installs (windows ANSI is not always cp1252 - Russian cp1251, Polish/Czech cp1250).
+- **`game-type.ts`** - `detectGameIdentity(key): GameIdentity` (also `openGame().identity`): the game's
+  type/edition, detected the way WeiDU does - probe the KEY for marker resources, last
+  match wins, from a classic-BG1 default. `variant` is WeiDU's game_type (the EE edition or `generic`),
+  `scriptStyle` its script style, `edition` drives the TLK encoding. `flavour` is the finer WeiDU GAME_IS type
+  (`src/tppe.ml` `PE_GameIs`) resolved by area markers - ToB (`AR6111`) vs SoA (`AR0083`), TotSC (`AR2003`) vs
+  BG1, HoW/TotLM vs IWD - and drives `label` ("Baldur's Gate II: Throne of Bhaal") and `shortLabel` ("BG2: ToB").
+  `refineGameFlavour(base, resExists, fileExists)` then upgrades the flavour for the conversions/expansions that
+  only show against the LIVE game (override + loose files), per WeiDU and Near Infinity markers: EET
+  (`override/eet.flag` or `data/eetTU00.bif`), SoD (BGEE + `movies/sodcin01.wbm`), BGT (BG2 + `AR7200.ARE` in
+  override). `openGame` runs it against the resolution tree (KEY winners + override) and the game dir.
+- **`resource-type.ts`** - resType code <-> extension table, transcribed from IESDP `general.htm`.
+
+The library uses the spec-system codecs (`StructSpec` + `toTypedBinarySchema`) for the fixed structs, read at
+their pointed-to offsets. Tests (`binary/test/archive.test.ts`) build byte-accurate synthetic fixtures - there
+is no real `chitin.key`/BIF in `external/` (those are mod sources, not game installs).
+
 ## Testing
 
 ```bash

@@ -411,9 +411,66 @@
                 "command": "extension.bgforge.dialogEditor",
                 "title": "BGforge MLS: Dialog Editor",
                 "icon": "$(type-hierarchy)"
+            },
+            {
+                "command": "bgforge.ieResources.openGame",
+                "title": "BGforge: Open IE Game...",
+                "icon": "$(folder-opened)"
+            },
+            {
+                "command": "bgforge.ieResources.refresh",
+                "title": "BGforge: Refresh IE Game Resources",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "bgforge.ieResources.closeGame",
+                "title": "BGforge: Close IE Game",
+                "icon": "$(close)"
             }
         ],
-        "menus": {},
+        "menus": {
+            "view/title": [
+                {
+                    "command": "bgforge.ieResources.openGame",
+                    "when": "view == bgforge.ieResources",
+                    "group": "navigation"
+                },
+                {
+                    "command": "bgforge.ieResources.refresh",
+                    "when": "view == bgforge.ieResources && bgforge.ieResources.hasGame",
+                    "group": "navigation"
+                },
+                {
+                    "command": "bgforge.ieResources.closeGame",
+                    "when": "view == bgforge.ieResources && bgforge.ieResources.hasGame",
+                    "group": "navigation"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "bgforgeIeResources",
+                    "title": "BGforge",
+                    "icon": "themes/icons/ie-game-resources.svg"
+                }
+            ]
+        },
+        "views": {
+            "bgforgeIeResources": [
+                {
+                    "id": "bgforge.ieResources",
+                    "name": "IE Game Resources",
+                    "contextualTitle": "IE Game Resources"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "bgforge.ieResources",
+                "contents": "No Infinity Engine game is open.\n[BGforge: Open IE Game...](command:bgforge.ieResources.openGame)"
+            }
+        ],
         "customEditors": [
             {
                 "viewType": "bgforge.binaryEditor",
@@ -710,6 +767,7 @@
     "activationEvents": [
         "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
+        "onFileSystem:bgforge-ie-resource",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",
@@ -722,6 +780,7 @@
         "onLanguage:weidu-ssl",
         "onLanguage:weidu-tp2",
         "onLanguage:weidu-tra",
+        "onView:bgforge.ieResources",
         "workspaceContains:**/*.tbaf",
         "workspaceContains:**/*.td",
         "workspaceContains:**/*.tssl"

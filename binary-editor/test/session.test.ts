@@ -24,4 +24,13 @@ describe("openSession", () => {
         expect(result.errors.length).toBeGreaterThan(0);
         expect(result.rootWindow.length).toBe(0);
     });
+
+    it("derives the extension from the path, ignoring a query (game-resource URIs carry ?g=<dir>)", () => {
+        // The IE resource viewer addresses records as bgforge-ie-resource:/<resref>.<ext>?g=<gameDir>; a naive
+        // last-"." split would read the extension as "map?g=..." and find no parser. The dir has a "." too.
+        const result = openSession("bgforge-ie-resource:/arcaves.map?g=/home/user/games/bg2.ee/tob", bytes());
+        expect(result.format).toBe("map");
+        expect(result.errors.length).toBe(0);
+        expect(result.rootWindow.length).toBeGreaterThan(0);
+    });
 });

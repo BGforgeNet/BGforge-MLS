@@ -303,9 +303,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             .getConfiguration("bgforge.binaryEditor")
             .get<boolean>("autoDumpJson", false);
         for (const write of planSave({ targetPath, bytes, snapshotJson, autoDumpJson })) {
-            // The primary artifact reuses the caller's URI (preserving its scheme); sidecars
-            // are always plain filesystem paths.
-            const target = write.path === targetPath ? primaryDestination : vscode.Uri.file(write.path);
+            // The primary artifact reuses the caller's URI (preserving its scheme). The JSON sidecar follows the
+            // same scheme: a `file:` destination writes <file>.json on disk; a virtual destination (game
+            // resource) routes back through its provider, landing the sidecar in override/, not the fs root.
+            const isPrimary = write.path === targetPath;
+            const target = isPrimary
+                ? primaryDestination
+                : primaryDestination.scheme === "file"
+                  ? vscode.Uri.file(write.path)
+                  : primaryDestination.with({ path: getSnapshotPath(primaryDestination.path) });
             // Sequential by design: the main artifact must land before the JSON sidecar so a
             // crash never leaves a snapshot newer than the file it describes. The list is at
             // most two entries, so serial writes cost nothing.
@@ -372,23 +378,36 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         this.scheduleDiagnostics(document);
     }
 
+    /**
+     * The `<name>.json` snapshot sidecar URI. A real file gets a `file:` path next to it; a virtual document
+     * keeps its OWN scheme (and query) so the write dispatches back through that provider - for a game resource
+     * the FS provider lands it in `override/`, not on the real filesystem (whose root a `file:` fsPath would hit).
+     */
+    private snapshotSidecarUri(document: BinaryEditorDocument): vscode.Uri {
+        return document.uri.scheme === "file"
+            ? vscode.Uri.file(getSnapshotPath(document.uri.fsPath))
+            : document.uri.with({ path: getSnapshotPath(document.uri.path) });
+    }
+
     private async dumpJson(document: BinaryEditorDocument): Promise<void> {
-        // Write the canonical snapshot to the automatic sidecar path (<file>.json) - the same path the
+        // Write the canonical snapshot to the automatic sidecar path (<name>.json) - the same target the
         // autoDumpJson save-time sidecar uses - with no dialog.
         const json = await document.getSnapshotJson();
-        const target = vscode.Uri.file(getSnapshotPath(document.uri.fsPath));
-        await vscode.workspace.fs.writeFile(target, Buffer.from(json, "utf8"));
+        await vscode.workspace.fs.writeFile(this.snapshotSidecarUri(document), Buffer.from(json, "utf8"));
     }
 
     private async loadJson(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
-        // Read from the automatic sidecar path (<file>.json), no dialog. Missing file -> advisory error.
-        const source = vscode.Uri.file(getSnapshotPath(document.uri.fsPath));
+        // Read from the automatic sidecar path (<name>.json), no dialog. Missing file -> advisory error.
+        const source = this.snapshotSidecarUri(document);
         let json: string;
         try {
             const bytes = await vscode.workspace.fs.readFile(source);
             json = Buffer.from(bytes).toString("utf8");
         } catch {
-            this.post(panel, { type: "error", message: `No JSON sidecar to load at ${source.fsPath}` });
+            this.post(panel, {
+                type: "error",
+                message: `No JSON sidecar to load for ${path.basename(document.uri.path)}.`,
+            });
             return;
         }
         const r = await document.bridge.send({ type: "loadJson", sessionId: document.sessionId, json });

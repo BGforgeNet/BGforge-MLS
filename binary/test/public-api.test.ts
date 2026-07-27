@@ -42,6 +42,19 @@ const REQUIRED_VALUE_EXPORTS = [
     // Concrete parsers
     "proParser",
     "mapParser",
+    // KEY/BIF archive support
+    "parseKey",
+    "openBif",
+    "parseBif",
+    "openTlk",
+    "parseTlk",
+    "openGame",
+    "engineOverrideFolders",
+    "detectGameIdentity",
+    "bufferSource",
+    "fileSource",
+    "resourceTypeExt",
+    "resourceTypeCode",
 ] as const;
 
 describe("@bgforge/binary public API", () => {

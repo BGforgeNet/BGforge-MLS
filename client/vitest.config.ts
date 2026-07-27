@@ -76,6 +76,14 @@ export default defineConfig({
                 "client/src/image-editor/provider.ts",
                 "client/src/image-editor/document.ts",
                 "client/src/image-editor/register.ts",
+                // IE game resource viewer: the FS provider, tree provider, and command registration are built
+                // around vscode.FileSystemProvider, vscode.TreeDataProvider, and vscode.commands - mocking them
+                // would recreate the framework (same reasoning as the binary/image editor exclusions above).
+                // Their pure logic is extracted and unit-tested: the game session (session.ts,
+                // ie-resources-session.test.ts) and the resource-URI encoding (uri.ts, ie-resources-uri.test.ts).
+                "client/src/ie-resources/fs-provider.ts",
+                "client/src/ie-resources/tree-provider.ts",
+                "client/src/ie-resources/register.ts",
                 // Shared webview-context helpers (navigator/globalThis/document); like the
                 // bundle entry points above, they run only inside the webview, not in vitest.
                 "client/src/webview-utils.ts",
