@@ -132,8 +132,10 @@ export function valueTier(row: Row): SizeTier {
     // Keyed on the FIELD (`row.strref`), never on whether this particular value resolved: keying on the text
     // sized siblings of one field differently - a resolved sound slot took the L track while the -1 beside it
     // took M, so a 5-column grid came out 266px/266px/117px/117px/117px. Per-value widths read as ragged; the
-    // tier is a property of the field. The line is unbounded, so L is the ceiling and the control ellipsizes.
-    if (row.strref === true) return "l";
+    // tier is a property of the field. ML, not L: the line is unbounded either way and ellipsizes, so the tier
+    // buys a preview rather than the whole string - and ML is what lets the 100 sound slots pack four columns
+    // into the panel (`render-cre.mts` pins that). The full line stays in the tooltip.
+    if (row.strref === true) return "ml";
     if (controlKind(row) === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
     // Decimal width follows the integer's BYTE WIDTH, not the current value (size to the type's max so a value
     // change never clips). The small box shows ~6 chars: an 8/16-bit field (<=6 digits incl. sign) fits, but a

@@ -535,6 +535,26 @@ check(
     `minGridGap=${sound.minGridGap}px`,
 );
 
+// 100 slots is a long scroll, so they pack four across - but a strref control is sized to show its dialog.tlk
+// line, and four of those must still fit the panel at this viewport. Guards both halves at once: the column
+// count is what makes the block compact, the overflow check is what stops that packing from running off-panel.
+const soundGrid = await page.evaluate(() => {
+    const grid = document.querySelector<HTMLElement>(".layout-root .grid");
+    if (!grid) return null;
+    // Two tracks per column (label, control) - see GridBlock's template.
+    const tracks = getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+    return {
+        columns: tracks / 2,
+        gridWidth: Math.round(grid.getBoundingClientRect().width),
+        docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+});
+check(
+    "layout: sound slots pack four columns without overflowing the panel",
+    soundGrid !== null && soundGrid.columns === 4 && soundGrid.docOverflow === 0,
+    JSON.stringify(soundGrid),
+);
+
 // ============================================================
 // Baseline counts (Node-side ground truth). The spell tables are no longer list sections (they render through
 // the spellbook), so they are absent from the sections map; the spellbook block is exercised via getSpellbook.

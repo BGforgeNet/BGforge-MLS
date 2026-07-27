@@ -659,7 +659,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     blocks: [
                                         // Three columns, not five: each slot is a strref sized to show its
                                         // dialog.tlk line, and five of those overflowed the panel horizontally.
-                                        { kind: "grid", columns: 3, items: slotKeys("soundSlots", "sound", 100) },
+                                        { kind: "grid", columns: 4, items: slotKeys("soundSlots", "sound", 100) },
                                     ],
                                 },
                             ],
