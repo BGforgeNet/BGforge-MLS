@@ -30,7 +30,7 @@
                     {#each valueColumns as vc (vc.key)}
                         {@const ref = r.cells[vc.key]}
                         {@const row = ref ? fields[ref] : undefined}
-                        <span class="c" style={cellWidth(vc)}>{#if row}<CellControl {row} {onedit} />{/if}</span>
+                        <span class="c" style={cellWidth(vc)}>{#if row}<CellControl {row} {onedit} compact />{/if}</span>
                     {/each}
                 </div>
             {/each}

@@ -72,6 +72,13 @@ export interface ScalarFieldSpec {
      */
     readonly hidden?: boolean;
     /**
+     * This field stores a `dialog.tlk` string reference (IESDP `type: strref`). The stored value stays a plain
+     * signed number - editing, range checks and the byte round-trip are unaffected - and the flag only tells a
+     * consumer the number can be resolved to text. -1 is the format's "no string" sentinel. Generated onto
+     * ITM/SPL specs by `scripts/ie-binary-update`; set by hand on the hand-written CRE spec.
+     */
+    readonly strref?: boolean;
+    /**
      * Presentation-only tooltip text (cleaned IESDP `desc`), surfaced by the editor as the field's hover
      * title. Read only by the presentation-schema derivation (`derive-presentation`), never by the codec or
      * `walkStruct` - so it never enters the parsed document or the JSON snapshot. Generated onto the spec by

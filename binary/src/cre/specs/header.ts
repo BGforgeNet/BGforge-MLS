@@ -25,10 +25,10 @@ function creProficiencyFields(): Record<string, FieldSpec> {
 export const creHeaderSpec = {
     signature: charsSpec(4),
     version: charsSpec(4),
-    // Strrefs into dialog.tlk: signed, -1 = "no string". (IESDP/the generator map strref -> i32; CRE is
-    // hand-written here, so the signed codec is set directly.)
-    longName: { codec: i32 },
-    shortName: { codec: i32 },
+    // Strrefs into dialog.tlk: signed, -1 = "no string" (IESDP cre_v1.htm 0x0008 / 0x000c). CRE is
+    // hand-written here, so the signed codec and the strref marker are set directly rather than generated.
+    longName: { codec: i32, strref: true },
+    shortName: { codec: i32, strref: true },
     creatureFlags: { codec: u32 },
     xpForKilling: { codec: u32 },
     powerLevelOrXp: { codec: u32 },

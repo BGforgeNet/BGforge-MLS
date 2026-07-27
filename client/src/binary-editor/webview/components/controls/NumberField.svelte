@@ -1,9 +1,11 @@
 <script lang="ts">
     import type { Row } from "@bgforge/binary-editor";
     import { rangeTooltip } from "../../state/controls";
-    const { row, onedit }: {
+    const { row, onedit, compact = false }: {
         row: Row;
         onedit: (value: number) => void;
+        // A fixed-width cell (the matrix) cannot hold a resolved strref's line - see CellControl.
+        compact?: boolean;
     } = $props();
     // Width comes from the display-width tier (the tier class on the ancestor .field-control sets --val-ch in
     // CSS); this control just renders the value. Hex sits in the M tier ("0x" + 8 digits = 10 chars).
@@ -44,6 +46,29 @@
         bounds !== undefined && row.min !== undefined && row.max !== undefined && (raw < row.min || raw > row.max),
     );
     const rangeTitle = $derived(bounds === undefined ? undefined : `Allowed range: ${bounds}`);
+
+    // A strref whose dialog.tlk line the host resolved shows "<number> <line>" while idle, and just the number
+    // while focused, so what you edit is exactly what is stored. One input across both states (rather than
+    // swapping elements) keeps focus where the user put it; `text-overflow: ellipsis` in styles.css clips the
+    // idle line, and the title carries it in full. Absent for a record outside a game, where nothing resolves.
+    const strrefLine = $derived(compact ? undefined : row.strrefText);
+    // In a compact cell the line still reaches the user, as the tooltip - it just does not widen the cell.
+    const compactStrrefTitle = $derived(compact ? row.strrefText : undefined);
+    const idleText = $derived(strrefLine === undefined ? "" : `${raw} ${strrefLine}`);
+    let editing = $state(false);
+    const strrefTitle = $derived(
+        strrefLine === undefined ? rangeTitle : rangeTitle === undefined ? strrefLine : `${strrefLine}\n${rangeTitle}`,
+    );
+    function focusStrref(e: FocusEvent) {
+        editing = true;
+        const el = e.target as HTMLInputElement;
+        el.value = String(raw);
+        el.select();
+    }
+    function blurStrref(e: FocusEvent) {
+        editing = false;
+        (e.target as HTMLInputElement).value = idleText;
+    }
 </script>
 
 {#if row.numericFormat === "hex32"}
@@ -63,6 +88,22 @@
             onchange={commitHex}
         />
     </span>
+{:else if strrefLine !== undefined}
+    <!-- type=text, not number: the idle state renders the resolved line beside the value, which a number input
+         cannot hold. Editing still commits a number - commitPlain rejects anything non-finite. -->
+    <input
+        class="strref"
+        type="text"
+        inputmode="numeric"
+        spellcheck="false"
+        value={editing ? raw : idleText}
+        disabled={!row.editable}
+        title={strrefTitle}
+        aria-invalid={outOfRange || undefined}
+        onfocus={focusStrref}
+        onblur={blurStrref}
+        onchange={commitPlain}
+    />
 {:else}
     <input
         type="number"
@@ -70,7 +111,11 @@
         min={row.min}
         max={row.max}
         disabled={!row.editable}
-        title={rangeTitle}
+        title={compactStrrefTitle === undefined
+            ? rangeTitle
+            : rangeTitle === undefined
+              ? compactStrrefTitle
+              : `${compactStrrefTitle}\n${rangeTitle}`}
         aria-invalid={outOfRange || undefined}
         onchange={commitPlain}
     />

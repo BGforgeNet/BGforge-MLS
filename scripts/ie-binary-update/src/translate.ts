@@ -188,6 +188,10 @@ export function translateField(item: OffsetItem, docBaseUrl?: string): Translate
     // the page itself is the only reliable target.
     const docUrl = docBaseUrl !== undefined && capped?.truncated === true ? docBaseUrl : undefined;
     const parts = [`codec: ${codec}`];
+    // IESDP's `strref` collapses to a plain i32 on the wire, so carry the distinction as a spec property -
+    // otherwise the only trace is the word "(strref)" inside some (not all) descriptions, which no consumer
+    // can key off. It survives on `unused` entries too: those are strrefs the engine ignores, not non-strrefs.
+    if (item.type === "strref") parts.push("strref: true");
     if (capped) parts.push(`description: ${JSON.stringify(capped.text)}`);
     if (docUrl !== undefined) parts.push(`docUrl: ${JSON.stringify(docUrl)}`);
     return {

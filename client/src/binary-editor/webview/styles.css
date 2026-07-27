@@ -1519,6 +1519,13 @@ input[type="text"]::placeholder {
 .layout-root .field-control.tier-l {
     --val-ch: 34ch;
 }
+/* A resolved strref shows "<number> <dialog.tlk line>" while idle. The line is unbounded, so it ellipsizes
+   rather than widening the column - the full text stays reachable in the title, and focusing the field swaps
+   it for the bare number (see NumberField.svelte). Ellipsis applies only while unfocused, which is exactly
+   the idle state this text belongs to. */
+.layout-root input.strref {
+    text-overflow: ellipsis;
+}
 /* Dropdown widths (enums only; see controls.ts dropdownWidth). A dropdown shares its column with hex/resref/
  * number inputs that need MORE room than enum option labels, so inheriting the text-input tiers above left
  * every dropdown over-wide. Size a dropdown to its OWN longest option instead, quantized to this small ch scale

@@ -426,5 +426,6 @@ function scalarFieldFor(
         type: typeName,
         rawValue: typeof value === "number" ? value : undefined,
         ...(numericFormat !== undefined && { numericFormat }),
+        ...(fs.strref === true && { strref: true }),
     };
 }

@@ -25,8 +25,11 @@ export interface ResourceNode {
 }
 type Node = GameNode | TypeNode | ResourceNode;
 
-// ITM/SPL/CRE v1 headers carry the (unidentified / long) name strref at byte 0x08 (IESDP) - used for the
-// hover tooltip that resolves the record's name via dialog.tlk.
+// ITM/SPL/CRE v1 headers carry the (unidentified / long) name strref at byte 0x08 (IESDP). Read raw rather
+// than through the spec's `strref` field property (which is what the binary editor resolves from): a hover
+// must not parse a whole record, and this is one constant, not a second copy of the resolution logic.
+// `binary/test/strref-fields.test.ts` pins the offset against the specs so a moved field can't silently make
+// this tooltip resolve the wrong string.
 const NAME_STRREF_OFFSET = 8;
 const NAME_STRREF_TYPES = new Set<number>([0x03ed /* ITM */, 0x03ee /* SPL */, 0x03f1 /* CRE */]);
 

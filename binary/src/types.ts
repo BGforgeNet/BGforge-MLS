@@ -74,6 +74,13 @@ export interface ParsedField {
      * fields (signature/version duplicates, `unused*`, `unknown`) that carry no value the user edits.
      */
     hidden?: boolean;
+    /**
+     * Display hint (from the spec's `strref` flag): the value is a `dialog.tlk` string reference, so a consumer
+     * holding the game's TLK can show the line it points at. The field keeps its numeric `type` - it is still
+     * edited and validated as a number - and this library never resolves the text itself: it has no game
+     * context, and one is only available when the record was opened from an installed game.
+     */
+    strref?: boolean;
 }
 
 /**

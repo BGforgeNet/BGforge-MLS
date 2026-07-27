@@ -128,6 +128,11 @@ export function valueTier(row: Row): SizeTier {
     // Enums are sized by `dropdownWidth`, not here - this scale is for the text inputs (number / string / hex)
     // that set their column's grid track. A hex32 packed id is "0x" + 8 digits = 10 chars.
     if (row.numericFormat === "hex32") return "m";
+    // A strref whose dialog.tlk line resolved renders "<number> <line>", so it is sized for text, not for the
+    // number's digits. Keyed on the RESOLVED text rather than on `row.strref`: an unresolved strref (no game
+    // behind the record, or the -1 sentinel) renders exactly a number, and this scale keys on the characters a
+    // value actually renders. The line itself is unbounded, so L is the ceiling and the control ellipsizes.
+    if (row.strrefText !== undefined) return "l";
     if (controlKind(row) === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
     // Decimal width follows the integer's BYTE WIDTH, not the current value (size to the type's max so a value
     // change never clips). The small box shows ~6 chars: an 8/16-bit field (<=6 digits incl. sign) fits, but a

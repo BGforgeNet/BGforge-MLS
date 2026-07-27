@@ -44,6 +44,13 @@ export interface Row {
     /** Display hint (from the spec's `enumOpen`): the enum is advisory, so the dropdown accepts a custom
      *  numeric value (shown as "N Unknown"). Closed enums omit this and reject off-list values at save. */
     enumOpen?: boolean;
+    /** The value is a `dialog.tlk` string reference (from the spec's `strref`). The row stays numeric and
+     *  editable as a number; this only marks it resolvable. */
+    strref?: boolean;
+    /** The line `strref` points at, resolved against the game the record was opened from. Filled by the host,
+     *  which owns the game session - never by the parser, which has no game context. Absent when the record is
+     *  not from an installed game, the strref is the -1 sentinel, or the TLK has no such entry. */
+    strrefText?: string;
     /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
      *  (Signedness is the field codec's job, not a display format.) */
     numericFormat?: "hex32";

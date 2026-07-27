@@ -14,6 +14,9 @@
     } = $props();
     const jump = useJump();
 
+    // A multi-column grid packs a label + control pair per column, so its control track has no room for a
+    // resolved strref's dialog.tlk line (the CRE sound slots: 100 strrefs, 4 columns). Those cells keep the
+    // number and carry the line in the tooltip; a single-column grid has the width, so it shows the line.
     const cells = $derived(
         items
             .map((ref) => ({ ref, row: fields[ref] }))
@@ -52,7 +55,7 @@
             <!-- Wrap in the same sized .field-control Field.svelte uses, so a dropdown in a grid cell is sized
                  to its longest option instead of falling to the combobox's intrinsic (clipping) width. -->
             <span class="field-control {controlWidthClass(cell.row)}">
-                <CellControl row={cell.row} {onedit} />
+                <CellControl row={cell.row} {onedit} compact={columns > 1} />
             </span>
         </div>
     {/each}

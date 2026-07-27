@@ -3,9 +3,11 @@ import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import type { StrrefResolver } from "../ie-resources/strref";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
+import { withResolvedStrrefs } from "./strref-rows";
 import { type HostToWebview, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
@@ -58,9 +60,11 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     private readonly diagnosticsTimers = new WeakMap<BinaryEditorDocument, ReturnType<typeof setTimeout>>();
 
     private readonly extensionUri: vscode.Uri;
+    private readonly resolveStrref: StrrefResolver;
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, resolveStrref: StrrefResolver) {
         this.extensionUri = context.extensionUri;
+        this.resolveStrref = resolveStrref;
     }
 
     async openCustomDocument(
@@ -324,7 +328,13 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     }
 
     private post(panel: vscode.WebviewPanel, message: HostToWebview): void {
-        void panel.webview.postMessage(message);
+        // Every host-to-webview message funnels through here, so strref resolution lands once instead of at
+        // each of the six sites that can carry rows. The document comes from the panel map rather than the
+        // call sites: only the document's URI says which game (if any) the record was opened from.
+        const uri = this.active.get(panel)?.uri;
+        const resolved =
+            uri === undefined ? message : withResolvedStrrefs(message, (strref) => this.resolveStrref(uri, strref));
+        void panel.webview.postMessage(resolved);
     }
 
     /** Post a message to every webview panel currently showing the given document. */

@@ -17,6 +17,19 @@ is a defect unless every other renderer either also gets it (via one shared help
 copies) or is explicitly declared N/A with the reason. A field's presentation must not depend on which block
 kind the layout schema happened to place it in.
 
+## Resolved strrefs: idle text in roomy controls, tooltip in dense ones
+
+A field the spec marks `strref` (see `binary/src/AGENTS.md`) carries the host-resolved `dialog.tlk` line in
+`row.strrefText` when the record was opened from an installed game. `NumberField.svelte` renders it: idle shows
+`<number> <line>` (tier L, ellipsized), focus swaps to the bare number so what you edit is what is stored, and
+the title carries the full line. A record outside a game has no `strrefText` and renders an ordinary number.
+
+Cells that CANNOT grow opt out via `compact` on `CellControl`: the fixed-width matrix, and a `GridBlock` with
+more than one column (the CRE sound slots are 100 strrefs across 4 columns). Those keep the number in the cell
+and move the line to the tooltip - without it the line overflows and clips the NUMBER itself, which is worse
+than not resolving at all. This is the declared N/A for the shared-layer rule below, not an oversight; the
+opt-out is derived from the layout's own density (`columns > 1`), never a per-block exception list.
+
 ## Field width: a small display-width tier scale
 
 Value controls map to a small fixed set of widths by DISPLAY width (characters rendered), not byte size. TEXT

@@ -78,6 +78,16 @@ Declare hex (not decimal) for a numeric field that packs `(type << 24) | index` 
 legible and stops the master list showing indistinguishable big decimals: MAP `FID` / `PID`, PRO
 Inventory/Head/Male/Female `FRM ID`. A plain index (the PRO header `frmId`) stays decimal.
 
+## Strrefs are marked on the spec, not inferred from a description
+
+A field holding a `dialog.tlk` string reference carries `strref: true` on its spec (`ScalarFieldSpec`, or an
+array's `element`). It stays an `i32` - the flag adds resolvability, it does not change storage, editing, or
+the byte round-trip. ITM/SPL get it from the generator (IESDP's own `type: strref`); the hand-written CRE spec
+sets it directly. Never key display behaviour off the word "(strref)" appearing in a description: IESDP writes
+it in some descriptions and not others, and marks two SPL strrefs `unused` (they are still strrefs).
+`binary/test/strref-fields.test.ts` pins the marked set - including that the record's name strref stays at
+offset 8, which the resource tree's hover tooltip reads raw.
+
 ## Faithful raw bytes; faithful labels
 
 - **Raw bytes verbatim.** Resref / string fields show their stored bytes; a field holding non-printable bytes

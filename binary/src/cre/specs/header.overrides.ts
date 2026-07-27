@@ -75,7 +75,7 @@ export const creHeaderSpecAnnotated = {
      */
     soundSlots: arraySpec({
         // Sound-set strrefs into dialog.tlk: signed, -1 = "no sound" (the common value for unused slots).
-        element: { codec: i32 },
+        element: { codec: i32, strref: true },
         count: 100,
         view: "slots",
         slotLabels: SOUND_SLOT_LABELS,
