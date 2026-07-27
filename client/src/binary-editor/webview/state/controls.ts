@@ -128,11 +128,12 @@ export function valueTier(row: Row): SizeTier {
     // Enums are sized by `dropdownWidth`, not here - this scale is for the text inputs (number / string / hex)
     // that set their column's grid track. A hex32 packed id is "0x" + 8 digits = 10 chars.
     if (row.numericFormat === "hex32") return "m";
-    // A strref whose dialog.tlk line resolved renders "<number> <line>", so it is sized for text, not for the
-    // number's digits. Keyed on the RESOLVED text rather than on `row.strref`: an unresolved strref (no game
-    // behind the record, or the -1 sentinel) renders exactly a number, and this scale keys on the characters a
-    // value actually renders. The line itself is unbounded, so L is the ceiling and the control ellipsizes.
-    if (row.strrefText !== undefined) return "l";
+    // A strref can render "<number> <dialog.tlk line>", so it is sized for text, not for the number's digits.
+    // Keyed on the FIELD (`row.strref`), never on whether this particular value resolved: keying on the text
+    // sized siblings of one field differently - a resolved sound slot took the L track while the -1 beside it
+    // took M, so a 5-column grid came out 266px/266px/117px/117px/117px. Per-value widths read as ragged; the
+    // tier is a property of the field. The line is unbounded, so L is the ceiling and the control ellipsizes.
+    if (row.strref === true) return "l";
     if (controlKind(row) === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
     // Decimal width follows the integer's BYTE WIDTH, not the current value (size to the type's max so a value
     // change never clips). The small box shows ~6 chars: an 8/16-bit field (<=6 digits incl. sign) fits, but a

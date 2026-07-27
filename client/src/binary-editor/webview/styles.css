@@ -1429,7 +1429,9 @@ input[type="text"]::placeholder {
 .layout-root .grid {
     display: grid;
     justify-content: start;
-    gap: 4px 40px;
+    /* Column gap is the shared inter-column spacing, not a value of its own - see the webview AGENTS.md
+       "Uniform spacing" rule. It was a hardcoded 40px, which read as a gulf beside the packed field grids. */
+    gap: 4px var(--bb-col-gap);
 }
 .layout-root .grid .skill {
     /* Subgrid spanning this column's (label, control) track pair, so labels share a max-content track and
@@ -1685,11 +1687,13 @@ input[type="text"]::placeholder {
     min-width: 0;
     text-align: right;
 }
-/* Numeric/text grid inputs use the fixed compact width; the combobox's own value input is excluded so it
- * follows its box (sized to --val-ch below) instead of being pinned narrow and clipping its option. */
+/* Numeric/text grid inputs follow the display-width tier, like every other control; the combobox's own value
+ * input is excluded so it follows its box (sized to --val-ch below) instead of being pinned narrow and clipping
+ * its option. This was a flat 52px, which is under the S tier and clipped any value past ~4 digits - a CRE sound
+ * slot's 5-digit strref rendered "7290". The 52px survives only as the fallback for a control with no tier. */
 .layout-root .grid .skill input:not(.bb-combobox-input) {
-    width: 52px;
-    min-width: 0;
+    width: var(--val-ch, 52px);
+    box-sizing: border-box;
 }
 /* Grid dropdowns size to their own longest option via the dd-* class on the wrapping .field-control (the
  * same sizing the kv field layout uses); without this a grid dropdown fell to the combobox's intrinsic,

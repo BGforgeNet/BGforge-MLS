@@ -27,11 +27,10 @@ hides the span and swaps the input to the bare number, so what you edit is what 
 never shown twice; the title carries the full line. A record outside a game has no `strrefText` and renders an
 ordinary number.
 
-Cells that CANNOT grow opt out via `compact` on `CellControl`: the fixed-width matrix, and a `GridBlock` with
-more than one column (the CRE sound slots are 100 strrefs across 4 columns). Those keep the number in the cell
-and move the line to the tooltip - without it the line overflows and clips the NUMBER itself, which is worse
-than not resolving at all. This is the declared N/A for the shared-layer rule below, not an oversight; the
-opt-out is derived from the layout's own density (`columns > 1`), never a per-block exception list.
+The `compact` prop on `CellControl` is the declared N/A for the shared-layer rule below: it keeps the number in
+the cell and moves the line to the tooltip. Only `MatrixBlock` sets it - a true 2D matrix has no room to grow.
+A grid is NOT compact: it shows the line like any other form. Getting there needed the grid to stop sizing
+itself by content - see the sizing note below - because a 5-column grid of L-tier controls overflowed the panel.
 
 ## Field width: a small display-width tier scale
 
@@ -58,6 +57,22 @@ in the CSS classes (`.field-control.tier-{s,m,ml,l}` and `.field-control.dd-{1..
   that is the off-the-longest-option contract, not a defect.
 - A control narrower than its column track leaves empty space to its right. INTENTIONAL: the value track is
   `auto`, so it sizes to the widest control in the column; left edges stay aligned.
+
+## A grid cell is sized by its tier, never by its content
+
+`GridBlock` cells consume `--val-ch` exactly like the kv forms. Two traps this closes, both of which shipped as
+visible defects in the CRE sound slots (100 strrefs):
+
+- **The tier is a property of the FIELD, not of the value.** `valueTier` keys on `row.strref`, never on whether
+  a particular strref resolved - keying on the resolved text sized siblings of one field differently, so a
+  5-column grid came out 266/266/117/117/117 and read as ragged.
+- **A grid control must not fall back to its intrinsic width.** Grid inputs were pinned to a flat `52px`, under
+  the S tier, which clipped any value past ~4 digits. They now take `var(--val-ch, 52px)`. Do NOT add
+  `min-width: 0` here (the kv rules have it): the control track is `auto`, so a shrinkable control lets the
+  track shrink with it and the value clips again.
+
+A grid's column count is the schema's lever for fitting the result: L-tier controls are wide, so the sound
+slots run 3 columns, not 5. Check the panel does not overflow after changing either.
 
 ## Keep columns aligned with fixed grid tracks
 
