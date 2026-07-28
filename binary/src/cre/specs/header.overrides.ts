@@ -44,27 +44,56 @@ export const creHeaderSpecAnnotated = {
      */
     effStructureVersion: { ...creHeaderSpec.effStructureVersion, enum: CreEffStructureVersion },
     /**
-     * `sex` is GENDER.IDS in BGEE, which mods can extend - the engine
-     * tolerates out-of-table values. Keep advisory.
+     * The fields below are all IDS-backed, so each declares the table that names it (`ref`) alongside the
+     * vendored `enum`. The vendored table is the baseline a record opened outside a game falls back to; with a
+     * game open, that install's own table wins per value and is far richer (8 vendored races against RACE.IDS's
+     * 82) and mod-extended. Every one stays `enumOpen`: the engine tolerates out-of-table values, and the
+     * declaration adds names, never a closed value set.
      */
-    sex: { ...creHeaderSpec.sex, enum: CreSex, enumOpen: true },
-    enemyAlly: { ...creHeaderSpec.enemyAlly, enum: CreEnemyAlly, enumOpen: true },
-    general: { ...creHeaderSpec.general, enum: CreGeneral, enumOpen: true },
-    // SPECIFIC.IDS: open enum, mostly game/mod-defined (see CreSpecific).
-    specific: { ...creHeaderSpec.specific, enum: CreSpecific, enumOpen: true },
-    race: { ...creHeaderSpec.race, enum: CreRace, enumOpen: true },
+    sex: { ...creHeaderSpec.sex, enum: CreSex, enumOpen: true, ref: { kind: "ids", tables: ["GENDER"] } },
+    enemyAlly: { ...creHeaderSpec.enemyAlly, enum: CreEnemyAlly, enumOpen: true, ref: { kind: "ids", tables: ["EA"] } },
+    general: { ...creHeaderSpec.general, enum: CreGeneral, enumOpen: true, ref: { kind: "ids", tables: ["GENERAL"] } },
+    specific: {
+        ...creHeaderSpec.specific,
+        enum: CreSpecific,
+        enumOpen: true,
+        ref: { kind: "ids", tables: ["SPECIFIC"] },
+    },
+    race: { ...creHeaderSpec.race, enum: CreRace, enumOpen: true, ref: { kind: "ids", tables: ["RACE"] } },
     // `racialEnemy` is a RACE.IDS value (the ranger favoured-enemy race) - same lookup table as `race`.
-    racialEnemy: { ...creHeaderSpec.racialEnemy, enum: CreRace, enumOpen: true },
-    class: { ...creHeaderSpec.class, enum: CreClass, enumOpen: true },
+    racialEnemy: {
+        ...creHeaderSpec.racialEnemy,
+        enum: CreRace,
+        enumOpen: true,
+        ref: { kind: "ids", tables: ["RACE"] },
+    },
+    class: { ...creHeaderSpec.class, enum: CreClass, enumOpen: true, ref: { kind: "ids", tables: ["CLASS"] } },
     // `gender` mirrors GENDER.IDS - same lookup table as `sex`.
-    gender: { ...creHeaderSpec.gender, enum: CreSex, enumOpen: true },
-    alignment: { ...creHeaderSpec.alignment, enum: CreAlignment, enumOpen: true },
+    gender: { ...creHeaderSpec.gender, enum: CreSex, enumOpen: true, ref: { kind: "ids", tables: ["GENDER"] } },
+    alignment: {
+        ...creHeaderSpec.alignment,
+        enum: CreAlignment,
+        enumOpen: true,
+        ref: { kind: "ids", tables: ["ALIGNMEN"] },
+    },
     /**
-     * `kit` is KIT.IDS (CRE header 0x244). Open enum: mods add kits beyond the engine-defined set, so
-     * out-of-table values surface as Unknown(N). The LE u32 read matches the IESDP KIT_* dword values
-     * directly (verified against the Edwin/Conjurer fixture - see CreKit).
+     * `kit` is KIT.IDS (CRE header 0x244). The LE u32 read matches the IESDP KIT_* dword values directly
+     * (verified against the Edwin/Conjurer fixture - see CreKit).
+     *
+     * Deliberately declares NO `ref`, unlike every other IDS-backed field here: KIT.IDS is not keyed in this
+     * field's value space, and not in one consistent space either. Most entries are ids the field stores
+     * shifted left 16 (0x4003 KENSAI -> 0x40030000), but BARBARIAN (0x40000000) and WILDMAGE (0x80000000) are
+     * already full dwords, and shifting 0x4000 MAGESCHOOL_GENERALIST would collide with BARBARIAN's own key.
+     * The vendored table disagrees further, placing Barbarian at 0x4000. Merging under any single rule offers
+     * values the field cannot hold, so the vendored table stays the only source until the encoding is settled.
      */
     kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true },
+    /**
+     * ANIMATE.IDS, and the only one of these with NO vendored table: the value space is per-install (321
+     * entries in BG2:ToB) and a bare `0x6100` names nothing on its own. So this field shows a plain hex number
+     * outside a game and gains names only from the install - see the hex `format` in the presentation below.
+     */
+    animationId: { ...creHeaderSpec.animationId, ref: { kind: "ids", tables: ["ANIMATE"] } },
     // The 20 weapon-proficiency bytes are split into 40 packed scalar fields in the base spec (each byte ->
     // active/original sub-values per IESDP cre_v1.htm); they pass through here with no per-field overrides and
     // are surfaced as a 2-column matrix by the layout.

@@ -13,8 +13,10 @@
 /** Row shapes this fills in. Matched structurally: this module never imports the editor's Row type, so it
  *  walks messages whose row-bearing shape it does not need to know. */
 interface ValueRefRow {
-    ref: { kind: string };
+    ref: { kind: string; tables?: readonly string[] };
     rawValue: number;
+    enumOptions?: Record<string, string>;
+    valueType?: string;
 }
 
 interface SlotRefRow {
@@ -22,10 +24,12 @@ interface SlotRefRow {
     name: string;
 }
 
-/** What the host can answer about the open game. Undefined from either means "no game, or nothing there". */
+/** What the host can answer about the open game. Undefined from any of these means "no game, or nothing there". */
 export interface GameLookups {
     strref(strref: number): string | undefined;
     slotLabel(tables: readonly string[], index: number): string | undefined;
+    /** The whole naming table, for a field whose value space the game defines (RACE.IDS, ANIMATE.IDS, ...). */
+    idsTable(tables: readonly string[]): ReadonlyMap<number, string> | undefined;
 }
 
 /** A `{ kind: ... }` ref as it survives the structural walk - the union's own type lives in the binary lib. */
@@ -56,6 +60,25 @@ function isValueRefRow(value: object): value is ValueRefRow {
     );
 }
 
+/**
+ * The row's option list once the install's own naming table is folded in: the game wins per value, the vendored
+ * table fills what it does not cover. Vendored entries are kept rather than replaced wholesale because the two
+ * disagree in both directions - BG2's RACE.IDS carries 82 entries against 8 vendored, while its SPECIFIC.IDS
+ * carries 3 against 11.
+ *
+ * A field with no vendored table at all (CRE animationId) arrives as a plain number, so it is also re-typed to
+ * an enum here - otherwise the names would resolve into a control that never reads them. Always open: these
+ * value spaces are mod-extended, so a value no table names has to stay editable.
+ */
+function namedByGame(
+    row: ValueRefRow,
+    table: ReadonlyMap<number, string>,
+): { enumOptions: Record<string, string>; valueType: string; enumOpen: true } {
+    const merged: Record<string, string> = { ...row.enumOptions };
+    for (const [key, name] of table) merged[String(key)] = name;
+    return { enumOptions: merged, valueType: "enum", enumOpen: true };
+}
+
 export function withGameContext<T>(value: T, lookups: GameLookups): T {
     if (Array.isArray(value)) {
         let changed = false;
@@ -75,6 +98,10 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     if (isValueRefRow(row) && row.ref.kind === "strref") {
         const text = lookups.strref(row.rawValue);
         if (text !== undefined) row = { ...row, strrefText: text };
+    }
+    if (isValueRefRow(row) && row.ref.kind === "ids" && row.ref.tables !== undefined) {
+        const table = lookups.idsTable(row.ref.tables);
+        if (table !== undefined) row = { ...row, ...namedByGame(row, table) };
     }
     if (isSlotRefRow(row)) {
         const { ref, index } = row.slotRef;

@@ -28,6 +28,11 @@ const haveFixtures = fs.existsSync(ITM_FIXTURE) && fs.existsSync(CRE_FIXTURE);
 
 const isStrref = (f: ParsedField): boolean => f.ref?.kind === "strref";
 
+/** The IDS tables a field declares, or undefined when it declares no IDS ref. */
+function idsTables(f: ParsedField): readonly string[] | undefined {
+    return f.ref?.kind === "ids" ? f.ref.tables : undefined;
+}
+
 // The flag is what tells a consumer holding the game's dialog.tlk which numbers are resolvable, so it has to
 // survive the spec -> walk -> display-tree path, not merely exist on the spec.
 describe.skipIf(!haveFixtures)("strref fields reach the display tree", () => {
@@ -85,5 +90,39 @@ describe.skipIf(!haveFixtures)("strref fields reach the display tree", () => {
 
         expect(itmName?.offset).toBe(8);
         expect(creName?.offset).toBe(8);
+    });
+});
+
+// These values are IDS-backed: the vendored enum is a small baseline (8 races) while the install's own
+// RACE.IDS carries 82 and mods extend it further, so the field declares which table names it and a consumer
+// holding the game merges that in. Declaring it here is what makes the whole set reachable without the client
+// keeping its own field-to-table map.
+describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () => {
+    it("declares the naming table for every game-defined header field", () => {
+        const declared = parseFields(creParser, CRE_FIXTURE)
+            .filter((f) => idsTables(f) !== undefined)
+            .map((f) => [f.name, idsTables(f)] as const);
+
+        expect(Object.fromEntries(declared)).toEqual({
+            Sex: ["GENDER"],
+            Gender: ["GENDER"],
+            "Enemy Ally": ["EA"],
+            General: ["GENERAL"],
+            Specific: ["SPECIFIC"],
+            Race: ["RACE"],
+            "Racial Enemy": ["RACE"],
+            Class: ["CLASS"],
+            Alignment: ["ALIGNMEN"],
+            "Animation Id": ["ANIMATE"],
+        });
+    });
+
+    // Additive, not a replacement: the vendored table stays as the fallback for a record opened outside a game,
+    // and the field stays an open enum so a value no table names is still editable.
+    it("keeps the vendored table and open-enum behaviour alongside the declaration", () => {
+        const race = parseFields(creParser, CRE_FIXTURE).find((f) => f.name === "Race");
+
+        expect(race?.enumOptions?.["1"]).toBe("Human");
+        expect(race?.enumOpen).toBe(true);
     });
 });

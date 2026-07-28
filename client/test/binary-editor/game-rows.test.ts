@@ -5,6 +5,19 @@ const LINE = "Ring of Protection +1";
 const lookups = {
     strref: (strref: number): string | undefined => (strref === 6348 ? LINE : undefined),
     slotLabel: (): string | undefined => undefined,
+    idsTable: (): ReadonlyMap<number, string> | undefined => undefined,
+};
+
+/** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
+const withRaceIds = {
+    ...lookups,
+    idsTable: (tables: readonly string[]): ReadonlyMap<number, string> | undefined =>
+        tables[0] === "RACE"
+            ? new Map([
+                  [1, "HUMAN"],
+                  [6, "GNOME"],
+              ])
+            : undefined,
 };
 
 const strrefRow = { id: "f1", kind: "field", name: "Unidentified Name", ref: { kind: "strref" }, rawValue: 6348 };
@@ -91,6 +104,63 @@ describe("withGameContext", () => {
         const out = withGameContext({ rows: [slotRow] }, lookups);
 
         expect(out.rows[0]).toMatchObject({ name: "Sound 90" });
+    });
+
+    // An IDS-backed enum: the vendored table is a small baseline, the install's own is richer and mod-extended.
+    // Game wins per value, vendored fills the gaps - so neither table alone decides the option list.
+    it("merges the game's IDS table over the vendored enum, keeping vendored gaps", () => {
+        const race = {
+            id: "r1",
+            kind: "field",
+            name: "Race",
+            valueType: "enum",
+            ref: { kind: "ids", tables: ["RACE"] },
+            rawValue: 1,
+            enumOptions: { "1": "Human", "2": "Elf" },
+        };
+
+        const out = withGameContext({ rows: [race] }, withRaceIds);
+
+        // 1 overridden by the game, 2 kept from vendored, 6 added by the game.
+        expect(out.rows[0]?.enumOptions).toEqual({ "1": "HUMAN", "2": "Elf", "6": "GNOME" });
+    });
+
+    it("leaves the vendored enum untouched when the game has no such table", () => {
+        const clazz = {
+            id: "c1",
+            kind: "field",
+            name: "Class",
+            valueType: "enum",
+            ref: { kind: "ids", tables: ["CLASS"] },
+            rawValue: 2,
+            enumOptions: { "2": "Mage" },
+        };
+
+        const out = withGameContext({ rows: [clazz] }, withRaceIds);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "2": "Mage" });
+    });
+
+    // CRE animationId has NO vendored table - a bare 0x6100 names nothing - so with a game it must become a
+    // named dropdown, not stay a plain number input. Open, so an unnamed animation is still editable.
+    it("turns a plain number with no vendored table into an open enum when the game names it", () => {
+        const anim = {
+            id: "a1",
+            kind: "field",
+            name: "Animation Id",
+            valueType: "uint32",
+            ref: { kind: "ids", tables: ["ANIMATE"] },
+            rawValue: 24832,
+        };
+        const named = { ...lookups, idsTable: () => new Map([[24832, "MFIE_BAAL"]]) };
+
+        const out = withGameContext({ rows: [anim] }, named);
+
+        expect(out.rows[0]).toMatchObject({
+            valueType: "enum",
+            enumOpen: true,
+            enumOptions: { "24832": "MFIE_BAAL" },
+        });
     });
 
     // A CRE sound slot is BOTH: a strref (the line it points at) and an IDS-named slot (its label). The real

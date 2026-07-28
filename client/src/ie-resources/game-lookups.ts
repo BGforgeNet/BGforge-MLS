@@ -13,6 +13,9 @@ export type StrrefResolver = (uri: vscode.Uri, strref: number) => string | undef
 /** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
 export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
 
+/** Resolves a whole IDS table, for a field whose value space the game defines (RACE.IDS, ANIMATE.IDS, ...). */
+export type IdsTableResolver = (uri: vscode.Uri, tables: readonly string[]) => ReadonlyMap<number, string> | undefined;
+
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
 
@@ -67,5 +70,35 @@ export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
             // Unreadable game - the slot keeps its generic label, as it does outside a game.
         }
         return identifier === "" ? undefined : identifier;
+    };
+}
+
+/**
+ * Resolves the whole naming table for a value space the game owns, from the first of `tables` the install
+ * actually ships.
+ *
+ * First table PRESENT wins outright, rather than the per-key search `createSlotLabelResolver` does: a slot
+ * array wants the best name available for each index, but an option LIST has to come from one table, since two
+ * installs' tables mean different things at the same key and blending them would offer entries that exist in
+ * neither.
+ */
+export function createIdsTableResolver(session: TlkSource): IdsTableResolver {
+    return (uri, tables) => {
+        if (uri.scheme !== GAME_RESOURCE_SCHEME) return;
+        const { gameDir } = parseResourceUri(uri);
+        if (!gameDir) return;
+        // Accumulate rather than returning from inside the loop, matching the resolvers above: a bare `return`
+        // plus a single value return is the shape that satisfies both the linter and `noImplicitReturns`.
+        let resolved: ReadonlyMap<number, string> | undefined;
+        try {
+            const game = session.ensureOpen(gameDir);
+            for (const table of tables) {
+                resolved = game.ids(table);
+                if (resolved !== undefined) break;
+            }
+        } catch {
+            // Unreadable game - the field falls back to its vendored table, as it does outside a game.
+        }
+        return resolved;
     };
 }

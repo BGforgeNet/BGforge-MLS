@@ -86,7 +86,11 @@ function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
 const token = {} as vscode.CancellationToken;
 
 // This suite is about the restore path, not game lookups: a record outside a game resolves nothing.
-const noGame = { strref: (): undefined => undefined, slotLabel: (): undefined => undefined };
+const noGame = {
+    strref: (): undefined => undefined,
+    slotLabel: (): undefined => undefined,
+    idsTable: (): undefined => undefined,
+};
 
 describe("binary editor hot-exit restore", () => {
     beforeEach(() => {

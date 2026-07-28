@@ -371,6 +371,21 @@ function scalarFieldFor(
     value: unknown,
     pres?: FieldPresentation,
 ): ParsedField {
+    const field = scalarFieldValue(label, fs, offset, size, value, pres);
+    // One exit for the external-ref declaration. The body returns from three branches (enum / flags / plain)
+    // and attaching it per-branch silently omits whichever branch a ref-carrying field happens to land in -
+    // which is precisely what stranded every IDS-backed enum when only the plain branch carried it.
+    return fs.ref === undefined ? field : { ...field, ref: fs.ref };
+}
+
+function scalarFieldValue(
+    label: string,
+    fs: ScalarFieldSpec,
+    offset: number,
+    size: number,
+    value: unknown,
+    pres?: FieldPresentation,
+): ParsedField {
     if (fs.enum) {
         const resolved = fs.enum[value as number];
         return {
@@ -434,6 +449,5 @@ function scalarFieldFor(
         type: typeName,
         rawValue: typeof value === "number" ? value : undefined,
         ...(numericFormat !== undefined && { numericFormat }),
-        ...(fs.ref !== undefined && { ref: fs.ref }),
     };
 }

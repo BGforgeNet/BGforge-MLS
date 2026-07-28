@@ -5,7 +5,14 @@ import { conlog } from "../logging";
 import { GameResourceFileSystemProvider } from "./fs-provider";
 import { GameSession } from "./session";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
-import { createSlotLabelResolver, createStrrefResolver, type SlotLabelResolver, type StrrefResolver } from "./strref";
+import {
+    createIdsTableResolver,
+    createSlotLabelResolver,
+    createStrrefResolver,
+    type IdsTableResolver,
+    type SlotLabelResolver,
+    type StrrefResolver,
+} from "./game-lookups";
 import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
 
 const LAST_DIR_KEY = "bgforge.ieResources.lastDir";
@@ -19,6 +26,7 @@ const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
 export function registerIeResources(context: vscode.ExtensionContext): {
     strref: StrrefResolver;
     slotLabel: SlotLabelResolver;
+    idsTable: IdsTableResolver;
 } {
     const session = new GameSession();
     const tree = new GameResourceTreeProvider(session);
@@ -121,5 +129,9 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         void setHasGame(false);
     }
 
-    return { strref: createStrrefResolver(session), slotLabel: createSlotLabelResolver(session) };
+    return {
+        strref: createStrrefResolver(session),
+        slotLabel: createSlotLabelResolver(session),
+        idsTable: createIdsTableResolver(session),
+    };
 }

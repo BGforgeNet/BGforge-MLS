@@ -89,13 +89,13 @@ spec sets its own.
 **Two axes, and a field commonly has both.** `ref` resolves a field's VALUE; an array's `slotRef` names its
 SLOTS (emitted onto each child as `{ ref, index }`). A CRE sound slot carries each - a strref value and an
 IDS-named label - so a consumer applies both in sequence. Handling them as exclusive branches is what silently
-dropped the label on exactly the rows the feature exists for; `binary/test/strref-fields.test.ts` pins a row
+dropped the label on exactly the rows the feature exists for; `binary/test/external-refs.test.ts` pins a row
 that carries both.
 
 - **Never key display behaviour off description prose.** IESDP writes "(strref)" in some descriptions and not
   others, marks two SPL strrefs `unused` (still strrefs), and documents the same resref field differently
   across formats ("Ground icon (BAM)" in ITM, "Ground icon" in SPL). The declaration is the only reliable
-  signal. `strref-fields.test.ts` pins the marked set - including that the record's name strref stays at offset
+  signal. `external-refs.test.ts` pins the marked set - including that the record's name strref stays at offset
   8, which the resource tree's hover tooltip reads raw.
 - **`tables` is an ordered candidate list, and the order does real work.** It is not only preference ranking:
   it is how one declaration resolves across editions that disagree, since only one candidate exists in a given
@@ -106,6 +106,17 @@ that carries both.
   a consumer holding the game resolves it (`Game.ids()`, `Game.tlk()`). This is also what keeps a parsed record
   and its JSON snapshot identical whether or not a game is open. `slotLabels` remains the game-agnostic
   fallback for a record opened outside a game.
+- **A vendored `enum` and an `ids` ref coexist; the ref does not replace the table.** The vendored table is what
+  a record opened OUTSIDE a game falls back to, so it stays; with a game open the install's own wins per value
+  and the vendored one fills what it does not cover. The gap runs both ways - BG2's RACE.IDS carries 82 entries
+  against 8 vendored, its SPECIFIC.IDS only 3 against 11. Keep such fields `enumOpen`: the declaration adds
+  names, never a closed value set.
+- **Only declare an `ids` ref when the table is keyed in that FIELD's value space.** CRE `kit` deliberately
+  declares none. KIT.IDS is keyed inconsistently against the stored dword: most entries are ids the field
+  stores shifted left 16 (0x4003 KENSAI -> 0x40030000), but BARBARIAN (0x40000000) and WILDMAGE (0x80000000)
+  are already full dwords, and shifting 0x4000 MAGESCHOOL_GENERALIST collides with BARBARIAN's own key. Merging
+  under any single rule offers values the field cannot legally hold - worse than no names at all. Check the
+  table's keys against real stored values before declaring one.
 
 ## Faithful raw bytes; faithful labels
 

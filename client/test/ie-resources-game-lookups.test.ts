@@ -5,7 +5,11 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 
 // Imported after vi.mock so the mocked vscode is in place.
-import { createSlotLabelResolver, createStrrefResolver } from "../src/ie-resources/strref";
+import {
+    createIdsTableResolver,
+    createSlotLabelResolver,
+    createStrrefResolver,
+} from "../src/ie-resources/game-lookups";
 import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
@@ -117,5 +121,42 @@ describe("createSlotLabelResolver", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.cre" } as never;
 
         expect(createSlotLabelResolver(session({ tables: ["sndslot"] }))(fileUri, ["SNDSLOT"], 21)).toBeUndefined();
+    });
+});
+
+describe("createIdsTableResolver", () => {
+    it("returns the whole table, so a consumer can build an option list from it", () => {
+        const resolve = createIdsTableResolver(session({ tables: ["sndslot"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT"])).toEqual(new Map([[21, "AREA_FOREST"]]));
+    });
+
+    // First table PRESENT wins outright - not a per-key merge. Two installs' tables mean different things at
+    // the same key, so blending them would invent entries that exist in neither.
+    it("returns the first table the game ships, never a blend of both", () => {
+        const resolve = createIdsTableResolver(session({ tables: ["sndslot", "soundoff"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"])).toEqual(new Map([[21, "AREA_FOREST"]]));
+    });
+
+    it("falls back to the next table when the preferred one is absent", () => {
+        const resolve = createIdsTableResolver(session({ tables: ["soundoff"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"])?.get(35)).toBe("SELECT_RARE");
+    });
+
+    it("returns nothing when the game ships none of the candidates", () => {
+        expect(createIdsTableResolver(session())(gameUri(), ["RACE"])).toBeUndefined();
+    });
+
+    it("returns nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.cre" } as never;
+
+        expect(createIdsTableResolver(session({ tables: ["sndslot"] }))(fileUri, ["SNDSLOT"])).toBeUndefined();
+    });
+
+    // An unreadable game must not fail the open; the field falls back to its vendored table.
+    it("swallows an unopenable game", () => {
+        expect(createIdsTableResolver(session({ throws: true }))(gameUri(), ["SNDSLOT"])).toBeUndefined();
     });
 });
