@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+### Infinity Engine game resources
+
+- New IE Game Resources view: point it at a game's `chitin.key` and browse everything the install holds, BIF
+  archives and `override` alike, grouped by resource type. Opening a resource loads it in the matching editor -
+  the binary editor for ITM/SPL/EFF/CRE, the normal one otherwise. Hovering shows the resource's in-game name,
+  read from the game's `dialog.tlk`.
+- A record opened from a game now shows what only the install can say, instead of raw numbers:
+  - The `dialog.tlk` line appears in place of a strref, with the number kept beside it and the full text on
+    hover. Editing the field still edits the number.
+  - CRE sound slots are named from the game's `SNDSLOT.IDS` or `SOUNDOFF.IDS` - whichever the install ships -
+    and are laid out in columns rather than one slot per row.
+  - Gender, alignment, race, class, kit, animation and the other IDS-backed CRE fields list the install's own
+    identifiers, including any a mod adds. Values the install does not name stay editable.
+  - Magic school and secondary type are named from `MSCHOOL.2DA` and `MSECTYPE.2DA`.
+  - A resref the game can actually resolve gets an open affordance beside it, which opens that resource. One
+    the game does not have is left as-is and never flagged: a mod record legitimately refers to a file a later
+    install step creates.
+
+### Fixes
+
+- Unsaved binary-editor and animation-editor changes now survive a window reload or crash, instead of being
+  silently lost.
+- CRE kits whose identifier is keyed in the high half of the table entry - Barbarian and Wild Mage on the
+  Enhanced Editions - can now be named and selected. They were missing from the list entirely.
+- Values in the CRE sound-slot grid no longer clip, and the cells line up in columns.
+
 ## 3.12.0
 
 - New animation viewer/player/converter: Fallout FRM and Infinity Engine BAM files.
