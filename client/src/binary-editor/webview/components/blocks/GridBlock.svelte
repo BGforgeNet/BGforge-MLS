@@ -52,8 +52,16 @@
             node.style.setProperty("--col-w", `${Math.ceil(label + control) + LABEL_CONTROL_GAP}px`);
         };
         // After the row values land, not during this update - measuring now would read the previous content.
-        const scheduled = requestAnimationFrame(measure);
-        return { update: () => requestAnimationFrame(measure), destroy: () => cancelAnimationFrame(scheduled) };
+        // One frame in flight at a time: each re-measure supersedes the pending one, and `destroy` cancels
+        // whichever is outstanding. Tracking only the FIRST handle leaked a callback per update and let a
+        // measure run against a node already removed from the DOM.
+        let pending = 0;
+        const schedule = (): void => {
+            cancelAnimationFrame(pending);
+            pending = requestAnimationFrame(measure);
+        };
+        schedule();
+        return { update: schedule, destroy: () => cancelAnimationFrame(pending) };
     }
 </script>
 <div class="grid" style={`column-count:${columns}`} use:fitColumns={cells}>

@@ -156,14 +156,24 @@ function openPlainBif(source: ByteSource): BifArchive {
     };
 }
 
+/**
+ * Inflate one stream, refusing to produce more than deflate could plausibly have compressed. zlib's best
+ * ratio is 1032:1, so anything past that multiple of the input is a corrupt or hostile length rather than a
+ * real archive, and fails as a clear zlib error instead of an unbounded allocation.
+ */
+const MAX_INFLATE_RATIO = 1032;
+
+function inflateBounded(compressed: Uint8Array): Buffer {
+    return zlib.inflateSync(compressed, { maxOutputLength: compressed.byteLength * MAX_INFLATE_RATIO });
+}
+
 // BIFC ('BIF ' V1): header is sig(4)+version(4)+filenameLen(4)+filename+uncompressedLen(4)+compressedLen(4),
 // then one zlib stream of the whole inner BIFF.
 function inflateWhole(source: ByteSource): Uint8Array {
     const all = source.read(0, source.size);
     const dv = new DataView(all.buffer, all.byteOffset, all.byteLength);
     const filenameLen = dv.getUint32(8, true);
-    const compressed = all.subarray(12 + filenameLen + 8);
-    return zlib.inflateSync(compressed);
+    return inflateBounded(all.subarray(12 + filenameLen + 8));
 }
 
 // BIFC V1.0 ('BIFC'): header is sig(4)+version(4)+uncompressedSize(4), then blocks of
@@ -171,17 +181,20 @@ function inflateWhole(source: ByteSource): Uint8Array {
 function inflateBlocks(source: ByteSource): Uint8Array {
     const all = source.read(0, source.size);
     const dv = new DataView(all.buffer, all.byteOffset, all.byteLength);
+    // The declared total bounds the LOOP, never an allocation: it comes straight off the file, so sizing a
+    // buffer with it lets the file's own claim reserve memory (and the archive then holds that buffer for its
+    // lifetime). Concatenating what actually inflated gives the same bytes with no such trust.
     const total = dv.getUint32(8, true);
-    const out = Buffer.allocUnsafe(total);
+    const blocks: Uint8Array[] = [];
     let pos = 12;
     let written = 0;
     while (pos + 8 <= all.byteLength && written < total) {
         const compressedSize = dv.getUint32(pos + 4, true);
         pos += 8;
-        const inflated = zlib.inflateSync(all.subarray(pos, pos + compressedSize));
-        out.set(inflated, written);
+        const inflated = inflateBounded(all.subarray(pos, pos + compressedSize));
+        blocks.push(inflated);
         written += inflated.byteLength;
         pos += compressedSize;
     }
-    return out.subarray(0, written);
+    return Buffer.concat(blocks);
 }

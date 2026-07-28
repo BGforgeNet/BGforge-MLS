@@ -266,6 +266,37 @@ describe("withGameContext", () => {
         expect(out.rows[0]?.enumOptions).toEqual({ "2147483648": "HIGHBIT" });
     });
 
+    /**
+     * IDS files are plain text and mods write what they like, so a table can carry a negative key. The upper
+     * bound already drops a key too large for the field; a negative one is just as unstorable, and offering it
+     * would put an option in the dropdown that no value of the field can ever select.
+     */
+    it("drops a table key the field cannot hold, at either end of its range", () => {
+        const sex = {
+            id: "x1",
+            kind: "field",
+            name: "Sex",
+            valueType: "enum",
+            size: 1,
+            ref: { kind: "ids", tables: ["GENDER"] },
+            rawValue: 1,
+            enumOptions: {},
+        };
+        const named = {
+            ...lookups,
+            namingTable: () =>
+                new Map([
+                    [-1, "NEGATIVE"],
+                    [1, "MALE"],
+                    [256, "TOO_WIDE"],
+                ]),
+        };
+
+        const out = withGameContext({ rows: [sex] }, named);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "1": "MALE" });
+    });
+
     // A 2DA-backed field (an EFF magic school) resolves through the same merge as an IDS one - only the source
     // resource differs - so the kind has to reach the lookup rather than being assumed to be IDS.
     it("names a 2DA-backed field from the game's row-name table", () => {

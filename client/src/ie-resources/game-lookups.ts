@@ -35,6 +35,28 @@ export type ResourceTypeResolver = (uri: vscode.Uri, decl: ResourceRefDecl, resr
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
 
+/**
+ * The game directory a document was opened from, or undefined when it was not opened from a game. One
+ * definition for every resolver below, so they cannot drift on what counts as game-backed.
+ */
+function gameDirOf(uri: vscode.Uri): string | undefined {
+    if (uri.scheme !== GAME_RESOURCE_SCHEME) return undefined;
+    const { gameDir } = parseResourceUri(uri);
+    return gameDir === "" ? undefined : gameDir;
+}
+
+/**
+ * Whether anything can be resolved for this document at all.
+ *
+ * Exported so a caller can skip work that could only ever come back empty: the binary editor walks every
+ * host-to-webview message hunting for rows to fill in, and for a record outside a game that traversal is
+ * guaranteed to find nothing. Asking here keeps the scheme's meaning in this module rather than spreading a
+ * URI check into consumers.
+ */
+export function isGameDocument(uri: vscode.Uri): boolean {
+    return gameDirOf(uri) !== undefined;
+}
+
 /** The slice of GameSession this needs. Narrow on purpose: the resolver only ever reads a line, and depending
  *  on the whole session would drag its open/close lifecycle into every caller (and every test). */
 interface TlkSource {
@@ -50,13 +72,17 @@ interface TlkSource {
 
 export function createStrrefResolver(session: TlkSource): StrrefResolver {
     return (uri, strref) => {
-        if (uri.scheme !== GAME_RESOURCE_SCHEME || strref === NO_STRING || strref < 0) return;
-        const { gameDir } = parseResourceUri(uri);
-        if (!gameDir) return;
+        if (strref === NO_STRING || strref < 0) return;
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
         let line: string | undefined;
         try {
             // ensureOpen, not game(): an editor VS Code restored across a reload can outlive the session's
             // knowledge of its game, exactly as the FS provider's read path handles.
+            //
+            // Always the male/default `dialog.tlk`, though `Game.tlk` can open `dialogF.tlk` too: a record has
+            // no player gender, so there is nothing to select on, and the two tables differ for only a handful
+            // of strings. Making it selectable needs a user-facing control, not a default guess here.
             line = session.ensureOpen(gameDir).tlk()?.get(strref);
         } catch {
             // A missing game directory or an unreadable TLK is not worth failing an open over - the field
@@ -76,9 +102,8 @@ export function createStrrefResolver(session: TlkSource): StrrefResolver {
  */
 export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
     return (uri, tables, index) => {
-        if (uri.scheme !== GAME_RESOURCE_SCHEME) return;
-        const { gameDir } = parseResourceUri(uri);
-        if (!gameDir) return;
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
         let identifier: string | undefined;
         try {
             const game = session.ensureOpen(gameDir);
@@ -104,9 +129,8 @@ export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
  */
 export function createNamingTableResolver(session: TlkSource): NamingTableResolver {
     return (uri, kind, tables) => {
-        if (uri.scheme !== GAME_RESOURCE_SCHEME) return;
-        const { gameDir } = parseResourceUri(uri);
-        if (!gameDir) return;
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
         // Accumulate rather than returning from inside the loop, matching the resolvers above: a bare `return`
         // plus a single value return is the shape that satisfies both the linter and `noImplicitReturns`.
         let resolved: ReadonlyMap<number, string> | undefined;
@@ -134,9 +158,9 @@ export function createNamingTableResolver(session: TlkSource): NamingTableResolv
  */
 export function createResourceTypeResolver(session: TlkSource): ResourceTypeResolver {
     return (uri, decl, resref) => {
-        if (uri.scheme !== GAME_RESOURCE_SCHEME || resref === "") return;
-        const { gameDir } = parseResourceUri(uri);
-        if (!gameDir) return;
+        if (resref === "") return;
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
         let found: string | undefined;
         try {
             const game = session.ensureOpen(gameDir);

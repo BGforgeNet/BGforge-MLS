@@ -117,11 +117,12 @@ function namedByGame(
     const merged: Record<string, string> = { ...row.enumOptions };
     // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in the
     // other half of its dword), so convert first - then drop anything that does not fit the field, since an
-    // option list must never offer a value the field cannot hold.
+    // option list must never offer a value the field cannot hold. Bounded at BOTH ends: an IDS is plain text a
+    // mod can put anything in, and a negative key is as unstorable as an oversized one.
     const limit = row.size === undefined ? Infinity : 2 ** (8 * row.size);
     for (const [key, name] of table) {
         const stored = row.ref.keyEncoding === "swappedWords" ? swapWords(key) : key;
-        if (stored < limit) merged[String(stored)] = name;
+        if (stored >= 0 && stored < limit) merged[String(stored)] = name;
     }
     return { enumOptions: merged, valueType: "enum", enumOpen: true };
 }
@@ -166,6 +167,10 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         // unresolved slots beside it (the tail of a sound-set block has no IDS entry); they differ by one.
         if (identifier !== undefined) row = { ...row, name: `${index + 1} ${identifier}` };
     }
+    // A row that resolved is returned without descending into it. Sound because every shape matched above is a
+    // LEAF - a field carries scalars, and only a group carries children, which no guard here matches. Stated
+    // rather than assumed: this module deliberately does not import the row types, so nothing else would catch
+    // a future shape that carries both a `ref` and nested rows.
     if (row !== value) return row as T;
 
     let changed = false;

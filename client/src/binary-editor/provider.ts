@@ -3,11 +3,12 @@ import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
-import type {
-    NamingTableResolver,
-    ResourceTypeResolver,
-    SlotLabelResolver,
-    StrrefResolver,
+import {
+    isGameDocument,
+    type NamingTableResolver,
+    type ResourceTypeResolver,
+    type SlotLabelResolver,
+    type StrrefResolver,
 } from "../ie-resources/game-lookups";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
@@ -29,6 +30,21 @@ const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
+
+/**
+ * The `<name>.json` snapshot sidecar URI for a destination.
+ *
+ * A real file gets a `file:` path next to it; a virtual document keeps its OWN scheme (and query) so the write
+ * dispatches back through that provider - for a game resource the FS provider lands it in `override/`, not on
+ * the real filesystem (whose root a `file:` fsPath would hit). Takes the destination rather than the document
+ * because a Save As targets somewhere else, and both it and the dump/load commands must derive the sidecar the
+ * same way.
+ */
+function snapshotSidecarUri(destination: vscode.Uri): vscode.Uri {
+    return destination.scheme === "file"
+        ? vscode.Uri.file(getSnapshotPath(destination.fsPath))
+        : destination.with({ path: getSnapshotPath(destination.path) });
+}
 
 /** Human-readable undo-history label for a structure op. The worker keeps its own detailed label; this is the
  *  coarse-grained entry shown in the host editor's undo stack. */
@@ -332,15 +348,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             .getConfiguration("bgforge.binaryEditor")
             .get<boolean>("autoDumpJson", false);
         for (const write of planSave({ targetPath, bytes, snapshotJson, autoDumpJson })) {
-            // The primary artifact reuses the caller's URI (preserving its scheme). The JSON sidecar follows the
-            // same scheme: a `file:` destination writes <file>.json on disk; a virtual destination (game
-            // resource) routes back through its provider, landing the sidecar in override/, not the fs root.
-            const isPrimary = write.path === targetPath;
-            const target = isPrimary
-                ? primaryDestination
-                : primaryDestination.scheme === "file"
-                  ? vscode.Uri.file(write.path)
-                  : primaryDestination.with({ path: getSnapshotPath(primaryDestination.path) });
+            // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar derives from
+            // that same destination, through the one helper that owns the scheme rule.
+            const target = write.path === targetPath ? primaryDestination : snapshotSidecarUri(primaryDestination);
             // Sequential by design: the main artifact must land before the JSON sidecar so a
             // crash never leaves a snapshot newer than the file it describes. The list is at
             // most two entries, so serial writes cost nothing.
@@ -353,9 +363,13 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // Every host-to-webview message funnels through here, so strref resolution lands once instead of at
         // each of the six sites that can carry rows. The document comes from the panel map rather than the
         // call sites: only the document's URI says which game (if any) the record was opened from.
+        //
+        // Gated on the document actually being game-backed, not just on having a URI: every resolver answers
+        // undefined for a record opened off disk, so without this the common case - editing a mod's own file -
+        // pays a full recursive walk of every message to find nothing.
         const uri = this.active.get(panel)?.uri;
         const resolved =
-            uri === undefined
+            uri === undefined || !isGameDocument(uri)
                 ? message
                 : withGameContext(message, {
                       strref: (strref) => this.gameLookups.strref(uri, strref),
@@ -420,27 +434,16 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         this.scheduleDiagnostics(document);
     }
 
-    /**
-     * The `<name>.json` snapshot sidecar URI. A real file gets a `file:` path next to it; a virtual document
-     * keeps its OWN scheme (and query) so the write dispatches back through that provider - for a game resource
-     * the FS provider lands it in `override/`, not on the real filesystem (whose root a `file:` fsPath would hit).
-     */
-    private snapshotSidecarUri(document: BinaryEditorDocument): vscode.Uri {
-        return document.uri.scheme === "file"
-            ? vscode.Uri.file(getSnapshotPath(document.uri.fsPath))
-            : document.uri.with({ path: getSnapshotPath(document.uri.path) });
-    }
-
     private async dumpJson(document: BinaryEditorDocument): Promise<void> {
         // Write the canonical snapshot to the automatic sidecar path (<name>.json) - the same target the
         // autoDumpJson save-time sidecar uses - with no dialog.
         const json = await document.getSnapshotJson();
-        await vscode.workspace.fs.writeFile(this.snapshotSidecarUri(document), Buffer.from(json, "utf8"));
+        await vscode.workspace.fs.writeFile(snapshotSidecarUri(document.uri), Buffer.from(json, "utf8"));
     }
 
     private async loadJson(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
         // Read from the automatic sidecar path (<name>.json), no dialog. Missing file -> advisory error.
-        const source = this.snapshotSidecarUri(document);
+        const source = snapshotSidecarUri(document.uri);
         let json: string;
         try {
             const bytes = await vscode.workspace.fs.readFile(source);

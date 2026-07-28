@@ -13,8 +13,9 @@ const BACKUP_URI = "file:///storage/backups/sw1h01.itm.bak";
 const DISK_BYTES = new Uint8Array([1, 1, 1]);
 const BACKUP_BYTES = new Uint8Array([2, 2, 2]);
 
-const { readFileMock, workerRequests } = vi.hoisted(() => ({
+const { readFileMock, showWarningMock, workerRequests } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
+    showWarningMock: vi.fn(),
     workerRequests: [] as { type: string; uri?: string; bytes?: Uint8Array }[],
 }));
 
@@ -27,6 +28,7 @@ vi.mock("vscode", () => {
     return {
         EventEmitter,
         Uri: { parse: (value: string) => ({ toString: () => value }) },
+        window: { showWarningMessage: showWarningMock },
         workspace: { fs: { readFile: readFileMock } },
     };
 });
@@ -75,8 +77,11 @@ const { BinaryEditorProvider } = await import("../../src/binary-editor/provider"
 // live runtime, so assert the shape we actually depend on rather than constructing the other ~30 members.
 const context = { extensionUri: { fsPath: "/ext" } } as unknown as vscode.ExtensionContext;
 
+// Carries `path` as well as `toString`: a real vscode.Uri has both, and the restore path names the file in
+// its warning. A double missing `path` would fail the code rather than the behaviour under test.
 function uri(value: string): vscode.Uri {
-    return { toString: () => value } as unknown as vscode.Uri;
+    const path = value.slice(value.indexOf(":") + 1).split(/[?#]/, 1)[0]!;
+    return { path, toString: () => value } as unknown as vscode.Uri;
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
@@ -97,6 +102,7 @@ describe("binary editor hot-exit restore", () => {
     beforeEach(() => {
         workerRequests.length = 0;
         readFileMock.mockReset();
+        showWarningMock.mockReset();
         readFileMock.mockImplementation((target: { toString: () => string }) =>
             Promise.resolve(target.toString() === BACKUP_URI ? BACKUP_BYTES : DISK_BYTES),
         );
@@ -120,5 +126,36 @@ describe("binary editor hot-exit restore", () => {
 
         expect(readFileMock.mock.calls.map(([target]) => String(target))).toEqual([DOC_URI]);
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES }]);
+    });
+
+    /**
+     * An unreadable backup must not make the file unopenable. VS Code hands back whatever backupId it stored,
+     * which can outlive the extension version that wrote it or be cleaned up underneath us - and the unsaved
+     * edits are unrecoverable either way, so refusing to open loses the SAVED file too. Degrade to disk and
+     * say so, rather than propagating out of openCustomDocument.
+     */
+    it("falls back to the saved file, with a warning, when the backup cannot be read", async () => {
+        readFileMock.mockImplementation((target: { toString: () => string }) =>
+            target.toString() === BACKUP_URI
+                ? Promise.reject(new Error("backup is gone"))
+                : Promise.resolve(DISK_BYTES),
+        );
+        const provider = new BinaryEditorProvider(context, noGame);
+
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(BACKUP_URI), token);
+
+        expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES }]);
+        expect(document.uri.toString()).toBe(DOC_URI);
+        expect(showWarningMock).toHaveBeenCalledTimes(1);
+        expect(String(showWarningMock.mock.calls[0]?.[0])).toContain("sw1h01.itm");
+    });
+
+    // The fallback is for a broken BACKUP, not for a broken file: with no backup in play an unreadable
+    // document still fails the open, so a genuine read error is never swallowed into an empty editor.
+    it("still fails the open when the file itself cannot be read", async () => {
+        readFileMock.mockImplementation(() => Promise.reject(new Error("disk is gone")));
+        const provider = new BinaryEditorProvider(context, noGame);
+
+        await expect(provider.openCustomDocument(uri(DOC_URI), openContext(), token)).rejects.toThrow("disk is gone");
     });
 });

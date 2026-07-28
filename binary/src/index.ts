@@ -137,6 +137,7 @@ export type {
     BifFileEntry,
     BifTilesetEntry,
     Tlk,
+    TlkOptions,
     ByteSource,
     Game,
     GameResourceRef,
@@ -144,6 +145,7 @@ export type {
     GameIdentity,
     IeVariant,
     IeScriptStyle,
+    IeFlavour,
 } from "./archive";
 
 // Side-effect: register the bundled parsers on the registry.

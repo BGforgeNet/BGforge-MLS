@@ -169,7 +169,13 @@ interface TreeEntry {
     sources: Source[]; // sorted by rank ascending; sources[0] is the winner
 }
 
-/** Resolve `name` in `dir` allowing a case difference (IE ships lowercase names; case-sensitive hosts differ). */
+/**
+ * Resolve `name` in `dir` allowing a case difference (IE ships lowercase names; case-sensitive hosts differ).
+ *
+ * Not memoized, deliberately: the exact-path probe answers first, so a correctly-cased hit costs one `stat`
+ * and never lists the directory. Only a miss or a case mismatch pays the scan, and a cache would then have to
+ * be invalidated on every write and remove for a saving the common path does not need.
+ */
 function resolveCaseInsensitive(dir: string, name: string): string | undefined {
     const exact = path.join(dir, name);
     if (fs.existsSync(exact)) return exact;
@@ -415,6 +421,24 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         return rank;
     }
 
+    // Shared by the `read` method and the `ids`/`twoDa` table readers. A closure rather than `this.read`, so
+    // every member of the returned object reaches its state the same way and none of them depends on being
+    // called as a method.
+    function readResource(resref: string, type?: number | string): Uint8Array {
+        let typeCode = type === undefined ? undefined : typeof type === "string" ? resourceTypeCode(type) : type;
+        if (typeof type === "string" && typeCode === undefined) {
+            throw new Error(`Unknown resource extension "${type}"`);
+        }
+        // No type given: recover it from the KEY (a loose-only resource needs an explicit type).
+        if (typeCode === undefined) typeCode = key.lookup(resref)?.type;
+        const entry = typeCode === undefined ? undefined : tree.get(keyOf(resref, typeCode));
+        if (!entry || entry.sources.length === 0) {
+            const suffix = typeCode !== undefined ? ` (type 0x${typeCode.toString(16)})` : "";
+            throw new Error(`Resource not found: ${resref}${suffix}`);
+        }
+        return materialize(entry.sources[0]!);
+    }
+
     return {
         key,
         identity,
@@ -434,20 +458,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             }
             return out;
         },
-        read(resref, type) {
-            let typeCode = type === undefined ? undefined : typeof type === "string" ? resourceTypeCode(type) : type;
-            if (typeof type === "string" && typeCode === undefined) {
-                throw new Error(`Unknown resource extension "${type}"`);
-            }
-            // No type given: recover it from the KEY (a loose-only resource needs an explicit type).
-            if (typeCode === undefined) typeCode = key.lookup(resref)?.type;
-            const entry = typeCode === undefined ? undefined : tree.get(keyOf(resref, typeCode));
-            if (!entry || entry.sources.length === 0) {
-                const suffix = typeCode !== undefined ? ` (type 0x${typeCode.toString(16)})` : "";
-                throw new Error(`Resource not found: ${resref}${suffix}`);
-            }
-            return materialize(entry.sources[0]!);
-        },
+        read: readResource,
         canRead(resref, type) {
             const typeCode = typeof type === "string" ? resourceTypeCode(type) : type;
             const entry = typeCode === undefined ? undefined : tree.get(keyOf(resref, typeCode));
@@ -529,7 +540,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                 // re-reading on each lookup.
                 entry = null;
                 try {
-                    entry = parseIds(this.read(resref, IDS_RESTYPE));
+                    entry = parseIds(readResource(resref, IDS_RESTYPE));
                 } catch {
                     // Resource not found, or unreadable - reported as "no table" by the null above.
                 }
@@ -545,7 +556,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                 // re-reading on each lookup, exactly as `ids` above.
                 entry = null;
                 try {
-                    entry = parse2daRowNames(this.read(resref, TWO_DA_RESTYPE));
+                    entry = parse2daRowNames(readResource(resref, TWO_DA_RESTYPE));
                 } catch {
                     // Resource not found, or unreadable - reported as "no table" by the null above.
                 }

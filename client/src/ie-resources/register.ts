@@ -148,13 +148,31 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         vscode.commands.registerCommand("bgforge.ieResources.openRef", openRefFromDocument),
     );
 
-    // Restore the last-opened game (independent of the workspace) for continuity across reloads.
+    /**
+     * Restore the last-opened game (independent of the workspace) for continuity across reloads - but not
+     * during activation, and only once the resource view is actually shown.
+     *
+     * Opening a game is synchronous and proportional to the install: it parses `chitin.key`, indexes every
+     * resource it names, and scans the override folders. The extension also activates for a script file, and
+     * paying that on the activation path would stall the host for a view the user may never open. A restored
+     * binary editor does not depend on this - the FS provider opens the game from the URI on demand.
+     */
     const lastDir = context.workspaceState.get<string>(LAST_DIR_KEY);
-    if (lastDir && fs.existsSync(path.join(lastDir, "chitin.key"))) {
-        void openGameDir(lastDir);
-    } else {
-        void setHasGame(false);
-    }
+    const restorable = lastDir !== undefined && fs.existsSync(path.join(lastDir, "chitin.key"));
+    let restored = false;
+    const restoreLastGame = async (): Promise<void> => {
+        if (restored || !restorable) return;
+        restored = true; // set before awaiting, so a second visibility event cannot start a parallel open
+        await openGameDir(lastDir);
+    };
+    void setHasGame(false);
+    context.subscriptions.push(
+        treeView.onDidChangeVisibility((event) => {
+            if (event.visible) void restoreLastGame();
+        }),
+    );
+    // Already showing (the view was the reason for activation), so no visibility change is coming.
+    if (treeView.visible) void restoreLastGame();
 
     return {
         strref: createStrrefResolver(session),

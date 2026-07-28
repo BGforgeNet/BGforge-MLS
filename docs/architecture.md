@@ -86,6 +86,8 @@ vscode-mls/
 |   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-editor/          Dialog Editor (custom text editor + Svelte webview; @xyflow/svelte graph)
 |   |   +-- binary-editor/          Binary .pro/.map/.itm/.spl/.eff/.cre custom editor (worker thread + Svelte webview; uses @bgforge/binary + @bgforge/binary-editor)
+|   |   +-- image-editor/           Animation editor for Fallout FRM / IE BAM (custom editor + Svelte webview; uses @bgforge/image)
+|   |   +-- ie-resources/           IE game resource viewer: sidebar tree over an installed game, plus the bgforge-ie-resource: FileSystemProvider that lets the editors open and save resources out of chitin.key/BIF and override/
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -276,7 +278,12 @@ activate()
   |
   +-> Create LanguageClient (IPC transport to server)
   +-> Register commands (compile, dialog editor)
+  +-> Register the IE game resource viewer (sidebar tree, bgforge-ie-resource: FileSystemProvider, commands)
+  |     First, because it owns the game session the binary editor resolves strrefs and IDS names through.
+  |     Opening the last-used game is deferred until the view is actually shown - it is synchronous and
+  |     proportional to the install, so an activation triggered by a script file must not pay for it.
   +-> Register binary editor provider (.pro/.map/.itm/.spl/.eff/.cre files)
+  +-> Register the animation editor (.frm/.bam files)
   +-> Register the Dialog Editor custom editor (.d/.ssl/.td/.tssl)
   +-> Start server (server/out/server.js)
 ```

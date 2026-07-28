@@ -10,6 +10,7 @@ import {
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
+    isGameDocument,
 } from "../src/ie-resources/game-lookups";
 import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
@@ -62,6 +63,32 @@ function gameUri(gameDir = "/games/tob"): never {
     // Cast-free: the resolver reads only these two members off the URI.
     return { scheme: GAME_RESOURCE_SCHEME, query: `g=${encodeURIComponent(gameDir)}`, path: "/sw1h01.itm" } as never;
 }
+
+/**
+ * The one place that decides whether a document is backed by a game. Every resolver already answered this
+ * question privately; naming it lets a caller ask BEFORE doing work whose result would be discarded - the
+ * binary editor walks each host-to-webview message looking for rows to resolve, which for a record outside a
+ * game is a full traversal that can only ever produce nothing.
+ */
+describe("isGameDocument", () => {
+    it("accepts a game-resource URI carrying a game directory", () => {
+        expect(isGameDocument(gameUri())).toBe(true);
+    });
+
+    // Differs from a game URI ONLY by scheme - it still carries a `g=` query - so a dropped scheme check
+    // cannot pass this by falling through to the empty-gameDir case.
+    it("rejects a document of another scheme, even with a game query", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
+
+        expect(isGameDocument(fileUri)).toBe(false);
+    });
+
+    it("rejects a game-resource URI with no game directory", () => {
+        const noDir = { scheme: GAME_RESOURCE_SCHEME, query: "", path: "/sw1h01.itm" } as never;
+
+        expect(isGameDocument(noDir)).toBe(false);
+    });
+});
 
 describe("createStrrefResolver", () => {
     it("resolves a strref against the game the URI names", () => {

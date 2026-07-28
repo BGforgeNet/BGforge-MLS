@@ -14,11 +14,13 @@ import {
     openBif,
     parseBif,
     parseTlk,
+    openTlk,
     openGame,
     detectGameIdentity,
     bufferSource,
     resourceTypeExt,
     resourceTypeCode,
+    type ByteSource,
 } from "@bgforge/binary";
 
 const RESTYPE_ITM = 0x03ed;
@@ -362,6 +364,26 @@ describe("openBif (compressed)", () => {
         bif.close();
     });
 
+    /**
+     * The BIFC header's uncompressed total is a `u32` read straight from the file, so it must not size an
+     * allocation: a corrupt or hostile value reserves that much before a single block is inflated, and the
+     * inflated archive keeps a view on it for its whole lifetime. Asserting the extracted bytes alone would
+     * not catch this - the archive reads back correctly either way, just off a buffer sized by the file's
+     * claim. So the assertion is on the BACKING store, which is the only place the difference shows.
+     */
+    it("sizes a BIFC V1.0 archive by what inflates, not by its declared uncompressed size", () => {
+        const bytes = buildBifcBlocks(sampleBif());
+        const declared = 0x1000_0000; // 256 MB, against an archive of a few dozen bytes
+        new DataView(bytes.buffer).setUint32(8, declared, true);
+        const bif = openBif(bufferSource(bytes));
+        try {
+            expect(arr(bif.readFile(0))).toEqual(arr(ITEM_DATA));
+            expect(bif.readFile(0).buffer.byteLength).toBeLessThan(declared);
+        } finally {
+            bif.close();
+        }
+    });
+
     it("inflates a BIFC V1.0 block-compressed archive to the same files", () => {
         const bif = openBif(bufferSource(buildBifcBlocks(sampleBif())));
         expect(bif.compressed).toBe(true);
@@ -411,6 +433,49 @@ describe("TLK (dialog.tlk)", () => {
 
     it("throws on an unsupported encoding label", () => {
         expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow();
+    });
+
+    /**
+     * A record's fields resolve one strref at a time and every message re-resolves them - a CRE alone carries
+     * 100 sound-slot strrefs - so an uncached `get` turns one panel refresh into hundreds of positioned reads
+     * on the host thread. Counted at the byte source, which is the only place the saving is observable.
+     */
+    it("reads a strref from the source once, then answers from cache", () => {
+        const bytes = buildTlk(["Sword +1", "Fire!"]);
+        let reads = 0;
+        const counting: ByteSource = {
+            size: bytes.byteLength,
+            read(offset, length) {
+                reads++;
+                return bytes.subarray(offset, offset + length);
+            },
+            close() {},
+        };
+        const tlk = openTlk(counting);
+        const afterHeader = reads;
+
+        expect(tlk.get(0)).toBe("Sword +1");
+        const afterFirst = reads;
+        expect(afterFirst).toBeGreaterThan(afterHeader); // the entry and its string
+
+        expect(tlk.get(0)).toBe("Sword +1");
+        expect(reads).toBe(afterFirst); // repeat resolved from cache
+
+        // A different strref is a genuine miss, so caching must not answer it from the first one's entry.
+        expect(tlk.get(1)).toBe("Fire!");
+        expect(reads).toBeGreaterThan(afterFirst);
+        tlk.close();
+    });
+
+    // An out-of-range strref must stay undefined however often it is asked, and must not occupy a cache slot
+    // that a later in-range lookup could collide with. -1 is the format-wide "no string", so it is the hot path.
+    it("caches nothing for an out-of-range strref", () => {
+        const tlk = parseTlk(buildTlk(["x"]));
+        expect(tlk.get(-1)).toBeUndefined();
+        expect(tlk.get(-1)).toBeUndefined();
+        expect(tlk.get(9)).toBeUndefined();
+        expect(tlk.get(0)).toBe("x");
+        tlk.close();
     });
 
     it("carries the language id and rejects a non-TLK buffer", () => {

@@ -17,7 +17,7 @@ const BACKUP_PATH = "/storage/backups/hero.frm.bak";
 const BASE_PATH = "/w/usar1ca.bam";
 const EAST_PATH = "/w/usar1cae.bam";
 
-const { readFileMock } = vi.hoisted(() => ({ readFileMock: vi.fn() }));
+const { readFileMock, showWarningMock } = vi.hoisted(() => ({ readFileMock: vi.fn(), showWarningMock: vi.fn() }));
 
 vi.mock("vscode", () => {
     class EventEmitter {
@@ -26,7 +26,12 @@ vi.mock("vscode", () => {
         dispose(): void {}
     }
     const uri = (fsPath: string) => ({ fsPath, path: fsPath, scheme: "file", toString: () => fsPath });
-    return { EventEmitter, Uri: { file: uri, parse: uri }, workspace: { fs: { readFile: readFileMock } } };
+    return {
+        EventEmitter,
+        Uri: { file: uri, parse: uri },
+        window: { showWarningMessage: showWarningMock },
+        workspace: { fs: { readFile: readFileMock } },
+    };
 });
 
 const { ImageEditorProvider } = await import("../../src/image-editor/provider");
@@ -74,10 +79,45 @@ describe("animation editor hot-exit restore", () => {
             [BACKUP_PATH, encodeBackup({ bytes: editedFrm(), externalPalette: false })],
         ]);
         readFileMock.mockReset();
+        showWarningMock.mockReset();
         readFileMock.mockImplementation((target: { fsPath: string }) => {
             const bytes = files.get(target.fsPath);
             return bytes ? Promise.resolve(bytes) : Promise.reject(new Error(`no such file: ${target.fsPath}`));
         });
+    });
+
+    /**
+     * `decodeBackup` fails loud on a header it cannot read, and a version mismatch is an EXPECTED condition -
+     * the container is versioned precisely because a backup outlives the extension that wrote it. So the
+     * caller has to absorb it: the unsaved edits are gone either way, and propagating would make the saved
+     * file unopenable too. Covers both halves of the restore read, since the throw can come from either.
+     */
+    it.each([
+        ["an unreadable backup file", () => files.delete(BACKUP_PATH)],
+        ["a backup this version cannot decode", () => files.set(BACKUP_PATH, new Uint8Array([0x7b, 0x0a, 0x01]))],
+    ])("falls back to the saved file, with a warning, on %s", async (_label, breakBackup) => {
+        breakBackup();
+        const provider = new ImageEditorProvider(context);
+
+        const document = await provider.openCustomDocument(fileUri(DOC_PATH), openContext(BACKUP_PATH), token);
+
+        // The on-disk animation, not the pending edit: fps 10 and the sidecar's auto-on palette.
+        expect(document.toView().meta.fps).toBe(10);
+        expect(document.toView().externalPaletteActive).toBe(true);
+        expect(document.savePath).toBe(DOC_PATH);
+        expect(showWarningMock).toHaveBeenCalledTimes(1);
+        expect(String(showWarningMock.mock.calls[0]?.[0])).toContain("hero.frm");
+    });
+
+    // The fallback is for a broken BACKUP, not a broken file: with no backup in play an unreadable document
+    // still fails the open rather than being swallowed into an empty editor.
+    it("still fails the open when the file itself cannot be read", async () => {
+        files.delete(DOC_PATH);
+        const provider = new ImageEditorProvider(context);
+
+        await expect(provider.openCustomDocument(fileUri(DOC_PATH), openContext(), token)).rejects.toThrow(
+            /no such file/,
+        );
     });
 
     it("restores the edited animation and the palette toggle from the backup", async () => {

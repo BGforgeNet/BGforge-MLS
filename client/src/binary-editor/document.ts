@@ -1,7 +1,28 @@
+import * as path from "path";
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import type { ChangeSet, OpenResult } from "@bgforge/binary-editor";
 import { WorkerBridge, workerPort } from "./worker-bridge";
+
+/**
+ * Bytes to parse: the hot-exit backup when one is readable, otherwise the file itself.
+ *
+ * A backup that cannot be read is not fatal. VS Code hands back whatever backup id it stored, which can
+ * outlive the extension version that wrote it or be cleaned up underneath us - and the unsaved edits are
+ * unrecoverable either way, so failing the open would lose access to the SAVED file too. The scope is
+ * deliberately the read alone: with no backup in play, an unreadable file still fails the open.
+ */
+async function readDocumentBytes(uri: vscode.Uri, backup?: vscode.Uri): Promise<Uint8Array> {
+    if (!backup) return vscode.workspace.fs.readFile(uri);
+    try {
+        return await vscode.workspace.fs.readFile(backup);
+    } catch {
+        void vscode.window.showWarningMessage(
+            `Could not restore unsaved changes to ${path.basename(uri.path)}. Opened the saved file instead.`,
+        );
+        return vscode.workspace.fs.readFile(uri);
+    }
+}
 
 /**
  * A single open binary file backed by a dedicated worker session. Owns the worker
@@ -33,12 +54,13 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
     }
 
     /**
-     * Opens a parse session for `uri`. `byteSource` overrides only where the bytes are read from, leaving the
+     * Opens a parse session for `uri`. `backup` overrides only where the bytes are read from, leaving the
      * document's identity (and therefore the save target and the worker's format detection) on `uri` - a hot-exit
-     * restore parses the backup while still saving to the original file.
+     * restore parses the backup while still saving to the original file. An unreadable backup falls back to the
+     * saved file (see `readDocumentBytes`).
      */
-    static async open(uri: vscode.Uri, workerScript: string, byteSource?: vscode.Uri): Promise<BinaryEditorDocument> {
-        const bytes = await vscode.workspace.fs.readFile(byteSource ?? uri);
+    static async open(uri: vscode.Uri, workerScript: string, backup?: vscode.Uri): Promise<BinaryEditorDocument> {
+        const bytes = await readDocumentBytes(uri, backup);
         const worker = new Worker(workerScript);
         const bridge = new WorkerBridge(workerPort(worker));
         const response = await bridge.send({

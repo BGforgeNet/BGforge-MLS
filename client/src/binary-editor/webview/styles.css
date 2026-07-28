@@ -1443,7 +1443,13 @@ input[type="text"]::placeholder {
     column-gap: 10px;
     align-items: center;
     break-inside: avoid;
+    /* Row spacing as a top margin collapsed away on the first cell, so `gap` cannot be used here (multicol has
+       no row gap between siblings). Zeroed on the last cell so a column does not carry trailing space below
+       its final row - which reads as the block being taller than its content. */
     margin-bottom: 4px;
+}
+.layout-root .grid .skill:last-child {
+    margin-bottom: 0;
 }
 .layout-root .grid .skill .nm {
     color: var(--vscode-descriptionForeground);

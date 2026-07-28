@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { type Animation, importPngDirectory } from "@bgforge/image";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
-import { decodeBackup, encodeBackup } from "./backup";
+import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
@@ -18,6 +18,26 @@ import {
 import { sidecarPalPath } from "./sidecar";
 import { ieGroupLabels, ieGroupOptionText } from "./webview/render/cycle-grouping";
 import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToHost } from "./webview/messages";
+
+/**
+ * The hot-exit backup for `backupId`, or undefined when there is none or it cannot be used.
+ *
+ * A backup that fails to read or decode is not fatal, and a decode failure is an EXPECTED condition: the
+ * container is versioned precisely because a backup can outlive the extension version that wrote it. The
+ * unsaved edits are unrecoverable either way, so propagating would make the SAVED file unopenable too.
+ * `decodeBackup` still refuses a header it cannot read - only the caller's handling is forgiving.
+ */
+async function readBackup(uri: vscode.Uri, backupId: string | undefined): Promise<DocumentBackup | undefined> {
+    if (backupId === undefined) return undefined;
+    try {
+        return decodeBackup(await vscode.workspace.fs.readFile(vscode.Uri.parse(backupId)));
+    } catch {
+        void vscode.window.showWarningMessage(
+            `Could not restore unsaved changes to ${path.basename(uri.fsPath)}. Opened the saved file instead.`,
+        );
+        return undefined;
+    }
+}
 
 const WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
@@ -55,9 +75,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // A hot-exit restore hands back the backup written by backupCustomDocument, whose payload carries
         // the unsaved edits; reading the files instead would silently discard them while the editor still
         // shows as dirty.
-        const backup = openContext.backupId
-            ? decodeBackup(await vscode.workspace.fs.readFile(vscode.Uri.parse(openContext.backupId)))
-            : undefined;
+        const backup = await readBackup(uri, openContext.backupId);
         const document = await ImageEditorDocument.open(uri, backup);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: document.toView() }));

@@ -101,16 +101,29 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
     const count = header.stringCount;
     const stringsOffset = header.stringsOffset;
 
+    // Resolved strings, by strref. A TLK is read-only for this reader's lifetime, so a hit needs no
+    // invalidation. Worth caching because callers resolve the same strrefs repeatedly - a record's fields are
+    // re-resolved on every refresh - and each miss costs two positioned reads. Only in-range strrefs land here;
+    // an out-of-range one (including the -1 "no string" sentinel) returns before the lookup and stores nothing.
+    const strings = new Map<number, string>();
+
     return {
         count,
         languageId: header.languageId,
         get(strref) {
             if (!Number.isInteger(strref) || strref < 0 || strref >= count) return;
+            const cached = strings.get(strref);
+            // An empty string is a real cached value (a no-text entry), so test for the miss, not falsiness.
+            if (cached !== undefined) return cached;
             const entry = entryCodec.read(
                 readerOf(source.read(TLK_HEADER_BYTES + strref * TLK_ENTRY_BYTES, TLK_ENTRY_BYTES)),
             );
-            if ((entry.flags & TLK_TEXT_FLAG) === 0 || entry.stringLength === 0) return "";
-            return decodeString(source.read(stringsOffset + entry.stringOffset, entry.stringLength), encoding);
+            const text =
+                (entry.flags & TLK_TEXT_FLAG) === 0 || entry.stringLength === 0
+                    ? ""
+                    : decodeString(source.read(stringsOffset + entry.stringOffset, entry.stringLength), encoding);
+            strings.set(strref, text);
+            return text;
         },
         close() {
             source.close();

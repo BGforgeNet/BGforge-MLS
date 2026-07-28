@@ -129,18 +129,36 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
 
 // ---- Dropdown width guard (binary-editor UI guidelines: dropdowns are sized to their OWN longest option on a
 // dedicated dd-{1..5} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
-// hex/resref input is no longer dragged to that input's width). The Identity box's Alignment is a stable mid
-// case: its longest of the nine fixed alignments is "0x32 Chaotic neutral". Assert it lands on dd-4 (NOT the
-// widest dd-5, proving it tightened below the widest bucket), then drive it (via the chevron) to that longest
-// option and assert the combobox input shows it without being horizontally clipped (scrollWidth <= clientWidth).
+// hex/resref input is no longer dragged to that input's width). Asserted as the RELATIONSHIP between two
+// dropdowns in the same Identity box rather than a tier constant: Race's identifiers are short and Alignment's
+// are long, so a per-option width puts Race strictly narrower. Pinning a specific tier instead tied the guard
+// to the label TEXT - it broke when the vendored tables moved to the game's verbatim identifiers ("Chaotic
+// neutral" -> "CHAOTIC_NEUTRAL"), which is a legitimate relabel this guard should survive. Then drive Alignment
+// to its longest option and assert the input shows it unclipped (scrollWidth <= clientWidth).
 // Every enum is now a searchable combobox: the aria-label is on the input, the chevron opens the list. ----
 {
+    const ddWidths = await page.evaluate(() =>
+        Object.fromEntries(
+            Array.from(document.querySelectorAll(".field-control:has(.bb-combobox-input)")).map((el) => [
+                el.querySelector(".bb-combobox-input")?.getAttribute("aria-label"),
+                {
+                    cls: el.className.replace("field-control", "").trim(),
+                    w: Math.round(el.getBoundingClientRect().width),
+                },
+            ]),
+        ),
+    );
+    const race = ddWidths["Race"];
+    const alignment = ddWidths["Alignment"];
     const alignFc = page.locator('.field-control:has(.bb-combobox-input[aria-label="Alignment"])').first();
-    const alignClass = await alignFc.evaluate((el) => el.className.replace("field-control", "").trim());
     check(
-        "dropdown: mid-length Alignment lands on dd-4 (tighter than the widest dd-5)",
-        alignClass === "dd-4",
-        alignClass,
+        "dropdown: same-box dropdowns size to their own longest option, not one shared width",
+        race !== undefined &&
+            alignment !== undefined &&
+            /^dd-[1-5]$/.test(race.cls) &&
+            /^dd-[1-5]$/.test(alignment.cls) &&
+            race.w < alignment.w,
+        JSON.stringify({ race, alignment }),
     );
     await alignFc.locator(".bb-combobox-input").click(); // focusing the input opens the list (chevron is decorative)
     await page
@@ -163,12 +181,12 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
         listInfo.count > 0 && listInfo.minH >= 12 && listInfo.allLabeled && listInfo.anyHighlighted,
         JSON.stringify(listInfo),
     );
-    await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
+    await page.locator(".bb-popup-item", { hasText: "CHAOTIC_NEUTRAL" }).first().click();
     await page
         .waitForFunction(
             () => {
                 const el = document.querySelector('.bb-combobox-input[aria-label="Alignment"]');
-                return !!el && (el as HTMLInputElement).value.includes("Chaotic neutral");
+                return !!el && (el as HTMLInputElement).value.includes("CHAOTIC_NEUTRAL");
             },
             undefined,
             { timeout: 5000 },
@@ -178,21 +196,21 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
         .locator(".bb-combobox-input")
         .evaluate((el: HTMLInputElement) => ({ text: el.value, clipped: el.scrollWidth > el.clientWidth + 1 }));
     check(
-        "dropdown: longest Alignment option fits the dd-4 combobox without clipping",
+        "dropdown: longest Alignment option fits its combobox without clipping",
         !alignClip.clipped,
         JSON.stringify(alignClip),
     );
     // Re-picking the CURRENT value must keep it and close: bits-ui's single-select toggles the selection OFF on a
-    // re-pick (value -> ""), which would blank an enum and leave the list open. "Chaotic neutral" is selected now.
+    // re-pick (value -> ""), which would blank an enum and leave the list open. "CHAOTIC_NEUTRAL" is selected now.
     await alignFc.locator(".bb-combobox-input").click();
-    await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
+    await page.locator(".bb-popup-item", { hasText: "CHAOTIC_NEUTRAL" }).first().click();
     await page
         .waitForFunction(
             () => {
                 const el = document.querySelector('.bb-combobox-input[aria-label="Alignment"]');
                 return (
                     !!el &&
-                    (el as HTMLInputElement).value.includes("Chaotic neutral") &&
+                    (el as HTMLInputElement).value.includes("CHAOTIC_NEUTRAL") &&
                     document.querySelectorAll(".bb-combobox-content").length === 0
                 );
             },
@@ -204,7 +222,7 @@ await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
     const rePickOpen = await page.locator(".bb-combobox-content").count();
     check(
         "dropdown: re-picking the current value keeps it and closes (no single-select deselect)",
-        rePick.includes("Chaotic neutral") && rePickOpen === 0,
+        rePick.includes("CHAOTIC_NEUTRAL") && rePickOpen === 0,
         JSON.stringify({ rePick, rePickOpen }),
     );
 }
