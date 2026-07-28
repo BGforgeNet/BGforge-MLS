@@ -11,7 +11,7 @@
  *  - clip: a visible value `<input>` (text/number input or the combobox's value input) whose `scrollWidth`
  *    exceeds its `clientWidth` is showing horizontally-clipped text. Catches a control that clips its CURRENT
  *    value, whatever the cause.
- *  - unsized: a rendered dropdown (`.bb-combobox`) with no `dd-{1..5}` width class on an ancestor box. Every
+ *  - unsized: a rendered dropdown (`.bb-combobox`) with no `dd-{1..6}` width class on an ancestor box. Every
  *    dropdown is sized to its OWN longest option via that class (state/controls.ts `dropdownWidth`, applied in
  *    Field.svelte); a dropdown rendered through a path that never applies it (a grid/matrix cell via
  *    CellControl) carries none and will clip a long option even when its current value happens to be short -
@@ -96,7 +96,7 @@ export async function collectClipViolations(page: Page, context: string): Promis
             const r = cb.getBoundingClientRect();
             if (cb.offsetParent === null && getComputedStyle(cb).position !== "fixed") continue;
             if (r.width <= 0 || r.height <= 0) continue;
-            if (cb.closest(".dd-1, .dd-2, .dd-3, .dd-4, .dd-5")) continue;
+            if (cb.closest(".dd-1, .dd-2, .dd-3, .dd-4, .dd-5, .dd-6")) continue;
             const inp = cb.querySelector<HTMLInputElement>(".bb-combobox-input");
             out.push({
                 kind: "unsized",

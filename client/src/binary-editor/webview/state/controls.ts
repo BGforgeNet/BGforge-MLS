@@ -149,9 +149,15 @@ export function valueTier(row: Row): SizeTier {
 // this small ch scale so dropdowns still align with each other. ch values MUST mirror `.field-control.dd-N` in
 // styles.css. Boundaries are the box width in ch; a dropdown picks the smallest box whose text room (box minus
 // trigger chrome) fits its widest option, measured in ch so it scales with the theme font like the tiers.
-export type DropdownWidth = "dd-1" | "dd-2" | "dd-3" | "dd-4" | "dd-5";
-const DROPDOWN_BOX_CH: readonly number[] = [10, 16, 20, 25, 32];
-const DROPDOWN_CLASS: readonly DropdownWidth[] = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"];
+export type DropdownWidth = "dd-1" | "dd-2" | "dd-3" | "dd-4" | "dd-5" | "dd-6";
+// The top box exists for the longest real option in the data: a CRE kit renders its packed id beside the
+// game's own identifier ("0x00008000 MAGESCHOOL_NECROMANCER"), which needs ~42ch and clipped against the
+// former 32ch ceiling. Widening the scale rather than shortening the label, because the identifier is the
+// game's and the hex prefix is what makes a packed id legible.
+const DROPDOWN_BOX_CH: readonly number[] = [10, 16, 20, 25, 32, 46];
+const DROPDOWN_CLASS: readonly DropdownWidth[] = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5", "dd-6"];
+/** Widest box, used wherever a width cannot be computed or no box fits - failing wide never clips. */
+const DROPDOWN_WIDEST: DropdownWidth = DROPDOWN_CLASS[DROPDOWN_CLASS.length - 1]!;
 // Trigger chrome in ch (padding 0.4rem*2 + gap 0.4rem + arrow ~0.8em + border), subtracted from the box to get
 // usable text room. A small breathing margin keeps the longest option off the arrow.
 const DROPDOWN_CHROME_CH = 4.5;
@@ -173,16 +179,17 @@ function dropdownMeasure(): { ch: (text: string) => number } | undefined {
 
 /** Pick a dropdown's width class from its longest option (value-prefixed, as the trigger renders it), measured
  *  in ch. Sized to the option list (not whether it is searchable - every dropdown is), so a long list like the
- *  IE opcodes lands on the widest box from its labels alone. If text metrics are unavailable (no DOM), fail to
- *  the widest box so an option can never clip. */
+ *  IE opcodes lands on the widest box from its labels alone. Both fallbacks - no text metrics, and no box wide
+ *  enough - take the widest box; the second is the one that silently clipped while the scale topped out below
+ *  the longest real option, so it is a bound to keep an eye on, not a resting place. */
 export function dropdownWidth(row: Row): DropdownWidth {
     const m = dropdownMeasure();
-    if (!m) return "dd-5";
+    if (!m) return DROPDOWN_WIDEST;
     let maxCh = 0;
     for (const o of enumOptionList(row)) maxCh = Math.max(maxCh, m.ch(o.label));
     const needed = maxCh + DROPDOWN_CHROME_CH;
     const idx = DROPDOWN_BOX_CH.findIndex((box) => box >= needed);
-    return idx === -1 ? "dd-5" : DROPDOWN_CLASS[idx]!;
+    return idx === -1 ? DROPDOWN_WIDEST : DROPDOWN_CLASS[idx]!;
 }
 
 // ---- the single width-class classifier every renderer applies ----

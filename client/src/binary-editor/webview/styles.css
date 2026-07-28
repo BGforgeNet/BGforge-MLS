@@ -1587,6 +1587,9 @@ input[type="text"]::placeholder {
 .layout-root .field-control.dd-5 {
     --val-ch: 32ch;
 }
+.layout-root .field-control.dd-6 {
+    --val-ch: 46ch;
+}
 .layout-root .kv:not(.kv-multi) .field-control {
     justify-self: start;
 }

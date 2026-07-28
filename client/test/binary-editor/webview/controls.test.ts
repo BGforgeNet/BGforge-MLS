@@ -152,8 +152,9 @@ describe("valueTier", () => {
 
 describe("dropdownWidth", () => {
     it("fails wide when text metrics are unavailable (jsdom has no 2d canvas context)", () => {
-        // Without a measurable font the width can't be computed, so a dropdown must never clip - it picks dd-5.
-        expect(dropdownWidth(enumRow)).toBe("dd-5");
+        // Without a measurable font the width can't be computed, so a dropdown must never clip - it takes the
+        // widest box. Pinned as the last class in the scale, so adding a wider box moves this with it.
+        expect(dropdownWidth(enumRow)).toBe("dd-6");
     });
 
     describe("with a stubbed DOM and measurable canvas context", () => {
@@ -204,20 +205,36 @@ describe("dropdownWidth", () => {
             // At 8px/char and a 1ch=8px ratio, "1 Mutant" -> 8ch wide.
             // needed = 8 + DROPDOWN_CHROME_CH (4.5) = 12.5ch -> first box >= 12.5 is 16ch (dd-2).
             const result = dropdownWidth(enumRow);
-            expect(["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"]).toContain(result);
-            // With short labels (<=12ch) it should land below dd-5 (the no-metrics fallback)
-            expect(result).not.toBe("dd-5");
+            expect(["dd-1", "dd-2", "dd-3", "dd-4", "dd-5", "dd-6"]).toContain(result);
+            // With short labels (<=12ch) it should land well below the widest box (the no-metrics fallback)
+            expect(result).toBe("dd-2");
         });
 
-        it("falls back to dd-5 when DROPDOWN_BOX_CH cannot accommodate the longest label", () => {
-            // A very long label (> 32ch of text + chrome) should saturate to dd-5.
+        it("saturates to the widest box when no box accommodates the longest label", () => {
+            // Past the top of the scale (46ch of box, minus chrome) there is nothing wider to pick, so it
+            // saturates. That saturation is what silently clipped a CRE kit while the scale stopped at 32ch,
+            // so the label here is deliberately beyond ANY plausible option rather than merely long.
             const longRow: import("@bgforge/binary-editor").Row = {
                 ...enumRow,
-                enumOptions: { "0": "A".repeat(35) }, // 35 chars -> 35ch >> 32ch + chrome
+                enumOptions: { "0": "A".repeat(60) }, // 60 chars -> 60ch, past the 46ch box even before chrome
                 rawValue: 0,
             };
             const result = dropdownWidth(longRow);
-            expect(result).toBe("dd-5");
+            expect(result).toBe("dd-6");
+        });
+
+        // The real case the top box was added for: a CRE kit renders its packed id beside the game's own
+        // identifier. At 1ch/char under the stub this is 33ch + 4.5 chrome = 37.5ch, which fits the 46ch box
+        // and did NOT fit the 32ch one - the clip the cross-format sweep caught.
+        it("fits the longest real kit label without saturating below it", () => {
+            const kitRow: import("@bgforge/binary-editor").Row = {
+                ...enumRow,
+                numericFormat: "hex32",
+                enumOptions: { "8388608": "MAGESCHOOL_NECROMANCER" },
+                rawValue: 8388608,
+            };
+
+            expect(dropdownWidth(kitRow)).toBe("dd-6");
         });
 
         // Fit-contract regression pin: a dropdown's chosen box must always have room for its longest option
@@ -231,8 +248,8 @@ describe("dropdownWidth", () => {
             // Mirror the private scale in state/controls.ts (DROPDOWN_BOX_CH / DROPDOWN_CHROME_CH). Kept in
             // sync deliberately: if those change in code without updating here, this pin fails - the prompt to
             // re-confirm nothing clips. Stub metrics are 8px/char with 1ch=8px, so a label of N chars is N ch.
-            const BOX_CH = [10, 16, 20, 25, 32];
-            const CLASS = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"] as const;
+            const BOX_CH = [10, 16, 20, 25, 32, 46];
+            const CLASS = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5", "dd-6"] as const;
             const CHROME_CH = 4.5;
             const expectedClass = (renderedCh: number): string => {
                 const needed = renderedCh + CHROME_CH;
