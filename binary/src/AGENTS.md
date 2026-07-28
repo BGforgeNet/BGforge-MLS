@@ -138,13 +138,16 @@ that carries both.
   TAKESOUND / DROPSOUND / SLOT - it is a sound-and-slot lookup that names nothing, and it ships only with the
   Enhanced Editions anyway. Where a pair of fields shares a table across formats (school / sectype on the SPL
   header, ITM ability and EFF body), declare the ref ONCE as a shared constant so the sites cannot drift.
-- **Check the table's key space against real stored values before declaring, and use `keyShift` when they
+- **Check the table's key space against real stored values before declaring, and use `keyEncoding` when they
   differ.** A table is not always keyed the way the field stores it: CRE `kit` holds the KIT.IDS key in the
-  dword's high word (0x4003 KENSAI -> 0x40030000), so it declares `keyShift: 16`. Establish this from a corpus,
-  not from the vendored table - the vendored `CreKit` places Barbarian at 0x4000, a value no CRE in the
-  4020-record BG2 corpus holds, while 19 of the 20 values that DO occur are exactly `key << 16`. A consumer
-  drops any key that overflows the field once shifted (KIT.IDS carries two PC-only kits in already-stored form
-  that no CRE uses), because offering a value the field cannot hold is worse than leaving it unnamed.
+  dword's other half (0x4003 KENSAI -> 0x40030000), so it declares `keyEncoding: "swappedWords"`. Establish
+  this from a corpus, not from the vendored table - the vendored `CreKit` places Barbarian at 0x4000, a value
+  no CRE in the 4020-record BG2 corpus holds, while 19 of the 20 values that DO occur are the key with its
+  words swapped. Prefer an encoding that is a BIJECTION over one that only fits the common case: a left shift
+  matches the swap for every key under 0x10000 and silently pushes the rest off the end of the field, which
+  left EE BARBARIAN (0x40000000), WILDMAGE (0x80000000) and eight IWD2 cleric kits permanently unnamed. Near
+  Infinity reads this field the same way. A consumer still drops any key that does not fit the field, because
+  offering a value the field cannot hold is worse than leaving it unnamed.
 
 ## Faithful raw bytes; faithful labels
 

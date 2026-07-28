@@ -13,7 +13,7 @@
 /** Row shapes this fills in. Matched structurally: this module never imports the editor's Row type, so it
  *  walks messages whose row-bearing shape it does not need to know. */
 interface ValueRefRow {
-    ref: { kind: string; tables?: readonly string[]; keyShift?: number };
+    ref: { kind: string; tables?: readonly string[]; keyEncoding?: string };
     rawValue: number;
     enumOptions?: Record<string, string>;
     valueType?: string;
@@ -55,6 +55,18 @@ export interface GameLookups {
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
  *  strref, which cannot be pushed as a list). */
 const NAMING_KINDS = new Set(["ids", "2da"]);
+
+const WORD = 0x1_0000;
+
+/**
+ * Exchange a dword's two halves. Its own inverse, so one function converts key -> stored and back.
+ *
+ * Arithmetic rather than shifts: `<< 16` yields a SIGNED int32, so any key whose low word has the top bit set
+ * comes back negative and keys an option row no value can match.
+ */
+function swapWords(value: number): number {
+    return Math.floor(value / WORD) + (value % WORD) * WORD;
+}
 
 /** A `{ kind: ... }` ref as it survives the structural walk - the union's own type lives in the binary lib. */
 function isRef(value: unknown): value is { kind: string } {
@@ -103,14 +115,12 @@ function namedByGame(
     table: ReadonlyMap<number, string>,
 ): { enumOptions: Record<string, string>; valueType: string; enumOpen: true } {
     const merged: Record<string, string> = { ...row.enumOptions };
-    // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in its
-    // high word), so shift first - then drop anything that no longer fits the field, since an option list must
-    // never offer a value the field cannot hold. KIT.IDS's two PC-only kits are already in stored form and
-    // overflow a u32 once shifted; they drop out here rather than becoming nonsense entries.
-    const shift = row.ref.keyShift ?? 0;
+    // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in the
+    // other half of its dword), so convert first - then drop anything that does not fit the field, since an
+    // option list must never offer a value the field cannot hold.
     const limit = row.size === undefined ? Infinity : 2 ** (8 * row.size);
     for (const [key, name] of table) {
-        const stored = key * 2 ** shift;
+        const stored = row.ref.keyEncoding === "swappedWords" ? swapWords(key) : key;
         if (stored < limit) merged[String(stored)] = name;
     }
     return { enumOptions: merged, valueType: "enum", enumOpen: true };

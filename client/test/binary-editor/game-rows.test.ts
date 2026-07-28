@@ -167,14 +167,14 @@ describe("withGameContext", () => {
     // A CRE kit dword stores the KIT.IDS key in its HIGH WORD (0x4003 KENSAI is stored 0x40030000), verified
     // across the 4020-CRE BG2 corpus: 19 of the 20 distinct stored values are that shift, and none is a raw
     // key. Merged unshifted, the table contributes options the field can never hold.
-    it("shifts IDS keys into the field's own encoding when the ref declares a shift", () => {
+    it("swaps an IDS key's words into the field's own encoding when the ref declares it", () => {
         const kit = {
             id: "k1",
             kind: "field",
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyShift: 16 },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
             rawValue: 0x4003_0000,
             enumOptions: { "1073938432": "Kensai" },
         };
@@ -186,16 +186,16 @@ describe("withGameContext", () => {
         expect(out.rows[0]?.enumOptions).toEqual({ "1073938432": "KENSAI" });
     });
 
-    // KIT.IDS also carries the two PC-only kits keyed in their already-stored form (BARBARIAN 0x40000000),
-    // which overflow a u32 once shifted. An option the field cannot store must not be offered at all.
-    it("drops a shifted key the field is too narrow to hold", () => {
+    // The EE and IWD2 tables key some kits in the OTHER word - BARBARIAN is 0x40000000 - and the swap maps
+    // those to a stored 0x4000 rather than off the end of the field. A plain shift dropped them entirely.
+    it("names a key held in the high word, which a shift would push out of the field", () => {
         const kit = {
             id: "k2",
             kind: "field",
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyShift: 16 },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
             rawValue: 0,
             enumOptions: {},
         };
@@ -205,12 +205,65 @@ describe("withGameContext", () => {
                 new Map([
                     [0x4003, "KENSAI"],
                     [0x4000_0000, "BARBARIAN"],
+                    [0x8000_0000, "WILDMAGE"],
                 ]),
         };
 
         const out = withGameContext({ rows: [kit] }, named);
 
-        expect(out.rows[0]?.enumOptions).toEqual({ "1073938432": "KENSAI" });
+        expect(out.rows[0]?.enumOptions).toEqual({
+            "1073938432": "KENSAI",
+            "16384": "BARBARIAN",
+            "32768": "WILDMAGE",
+        });
+    });
+
+    // The swap is an involution, so it is the same operation in both directions: the value a record stores
+    // maps back to exactly the table key it came from.
+    it("round-trips a stored value back to its table key", () => {
+        const kit = {
+            id: "k3",
+            kind: "field",
+            name: "Kit",
+            valueType: "enum",
+            size: 4,
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            rawValue: 0x4000,
+            enumOptions: {},
+        };
+        // TRUE_CLASS is 0x4000, the no-kit marker: it stores as 0x40000000, the commonest value in the corpus.
+        const named = {
+            ...lookups,
+            namingTable: () =>
+                new Map([
+                    [0x4000, "TRUE_CLASS"],
+                    [0x4000_0000, "BARBARIAN"],
+                ]),
+        };
+
+        const out = withGameContext({ rows: [kit] }, named);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "1073741824": "TRUE_CLASS", "16384": "BARBARIAN" });
+    });
+
+    // A key whose low word has the top bit set lands in the stored dword's HIGH word, past the signed-int32
+    // range. The option key must be the unsigned value the field holds, not a negative one no row can match.
+    it("keeps a key that swaps into the top bit unsigned", () => {
+        const kit = {
+            id: "k4",
+            kind: "field",
+            name: "Kit",
+            valueType: "enum",
+            size: 4,
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            rawValue: 0,
+            enumOptions: {},
+        };
+        const named = { ...lookups, namingTable: () => new Map([[0x8000, "HIGHBIT"]]) };
+
+        const out = withGameContext({ rows: [kit] }, named);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "2147483648": "HIGHBIT" });
     });
 
     // A 2DA-backed field (an EFF magic school) resolves through the same merge as an IDS one - only the source

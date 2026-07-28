@@ -26,12 +26,16 @@ export type ExternalRef =
           readonly kind: "ids";
           readonly tables: readonly string[];
           /**
-           * Bits the field's stored value is shifted left by, relative to the table's key. Default 0 - the
-           * stored value IS the key, which is the usual case. A CRE kit dword holds the KIT.IDS key in its
-           * high word (0x4003 KENSAI is stored 0x40030000), so it declares 16. A consumer must drop any key
-           * that overflows the field once shifted, rather than offering a value the field cannot store.
+           * How the field's stored value encodes the table's key. Absent - the usual case - means the stored
+           * value IS the key.
+           *
+           * `swappedWords` exchanges the two halves of a dword: a CRE kit stores KIT.IDS 0x4003 KENSAI as
+           * 0x40030000. It is an involution, so it converts in both directions, and every key stays inside
+           * the field - which a shift does not: the EE tables key BARBARIAN as 0x40000000 and WILDMAGE as
+           * 0x80000000, and IWD2 keys eight cleric kits above 0x10000, all of which a left-shift pushes off
+           * the end of the dword. Declared only on 4-byte fields; it means nothing on a narrower one.
            */
-          readonly keyShift?: number;
+          readonly keyEncoding?: "swappedWords";
       }
     /**
      * Value is a row INDEX in a 2DA table, whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Same

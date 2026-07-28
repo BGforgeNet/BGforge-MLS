@@ -95,18 +95,26 @@ export const creHeaderSpecAnnotated = {
         ref: { kind: "ids", tables: ["ALIGNMEN"] },
     },
     /**
-     * `kit` is KIT.IDS (CRE header 0x244), stored with the table's key in the dword's HIGH WORD - 0x4003
-     * KENSAI is stored 0x40030000 - hence `keyShift: 16`. Measured against the 4020-CRE BG2:ToB corpus: 19 of
-     * the 20 distinct stored values are exactly `key << 16`, and none is a raw key. KIT.IDS's BARBARIAN
-     * (0x40000000) and WILDMAGE (0x80000000) are keyed in already-stored form because they are PC-only kits
-     * that no CRE carries; they overflow a u32 once shifted and are dropped by the consumer's range check
-     * rather than named. 0x40000000 occurs on 272 creatures of every class (fighters, monks, wraiths), i.e.
-     * as the generic no-kit marker, which this install's table calls MAGESCHOOL_GENERALIST.
+     * `kit` is KIT.IDS (CRE header 0x244), stored with the table's key in the OTHER half of the dword - 0x4003
+     * KENSAI is stored 0x40030000. Measured against the 4020-CRE BG2:ToB corpus: 19 of the 20 distinct stored
+     * values are the key with its words swapped, and none is a raw key.
      *
-     * The vendored `CreKit` places Barbarian at 0x4000 - a value no CRE in the corpus holds. Left as-is here
-     * (it only fills gaps the game's table does not cover), but it is wrong and the game's table wins over it.
+     * The swap, not a left shift, because the two are the same for a key under 0x10000 and only the swap keeps
+     * the larger ones inside the field: the EE tables key BARBARIAN as 0x40000000 and WILDMAGE as 0x80000000,
+     * and IWD2 keys eight cleric kits above 0x10000. A shift pushed all of those off the end of the dword, so
+     * they went unnamed. This matches how Near Infinity reads the field.
+     *
+     * Stored 0x40000000 is the no-kit marker - 272 creatures of every class (fighters, monks, wraiths) - and
+     * swaps back to key 0x4000, which BG2 calls TRUE_CLASS and the EE tables MAGESCHOOL_GENERALIST. The
+     * disagreement is why the install's own table wins over the vendored `CreKit`, which fills only what the
+     * game's does not cover.
      */
-    kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true, ref: { kind: "ids", tables: ["KIT"], keyShift: 16 } },
+    kit: {
+        ...creHeaderSpec.kit,
+        enum: CreKit,
+        enumOpen: true,
+        ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+    },
     /**
      * ANIMATE.IDS, and the only one of these with NO vendored table: the value space is per-install (321
      * entries in BG2:ToB) and a bare `0x6100` names nothing on its own. So this field shows a plain hex number
