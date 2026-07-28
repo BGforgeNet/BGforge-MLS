@@ -30,9 +30,17 @@ interface SlotRefRow {
 export interface GameLookups {
     strref(strref: number): string | undefined;
     slotLabel(tables: readonly string[], index: number): string | undefined;
-    /** The whole naming table, for a field whose value space the game defines (RACE.IDS, ANIMATE.IDS, ...). */
-    idsTable(tables: readonly string[]): ReadonlyMap<number, string> | undefined;
+    /**
+     * The whole naming table for a field whose value space the game defines. `kind` selects the source - an IDS
+     * table keyed by value, or a 2DA keyed by row index - because the merge below is identical either way and
+     * only the resource differs.
+     */
+    namingTable(kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined;
 }
+
+/** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
+ *  strref, which cannot be pushed as a list). */
+const NAMING_KINDS = new Set(["ids", "2da"]);
 
 /** A `{ kind: ... }` ref as it survives the structural walk - the union's own type lives in the binary lib. */
 function isRef(value: unknown): value is { kind: string } {
@@ -110,8 +118,8 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         const text = lookups.strref(row.rawValue);
         if (text !== undefined) row = { ...row, strrefText: text };
     }
-    if (isValueRefRow(row) && row.ref.kind === "ids" && row.ref.tables !== undefined) {
-        const table = lookups.idsTable(row.ref.tables);
+    if (isValueRefRow(row) && NAMING_KINDS.has(row.ref.kind) && row.ref.tables !== undefined) {
+        const table = lookups.namingTable(row.ref.kind, row.ref.tables);
         if (table !== undefined) row = { ...row, ...namedByGame(row, table) };
     }
     if (isSlotRefRow(row)) {

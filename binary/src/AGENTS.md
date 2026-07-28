@@ -117,6 +117,12 @@ that carries both.
   inside one dropdown), and the identifier is what a script author actually types. Source it from a real install
   or IESDP's IDS listings (`files/ids/<game>/*.htm`), never by inventing an identifier-looking name - where no
   IDS names a value (the `0` unset sentinels), keep a plain editor word so it does not pose as one.
+- **A 2DA ref is keyed by ROW INDEX, and not every 2DA can name anything.** `{ kind: "2da" }` resolves the
+  stored value as a row position whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Check the file
+  first: `itemtype.2da` deliberately has NO ref, because its rows are numbered `0,1,2...` and its columns are
+  TAKESOUND / DROPSOUND / SLOT - it is a sound-and-slot lookup that names nothing, and it ships only with the
+  Enhanced Editions anyway. Where a pair of fields shares a table across formats (school / sectype on the SPL
+  header, ITM ability and EFF body), declare the ref ONCE as a shared constant so the sites cannot drift.
 - **Check the table's key space against real stored values before declaring, and use `keyShift` when they
   differ.** A table is not always keyed the way the field stores it: CRE `kit` holds the KIT.IDS key in the
   dword's high word (0x4003 KENSAI -> 0x40030000), so it declares `keyShift: 16`. Establish this from a corpus,

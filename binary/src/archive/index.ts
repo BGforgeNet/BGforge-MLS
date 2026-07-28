@@ -10,6 +10,7 @@ export type { KeyIndex, KeyBifEntry, KeyResource } from "./key";
 export { openBif, parseBif } from "./bif";
 export type { BifArchive, BifFileEntry, BifTilesetEntry } from "./bif";
 export { parseIds } from "./ids";
+export { parse2daRowNames } from "./two-da";
 export { openTlk, parseTlk } from "./tlk";
 export type { Tlk } from "./tlk";
 export { bufferSource, fileSource } from "./byte-source";

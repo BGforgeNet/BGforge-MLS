@@ -27,4 +27,10 @@ export type ExternalRef =
            * that overflows the field once shifted, rather than offering a value the field cannot store.
            */
           readonly keyShift?: number;
-      };
+      }
+    /**
+     * Value is a row INDEX in a 2DA table, whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Same
+     * candidate-list semantics as `ids`; the kind differs only in which resource the consumer reads, since the
+     * two live under different resource types and parse differently.
+     */
+    | { readonly kind: "2da"; readonly tables: readonly string[] };

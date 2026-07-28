@@ -89,7 +89,7 @@ const token = {} as vscode.CancellationToken;
 const noGame = {
     strref: (): undefined => undefined,
     slotLabel: (): undefined => undefined,
-    idsTable: (): undefined => undefined,
+    namingTable: (): undefined => undefined,
 };
 
 describe("binary editor hot-exit restore", () => {

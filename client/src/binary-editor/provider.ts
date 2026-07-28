@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
-import type { IdsTableResolver, SlotLabelResolver, StrrefResolver } from "../ie-resources/game-lookups";
+import type { NamingTableResolver, SlotLabelResolver, StrrefResolver } from "../ie-resources/game-lookups";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
@@ -60,11 +60,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     private readonly diagnosticsTimers = new WeakMap<BinaryEditorDocument, ReturnType<typeof setTimeout>>();
 
     private readonly extensionUri: vscode.Uri;
-    private readonly gameLookups: { strref: StrrefResolver; slotLabel: SlotLabelResolver; idsTable: IdsTableResolver };
+    private readonly gameLookups: {
+        strref: StrrefResolver;
+        slotLabel: SlotLabelResolver;
+        namingTable: NamingTableResolver;
+    };
 
     constructor(
         context: vscode.ExtensionContext,
-        gameLookups: { strref: StrrefResolver; slotLabel: SlotLabelResolver; idsTable: IdsTableResolver },
+        gameLookups: { strref: StrrefResolver; slotLabel: SlotLabelResolver; namingTable: NamingTableResolver },
     ) {
         this.extensionUri = context.extensionUri;
         this.gameLookups = gameLookups;
@@ -341,7 +345,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 : withGameContext(message, {
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
-                      idsTable: (tables) => this.gameLookups.idsTable(uri, tables),
+                      namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
                   });
         void panel.webview.postMessage(resolved);
     }

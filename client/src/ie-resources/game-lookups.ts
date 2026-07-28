@@ -13,8 +13,12 @@ export type StrrefResolver = (uri: vscode.Uri, strref: number) => string | undef
 /** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
 export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
 
-/** Resolves a whole IDS table, for a field whose value space the game defines (RACE.IDS, ANIMATE.IDS, ...). */
-export type IdsTableResolver = (uri: vscode.Uri, tables: readonly string[]) => ReadonlyMap<number, string> | undefined;
+/** Resolves a whole naming table (an IDS keyed by value, or a 2DA keyed by row index) for a document. */
+export type NamingTableResolver = (
+    uri: vscode.Uri,
+    kind: string,
+    tables: readonly string[],
+) => ReadonlyMap<number, string> | undefined;
 
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
@@ -25,6 +29,7 @@ interface TlkSource {
     ensureOpen(dir: string): {
         tlk(): { get(strref: number): string | undefined } | undefined;
         ids(resref: string): ReadonlyMap<number, string> | undefined;
+        twoDa(resref: string): ReadonlyMap<number, string> | undefined;
     };
 }
 
@@ -82,8 +87,8 @@ export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
  * installs' tables mean different things at the same key and blending them would offer entries that exist in
  * neither.
  */
-export function createIdsTableResolver(session: TlkSource): IdsTableResolver {
-    return (uri, tables) => {
+export function createNamingTableResolver(session: TlkSource): NamingTableResolver {
+    return (uri, kind, tables) => {
         if (uri.scheme !== GAME_RESOURCE_SCHEME) return;
         const { gameDir } = parseResourceUri(uri);
         if (!gameDir) return;
@@ -93,7 +98,7 @@ export function createIdsTableResolver(session: TlkSource): IdsTableResolver {
         try {
             const game = session.ensureOpen(gameDir);
             for (const table of tables) {
-                resolved = game.ids(table);
+                resolved = kind === "2da" ? game.twoDa(table) : game.ids(table);
                 if (resolved !== undefined) break;
             }
         } catch {

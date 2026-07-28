@@ -16,7 +16,9 @@ import {
     EffectSaveTypeFlags,
     EffectTarget,
     EffectTiming,
+    SCHOOL_REF,
     Schools,
+    SECTYPE_REF,
     SecondaryTypes,
 } from "../../ie-common/types";
 import { Opcodes } from "../../ie-common/opcodes";
@@ -46,8 +48,8 @@ export const effBodySpecAnnotated = {
     saveType: { ...effBodySpec.saveType, flags: EffectSaveTypeFlags },
     // Primary type / magic school (mschool.2da) and secondary type (msectype.2da); both mod-extensible 2DAs,
     // shared with the SPL header and ITM ability fields of the same name.
-    school: { ...effBodySpec.school, enum: Schools, enumOpen: true },
-    sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true },
+    school: { ...effBodySpec.school, enum: Schools, enumOpen: true, ref: SCHOOL_REF },
+    sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true, ref: SECTYPE_REF },
     // Parent resource kind (0 None / 1 Spell / 2 Item per IESDP eff_v2 0x90); was a raw integer next to the
     // parent-resource flags. Open: EE/mod data occasionally carries values outside the documented three.
     parentResourceType: { ...effBodySpec.parentResourceType, enum: EffectParentResourceType, enumOpen: true },

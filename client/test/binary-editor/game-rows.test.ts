@@ -5,13 +5,13 @@ const LINE = "Ring of Protection +1";
 const lookups = {
     strref: (strref: number): string | undefined => (strref === 6348 ? LINE : undefined),
     slotLabel: (): string | undefined => undefined,
-    idsTable: (): ReadonlyMap<number, string> | undefined => undefined,
+    namingTable: (): ReadonlyMap<number, string> | undefined => undefined,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
 const withRaceIds = {
     ...lookups,
-    idsTable: (tables: readonly string[]): ReadonlyMap<number, string> | undefined =>
+    namingTable: (_kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined =>
         tables[0] === "RACE"
             ? new Map([
                   [1, "HUMAN"],
@@ -152,7 +152,7 @@ describe("withGameContext", () => {
             ref: { kind: "ids", tables: ["ANIMATE"] },
             rawValue: 24832,
         };
-        const named = { ...lookups, idsTable: () => new Map([[24832, "MFIE_BAAL"]]) };
+        const named = { ...lookups, namingTable: () => new Map([[24832, "MFIE_BAAL"]]) };
 
         const out = withGameContext({ rows: [anim] }, named);
 
@@ -177,7 +177,7 @@ describe("withGameContext", () => {
             rawValue: 0x4003_0000,
             enumOptions: { "1073938432": "Kensai" },
         };
-        const named = { ...lookups, idsTable: () => new Map([[0x4003, "KENSAI"]]) };
+        const named = { ...lookups, namingTable: () => new Map([[0x4003, "KENSAI"]]) };
 
         const out = withGameContext({ rows: [kit] }, named);
 
@@ -200,7 +200,7 @@ describe("withGameContext", () => {
         };
         const named = {
             ...lookups,
-            idsTable: () =>
+            namingTable: () =>
                 new Map([
                     [0x4003, "KENSAI"],
                     [0x4000_0000, "BARBARIAN"],
@@ -210,6 +210,30 @@ describe("withGameContext", () => {
         const out = withGameContext({ rows: [kit] }, named);
 
         expect(out.rows[0]?.enumOptions).toEqual({ "1073938432": "KENSAI" });
+    });
+
+    // A 2DA-backed field (an EFF magic school) resolves through the same merge as an IDS one - only the source
+    // resource differs - so the kind has to reach the lookup rather than being assumed to be IDS.
+    it("names a 2DA-backed field from the game's row-name table", () => {
+        const school = {
+            id: "s1",
+            kind: "field",
+            name: "School",
+            valueType: "enum",
+            size: 1,
+            ref: { kind: "2da", tables: ["MSCHOOL"] },
+            rawValue: 1,
+            enumOptions: { "1": "Abjurer" },
+        };
+        const named = {
+            ...lookups,
+            namingTable: (kind: string, tables: readonly string[]) =>
+                kind === "2da" && tables[0] === "MSCHOOL" ? new Map([[1, "ABJURER"]]) : undefined,
+        };
+
+        const out = withGameContext({ rows: [school] }, named);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "1": "ABJURER" });
     });
 
     // A CRE sound slot is BOTH: a strref (the line it points at) and an IDS-named slot (its label). The real

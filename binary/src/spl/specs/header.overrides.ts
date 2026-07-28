@@ -3,7 +3,7 @@
  */
 
 import type { FieldSpec } from "../../spec/types";
-import { Schools, SecondaryTypes } from "../../ie-common/types";
+import { SCHOOL_REF, Schools, SECTYPE_REF, SecondaryTypes } from "../../ie-common/types";
 import { SplCastingGraphics, SplExclusionFlags, SplFlags, SplType } from "../types";
 import { splHeaderSpec } from "./header";
 
@@ -14,9 +14,9 @@ export const splHeaderSpecAnnotated = {
     // tolerates out-of-table values, so the lookup is advisory.
     type: { ...splHeaderSpec.type, enum: SplType, enumOpen: true },
     // Primary type / magic school (mschool.2da). Open because the 2DA is mod-extensible.
-    school: { ...splHeaderSpec.school, enum: Schools, enumOpen: true },
+    school: { ...splHeaderSpec.school, enum: Schools, enumOpen: true, ref: SCHOOL_REF },
     // Secondary type (msectype.2da), likewise mod-extensible.
-    sectype: { ...splHeaderSpec.sectype, enum: SecondaryTypes, enumOpen: true },
+    sectype: { ...splHeaderSpec.sectype, enum: SecondaryTypes, enumOpen: true, ref: SECTYPE_REF },
     exclusionFlags: { ...splHeaderSpec.exclusionFlags, flags: SplExclusionFlags },
     // Casting graphics 0-15 are documented; mods/EE engines occasionally use
     // additional values.

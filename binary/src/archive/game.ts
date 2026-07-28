@@ -18,10 +18,12 @@ import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
 import { parseIds } from "./ids";
+import { parse2daRowNames } from "./two-da";
 import { openTlk, type Tlk } from "./tlk";
 
-/** IDS resource type (IESDP general.htm resource-type table). */
+/** IDS and 2DA resource types (IESDP general.htm resource-type table). */
 const IDS_RESTYPE = 0x03f0;
+const TWO_DA_RESTYPE = 0x03f4;
 
 export interface GameResourceRef {
     readonly resref: string;
@@ -81,6 +83,12 @@ export interface Game {
      * SOUNDOFF.IDS and BG2's SNDSLOT.IDS disagree on most sound slots, and mods extend these tables.
      */
     ids(resref: string): ReadonlyMap<number, string> | undefined;
+    /**
+     * A 2DA table from THIS install as row index -> row NAME (e.g. `twoDa("MSCHOOL")`). Undefined when the game
+     * has no such table - `itemtype.2da` ships only with the Enhanced Editions, for instance. Read from the game
+     * for the same reason as `ids`: the tables are per-install and mod-extensible.
+     */
+    twoDa(resref: string): ReadonlyMap<number, string> | undefined;
     close(): void;
 }
 
@@ -281,6 +289,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
     const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
+    const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
     // the folder is taken from weidu.conf (or the sorted-first lang subdir that has a dialog.tlk). Classic games
@@ -525,6 +534,22 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     // Resource not found, or unreadable - reported as "no table" by the null above.
                 }
                 idsCache.set(cacheKey, entry);
+            }
+            return entry ?? undefined;
+        },
+        twoDa(resref) {
+            const cacheKey = resref.toLowerCase();
+            let entry = twoDaCache.get(cacheKey);
+            if (entry === undefined) {
+                // Absent is normal - itemtype.2da is Enhanced-Edition-only - so it caches as null rather than
+                // re-reading on each lookup, exactly as `ids` above.
+                entry = null;
+                try {
+                    entry = parse2daRowNames(this.read(resref, TWO_DA_RESTYPE));
+                } catch {
+                    // Resource not found, or unreadable - reported as "no table" by the null above.
+                }
+                twoDaCache.set(cacheKey, entry);
             }
             return entry ?? undefined;
         },

@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { creParser } from "../src/cre";
+import { effParser } from "../src/eff";
 import { itmParser } from "../src/itm";
+import { splParser } from "../src/spl";
 import { REPO_ROOT } from "./repo-root";
 import type { ParsedField, ParsedGroup } from "../src/types";
 
@@ -24,7 +26,14 @@ function parseFields(parser: { parse: (b: Uint8Array) => { root: ParsedGroup } }
     return allFields(parser.parse(new Uint8Array(fs.readFileSync(fixture))).root);
 }
 
+const SPL_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/spl/wm_word.spl");
+const EFF_FIXTURE = path.join(
+    REPO_ROOT,
+    "external/infinity-engine/Ascension/ascension/ascensionmain/demon/babausu.eff",
+);
+
 const haveFixtures = fs.existsSync(ITM_FIXTURE) && fs.existsSync(CRE_FIXTURE);
+const have2daFixtures = haveFixtures && fs.existsSync(SPL_FIXTURE) && fs.existsSync(EFF_FIXTURE);
 
 const isStrref = (f: ParsedField): boolean => f.ref?.kind === "strref";
 
@@ -133,5 +142,40 @@ describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () =
 
         expect(race?.enumOptions?.["1"]).toBe("HUMAN");
         expect(race?.enumOpen).toBe(true);
+    });
+});
+
+/**
+ * The magic school and secondary type are 2DA-backed, and the SAME pair appears in three formats (SPL header,
+ * ITM ability, EFF body) through one shared vendored table. Declaring the ref on only some of them would name
+ * the value in one editor and not another, so this pins the whole cohort against real parses.
+ *
+ * The stored value is the 2DA's ROW INDEX and the row NAME is the identifier - MSCHOOL row 1 is ABJURER - so
+ * the reader maps index to name (see `archive/two-da.ts`).
+ */
+describe.skipIf(!have2daFixtures)("2DA-backed school/sectype fields declare their table", () => {
+    const refFor = (fields: ParsedField[], name: string): unknown => fields.find((f) => f.name === name)?.ref;
+    const school = { kind: "2da", tables: ["MSCHOOL"] };
+    const sectype = { kind: "2da", tables: ["MSECTYPE"] };
+
+    it("declares MSCHOOL and MSECTYPE on the ITM ability pair", () => {
+        const fields = parseFields(itmParser, ITM_FIXTURE);
+
+        expect(refFor(fields, "Primary Type")).toEqual(school);
+        expect(refFor(fields, "Secondary Type")).toEqual(sectype);
+    });
+
+    it("declares the same pair on the SPL header", () => {
+        const fields = parseFields(splParser, SPL_FIXTURE);
+
+        expect(refFor(fields, "School")).toEqual(school);
+        expect(refFor(fields, "Sectype")).toEqual(sectype);
+    });
+
+    it("declares the same pair on the EFF body", () => {
+        const fields = parseFields(effParser, EFF_FIXTURE);
+
+        expect(refFor(fields, "School")).toEqual(school);
+        expect(refFor(fields, "Sectype")).toEqual(sectype);
     });
 });

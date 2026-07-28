@@ -107,43 +107,52 @@ export const EffectParentResourceType: Record<number, string> = {
 // -- Classification lookups (shared across SPL/ITM/EFF) ---------------------
 
 /**
+ * The 2DA each classification field is named by, declared once so the SPL header, ITM ability and EFF body
+ * sites cannot drift apart - all three read the same table, and a field named in one editor but not another
+ * would be the drift this prevents.
+ */
+export const SCHOOL_REF = { kind: "2da", tables: ["MSCHOOL"] } as const;
+export const SECTYPE_REF = { kind: "2da", tables: ["MSECTYPE"] } as const;
+
+/**
  * Primary type / magic school (`mschool.2da`; `school.2da` in IWD). Shared by the SPL header `school`, the ITM
  * ability `primaryType`, and the EFF v2 effect `school` - all reference the same 2DA, so one table serves them.
  * Mod-extensible (up to 256 rows), so callers mark the field `enumOpen`. Number-keyed, so it works for either
- * the u8 (SPL/ITM) or u32 (EFF) wire width.
+ * the u8 (SPL/ITM) or u32 (EFF) wire width. Labels are the 2DA's own row names verbatim; `0` has no row, so it
+ * keeps the editor's word for unset.
  * 2DA reference: https://iesdp.bgforge.net/files/2da/2da_bgee/mschool.htm
  */
 export const Schools: Readonly<Record<number, string>> = {
     0: "None",
-    1: "Abjurer",
-    2: "Conjurer",
-    3: "Diviner",
-    4: "Enchanter",
-    5: "Illusionist",
-    6: "Invoker",
-    7: "Necromancer",
-    8: "Transmuter",
-    9: "Generalist",
+    1: "ABJURER",
+    2: "CONJURER",
+    3: "DIVINER",
+    4: "ENCHANTER",
+    5: "ILLUSIONIST",
+    6: "INVOKER",
+    7: "NECROMANCER",
+    8: "TRANSMUTER",
+    9: "GENERALIST",
 };
 
 /**
  * Secondary type (`msectype.2da`). Shared by the SPL header `sectype`, the ITM ability `secondaryType`, and the
- * EFF v2 effect `sectype`. Mod-extensible, so callers mark the field `enumOpen`. Labels humanize the 2DA's
- * CamelCase identifiers.
+ * EFF v2 effect `sectype`. Mod-extensible, so callers mark the field `enumOpen`. Labels are the 2DA's own row
+ * names verbatim, so the field reads the same with or without a game open.
  * 2DA reference: https://iesdp.bgforge.net/files/2da/2da_bgee/msectype.htm
  */
 export const SecondaryTypes: Readonly<Record<number, string>> = {
     0: "None",
-    1: "Spell Protections",
-    2: "Specific Protections",
-    3: "Illusionary Protections",
-    4: "Magic Attack",
-    5: "Divination Attack",
+    1: "SpellProtections",
+    2: "SpecificProtections",
+    3: "IllusionaryProtections",
+    4: "MagicAttack",
+    5: "DivinationAttack",
     6: "Conjuration",
-    7: "Combat Protections",
+    7: "CombatProtections",
     8: "Contingency",
     9: "Battleground",
-    10: "Offensive Damage",
+    10: "OffensiveDamage",
     11: "Disabling",
     12: "Combination",
     13: "Non-combat",
