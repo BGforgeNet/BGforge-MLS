@@ -1,0 +1,79 @@
+/**
+ * IDS lookup-table reader. Fixtures are built byte-accurately here (an installed game is not available to the
+ * test suite), following the format IESDP documents: two optional header lines, then `<value> <identifier>`
+ * rows in decimal or hex, optionally XOR-encrypted behind an 0xFFFF marker.
+ */
+import { describe, it, expect } from "vitest";
+import { parseIds } from "../src/archive/ids";
+
+/** The game writes CRLF and pads identifiers with trailing spaces. */
+function idsBytes(body: string): Uint8Array {
+    return new TextEncoder().encode(body);
+}
+
+// The IE text-encryption key, verbatim from IESDP encryption.htm. Declared in the TEST so the fixture is built
+// from the published key rather than from whatever the implementation happens to use.
+const IE_XOR_KEY = Uint8Array.from([
+    0x88, 0xa8, 0x8f, 0xba, 0x8a, 0xd3, 0xb9, 0xf5, 0xed, 0xb1, 0xcf, 0xea, 0xaa, 0xe4, 0xb5, 0xfb, 0xeb, 0x82, 0xf9,
+    0x90, 0xca, 0xc9, 0xb5, 0xe7, 0xdc, 0x8e, 0xb7, 0xac, 0xee, 0xf7, 0xe0, 0xca, 0x8e, 0xea, 0xca, 0x80, 0xce, 0xc5,
+    0xad, 0xb7, 0xc4, 0xd0, 0x84, 0x93, 0xd5, 0xf0, 0xeb, 0xc8, 0xb4, 0x9d, 0xcc, 0xaf, 0xa5, 0x95, 0xba, 0x99, 0x87,
+    0xd2, 0x9d, 0xe3, 0x91, 0xba, 0x90, 0xca,
+]);
+
+describe("parseIds", () => {
+    it("maps each value to its identifier", () => {
+        const ids = parseIds(idsBytes("IDS V1.0\r\n0 INITIAL_MEETING\r\n1 MORALE\r\n"));
+
+        expect(ids.get(0)).toBe("INITIAL_MEETING");
+        expect(ids.get(1)).toBe("MORALE");
+    });
+
+    // The 64-byte cyclic XOR IESDP documents (encryption.htm), behind the 0xFFFF marker. BG2 ships SOUNDOFF.IDS
+    // in this form, so a reader that skips it gets binary noise rather than a table.
+    it("decrypts a file behind the 0xFFFF marker", () => {
+        const plain = "IDS V1.0\r\n0 INITIAL_MEETING\r\n1 MORALE\r\n";
+        const body = idsBytes(plain);
+        const encrypted = new Uint8Array(2 + body.length);
+        encrypted[0] = 0xff;
+        encrypted[1] = 0xff;
+        for (const [i, byte] of body.entries()) encrypted[2 + i] = byte ^ IE_XOR_KEY[i % IE_XOR_KEY.length]!;
+
+        const ids = parseIds(encrypted);
+
+        expect(ids.get(0)).toBe("INITIAL_MEETING");
+        expect(ids.get(1)).toBe("MORALE");
+    });
+
+    // The real SNDSLOT.IDS pads every identifier out to a fixed column.
+    it("drops the trailing padding the game writes", () => {
+        const ids = parseIds(idsBytes("IDS V1.0\r\n0 INITIAL_MEETING          \r\n"));
+
+        expect(ids.get(0)).toBe("INITIAL_MEETING");
+    });
+
+    // "The IDS file header consists of two lines, either of which may be omitted" (IESDP ids.htm).
+    it("reads a file with no header line", () => {
+        expect(parseIds(idsBytes("0 MORALE\r\n")).get(0)).toBe("MORALE");
+    });
+
+    // The second header line is an entry count, "not always correct" - so it must not be mistaken for a row.
+    it("does not mistake the entry-count header for a row", () => {
+        const ids = parseIds(idsBytes("IDS V1.0\r\n2\r\n0 INITIAL_MEETING\r\n1 MORALE\r\n"));
+
+        expect(ids.size).toBe(2);
+        expect(ids.get(2)).toBeUndefined();
+    });
+
+    it("accepts a hex value", () => {
+        expect(parseIds(idsBytes("0x0010 BATTLE_CRY1\r\n")).get(16)).toBe("BATTLE_CRY1");
+    });
+
+    it("skips blank and malformed lines rather than failing the table", () => {
+        const ids = parseIds(idsBytes("IDS V1.0\r\n\r\n0 MORALE\r\nnonsense\r\n\r\n1 HAPPY\r\n"));
+
+        expect([...ids.entries()]).toEqual([
+            [0, "MORALE"],
+            [1, "HAPPY"],
+        ]);
+    });
+});

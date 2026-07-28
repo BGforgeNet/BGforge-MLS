@@ -532,6 +532,28 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    // The game's own IDS tables are what name its slots (BG1 SOUNDOFF.IDS and BG2 SNDSLOT.IDS disagree on most
+    // sound slots, and mods extend them), so the reader has to come from the install, not a vendored copy.
+    it("reads an IDS table from the game by name", () => {
+        const sndslot = new TextEncoder().encode("IDS V1.0\r\n0 INITIAL_MEETING\r\n1 MORALE\r\n");
+        const game = openGame(makeGameDir({ "override/sndslot.ids": sndslot }));
+        try {
+            expect(game.ids("SNDSLOT")?.get(0)).toBe("INITIAL_MEETING");
+            expect(game.ids("sndslot")?.get(1)).toBe("MORALE");
+        } finally {
+            game.close();
+        }
+    });
+
+    it("reports an absent IDS table rather than throwing", () => {
+        const game = openGame(makeGameDir());
+        try {
+            expect(game.ids("SNDSLOT")).toBeUndefined();
+        } finally {
+            game.close();
+        }
+    });
+
     it("reuses one open BIF across reads and reports missing resources", () => {
         const game = openGame(makeGameDir());
         try {

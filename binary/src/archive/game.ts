@@ -17,7 +17,11 @@ import { atomicWriteFileSync, fileSource } from "./byte-source";
 import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game-type";
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
+import { parseIds } from "./ids";
 import { openTlk, type Tlk } from "./tlk";
+
+/** IDS resource type (IESDP general.htm resource-type table). */
+const IDS_RESTYPE = 0x03f0;
 
 export interface GameResourceRef {
     readonly resref: string;
@@ -71,6 +75,12 @@ export interface Game {
      * strref - resolve them via `tlk()?.get(strref)`.
      */
     tlk(variant?: "male" | "female"): Tlk | undefined;
+    /**
+     * An IDS lookup table from THIS install, by resref (e.g. `ids("SNDSLOT")`). Undefined when the game has no
+     * such table. Read from the game rather than vendored because the mapping is per-install: BG1's
+     * SOUNDOFF.IDS and BG2's SNDSLOT.IDS disagree on most sound slots, and mods extend these tables.
+     */
+    ids(resref: string): ReadonlyMap<number, string> | undefined;
     close(): void;
 }
 
@@ -270,6 +280,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const baseIdentity = detectGameIdentity(key);
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
+    const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
     // the folder is taken from weidu.conf (or the sorted-first lang subdir that has a dialog.tlk). Classic games
@@ -498,6 +509,22 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                 }
                 entry = resolved ? openTlk(fileSource(resolved), { encoding: tlkEncoding }) : null;
                 tlkCache.set(variant, entry);
+            }
+            return entry ?? undefined;
+        },
+        ids(resref) {
+            const cacheKey = resref.toLowerCase();
+            let entry = idsCache.get(cacheKey);
+            if (entry === undefined) {
+                // An absent table is normal (not every game ships every IDS), so it caches as null rather than
+                // re-reading on each lookup.
+                entry = null;
+                try {
+                    entry = parseIds(this.read(resref, IDS_RESTYPE));
+                } catch {
+                    // Resource not found, or unreadable - reported as "no table" by the null above.
+                }
+                idsCache.set(cacheKey, entry);
             }
             return entry ?? undefined;
         },

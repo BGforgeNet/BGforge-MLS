@@ -117,6 +117,7 @@ export {
     openBif,
     parseBif,
     openTlk,
+    parseIds,
     parseTlk,
     openGame,
     engineOverrideFolders,

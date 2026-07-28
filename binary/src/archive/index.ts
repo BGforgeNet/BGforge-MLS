@@ -9,6 +9,7 @@ export { parseKey } from "./key";
 export type { KeyIndex, KeyBifEntry, KeyResource } from "./key";
 export { openBif, parseBif } from "./bif";
 export type { BifArchive, BifFileEntry, BifTilesetEntry } from "./bif";
+export { parseIds } from "./ids";
 export { openTlk, parseTlk } from "./tlk";
 export type { Tlk } from "./tlk";
 export { bufferSource, fileSource } from "./byte-source";
