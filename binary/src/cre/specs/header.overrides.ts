@@ -77,17 +77,18 @@ export const creHeaderSpecAnnotated = {
         ref: { kind: "ids", tables: ["ALIGNMEN"] },
     },
     /**
-     * `kit` is KIT.IDS (CRE header 0x244). The LE u32 read matches the IESDP KIT_* dword values directly
-     * (verified against the Edwin/Conjurer fixture - see CreKit).
+     * `kit` is KIT.IDS (CRE header 0x244), stored with the table's key in the dword's HIGH WORD - 0x4003
+     * KENSAI is stored 0x40030000 - hence `keyShift: 16`. Measured against the 4020-CRE BG2:ToB corpus: 19 of
+     * the 20 distinct stored values are exactly `key << 16`, and none is a raw key. KIT.IDS's BARBARIAN
+     * (0x40000000) and WILDMAGE (0x80000000) are keyed in already-stored form because they are PC-only kits
+     * that no CRE carries; they overflow a u32 once shifted and are dropped by the consumer's range check
+     * rather than named. 0x40000000 occurs on 272 creatures of every class (fighters, monks, wraiths), i.e.
+     * as the generic no-kit marker, which this install's table calls MAGESCHOOL_GENERALIST.
      *
-     * Deliberately declares NO `ref`, unlike every other IDS-backed field here: KIT.IDS is not keyed in this
-     * field's value space, and not in one consistent space either. Most entries are ids the field stores
-     * shifted left 16 (0x4003 KENSAI -> 0x40030000), but BARBARIAN (0x40000000) and WILDMAGE (0x80000000) are
-     * already full dwords, and shifting 0x4000 MAGESCHOOL_GENERALIST would collide with BARBARIAN's own key.
-     * The vendored table disagrees further, placing Barbarian at 0x4000. Merging under any single rule offers
-     * values the field cannot hold, so the vendored table stays the only source until the encoding is settled.
+     * The vendored `CreKit` places Barbarian at 0x4000 - a value no CRE in the corpus holds. Left as-is here
+     * (it only fills gaps the game's table does not cover), but it is wrong and the game's table wins over it.
      */
-    kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true },
+    kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true, ref: { kind: "ids", tables: ["KIT"], keyShift: 16 } },
     /**
      * ANIMATE.IDS, and the only one of these with NO vendored table: the value space is per-install (321
      * entries in BG2:ToB) and a bare `0x6100` names nothing on its own. So this field shows a plain hex number

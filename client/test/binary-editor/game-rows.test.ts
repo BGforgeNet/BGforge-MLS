@@ -163,6 +163,55 @@ describe("withGameContext", () => {
         });
     });
 
+    // A CRE kit dword stores the KIT.IDS key in its HIGH WORD (0x4003 KENSAI is stored 0x40030000), verified
+    // across the 4020-CRE BG2 corpus: 19 of the 20 distinct stored values are that shift, and none is a raw
+    // key. Merged unshifted, the table contributes options the field can never hold.
+    it("shifts IDS keys into the field's own encoding when the ref declares a shift", () => {
+        const kit = {
+            id: "k1",
+            kind: "field",
+            name: "Kit",
+            valueType: "enum",
+            size: 4,
+            ref: { kind: "ids", tables: ["KIT"], keyShift: 16 },
+            rawValue: 0x4003_0000,
+            enumOptions: { "1073938432": "Kensai" },
+        };
+        const named = { ...lookups, idsTable: () => new Map([[0x4003, "KENSAI"]]) };
+
+        const out = withGameContext({ rows: [kit] }, named);
+
+        // Keyed at the stored dword, not at the table's 0x4003 - and overriding the vendored label there.
+        expect(out.rows[0]?.enumOptions).toEqual({ "1073938432": "KENSAI" });
+    });
+
+    // KIT.IDS also carries the two PC-only kits keyed in their already-stored form (BARBARIAN 0x40000000),
+    // which overflow a u32 once shifted. An option the field cannot store must not be offered at all.
+    it("drops a shifted key the field is too narrow to hold", () => {
+        const kit = {
+            id: "k2",
+            kind: "field",
+            name: "Kit",
+            valueType: "enum",
+            size: 4,
+            ref: { kind: "ids", tables: ["KIT"], keyShift: 16 },
+            rawValue: 0,
+            enumOptions: {},
+        };
+        const named = {
+            ...lookups,
+            idsTable: () =>
+                new Map([
+                    [0x4003, "KENSAI"],
+                    [0x4000_0000, "BARBARIAN"],
+                ]),
+        };
+
+        const out = withGameContext({ rows: [kit] }, named);
+
+        expect(out.rows[0]?.enumOptions).toEqual({ "1073938432": "KENSAI" });
+    });
+
     // A CRE sound slot is BOTH: a strref (the line it points at) and an IDS-named slot (its label). The real
     // row carries both, so filling one must not skip the other.
     it("fills the line AND the slot name on a row that is both", () => {

@@ -17,4 +17,14 @@ export type ExternalRef =
      * is not only ranking: it is how a ref resolves across editions that disagree (BG2 names sound slots in
      * SNDSLOT.IDS, BG1 in SOUNDOFF.IDS), since only one of them exists in any given install.
      */
-    | { readonly kind: "ids"; readonly tables: readonly string[] };
+    | {
+          readonly kind: "ids";
+          readonly tables: readonly string[];
+          /**
+           * Bits the field's stored value is shifted left by, relative to the table's key. Default 0 - the
+           * stored value IS the key, which is the usual case. A CRE kit dword holds the KIT.IDS key in its
+           * high word (0x4003 KENSAI is stored 0x40030000), so it declares 16. A consumer must drop any key
+           * that overflows the field once shifted, rather than offering a value the field cannot store.
+           */
+          readonly keyShift?: number;
+      };

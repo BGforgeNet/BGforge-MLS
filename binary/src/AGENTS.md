@@ -111,12 +111,13 @@ that carries both.
   and the vendored one fills what it does not cover. The gap runs both ways - BG2's RACE.IDS carries 82 entries
   against 8 vendored, its SPECIFIC.IDS only 3 against 11. Keep such fields `enumOpen`: the declaration adds
   names, never a closed value set.
-- **Only declare an `ids` ref when the table is keyed in that FIELD's value space.** CRE `kit` deliberately
-  declares none. KIT.IDS is keyed inconsistently against the stored dword: most entries are ids the field
-  stores shifted left 16 (0x4003 KENSAI -> 0x40030000), but BARBARIAN (0x40000000) and WILDMAGE (0x80000000)
-  are already full dwords, and shifting 0x4000 MAGESCHOOL_GENERALIST collides with BARBARIAN's own key. Merging
-  under any single rule offers values the field cannot legally hold - worse than no names at all. Check the
-  table's keys against real stored values before declaring one.
+- **Check the table's key space against real stored values before declaring, and use `keyShift` when they
+  differ.** A table is not always keyed the way the field stores it: CRE `kit` holds the KIT.IDS key in the
+  dword's high word (0x4003 KENSAI -> 0x40030000), so it declares `keyShift: 16`. Establish this from a corpus,
+  not from the vendored table - the vendored `CreKit` places Barbarian at 0x4000, a value no CRE in the
+  4020-record BG2 corpus holds, while 19 of the 20 values that DO occur are exactly `key << 16`. A consumer
+  drops any key that overflows the field once shifted (KIT.IDS carries two PC-only kits in already-stored form
+  that no CRE uses), because offering a value the field cannot hold is worse than leaving it unnamed.
 
 ## Faithful raw bytes; faithful labels
 

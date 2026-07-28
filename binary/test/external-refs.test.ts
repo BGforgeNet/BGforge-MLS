@@ -113,8 +113,17 @@ describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () =
             "Racial Enemy": ["RACE"],
             Class: ["CLASS"],
             Alignment: ["ALIGNMEN"],
+            Kit: ["KIT"],
             "Animation Id": ["ANIMATE"],
         });
+    });
+
+    // KIT.IDS is keyed by the bare kit id while the field stores it in the dword's high word, so the
+    // declaration carries the shift between the two - corpus-verified, see the spec comment.
+    it("declares the shift between KIT.IDS keys and the stored kit dword", () => {
+        const kit = parseFields(creParser, CRE_FIXTURE).find((f) => f.name === "Kit");
+
+        expect(kit?.ref).toEqual({ kind: "ids", tables: ["KIT"], keyShift: 16 });
     });
 
     // Additive, not a replacement: the vendored table stays as the fallback for a record opened outside a game,

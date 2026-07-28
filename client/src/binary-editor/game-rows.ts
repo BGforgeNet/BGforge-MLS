@@ -13,10 +13,12 @@
 /** Row shapes this fills in. Matched structurally: this module never imports the editor's Row type, so it
  *  walks messages whose row-bearing shape it does not need to know. */
 interface ValueRefRow {
-    ref: { kind: string; tables?: readonly string[] };
+    ref: { kind: string; tables?: readonly string[]; keyShift?: number };
     rawValue: number;
     enumOptions?: Record<string, string>;
     valueType?: string;
+    /** Field width in bytes; bounds which shifted keys the field can actually store. */
+    size?: number;
 }
 
 interface SlotRefRow {
@@ -75,7 +77,16 @@ function namedByGame(
     table: ReadonlyMap<number, string>,
 ): { enumOptions: Record<string, string>; valueType: string; enumOpen: true } {
     const merged: Record<string, string> = { ...row.enumOptions };
-    for (const [key, name] of table) merged[String(key)] = name;
+    // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in its
+    // high word), so shift first - then drop anything that no longer fits the field, since an option list must
+    // never offer a value the field cannot hold. KIT.IDS's two PC-only kits are already in stored form and
+    // overflow a u32 once shifted; they drop out here rather than becoming nonsense entries.
+    const shift = row.ref.keyShift ?? 0;
+    const limit = row.size === undefined ? Infinity : 2 ** (8 * row.size);
+    for (const [key, name] of table) {
+        const stored = key * 2 ** shift;
+        if (stored < limit) merged[String(stored)] = name;
+    }
     return { enumOptions: merged, valueType: "enum", enumOpen: true };
 }
 
