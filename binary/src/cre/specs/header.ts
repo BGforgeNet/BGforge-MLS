@@ -27,8 +27,8 @@ export const creHeaderSpec = {
     version: charsSpec(4),
     // Strrefs into dialog.tlk: signed, -1 = "no string" (IESDP cre_v1.htm 0x0008 / 0x000c). CRE is
     // hand-written here, so the signed codec and the strref marker are set directly rather than generated.
-    longName: { codec: i32, strref: true },
-    shortName: { codec: i32, strref: true },
+    longName: { codec: i32, ref: { kind: "strref" } },
+    shortName: { codec: i32, ref: { kind: "strref" } },
     creatureFlags: { codec: u32 },
     xpForKilling: { codec: u32 },
     powerLevelOrXp: { codec: u32 },

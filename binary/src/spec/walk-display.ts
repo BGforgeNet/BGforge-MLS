@@ -332,7 +332,7 @@ function fieldFor(
             const elementSize = codecByteLength(fs.element.codec);
             const slotLabels = fs.slotLabels;
             const slotElements = fs.slotElements;
-            const slotLabelIds = fs.slotLabelIds;
+            const slotRef = fs.slotRef;
             const children: ParsedField[] = value.map((elementValue, i) => {
                 const slotLabel = slotLabels[i] ?? `Slot ${i}`;
                 const elementSpec = slotElements?.[i] ?? fs.element;
@@ -343,7 +343,7 @@ function fieldFor(
                     elementSize,
                     elementValue,
                 );
-                return slotLabelIds === undefined ? child : { ...child, idsSlot: { tables: slotLabelIds, index: i } };
+                return slotRef === undefined ? child : { ...child, slotRef: { ref: slotRef, index: i } };
             });
             // Lay the slots on a single row (capped so a large slot array can't mint an absurdly wide grid;
             // only small scalar slot groups like Melee Animation actually render in the detail form).
@@ -434,6 +434,6 @@ function scalarFieldFor(
         type: typeName,
         rawValue: typeof value === "number" ? value : undefined,
         ...(numericFormat !== undefined && { numericFormat }),
-        ...(fs.strref === true && { strref: true }),
+        ...(fs.ref !== undefined && { ref: fs.ref }),
     };
 }

@@ -17,14 +17,14 @@ describe("translateField - scalar codecs", () => {
 describe("translateField - strref", () => {
     test("strref maps to i32 and keeps the distinction as a spec property", () => {
         const result = translateField({ desc: "Anything", type: "strref", id: "foo" });
-        expect(result.fieldSource).toBe('{ codec: i32, strref: true, description: "Anything" }');
+        expect(result.fieldSource).toBe('{ codec: i32, ref: { kind: "strref" }, description: "Anything" }');
     });
 
     // IESDP marks some strrefs `unused` (SPL identified_name / identified_desc, "usually -1"). Those are
     // strrefs the engine ignores, not non-strrefs - dropping the flag there would under-mark the format.
     test("an unused strref still carries the flag, without the dropped tooltip", () => {
         const result = translateField({ desc: "Anything", type: "strref", unused: true });
-        expect(result.fieldSource).toBe("{ codec: i32, strref: true }");
+        expect(result.fieldSource).toBe('{ codec: i32, ref: { kind: "strref" } }');
     });
 
     test("a plain dword carries no strref flag", () => {

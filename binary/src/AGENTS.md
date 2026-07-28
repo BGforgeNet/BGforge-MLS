@@ -78,24 +78,34 @@ Declare hex (not decimal) for a numeric field that packs `(type << 24) | index` 
 legible and stops the master list showing indistinguishable big decimals: MAP `FID` / `PID`, PRO
 Inventory/Head/Male/Female `FRM ID`. A plain index (the PRO header `frmId`) stays decimal.
 
-## Strrefs are marked on the spec, not inferred from a description
+## External references are declared on the spec, never inferred from a description
 
-A field holding a `dialog.tlk` string reference carries `strref: true` on its spec (`ScalarFieldSpec`, or an
-array's `element`). It stays an `i32` - the flag adds resolvability, it does not change storage, editing, or
-the byte round-trip. ITM/SPL get it from the generator (IESDP's own `type: strref`); the hand-written CRE spec
-sets it directly. Never key display behaviour off the word "(strref)" appearing in a description: IESDP writes
-it in some descriptions and not others, and marks two SPL strrefs `unused` (they are still strrefs).
-`binary/test/strref-fields.test.ts` pins the marked set - including that the record's name strref stays at
-offset 8, which the resource tree's hover tooltip reads raw.
+A field whose value points outside its file declares `ref: ExternalRef` (`spec/external-ref.ts`) - one union
+covering every such source, so a new kind reaches every format by declaration rather than by new plumbing. The
+declaration never changes storage, editing, or the byte round-trip; it only tells a consumer what the value can
+be resolved against. ITM/SPL strrefs come from the generator (IESDP's own `type: strref`); the hand-written CRE
+spec sets its own.
 
-## Game-named slots: emit the table, never a vendored copy
+**Two axes, and a field commonly has both.** `ref` resolves a field's VALUE; an array's `slotRef` names its
+SLOTS (emitted onto each child as `{ ref, index }`). A CRE sound slot carries each - a strref value and an
+IDS-named label - so a consumer applies both in sequence. Handling them as exclusive branches is what silently
+dropped the label on exactly the rows the feature exists for; `binary/test/strref-fields.test.ts` pins a row
+that carries both.
 
-A slot array whose slots are NAMED by the game (CRE sound slots) declares `slotLabelIds` - the IDS tables that
-name them, most preferred first (`["SNDSLOT", "SOUNDOFF"]`: BG2's, then BG1's). The walker emits `idsSlot`
-({tables, index}) on each slot child and the library stops there; a consumer holding the game resolves it via
-`Game.ids()`. Do NOT vendor a name table: BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4
-in one, SELECT_RARE in the other), a single install can ship both, and mods extend them. `slotLabels` stays as
-the game-agnostic fallback for a record opened outside a game.
+- **Never key display behaviour off description prose.** IESDP writes "(strref)" in some descriptions and not
+  others, marks two SPL strrefs `unused` (still strrefs), and documents the same resref field differently
+  across formats ("Ground icon (BAM)" in ITM, "Ground icon" in SPL). The declaration is the only reliable
+  signal. `strref-fields.test.ts` pins the marked set - including that the record's name strref stays at offset
+  8, which the resource tree's hover tooltip reads raw.
+- **`tables` is an ordered candidate list, and the order does real work.** It is not only preference ranking:
+  it is how one declaration resolves across editions that disagree, since only one candidate exists in a given
+  install. BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4 in one, SELECT_RARE in the
+  other), a single install can ship both, and mods extend them - so declare `["SNDSLOT", "SOUNDOFF"]` and let
+  the install decide. Do NOT vendor a name table.
+- **The library resolves nothing.** Resolution needs a game and is per-install, so it stops at the declaration;
+  a consumer holding the game resolves it (`Game.ids()`, `Game.tlk()`). This is also what keeps a parsed record
+  and its JSON snapshot identical whether or not a game is open. `slotLabels` remains the game-agnostic
+  fallback for a record opened outside a game.
 
 ## Faithful raw bytes; faithful labels
 

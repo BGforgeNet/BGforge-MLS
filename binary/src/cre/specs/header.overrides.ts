@@ -75,13 +75,13 @@ export const creHeaderSpecAnnotated = {
      */
     soundSlots: arraySpec({
         // Sound-set strrefs into dialog.tlk: signed, -1 = "no sound" (the common value for unused slots).
-        element: { codec: i32, strref: true },
+        element: { codec: i32, ref: { kind: "strref" } },
         count: 100,
         view: "slots",
         slotLabels: SOUND_SLOT_LABELS,
         // BG2 names these in SNDSLOT.IDS, BG1 in SOUNDOFF.IDS, and the two disagree on most slots - so the
         // name comes from whichever the opened game ships, never from a table vendored here.
-        slotLabelIds: ["SNDSLOT", "SOUNDOFF"],
+        slotRef: { kind: "ids", tables: ["SNDSLOT", "SOUNDOFF"] },
     }),
     /**
      * OBJECT.IDS reference block (5 x u8). The engine uses these as an ordered

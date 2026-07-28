@@ -7,7 +7,7 @@ const lookups = {
     slotLabel: (): string | undefined => undefined,
 };
 
-const strrefRow = { id: "f1", kind: "field", name: "Unidentified Name", strref: true, rawValue: 6348 };
+const strrefRow = { id: "f1", kind: "field", name: "Unidentified Name", ref: { kind: "strref" }, rawValue: 6348 };
 const plainRow = { id: "f2", kind: "field", name: "Weight", rawValue: 37 };
 
 describe("withGameContext", () => {
@@ -63,7 +63,12 @@ describe("withGameContext", () => {
     // A slot named by the game's own IDS table (a CRE sound slot): the parser emits which tables name it and
     // at which index, and the host - which holds the game - turns that into the row's label.
     it("names an IDS-backed slot from the game's table", () => {
-        const slotRow = { id: "s1", kind: "field", name: "Sound 22", idsSlot: { tables: ["SNDSLOT"], index: 21 } };
+        const slotRow = {
+            id: "s1",
+            kind: "field",
+            name: "Sound 22",
+            slotRef: { ref: { kind: "ids", tables: ["SNDSLOT"] }, index: 21 },
+        };
         const named = {
             ...lookups,
             slotLabel: (tables: readonly string[], index: number) =>
@@ -76,7 +81,12 @@ describe("withGameContext", () => {
     });
 
     it("keeps the generic slot label when the game has no name for it", () => {
-        const slotRow = { id: "s2", kind: "field", name: "Sound 90", idsSlot: { tables: ["SNDSLOT"], index: 89 } };
+        const slotRow = {
+            id: "s2",
+            kind: "field",
+            name: "Sound 90",
+            slotRef: { ref: { kind: "ids", tables: ["SNDSLOT"] }, index: 89 },
+        };
 
         const out = withGameContext({ rows: [slotRow] }, lookups);
 
@@ -90,9 +100,9 @@ describe("withGameContext", () => {
             id: "s3",
             kind: "field",
             name: "Sound 22",
-            strref: true,
+            ref: { kind: "strref" },
             rawValue: 6348,
-            idsSlot: { tables: ["SNDSLOT"], index: 21 },
+            slotRef: { ref: { kind: "ids", tables: ["SNDSLOT"] }, index: 21 },
         };
         const named = { ...lookups, slotLabel: () => "AREA_FOREST" };
 

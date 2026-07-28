@@ -12,6 +12,7 @@ export type {
     ParsedGroup,
     ParseOpaqueRange,
 } from "./types";
+export type { ExternalRef } from "./spec/external-ref";
 
 // JSON snapshot helpers
 export { createBinaryJsonSnapshot, parseBinaryJsonSnapshot, loadBinaryJsonSnapshot } from "./json-snapshot";

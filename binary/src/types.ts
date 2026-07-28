@@ -1,3 +1,4 @@
+import type { ExternalRef } from "./spec/external-ref";
 import type { CreCanonicalDocument } from "./cre/canonical";
 import type { EffCanonicalDocument } from "./eff/canonical";
 import type { ItmCanonicalDocument } from "./itm/canonical";
@@ -75,19 +76,19 @@ export interface ParsedField {
      */
     hidden?: boolean;
     /**
-     * Display hint (from the spec's `strref` flag): the value is a `dialog.tlk` string reference, so a consumer
-     * holding the game's TLK can show the line it points at. The field keeps its numeric `type` - it is still
-     * edited and validated as a number - and this library never resolves the text itself: it has no game
-     * context, and one is only available when the record was opened from an installed game.
+     * Display hint (from the spec's `ref`): the value points at data outside this file, so a consumer holding
+     * the game can resolve it - a `dialog.tlk` line for a strref, and so on per kind. The field keeps its own
+     * `type` and is still edited and validated as that type; this library never resolves a ref itself, having
+     * no game context (see `spec/external-ref.ts`).
      */
-    strref?: boolean;
+    ref?: ExternalRef;
     /**
-     * This field is one slot of an array whose slots are NAMED by an IDS table in the game (e.g. a CRE
-     * sound slot). `tables` lists the candidate tables most-preferred first, `index` is the slot's position.
-     * Like `strref`, the library only reports it: the mapping is per-install, so a consumer holding the game
-     * resolves it and falls back to the field's own generic label.
+     * This field is one slot of an array whose slots are NAMED by an external source (e.g. a CRE sound slot,
+     * named by an IDS table the game ships). Distinct from `ref` above, which resolves the field's VALUE - a
+     * slot commonly carries both, and a consumer must apply each. Like `ref`, the library only reports it: the
+     * mapping is per-install, so a consumer holding the game resolves it and falls back to the generic label.
      */
-    idsSlot?: { tables: readonly string[]; index: number };
+    slotRef?: { ref: ExternalRef; index: number };
 }
 
 /**

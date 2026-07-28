@@ -123,6 +123,19 @@ describe("valueTier", () => {
         expect(valueTier({ ...numberRow, numericFormat: "hex32" })).toBe("m");
     });
 
+    // A strref-declaring field is sized for the dialog.tlk line it can show, not for the number's digits.
+    it("widens a strref field to the mid-large tier", () => {
+        expect(valueTier({ ...numberRow, valueType: "int32", size: 4, ref: { kind: "strref" } })).toBe("ml");
+    });
+
+    // Keyed on the FIELD's declaration, never on whether THIS value resolved - keying on the resolved text
+    // sized siblings of one field differently and rendered the sound-slot grid ragged.
+    it("widens a strref field whose line the game did not resolve", () => {
+        const unresolved: Row = { ...numberRow, valueType: "int32", size: 4, ref: { kind: "strref" }, rawValue: -1 };
+
+        expect(valueTier(unresolved)).toBe("ml");
+    });
+
     it("sizes string fields by their char-array length", () => {
         expect(valueTier(stringRow(4))).toBe("s"); // <= 6 chars
         expect(valueTier(stringRow(6))).toBe("s");

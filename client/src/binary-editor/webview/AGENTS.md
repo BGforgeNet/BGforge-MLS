@@ -19,13 +19,13 @@ kind the layout schema happened to place it in.
 
 ## Resolved strrefs: idle text in roomy controls, tooltip in dense ones
 
-A field the spec marks `strref` (see `binary/src/AGENTS.md`) carries the host-resolved `dialog.tlk` line in
-`row.strrefText` when the record was opened from an installed game. `NumberField.svelte` renders it with the
-hex field's wrapper shape - a dimmed static span holding the number beside a borderless input holding the line,
-chromed as one control (tier L, line ellipsized), so the eye lands on the text rather than the number. Focus
-hides the span and swaps the input to the bare number, so what you edit is what is stored and the value is
-never shown twice; the title carries the full line. A record outside a game has no `strrefText` and renders an
-ordinary number.
+A field whose spec declares `ref: { kind: "strref" }` (see `binary/src/AGENTS.md`) carries the host-resolved
+`dialog.tlk` line in `row.strrefText` when the record was opened from an installed game. `NumberField.svelte`
+renders it with the hex field's wrapper shape - a dimmed static span holding the number beside a borderless
+input holding the line, chromed as one control (tier L, line ellipsized), so the eye lands on the text rather
+than the number. Focus hides the span and swaps the input to the bare number, so what you edit is what is
+stored and the value is never shown twice; the title carries the full line. A record outside a game has no
+`strrefText` and renders an ordinary number.
 
 The `compact` prop on `CellControl` is the declared N/A for the shared-layer rule below: it keeps the number in
 the cell and moves the line to the tooltip. Only `MatrixBlock` sets it - a true 2D matrix has no room to grow.
@@ -75,8 +75,8 @@ in the CSS classes (`.field-control.tier-{s,m,ml,l}` and `.field-control.dd-{1..
 `GridBlock` cells consume `--val-ch` exactly like the kv forms. Two traps this closes, both of which shipped as
 visible defects in the CRE sound slots (100 strrefs):
 
-- **The tier is a property of the FIELD, not of the value.** `valueTier` keys on `row.strref`, never on whether
-  a particular strref resolved - keying on the resolved text sized siblings of one field differently, so a
+- **The tier is a property of the FIELD, not of the value.** `valueTier` keys on `row.ref`, never on whether a
+  particular strref resolved - keying on the resolved text sized siblings of one field differently, so a
   5-column grid came out 266/266/117/117/117 and read as ragged.
 - **A grid control must not fall back to its intrinsic width.** Grid inputs were pinned to a flat `52px`, under
   the S tier, which clipped any value past ~4 digits. They now take `var(--val-ch, 52px)`. Do NOT add

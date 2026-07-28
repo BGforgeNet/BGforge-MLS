@@ -1,4 +1,4 @@
-import type { FieldRef, LayoutRow, ParsedFieldType } from "@bgforge/binary";
+import type { ExternalRef, FieldRef, LayoutRow, ParsedFieldType } from "@bgforge/binary";
 
 export type SessionId = string;
 
@@ -44,15 +44,16 @@ export interface Row {
     /** Display hint (from the spec's `enumOpen`): the enum is advisory, so the dropdown accepts a custom
      *  numeric value (shown as "N Unknown"). Closed enums omit this and reject off-list values at save. */
     enumOpen?: boolean;
-    /** The value is a `dialog.tlk` string reference (from the spec's `strref`). The row stays numeric and
-     *  editable as a number; this only marks it resolvable. */
-    strref?: boolean;
-    /** This row is one slot of an array the GAME names via an IDS table (a CRE sound slot). The host swaps the
-     *  generic label for the game's own identifier; absent outside a game. */
-    idsSlot?: { tables: readonly string[]; index: number };
-    /** The line `strref` points at, resolved against the game the record was opened from. Filled by the host,
-     *  which owns the game session - never by the parser, which has no game context. Absent when the record is
-     *  not from an installed game, the strref is the -1 sentinel, or the TLK has no such entry. */
+    /** The row's VALUE points outside the file (from the spec's `ref`) - a `dialog.tlk` line, an IDS entry. The
+     *  row stays editable as its own type; this only marks it resolvable by a consumer holding the game. */
+    ref?: ExternalRef;
+    /** This row is one slot of an array whose slots an external source NAMES - a CRE sound slot, named by an IDS
+     *  table the game ships. Distinct from `ref`, which resolves the value; a slot commonly carries both. The
+     *  host swaps the generic label for the game's own identifier; absent outside a game. */
+    slotRef?: { ref: ExternalRef; index: number };
+    /** The line a `strref` ref points at, resolved against the game the record was opened from. Filled by the
+     *  host, which owns the game session - never by the parser, which has no game context. Absent when the
+     *  record is not from an installed game, the value is the -1 sentinel, or the TLK has no such entry. */
     strrefText?: string;
     /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
      *  (Signedness is the field codec's job, not a display format.) */

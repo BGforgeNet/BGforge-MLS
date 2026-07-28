@@ -1,4 +1,5 @@
 import type { ISchema } from "typed-binary";
+import type { ExternalRef } from "./external-ref";
 
 /**
  * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
@@ -72,12 +73,12 @@ export interface ScalarFieldSpec {
      */
     readonly hidden?: boolean;
     /**
-     * This field stores a `dialog.tlk` string reference (IESDP `type: strref`). The stored value stays a plain
-     * signed number - editing, range checks and the byte round-trip are unaffected - and the flag only tells a
-     * consumer the number can be resolved to text. -1 is the format's "no string" sentinel. Generated onto
-     * ITM/SPL specs by `scripts/ie-binary-update`; set by hand on the hand-written CRE spec.
+     * This field's value points at data outside the file - a `dialog.tlk` line, an IDS entry, a resource. The
+     * stored value is unaffected: editing, range checks and the byte round-trip stay exactly as they were, and
+     * the declaration only tells a consumer holding a game what the value can be resolved against. Generated
+     * onto ITM/SPL specs by `scripts/ie-binary-update`; set by hand on the hand-written CRE spec.
      */
-    readonly strref?: boolean;
+    readonly ref?: ExternalRef;
     /**
      * Presentation-only tooltip text (cleaned IESDP `desc`), surfaced by the editor as the field's hover
      * title. Read only by the presentation-schema derivation (`derive-presentation`), never by the codec or
@@ -129,11 +130,11 @@ export interface ArrayFieldSpec {
     readonly view?: "bytes" | "slots";
     readonly slotLabels?: readonly string[];
     /**
-     * IDS tables that name this array's slots, most preferred first (e.g. `["SNDSLOT", "SOUNDOFF"]` - BG2's
-     * table then BG1's). Emitted onto each slot child as a hint; this library never resolves it, because the
-     * mapping is per-install and mods extend it. `slotLabels` remains the game-agnostic fallback.
+     * External source that NAMES this array's slots (as opposed to `element.ref`, which resolves each slot's
+     * VALUE). Emitted onto every slot child with its index; this library never resolves it, because the mapping
+     * is per-install and mods extend it. `slotLabels` remains the game-agnostic fallback.
      */
-    readonly slotLabelIds?: readonly string[];
+    readonly slotRef?: ExternalRef;
     /**
      * Optional per-slot element override. When supplied, the walker uses
      * `slotElements[i]` for slot `i` instead of the shared `element` spec.
@@ -217,7 +218,7 @@ export function arraySpec<Ctx = never>(args: {
     count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
     view?: "bytes" | "slots";
     slotLabels?: readonly string[];
-    slotLabelIds?: readonly string[];
+    slotRef?: ExternalRef;
     slotElements?: readonly ScalarFieldSpec[];
     addable?: boolean;
     removable?: boolean;
@@ -246,7 +247,7 @@ export function arraySpec<Ctx = never>(args: {
         count: args.count as ArrayFieldSpec["count"],
         ...(args.view !== undefined ? { view: args.view } : {}),
         ...(args.slotLabels !== undefined ? { slotLabels: args.slotLabels } : {}),
-        ...(args.slotLabelIds !== undefined ? { slotLabelIds: args.slotLabelIds } : {}),
+        ...(args.slotRef !== undefined ? { slotRef: args.slotRef } : {}),
         ...(args.slotElements !== undefined ? { slotElements: args.slotElements } : {}),
         ...(args.addable !== undefined ? { addable: args.addable } : {}),
         ...(args.removable !== undefined ? { removable: args.removable } : {}),
