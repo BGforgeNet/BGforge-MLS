@@ -32,8 +32,12 @@ const EFF_FIXTURE = path.join(
     "external/infinity-engine/Ascension/ascension/ascensionmain/demon/babausu.eff",
 );
 
+// A mage with a full spellbook and inventory - the header fixture above carries neither.
+const CRE_SPELLS_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/BGT-WeiDU/bgt/modify/cre/edwin6.cre");
+
 const haveFixtures = fs.existsSync(ITM_FIXTURE) && fs.existsSync(CRE_FIXTURE);
-const have2daFixtures = haveFixtures && fs.existsSync(SPL_FIXTURE) && fs.existsSync(EFF_FIXTURE);
+const have2daFixtures =
+    haveFixtures && fs.existsSync(SPL_FIXTURE) && fs.existsSync(EFF_FIXTURE) && fs.existsSync(CRE_SPELLS_FIXTURE);
 
 const isStrref = (f: ParsedField): boolean => f.ref?.kind === "strref";
 
@@ -177,5 +181,63 @@ describe.skipIf(!have2daFixtures)("2DA-backed school/sectype fields declare thei
 
         expect(refFor(fields, "School")).toEqual(school);
         expect(refFor(fields, "Sectype")).toEqual(sectype);
+    });
+});
+
+/**
+ * Resref fields declare what KIND of resource they point at, so a consumer holding the game can offer to open
+ * it. Hand-declared, never generated: IESDP records the target only in prose and inconsistently - the same
+ * ground-icon field reads "Ground icon (BAM)" in ITM and plain "Ground icon" in SPL, and others say only
+ * "Resource".
+ *
+ * `types` is an ordered candidate list, as for the other kinds, and it does real work here: ITM `replacement`
+ * is a replacement ITEM in BG1/BG2/BGEE and a drop SOUND in PSTEE, so the install disambiguates itself.
+ *
+ * The pins below are the whole declared set per format - so a field that should NOT carry one (the char[2]
+ * item animation code, a char[32] script variable, the deliberately-untyped effect resources) failing to be
+ * excluded shows up here too.
+ */
+describe.skipIf(!have2daFixtures)("resref fields declare their target resource type", () => {
+    function declared(fields: ParsedField[]): Record<string, readonly string[]> {
+        const out: Record<string, readonly string[]> = {};
+        for (const f of fields) {
+            if (f.ref?.kind !== "resource") continue;
+            out[f.name] = f.ref.types;
+        }
+        return out;
+    }
+
+    it("declares the ITM icons, and the edition-dependent replacement", () => {
+        expect(declared(parseFields(itmParser, ITM_FIXTURE))).toEqual({
+            Replacement: ["ITM", "WAV"],
+            "Inventory Icon": ["BAM"],
+            "Ground Icon": ["BAM"],
+            "Description Icon": ["BAM"],
+            "Use Icon": ["BAM"],
+        });
+    });
+
+    // The two `unused` SPL resrefs stay undeclared: IESDP marks them unused and they name nothing.
+    it("declares the SPL sound and icons", () => {
+        expect(declared(parseFields(splParser, SPL_FIXTURE))).toEqual({
+            "Completion Sound": ["WAV"],
+            "Spellbook Icon": ["BAM"],
+            "Memorised Icon": ["BAM"],
+        });
+    });
+
+    it("declares the CRE portraits, scripts, dialog, spells and items", () => {
+        expect(declared(parseFields(creParser, CRE_SPELLS_FIXTURE))).toEqual({
+            "Small Portrait": ["BMP"],
+            "Large Portrait": ["BMP", "BAM"],
+            "Script Override": ["BCS"],
+            "Script Class": ["BCS"],
+            "Script Race": ["BCS"],
+            "Script General": ["BCS"],
+            "Script Default": ["BCS"],
+            "Dialog File": ["DLG"],
+            Spell: ["SPL"],
+            Item: ["ITM"],
+        });
     });
 });

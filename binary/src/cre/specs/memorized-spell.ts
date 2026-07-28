@@ -4,7 +4,7 @@ import { u32 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const creMemorizedSpellSpec = {
-    spell: charsSpec(8),
+    spell: { ...charsSpec(8), ref: { kind: "resource", types: ["SPL"] } },
     memorizedFlags: { codec: u32 },
 } satisfies Record<string, FieldSpec>;
 

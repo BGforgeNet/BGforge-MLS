@@ -83,6 +83,10 @@ export class Bridge {
     dumpJson(): void {
         this.post({ type: "dumpJson" });
     }
+
+    openResource(resref: string, ext: string): void {
+        this.post({ type: "openResource", resref, ext });
+    }
     loadJson(): void {
         this.post({ type: "loadJson" });
     }

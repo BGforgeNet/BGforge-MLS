@@ -7,13 +7,16 @@ import { GameSession } from "./session";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
     createNamingTableResolver,
+    createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
     type NamingTableResolver,
+    type ResourceTypeResolver,
     type SlotLabelResolver,
     type StrrefResolver,
 } from "./game-lookups";
-import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
+import { parserRegistry } from "@bgforge/binary";
+import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 
 const LAST_DIR_KEY = "bgforge.ieResources.lastDir";
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
@@ -27,6 +30,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     strref: StrrefResolver;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
+    resourceType: ResourceTypeResolver;
 } {
     const session = new GameSession();
     const tree = new GameResourceTreeProvider(session);
@@ -80,26 +84,48 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         if (keyFile) await openGameDir(path.dirname(keyFile));
     };
 
-    const openResource = async (element?: ResourceNode): Promise<void> => {
-        const current = session.current;
-        if (!current || !element) return;
-        // Some KEY entries point at archives that are not installed (e.g. developer BIFs like PROGTEST.BIF).
-        // Fail gracefully with a clear message instead of opening an editor that then errors on the missing read.
-        if (!current.game.canRead(element.resref, element.ext)) {
+    /**
+     * Open one resource of a game by resref+ext. Shared by the tree's own open and the binary editor's
+     * open-a-referenced-resource affordance, so the binary-vs-default-editor choice lives in one place.
+     */
+    const openRef = async (gameDir: string, resref: string, ext: string): Promise<void> => {
+        let game;
+        try {
+            game = session.ensureOpen(gameDir);
+        } catch {
+            return;
+        }
+        if (!game.canRead(resref, ext)) {
             void vscode.window.showWarningMessage(
-                `${element.resref}.${element.ext} is unavailable: its archive is not installed in this game.`,
+                `${resref}.${ext} is unavailable: its archive is not installed in this game.`,
             );
             return;
         }
-        const uri = resourceUri(current.dir, element.resref, element.ext);
-        // Binary record formats open in the structured binary editor; every other resource opens in the default
-        // editor, where text formats (2da/ids/baf/d/tra/tp2/...) render as text and VS Code shows its binary
-        // notice for opaque blobs (bam/mos/wav/...). Both read through the game-resource FS provider.
-        if (element.openable) {
-            await vscode.commands.executeCommand("vscode.openWith", uri, "bgforge.binaryEditor");
-        } else {
-            await vscode.commands.executeCommand("vscode.open", uri);
-        }
+        const uri = resourceUri(gameDir, resref, ext);
+        const openable = parserRegistry.getByExtension(`.${ext}`) !== undefined;
+        await vscode.commands.executeCommand(
+            openable ? "vscode.openWith" : "vscode.open",
+            uri,
+            ...(openable ? ["bgforge.binaryEditor"] : []),
+        );
+    };
+
+    const openResource = async (element?: ResourceNode): Promise<void> => {
+        const current = session.current;
+        if (!current || !element) return;
+        await openRef(current.dir, element.resref, element.ext);
+    };
+
+    /** The binary editor's open-a-referenced-resource affordance; the document URI names which game. */
+    const openRefFromDocument = async (arg?: {
+        documentUri?: vscode.Uri;
+        resref?: string;
+        ext?: string;
+    }): Promise<void> => {
+        if (!arg?.documentUri || !arg.resref || !arg.ext) return;
+        const { gameDir } = parseResourceUri(arg.documentUri);
+        if (!gameDir) return;
+        await openRef(gameDir, arg.resref, arg.ext);
     };
 
     context.subscriptions.push(
@@ -119,6 +145,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             updateHeader();
         }),
         vscode.commands.registerCommand("bgforge.ieResources.open", openResource),
+        vscode.commands.registerCommand("bgforge.ieResources.openRef", openRefFromDocument),
     );
 
     // Restore the last-opened game (independent of the workspace) for continuity across reloads.
@@ -133,5 +160,6 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         strref: createStrrefResolver(session),
         slotLabel: createSlotLabelResolver(session),
         namingTable: createNamingTableResolver(session),
+        resourceType: createResourceTypeResolver(session),
     };
 }

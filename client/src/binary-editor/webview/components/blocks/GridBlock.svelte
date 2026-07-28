@@ -5,6 +5,7 @@
     import { useJump } from "../../state/jump-context";
     import CellControl from "../CellControl.svelte";
     import DocLink from "../DocLink.svelte";
+    import OpenResourceLink from "../OpenResourceLink.svelte";
 
     const { columns, items, fields, onedit }: {
         columns: number;
@@ -78,6 +79,11 @@
             <span class="field-control {controlWidthClass(cell.row)}">
                 <CellControl row={cell.row} {onedit} />
             </span>
+            <!-- Per `webview/AGENTS.md`, a per-field affordance covers every block renderer, not just the kv
+                 form - a grid cell holding a resref (a CRE item slot) offers the same open chip. -->
+            {#if cell.row.openTarget}
+                <OpenResourceLink target={cell.row.openTarget} />
+            {/if}
         </div>
     {/each}
 </div>

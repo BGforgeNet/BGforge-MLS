@@ -22,11 +22,14 @@ const TABLES: Record<string, ReadonlyMap<number, string>> = {
     ]),
 };
 
-function session(overrides: { throws?: boolean; noTlk?: boolean; tables?: string[]; twoDa?: string[] } = {}): {
+function session(
+    overrides: { throws?: boolean; noTlk?: boolean; tables?: string[]; twoDa?: string[]; resources?: string[] } = {},
+): {
     ensureOpen: (dir: string) => {
         tlk: () => { get: (n: number) => string | undefined } | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
+        canRead: (resref: string, type: string) => boolean;
     };
 } {
     return {
@@ -38,6 +41,8 @@ function session(overrides: { throws?: boolean; noTlk?: boolean; tables?: string
                     (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 twoDa: (resref: string) =>
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
+                canRead: (resref: string, type: string) =>
+                    (overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()),
             };
         },
     };
@@ -66,7 +71,12 @@ describe("createStrrefResolver", () => {
     it("resolves nothing for the -1 sentinel", () => {
         const get = vi.fn();
         const spySession = {
-            ensureOpen: () => ({ tlk: () => ({ get }), ids: () => undefined, twoDa: () => undefined }),
+            ensureOpen: () => ({
+                tlk: () => ({ get }),
+                ids: () => undefined,
+                twoDa: () => undefined,
+                canRead: () => false,
+            }),
         };
 
         expect(createStrrefResolver(spySession)(gameUri(), -1)).toBeUndefined();

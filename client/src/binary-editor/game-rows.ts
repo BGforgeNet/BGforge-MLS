@@ -21,6 +21,11 @@ interface ValueRefRow {
     size?: number;
 }
 
+interface ResourceRefRow {
+    ref: { kind: string; types?: readonly string[] };
+    rawValue: string;
+}
+
 interface SlotRefRow {
     slotRef: { ref: { kind: string; tables?: readonly string[] }; index: number };
     name: string;
@@ -36,6 +41,12 @@ export interface GameLookups {
      * only the resource differs.
      */
     namingTable(kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined;
+    /**
+     * Which of a resref's candidate types the install actually has, or undefined when it has none. Returning
+     * the resolved TYPE rather than a boolean is what lets an edition-dependent field (ITM `replacement` is an
+     * item in BG2 and a sound in PSTEE) be opened without the caller knowing which edition it is looking at.
+     */
+    resourceType(types: readonly string[], resref: string): string | undefined;
 }
 
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
@@ -58,6 +69,10 @@ function isSlotRefRow(value: object): value is SlotRefRow {
         "index" in slot &&
         typeof slot.index === "number"
     );
+}
+
+function isResourceRefRow(value: object): value is ResourceRefRow {
+    return "ref" in value && isRef(value.ref) && "rawValue" in value && typeof value.rawValue === "string";
 }
 
 function isValueRefRow(value: object): value is ValueRefRow {
@@ -121,6 +136,13 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     if (isValueRefRow(row) && NAMING_KINDS.has(row.ref.kind) && row.ref.tables !== undefined) {
         const table = lookups.namingTable(row.ref.kind, row.ref.tables);
         if (table !== undefined) row = { ...row, ...namedByGame(row, table) };
+    }
+    if (isResourceRefRow(row) && row.ref.kind === "resource" && row.ref.types !== undefined && row.rawValue !== "") {
+        // Resolving to the TYPE that exists, not a boolean, is what carries an edition-dependent field. An
+        // unresolvable resref is left exactly as it is: a mod record legitimately points at what a later
+        // install step creates, so there is no marker and no advisory - only the affordance is withheld.
+        const ext = lookups.resourceType(row.ref.types, row.rawValue);
+        if (ext !== undefined) row = { ...row, openTarget: { resref: row.rawValue, ext } };
     }
     if (isSlotRefRow(row)) {
         const { ref, index } = row.slotRef;

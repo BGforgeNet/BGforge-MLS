@@ -9,6 +9,8 @@ import { splAbilitySpec } from "./ability";
 
 export const splAbilitySpecAnnotated = {
     ...splAbilitySpec,
+    // Hand-declared resref target (IESDP's prose is not a reliable source).
+    memorisedIcon: { ...splAbilitySpec.memorisedIcon, ref: { kind: "resource", types: ["BAM"] } },
     form: { ...splAbilitySpec.form, enum: SplAbilityForm },
     friendly: { ...splAbilitySpec.friendly, flags: SplAbilityFriendly },
     location: { ...splAbilitySpec.location, enum: SplAbilityLocation },

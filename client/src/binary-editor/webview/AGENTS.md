@@ -32,6 +32,17 @@ the cell and moves the line to the tooltip. Only `MatrixBlock` sets it - a true 
 A grid is NOT compact: it shows the line like any other form. Getting there needed the grid to stop sizing
 itself by content - see the sizing note below - because a 5-column grid of L-tier controls overflowed the panel.
 
+## Resolvable resrefs get an open chip; unresolvable ones get nothing
+
+A field the spec marks `{ kind: "resource" }` carries `row.openTarget` when the OPEN GAME actually has the
+resource - the host resolves which of the declared candidate types exists. `OpenResourceLink.svelte` renders a
+`-> <ext>` chip beside the value, styled as `JumpLink` (which navigates WITHIN the record; this opens a
+different resource entirely, via a host command so the binary-vs-default editor choice stays in one place).
+
+Absent `openTarget` renders NOTHING - no marker, no dimming, no advisory. That is deliberate and must stay:
+a mod record legitimately references what a later install step creates, so flagging it would fire on correct
+input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte`.
+
 ## A grid fits columns to the panel; the schema count is a maximum
 
 `GridBlock` is multi-column (`column-count` from the schema as a cap, a measured `column-width` as the

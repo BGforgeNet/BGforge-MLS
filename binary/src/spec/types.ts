@@ -184,6 +184,11 @@ export interface ArrayFieldSpec {
 export interface CharsFieldSpec {
     readonly kind: "chars";
     readonly count: number;
+    /**
+     * This field's value points at data outside the file - for a chars field, a resref naming another resource.
+     * Storage, editing and the byte round-trip are unaffected; see `ScalarFieldSpec.ref`.
+     */
+    readonly ref?: ExternalRef;
     /** Display-only: omit from the rendered detail form (see `ScalarFieldSpec.hidden`). Round-trip unaffected. */
     readonly hidden?: boolean;
 }

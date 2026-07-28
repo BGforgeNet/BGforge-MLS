@@ -5,6 +5,7 @@
     import DocLink from "./DocLink.svelte";
     import Icon from "./Icon.svelte";
     import JumpLink from "./JumpLink.svelte";
+    import OpenResourceLink from "./OpenResourceLink.svelte";
     const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[] } = $props();
@@ -49,6 +50,9 @@
              chip is the right affordance. The CRE item-slots GRID instead makes the slot LABEL itself the link
              (see GridBlock.svelte), because there the label names the referent ("Weapon 2" IS the linked entry).
              JumpLink renders nothing when no jump handler is in context (a view with no navigable sections). -->
+        {#if row.openTarget}
+            <OpenResourceLink target={row.openTarget} />
+        {/if}
         {#if row.link}
             <JumpLink link={row.link} />
         {/if}

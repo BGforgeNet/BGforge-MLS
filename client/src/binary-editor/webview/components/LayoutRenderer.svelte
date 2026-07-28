@@ -7,6 +7,7 @@
     import type { Diagnostic, LayoutRow, NodeId, ResolvedLayout, ResolvedTab, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { provideJump } from "../state/jump-context";
+    import { provideOpenResource } from "../state/open-resource-context";
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
@@ -80,6 +81,8 @@
         navTarget = { sectionKey: link.sectionKey, nodeId: link.targetNodeId };
     }
     provideJump(navigate);
+    // Opening another resource is the host's to do (it owns the game session and the editor commands).
+    provideOpenResource((target) => bridge.openResource(target.resref, target.ext));
 
     const visibleTabs = $derived((layout.tabs ?? []).filter((t) => tabHasContent(t)));
     const activeTab = $derived(visibleTabs.find((t) => t.id === activeTabId) ?? visibleTabs[0]);

@@ -33,4 +33,12 @@ export type ExternalRef =
      * candidate-list semantics as `ids`; the kind differs only in which resource the consumer reads, since the
      * two live under different resource types and parse differently.
      */
-    | { readonly kind: "2da"; readonly tables: readonly string[] };
+    | { readonly kind: "2da"; readonly tables: readonly string[] }
+    /**
+     * Value is a resref naming another resource. `types` is the candidate extensions in preference order, and
+     * as with `tables` the order does real work: ITM `replacement` is a replacement ITEM in BG1/BG2/BGEE and a
+     * drop SOUND in PSTEE, so declaring `["ITM", "WAV"]` lets the install disambiguate itself.
+     *
+     * Hand-declared, never generated - IESDP records the target only in prose, and inconsistently.
+     */
+    | { readonly kind: "resource"; readonly types: readonly string[] };

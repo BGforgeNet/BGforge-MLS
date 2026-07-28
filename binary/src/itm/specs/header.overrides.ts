@@ -27,6 +27,15 @@ import { itmHeaderSpec } from "./header";
 
 export const itmHeaderSpecAnnotated = {
     ...itmHeaderSpec,
+    /**
+     * Resref targets are hand-declared: IESDP records them only in prose and inconsistently (this ground icon
+     * reads "Ground icon (BAM)" here but plain "Ground icon" in SPL). `replacement` is edition-dependent - a
+     * replacement ITEM in BG1/BG2/BGEE, a drop SOUND in PSTEE - so it lists both and the install decides.
+     */
+    replacement: { ...itmHeaderSpec.replacement, ref: { kind: "resource", types: ["ITM", "WAV"] } },
+    inventoryIcon: { ...itmHeaderSpec.inventoryIcon, ref: { kind: "resource", types: ["BAM"] } },
+    groundIcon: { ...itmHeaderSpec.groundIcon, ref: { kind: "resource", types: ["BAM"] } },
+    descriptionIcon: { ...itmHeaderSpec.descriptionIcon, ref: { kind: "resource", types: ["BAM"] } },
     flags: { ...itmHeaderSpec.flags, flags: ItmFlags },
     // ItmType is backed by `itemtype.2da` which mods can extend with custom
     // item categories; the engine accepts any 16-bit value. Display lookup

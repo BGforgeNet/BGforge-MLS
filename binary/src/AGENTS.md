@@ -117,6 +117,12 @@ that carries both.
   inside one dropdown), and the identifier is what a script author actually types. Source it from a real install
   or IESDP's IDS listings (`files/ids/<game>/*.htm`), never by inventing an identifier-looking name - where no
   IDS names a value (the `0` unset sentinels), keep a plain editor word so it does not pose as one.
+- **Resref targets are hand-declared, never generated.** `{ kind: "resource", types }` names what a resref
+  points at, and IESDP is not a usable source for it: the same ground-icon field reads "Ground icon (BAM)" in
+  ITM and plain "Ground icon" in SPL, and others say only "Resource". `types` is ordered like `tables` and does
+  the same work - ITM `replacement` is a replacement ITEM in BG1/BG2/BGEE and a drop SOUND in PSTEE, so it
+  declares both and the install decides. Check the WIDTH before declaring: a resref is `char[8]`, so a
+  `char[2]` animation code and a `char[32]` script variable are not resrefs and get none.
 - **A 2DA ref is keyed by ROW INDEX, and not every 2DA can name anything.** `{ kind: "2da" }` resolves the
   stored value as a row position whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Check the file
   first: `itemtype.2da` deliberately has NO ref, because its rows are numbered `0,1,2...` and its columns are

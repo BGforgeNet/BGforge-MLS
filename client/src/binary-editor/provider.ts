@@ -3,12 +3,25 @@ import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
-import type { NamingTableResolver, SlotLabelResolver, StrrefResolver } from "../ie-resources/game-lookups";
+import type {
+    NamingTableResolver,
+    ResourceTypeResolver,
+    SlotLabelResolver,
+    StrrefResolver,
+} from "../ie-resources/game-lookups";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import { withGameContext } from "./game-rows";
 import { type HostToWebview, type WebviewToHost, isWebviewToHost } from "./webview/messages";
+
+/** The game-backed lookups the editor is handed; it never reaches for a `Game` itself. */
+export interface GameResolvers {
+    strref: StrrefResolver;
+    slotLabel: SlotLabelResolver;
+    namingTable: NamingTableResolver;
+    resourceType: ResourceTypeResolver;
+}
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
@@ -60,16 +73,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     private readonly diagnosticsTimers = new WeakMap<BinaryEditorDocument, ReturnType<typeof setTimeout>>();
 
     private readonly extensionUri: vscode.Uri;
-    private readonly gameLookups: {
-        strref: StrrefResolver;
-        slotLabel: SlotLabelResolver;
-        namingTable: NamingTableResolver;
-    };
+    private readonly gameLookups: GameResolvers;
 
-    constructor(
-        context: vscode.ExtensionContext,
-        gameLookups: { strref: StrrefResolver; slotLabel: SlotLabelResolver; namingTable: NamingTableResolver },
-    ) {
+    constructor(context: vscode.ExtensionContext, gameLookups: GameResolvers) {
         this.extensionUri = context.extensionUri;
         this.gameLookups = gameLookups;
     }
@@ -252,6 +258,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 }
                 break;
             }
+            case "openResource":
+                // The ie-resources subsystem owns opening a game resource (it decides binary editor vs default
+                // editor and holds the session), so this forwards rather than re-implementing that choice.
+                await vscode.commands.executeCommand("bgforge.ieResources.openRef", {
+                    documentUri: document.uri,
+                    resref: message.resref,
+                    ext: message.ext,
+                });
+                break;
             case "dumpJson":
                 await this.dumpJson(document);
                 break;
@@ -346,6 +361,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
+                      resourceType: (types, resref) => this.gameLookups.resourceType(uri, types, resref),
                   });
         void panel.webview.postMessage(resolved);
     }

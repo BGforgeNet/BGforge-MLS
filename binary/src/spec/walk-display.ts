@@ -321,7 +321,11 @@ function fieldFor(
         let trimEnd = raw.length;
         while (trimEnd > 0 && raw.codePointAt(trimEnd - 1) === 0) trimEnd--;
         const trimmed = raw.slice(0, trimEnd);
-        return withHidden({ name: label, value: trimmed, offset, size, type: "string" }, fs);
+        // Chars fields return from here rather than through `scalarFieldFor`, so the external-ref declaration
+        // is attached on both paths - a resref's `ref` would otherwise never reach the display tree.
+        const field: ParsedField = { name: label, value: trimmed, offset, size, type: "string" };
+        if (fs.ref !== undefined) field.ref = fs.ref;
+        return withHidden(field, fs);
     }
 
     if (isArraySpec(fs)) {

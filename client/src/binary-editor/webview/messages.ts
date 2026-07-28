@@ -19,6 +19,7 @@ export type WebviewToHost =
     | { type: "editField"; nodeId: NodeId; value: number | string }
     | { type: "structureOp"; op: StructureOpRequest }
     | { type: "spellbookEdit"; op: SpellbookEditOp }
+    | { type: "openResource"; resref: string; ext: string }
     | { type: "dumpJson" }
     | { type: "loadJson" }
     | { type: "runtimeError"; message: string; stack?: string };
@@ -41,6 +42,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "dumpJson":
         case "loadJson":
             return true;
+        case "openResource":
+            return typeof m.resref === "string" && typeof m.ext === "string";
         case "requestSpellbook":
         case "requestEffectTree":
             return typeof m.requestId === "number";

@@ -20,6 +20,12 @@ export type NamingTableResolver = (
     tables: readonly string[],
 ) => ReadonlyMap<number, string> | undefined;
 
+/**
+ * Resolves WHICH of a resref's candidate types the open game actually has, or undefined for none. The type
+ * rather than a boolean, so an edition-dependent field resolves without the caller knowing the edition.
+ */
+export type ResourceTypeResolver = (uri: vscode.Uri, types: readonly string[], resref: string) => string | undefined;
+
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
 
@@ -30,6 +36,7 @@ interface TlkSource {
         tlk(): { get(strref: number): string | undefined } | undefined;
         ids(resref: string): ReadonlyMap<number, string> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
+        canRead(resref: string, type: string): boolean;
     };
 }
 
@@ -105,5 +112,30 @@ export function createNamingTableResolver(session: TlkSource): NamingTableResolv
             // Unreadable game - the field falls back to its vendored table, as it does outside a game.
         }
         return resolved;
+    };
+}
+
+/**
+ * Resolves a resref against the open game, answering with the first candidate type the install actually ships.
+ * Never judges: an unresolvable resref simply gets no answer, because a mod record legitimately references what
+ * a later install step creates.
+ */
+export function createResourceTypeResolver(session: TlkSource): ResourceTypeResolver {
+    return (uri, types, resref) => {
+        if (uri.scheme !== GAME_RESOURCE_SCHEME || resref === "") return;
+        const { gameDir } = parseResourceUri(uri);
+        if (!gameDir) return;
+        let found: string | undefined;
+        try {
+            const game = session.ensureOpen(gameDir);
+            for (const type of types) {
+                if (!game.canRead(resref, type)) continue;
+                found = type;
+                break;
+            }
+        } catch {
+            // Unreadable game - no affordance, exactly as outside a game.
+        }
+        return found;
     };
 }

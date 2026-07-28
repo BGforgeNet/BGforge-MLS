@@ -90,6 +90,7 @@ const noGame = {
     strref: (): undefined => undefined,
     slotLabel: (): undefined => undefined,
     namingTable: (): undefined => undefined,
+    resourceType: (): undefined => undefined,
 };
 
 describe("binary editor hot-exit restore", () => {

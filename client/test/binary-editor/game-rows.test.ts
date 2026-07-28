@@ -6,6 +6,7 @@ const lookups = {
     strref: (strref: number): string | undefined => (strref === 6348 ? LINE : undefined),
     slotLabel: (): string | undefined => undefined,
     namingTable: (): ReadonlyMap<number, string> | undefined => undefined,
+    resourceType: (): string | undefined => undefined,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
@@ -234,6 +235,48 @@ describe("withGameContext", () => {
         const out = withGameContext({ rows: [school] }, named);
 
         expect(out.rows[0]?.enumOptions).toEqual({ "1": "ABJURER" });
+    });
+
+    // A resref the open game actually has becomes openable: the host resolves WHICH of the declared candidate
+    // types exists, so the webview can offer to open it without knowing anything about the game.
+    const iconRow = {
+        id: "i1",
+        kind: "field",
+        name: "Inventory Icon",
+        valueType: "string",
+        ref: { kind: "resource", types: ["BAM"] },
+        rawValue: "ISW1H01",
+    };
+
+    it("marks a resref the game can open, naming the type that resolved", () => {
+        const named = {
+            ...lookups,
+            resourceType: (types: readonly string[], resref: string) =>
+                types[0] === "BAM" && resref === "ISW1H01" ? "BAM" : undefined,
+        };
+
+        const out = withGameContext({ rows: [iconRow] }, named);
+
+        expect(out.rows[0]).toMatchObject({ openTarget: { resref: "ISW1H01", ext: "BAM" } });
+    });
+
+    // Never judge: a mod file legitimately points at what a later install step creates, so an unresolvable
+    // resref is left exactly as it is - no marker, no advisory, just no open affordance.
+    it("leaves a resref the game does not have untouched", () => {
+        const out = withGameContext({ rows: [iconRow] }, lookups);
+
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
+    // An empty resref is the "no resource" value, so it must never be probed or offered.
+    it("does not offer to open an empty resref", () => {
+        const probe = vi.fn();
+        const spying = { ...lookups, resourceType: probe };
+
+        const out = withGameContext({ rows: [{ ...iconRow, rawValue: "" }] }, spying);
+
+        expect(probe).not.toHaveBeenCalled();
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
     });
 
     // A CRE sound slot is BOTH: a strref (the line it points at) and an IDS-named slot (its label). The real
