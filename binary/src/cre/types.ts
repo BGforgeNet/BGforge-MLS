@@ -113,6 +113,16 @@ export const CreEffStructureVersion: Readonly<Record<number, string>> = {
     1: "Version 2 EFF",
 };
 
+/*
+ * The IDS-backed tables below (sex/gender, enemyAlly, general, specific, race, class, alignment, kit) carry the
+ * game's OWN identifiers verbatim - HALF_ELF, MAGESCHOOL_ABJURER, ASSASIN with the engine's misspelling - not a
+ * humanized rendering of them. Each field also declares an `ids` ref (see `specs/header.overrides.ts`), so with
+ * a game open that install's table merges in on top; keeping one vocabulary means the editor reads the same
+ * with or without a game, and it is the vocabulary a script author types. The `0` entries are the exception:
+ * no IDS names 0 for these fields, so it stays the editor's own word for "unset" rather than a fabricated
+ * identifier.
+ */
+
 /**
  * CRE header `sex` (byte, 0x0237) - GENDER.IDS: https://iesdp.bgforge.net/files/ids/bgee/gender.htm
  * `0: "Sexless"` is a curated unset sentinel (GENDER.IDS starts at 1). Names mirror the IDS spelling, including
@@ -121,40 +131,40 @@ export const CreEffStructureVersion: Readonly<Record<number, string>> = {
  */
 export const CreSex: Readonly<Record<number, string>> = {
     0: "Sexless",
-    1: "Male",
-    2: "Female",
-    3: "Other",
-    4: "Niether",
-    5: "Both",
-    6: "Summoned",
-    7: "Illusionary",
-    9: "Summoned demon",
+    1: "MALE",
+    2: "FEMALE",
+    3: "OTHER",
+    4: "NIETHER",
+    5: "BOTH",
+    6: "SUMMONED",
+    7: "ILLUSIONARY",
+    9: "SUMMONED_DEMON",
 };
 
 /** CRE header `enemyAlly` (byte, 0x0270) - EA.IDS: https://iesdp.bgforge.net/files/ids/bgee/ea.htm */
 export const CreEnemyAlly: Readonly<Record<number, string>> = {
-    0: "Anyone",
-    1: "Inanimate",
+    0: "ANYONE",
+    1: "INANIMATE",
     2: "PC",
-    3: "Familiar",
-    4: "Ally",
-    5: "Controlled",
-    6: "Charmed",
-    7: "Reallycharmed",
-    28: "Goodbutred",
-    29: "Goodbutblue",
-    30: "Goodcutoff",
-    31: "Notgood",
-    126: "Anything",
-    127: "Areaobject",
-    128: "Neutral",
-    198: "Notneutral",
-    199: "Notevil",
-    200: "Evilcutoff",
-    201: "Evilbutgreen",
-    202: "Evilbutblue",
-    254: "Charmed PC",
-    255: "Enemy",
+    3: "FAMILIAR",
+    4: "ALLY",
+    5: "CONTROLLED",
+    6: "CHARMED",
+    7: "REALLYCHARMED",
+    28: "GOODBUTRED",
+    29: "GOODBUTBLUE",
+    30: "GOODCUTOFF",
+    31: "NOTGOOD",
+    126: "ANYTHING",
+    127: "AREAOBJECT",
+    128: "NEUTRAL",
+    198: "NOTNEUTRAL",
+    199: "NOTEVIL",
+    200: "EVILCUTOFF",
+    201: "EVILBUTGREEN",
+    202: "EVILBUTBLUE",
+    254: "CHARMED_PC",
+    255: "ENEMY",
 };
 
 /**
@@ -164,36 +174,36 @@ export const CreEnemyAlly: Readonly<Record<number, string>> = {
  * (101-113 WEAPON/ARMOR/...) are omitted as they are not creature values.
  */
 export const CreGeneral: Readonly<Record<number, string>> = {
-    0: "None",
-    1: "Humanoid",
-    2: "Animal",
-    3: "Dead",
-    4: "Undead",
-    5: "Giant humanoid",
-    6: "Frozen",
-    7: "Plant",
-    255: "Monster",
+    0: "GENERAL_ITEM",
+    1: "HUMANOID",
+    2: "ANIMAL",
+    3: "DEAD",
+    4: "UNDEAD",
+    5: "GIANTHUMANOID",
+    6: "FROZEN",
+    7: "PLANT",
+    255: "MONSTER",
 };
 
 /**
  * CRE header `specific` (byte, 0x0274) - SPECIFIC.IDS, from
- * https://iesdp.bgforge.net/files/ids/bgee/specific.htm (names humanized to match the sibling tables).
+ * https://iesdp.bgforge.net/files/ids/bgee/specific.htm.
  * `0: "None"` is a curated sentinel for the common unset value - it is NOT in the BGEE IDS, but mirrors the
  * `0` entries in CreGeneral / CreRace. Open enum: SPECIFIC.IDS varies by game and is mod-extensible, so
  * unlisted values round-trip as `Unknown (N)`.
  */
 export const CreSpecific: Readonly<Record<number, string>> = {
     0: "None",
-    1: "Normal",
-    10: "Cultist",
-    12: "Sharran",
-    64: "Shou monk",
-    65: "Shou flayer",
-    66: "Quadim spider",
-    67: "Culak spider",
-    101: "Magic",
-    102: "No magic",
-    250: "Spirit",
+    1: "NORMAL",
+    10: "CULTIST",
+    12: "SHARRAN",
+    64: "SHOU_MONK",
+    65: "SHOU_FLAYER",
+    66: "QUADIM_SPIDER",
+    67: "CULAK_SPIDER",
+    101: "MAGIC",
+    102: "NO_MAGIC",
+    250: "SPIRIT",
 };
 
 /**
@@ -204,13 +214,13 @@ export const CreSpecific: Readonly<Record<number, string>> = {
  */
 export const CreRace: Readonly<Record<number, string>> = {
     0: "None",
-    1: "Human",
-    2: "Elf",
-    3: "Half elf",
-    4: "Dwarf",
-    5: "Halfling",
-    6: "Gnome",
-    7: "Half orc",
+    1: "HUMAN",
+    2: "ELF",
+    3: "HALF_ELF",
+    4: "DWARF",
+    5: "HALFLING",
+    6: "GNOME",
+    7: "HALFORC",
 };
 
 /**
@@ -223,28 +233,28 @@ export const CreRace: Readonly<Record<number, string>> = {
  */
 export const CreClass: Readonly<Record<number, string>> = {
     0: "None",
-    1: "Mage",
-    2: "Fighter",
-    3: "Cleric",
-    4: "Thief",
-    5: "Bard",
-    6: "Paladin",
-    7: "Fighter mage",
-    8: "Fighter cleric",
-    9: "Fighter thief",
-    10: "Fighter mage thief",
-    11: "Druid",
-    12: "Ranger",
-    13: "Mage thief",
-    14: "Cleric mage",
-    15: "Cleric thief",
-    16: "Fighter druid",
-    17: "Fighter mage cleric",
-    18: "Cleric ranger",
-    19: "Sorcerer",
-    20: "Monk",
-    21: "Shaman",
-    255: "No class",
+    1: "MAGE",
+    2: "FIGHTER",
+    3: "CLERIC",
+    4: "THIEF",
+    5: "BARD",
+    6: "PALADIN",
+    7: "FIGHTER_MAGE",
+    8: "FIGHTER_CLERIC",
+    9: "FIGHTER_THIEF",
+    10: "FIGHTER_MAGE_THIEF",
+    11: "DRUID",
+    12: "RANGER",
+    13: "MAGE_THIEF",
+    14: "CLERIC_MAGE",
+    15: "CLERIC_THIEF",
+    16: "FIGHTER_DRUID",
+    17: "FIGHTER_MAGE_CLERIC",
+    18: "CLERIC_RANGER",
+    19: "SORCERER",
+    20: "MONK",
+    21: "SHAMAN",
+    255: "NO_CLASS",
 };
 
 /**
@@ -254,16 +264,16 @@ export const CreClass: Readonly<Record<number, string>> = {
  * script-check values, not stored creature alignments, so they are omitted.
  */
 export const CreAlignment: Readonly<Record<number, string>> = {
-    0x00: "None",
-    0x11: "Lawful good",
-    0x12: "Lawful neutral",
-    0x13: "Lawful evil",
-    0x21: "Neutral good",
-    0x22: "Neutral",
-    0x23: "Neutral evil",
-    0x31: "Chaotic good",
-    0x32: "Chaotic neutral",
-    0x33: "Chaotic evil",
+    0x00: "NONE",
+    0x11: "LAWFUL_GOOD",
+    0x12: "LAWFUL_NEUTRAL",
+    0x13: "LAWFUL_EVIL",
+    0x21: "NEUTRAL_GOOD",
+    0x22: "NEUTRAL",
+    0x23: "NEUTRAL_EVIL",
+    0x31: "CHAOTIC_GOOD",
+    0x32: "CHAOTIC_NEUTRAL",
+    0x33: "CHAOTIC_EVIL",
 };
 
 /**
@@ -278,37 +288,36 @@ export const CreAlignment: Readonly<Record<number, string>> = {
  */
 export const CreKit: Readonly<Record<number, string>> = {
     0x00000000: "None",
-    0x00004000: "Barbarian",
-    0x40000000: "True class",
-    0x40010000: "Berserker",
-    0x40020000: "Wizard slayer",
-    0x40030000: "Kensai",
-    0x40040000: "Cavalier",
-    0x40050000: "Inquisitor",
-    0x40060000: "Undead hunter",
-    0x40070000: "Archer",
-    0x40080000: "Stalker",
-    0x40090000: "Beast master",
-    0x400a0000: "Assassin",
-    0x400b0000: "Bounty hunter",
-    0x400c0000: "Swashbuckler",
-    0x400d0000: "Blade",
-    0x400e0000: "Jester",
-    0x400f0000: "Skald",
-    0x40100000: "Totemic druid",
-    0x40110000: "Shapeshifter",
-    0x40120000: "Avenger",
-    0x40130000: "Priest of Talos",
-    0x40140000: "Priest of Helm",
-    0x40150000: "Priest of Lathander",
-    0x00400000: "Abjurer",
-    0x00800000: "Conjurer",
-    0x01000000: "Diviner",
-    0x02000000: "Enchanter",
-    0x04000000: "Illusionist",
-    0x08000000: "Invoker",
-    0x10000000: "Necromancer",
-    0x20000000: "Transmuter",
+    0x40000000: "MAGESCHOOL_GENERALIST",
+    0x40010000: "BERSERKER",
+    0x40020000: "WIZARDSLAYER",
+    0x40030000: "KENSAI",
+    0x40040000: "CAVALIER",
+    0x40050000: "INQUISITOR",
+    0x40060000: "UNDEADHUNTER",
+    0x40070000: "FERALAN",
+    0x40080000: "STALKER",
+    0x40090000: "BEASTMASTER",
+    0x400a0000: "ASSASIN",
+    0x400b0000: "BOUNTYHUNTER",
+    0x400c0000: "SWASHBUCKLER",
+    0x400d0000: "BLADE",
+    0x400e0000: "JESTER",
+    0x400f0000: "SKALD",
+    0x40100000: "TOTEMIC",
+    0x40110000: "SHAPESHIFTER",
+    0x40120000: "BEASTFRIEND",
+    0x40130000: "GODTALOS",
+    0x40140000: "GODHELM",
+    0x40150000: "GODLATHANDER",
+    0x00400000: "MAGESCHOOL_ABJURER",
+    0x00800000: "MAGESCHOOL_CONJURER",
+    0x01000000: "MAGESCHOOL_DIVINER",
+    0x02000000: "MAGESCHOOL_ENCHANTER",
+    0x04000000: "MAGESCHOOL_ILLUSIONIST",
+    0x08000000: "MAGESCHOOL_INVOKER",
+    0x10000000: "MAGESCHOOL_NECROMANCER",
+    0x20000000: "MAGESCHOOL_TRANSMUTER",
 };
 
 // `gender` (byte, 0x0275) reuses the GENDER.IDS table via `CreSex` directly -

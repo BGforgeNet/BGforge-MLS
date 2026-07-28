@@ -2,7 +2,7 @@
  * CRE `kit` is a packed KIT.IDS dword (the bits encode class/kit), so it must render in hex, not as a
  * meaningless decimal. Drives the REAL parse + projection on a vendored Conjurer fixture and asserts the
  * projected Kit row carries `numericFormat: "hex32"` - the property the dropdown/summary read to hex-prefix
- * its value. Without this the field showed "8388608 Conjurer".
+ * its value. Without this the field showed "8388608 MAGESCHOOL_CONJURER".
  */
 
 import fs from "node:fs";
@@ -39,7 +39,7 @@ function consumerLabel(row: {
 }
 
 describe("CRE packed-bitfield hex display", () => {
-    it("projects Kit (a dword) so its value reads '0x00800000 Conjurer', not '8388608 Conjurer'", () => {
+    it("projects Kit so its value reads '0x00800000 MAGESCHOOL_CONJURER', not a bare 8388608", () => {
         if (!fixturePresent()) return;
         const bytes = new Uint8Array(fs.readFileSync(CRE_FIXTURE));
         const { sessionId } = openSession("file:///edwin6.cre", bytes);
@@ -52,10 +52,10 @@ describe("CRE packed-bitfield hex display", () => {
         // The model fact that drives hex prefixing everywhere the consumer renders the field.
         expect(row.numericFormat).toBe("hex32");
         expect(row.size).toBe(4); // dword -> 8 hex digits
-        expect(consumerLabel(row)).toBe("0x00800000 Conjurer");
+        expect(consumerLabel(row)).toBe("0x00800000 MAGESCHOOL_CONJURER");
     });
 
-    it("projects Alignment (a byte) at its own width: '0x13 Lawful evil', not '19' or '0x00000013'", () => {
+    it("projects Alignment (a byte) at its own width: '0x13 LAWFUL_EVIL', not '19' or '0x00000013'", () => {
         if (!fixturePresent()) return;
         const bytes = new Uint8Array(fs.readFileSync(CRE_FIXTURE));
         const { sessionId } = openSession("file:///edwin6-align.cre", bytes);
@@ -67,6 +67,6 @@ describe("CRE packed-bitfield hex display", () => {
         expect(row.rawValue).toBe(0x13);
         expect(row.numericFormat).toBe("hex32");
         expect(row.size).toBe(1); // byte -> 2 hex digits, not 8
-        expect(consumerLabel(row)).toBe("0x13 Lawful evil");
+        expect(consumerLabel(row)).toBe("0x13 LAWFUL_EVIL");
     });
 });

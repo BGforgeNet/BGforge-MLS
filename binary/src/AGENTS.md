@@ -111,6 +111,12 @@ that carries both.
   and the vendored one fills what it does not cover. The gap runs both ways - BG2's RACE.IDS carries 82 entries
   against 8 vendored, its SPECIFIC.IDS only 3 against 11. Keep such fields `enumOpen`: the declaration adds
   names, never a closed value set.
+- **A vendored table that mirrors an IDS carries the game's identifiers VERBATIM - never humanized.** `HALF_ELF`,
+  `MAGESCHOOL_ABJURER`, and `ASSASIN` with the engine's own misspelling. Two reasons: the same field must read
+  identically with and without a game (a humanized vendored table beside raw IDS entries mixes two vocabularies
+  inside one dropdown), and the identifier is what a script author actually types. Source it from a real install
+  or IESDP's IDS listings (`files/ids/<game>/*.htm`), never by inventing an identifier-looking name - where no
+  IDS names a value (the `0` unset sentinels), keep a plain editor word so it does not pose as one.
 - **Check the table's key space against real stored values before declaring, and use `keyShift` when they
   differ.** A table is not always keyed the way the field stores it: CRE `kit` holds the KIT.IDS key in the
   dword's high word (0x4003 KENSAI -> 0x40030000), so it declares `keyShift: 16`. Establish this from a corpus,

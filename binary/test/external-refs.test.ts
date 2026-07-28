@@ -131,7 +131,7 @@ describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () =
     it("keeps the vendored table and open-enum behaviour alongside the declaration", () => {
         const race = parseFields(creParser, CRE_FIXTURE).find((f) => f.name === "Race");
 
-        expect(race?.enumOptions?.["1"]).toBe("Human");
+        expect(race?.enumOptions?.["1"]).toBe("HUMAN");
         expect(race?.enumOpen).toBe(true);
     });
 });
