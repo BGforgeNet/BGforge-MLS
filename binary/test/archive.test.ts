@@ -27,6 +27,8 @@ const RESTYPE_TIS = 0x03eb;
 const RESTYPE_ARE = 0x03f2;
 const RESTYPE_IDS = 0x03f0;
 const RESTYPE_MVE = 0x0002;
+const RESTYPE_2DA = 0x03f4;
+const RESTYPE_WAV = 0x0004;
 
 function writeStr(dv: DataView, offset: number, s: string): void {
     for (let i = 0; i < s.length; i++) dv.setUint8(offset + i, s.codePointAt(i)!);
@@ -826,6 +828,38 @@ describe("openGame (real filesystem)", () => {
         expect(flavourOf({ "override/ar7200.are": byte }, [areMarker("AR0083")])).toBe("bgt");
         // No conversion marker: the base flavour stands.
         expect(flavourOf({}, [areMarker("AR0083")])).toBe("bg2");
+    });
+
+    /**
+     * PSTEE is the only flavour a `byFlavour` resref override names today - ITM `replacement` holds a drop
+     * SOUND there and an ITEM everywhere else, CRE `largePortrait` a BAM against BMP - so the whole override
+     * arm hangs on a PSTEE install reporting this flavour. The declaration and the resolver are each pinned
+     * elsewhere (`external-refs.test.ts`, and the client's `createResourceTypeResolver` tests, which stub the
+     * flavour); this covers the link between them, which neither of those would notice was broken.
+     *
+     * It pins the flavour, not the route to it: PSTCHAR.2DA appears in both the coarse variant probe and the
+     * fine marker list, and an EE variant is its own fallback flavour, so either one alone still answers
+     * "pstee". That redundancy is the reason to assert the observable the resolver reads rather than a marker.
+     *
+     * Both candidate types are installed under one resref because that is the case `byFlavour` exists for: with
+     * an ITM and a WAV both present, nothing but the flavour can say which one the field points at, so probing
+     * by presence would answer whichever it happened to find first.
+     */
+    it("detects PSTEE, where both types a byFlavour resref names can be installed at once", () => {
+        const byte = Uint8Array.from([0]);
+        const game = openGame(
+            makeGameDir({ "override/drop01.itm": byte, "override/drop01.wav": byte }, [
+                { resref: "PSTCHAR", type: RESTYPE_2DA, bifIndex: 0, tilesetIndex: 0, fileIndex: 9 },
+            ]),
+        );
+        try {
+            expect(game.identity.flavour).toBe("pstee");
+            expect(game.identity.edition).toBe("ee");
+            expect(game.canRead("drop01", RESTYPE_ITM)).toBe(true);
+            expect(game.canRead("drop01", RESTYPE_WAV)).toBe(true);
+        } finally {
+            game.close();
+        }
     });
 
     it("resolves strrefs via the game's dialog.tlk, and is undefined when the game has none", () => {
