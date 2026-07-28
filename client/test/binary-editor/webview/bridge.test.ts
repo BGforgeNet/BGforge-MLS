@@ -98,3 +98,16 @@ describe("Bridge", () => {
         expect(bridge.handle({ type: "invalidated" })).toBe(false);
     });
 });
+
+// The open-a-referenced-resource affordance is fire-and-forget: the host opens an editor, there is nothing to
+// correlate back, so this only has to reach the host as a well-formed message.
+describe("Bridge.openResource", () => {
+    it("posts the resref and the resolved type", () => {
+        const sent: unknown[] = [];
+        const bridge = new Bridge((m) => sent.push(m));
+
+        bridge.openResource("SPWI112C", "BAM");
+
+        expect(sent).toEqual([{ type: "openResource", resref: "SPWI112C", ext: "BAM" }]);
+    });
+});

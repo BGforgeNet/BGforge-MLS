@@ -7,6 +7,7 @@ vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 // Imported after vi.mock so the mocked vscode is in place.
 import {
     createNamingTableResolver,
+    createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
 } from "../src/ie-resources/game-lookups";
@@ -175,5 +176,47 @@ describe("createNamingTableResolver", () => {
     // An unreadable game must not fail the open; the field falls back to its vendored table.
     it("swallows an unopenable game", () => {
         expect(createNamingTableResolver(session({ throws: true }))(gameUri(), "ids", ["SNDSLOT"])).toBeUndefined();
+    });
+});
+
+describe("createResourceTypeResolver", () => {
+    // Answers with the TYPE, not a boolean: an edition-dependent field (ITM `replacement` is an item in
+    // BG1/BG2/BGEE and a sound in PSTEE) is opened without the caller knowing which edition it is looking at.
+    it("answers with the candidate type the install actually ships", () => {
+        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
+
+        expect(resolve(gameUri(), ["ITM", "WAV"], "SW1H01")).toBe("ITM");
+    });
+
+    it("falls through to a later candidate when the first is absent", () => {
+        const resolve = createResourceTypeResolver(session({ resources: ["drop01.wav"] }));
+
+        expect(resolve(gameUri(), ["ITM", "WAV"], "DROP01")).toBe("WAV");
+    });
+
+    // Never judges: a mod record legitimately references what a later install step creates, so an unresolvable
+    // resref simply gets no answer - the editor withholds the affordance rather than marking the field.
+    it("answers nothing when the install has none of the candidates", () => {
+        expect(createResourceTypeResolver(session())(gameUri(), ["ITM"], "NOPE")).toBeUndefined();
+    });
+
+    // The "no resource" value must never be probed - every empty resref would otherwise hit the game index.
+    it("never probes an empty resref", () => {
+        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
+
+        expect(resolve(gameUri(), ["ITM"], "")).toBeUndefined();
+    });
+
+    it("answers nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
+
+        expect(
+            createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }))(fileUri, ["ITM"], "SW1H01"),
+        ).toBeUndefined();
+    });
+
+    // An unreadable game must not fail the open - the field just gets no affordance.
+    it("swallows an unopenable game", () => {
+        expect(createResourceTypeResolver(session({ throws: true }))(gameUri(), ["ITM"], "SW1H01")).toBeUndefined();
     });
 });

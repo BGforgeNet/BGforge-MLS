@@ -112,3 +112,20 @@ describe("isWebviewToHost (runtime narrowing)", () => {
         for (const m of invalid) expect(isWebviewToHost(m), JSON.stringify(m)).toBe(false);
     });
 });
+
+// The open-a-referenced-resource message carries two strings the host feeds straight into a command, so the
+// narrowing has to reject a partial one rather than let the host act on half a target.
+describe("openResource narrowing", () => {
+    it("accepts a message carrying both resref and ext", () => {
+        expect(isWebviewToHost({ type: "openResource", resref: "SPWI112C", ext: "BAM" })).toBe(true);
+    });
+
+    it.each([
+        ["no ext", { type: "openResource", resref: "SPWI112C" }],
+        ["no resref", { type: "openResource", ext: "BAM" }],
+        ["non-string resref", { type: "openResource", resref: 7, ext: "BAM" }],
+        ["non-string ext", { type: "openResource", resref: "SPWI112C", ext: 7 }],
+    ])("rejects a message with %s", (_label, message) => {
+        expect(isWebviewToHost(message)).toBe(false);
+    });
+});

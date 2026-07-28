@@ -101,6 +101,9 @@ export default defineConfig({
                 // (a harness would only re-assert that Svelte stores and returns the value). Exercised
                 // in-context by the components that provide/consume the jump callback.
                 "client/src/binary-editor/webview/state/jump-context.ts",
+                // Same shape and same reasoning: the open-a-referenced-resource callback wrapper. Exercised
+                // in-context by OpenResourceLink and the LayoutRenderer that provides it.
+                "client/src/binary-editor/webview/state/open-resource-context.ts",
                 // Dialog editor: the render harness (mounts the real App in Chromium via Playwright,
                 // delivers the model through the real postMessage channel) is e2e-tier and run out of
                 // process, not under in-process vitest. Same category as client/src/test/**.
