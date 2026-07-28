@@ -4,7 +4,7 @@ import { u16 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const creKnownSpellSpec = {
-    spell: { ...charsSpec(8), ref: { kind: "resource", types: ["SPL"] } },
+    spell: { ...charsSpec(8), ref: { kind: "resource", type: "SPL" } },
     spellLevel: { codec: u16 },
     spellType: { codec: u16 },
 } satisfies Record<string, FieldSpec>;

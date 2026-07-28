@@ -36,18 +36,23 @@ const OBJECT_REF_LABELS: readonly string[] = Array.from({ length: 5 }, (_, i) =>
 export const creHeaderSpecAnnotated = {
     ...creHeaderSpec,
     /**
-     * Resref targets, hand-declared (IESDP records them only in prose). The large portrait is edition-dependent
-     * - IESDP gives "PSTEE: BAM, Other games: BMP" - so it lists both and the install decides which exists.
+     * Resref targets, hand-declared (IESDP records them only in prose). The large portrait is the one that
+     * varies: IESDP gives "PSTEE: BAM, Other games: BMP", so the flavour names the exception rather than the
+     * install being probed for which of the two exists. `pstee` is the only entry needed: the other games
+     * storing a BAM here use CRE v1.1/v1.2, which this parser rejects.
      * `trackingTarget` and `deathVariable` are char[32] script variables, not resrefs, so neither is declared.
      */
-    smallPortrait: { ...creHeaderSpec.smallPortrait, ref: { kind: "resource", types: ["BMP"] } },
-    largePortrait: { ...creHeaderSpec.largePortrait, ref: { kind: "resource", types: ["BMP", "BAM"] } },
-    scriptOverride: { ...creHeaderSpec.scriptOverride, ref: { kind: "resource", types: ["BCS"] } },
-    scriptClass: { ...creHeaderSpec.scriptClass, ref: { kind: "resource", types: ["BCS"] } },
-    scriptRace: { ...creHeaderSpec.scriptRace, ref: { kind: "resource", types: ["BCS"] } },
-    scriptGeneral: { ...creHeaderSpec.scriptGeneral, ref: { kind: "resource", types: ["BCS"] } },
-    scriptDefault: { ...creHeaderSpec.scriptDefault, ref: { kind: "resource", types: ["BCS"] } },
-    dialogFile: { ...creHeaderSpec.dialogFile, ref: { kind: "resource", types: ["DLG"] } },
+    smallPortrait: { ...creHeaderSpec.smallPortrait, ref: { kind: "resource", type: "BMP" } },
+    largePortrait: {
+        ...creHeaderSpec.largePortrait,
+        ref: { kind: "resource", type: "BMP", byFlavour: { pstee: "BAM" } },
+    },
+    scriptOverride: { ...creHeaderSpec.scriptOverride, ref: { kind: "resource", type: "BCS" } },
+    scriptClass: { ...creHeaderSpec.scriptClass, ref: { kind: "resource", type: "BCS" } },
+    scriptRace: { ...creHeaderSpec.scriptRace, ref: { kind: "resource", type: "BCS" } },
+    scriptGeneral: { ...creHeaderSpec.scriptGeneral, ref: { kind: "resource", type: "BCS" } },
+    scriptDefault: { ...creHeaderSpec.scriptDefault, ref: { kind: "resource", type: "BCS" } },
+    dialogFile: { ...creHeaderSpec.dialogFile, ref: { kind: "resource", type: "DLG" } },
     creatureFlags: { ...creHeaderSpec.creatureFlags, flags: CreCreatureFlags },
     statusFlags: { ...creHeaderSpec.statusFlags, flags: CreStatusFlags },
     /**

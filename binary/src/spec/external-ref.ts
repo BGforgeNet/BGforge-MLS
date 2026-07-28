@@ -9,6 +9,11 @@
  * Lives in its own module because both the spec shapes (`spec/types.ts`) and the parsed display shapes
  * (`../types.ts`) name it; declaring it on either would make one depend on the other.
  */
+// Type-only, and deliberately so: `archive/` imports `spec/` for its own record shapes, so a value import here
+// would close a cycle. `import type` is erased before any bundler sees it, and naming the flavours keeps a
+// `byFlavour` key checked against the real set instead of being an open string.
+import type { IeFlavour } from "../archive/game-type";
+
 export type ExternalRef =
     /** Value is a `dialog.tlk` string reference. Stays a signed number; -1 is the format-wide "no string". */
     | { readonly kind: "strref" }
@@ -35,10 +40,27 @@ export type ExternalRef =
      */
     | { readonly kind: "2da"; readonly tables: readonly string[] }
     /**
-     * Value is a resref naming another resource. `types` is the candidate extensions in preference order, and
-     * as with `tables` the order does real work: ITM `replacement` is a replacement ITEM in BG1/BG2/BGEE and a
-     * drop SOUND in PSTEE, so declaring `["ITM", "WAV"]` lets the install disambiguate itself.
+     * Value is a resref naming another resource of type `type`.
+     *
+     * ONE type, not a candidate list. Unlike `tables`, which resource a field points at does not depend on what
+     * the install happens to ship: it follows from the record's version and the game, both of which are known
+     * before any lookup. The handful of fields that genuinely differ name the exception per flavour - ITM
+     * `replacement` is a replacement ITEM everywhere except PSTEE, which stores a drop SOUND there. Probing
+     * candidates by presence instead would silently pick the wrong one wherever both resources exist.
      *
      * Hand-declared, never generated - IESDP records the target only in prose, and inconsistently.
      */
-    | { readonly kind: "resource"; readonly types: readonly string[] };
+    | {
+          readonly kind: "resource";
+          readonly type: string;
+          /** Flavours whose record stores a different target type. Absent - the common case - means `type` everywhere. */
+          readonly byFlavour?: Readonly<Partial<Record<IeFlavour, string>>>;
+      }
+    /**
+     * The field points outside its file, but at a type another field's value selects - so no single type is
+     * right and no lookup can be declared. Marked rather than left bare so the absence reads as a decision
+     * instead of an oversight, and so a completeness sweep over resref-shaped fields can tell the two apart.
+     *
+     * A consumer resolves nothing for it: the field renders exactly as an undeclared one.
+     */
+    | { readonly kind: "deferred"; readonly reason: string };

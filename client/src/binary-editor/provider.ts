@@ -361,7 +361,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
-                      resourceType: (types, resref) => this.gameLookups.resourceType(uri, types, resref),
+                      resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
                   });
         void panel.webview.postMessage(resolved);
     }

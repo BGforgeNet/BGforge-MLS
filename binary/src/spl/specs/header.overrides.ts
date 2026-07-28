@@ -11,8 +11,8 @@ export const splHeaderSpecAnnotated = {
     ...splHeaderSpec,
     // Hand-declared resref targets (IESDP's prose is not a reliable source). `unused16`/`unused19` stay
     // undeclared: IESDP marks them unused and they name nothing.
-    completionSound: { ...splHeaderSpec.completionSound, ref: { kind: "resource", types: ["WAV"] } },
-    spellbookIcon: { ...splHeaderSpec.spellbookIcon, ref: { kind: "resource", types: ["BAM"] } },
+    completionSound: { ...splHeaderSpec.completionSound, ref: { kind: "resource", type: "WAV" } },
+    spellbookIcon: { ...splHeaderSpec.spellbookIcon, ref: { kind: "resource", type: "BAM" } },
     flags: { ...splHeaderSpec.flags, flags: SplFlags },
     // Per IESDP, type values 6-65535 behave as Psionic/Bard-song; the engine
     // tolerates out-of-table values, so the lookup is advisory.

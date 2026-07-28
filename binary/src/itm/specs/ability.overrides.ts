@@ -29,7 +29,7 @@ const YesNo: Record<number, string> = { 0: "No", 1: "Yes" };
 export const itmAbilitySpecAnnotated = {
     ...itmAbilitySpec,
     // Hand-declared resref target (IESDP's prose is not a reliable source).
-    useIcon: { ...itmAbilitySpec.useIcon, ref: { kind: "resource", types: ["BAM"] } },
+    useIcon: { ...itmAbilitySpec.useIcon, ref: { kind: "resource", type: "BAM" } },
     attackType: { ...itmAbilitySpec.attackType, enum: ItmAbilityAttackType },
     idRequired: { ...itmAbilitySpec.idRequired, flags: AbilityIdRequiredFlags },
     location: { ...itmAbilitySpec.location, enum: ItmAbilityLocation },

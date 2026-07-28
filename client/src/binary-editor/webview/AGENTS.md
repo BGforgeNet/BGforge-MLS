@@ -35,7 +35,8 @@ itself by content - see the sizing note below - because a 5-column grid of L-tie
 ## Resolvable resrefs get an open chip; unresolvable ones get nothing
 
 A field the spec marks `{ kind: "resource" }` carries `row.openTarget` when the OPEN GAME actually has the
-resource - the host resolves which of the declared candidate types exists. `OpenResourceLink.svelte` renders a
+resource - the host takes the declared type (or this game's `byFlavour` override) and asks only whether it is
+there. A `{ kind: "deferred" }` resref never resolves, so it renders bare. `OpenResourceLink.svelte` renders a
 `-> <ext>` chip beside the value, styled as `JumpLink` (which navigates WITHIN the record; this opens a
 different resource entirely, via a host command so the binary-vs-default editor choice stays in one place).
 

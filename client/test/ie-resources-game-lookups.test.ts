@@ -24,13 +24,21 @@ const TABLES: Record<string, ReadonlyMap<number, string>> = {
 };
 
 function session(
-    overrides: { throws?: boolean; noTlk?: boolean; tables?: string[]; twoDa?: string[]; resources?: string[] } = {},
+    overrides: {
+        throws?: boolean;
+        noTlk?: boolean;
+        tables?: string[];
+        twoDa?: string[];
+        resources?: string[];
+        flavour?: string;
+    } = {},
 ): {
     ensureOpen: (dir: string) => {
         tlk: () => { get: (n: number) => string | undefined } | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
         canRead: (resref: string, type: string) => boolean;
+        identity: { flavour: string };
     };
 } {
     return {
@@ -44,6 +52,7 @@ function session(
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 canRead: (resref: string, type: string) =>
                     (overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()),
+                identity: { flavour: overrides.flavour ?? "tob" },
             };
         },
     };
@@ -77,6 +86,7 @@ describe("createStrrefResolver", () => {
                 ids: () => undefined,
                 twoDa: () => undefined,
                 canRead: () => false,
+                identity: { flavour: "tob" },
             }),
         };
 
@@ -180,43 +190,64 @@ describe("createNamingTableResolver", () => {
 });
 
 describe("createResourceTypeResolver", () => {
-    // Answers with the TYPE, not a boolean: an edition-dependent field (ITM `replacement` is an item in
-    // BG1/BG2/BGEE and a sound in PSTEE) is opened without the caller knowing which edition it is looking at.
-    it("answers with the candidate type the install actually ships", () => {
+    // ITM `replacement`: an item everywhere the parser accepts the record, a drop sound in PSTEE.
+    const REPLACEMENT = { type: "ITM", byFlavour: { pstee: "WAV" } };
+
+    it("answers with the declared type when the install has it", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
 
-        expect(resolve(gameUri(), ["ITM", "WAV"], "SW1H01")).toBe("ITM");
+        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toBe("ITM");
     });
 
-    it("falls through to a later candidate when the first is absent", () => {
-        const resolve = createResourceTypeResolver(session({ resources: ["drop01.wav"] }));
+    it("answers with the flavour's own type where one is declared", () => {
+        const resolve = createResourceTypeResolver(session({ resources: ["drop01.wav"], flavour: "pstee" }));
 
-        expect(resolve(gameUri(), ["ITM", "WAV"], "DROP01")).toBe("WAV");
+        expect(resolve(gameUri(), REPLACEMENT, "DROP01")).toBe("WAV");
+    });
+
+    // The declaration decides, not what happens to be installed: with BOTH resources present the answer still
+    // follows the game. A presence probe would return whichever candidate it tried first and be wrong in one
+    // of the two games - the reason this is not a candidate list.
+    it("follows the flavour even when both types exist in the install", () => {
+        const both = { resources: ["x.itm", "x.wav"] };
+
+        expect(createResourceTypeResolver(session(both))(gameUri(), REPLACEMENT, "X")).toBe("ITM");
+        expect(createResourceTypeResolver(session({ ...both, flavour: "pstee" }))(gameUri(), REPLACEMENT, "X")).toBe(
+            "WAV",
+        );
+    });
+
+    it("ignores a byFlavour entry for some other game", () => {
+        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"], flavour: "bgee" }));
+
+        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toBe("ITM");
     });
 
     // Never judges: a mod record legitimately references what a later install step creates, so an unresolvable
     // resref simply gets no answer - the editor withholds the affordance rather than marking the field.
-    it("answers nothing when the install has none of the candidates", () => {
-        expect(createResourceTypeResolver(session())(gameUri(), ["ITM"], "NOPE")).toBeUndefined();
+    it("answers nothing when the install does not have it", () => {
+        expect(createResourceTypeResolver(session())(gameUri(), { type: "ITM" }, "NOPE")).toBeUndefined();
     });
 
     // The "no resource" value must never be probed - every empty resref would otherwise hit the game index.
     it("never probes an empty resref", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
 
-        expect(resolve(gameUri(), ["ITM"], "")).toBeUndefined();
+        expect(resolve(gameUri(), { type: "ITM" }, "")).toBeUndefined();
     });
 
     it("answers nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
 
         expect(
-            createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }))(fileUri, ["ITM"], "SW1H01"),
+            createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }))(fileUri, { type: "ITM" }, "SW1H01"),
         ).toBeUndefined();
     });
 
     // An unreadable game must not fail the open - the field just gets no affordance.
     it("swallows an unopenable game", () => {
-        expect(createResourceTypeResolver(session({ throws: true }))(gameUri(), ["ITM"], "SW1H01")).toBeUndefined();
+        expect(
+            createResourceTypeResolver(session({ throws: true }))(gameUri(), { type: "ITM" }, "SW1H01"),
+        ).toBeUndefined();
     });
 });

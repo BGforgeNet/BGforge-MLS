@@ -97,11 +97,15 @@ that carries both.
   across formats ("Ground icon (BAM)" in ITM, "Ground icon" in SPL). The declaration is the only reliable
   signal. `external-refs.test.ts` pins the marked set - including that the record's name strref stays at offset
   8, which the resource tree's hover tooltip reads raw.
-- **`tables` is an ordered candidate list, and the order does real work.** It is not only preference ranking:
-  it is how one declaration resolves across editions that disagree, since only one candidate exists in a given
-  install. BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4 in one, SELECT_RARE in the
-  other), a single install can ship both, and mods extend them - so declare `["SNDSLOT", "SOUNDOFF"]` and let
-  the install decide. Do NOT vendor a name table.
+- **`tables` is an ordered candidate list; a resource `type` is NOT.** The two look alike and are decided
+  differently, so keep them apart. WHICH IDS/2DA names a value depends on what the install ships - the tables
+  are data files editions differ on and mods add to - so `tables` is probed by presence, first present wins.
+  BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4 in one, SELECT_RARE in the other), a
+  single install can ship both, so declare `["SNDSLOT", "SOUNDOFF"]` and let the install decide; Near Infinity
+  resolves this same field the same way. Do NOT vendor a name table.
+  WHAT a resref points at is not like that: it follows from the record version and the game, both known before
+  any lookup, so it is one `type` plus a `byFlavour` exception where a game genuinely differs. Probing types by
+  presence picks whichever happens to exist and is wrong wherever both do.
 - **The library resolves nothing.** Resolution needs a game and is per-install, so it stops at the declaration;
   a consumer holding the game resolves it (`Game.ids()`, `Game.tlk()`). This is also what keeps a parsed record
   and its JSON snapshot identical whether or not a game is open. `slotLabels` remains the game-agnostic
@@ -117,12 +121,17 @@ that carries both.
   inside one dropdown), and the identifier is what a script author actually types. Source it from a real install
   or IESDP's IDS listings (`files/ids/<game>/*.htm`), never by inventing an identifier-looking name - where no
   IDS names a value (the `0` unset sentinels), keep a plain editor word so it does not pose as one.
-- **Resref targets are hand-declared, never generated.** `{ kind: "resource", types }` names what a resref
+- **Resref targets are hand-declared, never generated.** `{ kind: "resource", type }` names what a resref
   points at, and IESDP is not a usable source for it: the same ground-icon field reads "Ground icon (BAM)" in
-  ITM and plain "Ground icon" in SPL, and others say only "Resource". `types` is ordered like `tables` and does
-  the same work - ITM `replacement` is a replacement ITEM in BG1/BG2/BGEE and a drop SOUND in PSTEE, so it
-  declares both and the install decides. Check the WIDTH before declaring: a resref is `char[8]`, so a
+  ITM and plain "Ground icon" in SPL, and others say only "Resource". Exactly two fields vary today, both only
+  in PSTEE - ITM `replacement` (an ITEM, a drop SOUND there) and CRE `largePortrait` (a BMP, a BAM there) - so
+  each declares `byFlavour: { pstee: ... }`. Check the WIDTH before declaring: a resref is `char[8]`, so a
   `char[2]` animation code and a `char[32]` script variable are not resrefs and get none.
+- **A resref whose type another field selects is `{ kind: "deferred", reason }`, not left bare.** Bare and
+  deferred look identical from outside, so the marker is what makes the absence a decision a completeness
+  sweep can read rather than something nobody got to. Every effect resource is one (`EFFECT_RESOURCE_REF`):
+  the opcode picks the target, so no type fits the field. A consumer resolves nothing for it - the field
+  renders exactly like an undeclared one.
 - **A 2DA ref is keyed by ROW INDEX, and not every 2DA can name anything.** `{ kind: "2da" }` resolves the
   stored value as a row position whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Check the file
   first: `itemtype.2da` deliberately has NO ref, because its rows are numbered `0,1,2...` and its columns are

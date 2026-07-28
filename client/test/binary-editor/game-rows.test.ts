@@ -244,15 +244,15 @@ describe("withGameContext", () => {
         kind: "field",
         name: "Inventory Icon",
         valueType: "string",
-        ref: { kind: "resource", types: ["BAM"] },
+        ref: { kind: "resource", type: "BAM" },
         rawValue: "ISW1H01",
     };
 
     it("marks a resref the game can open, naming the type that resolved", () => {
         const named = {
             ...lookups,
-            resourceType: (types: readonly string[], resref: string) =>
-                types[0] === "BAM" && resref === "ISW1H01" ? "BAM" : undefined,
+            resourceType: (decl: { type: string }, resref: string) =>
+                decl.type === "BAM" && resref === "ISW1H01" ? "BAM" : undefined,
         };
 
         const out = withGameContext({ rows: [iconRow] }, named);

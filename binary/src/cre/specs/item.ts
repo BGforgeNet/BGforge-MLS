@@ -4,7 +4,7 @@ import { u16, u32 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const creItemSpec = {
-    item: { ...charsSpec(8), ref: { kind: "resource", types: ["ITM"] } },
+    item: { ...charsSpec(8), ref: { kind: "resource", type: "ITM" } },
     expirationTime: { codec: u16 },
     quantity1: { codec: u16 },
     quantity2: { codec: u16 },

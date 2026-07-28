@@ -16,6 +16,7 @@ import {
     EffectSaveTypeFlags,
     EffectTarget,
     EffectTiming,
+    EFFECT_RESOURCE_REF,
     SCHOOL_REF,
     Schools,
     SECTYPE_REF,
@@ -50,6 +51,13 @@ export const effBodySpecAnnotated = {
     // shared with the SPL header and ITM ability fields of the same name.
     school: { ...effBodySpec.school, enum: Schools, enumOpen: true, ref: SCHOOL_REF },
     sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true, ref: SECTYPE_REF },
+    // All four resrefs defer rather than declaring a type - see EFFECT_RESOURCE_REF. `parentResource` is the
+    // one with a nearby discriminator (`parentResourceType`), but it holds 0/None on most records, so it
+    // cannot type the field either.
+    resource: { ...effBodySpec.resource, ref: EFFECT_RESOURCE_REF },
+    resource2: { ...effBodySpec.resource2, ref: EFFECT_RESOURCE_REF },
+    resource3: { ...effBodySpec.resource3, ref: EFFECT_RESOURCE_REF },
+    parentResource: { ...effBodySpec.parentResource, ref: EFFECT_RESOURCE_REF },
     // Parent resource kind (0 None / 1 Spell / 2 Item per IESDP eff_v2 0x90); was a raw integer next to the
     // parent-resource flags. Open: EE/mod data occasionally carries values outside the documented three.
     parentResourceType: { ...effBodySpec.parentResourceType, enum: EffectParentResourceType, enumOpen: true },

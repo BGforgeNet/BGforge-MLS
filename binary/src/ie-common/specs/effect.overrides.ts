@@ -6,7 +6,7 @@
 
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
-import { EffectResistanceFlags, EffectSaveTypeFlags, EffectTarget, EffectTiming } from "../types";
+import { EFFECT_RESOURCE_REF, EffectResistanceFlags, EffectSaveTypeFlags, EffectTarget, EffectTiming } from "../types";
 import { effectSpec } from "./effect";
 import { Opcodes } from "../opcodes";
 
@@ -21,6 +21,9 @@ export const effectSpecAnnotated = {
     timing: { ...effectSpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effectSpec.resistance, flags: EffectResistanceFlags },
     saveType: { ...effectSpec.saveType, flags: EffectSaveTypeFlags },
+    // Same deferral as the EFF v2 body's resrefs - the opcode picks the target type. Shared so ITM, SPL and
+    // CRE effects, which all render through this record, cannot disagree about it.
+    resource: { ...effectSpec.resource, ref: EFFECT_RESOURCE_REF },
 } satisfies Record<string, FieldSpec>;
 
 // Single shared presentation for the feature-block / EFF v1 record. This is the same 48 bytes embedded by

@@ -20,11 +20,17 @@ export type NamingTableResolver = (
     tables: readonly string[],
 ) => ReadonlyMap<number, string> | undefined;
 
+/** A resref field's declared target: one type, plus the flavours that store something else. */
+export interface ResourceRefDecl {
+    readonly type: string;
+    readonly byFlavour?: Readonly<Record<string, string>>;
+}
+
 /**
- * Resolves WHICH of a resref's candidate types the open game actually has, or undefined for none. The type
- * rather than a boolean, so an edition-dependent field resolves without the caller knowing the edition.
+ * Resolves the type a resref points at in THIS game, or undefined when the game does not have it. The
+ * declared type answers what it points at; the game is consulted only for whether it is there.
  */
-export type ResourceTypeResolver = (uri: vscode.Uri, types: readonly string[], resref: string) => string | undefined;
+export type ResourceTypeResolver = (uri: vscode.Uri, decl: ResourceRefDecl, resref: string) => string | undefined;
 
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
@@ -37,6 +43,8 @@ interface TlkSource {
         ids(resref: string): ReadonlyMap<number, string> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
         canRead(resref: string, type: string): boolean;
+        /** WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override. */
+        readonly identity: { readonly flavour: string };
     };
 }
 
@@ -116,23 +124,24 @@ export function createNamingTableResolver(session: TlkSource): NamingTableResolv
 }
 
 /**
- * Resolves a resref against the open game, answering with the first candidate type the install actually ships.
- * Never judges: an unresolvable resref simply gets no answer, because a mod record legitimately references what
- * a later install step creates.
+ * Resolves a resref against the open game: the declared type, overridden where this game's flavour stores
+ * another, and only then checked for existence.
+ *
+ * Not a search over candidates. What a field points at follows from the record and the game, so probing by
+ * presence would pick whichever happened to exist - wrong for a field whose two types can both be installed.
+ * The game is asked one question: is this resource here? Never judges - an unresolvable resref gets no answer,
+ * because a mod record legitimately references what a later install step creates.
  */
 export function createResourceTypeResolver(session: TlkSource): ResourceTypeResolver {
-    return (uri, types, resref) => {
+    return (uri, decl, resref) => {
         if (uri.scheme !== GAME_RESOURCE_SCHEME || resref === "") return;
         const { gameDir } = parseResourceUri(uri);
         if (!gameDir) return;
         let found: string | undefined;
         try {
             const game = session.ensureOpen(gameDir);
-            for (const type of types) {
-                if (!game.canRead(resref, type)) continue;
-                found = type;
-                break;
-            }
+            const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
+            if (game.canRead(resref, type)) found = type;
         } catch {
             // Unreadable game - no affordance, exactly as outside a game.
         }
