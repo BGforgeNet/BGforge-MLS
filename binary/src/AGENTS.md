@@ -88,6 +88,15 @@ it in some descriptions and not others, and marks two SPL strrefs `unused` (they
 `binary/test/strref-fields.test.ts` pins the marked set - including that the record's name strref stays at
 offset 8, which the resource tree's hover tooltip reads raw.
 
+## Game-named slots: emit the table, never a vendored copy
+
+A slot array whose slots are NAMED by the game (CRE sound slots) declares `slotLabelIds` - the IDS tables that
+name them, most preferred first (`["SNDSLOT", "SOUNDOFF"]`: BG2's, then BG1's). The walker emits `idsSlot`
+({tables, index}) on each slot child and the library stops there; a consumer holding the game resolves it via
+`Game.ids()`. Do NOT vendor a name table: BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4
+in one, SELECT_RARE in the other), a single install can ship both, and mods extend them. `slotLabels` stays as
+the game-agnostic fallback for a record opened outside a game.
+
 ## Faithful raw bytes; faithful labels
 
 - **Raw bytes verbatim.** Resref / string fields show their stored bytes; a field holding non-printable bytes

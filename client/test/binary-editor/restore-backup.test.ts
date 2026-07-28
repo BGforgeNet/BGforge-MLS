@@ -85,8 +85,8 @@ function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
 
 const token = {} as vscode.CancellationToken;
 
-// This suite is about the restore path, not strref resolution: a record outside a game resolves nothing.
-const noStrrefs = (): undefined => undefined;
+// This suite is about the restore path, not game lookups: a record outside a game resolves nothing.
+const noGame = { strref: (): undefined => undefined, slotLabel: (): undefined => undefined };
 
 describe("binary editor hot-exit restore", () => {
     beforeEach(() => {
@@ -98,7 +98,7 @@ describe("binary editor hot-exit restore", () => {
     });
 
     it("parses the backup bytes, not the file on disk, when restoring a dirty document", async () => {
-        const provider = new BinaryEditorProvider(context, noStrrefs);
+        const provider = new BinaryEditorProvider(context, noGame);
 
         const document = await provider.openCustomDocument(uri(DOC_URI), openContext(BACKUP_URI), token);
 
@@ -109,7 +109,7 @@ describe("binary editor hot-exit restore", () => {
     });
 
     it("reads the file itself when opening without a backup", async () => {
-        const provider = new BinaryEditorProvider(context, noStrrefs);
+        const provider = new BinaryEditorProvider(context, noGame);
 
         await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
 

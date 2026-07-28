@@ -5,7 +5,7 @@ import { conlog } from "../logging";
 import { GameResourceFileSystemProvider } from "./fs-provider";
 import { GameSession } from "./session";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
-import { createStrrefResolver, type StrrefResolver } from "./strref";
+import { createSlotLabelResolver, createStrrefResolver, type SlotLabelResolver, type StrrefResolver } from "./strref";
 import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
 
 const LAST_DIR_KEY = "bgforge.ieResources.lastDir";
@@ -13,10 +13,13 @@ const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
 
 /**
  * Wire up the IE game resource viewer: the sidebar tree, the game-resource FS provider, and its commands.
- * Returns a resolver over the session it owns, so the binary editor can turn a strref field into text without
- * reaching for a `Game` of its own.
+ * Returns lookups over the session it owns, so the binary editor can turn a strref into text and a slot into
+ * its IDS name without reaching for a `Game` of its own.
  */
-export function registerIeResources(context: vscode.ExtensionContext): StrrefResolver {
+export function registerIeResources(context: vscode.ExtensionContext): {
+    strref: StrrefResolver;
+    slotLabel: SlotLabelResolver;
+} {
     const session = new GameSession();
     const tree = new GameResourceTreeProvider(session);
     const fsProvider = new GameResourceFileSystemProvider(session);
@@ -118,5 +121,5 @@ export function registerIeResources(context: vscode.ExtensionContext): StrrefRes
         void setHasGame(false);
     }
 
-    return createStrrefResolver(session);
+    return { strref: createStrrefResolver(session), slotLabel: createSlotLabelResolver(session) };
 }

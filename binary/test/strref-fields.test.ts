@@ -52,6 +52,17 @@ describe.skipIf(!haveFixtures)("strref fields reach the display tree", () => {
         expect(marked.slice(0, 2).map((f) => f.name)).toEqual(["Long Name", "Short Name"]);
     });
 
+    // The library never names these slots itself: the mapping is per-install (BG1 SOUNDOFF.IDS vs BG2
+    // SNDSLOT.IDS, plus mod extensions), so it emits which table names the slot and at which index, and a
+    // consumer holding the game resolves it. Ordered by preference - SNDSLOT is BG2's, SOUNDOFF is BG1's.
+    it("tells a consumer which IDS table names each CRE sound slot", () => {
+        const slots = parseFields(creParser, CRE_FIXTURE).filter((f) => f.idsSlot !== undefined);
+
+        expect(slots).toHaveLength(100);
+        expect(slots[0]?.idsSlot).toEqual({ tables: ["SNDSLOT", "SOUNDOFF"], index: 0 });
+        expect(slots[99]?.idsSlot).toEqual({ tables: ["SNDSLOT", "SOUNDOFF"], index: 99 });
+    });
+
     // Pins the constant `client/src/ie-resources/tree-provider.ts` reads raw for its hover tooltip: it grabs the
     // name strref at a fixed offset rather than parsing a whole record per hover, so if a format ever moved that
     // field the tooltip would silently resolve the wrong string.

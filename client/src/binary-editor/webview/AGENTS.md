@@ -32,6 +32,18 @@ the cell and moves the line to the tooltip. Only `MatrixBlock` sets it - a true 
 A grid is NOT compact: it shows the line like any other form. Getting there needed the grid to stop sizing
 itself by content - see the sizing note below - because a 5-column grid of L-tier controls overflowed the panel.
 
+## A grid fits columns to the panel; the schema count is a maximum
+
+`GridBlock` is multi-column (`column-count` from the schema as a cap, a measured `column-width` as the
+minimum), so it sheds columns instead of overflowing. Sizing cannot be declared here: a cell is a label plus a
+tier-sized control, and with a game open a CRE sound slot's label comes from the game's IDS table and runs
+three times longer than the schema's generic "Sound 12". The measured `--nm-w` (widest label) is applied to
+every cell so controls align down a column - the old subgrid cannot span multicol columns - and `--col-w` sums
+the widest label and widest control separately, because those two rarely sit in the same cell.
+
+Guarded at two viewports by `render-cre.mts`. The harness has no game, so it exercises the narrow-panel case
+rather than the long-label one; both are "content wider than the panel".
+
 ## Field width: a small display-width tier scale
 
 Value controls map to a small fixed set of widths by DISPLAY width (characters rendered), not byte size. TEXT
@@ -71,8 +83,8 @@ visible defects in the CRE sound slots (100 strrefs):
   `min-width: 0` here (the kv rules have it): the control track is `auto`, so a shrinkable control lets the
   track shrink with it and the value clips again.
 
-A grid's column count is the schema's lever for fitting the result: L-tier controls are wide, so the sound
-slots run 3 columns, not 5. Check the panel does not overflow after changing either.
+The schema's column count is a MAXIMUM, not a promise - the block fits what the panel allows (see above), so
+raising it is safe but does not guarantee that many columns.
 
 ## Keep columns aligned with fixed grid tracks
 

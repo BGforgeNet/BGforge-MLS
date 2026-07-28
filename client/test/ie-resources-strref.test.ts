@@ -5,18 +5,33 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 
 // Imported after vi.mock so the mocked vscode is in place.
-import { createStrrefResolver } from "../src/ie-resources/strref";
+import { createSlotLabelResolver, createStrrefResolver } from "../src/ie-resources/strref";
 import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
 
-function session(overrides: { throws?: boolean; noTlk?: boolean } = {}): {
-    ensureOpen: (dir: string) => { tlk: () => { get: (n: number) => string | undefined } | undefined };
+const TABLES: Record<string, ReadonlyMap<number, string>> = {
+    sndslot: new Map([[21, "AREA_FOREST"]]),
+    soundoff: new Map([
+        [21, "AREA_FOREST_BG1"],
+        [35, "SELECT_RARE"],
+    ]),
+};
+
+function session(overrides: { throws?: boolean; noTlk?: boolean; tables?: string[] } = {}): {
+    ensureOpen: (dir: string) => {
+        tlk: () => { get: (n: number) => string | undefined } | undefined;
+        ids: (resref: string) => ReadonlyMap<number, string> | undefined;
+    };
 } {
     return {
         ensureOpen: (dir: string) => {
             if (overrides.throws === true) throw new Error(`no game at ${dir}`);
-            return { tlk: () => (overrides.noTlk === true ? undefined : { get: (n: number) => LINES[n] }) };
+            return {
+                tlk: () => (overrides.noTlk === true ? undefined : { get: (n: number) => LINES[n] }),
+                ids: (resref: string) =>
+                    (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
+            };
         },
     };
 }
@@ -43,7 +58,7 @@ describe("createStrrefResolver", () => {
     // or, worse, wrap into a real entry).
     it("resolves nothing for the -1 sentinel", () => {
         const get = vi.fn();
-        const spySession = { ensureOpen: () => ({ tlk: () => ({ get }) }) };
+        const spySession = { ensureOpen: () => ({ tlk: () => ({ get }), ids: () => undefined }) };
 
         expect(createStrrefResolver(spySession)(gameUri(), -1)).toBeUndefined();
         expect(get).not.toHaveBeenCalled();
@@ -66,5 +81,41 @@ describe("createStrrefResolver", () => {
     // An unreadable game must not fail the editor open - the field falls back to showing its number.
     it("swallows an unopenable game", () => {
         expect(createStrrefResolver(session({ throws: true }))(gameUri(), 6348)).toBeUndefined();
+    });
+});
+
+describe("createSlotLabelResolver", () => {
+    it("names a slot from the game's IDS table", () => {
+        const resolve = createSlotLabelResolver(session({ tables: ["sndslot"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST");
+    });
+
+    // A BG2 install ships both tables and they disagree at the same index, so preference order has to decide
+    // rather than a merge - SNDSLOT wins where present.
+    it("prefers the first table the game ships, not a merge of both", () => {
+        const resolve = createSlotLabelResolver(session({ tables: ["sndslot", "soundoff"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST");
+        // Only the fallback names slot 35, so it still answers there.
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 35)).toBe("SELECT_RARE");
+    });
+
+    it("falls back to the next table when the preferred one is absent", () => {
+        const resolve = createSlotLabelResolver(session({ tables: ["soundoff"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST_BG1");
+    });
+
+    it("names nothing for a slot no table covers", () => {
+        const resolve = createSlotLabelResolver(session({ tables: ["sndslot"] }));
+
+        expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 90)).toBeUndefined();
+    });
+
+    it("names nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.cre" } as never;
+
+        expect(createSlotLabelResolver(session({ tables: ["sndslot"] }))(fileUri, ["SNDSLOT"], 21)).toBeUndefined();
     });
 });

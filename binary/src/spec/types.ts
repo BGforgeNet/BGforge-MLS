@@ -129,6 +129,12 @@ export interface ArrayFieldSpec {
     readonly view?: "bytes" | "slots";
     readonly slotLabels?: readonly string[];
     /**
+     * IDS tables that name this array's slots, most preferred first (e.g. `["SNDSLOT", "SOUNDOFF"]` - BG2's
+     * table then BG1's). Emitted onto each slot child as a hint; this library never resolves it, because the
+     * mapping is per-install and mods extend it. `slotLabels` remains the game-agnostic fallback.
+     */
+    readonly slotLabelIds?: readonly string[];
+    /**
      * Optional per-slot element override. When supplied, the walker uses
      * `slotElements[i]` for slot `i` instead of the shared `element` spec.
      * Use when slots have semantically different content - e.g. an ITM
@@ -211,6 +217,7 @@ export function arraySpec<Ctx = never>(args: {
     count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
     view?: "bytes" | "slots";
     slotLabels?: readonly string[];
+    slotLabelIds?: readonly string[];
     slotElements?: readonly ScalarFieldSpec[];
     addable?: boolean;
     removable?: boolean;
@@ -239,6 +246,7 @@ export function arraySpec<Ctx = never>(args: {
         count: args.count as ArrayFieldSpec["count"],
         ...(args.view !== undefined ? { view: args.view } : {}),
         ...(args.slotLabels !== undefined ? { slotLabels: args.slotLabels } : {}),
+        ...(args.slotLabelIds !== undefined ? { slotLabelIds: args.slotLabelIds } : {}),
         ...(args.slotElements !== undefined ? { slotElements: args.slotElements } : {}),
         ...(args.addable !== undefined ? { addable: args.addable } : {}),
         ...(args.removable !== undefined ? { removable: args.removable } : {}),

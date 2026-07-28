@@ -1,5 +1,5 @@
 <script lang="ts">
-    // Flat N-column grid of label + control cells (the critter Skills block). Clumps left.
+    // Flat grid of label + control cells (the critter Skills block, the CRE sound slots). Clumps left.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { controlWidthClass } from "../../state/controls";
     import { useJump } from "../../state/jump-context";
@@ -14,24 +14,48 @@
     } = $props();
     const jump = useJump();
 
+    /** Matches the `.skill` column-gap in styles.css. */
+    const LABEL_CONTROL_GAP = 10;
+
     const cells = $derived(
         items
             .map((ref) => ({ ref, row: fields[ref] }))
             .filter((c): c is { ref: FieldRef; row: Row } => c.row !== undefined),
     );
-    // Two tracks per column (label max-content, control auto) so each .skill is a subgrid: every label in a
-    // visual column shares one max-content track and the controls align - regardless of label length (a long
-    // label like "Selected weapon ability" widens only its column, it no longer shoves its own control out of
-    // line). A cross-record jump (e.g. a CRE item slot -> its Items entry) is the LABEL itself acting as a link,
-    // so it lives in the existing label track and adds no track of its own. Column-major fill (top-down first):
-    // `grid-auto-flow:column` + a fixed row count fills column 1 fully before column 2, so reading order runs
-    // down each column rather than snaking across rows.
-    const rows = $derived(Math.ceil(cells.length / columns));
-    const gridStyle = $derived(
-        `grid-template-columns:repeat(${columns},max-content auto);grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`,
-    );
+    /**
+     * Multi-column layout, not a fixed N-column grid: the schema's `columns` is the MAXIMUM, and the browser
+     * drops to fewer when the panel cannot hold them - a narrow window, a split editor, or labels three times
+     * longer than the schema's generic ones (a CRE sound slot named from the game's own SNDSLOT.IDS). A fixed
+     * count simply overflowed. Multicol also keeps the column-major reading order this editor wants, and a
+     * cross-record jump link stays in the label position it already occupied.
+     *
+     * The two widths are measured rather than declared: a cell is its label plus a tier-sized control, neither
+     * known here. `--nm-w` is the widest label, applied to every cell so controls line up down a column;
+     * `--col-w` is the widest whole cell, the minimum width a column may take.
+     */
+    function fitColumns(node: HTMLElement, _cells: unknown) {
+        const measure = (): void => {
+            // Measure natural widths, so a previous pass's uniform label track cannot ratchet the next one wider.
+            node.style.removeProperty("--nm-w");
+            node.style.removeProperty("--col-w");
+            let label = 0;
+            let control = 0;
+            for (const el of node.querySelectorAll<HTMLElement>(".nm")) label = Math.max(label, el.scrollWidth);
+            for (const el of node.querySelectorAll<HTMLElement>(".field-control")) {
+                control = Math.max(control, el.scrollWidth);
+            }
+            // The two halves are measured apart and summed, rather than taking the widest whole cell: the widest
+            // label and the widest control rarely sit in the same cell, and a whole-cell measurement would size
+            // every column to a pairing that does not exist.
+            node.style.setProperty("--nm-w", `${Math.ceil(label)}px`);
+            node.style.setProperty("--col-w", `${Math.ceil(label + control) + LABEL_CONTROL_GAP}px`);
+        };
+        // After the row values land, not during this update - measuring now would read the previous content.
+        const scheduled = requestAnimationFrame(measure);
+        return { update: () => requestAnimationFrame(measure), destroy: () => cancelAnimationFrame(scheduled) };
+    }
 </script>
-<div class="grid" style={gridStyle}>
+<div class="grid" style={`column-count:${columns}`} use:fitColumns={cells}>
     {#each cells as cell (cell.row.id)}
         <div class="skill">
             {#if cell.row.link && jump}

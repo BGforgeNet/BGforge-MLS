@@ -538,21 +538,37 @@ check(
 // 100 slots is a long scroll, so they pack four across - but a strref control is sized to show its dialog.tlk
 // line, and four of those must still fit the panel at this viewport. Guards both halves at once: the column
 // count is what makes the block compact, the overflow check is what stops that packing from running off-panel.
-const soundGrid = await page.evaluate(() => {
-    const grid = document.querySelector<HTMLElement>(".layout-root .grid");
-    if (!grid) return null;
-    // Two tracks per column (label, control) - see GridBlock's template.
-    const tracks = getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
-    return {
-        columns: tracks / 2,
-        gridWidth: Math.round(grid.getBoundingClientRect().width),
-        docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    };
-});
+// Column count is measured from where the cells actually land, not from the template, so the assertion holds
+// whatever mechanism does the fitting.
+const measureGrid = async (): Promise<{ columns: number; gridWidth: number; docOverflow: number } | null> =>
+    page.evaluate(() => {
+        const grid = document.querySelector<HTMLElement>(".layout-root .grid");
+        if (!grid) return null;
+        const xs = new Set(Array.from(grid.querySelectorAll(".skill"), (s) => Math.round(s.getBoundingClientRect().x)));
+        return {
+            columns: xs.size,
+            gridWidth: Math.round(grid.getBoundingClientRect().width),
+            docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+    });
+
+const soundGrid = await measureGrid();
 check(
     "layout: sound slots pack four columns without overflowing the panel",
     soundGrid !== null && soundGrid.columns === 4 && soundGrid.docOverflow === 0,
     JSON.stringify(soundGrid),
+);
+
+// The panel is not always this wide - a narrow window, a split editor, or (with a game open) IDS slot names
+// three times longer than "Sound 12". The block must shed columns to fit rather than run off the panel, so the
+// schema's column count is a MAXIMUM, not a promise.
+await page.setViewportSize({ width: 760, height: 900 });
+const narrowGrid = await measureGrid();
+await page.setViewportSize({ width: 1280, height: 900 });
+check(
+    "layout: sound slots shed columns instead of overflowing a narrow panel",
+    narrowGrid !== null && narrowGrid.columns < 4 && narrowGrid.columns >= 1 && narrowGrid.docOverflow === 0,
+    JSON.stringify(narrowGrid),
 );
 
 // ============================================================

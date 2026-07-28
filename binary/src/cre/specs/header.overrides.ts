@@ -79,6 +79,9 @@ export const creHeaderSpecAnnotated = {
         count: 100,
         view: "slots",
         slotLabels: SOUND_SLOT_LABELS,
+        // BG2 names these in SNDSLOT.IDS, BG1 in SOUNDOFF.IDS, and the two disagree on most slots - so the
+        // name comes from whichever the opened game ships, never from a table vendored here.
+        slotLabelIds: ["SNDSLOT", "SOUNDOFF"],
     }),
     /**
      * OBJECT.IDS reference block (5 x u8). The engine uses these as an ordered

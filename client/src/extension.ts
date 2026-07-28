@@ -61,11 +61,11 @@ export async function activate(context: ExtensionContext) {
 
     // Register the IE game resource viewer (sidebar tree + game-resource FS provider); manages its own
     // disposables. First, because it owns the game session the binary editor resolves strrefs through.
-    const resolveStrref = registerIeResources(context);
+    const gameLookups = registerIeResources(context);
 
     // Register binary file and animation editors
     // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
-    context.subscriptions.push(registerBinaryEditor(context, resolveStrref), registerImageEditor(context));
+    context.subscriptions.push(registerBinaryEditor(context, gameLookups), registerImageEditor(context));
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used

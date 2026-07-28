@@ -1426,23 +1426,24 @@ input[type="text"]::placeholder {
     width: 56px;
 }
 /* skills grid: N columns of label + control, clumped left */
+/* Multi-column, so the block sheds columns rather than overflowing when the panel is narrow or the labels are
+   long (see GridBlock.svelte). `column-count` from the schema is the cap; `column-width` is the measured
+   minimum, so the browser fits min(count, what actually fits). */
 .layout-root .grid {
-    display: grid;
-    justify-content: start;
+    column-width: var(--col-w, 12rem);
     /* Column gap is the shared inter-column spacing, not a value of its own - see the webview AGENTS.md
        "Uniform spacing" rule. It was a hardcoded 40px, which read as a gulf beside the packed field grids. */
-    gap: 4px var(--bb-col-gap);
+    column-gap: var(--bb-col-gap);
 }
 .layout-root .grid .skill {
-    /* Subgrid spanning this column's (label, control) track pair, so labels share a max-content track and
-       controls align - the same technique .field uses. Replaces a fixed 108px label width that a longer label
-       (e.g. "Selected weapon ability") overflowed, misaligning its control. A cross-record jump is the label
-       itself acting as a link, so it stays in the label track and needs no track of its own. */
+    /* Label track is the block's widest label (measured), so controls align down every column - the subgrid
+       that used to do this cannot span multicol columns. `break-inside: avoid` keeps a cell whole. */
     display: grid;
-    grid-template-columns: subgrid;
-    grid-column: span 2;
+    grid-template-columns: var(--nm-w, max-content) auto;
     column-gap: 10px;
     align-items: center;
+    break-inside: avoid;
+    margin-bottom: 4px;
 }
 .layout-root .grid .skill .nm {
     color: var(--vscode-descriptionForeground);

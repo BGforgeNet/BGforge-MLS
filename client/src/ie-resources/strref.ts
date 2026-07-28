@@ -10,13 +10,19 @@ import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
  */
 export type StrrefResolver = (uri: vscode.Uri, strref: number) => string | undefined;
 
+/** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
+export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
+
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
 
 /** The slice of GameSession this needs. Narrow on purpose: the resolver only ever reads a line, and depending
  *  on the whole session would drag its open/close lifecycle into every caller (and every test). */
 interface TlkSource {
-    ensureOpen(dir: string): { tlk(): { get(strref: number): string | undefined } | undefined };
+    ensureOpen(dir: string): {
+        tlk(): { get(strref: number): string | undefined } | undefined;
+        ids(resref: string): ReadonlyMap<number, string> | undefined;
+    };
 }
 
 export function createStrrefResolver(session: TlkSource): StrrefResolver {
@@ -37,5 +43,29 @@ export function createStrrefResolver(session: TlkSource): StrrefResolver {
         // An empty line is nothing to show, so it reads as unresolved rather than rendering a trailing space
         // in the field and a blank tooltip.
         return line === "" ? undefined : line;
+    };
+}
+
+/**
+ * Resolves a slot's name from the first of `tables` the game actually ships - BG2 carries SNDSLOT.IDS, BG1
+ * SOUNDOFF.IDS, and an install can have both with different meanings at the same index, so preference order
+ * decides rather than a merge.
+ */
+export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
+    return (uri, tables, index) => {
+        if (uri.scheme !== GAME_RESOURCE_SCHEME) return;
+        const { gameDir } = parseResourceUri(uri);
+        if (!gameDir) return;
+        let identifier: string | undefined;
+        try {
+            const game = session.ensureOpen(gameDir);
+            for (const table of tables) {
+                identifier = game.ids(table)?.get(index);
+                if (identifier !== undefined) break;
+            }
+        } catch {
+            // Unreadable game - the slot keeps its generic label, as it does outside a game.
+        }
+        return identifier === "" ? undefined : identifier;
     };
 }

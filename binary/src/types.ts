@@ -81,6 +81,13 @@ export interface ParsedField {
      * context, and one is only available when the record was opened from an installed game.
      */
     strref?: boolean;
+    /**
+     * This field is one slot of an array whose slots are NAMED by an IDS table in the game (e.g. a CRE
+     * sound slot). `tables` lists the candidate tables most-preferred first, `index` is the slot's position.
+     * Like `strref`, the library only reports it: the mapping is per-install, so a consumer holding the game
+     * resolves it and falls back to the field's own generic label.
+     */
+    idsSlot?: { tables: readonly string[]; index: number };
 }
 
 /**

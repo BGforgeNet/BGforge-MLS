@@ -47,6 +47,9 @@ export interface Row {
     /** The value is a `dialog.tlk` string reference (from the spec's `strref`). The row stays numeric and
      *  editable as a number; this only marks it resolvable. */
     strref?: boolean;
+    /** This row is one slot of an array the GAME names via an IDS table (a CRE sound slot). The host swaps the
+     *  generic label for the game's own identifier; absent outside a game. */
+    idsSlot?: { tables: readonly string[]; index: number };
     /** The line `strref` points at, resolved against the game the record was opened from. Filled by the host,
      *  which owns the game session - never by the parser, which has no game context. Absent when the record is
      *  not from an installed game, the strref is the -1 sentinel, or the TLK has no such entry. */
