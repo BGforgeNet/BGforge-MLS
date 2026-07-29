@@ -229,7 +229,10 @@ export const ItmKitUsabilityByte4Flags: Readonly<Record<number, string>> = {
  * Required weapon proficiency (IESDP itm_v1.htm "Header Proficiency" section,
  * https://iesdp.bgforge.net/file_formats/ie_formats/itm_v1.htm): the proficiency-type code an item needs, not a
  * scalar. Named values 0x59-0x73 plus 0 "None"; the gap below 0x59 is unused and 0x74+ are mod-extensible
- * "Extra Proficiency" slots (PROFICIENCY.IDS), so callers mark the field `enumOpen`.
+ * "Extra Proficiency" slots, so callers mark the field `enumOpen`.
+ *
+ * The fallback for a record opened outside a game: with one open, the install's own proficiency table wins per
+ * value and this fills what it does not name (see the field's `ref` in `specs/header.overrides.ts`).
  */
 export const ItmWeaponProficiency: Readonly<Record<number, string>> = {
     0x00: "None",

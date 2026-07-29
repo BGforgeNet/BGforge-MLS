@@ -70,8 +70,20 @@ export const itmHeaderSpecAnnotated = {
     kitUsability3: { ...itmHeaderSpec.kitUsability3, flags: ItmKitUsabilityByte3Flags },
     kitUsability4: { ...itmHeaderSpec.kitUsability4, flags: ItmKitUsabilityByte4Flags },
     // Required weapon proficiency (IESDP "Header Proficiency") - a proficiency-type code, not a scalar. Open
-    // because 0x74+ are mod-extensible PROFICIENCY.IDS slots.
-    weaponProficiency: { ...itmHeaderSpec.weaponProficiency, enum: ItmWeaponProficiency, enumOpen: true },
+    // because 0x74+ are mod-extensible slots.
+    //
+    // The install names these: BG/PST ship WPROF.IDS and IWD2 PROFTYPE.IDS, both keyed exactly as the field
+    // stores (0x59-0x73, verified against a real BG:EE WPROF.IDS - all 25 of its entries land in that range
+    // and none is missing from the vendored table). Near Infinity resolves the field the same way, preferring
+    // PROFTYPE. STATS.IDS carries the same names at the same keys and is deliberately NOT a candidate: it is
+    // the general 202-entry stat table, so resolving against it would fill the dropdown with stats the field
+    // cannot mean.
+    weaponProficiency: {
+        ...itmHeaderSpec.weaponProficiency,
+        enum: ItmWeaponProficiency,
+        enumOpen: true,
+        ref: { kind: "ids", tables: ["PROFTYPE", "WPROF"] },
+    },
     // Structural pointers into the abilities + effects sections that follow
     // the header. Editing these by hand silently corrupts the file, so the
     // editor renders them as read-only and (eventually) the canonical writer

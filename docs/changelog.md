@@ -25,6 +25,8 @@
   - Effects that target a creature type (opcodes 55, 72, 100, 175, 178) now name both halves: the IDS File
     parameter lists the tables it can select, and the IDS Entry parameter becomes a dropdown of that table's
     own entries, re-read from the game whenever the file is changed.
+  - An item's weapon proficiency is named from the game's own proficiency table, so proficiencies a mod adds
+    are listed instead of showing as a bare number.
 
 ### Syntax highlighting
 

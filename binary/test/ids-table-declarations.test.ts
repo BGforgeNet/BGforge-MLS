@@ -10,6 +10,18 @@
  *
  * Static, over the specs themselves rather than a parsed fixture: a fixture only reaches the fields its own
  * record happens to carry, and the point is to cover every declared field.
+ *
+ * Two wider discriminators were measured and REJECTED - do not "improve" the sweep back into them:
+ *
+ *  - Matching a table's BARE name (no `.IDS`) anywhere in the description. The table names are ordinary
+ *    English words, so this fires on "average of all active CLASS levels", "ignores all 4 SPECIFIC AC" and
+ *    every "KIT Usability" label: 6 false positives against 1 real find, each needing an exclusion to stay
+ *    green. A check that has to be taught to ignore correct input is the cry-wolf shape.
+ *  - Vendored `enum` values shaped like engine identifiers (ALL_CAPS_WITH_UNDERSCORES). Every field that
+ *    trips it already declares its table, so it adds no signal.
+ *
+ * The one real gap those found - ITM `weaponProficiency`, which the install names via WPROF/PROFTYPE - was
+ * fixed rather than excluded, so the narrow discriminator below is what remains.
  */
 
 import { describe, expect, it } from "vitest";
@@ -18,6 +30,7 @@ import { itmAbilitySpecAnnotated } from "../src/itm/specs/ability.overrides";
 import { splHeaderSpecAnnotated } from "../src/spl/specs/header.overrides";
 import { splAbilitySpecAnnotated } from "../src/spl/specs/ability.overrides";
 import { effBodySpecAnnotated } from "../src/eff/specs/body.overrides";
+import { effHeaderSpec } from "../src/eff/specs/header";
 import { effectSpecAnnotated } from "../src/ie-common/specs/effect.overrides";
 import { creHeaderSpecAnnotated } from "../src/cre/specs/header.overrides";
 import { creItemSpecAnnotated } from "../src/cre/specs/item.overrides";
@@ -25,13 +38,19 @@ import { creKnownSpellSpecAnnotated } from "../src/cre/specs/known-spell.overrid
 import { creMemorizedSpellSpecAnnotated } from "../src/cre/specs/memorized-spell.overrides";
 import { creSpellMemInfoSpecAnnotated } from "../src/cre/specs/spell-mem-info.overrides";
 
-/** Every annotated spec, by the name this test reports a field under. */
+/**
+ * Every IE spec module, by the name this test reports a field under. PRO and MAP are deliberately absent:
+ * they are Fallout formats with no IDS/2DA concept, so there is nothing here for them to declare.
+ */
 const SPECS: Readonly<Record<string, unknown>> = {
     itmHeader: itmHeaderSpecAnnotated,
     itmAbility: itmAbilitySpecAnnotated,
     splHeader: splHeaderSpecAnnotated,
     splAbility: splAbilitySpecAnnotated,
     effBody: effBodySpecAnnotated,
+    // No `.overrides` sibling, so it is the raw spec - and the only IE spec module without one, which is
+    // exactly how it went unswept when this listed only the annotated exports.
+    effHeader: effHeaderSpec,
     featureBlock: effectSpecAnnotated,
     creHeader: creHeaderSpecAnnotated,
     creItem: creItemSpecAnnotated,
@@ -49,14 +68,18 @@ const NAMES_A_TABLE_BUT_INDEXES_NONE: Readonly<Record<string, string>> = {
     "itmAbility.projectileType":
         "Stores the launcher category the ability requires (0 None, 1 Bow, ...), not an ITEMCAT.IDS key. The " +
         "description names ITEMCAT for the LAUNCHER WEAPON that has to match, which is a different value.",
+    // The projectile pair is not blocked on evidence any more - it is blocked on the ref shape. The offset
+    // between the stored value and the PROJECTL.IDS key is CONDITIONAL: resolved as a projectile the value is
+    // the key, resolved as a missile it is the key plus one, and Near Infinity applies exactly that split.
+    // `keyEncoding` is a property of the declaration, so it cannot say "minus one, but only down the MISSILE
+    // branch" - and IESDP naming both tables on the ITM field is the same fork. Declaring either table alone
+    // would misname every value on the other branch. Needs a ref that can carry the per-table encoding.
     "itmAbility.projectileAnimation":
-        "Indexes PROJECTL.IDS (MISSILE.IDS on older engines), but at an offset this project has not " +
-        "established: IESDP documents its SPL twin as off-by-one and says nothing here, and a sample of a real " +
-        "BG:EE install fits neither reading cleanly. Declaring the table would name every value wrongly, which " +
-        "is worse than leaving it a number.",
+        "Indexes PROJECTL.IDS or MISSILE.IDS, and the offset differs BETWEEN those two - which a single " +
+        "`keyEncoding` on one declaration cannot express. Blocked on the ref shape, not on evidence.",
     "splAbility.projectile":
-        "Same table and the same unresolved offset, stated outright by IESDP: 'in BG2, this value is " +
-        "off-by-one from projectl.ids value'. Needs a verified key encoding before it can be declared.",
+        "Same fork, and IESDP states the off-by-one outright: 'in BG2, this value is off-by-one from " +
+        "projectl.ids value'. Blocked on the same missing per-table encoding.",
 };
 
 const TABLE_MENTION = /\b[A-Za-z][A-Za-z0-9_]{1,11}\.(?:ids|2da)\b/gi;
