@@ -9,6 +9,7 @@ import {
     parseCustomValue,
     valueTier,
     dropdownWidth,
+    controlWidthClass,
     rangeTooltip,
 } from "../../../src/binary-editor/webview/state/controls";
 
@@ -367,5 +368,47 @@ describe("parseCustomValue", () => {
     it("returns undefined for Infinity and NaN", () => {
         expect(parseCustomValue("Infinity")).toBeUndefined();
         expect(parseCustomValue("NaN")).toBeUndefined();
+    });
+});
+
+/**
+ * The one place a row is mapped to its width class. Every renderer applies it, and a control rendered through
+ * a path that skips it carries no class and clips its value.
+ */
+describe("controlWidthClass", () => {
+    const base: Row = {
+        id: "1",
+        namePath: ["Icon"],
+        depth: 1,
+        kind: "field",
+        name: "Inventory Icon",
+        valueType: "string",
+        size: 8,
+        rawValue: "ISW1H01",
+        displayValue: "ISW1H01",
+        editable: true,
+    };
+
+    it("gives a flags field no width class (it is full-width)", () => {
+        const flags: Row = { ...base, valueType: "flags", flagOptions: { "1": "Visible" }, rawValue: 1 };
+        expect(controlWidthClass(flags)).toBe("");
+    });
+
+    it("puts a text field on the tier scale and an enum on the dropdown scale", () => {
+        expect(controlWidthClass(base)).toBe("tier-m"); // char[8] resref
+        const dropdown: Row = { ...base, valueType: "enum", enumOptions: { "0": "Books" }, rawValue: 0 };
+        // jsdom has no 2d canvas context, so the measured dropdown scale fails wide - see dropdownWidth.
+        expect(controlWidthClass(dropdown)).toBe("dd-6");
+    });
+
+    // A resref picker is sized from the FIELD's char capacity, not its options: the list may not have loaded
+    // yet, and every option is a resref of that same char array anyway. So unlike an enum it does not depend
+    // on text metrics, and lands on a real box rather than the fail-wide fallback. (A resref is always char[8]
+    // - a wider char array is not declared a resource ref at all - so that is the only size to pin.)
+    it("sizes a resref picker from the field's char capacity, not its options", () => {
+        const picker: Row = { ...base, ref: { kind: "resource", type: "BAM" }, refExt: "BAM" };
+        expect(controlWidthClass(picker)).toBe("dd-2");
+        // Same field without a game behind it is a plain text box on the tier scale.
+        expect(controlWidthClass({ ...picker, refExt: undefined })).toBe("tier-m");
     });
 });

@@ -7,6 +7,10 @@ patterns:
   - include: '#action'
   - include: '#comments'
   - include: '#condition-abbreviated'
+  # Before #d-action, which matches these same keywords bare - first in the list wins at equal position.
+  - include: '#patch-trigger'
+  - include: '#patch-trans-trigger'
+  - include: '#patch-trans-action'
   - include: '#d-action'
   - include: '#action-when'
   - include: '#chain-epilogue'
@@ -172,6 +176,97 @@ repository:
       "1":
         name: keyword.other.weidu-d
       "2":
+        name: string.quoted.tilde.weidu-d
+    end: '(~)'
+    endCaptures:
+      "1":
+        name: string.quoted.tilde.weidu-d
+    patterns:
+      - include: source.weidu-baf#action-body
+
+  # The patch commands (README-WeiDU, "d Action" commands) carry their trigger/action as a bare tilde-string
+  # with no IF/DO in front of it, so each rule has to consume the arguments its own syntax puts first. The
+  # filename argument may ITSELF be tilde-quoted (ADD_STATE_TRIGGER ~imoen2p~ 8 ~trigger~), so counting
+  # arguments is the only way to tell the file from the body. Argument runs are re-tokenized through the
+  # ordinary rules so they keep the colouring they had before these rules existed.
+
+  # filename stateNumber ~body~ - ADD_STATE_TRIGGER, ADD_TRANS_TRIGGER, REPLACE_STATE_TRIGGER. Ends at the
+  # closing tilde rather than end-of-line: state numbers and a DO clause may follow, and they colour normally.
+  patch-trigger:
+    name: meta.weidu-d.condition
+    begin: '\b(ADD_STATE_TRIGGER|ADD_TRANS_TRIGGER|REPLACE_STATE_TRIGGER)\b(\s+(?:~[^~]*~|[%\w#]+)\s+(?:[%\w#]+))\s+(~)'
+    beginCaptures:
+      "1":
+        name: support.function.weidu-baf.action
+      "2":
+        patterns:
+          - include: '#strings'
+          - include: '#vars'
+          - include: '#numbers'
+      "3":
+        name: string.quoted.tilde.weidu-d
+    end: '(~)'
+    endCaptures:
+      "1":
+        name: string.quoted.tilde.weidu-d
+    patterns:
+      - include: source.weidu-baf#condition-body
+
+  # filename BEGIN states END BEGIN trans END oldText newText - both strings are TRIGGERS. Same argument shape
+  # as patch-trans-action below and a different body language, which is why they are two rules.
+  patch-trans-trigger:
+    name: meta.weidu-d.condition
+    begin: '\b(REPLACE_TRANS_TRIGGER)\b(\s+(?:~[^~]*~|[%\w#]+)\s+BEGIN\b[^~]*?\bEND\b\s+BEGIN\b[^~]*?\bEND\b)'
+    beginCaptures:
+      "1":
+        name: support.function.weidu-baf.action
+      "2":
+        patterns:
+          - include: '#patch-argument-run'
+    end: '(?=\b(?:IF|UNLESS)\b)|$'
+    patterns:
+      - include: '#patch-condition-string'
+
+  # filename BEGIN states END BEGIN trans END [action] - ADD_TRANS_ACTION takes one string and may omit it,
+  # REPLACE_TRANS_ACTION takes oldText and newText. Ends before a trailing IF/UNLESS clause so it still colours.
+  patch-trans-action:
+    name: meta.weidu-d.action
+    begin: '\b(ADD_TRANS_ACTION|REPLACE_TRANS_ACTION)\b(\s+(?:~[^~]*~|[%\w#]+)\s+BEGIN\b[^~]*?\bEND\b\s+BEGIN\b[^~]*?\bEND\b)'
+    beginCaptures:
+      "1":
+        name: support.function.weidu-baf.action
+      "2":
+        patterns:
+          - include: '#patch-argument-run'
+    end: '(?=\b(?:IF|UNLESS)\b)|$'
+    patterns:
+      - include: '#patch-action-string'
+
+  # The filename and BEGIN..END blocks of a patch command, coloured as they are outside one.
+  patch-argument-run:
+    patterns:
+      - include: '#strings'
+      - include: '#vars'
+      - include: '#numbers'
+      - include: '#d-action' # BEGIN
+      - include: '#sugar' # END
+
+  patch-condition-string:
+    begin: '(~)'
+    beginCaptures:
+      "1":
+        name: string.quoted.tilde.weidu-d
+    end: '(~)'
+    endCaptures:
+      "1":
+        name: string.quoted.tilde.weidu-d
+    patterns:
+      - include: source.weidu-baf#condition-body
+
+  patch-action-string:
+    begin: '(~)'
+    beginCaptures:
+      "1":
         name: string.quoted.tilde.weidu-d
     end: '(~)'
     endCaptures:

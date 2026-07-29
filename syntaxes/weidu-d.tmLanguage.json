@@ -16,6 +16,15 @@
       "include": "#condition-abbreviated"
     },
     {
+      "include": "#patch-trigger"
+    },
+    {
+      "include": "#patch-trans-trigger"
+    },
+    {
+      "include": "#patch-trans-action"
+    },
+    {
       "include": "#d-action"
     },
     {
@@ -402,6 +411,146 @@
         {
           "include": "source.weidu-baf#action-body",
           "name": "meta.weidu-d.action"
+        }
+      ]
+    },
+    "patch-trigger": {
+      "name": "meta.weidu-d.condition",
+      "begin": "\\b(ADD_STATE_TRIGGER|ADD_TRANS_TRIGGER|REPLACE_STATE_TRIGGER)\\b(\\s+(?:~[^~]*~|[%\\w#]+)\\s+(?:[%\\w#]+))\\s+(~)",
+      "beginCaptures": {
+        "1": {
+          "name": "support.function.weidu-baf.action"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#vars"
+            },
+            {
+              "include": "#numbers"
+            }
+          ]
+        },
+        "3": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "end": "(~)",
+      "endCaptures": {
+        "1": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.weidu-baf#condition-body",
+          "name": "meta.weidu-d.condition"
+        }
+      ]
+    },
+    "patch-trans-trigger": {
+      "name": "meta.weidu-d.condition",
+      "begin": "\\b(REPLACE_TRANS_TRIGGER)\\b(\\s+(?:~[^~]*~|[%\\w#]+)\\s+BEGIN\\b[^~]*?\\bEND\\b\\s+BEGIN\\b[^~]*?\\bEND\\b)",
+      "beginCaptures": {
+        "1": {
+          "name": "support.function.weidu-baf.action"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#patch-argument-run"
+            }
+          ]
+        }
+      },
+      "end": "(?=\\b(?:IF|UNLESS)\\b)|$",
+      "patterns": [
+        {
+          "include": "#patch-condition-string",
+          "name": "meta.weidu-d.condition"
+        }
+      ]
+    },
+    "patch-trans-action": {
+      "name": "meta.weidu-d.action",
+      "begin": "\\b(ADD_TRANS_ACTION|REPLACE_TRANS_ACTION)\\b(\\s+(?:~[^~]*~|[%\\w#]+)\\s+BEGIN\\b[^~]*?\\bEND\\b\\s+BEGIN\\b[^~]*?\\bEND\\b)",
+      "beginCaptures": {
+        "1": {
+          "name": "support.function.weidu-baf.action"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#patch-argument-run"
+            }
+          ]
+        }
+      },
+      "end": "(?=\\b(?:IF|UNLESS)\\b)|$",
+      "patterns": [
+        {
+          "include": "#patch-action-string",
+          "name": "meta.weidu-d.action"
+        }
+      ]
+    },
+    "patch-argument-run": {
+      "patterns": [
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#vars"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#d-action"
+        },
+        {
+          "include": "#sugar"
+        }
+      ]
+    },
+    "patch-condition-string": {
+      "begin": "(~)",
+      "beginCaptures": {
+        "1": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "end": "(~)",
+      "endCaptures": {
+        "1": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.weidu-baf#condition-body"
+        }
+      ]
+    },
+    "patch-action-string": {
+      "begin": "(~)",
+      "beginCaptures": {
+        "1": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "end": "(~)",
+      "endCaptures": {
+        "1": {
+          "name": "string.quoted.tilde.weidu-d"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.weidu-baf#action-body"
         }
       ]
     },

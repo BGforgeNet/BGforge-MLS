@@ -23,6 +23,13 @@
     can be chosen by name instead of typed from memory. It still accepts any name you type, including one the
     install does not have. Long lists show the first matches and the number left out - keep typing to narrow.
 
+### Syntax highlighting
+
+- WeiDU `.d` patch commands now highlight their trigger and action as script rather than as a plain string.
+  `ADD_STATE_TRIGGER`, `ADD_TRANS_TRIGGER`, `REPLACE_STATE_TRIGGER`, `REPLACE_TRANS_TRIGGER`,
+  `ADD_TRANS_ACTION` and `REPLACE_TRANS_ACTION` colour their tilde-quoted body with the BAF vocabulary, the
+  way `IF ~...~` and `DO ~...~` already did.
+
 ### Fixes
 
 - Unsaved binary-editor and animation-editor changes now survive a window reload or crash, instead of being

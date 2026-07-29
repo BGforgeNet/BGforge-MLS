@@ -111,3 +111,56 @@ describe("Bridge.openResource", () => {
         expect(sent).toEqual([{ type: "openResource", resref: "SPWI112C", ext: "BAM" }]);
     });
 });
+
+/**
+ * The resource list backs a resref field's picker. Unlike every other query it is CACHED per type, because the
+ * lists are large (~14700 BAMs in a plain BG:EE) and are not derived from the record, so a mutation cannot
+ * stale them.
+ */
+describe("Bridge.requestResourceList", () => {
+    it("correlates a resourceList response to its request by requestId", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const p = bridge.requestResourceList("BAM");
+        bridge.handle({ type: "resourceList", requestId: sent[0]!.requestId, resrefs: ["ISW1H01", "ISW1H02"] });
+
+        await expect(p).resolves.toEqual(["ISW1H01", "ISW1H02"]);
+        expect(sent[0]).toMatchObject({ type: "requestResourceList", ext: "BAM" });
+    });
+
+    it("asks the host once per type and serves later callers from the cache", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestResourceList("BAM");
+        const second = bridge.requestResourceList("BAM");
+        bridge.handle({ type: "resourceList", requestId: sent[0]!.requestId, resrefs: ["ISW1H01"] });
+
+        expect(sent).toHaveLength(1);
+        await expect(first).resolves.toEqual(["ISW1H01"]);
+        await expect(second).resolves.toEqual(["ISW1H01"]);
+        // A different type is a different list, so it is a second request.
+        void bridge.requestResourceList("ITM");
+        expect(sent).toHaveLength(2);
+    });
+
+    it("drops a failed request from the cache so a later open retries", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestResourceList("BAM");
+        bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "no game" });
+        await expect(first).rejects.toThrow("no game");
+        // Without the cache eviction this would replay the rejection forever instead of asking again.
+        await Promise.resolve();
+        void bridge.requestResourceList("BAM");
+
+        expect(sent).toHaveLength(2);
+    });
+
+    it("leaves a resourceList for no live request unhandled rather than throwing", () => {
+        const bridge = new Bridge(() => {});
+        expect(bridge.handle({ type: "resourceList", requestId: 999, resrefs: [] })).toBe(false);
+    });
+});
