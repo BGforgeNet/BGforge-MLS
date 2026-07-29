@@ -103,10 +103,15 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         }
         const uri = resourceUri(gameDir, resref, ext);
         const openable = parserRegistry.getByExtension(`.${ext}`) !== undefined;
+        // `preview: false` pins each resource to its own tab: following a reference is deliberate, not the
+        // browse-and-discard a preview tab models, so a second follow must not evict the first. Both commands
+        // take the options last (after the uri, or after the view id), so the spread lands them correctly.
+        const showOptions: vscode.TextDocumentShowOptions = { preview: false };
         await vscode.commands.executeCommand(
             openable ? "vscode.openWith" : "vscode.open",
             uri,
             ...(openable ? ["bgforge.binaryEditor"] : []),
+            showOptions,
         );
     };
 
