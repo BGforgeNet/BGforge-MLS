@@ -1,3 +1,4 @@
+import type { ExternalRef } from "@bgforge/binary";
 import type { FlatNode, Model } from "../model";
 import type { Diagnostic, NodeId } from "../types";
 
@@ -11,6 +12,10 @@ export interface FieldOverride {
      *  node, `sectionKey` is its list section (so the view can switch tabs), and `label` describes it. Copied
      *  onto the Row so the view can render a click-to-navigate affordance. */
     link?: { targetNodeId: NodeId; sectionKey: string; label: string };
+    /** External reference computed from a SIBLING field's value, where the spec cannot declare a static one -
+     *  an effect's IDS Entry, whose table its IDS File parameter names. Overwrites any spec-declared `ref` on
+     *  the row, so the host's existing resolution handles it with no separate path. */
+    ref?: ExternalRef;
 }
 
 export interface RelationshipModel {

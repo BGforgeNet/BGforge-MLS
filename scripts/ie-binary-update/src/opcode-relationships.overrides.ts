@@ -84,4 +84,82 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
             },
         },
     },
+
+    // The IDS-Entry / IDS-File opcodes: parameter1 is an entry in a table parameter2 names. IESDP writes the
+    // list three different ways across these five ("N -> EA.IDS", "N -> EA", "N   EA.ids"), and the mapping is
+    // NOT shared - so each is transcribed from its own page rather than harvested or copied sideways. ALIGN is
+    // listed with ALIGNMEN behind it wherever IESDP names either: the two are the same table under the name a
+    // given edition ships, which is what the candidate ordering is for.
+
+    // op055: Death: Kill Creature Type
+    // Verified from op055.html body text: "Known values for IDS File are".
+    55: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"], // EE only
+        },
+    },
+
+    // op072: Creature Type: Change
+    // Verified from op072.html body text. This one is 0-BASED, unlike every other opcode here.
+    72: {
+        idsFileByParam2: {
+            0: ["EA"],
+            1: ["GENERAL"],
+            2: ["RACE"],
+            3: ["CLASS"],
+            4: ["SPECIFIC"],
+            5: ["GENDER"],
+            6: ["ALIGN", "ALIGNMEN"],
+        },
+    },
+
+    // op100: Protection: Creature Type
+    // Verified from op100.html body text: "Known values for IDS File are". Same mapping as op055; IESDP notes
+    // its slot 9 (KIT) is broken in at least engine 2.5, which is engine behaviour, not a naming difference.
+    100: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op175: State: Hold
+    // Verified from op175.html body text: "Known values for 'IDS File' are". No KIT slot.
+    175: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+        },
+    },
+
+    // op178: Spell Effect: THAC0 vs. Creature Type Modifier
+    // Verified from op178.html body text. Slot 2 is OBJECT here, not EA, and the list stops at GENDER.
+    178: {
+        idsFileByParam2: {
+            2: ["OBJECT"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+        },
+    },
 };

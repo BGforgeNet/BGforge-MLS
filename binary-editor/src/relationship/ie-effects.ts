@@ -65,21 +65,43 @@ export const ieEffectsModel: RelationshipModel = {
         if (opcode === undefined) return;
         const rel = OpcodeRelationships[opcode];
         const slot = key === "parameter1" ? rel?.param1 : rel?.param2;
-        if (!slot) return;
+        const idsFiles = rel?.idsFileByParam2;
+        if (!slot && !idsFiles) return;
         const override: FieldOverride = {};
-        if (slot.label) override.label = slot.label;
-        if (slot.enum) {
+        if (slot?.label) override.label = slot.label;
+        if (slot?.enum) {
             override.enumOptions = Object.fromEntries(Object.entries(slot.enum).map(([k, v]) => [k, v]));
             override.presentationType = "enum";
+        }
+        if (idsFiles) {
+            if (key === "parameter2") {
+                // Name the files themselves, so the selector reads as a table rather than a bare number. Derived
+                // from the same map the entry resolves through, so the two can never disagree about a slot.
+                override.enumOptions = Object.fromEntries(
+                    Object.entries(idsFiles).map(([value, tables]) => [value, `${tables[0]}.IDS`]),
+                );
+                override.presentationType = "enum";
+            } else {
+                // parameter1 is an entry in whichever table parameter2 currently names. The spec cannot declare
+                // this - only here is the sibling visible - so the ref is computed and the host resolves it
+                // exactly as it resolves a declared one. An unmapped parameter2 leaves the field a plain
+                // number rather than guessing a table.
+                const tables = idsFiles[siblingValue(model, node, "parameter2") ?? -1];
+                if (tables !== undefined) override.ref = { kind: "ids", tables };
+            }
         }
         return Object.keys(override).length > 0 ? override : undefined;
     },
     dependents(model, editedNode) {
         if (editedNode.kind !== "field") return [];
         const editedKey = normKey(editedNode.name);
-        // Opcode rewrites the parameter labels AND the dual-purpose dice/level pair. parameter2 only flips the
-        // pair (opcode 218 reads dice iff parameter2 = 1), so an edit to it re-resolves the pair but not params.
-        const wantParams = editedKey === "opcode";
+        // Opcode rewrites the parameter labels AND the dual-purpose dice/level pair. parameter2 flips the pair
+        // (opcode 218 reads dice iff parameter2 = 1), and on an IDS-Entry/IDS-File opcode it also chooses the
+        // table parameter1 resolves against - so there it re-resolves the params too.
+        const editedOpcode = siblingValue(model, editedNode, "opcode");
+        const selectsIdsFile =
+            editedOpcode !== undefined && OpcodeRelationships[editedOpcode]?.idsFileByParam2 !== undefined;
+        const wantParams = editedKey === "opcode" || (editedKey === "parameter2" && selectsIdsFile);
         const wantDiceLevel = editedKey === "opcode" || editedKey === "parameter2";
         if (!wantParams && !wantDiceLevel) return [];
         const sibs = model.childrenByParent.get(editedNode.parentId ?? "") ?? [];

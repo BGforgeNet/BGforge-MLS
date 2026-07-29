@@ -4,6 +4,13 @@ export interface OpcodeRelationship {
     param1?: { label?: string; enum?: Readonly<Record<number, string>> };
     param2?: { label?: string; enum?: Readonly<Record<number, string>> };
     availability?: Readonly<Record<string, boolean>>;
+    /**
+     * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's
+     * stored value -> the candidate tables it names, most preferred first (first present wins, since
+     * editions disagree - ALIGN vs ALIGNMEN). The mapping is per opcode, not shared: 72 is 0-based
+     * where 55/100/175 are 2-based, and 178's slot 2 is OBJECT rather than EA.
+     */
+    idsFileByParam2?: Readonly<Record<number, readonly string[]>>;
 }
 
 export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> = {
@@ -61,7 +68,7 @@ export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> =
     52: { param1: { label: "RGB Colour" }, param2: { label: "Location" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: false, iwd2: false, pst: false, pstee: true } },
     53: { param1: { label: "Animation ID" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: false, iwd2: false, pst: false, pstee: true } },
     54: { param1: { label: "Statistic Modifier" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: true, pstee: true } },
-    55: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: false, pstee: true } },
+    55: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: false, pstee: true }, idsFileByParam2: { 2: ["EA"], 3: ["GENERAL"], 4: ["RACE"], 5: ["CLASS"], 6: ["SPECIFIC"], 7: ["GENDER"], 8: ["ALIGN", "ALIGNMEN"], 9: ["KIT"] } },
     56: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: false, pstee: true } },
     57: { param1: { label: "Irrelevant" }, param2: { label: "Alignment" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: false, pstee: true } },
     58: { param1: { label: "Level" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: false, iwd1: true, iwd2: true, pst: true, pstee: false } },
@@ -78,7 +85,7 @@ export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> =
     69: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     70: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: false, pstee: true } },
     71: { param1: { label: "Gender Modifier" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
-    72: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: false, pstee: true } },
+    72: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: false, pstee: true }, idsFileByParam2: { 0: ["EA"], 1: ["GENERAL"], 2: ["RACE"], 3: ["CLASS"], 4: ["SPECIFIC"], 5: ["GENDER"], 6: ["ALIGN", "ALIGNMEN"] } },
     73: { param1: { label: "Damage Modifier" }, param2: { label: "Type" }, availability: { bg1: false, bg2: false, bgee: false, iwd1: true, iwd2: true, pst: false, pstee: false } },
     74: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     75: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
@@ -105,7 +112,7 @@ export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> =
     97: { param1: { label: "Statistic Modifier" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     98: { param1: { label: "Regeneration Amount" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: false, iwd1: false, iwd2: false, pst: false, pstee: false } },
     99: { param1: { label: "Duration Modifier" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
-    100: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: true, pstee: true } },
+    100: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: true, pstee: true }, idsFileByParam2: { 2: ["EA"], 3: ["GENERAL"], 4: ["RACE"], 5: ["CLASS"], 6: ["SPECIFIC"], 7: ["GENDER"], 8: ["ALIGN", "ALIGNMEN"], 9: ["KIT"] } },
     101: { param1: { label: "Irrelevant" }, param2: { label: "Opcode" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     102: { param1: { label: "Spell Level" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     103: { param1: { label: "String Reference" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
@@ -180,9 +187,9 @@ export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> =
     172: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: false, iwd2: true, pst: true, pstee: true } },
     173: { param1: { label: "Statistic Modifier" }, param2: { label: "Irrelevant" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
     174: { param1: { label: "Irrelevant" }, param2: { label: "Irrelevant" }, availability: { bg1: false, bg2: true, bgee: true, iwd1: false, iwd2: false, pst: false, pstee: true } },
-    175: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: false, bg2: false, bgee: false, iwd1: true, iwd2: false, pst: true, pstee: false } },
+    175: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: false, bg2: false, bgee: false, iwd1: true, iwd2: false, pst: true, pstee: false }, idsFileByParam2: { 2: ["EA"], 3: ["GENERAL"], 4: ["RACE"], 5: ["CLASS"], 6: ["SPECIFIC"], 7: ["GENDER"], 8: ["ALIGN", "ALIGNMEN"] } },
     176: { param1: { label: "Statistic Modifier" }, param2: { label: "Type" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: true, pst: true, pstee: true } },
-    178: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: false, bgee: false, iwd1: true, iwd2: false, pst: false, pstee: false } },
+    178: { param1: { label: "IDS Entry" }, param2: { label: "IDS File" }, availability: { bg1: true, bg2: false, bgee: false, iwd1: true, iwd2: false, pst: false, pstee: false }, idsFileByParam2: { 2: ["OBJECT"], 3: ["GENERAL"], 4: ["RACE"], 5: ["CLASS"], 6: ["SPECIFIC"], 7: ["GENDER"] } },
     179: { param1: { label: "Reference Value" }, param2: { label: "Reference IDS" }, availability: { bg1: true, bg2: false, bgee: false, iwd1: true, iwd2: false, pst: false, pstee: false } },
     180: { param1: { label: "String Reference" }, param2: { label: "Undefined" }, availability: { bg1: true, bg2: true, bgee: true, iwd1: true, iwd2: false, pst: false, pstee: true } },
     182: { param1: { label: "Unknown" }, param2: { label: "Unknown" }, availability: { bg1: true, bg2: true, bgee: false, iwd1: true, iwd2: true, pst: true, pstee: false } },

@@ -132,6 +132,21 @@ that carries both.
   sweep can read rather than something nobody got to. Every effect resource is one (`EFFECT_RESOURCE_REF`):
   the opcode picks the target, so no type fits the field. A consumer resolves nothing for it - the field
   renders exactly like an undeclared one.
+- **A ref the spec cannot know, but a SIBLING field can, is computed by the relationship overlay - not
+  deferred.** `deferred` is for a ref nothing can resolve; where another field in the same record names the
+  answer, the overlay reads that sibling and emits the ref on `FieldOverride.ref`, which overwrites the row's
+  spec-declared one. The effect IDS-Entry/IDS-File opcodes are the case: `parameter1` is an entry in whichever
+  table `parameter2` selects, so `binary-editor`'s `ie-effects` overlay turns `OpcodeRelationships`'
+  `idsFileByParam2` into a plain `{ kind: "ids", tables }`, and the host resolves it through the SAME path as
+  a declared one - no second resolver. The mapping is per opcode and transcribed per page (opcode 72 is
+  0-based where 55/100/175 are 2-based; 178's slot 2 is OBJECT, not EA), so never copy one opcode's list to
+  another. Whatever computes such a ref must also list the sibling in `dependents`, or the dropdown goes stale
+  the moment the sibling is edited.
+- **A field whose documentation names an IDS/2DA table must declare it or record why not.** Unlike a resref,
+  an IDS-backed field is a plain number with no shape to spot, so `binary/test/ids-table-declarations.test.ts`
+  sweeps the specs for a `*.IDS`/`*.2DA` mention in the description and requires a declaration or an entry in
+  its exclusion map with a reason. Naming a table is not the same as indexing one: an ITM ability's launcher
+  type names ITEMCAT.IDS for the WEAPON it requires, not for its own value.
 - **A 2DA ref is keyed by ROW INDEX, and not every 2DA can name anything.** `{ kind: "2da" }` resolves the
   stored value as a row position whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Check the file
   first: `itemtype.2da` deliberately has NO ref, because its rows are numbered `0,1,2...` and its columns are

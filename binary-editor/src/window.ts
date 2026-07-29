@@ -104,6 +104,10 @@ export function projectRow(
             if (ov.presentationType === "enum") base.valueType = "enum";
             // A cross-record reference field (e.g. MAP script Owner ID -> object) carries its jump target.
             if (ov.link !== undefined) base.link = ov.link;
+            // A ref the SPEC could not declare because the table depends on a sibling field's value (an
+            // effect's IDS Entry). Set last so it wins over the spec's - the overlay is the only layer that
+            // can see the sibling - and the host then resolves it through the same path as a declared one.
+            if (ov.ref !== undefined) base.ref = ov.ref;
         }
     }
     // Effective advisory range (storage-type bounds narrowed by any domain declaration) for a field still

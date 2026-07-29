@@ -22,6 +22,9 @@
   - A resref field becomes a searchable picker over the install's resources of that field's type, so a target
     can be chosen by name instead of typed from memory. It still accepts any name you type, including one the
     install does not have. Long lists show the first matches and the number left out - keep typing to narrow.
+  - Effects that target a creature type (opcodes 55, 72, 100, 175, 178) now name both halves: the IDS File
+    parameter lists the tables it can select, and the IDS Entry parameter becomes a dropdown of that table's
+    own entries, re-read from the game whenever the file is changed.
 
 ### Syntax highlighting
 

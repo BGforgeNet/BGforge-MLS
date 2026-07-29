@@ -21,6 +21,16 @@ export interface OpcodeRelationship {
     param1?: { label?: string; enum?: Readonly<Record<number, string>> };
     param2?: { label?: string; enum?: Readonly<Record<number, string>> };
     availability?: Readonly<Record<string, boolean>>;
+    /**
+     * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's stored
+     * value -> the candidate tables that value names, most preferred first (the same first-present-wins
+     * ordering `ExternalRef`'s `tables` uses, since editions disagree - ALIGN vs ALIGNMEN).
+     *
+     * Not harvested: IESDP writes this list three different ways across the five opcodes that have it, and the
+     * mapping is not shared between them (opcode 72 is 0-based where 55/100/175 are 2-based, and 178's slot 2
+     * is OBJECT rather than EA). Curated in the overrides file, per opcode, against each op<NNN>.html.
+     */
+    idsFileByParam2?: Readonly<Record<number, readonly string[]>>;
 }
 
 const ENGINE_KEYS = ["bg1", "bg2", "bgee", "iwd1", "iwd2", "pst", "pstee"] as const;
@@ -162,6 +172,9 @@ export function buildMergedRelationships(opcodesDir: string): ReadonlyMap<number
         if (override.availability !== undefined) {
             merged.availability = override.availability;
         }
+        if (override.idsFileByParam2 !== undefined) {
+            merged.idsFileByParam2 = override.idsFileByParam2;
+        }
 
         out.set(num, merged);
     }
@@ -190,6 +203,13 @@ export function emitOpcodeRelationshipsModule(
         "    param1?: { label?: string; enum?: Readonly<Record<number, string>> };",
         "    param2?: { label?: string; enum?: Readonly<Record<number, string>> };",
         "    availability?: Readonly<Record<string, boolean>>;",
+        "    /**",
+        "     * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's",
+        "     * stored value -> the candidate tables it names, most preferred first (first present wins, since",
+        "     * editions disagree - ALIGN vs ALIGNMEN). The mapping is per opcode, not shared: 72 is 0-based",
+        "     * where 55/100/175 are 2-based, and 178's slot 2 is OBJECT rather than EA.",
+        "     */",
+        "    idsFileByParam2?: Readonly<Record<number, readonly string[]>>;",
         "}",
         "",
         "export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> = {",
@@ -211,6 +231,12 @@ export function emitOpcodeRelationshipsModule(
                 .map(([k, v]) => `${k}: ${v}`)
                 .join(", ");
             parts.push(`availability: { ${entries} }`);
+        }
+        if (rel.idsFileByParam2 !== undefined) {
+            const entries = Object.entries(rel.idsFileByParam2)
+                .map(([k, tables]) => `${k}: [${tables.map((t) => JSON.stringify(t)).join(", ")}]`)
+                .join(", ");
+            parts.push(`idsFileByParam2: { ${entries} }`);
         }
         lines.push(`    ${n}: { ${parts.join(", ")} },`);
     }

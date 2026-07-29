@@ -37,6 +37,108 @@ describe("ieEffectsModel.fieldOverride (real ITM display tree)", () => {
     });
 });
 
+/**
+ * The IDS-Entry / IDS-File opcodes: parameter1 is an entry in a table parameter2 names, so no static ref can
+ * be declared on the spec - only the overlay sees the sibling. It emits a computed `ids` ref instead, which
+ * the host resolves through the same path as a declared one.
+ */
+describe("ieEffectsModel.fieldOverride IDS-file-dependent entry (real ITM display tree)", () => {
+    it("computes parameter1's table from parameter2's current value", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55); // Death: Kill Creature Type - param1 entry, param2 file
+        setRaw(f.get("parameter2")!, 4); // op55 slot 4 = RACE.IDS
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toEqual({
+            kind: "ids",
+            tables: ["RACE"],
+        });
+    });
+
+    // The whole point of computing it: the same field resolves against a different table when the sibling moves.
+    it("follows parameter2 to a different table", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55);
+        setRaw(f.get("parameter2")!, 5); // slot 5 = CLASS.IDS
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toEqual({
+            kind: "ids",
+            tables: ["CLASS"],
+        });
+    });
+
+    // The mapping is per opcode, not shared: op72 is 0-based where op55 is 2-based, so the SAME stored
+    // parameter2 names a different table under each.
+    it("uses the opcode's own mapping, not a shared one", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("parameter2")!, 4);
+        setRaw(f.get("opcode")!, 55);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toMatchObject({
+            tables: ["RACE"],
+        });
+        setRaw(f.get("opcode")!, 72);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toMatchObject({
+            tables: ["SPECIFIC"],
+        });
+    });
+
+    // Editions ship the same table under either name, so the candidate list carries both and the install picks.
+    it("offers both spellings of the alignment table", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55);
+        setRaw(f.get("parameter2")!, 8);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toEqual({
+            kind: "ids",
+            tables: ["ALIGN", "ALIGNMEN"],
+        });
+    });
+
+    // Never guess a table: a value the opcode does not map leaves the field the plain number it was.
+    it("emits no ref for a parameter2 value the opcode does not map", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55);
+        setRaw(f.get("parameter2")!, 99);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.ref).toBeUndefined();
+    });
+
+    it("names the files on parameter2 so the selector is not a bare number", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55);
+        const p2 = ieEffectsModel.fieldOverride(session.model, f.get("parameter2")!);
+        expect(p2?.presentationType).toBe("enum");
+        expect(p2?.enumOptions).toMatchObject({ "2": "EA.IDS", "4": "RACE.IDS", "9": "KIT.IDS" });
+    });
+
+    // A derived dropdown has to re-project on EVERY path that can change it - here the sibling, not the opcode.
+    it("re-resolves parameter1 when parameter2 changes on an IDS-file opcode", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 55);
+        const deps = ieEffectsModel.dependents(session.model, f.get("parameter2")!);
+        expect(deps).toContain(f.get("parameter1")!.id);
+    });
+
+    // ...and not on an opcode where parameter2 means something else, so an ordinary edit stays local.
+    it("does not re-resolve parameter1 on a parameter2 edit for a plain opcode", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1);
+        const deps = ieEffectsModel.dependents(session.model, f.get("parameter2")!);
+        expect(deps).not.toContain(f.get("parameter1")!.id);
+    });
+});
+
 describe("ieEffectsModel.fieldOverride dual-purpose dice/level field (real ITM display tree)", () => {
     // The 0x1c/0x20 dword pair is dual-purpose: Maximum/Minimum Level for most opcodes, but Dice Thrown/Dice
     // Sides for opcodes 12/17/18/331/333 and 218 (only when parameter2=1). The static label is the level
