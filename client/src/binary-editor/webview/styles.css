@@ -657,6 +657,14 @@ select {
      * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
     padding: 0.2rem;
 }
+/* How many options the rendered cap left out. Styled apart from the items so it does not read as one - it is a
+ * notice, not something to pick. */
+.bb-combobox-more {
+    padding: 0.2rem 0.5rem;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    white-space: nowrap;
+}
 input[type="text"]:focus,
 input[type="number"]:focus,
 select:focus,

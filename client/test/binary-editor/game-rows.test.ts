@@ -6,7 +6,7 @@ const lookups = {
     strref: (strref: number): string | undefined => (strref === 6348 ? LINE : undefined),
     slotLabel: (): string | undefined => undefined,
     namingTable: (): ReadonlyMap<number, string> | undefined => undefined,
-    resourceType: (): string | undefined => undefined,
+    resourceType: (): { type: string; present: boolean } | undefined => undefined,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
@@ -332,35 +332,44 @@ describe("withGameContext", () => {
         rawValue: "ISW1H01",
     };
 
-    it("marks a resref the game can open, naming the type that resolved", () => {
-        const named = {
-            ...lookups,
-            resourceType: (decl: { type: string }, resref: string) =>
-                decl.type === "BAM" && resref === "ISW1H01" ? "BAM" : undefined,
-        };
+    /** A game that has ISW1H01.BAM. Every BAM-typed field resolves to the type; only that name is present. */
+    const hasIcon = {
+        ...lookups,
+        resourceType: (decl: { type: string }, resref: string) =>
+            decl.type === "BAM" ? { type: "BAM", present: resref === "ISW1H01" } : undefined,
+    };
 
-        const out = withGameContext({ rows: [iconRow] }, named);
+    it("marks a resref the game can open, naming the type that resolved", () => {
+        const out = withGameContext({ rows: [iconRow] }, hasIcon);
 
         expect(out.rows[0]).toMatchObject({ openTarget: { resref: "ISW1H01", ext: "BAM" } });
     });
 
     // Never judge: a mod file legitimately points at what a later install step creates, so an unresolvable
-    // resref is left exactly as it is - no marker, no advisory, just no open affordance.
-    it("leaves a resref the game does not have untouched", () => {
-        const out = withGameContext({ rows: [iconRow] }, lookups);
+    // resref gets no marker and no advisory - only the open affordance is withheld. The TYPE still lands,
+    // because that follows from the record and the game, not from the value.
+    it("withholds the open affordance for a resref the game does not have, but keeps it pickable", () => {
+        const out = withGameContext({ rows: [{ ...iconRow, rawValue: "MODONLY" }] }, hasIcon);
 
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+        expect(out.rows[0]).toMatchObject({ refExt: "BAM" });
+    });
+
+    // The empty field is exactly the one a picker exists for, so it carries the type - but there is no resource
+    // to open, so no affordance.
+    it("makes an empty resref pickable without offering to open it", () => {
+        const out = withGameContext({ rows: [{ ...iconRow, rawValue: "" }] }, hasIcon);
+
+        expect(out.rows[0]).toMatchObject({ refExt: "BAM" });
         expect(out.rows[0]).not.toHaveProperty("openTarget");
     });
 
-    // An empty resref is the "no resource" value, so it must never be probed or offered.
-    it("does not offer to open an empty resref", () => {
-        const probe = vi.fn();
-        const spying = { ...lookups, resourceType: probe };
+    // Outside a game there is nothing to resolve and nothing to suggest: the field stays a plain text box.
+    it("leaves a resref untouched when the record is not from a game", () => {
+        const out = withGameContext({ rows: [iconRow] }, lookups);
 
-        const out = withGameContext({ rows: [{ ...iconRow, rawValue: "" }] }, spying);
-
-        expect(probe).not.toHaveBeenCalled();
         expect(out.rows[0]).not.toHaveProperty("openTarget");
+        expect(out.rows[0]).not.toHaveProperty("refExt");
     });
 
     // A CRE sound slot is BOTH: a strref (the line it points at) and an IDS-named slot (its label). The real

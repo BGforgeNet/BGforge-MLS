@@ -8,6 +8,7 @@
     import type { Bridge } from "../state/bridge";
     import { provideJump } from "../state/jump-context";
     import { provideOpenResource } from "../state/open-resource-context";
+    import { provideResourceList } from "../state/resource-list-context";
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
@@ -83,6 +84,8 @@
     provideJump(navigate);
     // Opening another resource is the host's to do (it owns the game session and the editor commands).
     provideOpenResource((target) => bridge.openResource(target.resref, target.ext));
+    // Same reason for listing what the install holds; the bridge caches per type, so a field asks freely.
+    provideResourceList((ext) => bridge.requestResourceList(ext));
 
     const visibleTabs = $derived((layout.tabs ?? []).filter((t) => tabHasContent(t)));
     const activeTab = $derived(visibleTabs.find((t) => t.id === activeTabId) ?? visibleTabs[0]);

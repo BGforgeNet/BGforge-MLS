@@ -24,6 +24,10 @@ interface PendingEffectTree {
     resolve: (v: EffectTreeView) => void;
     reject: (e: Error) => void;
 }
+interface PendingResourceList {
+    resolve: (v: readonly string[]) => void;
+    reject: (e: Error) => void;
+}
 
 export class Bridge {
     private readonly post: (m: WebviewToHost) => void;
@@ -31,6 +35,8 @@ export class Bridge {
     private pending = new Map<number, Pending>();
     private pendingSpellbook = new Map<number, PendingSpellbook>();
     private pendingEffectTree = new Map<number, PendingEffectTree>();
+    private pendingResourceList = new Map<number, PendingResourceList>();
+    private resourceLists = new Map<string, Promise<readonly string[]>>();
 
     /** Called with an error message that matches no pending request - an edit/structureOp/spellbookEdit failure
      *  (which carries no requestId) or a stale requestId. Set by the view so the failure surfaces to the user
@@ -69,6 +75,27 @@ export class Bridge {
         return new Promise((resolve, reject) => {
             this.pendingEffectTree.set(requestId, { resolve, reject });
         });
+    }
+
+    /**
+     * Fetch every resref of one type the open game holds - the suggestion set behind a resref field's picker.
+     *
+     * Cached per extension, unlike the other queries, because these lists are large (BAM alone is ~12300 entries
+     * in a plain BG:EE) and are not derived from the record, so a mutation cannot stale them; a resource
+     * installed while the panel is open is not picked up until it is reopened. A failed request drops out of the
+     * cache so a later open retries rather than replaying the rejection.
+     */
+    requestResourceList(ext: string): Promise<readonly string[]> {
+        const cached = this.resourceLists.get(ext);
+        if (cached) return cached;
+        const requestId = this.nextId++;
+        this.post({ type: "requestResourceList", requestId, ext });
+        const promise = new Promise<readonly string[]>((resolve, reject) => {
+            this.pendingResourceList.set(requestId, { resolve, reject });
+        });
+        this.resourceLists.set(ext, promise);
+        void promise.catch(() => this.resourceLists.delete(ext));
+        return promise;
     }
 
     editField(nodeId: NodeId, value: number | string): void {
@@ -117,6 +144,14 @@ export class Bridge {
                 return true;
             }
         }
+        if (message.type === "resourceList") {
+            const p = this.pendingResourceList.get(message.requestId);
+            if (p) {
+                this.pendingResourceList.delete(message.requestId);
+                p.resolve(message.resrefs);
+                return true;
+            }
+        }
         if (message.type === "error") {
             if (message.requestId !== undefined) {
                 const p = this.pending.get(message.requestId);
@@ -135,6 +170,12 @@ export class Bridge {
                 if (pe) {
                     this.pendingEffectTree.delete(message.requestId);
                     pe.reject(new Error(message.message));
+                    return true;
+                }
+                const pr = this.pendingResourceList.get(message.requestId);
+                if (pr) {
+                    this.pendingResourceList.delete(message.requestId);
+                    pr.reject(new Error(message.message));
                     return true;
                 }
             }

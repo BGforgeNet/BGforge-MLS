@@ -26,11 +26,34 @@ export interface ResourceRefDecl {
     readonly byFlavour?: Readonly<Record<string, string>>;
 }
 
+/** What a resref field points at in one game, and whether the current value is actually there. */
+export interface ResolvedResourceRef {
+    /** The declared type, or this game's `byFlavour` override. Known from the record and the game alone. */
+    readonly type: string;
+    /** Whether the game has that resource. False for an empty field and for a name nothing resolves. */
+    readonly present: boolean;
+}
+
 /**
- * Resolves the type a resref points at in THIS game, or undefined when the game does not have it. The
- * declared type answers what it points at; the game is consulted only for whether it is there.
+ * Resolves what a resref field points at in THIS game, or undefined when the record is not from a game.
+ *
+ * The two halves are separate because they are known at different times: the TYPE follows from the record and
+ * the game, so it holds even for an empty field - which is exactly the field a resource picker is for - while
+ * PRESENCE is a property of the value and gates only the open affordance.
  */
-export type ResourceTypeResolver = (uri: vscode.Uri, decl: ResourceRefDecl, resref: string) => string | undefined;
+export type ResourceTypeResolver = (
+    uri: vscode.Uri,
+    decl: ResourceRefDecl,
+    resref: string,
+) => ResolvedResourceRef | undefined;
+
+/**
+ * Every resref of one type the game holds, sorted, or undefined when the record is not from a game.
+ *
+ * Suggestions, never a domain: a resref field legitimately names a resource a later install step creates, so a
+ * consumer offers this list without confining the field to it.
+ */
+export type ResourceListResolver = (uri: vscode.Uri, ext: string) => readonly string[] | undefined;
 
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
@@ -65,6 +88,7 @@ interface TlkSource {
         ids(resref: string): ReadonlyMap<number, string> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
         canRead(resref: string, type: string): boolean;
+        list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
         /** WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override. */
         readonly identity: { readonly flavour: string };
     };
@@ -153,22 +177,50 @@ export function createNamingTableResolver(session: TlkSource): NamingTableResolv
  *
  * Not a search over candidates. What a field points at follows from the record and the game, so probing by
  * presence would pick whichever happened to exist - wrong for a field whose two types can both be installed.
- * The game is asked one question: is this resource here? Never judges - an unresolvable resref gets no answer,
- * because a mod record legitimately references what a later install step creates.
+ * The game is asked one question: is this resource here? Never judges - an unresolvable resref comes back
+ * `present: false`, which withholds the open affordance and nothing more, because a mod record legitimately
+ * references what a later install step creates.
  */
 export function createResourceTypeResolver(session: TlkSource): ResourceTypeResolver {
     return (uri, decl, resref) => {
-        if (resref === "") return;
         const gameDir = gameDirOf(uri);
         if (gameDir === undefined) return;
-        let found: string | undefined;
+        let found: ResolvedResourceRef | undefined;
         try {
             const game = session.ensureOpen(gameDir);
             const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
-            if (game.canRead(resref, type)) found = type;
+            found = { type, present: resref !== "" && game.canRead(resref, type) };
         } catch {
             // Unreadable game - no affordance, exactly as outside a game.
         }
         return found;
+    };
+}
+
+/**
+ * Lists a type's resrefs from the whole install - biffed and override alike, since both are what the engine
+ * resolves. Not filtered by `canRead`: a KEY can name a BIF an install does not ship, and a resref pointing at
+ * one is still a legitimate value for the field to hold.
+ *
+ * Uncached, because the caller asks once per type and holds the answer; caching here would need invalidation
+ * on every write into `override/`.
+ */
+export function createResourceListResolver(session: TlkSource): ResourceListResolver {
+    return (uri, ext) => {
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
+        const want = ext.toLowerCase();
+        let resrefs: string[] | undefined;
+        try {
+            resrefs = session
+                .ensureOpen(gameDir)
+                .list()
+                .filter((r) => r.ext?.toLowerCase() === want)
+                .map((r) => r.resref)
+                .sort((a, b) => a.localeCompare(b));
+        } catch {
+            // Unreadable game - the field stays a plain text box, exactly as outside a game.
+        }
+        return resrefs;
     };
 }

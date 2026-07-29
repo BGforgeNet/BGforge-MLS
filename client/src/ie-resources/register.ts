@@ -7,10 +7,12 @@ import { GameSession } from "./session";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
     createNamingTableResolver,
+    createResourceListResolver,
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
     type NamingTableResolver,
+    type ResourceListResolver,
     type ResourceTypeResolver,
     type SlotLabelResolver,
     type StrrefResolver,
@@ -31,6 +33,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
+    resourceList: ResourceListResolver;
 } {
     const session = new GameSession();
     const tree = new GameResourceTreeProvider(session);
@@ -184,5 +187,6 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         slotLabel: createSlotLabelResolver(session),
         namingTable: createNamingTableResolver(session),
         resourceType: createResourceTypeResolver(session),
+        resourceList: createResourceListResolver(session),
     };
 }

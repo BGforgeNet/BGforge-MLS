@@ -6,6 +6,7 @@ import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScrip
 import {
     isGameDocument,
     type NamingTableResolver,
+    type ResourceListResolver,
     type ResourceTypeResolver,
     type SlotLabelResolver,
     type StrrefResolver,
@@ -22,6 +23,7 @@ export interface GameResolvers {
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
+    resourceList: ResourceListResolver;
 }
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
@@ -206,6 +208,14 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 } else if (r.type === "error") {
                     this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
                 }
+                break;
+            }
+            case "requestResourceList": {
+                // Answered from the game session, not the worker: the record's own bytes say nothing about what
+                // else the install holds. An empty list is the honest answer outside a game - the picker then
+                // offers nothing and the field stays the free-text box it is without one.
+                const resrefs = this.gameLookups.resourceList(document.uri, message.ext) ?? [];
+                this.post(panel, { type: "resourceList", requestId: message.requestId, resrefs });
                 break;
             }
             case "editField": {

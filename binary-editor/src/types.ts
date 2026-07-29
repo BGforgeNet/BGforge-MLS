@@ -59,6 +59,11 @@ export interface Row {
      *  exists. Absent outside a game and for a resref nothing resolves - the view offers to open it only when
      *  this is set, and never marks its absence (a mod record may point at what a later install step creates). */
     openTarget?: { resref: string; ext: string };
+    /** The extension a `resource` ref points at IN THIS GAME (the declared type, or this flavour's override),
+     *  set whenever the record was opened from a game - unlike `openTarget`, which additionally requires the
+     *  current value to resolve. It is what makes the field pickable: the view offers the game's resources of
+     *  this type as suggestions. Absent outside a game and for a `deferred` ref, whose type no field declares. */
+    refExt?: string;
     /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
      *  (Signedness is the field codec's job, not a display format.) */
     numericFormat?: "hex32";

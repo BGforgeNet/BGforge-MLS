@@ -4,11 +4,15 @@ import type { Row } from "@bgforge/binary-editor";
 // the browser webview bundle. The webview must only ever import the package's TYPES, never its runtime.
 import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "../../../../../shared/enum-label";
 
-export type ControlKind = "number" | "string" | "enum" | "flags";
+export type ControlKind = "number" | "string" | "enum" | "flags" | "resource";
 
 export function controlKind(row: Row): ControlKind {
     if (row.valueType === "enum" && row.enumOptions) return "enum";
     if (row.valueType === "flags" && row.flagOptions) return "flags";
+    // A resref field with a game behind it: the install's resources of that type become suggestions, so it
+    // renders as a searchable combobox rather than a bare text box. Only with `refExt` - outside a game there
+    // is nothing to suggest and the field stays plain text. Never a closed list (see ResourceField).
+    if (row.ref?.kind === "resource" && row.refExt !== undefined) return "resource";
     // `padding`/`note` carry a text summary (e.g. a reserved array shows "(15 values)"); render as a
     // (read-only) string so the summary shows, instead of falling through to a number input that can't
     // display the string and renders as a blank box - which left the field looking like a bare label.
@@ -78,10 +82,7 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
 
 /** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
  * whitespace-only query returns all options unchanged. */
-export function filterOptions(
-    options: { value: number; label: string }[],
-    query: string,
-): { value: number; label: string }[] {
+export function filterOptions<T extends { label: string }>(options: T[], query: string): T[] {
     const q = query.trim().toLowerCase();
     if (!q) return options;
     return options.filter((o) => o.label.toLowerCase().includes(q));
@@ -187,9 +188,22 @@ export function dropdownWidth(row: Row): DropdownWidth {
     if (!m) return DROPDOWN_WIDEST;
     let maxCh = 0;
     for (const o of enumOptionList(row)) maxCh = Math.max(maxCh, m.ch(o.label));
-    const needed = maxCh + DROPDOWN_CHROME_CH;
-    const idx = DROPDOWN_BOX_CH.findIndex((box) => box >= needed);
+    return dropdownBox(maxCh);
+}
+
+/** The smallest box whose text room fits `contentCh`; the widest box when none does (failing wide never clips). */
+function dropdownBox(contentCh: number): DropdownWidth {
+    const idx = DROPDOWN_BOX_CH.findIndex((box) => box >= contentCh + DROPDOWN_CHROME_CH);
     return idx === -1 ? DROPDOWN_WIDEST : DROPDOWN_CLASS[idx]!;
+}
+
+/**
+ * A resref picker's width. Sized from the FIELD's char capacity, not its option labels: every option is a
+ * resref of the same char array, so the field's own width already bounds them - and it holds even before the
+ * list has loaded, which sizing off the options would not.
+ */
+function resourceWidth(row: Row): DropdownWidth {
+    return dropdownBox(row.size ?? 8);
 }
 
 // ---- the single width-class classifier every renderer applies ----
@@ -206,6 +220,7 @@ export function controlWidthClass(row: Row): string {
     const kind = controlKind(row);
     if (kind === "flags") return "";
     if (kind === "enum") return dropdownWidth(row);
+    if (kind === "resource") return resourceWidth(row);
     return `tier-${valueTier(row)}`;
 }
 

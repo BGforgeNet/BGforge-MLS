@@ -18,14 +18,17 @@
     //   Combobox.Content  - the listbox popper (role="listbox"), same component as Select.Content.
     //   Combobox.Viewport - scroll container (same as Select.Viewport; ships its own component <style>).
     //   Combobox.Item     - props: value (STRING), label; renders role="option".
-    // bits-ui value is a string; numeric<->string conversion happens at this boundary.
+    // The control is string-valued throughout, as bits-ui is: a consumer whose field is numeric (every enum)
+    // converts at ITS boundary, so the primitive carries no type it has to translate.
     // bind:open is $bindable() in bits-ui and works two-way.
     // inputValue is not $bindable() in bits-ui, so we track it ourselves via oninput on Combobox.Input.
     import { Combobox } from "bits-ui";
-    import { filterOptions, parseCustomValue } from "../../state/controls";
+    import { filterOptions } from "../../state/controls";
+
+    const MAX_RENDERED_OPTIONS = 200;
 
     interface ComboboxOption {
-        value: number;
+        value: string;
         label: string;
     }
 
@@ -34,28 +37,35 @@
         value,
         onchange,
         allowCustom = false,
+        validateCustom,
         disabled = false,
         ariaLabel,
         placeholder,
+        onopen,
     }: {
         options: ComboboxOption[];
-        value: number;
-        onchange: (value: number) => void;
+        value: string;
+        onchange: (value: string) => void;
+        /** Accept a typed value that is not in the list. */
         allowCustom?: boolean;
+        /** Normalizes a typed custom value, or rejects it by returning undefined (the field then reverts).
+         *  Defaults to accepting any non-empty text as typed. */
+        validateCustom?: (text: string) => string | undefined;
         disabled?: boolean;
         ariaLabel?: string;
         placeholder?: string;
+        /** Fired on the rising edge of the dropdown opening, for a consumer that loads its options lazily. */
+        onopen?: () => void;
     } = $props();
 
-    // bits-ui stores the selection as a string; keep a string mirror of the numeric prop. Initialized to a
-    // literal (not String(value)) so it does not reference a reactive prop at $state init; the $effect below
-    // populates it on mount before first paint.
+    // bits-ui owns the selection; mirror the prop into it. Initialized to a literal so $state init does not
+    // reference a reactive prop; the $effect below populates it on mount before first paint.
     let selected = $state("");
     $effect(() => {
-        selected = String(value);
+        selected = value;
     });
 
-    const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? (allowCustom ? String(value) : ""));
+    const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? (allowCustom ? value : ""));
 
     // open tracks dropdown state. bits-ui declares open as $bindable() so bind:open works two-way.
     // eslint-disable-next-line prefer-const -- Svelte's bind:open assignment is generated; oxlint can't see it.
@@ -93,15 +103,24 @@
     });
 
     // On the rising edge of `open` (however it opened - click, chevron, or keyboard), select the shown value so
-    // the first keystroke replaces it and starts a fresh filter instead of appending to the label.
+    // the first keystroke replaces it and starts a fresh filter instead of appending to the label. Same edge
+    // tells a consumer to load its options, so a large list is fetched on first use rather than on mount.
     let wasOpen = false;
     $effect(() => {
-        if (open && !wasOpen && inputEl) inputEl.select();
+        if (open && !wasOpen) {
+            inputEl?.select();
+            onopen?.();
+        }
         wasOpen = open;
     });
 
     // While pristine (just opened / not yet typed) show every option; once the user types, substring-filter.
     const visibleOptions = $derived(pristine ? options : filterOptions(options, inputValue));
+    // Rendered rows are capped: an option list can be the whole install's resources of a type (~12300 BAM
+    // entries in a plain BG:EE), and bits-ui renders every item, so an uncapped list would mount that many
+    // nodes on first open. The overflow is stated in the list rather than silently dropped.
+    const renderedOptions = $derived(visibleOptions.slice(0, MAX_RENDERED_OPTIONS));
+    const hiddenCount = $derived(visibleOptions.length - renderedOptions.length);
 
     $effect(() => {
         // Re-runs when the list opens (viewport mounts) and whenever the filtered set changes: scroll the list
@@ -128,33 +147,42 @@
         });
     });
 
-    // items must mirror what is RENDERED (the filtered set), not the full list: bits-ui's "highlight the first
-    // match" effect keys on this prop, so handing it the filtered items re-fires highlight-first after every
-    // keystroke (and keeps arrow/Enter navigation pointing at on-screen options). Passing the full list left the
-    // highlight on an off-screen item, so arrows and Enter did nothing.
-    const items = $derived(visibleOptions.map((o) => ({ value: String(o.value), label: o.label })));
+    // items must mirror what is RENDERED (the capped, filtered set), not the full list: bits-ui's "highlight the
+    // first match" effect keys on this prop, so handing it the rendered items re-fires highlight-first after
+    // every keystroke (and keeps arrow/Enter navigation pointing at on-screen options). Passing the full list
+    // left the highlight on an off-screen item, so arrows and Enter did nothing.
+    const items = $derived(renderedOptions);
 
     function handleValueChange(next: string): void {
         // bits-ui yields "" by RE-PICKING the current item: type="single" toggles the selection OFF. Never
-        // deselect an enum (it always holds a value) - restore the bound value so bits-ui stays in sync, and
-        // close, since a re-pick should close the list like any other pick. Number("") is 0, so committing it
-        // would also silently set the field to option 0.
+        // deselect a field that always holds a value - restore the bound value so bits-ui stays in sync, and
+        // close, since a re-pick should close the list like any other pick.
         if (next === "") {
-            selected = String(value);
+            selected = value;
             open = false;
             return;
         }
-        const num = Number(next);
-        if (Number.isFinite(num)) {
-            onchange(num);
-            // A mouse pick blurs then refocuses the input; that refocus must not reopen the list. Set the flag
-            // for that synchronous refocus, then clear it on a microtask so a LATER, genuine focus still opens
-            // (a keyboard Enter pick keeps focus and fires no refocus, so the flag must not linger).
-            suppressFocusOpen = true;
-            queueMicrotask(() => {
-                suppressFocusOpen = false;
-            });
-        }
+        onchange(next);
+        // A mouse pick blurs then refocuses the input; that refocus must not reopen the list. Set the flag
+        // for that synchronous refocus, then clear it on a microtask so a LATER, genuine focus still opens
+        // (a keyboard Enter pick keeps focus and fires no refocus, so the flag must not linger).
+        suppressFocusOpen = true;
+        queueMicrotask(() => {
+            suppressFocusOpen = false;
+        });
+    }
+
+    /**
+     * The typed text as a committable value, or undefined to reject it (the field reverts to its value).
+     *
+     * Unchanged text is rejected too: the input shows the current value while idle, so blurring a field the
+     * user only tabbed through would otherwise commit it back to itself - a no-op edit that still marks the
+     * document dirty and takes an undo slot. An enum never hit this because its input shows a LABEL, which
+     * fails the numeric parse; a resref's input shows the value itself, so it round-trips exactly.
+     */
+    function customValue(text: string): string | undefined {
+        const parsed = validateCustom ? validateCustom(text) : text.trim() === "" ? undefined : text.trim();
+        return parsed === value ? undefined : parsed;
     }
 
     // bits-ui refocuses the input after a pick; that focus must NOT reopen the list. handleValueChange sets this
@@ -185,10 +213,8 @@
 
     function handleBlur(): void {
         if (allowCustom) {
-            const custom = parseCustomValue(inputValue);
-            if (custom !== undefined) {
-                onchange(custom);
-            }
+            const custom = customValue(inputValue);
+            if (custom !== undefined) onchange(custom);
         }
         // No valid custom value: the $effect restores the selected label when open transitions to false, so the
         // field can never be left blank - clearing the text just reverts to the current value.
@@ -196,7 +222,7 @@
 
     function handleKeydown(e: KeyboardEvent): void {
         if (e.key === "Enter" && allowCustom) {
-            const custom = parseCustomValue(inputValue);
+            const custom = customValue(inputValue);
             if (custom !== undefined) {
                 onchange(custom);
                 (e.currentTarget as HTMLInputElement).blur();
@@ -244,11 +270,15 @@
                  Keyed by query + value so the filtered items REMOUNT each keystroke - bits-ui re-highlights off an
                  item-mount watch, which reused nodes never fire, so the changing key drives the default highlight. -->
             <Combobox.Viewport bind:ref={viewportEl} class="bb-combobox-viewport">
-                {#each visibleOptions as opt (inputValue + ":" + opt.value)}
-                    <Combobox.Item class="bb-combobox-item bb-popup-item" value={String(opt.value)} label={opt.label}>
+                {#each renderedOptions as opt (inputValue + ":" + opt.value)}
+                    <Combobox.Item class="bb-combobox-item bb-popup-item" value={opt.value} label={opt.label}>
                         {opt.label}
                     </Combobox.Item>
                 {/each}
+                <!-- Not a Combobox.Item: the overflow notice reports the cap, it is not something to pick. -->
+                {#if hiddenCount > 0}
+                    <div class="bb-combobox-more">{hiddenCount} more - keep typing to narrow</div>
+                {/if}
             </Combobox.Viewport>
         </Combobox.Content>
     </Combobox.Portal>

@@ -96,6 +96,7 @@ const noGame = {
     slotLabel: (): undefined => undefined,
     namingTable: (): undefined => undefined,
     resourceType: (): undefined => undefined,
+    resourceList: (): undefined => undefined,
 };
 
 describe("binary editor hot-exit restore", () => {

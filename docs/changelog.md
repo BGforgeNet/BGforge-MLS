@@ -19,6 +19,9 @@
   - A resref the game can actually resolve gets an open affordance beside it, which opens that resource. One
     the game does not have is left as-is and never flagged: a mod record legitimately refers to a file a later
     install step creates.
+  - A resref field becomes a searchable picker over the install's resources of that field's type, so a target
+    can be chosen by name instead of typed from memory. It still accepts any name you type, including one the
+    install does not have. Long lists show the first matches and the number left out - keep typing to narrow.
 
 ### Fixes
 

@@ -7,6 +7,7 @@
     import NumberField from "./controls/NumberField.svelte";
     import StringField from "./controls/StringField.svelte";
     import EnumField from "./controls/EnumField.svelte";
+    import ResourceField from "./controls/ResourceField.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
 
     const { row, onedit, compact = false }: {
@@ -26,5 +27,6 @@
 </script>
 {#if kind === "number"}<NumberField {row} {compact} onedit={emit} />
 {:else if kind === "string"}<StringField {row} onedit={emit} />
+{:else if kind === "resource"}<ResourceField {row} onedit={emit} />
 {:else if kind === "enum"}<EnumField {row} onedit={emit} />
 {:else}<FlagColumns field={row.id} fields={flagFields} columns={1} boxed={false} {onedit} />{/if}

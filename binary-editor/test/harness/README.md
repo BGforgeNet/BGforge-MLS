@@ -36,6 +36,12 @@ The drivers are:
 - `render-map.mts` - MAP via the declarative layout; asserts header + flag panel, inline variable lists, the
   per-elevation object lists and present script sections render with no tabs, absent optional sections leave
   no panel, structure ops apply, and the file round-trips byte-identical.
+- `render-resource-picker.mts` - the resref resource picker. The only driver that plays a host WITH an
+  installed game: it runs each reply through the real `withGameContext` and answers `requestResourceList` from
+  a synthetic index, so the picker renders at all. Asserts a resref field is a plain input without a game and a
+  searchable combobox with one, that the list loads on first open and once per type, that the rendered-option
+  cap reports its overflow, and that a name the install does not have still commits while only a resolvable one
+  grows the open chip.
 - `render-clip-sweep.mts` - the cross-format value-control clipping sweep. Opens every format, walks each
   primary tab (and selects the first list row to sweep detail forms), and runs the `clip-gate.ts` check on each
   view - failing if any value control clips its text or any dropdown renders without a `dd-*` width class. The

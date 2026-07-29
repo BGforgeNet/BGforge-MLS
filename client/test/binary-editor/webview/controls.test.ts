@@ -47,6 +47,22 @@ describe("controls", () => {
         expect(controlKind({ ...enumRow, valueType: "string", enumOptions: undefined })).toBe("string");
     });
 
+    // A resref field becomes a picker only with a game behind it: `refExt` is what the host stamps when the
+    // record was opened from one, and without it there is nothing to suggest.
+    it("classifies a resref field as a resource picker only when a game named its type", () => {
+        const resref: Row = {
+            ...enumRow,
+            valueType: "string",
+            enumOptions: undefined,
+            size: 8,
+            rawValue: "ISW1H01",
+            ref: { kind: "resource", type: "BAM" },
+        };
+
+        expect(controlKind(resref)).toBe("string");
+        expect(controlKind({ ...resref, refExt: "BAM" })).toBe("resource");
+    });
+
     it("builds an enum option list with value-prefixed labels, injecting '<n> Unknown' for an out-of-range value", () => {
         // Every option label carries its stored value as a prefix ("<value> <name>"), so a dropdown reads
         // against the raw byte uniformly across formats; the synthetic out-of-range option follows the same form.

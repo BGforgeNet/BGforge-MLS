@@ -42,14 +42,15 @@ export interface GameLookups {
      */
     namingTable(kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined;
     /**
-     * The type this resref points at in the open game, or undefined when the game does not have it. Takes the
-     * whole declaration because a few fields store a different type in one flavour (ITM `replacement` is an
-     * item everywhere but PSTEE, which stores a sound), and only the host knows which game this is.
+     * What this resref field points at in the open game, or undefined outside one. Takes the whole declaration
+     * because a few fields store a different type in one flavour (ITM `replacement` is an item everywhere but
+     * PSTEE, which stores a sound), and only the host knows which game this is. `present` answers separately
+     * whether the CURRENT value is there - the type holds even for an empty field.
      */
     resourceType(
         decl: { type: string; byFlavour?: Readonly<Record<string, string>> },
         resref: string,
-    ): string | undefined;
+    ): { type: string; present: boolean } | undefined;
 }
 
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
@@ -151,13 +152,19 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         const table = lookups.namingTable(row.ref.kind, row.ref.tables);
         if (table !== undefined) row = { ...row, ...namedByGame(row, table) };
     }
-    if (isResourceRefRow(row) && row.ref.kind === "resource" && row.ref.type !== undefined && row.rawValue !== "") {
-        // The declaration says WHAT it points at; the game is asked only whether it is there. An unresolvable
-        // resref is left exactly as it is: a mod record legitimately points at what a later install step
-        // creates, so there is no marker and no advisory - only the affordance is withheld. A `deferred` ref
-        // never reaches here, so an opcode-typed effect resref renders like an undeclared one.
-        const ext = lookups.resourceType({ type: row.ref.type, byFlavour: row.ref.byFlavour }, row.rawValue);
-        if (ext !== undefined) row = { ...row, openTarget: { resref: row.rawValue, ext } };
+    if (isResourceRefRow(row) && row.ref.kind === "resource" && row.ref.type !== undefined) {
+        // The declaration says WHAT it points at; the game is asked only whether it is there. The type is
+        // stamped regardless, because it is what makes the field pickable - and the field a picker is most for
+        // is the EMPTY one. An unresolvable resref is otherwise left exactly as it is: a mod record legitimately
+        // points at what a later install step creates, so there is no marker and no advisory - only the open
+        // affordance is withheld. A `deferred` ref never reaches here, so an opcode-typed effect resref renders
+        // like an undeclared one.
+        const resref = row.rawValue;
+        const target = lookups.resourceType({ type: row.ref.type, byFlavour: row.ref.byFlavour }, resref);
+        if (target !== undefined) {
+            row = { ...row, refExt: target.type };
+            if (target.present) row = { ...row, openTarget: { resref, ext: target.type } };
+        }
     }
     if (isSlotRefRow(row)) {
         const { ref, index } = row.slotRef;

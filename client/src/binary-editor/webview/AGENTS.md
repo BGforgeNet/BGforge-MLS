@@ -44,6 +44,23 @@ Absent `openTarget` renders NOTHING - no marker, no dimming, no advisory. That i
 a mod record legitimately references what a later install step creates, so flagging it would fire on correct
 input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte`.
 
+## A resref field is a picker with a game, and the list is a suggestion set - never the domain
+
+`row.refExt` (the type the field points at in THIS game) is the separate, weaker signal: the host sets it
+whenever the record came from a game, where `openTarget` additionally needs the current VALUE to resolve. So
+an empty or unresolvable resref is still pickable while staying un-openable, which is the split the two
+affordances exist for. `ResourceField.svelte` renders it through the same `Combobox` every enum uses, loading
+the install's resrefs of that type on FIRST OPEN (`onopen`) - a record carries many such fields and the lists
+run to thousands, so mounting must not fetch. The bridge caches per type.
+
+`allowCustom` is UNCONDITIONAL here, where an enum ties it to `enumOpen`. Same reason the chip stays absent
+rather than flagging: confining the field to what is installed today would reject correct input. Do not "fix"
+this into a closed list, and do not add a warning for a typed name the install lacks.
+
+The `Combobox` caps how many options it RENDERS and states the overflow in the list. bits-ui mounts every item
+it is given, so the cap is what keeps a ~12300-entry BAM list from mounting 12300 nodes; keep the notice if you
+touch it - a silently truncated list reads as a complete one.
+
 ## A grid fits columns to the panel; the schema count is a maximum
 
 `GridBlock` is multi-column (`column-count` from the schema as a cap, a measured `column-width` as the
@@ -76,6 +93,9 @@ in the CSS classes (`.field-control.tier-{s,m,ml,l}` and `.field-control.dd-{1..
   separate scale: a dropdown often shares a column with a hex/resref input that needs MORE room than any enum
   option, so inheriting the text tier left every dropdown over-wide; sizing to its own longest option fixes it.
   The searchable combobox (effect opcode) keeps the widest box (dd-5) for free-text typing.
+- **A resref picker takes a dropdown box sized from the FIELD's char capacity**, not from its options: every
+  option is a resref of the same char array, so the field already bounds them - and the width must hold before
+  the list has loaded, which sizing off the options would not.
 - Sized off the LONGEST option (not the current value), so changing the selection never clips, and dropdowns
   still align with each other (quantized). A dropdown still looks a little roomy next to a SHORT current value -
   that is the off-the-longest-option contract, not a defect.

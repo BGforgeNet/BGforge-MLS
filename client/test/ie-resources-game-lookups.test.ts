@@ -7,6 +7,7 @@ vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 // Imported after vi.mock so the mocked vscode is in place.
 import {
     createNamingTableResolver,
+    createResourceListResolver,
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
@@ -39,6 +40,7 @@ function session(
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
         canRead: (resref: string, type: string) => boolean;
+        list: () => { resref: string; ext: string | undefined }[];
         identity: { flavour: string };
     };
 } {
@@ -53,6 +55,13 @@ function session(
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 canRead: (resref: string, type: string) =>
                     (overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()),
+                // The install's whole namespace, biffed and override alike - `resources` doubles as it, split
+                // back into the resref/ext pair `Game.list()` yields.
+                list: () =>
+                    (overrides.resources ?? []).map((name) => {
+                        const dot = name.lastIndexOf(".");
+                        return { resref: name.slice(0, dot).toUpperCase(), ext: name.slice(dot + 1) };
+                    }),
                 identity: { flavour: overrides.flavour ?? "tob" },
             };
         },
@@ -113,6 +122,7 @@ describe("createStrrefResolver", () => {
                 ids: () => undefined,
                 twoDa: () => undefined,
                 canRead: () => false,
+                list: () => [],
                 identity: { flavour: "tob" },
             }),
         };
@@ -223,13 +233,13 @@ describe("createResourceTypeResolver", () => {
     it("answers with the declared type when the install has it", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
 
-        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toBe("ITM");
+        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toEqual({ type: "ITM", present: true });
     });
 
     it("answers with the flavour's own type where one is declared", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["drop01.wav"], flavour: "pstee" }));
 
-        expect(resolve(gameUri(), REPLACEMENT, "DROP01")).toBe("WAV");
+        expect(resolve(gameUri(), REPLACEMENT, "DROP01")).toEqual({ type: "WAV", present: true });
     });
 
     // The declaration decides, not what happens to be installed: with BOTH resources present the answer still
@@ -238,29 +248,34 @@ describe("createResourceTypeResolver", () => {
     it("follows the flavour even when both types exist in the install", () => {
         const both = { resources: ["x.itm", "x.wav"] };
 
-        expect(createResourceTypeResolver(session(both))(gameUri(), REPLACEMENT, "X")).toBe("ITM");
-        expect(createResourceTypeResolver(session({ ...both, flavour: "pstee" }))(gameUri(), REPLACEMENT, "X")).toBe(
-            "WAV",
-        );
+        expect(createResourceTypeResolver(session(both))(gameUri(), REPLACEMENT, "X")?.type).toBe("ITM");
+        expect(
+            createResourceTypeResolver(session({ ...both, flavour: "pstee" }))(gameUri(), REPLACEMENT, "X")?.type,
+        ).toBe("WAV");
     });
 
     it("ignores a byFlavour entry for some other game", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"], flavour: "bgee" }));
 
-        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toBe("ITM");
+        expect(resolve(gameUri(), REPLACEMENT, "SW1H01")?.type).toBe("ITM");
     });
 
-    // Never judges: a mod record legitimately references what a later install step creates, so an unresolvable
-    // resref simply gets no answer - the editor withholds the affordance rather than marking the field.
-    it("answers nothing when the install does not have it", () => {
-        expect(createResourceTypeResolver(session())(gameUri(), { type: "ITM" }, "NOPE")).toBeUndefined();
+    // Never judges: a mod record legitimately references what a later install step creates. The TYPE still
+    // holds - it follows from the record and the game - so the field stays pickable; only `present` is false,
+    // and that is what withholds the open affordance.
+    it("still names the type when the install does not have it", () => {
+        expect(createResourceTypeResolver(session())(gameUri(), { type: "ITM" }, "NOPE")).toEqual({
+            type: "ITM",
+            present: false,
+        });
     });
 
-    // The "no resource" value must never be probed - every empty resref would otherwise hit the game index.
-    it("never probes an empty resref", () => {
+    // The empty field is the one a picker exists for, so it gets an answer - but "" is the "no resource"
+    // value, so it never counts as present.
+    it("names the type for an empty resref, which is never present", () => {
         const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
 
-        expect(resolve(gameUri(), { type: "ITM" }, "")).toBeUndefined();
+        expect(resolve(gameUri(), { type: "ITM" }, "")).toEqual({ type: "ITM", present: false });
     });
 
     it("answers nothing for a document outside a game", () => {
@@ -276,5 +291,40 @@ describe("createResourceTypeResolver", () => {
         expect(
             createResourceTypeResolver(session({ throws: true }))(gameUri(), { type: "ITM" }, "SW1H01"),
         ).toBeUndefined();
+    });
+});
+
+describe("createResourceListResolver", () => {
+    const INSTALL = { resources: ["sw1h01.itm", "misc01.itm", "isw1h01.bam", "drop01.wav"] };
+
+    it("lists the install's resrefs of one type, sorted", () => {
+        const list = createResourceListResolver(session(INSTALL));
+
+        expect(list(gameUri(), "itm")).toEqual(["MISC01", "SW1H01"]);
+    });
+
+    // The declaration's type is upper-case ("BAM") while the index names extensions lower-case; a picker that
+    // matched them literally would offer nothing for every field.
+    it("matches the type case-insensitively", () => {
+        const list = createResourceListResolver(session(INSTALL));
+
+        expect(list(gameUri(), "BAM")).toEqual(["ISW1H01"]);
+    });
+
+    // Not an error and not undefined: a game can genuinely hold none of a type, and the picker then simply has
+    // nothing to suggest while the field stays editable.
+    it("answers an empty list for a type the install has none of", () => {
+        expect(createResourceListResolver(session(INSTALL))(gameUri(), "spl")).toEqual([]);
+    });
+
+    // Undefined, distinct from empty: there is no game to ask, so the field is not a picker at all.
+    it("answers nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
+
+        expect(createResourceListResolver(session(INSTALL))(fileUri, "itm")).toBeUndefined();
+    });
+
+    it("swallows an unopenable game", () => {
+        expect(createResourceListResolver(session({ throws: true }))(gameUri(), "itm")).toBeUndefined();
     });
 });
