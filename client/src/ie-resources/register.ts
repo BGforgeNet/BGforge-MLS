@@ -77,7 +77,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             canSelectFolders: false,
             canSelectMany: false,
             filters: { "IE game index (chitin.key)": ["key"] },
-            openLabel: "Open IE Game",
+            openLabel: "Select chitin.key",
             title: "Select the game's chitin.key",
         });
         const keyFile = picked?.[0]?.fsPath;
