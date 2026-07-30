@@ -52,10 +52,20 @@ describe("opcodeReading", () => {
 });
 
 describe("engineForFlavour", () => {
-    // The Enhanced Editions share one engine, so they share one set of opcode readings. IWD:EE included: it
-    // runs the EE engine rather than the classic Icewind Dale one.
+    // The Baldur's Gate EEs share one engine and one set of readings. IWD:EE rides along because IESDP has no
+    // column for it, not because that equivalence was established - see the note on ENGINE_BY_FLAVOUR.
     it.each(["bgee", "sod", "bg2ee", "iwdee", "eet"])("maps the EE flavour %s to the EE engine", (flavour) => {
         expect(engineForFlavour(flavour)).toBe("bgee");
+    });
+
+    // PSTEE runs the same engine as the other EEs and reads all but a handful of opcodes identically. It keeps
+    // its own key for the numbers Planescape adds, which BG:EE marks Unused.
+    it("keeps PSTEE on its own readings, which differ only where Planescape adds opcodes", () => {
+        expect(engineForFlavour("pstee")).toBe("pstee");
+        expect(opcodeReading(352, "pstee")?.name).toBe("Change Background");
+        expect(opcodeReading(352, "bgee")?.name).toBe("Unused");
+        // ...and agrees with the other EEs everywhere else.
+        expect(opcodeReading(238, "pstee")?.name).toBe(opcodeReading(238, "bgee")?.name);
     });
 
     it.each([
