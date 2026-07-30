@@ -62,13 +62,12 @@ export const effBodySpecAnnotated = {
         enumOpen: true,
         ref: IMPACT_PROJECTILE_REF,
     },
-    // All four resrefs defer rather than declaring a type - see EFFECT_RESOURCE_REF. `parentResource` is the
-    // one with a nearby discriminator (`parentResourceType`), but it holds 0/None on most records, so it
-    // cannot type the field either.
+    // The three effect resrefs defer rather than declaring a type - see EFFECT_RESOURCE_REF. `parentResource`
+    // does NOT: its type is the adjacent `parentResourceType`, so the relationship overlay reads that sibling
+    // and emits the ref, the same way it types an IDS Entry from its IDS File.
     resource: { ...effBodySpec.resource, ref: EFFECT_RESOURCE_REF },
     resource2: { ...effBodySpec.resource2, ref: EFFECT_RESOURCE_REF },
     resource3: { ...effBodySpec.resource3, ref: EFFECT_RESOURCE_REF },
-    parentResource: { ...effBodySpec.parentResource, ref: EFFECT_RESOURCE_REF },
     // Parent resource kind (0 None / 1 Spell / 2 Item per IESDP eff_v2 0x90); was a raw integer next to the
     // parent-resource flags. Open: EE/mod data occasionally carries values outside the documented three.
     parentResourceType: { ...effBodySpec.parentResourceType, enum: EffectParentResourceType, enumOpen: true },

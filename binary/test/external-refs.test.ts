@@ -353,20 +353,17 @@ describe.skipIf(!have2daFixtures)("resref fields declare their target resource t
  * bare is indistinguishable from nobody having got to it. It carries an explicit deferral instead, so the
  * absence is a recorded decision that a completeness sweep can read.
  *
- * Every effect resource is one: the opcode decides what it points at (a CRE for opcode 55, a spell for 146, a
- * 2DA for 175...), so no single type is right for the field.
+ * Every effect resource is one: the opcode decides what it points at (a CRE for opcode 67, a spell for 146, a
+ * 2DA for 214...), so no single type is right for the field.
  */
 describe.skipIf(!have2daFixtures)("resrefs whose type depends on another field are deferred, not bare", () => {
     const deferredNames = (fields: ParsedField[]): string[] =>
         fields.filter((f) => f.ref?.kind === "deferred").map((f) => f.name);
 
+    // Parent Resource is deliberately absent: the adjacent Parent Resource Type names its type, so the
+    // relationship overlay resolves it per record instead of the spec deferring it.
     it("marks every EFF v2 resource field", () => {
-        expect(deferredNames(parseFields(effParser, EFF_FIXTURE))).toEqual([
-            "Resource",
-            "Resource2",
-            "Resource3",
-            "Parent Resource",
-        ]);
+        expect(deferredNames(parseFields(effParser, EFF_FIXTURE))).toEqual(["Resource", "Resource2", "Resource3"]);
     });
 
     // The 48-byte feature block is shared, so ITM/SPL/CRE effects inherit the same deferral.

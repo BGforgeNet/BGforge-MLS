@@ -22,9 +22,15 @@
   - A resref field becomes a searchable picker over the install's resources of that field's type, so a target
     can be chosen by name instead of typed from memory. It still accepts any name you type, including one the
     install does not have. Long lists show the first matches and the number left out - keep typing to narrow.
-  - Effects that target a creature type (opcodes 55, 72, 100, 175, 178) now name both halves: the IDS File
-    parameter lists the tables it can select, and the IDS Entry parameter becomes a dropdown of that table's
-    own entries, re-read from the game whenever the file is changed.
+  - Effects that target a creature type now name both halves: the IDS File parameter lists the tables it can
+    select, and the IDS Entry parameter becomes a dropdown of that table's own entries, re-read from the game
+    whenever the file is changed. This covers fourteen opcodes, including `Use EFF File` - by far the most
+    common of them in a real install.
+  - An effect's resource now opens the file it names, for the fifty-odd opcodes whose target is unambiguous - a
+    spell for `Cast Spell`, a creature for `Summon`, an item, an EFF or a 2DA elsewhere. Opcodes whose
+    documentation names two possible targets, or that mean different things in different games, are left alone
+    rather than guessed at.
+  - An effect's Parent Resource opens too, as the spell or item its own Parent Resource Type says it is.
   - An item's weapon proficiency is named from the game's own proficiency table, so proficiencies a mod adds
     are listed instead of showing as a bare number.
   - The projectile an item or spell ability fires is named from the game's `MISSILE.IDS` and `PROJECTL.IDS`,
@@ -32,6 +38,14 @@
     since a game often ships one of them only partly filled in. An effect's impact projectile is named too,
     from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file. The values that mean "no
     projectile" - which no game table names - read `None` instead of as a bare number.
+
+### Binary editor
+
+- Effect opcodes added after the original games are now named instead of showing as a bare number. That covers
+  every Enhanced Edition and Icewind Dale II opcode, plus a dozen older ones - `Use EFF File` among them, which
+  is one of the most common effects there is. Their parameters are named too, where documented.
+- The extra parameter, special and power fields an effect record carries now take the name the current opcode
+  gives them, the way Parameter 1 and Parameter 2 already did.
 
 ### Syntax highlighting
 

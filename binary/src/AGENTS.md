@@ -144,19 +144,25 @@ that carries both.
   `char[2]` animation code and a `char[32]` script variable are not resrefs and get none.
 - **A resref whose type another field selects is `{ kind: "deferred", reason }`, not left bare.** Bare and
   deferred look identical from outside, so the marker is what makes the absence a decision a completeness
-  sweep can read rather than something nobody got to. Every effect resource is one (`EFFECT_RESOURCE_REF`):
-  the opcode picks the target, so no type fits the field. A consumer resolves nothing for it - the field
-  renders exactly like an undeclared one.
+  sweep can read rather than something nobody got to. The three effect resources are ones
+  (`EFFECT_RESOURCE_REF`): the opcode picks the target, so no type fits the FIELD. The overlay still resolves
+  them per RECORD, where the opcode is visible - the deferral is the spec-level answer, not the final one.
 - **A ref the spec cannot know, but a SIBLING field can, is computed by the relationship overlay - not
   deferred.** `deferred` is for a ref nothing can resolve; where another field in the same record names the
   answer, the overlay reads that sibling and emits the ref on `FieldOverride.ref`, which overwrites the row's
-  spec-declared one. The effect IDS-Entry/IDS-File opcodes are the case: `parameter1` is an entry in whichever
-  table `parameter2` selects, so `binary-editor`'s `ie-effects` overlay turns `OpcodeRelationships`'
-  `idsFileByParam2` into a plain `{ kind: "ids", tables }`, and the host resolves it through the SAME path as
-  a declared one - no second resolver. The mapping is per opcode and transcribed per page (opcode 72 is
-  0-based where 55/100/175 are 2-based; 178's slot 2 is OBJECT, not EA), so never copy one opcode's list to
-  another. Whatever computes such a ref must also list the sibling in `dependents`, or the dropdown goes stale
-  the moment the sibling is edited.
+  spec-declared one. Three cases live in `binary-editor`'s `ie-effects` overlay, all reading the same
+  `OpcodeRelationships` table: `parameter1` is an entry in whichever table `parameter2` selects
+  (`idsFileByParam2` -> `{ kind: "ids", tables }`); the effect's own `resource` is typed by the opcode
+  (`resourceType` -> `{ kind: "resource", type }`); and `parentResource` is typed by the adjacent
+  `parentResourceType`, which is why it is the one effect resref carrying no spec-level deferral. The host
+  resolves all three through the SAME path as a declared ref - no second resolver. Each mapping is per opcode
+  and transcribed per page (opcode 72 is 0-based where 55/100/175 are 2-based; 178's slot 2 is OBJECT, not
+  EA), so never copy one opcode's list to another. Whatever computes such a ref must also list the sibling in
+  `dependents`, or the dropdown goes stale the moment the sibling is edited.
+- **Declare an opcode-derived target only where every IESDP page for the opcode agrees on one.** Numbers were
+  reused between editions (283 is Float Text canonically and Use EFF File (Cursed) on the EE), and some pages
+  name two targets at once ("the BAM/VVC"). Resolving against the wrong namespace is worse than leaving the
+  field bare, so those stay out of the table and are listed in `OPCODE_RESOURCE_UNRESOLVED` with the reason.
 - **A field whose documentation names an IDS/2DA table must declare it or record why not.** Unlike a resref,
   an IDS-backed field is a plain number with no shape to spot, so `binary/test/ids-table-declarations.test.ts`
   sweeps the specs for a `*.IDS`/`*.2DA` mention in the description and requires a declaration or an entry in

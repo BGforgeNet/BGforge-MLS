@@ -53,6 +53,14 @@ const NAMES_NOTHING: Record<string, string> = {
     "spl.header.unused19": "IESDP marks it unused; it holds no resref",
 };
 
+/**
+ * 8-char fields a SIBLING field types, so the relationship overlay emits the ref per record and the spec
+ * declares none. Distinct from `deferred`, which means nothing can resolve the field at all.
+ */
+const TYPED_BY_OVERLAY: Record<string, string> = {
+    "eff.body.parentResource": "Typed by the adjacent parentResourceType (1 Spell / 2 Item)",
+};
+
 const RESREF_CHARS = 8;
 
 /** Returns the chars-narrowed spec alongside the name, so callers can read `ref` without re-narrowing. */
@@ -70,7 +78,7 @@ describe("every resref-shaped field declares what it points at", () => {
         for (const [specName, spec] of Object.entries(SPECS)) {
             for (const [field, fieldSpec] of resrefShapedFields(spec)) {
                 const key = `${specName}.${field}`;
-                if (key in NAMES_NOTHING) continue;
+                if (key in NAMES_NOTHING || key in TYPED_BY_OVERLAY) continue;
                 const kind = fieldSpec.ref?.kind;
                 if (kind !== "resource" && kind !== "deferred") undeclared.push(key);
             }
@@ -81,9 +89,9 @@ describe("every resref-shaped field declares what it points at", () => {
 
     // An allowlist nobody prunes turns into a place undeclared fields hide. Each entry has to still name a
     // field that is still 8 chars wide and still carries no ref - otherwise it has outlived its reason.
-    it("keeps no stale entry in the names-nothing list", () => {
+    it("keeps no stale entry in the names-nothing or typed-by-overlay lists", () => {
         const stale: string[] = [];
-        for (const key of Object.keys(NAMES_NOTHING)) {
+        for (const key of [...Object.keys(NAMES_NOTHING), ...Object.keys(TYPED_BY_OVERLAY)]) {
             const lastDot = key.lastIndexOf(".");
             const spec = SPECS[key.slice(0, lastDot)];
             const fieldSpec = spec?.[key.slice(lastDot + 1)];

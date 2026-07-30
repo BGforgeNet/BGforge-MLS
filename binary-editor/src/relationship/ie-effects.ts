@@ -6,6 +6,27 @@ import type { FieldOverride, RelationshipModel } from "./types";
 // matches on a normalized key. `normKey`/`fieldNumber` are the shared helpers; `fieldValue` keeps the local name.
 import { normKey, fieldNumber as fieldValue } from "./model-helpers";
 
+type SlotKey = "param1" | "param2" | "param3" | "param4" | "param5" | "special" | "savingthrow" | "power";
+
+/**
+ * Effect fields whose meaning the opcode selects, mapped to the slot naming them in `OpcodeRelationships`.
+ * parameter1/parameter2 exist on every effect record; the rest are read by a minority of opcodes, and the
+ * dword mapped to `special` is the one the spec otherwise calls a TobEx stacking id (two spec names, one
+ * field, as with the dice/level pair below).
+ */
+const SLOT_BY_FIELD = new Map<string, SlotKey>([
+    ["parameter1", "param1"],
+    ["parameter2", "param2"],
+    ["parameter3", "param3"],
+    ["parameter4", "param4"],
+    ["parameter5", "param5"],
+    ["stackingidex", "special"],
+    ["stackingidtobex", "special"],
+    ["savetype", "savingthrow"],
+    ["power", "power"],
+]);
+
+/** The two slots the IDS-Entry / IDS-File pair occupies; only these consult `idsFileByParam2`. */
 const PARAM_FIELDS = new Set(["parameter1", "parameter2"]);
 
 // The 0x1c/0x20 dword pair is dual-purpose: most opcodes read it as a Maximum/Minimum Level range (the static
@@ -60,12 +81,29 @@ export const ieEffectsModel: RelationshipModel = {
             if (!readsDice(model, node)) return;
             return { label: THROWN_KEYS.has(key) ? "Dice Thrown" : "Dice Sides" };
         }
-        if (!PARAM_FIELDS.has(key)) return;
+        if (key === "resource") {
+            // What the resref points at is a function of the opcode, so it cannot be declared on the spec (which
+            // marks it deferred). Where IESDP names one target type for the opcode, the ref is computed here and
+            // the host resolves it through the same path as a declared one.
+            const opcode = siblingValue(model, node, "opcode");
+            const type = opcode === undefined ? undefined : OpcodeRelationships[opcode]?.resourceType;
+            return type === undefined ? undefined : { ref: { kind: "resource", type } };
+        }
+        if (key === "parentresource") {
+            // Unlike the effect's own resource this one is NOT opcode-dependent: the adjacent Parent Resource
+            // Type says what it is. Across BG:EE, BG2:ToB and the mod corpus every record with a parent resource
+            // also carries a non-zero type, so reading the sibling resolves the field rather than guessing.
+            const kind = siblingValue(model, node, "parentresourcetype");
+            const type = kind === 1 ? "SPL" : kind === 2 ? "ITM" : undefined;
+            return type === undefined ? undefined : { ref: { kind: "resource", type } };
+        }
+        const slotKey = SLOT_BY_FIELD.get(key);
+        if (slotKey === undefined) return;
         const opcode = siblingValue(model, node, "opcode");
         if (opcode === undefined) return;
         const rel = OpcodeRelationships[opcode];
-        const slot = key === "parameter1" ? rel?.param1 : rel?.param2;
-        const idsFiles = rel?.idsFileByParam2;
+        const slot = rel?.[slotKey];
+        const idsFiles = PARAM_FIELDS.has(key) ? rel?.idsFileByParam2 : undefined;
         if (!slot && !idsFiles) return;
         const override: FieldOverride = {};
         if (slot?.label) override.label = slot.label;
@@ -101,16 +139,26 @@ export const ieEffectsModel: RelationshipModel = {
         const editedOpcode = siblingValue(model, editedNode, "opcode");
         const selectsIdsFile =
             editedOpcode !== undefined && OpcodeRelationships[editedOpcode]?.idsFileByParam2 !== undefined;
-        const wantParams = editedKey === "opcode" || (editedKey === "parameter2" && selectsIdsFile);
+        // Opcode rewrites every slot label and the resource's target type; parameter2 re-resolves only the
+        // IDS-Entry pair; parentResourceType types its own resref and nothing else.
+        const wantSlots = editedKey === "opcode" || (editedKey === "parameter2" && selectsIdsFile);
         const wantDiceLevel = editedKey === "opcode" || editedKey === "parameter2";
-        if (!wantParams && !wantDiceLevel) return [];
+        const wantResource = editedKey === "opcode";
+        const wantParentResource = editedKey === "parentresourcetype";
+        if (!wantSlots && !wantDiceLevel && !wantResource && !wantParentResource) return [];
         const sibs = model.childrenByParent.get(editedNode.parentId ?? "") ?? [];
         const out: string[] = [];
         for (const i of sibs) {
             const n = model.nodes[i];
             if (!n || n.kind !== "field") continue;
             const k = normKey(n.name);
-            if ((wantParams && PARAM_FIELDS.has(k)) || (wantDiceLevel && (THROWN_KEYS.has(k) || SIDES_KEYS.has(k)))) {
+            const slotAffected = editedKey === "opcode" ? SLOT_BY_FIELD.has(k) : PARAM_FIELDS.has(k);
+            if (
+                (wantSlots && slotAffected) ||
+                (wantDiceLevel && (THROWN_KEYS.has(k) || SIDES_KEYS.has(k))) ||
+                (wantResource && k === "resource") ||
+                (wantParentResource && k === "parentresource")
+            ) {
                 out.push(n.id);
             }
         }

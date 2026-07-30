@@ -70,6 +70,17 @@ const MUTABLE_LABEL_RESERVE_CH: Readonly<Record<string, number>> = {
     minLevel: 13,
     diceThrown: 13,
     diceSides: 13,
+    // The EE-era slots the overlay also relabels. Sized to the labels these actually take across IESDP
+    // ("Frequency Multiplier", "Selection circle color"); the 46-char outlier on parameter3/parameter5 grows
+    // its own column, which is what a reserve is a floor for rather than a cap.
+    //
+    // `power` is deliberately absent though the overlay relabels it too: one opcode of 442 does so, and it
+    // shares the header run with Opcode/Target, so reserving would pad those static labels on every record.
+    parameter3: 20,
+    parameter4: 20,
+    parameter5: 20,
+    stackingIdEx: 18,
+    stackingIdTobex: 18,
 };
 
 /** The probability range, shown low-to-high as `probability2 - probability1`. Present in every effect record. */

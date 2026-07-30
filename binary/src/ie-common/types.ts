@@ -108,6 +108,9 @@ export const EffectParentResourceType: Record<number, string> = {
  * Every effect resource field: the opcode chooses what the resref points at, so no one type is right for the
  * field (IESDP has opcode 135 pointing at a creature, 146 at a spell, 214 at a 2DA). Declared rather than left
  * bare so the absence reads as a decision, and shared so the EFF v2 body and the 48-byte feature block agree.
+ *
+ * The relationship overlay resolves it per record from the opcode's own IESDP page, for the opcodes whose
+ * pages agree on one target type; this stays the spec-level answer, which cannot see the sibling opcode.
  */
 export const EFFECT_RESOURCE_REF = {
     kind: "deferred",

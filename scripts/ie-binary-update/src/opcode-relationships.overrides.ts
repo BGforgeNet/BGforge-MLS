@@ -86,7 +86,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     },
 
     // The IDS-Entry / IDS-File opcodes: parameter1 is an entry in a table parameter2 names. IESDP writes the
-    // list three different ways across these five ("N -> EA.IDS", "N -> EA", "N   EA.ids"), and the mapping is
+    // list several different ways across them ("N -> EA.IDS", "N -> EA", "N   EA.ids"), and the mapping is
     // NOT shared - so each is transcribed from its own page rather than harvested or copied sideways. ALIGN is
     // listed with ALIGNMEN behind it wherever IESDP names either: the two are the same table under the name a
     // given edition ships, which is what the candidate ordering is for.
@@ -160,6 +160,123 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
             5: ["CLASS"],
             6: ["SPECIFIC"],
             7: ["GENDER"],
+        },
+    },
+
+    // The nine below document the same pair but were reachable only from an engine-variant page, so the
+    // canonical-only harvest never saw them. They carry the bulk of the real usage - opcode 177 alone occurs an
+    // order of magnitude more often across BG:EE and BG2:ToB than all five entries above together. Each is
+    // still transcribed from its own page: they happen to agree today, which is not a reason to share one list.
+
+    // op109: State: Hold
+    // Verified from op109-bgee.html body text: "Known values for 'IDS File' are".
+    109: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op177: Use EFF File
+    // Verified from op177-bg2.html and op177-bgee.html. The bg2 list stops at ALIGN and the bgee one adds KIT,
+    // the same EE-only trailing slot op055 carries.
+    177: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"], // EE only
+        },
+    },
+
+    // op179: Spell Effect: Damage vs. Creature Type Modifier
+    // Verified from op179-bgee.html.
+    179: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op185: State: Hold (II)
+    // Verified from op185-bgee.html.
+    185: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op219: Stat: AC vs. Creature Type Modifier
+    // Verified from op219-bg2.html.
+    219: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // Opcodes 238 and 283 document the same pair on their bg2 / bgee pages and are deliberately NOT here. Both
+    // numbers were reused between editions - canonical 238 is "Stat: Save vs. all" against bg2's "Death:
+    // Disintegrate", canonical 283 is "Text: Float Text" against the EE's "Use EFF File (Cursed)" - so the
+    // table's one entry per opcode cannot hold both meanings, and adding the IDS map would pair an IDS-file
+    // dropdown with the other edition's parameter labels. They resolve when the table gains an engine axis.
+
+    // op319: Usability: Item Usability
+    // Verified from op319-bgee.html.
+    319: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op344: Enchantment vs. creature type
+    // Verified from op344-bgee.html.
+    344: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
         },
     },
 };

@@ -1,9 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
 import { ieEffectsModel, ieEffectsFieldOverride, ieEffectsDependents } from "../src/relationship/ie-effects";
 import { getRelationshipModel } from "../src/relationship/registry";
+import { normKey } from "../src/relationship/model-helpers";
+import { openSession, sessionStore } from "../src/session";
+import type { FlatNode, Model } from "../src/model";
 import { openItmSession, firstEffectFields, setRaw, itmFixturePresent } from "./ie-fixture";
+
+// The EFF v2 body has fields the shared 48-byte feature block lacks, so those cases need a standalone EFF.
+// It lives in the reproducible-but-gitignored external corpus, hence the per-test presence guard.
+const EFF_FIXTURE = path.resolve(
+    __dirname,
+    "../../external/infinity-engine/Ascension/ascension/balthazar/resource/balth01b.eff",
+);
 
 // These tests run the IE relationship model against the REAL display tree produced
 // by the parser (humanized labels "Opcode"/"Parameter1", enum codes in rawValue),
@@ -139,6 +151,92 @@ describe("ieEffectsModel.fieldOverride IDS-file-dependent entry (real ITM displa
     });
 });
 
+/**
+ * The effect's own resref: what it points at is a function of the opcode, so the spec defers it and the
+ * overlay supplies the type from the opcode's own IESDP page. Only opcodes whose pages agree on ONE target
+ * get a ref - resolving against the wrong namespace is worse than leaving the field unresolved.
+ */
+describe("ieEffectsModel.fieldOverride opcode-typed resource (real ITM display tree)", () => {
+    const refFor = (opcode: number) => {
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, opcode);
+        return ieEffectsModel.fieldOverride(session.model, f.get("resource")!)?.ref;
+    };
+
+    // One per target type, so a table-wide mistake cannot hide behind a single passing case.
+    it.each([
+        [67, "CRE"], // Summon: Creature Summoning
+        [111, "ITM"], // Item: Create Magical Weapon
+        [146, "SPL"], // Spell: Cast Spell (at Creature)
+        [174, "WAV"], // Spell Effect: Play Sound Effect
+        [177, "EFF"], // Use EFF File
+        [214, "2DA"], // Spell Effect: Select Spell
+    ])("types the resource of opcode %i as %s", (opcode, type) => {
+        if (!itmFixturePresent()) return;
+        expect(refFor(opcode)).toEqual({ kind: "resource", type });
+    });
+
+    // The same field, two opcodes, two namespaces - which is why this cannot be declared on the spec.
+    it("retypes the same field when the opcode changes", () => {
+        if (!itmFixturePresent()) return;
+        expect(refFor(146)).toEqual({ kind: "resource", type: "SPL" });
+        expect(refFor(122)).toEqual({ kind: "resource", type: "ITM" });
+    });
+
+    // Two IESDP pages name two different targets for opcode 215 ("the BAM/VVC"), so it stays unresolved
+    // rather than picking one; an unknown opcode likewise.
+    it.each([215, 321, 65000])("leaves the resource unresolved for opcode %i", (opcode) => {
+        if (!itmFixturePresent()) return;
+        expect(refFor(opcode)).toBeUndefined();
+    });
+
+    it("re-resolves the resource when the opcode changes", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        expect(ieEffectsModel.dependents(session.model, f.get("opcode")!)).toContain(f.get("resource")!.id);
+    });
+});
+
+/**
+ * The dword the spec calls a TobEx stacking id, and the power byte: 36 opcodes and one respectively give them
+ * a meaning of their own, which the overlay surfaces the same way it relabels the parameters.
+ */
+describe("ieEffectsModel.fieldOverride opcode-named special and power (real ITM display tree)", () => {
+    it("names the stacking-id dword what the opcode reads it as", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 39); // State: Unconsciousness - its page labels this field "Icon"
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("stackingidex")!)?.label).toBe("Icon");
+    });
+
+    it("leaves the static stacking-id label for an opcode that does not read it", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("stackingidex")!)).toBeUndefined();
+    });
+
+    it("names the power byte for the one opcode that gives it a meaning", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 319); // Usability: Item Usability
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("power")!)?.label).toBe("Usability behavior");
+    });
+
+    it("re-resolves both when the opcode changes", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        const deps = ieEffectsModel.dependents(session.model, f.get("opcode")!);
+        expect(deps).toEqual(expect.arrayContaining([f.get("stackingidex")!.id, f.get("power")!.id]));
+    });
+});
+
 describe("ieEffectsModel.fieldOverride dual-purpose dice/level field (real ITM display tree)", () => {
     // The 0x1c/0x20 dword pair is dual-purpose: Maximum/Minimum Level for most opcodes, but Dice Thrown/Dice
     // Sides for opcodes 12/17/18/331/333 and 218 (only when parameter2=1). The static label is the level
@@ -178,6 +276,70 @@ describe("ieEffectsModel.fieldOverride dual-purpose dice/level field (real ITM d
         const ids = [f.get("maxlevel")!.id, f.get("minlevel")!.id];
         expect(ieEffectsModel.dependents(session.model, f.get("opcode")!)).toEqual(expect.arrayContaining(ids));
         expect(ieEffectsModel.dependents(session.model, f.get("parameter2")!)).toEqual(expect.arrayContaining(ids));
+    });
+});
+
+/**
+ * The EFF v2 body carries fields the 48-byte feature block does not - the EE-era parameter3..5, and the parent
+ * resource pair - so these run against a real standalone EFF rather than the ITM fixture.
+ */
+describe("ieEffectsModel.fieldOverride EFF v2 body fields (real EFF display tree)", () => {
+    let counter = 0;
+    /** A fresh session per call, since each test drives the record's fields to its own values. */
+    const openEff = (): { model: Model; f: Map<string, FlatNode> } => {
+        const bytes = new Uint8Array(fs.readFileSync(EFF_FIXTURE));
+        const { sessionId } = openSession(`file:///fixture${counter++}.eff`, bytes);
+        const session = sessionStore.get(sessionId);
+        if (!session) throw new Error("EFF fixture did not open");
+        const f = new Map<string, FlatNode>();
+        for (const n of session.model.nodes) if (n.kind === "field") f.set(normKey(n.name), n);
+        return { model: session.model, f };
+    };
+
+    // The parent resource is the one effect resref that is NOT opcode-dependent: its sibling type field names
+    // it. Across BG:EE, BG2:ToB and the mod corpus, every record holding one also carries a non-zero type.
+    it.each([
+        [1, "SPL"],
+        [2, "ITM"],
+    ])("types the parent resource from parentResourceType %i as %s", (kind, type) => {
+        if (!fs.existsSync(EFF_FIXTURE)) return;
+        const { model, f } = openEff();
+        setRaw(f.get("parentresourcetype")!, kind);
+        expect(ieEffectsModel.fieldOverride(model, f.get("parentresource")!)?.ref).toEqual({
+            kind: "resource",
+            type,
+        });
+    });
+
+    // Type 0 is "None" - there is no parent, so there is nothing to point the resref at.
+    it("leaves the parent resource unresolved when its type says None", () => {
+        if (!fs.existsSync(EFF_FIXTURE)) return;
+        const { model, f } = openEff();
+        setRaw(f.get("parentresourcetype")!, 0);
+        expect(ieEffectsModel.fieldOverride(model, f.get("parentresource")!)?.ref).toBeUndefined();
+    });
+
+    it("re-resolves the parent resource when its type changes", () => {
+        if (!fs.existsSync(EFF_FIXTURE)) return;
+        const { model, f } = openEff();
+        expect(ieEffectsModel.dependents(model, f.get("parentresourcetype")!)).toContain(f.get("parentresource")!.id);
+    });
+
+    // The EE-era slots. IESDP documents these on the engine-variant pages only, which is why they reach the
+    // editor at all now - a canonical-page-only harvest never saw them.
+    it("labels parameter3 and parameter4 for an opcode whose page names them", () => {
+        if (!fs.existsSync(EFF_FIXTURE)) return;
+        const { model, f } = openEff();
+        setRaw(f.get("opcode")!, 272); // Spell: Apply Repeating EFF
+        expect(ieEffectsModel.fieldOverride(model, f.get("parameter3")!)?.label).toBe("Amount_2");
+        expect(ieEffectsModel.fieldOverride(model, f.get("parameter4")!)?.label).toBe("Frequency Multiplier");
+    });
+
+    it("leaves parameter3 unlabelled for an opcode that does not read it", () => {
+        if (!fs.existsSync(EFF_FIXTURE)) return;
+        const { model, f } = openEff();
+        setRaw(f.get("opcode")!, 1); // Stat: Attacks Per Round Modifier - two parameters, no more
+        expect(ieEffectsModel.fieldOverride(model, f.get("parameter3")!)).toBeUndefined();
     });
 });
 
