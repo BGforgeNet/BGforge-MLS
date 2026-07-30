@@ -1,4 +1,4 @@
-import type { BinaryParser } from "./types";
+import type { BinaryParser, GameFamily } from "./types";
 
 /**
  * Registry for binary file parsers.
@@ -6,7 +6,12 @@ import type { BinaryParser } from "./types";
  */
 class ParserRegistry {
     private parsers: Map<string, BinaryParser> = new Map();
-    private extensionMap: Map<string, string> = new Map();
+    /**
+     * Extension -> parser ids, in registration order. A LIST because the two game families legitimately claim
+     * the same extension (`.pro`), so a collision across families is not a mistake and must not drop either
+     * parser; `family` is what tells them apart.
+     */
+    private extensionMap: Map<string, string[]> = new Map();
 
     /**
      * Register a parser
@@ -24,13 +29,23 @@ class ParserRegistry {
         this.parsers.set(parser.id, parser);
         for (const ext of parser.extensions) {
             const extLower = ext.toLowerCase();
-            if (this.extensionMap.has(extLower)) {
-                const existingId = this.extensionMap.get(extLower);
-                console.warn(
-                    `Extension ".${ext}" already registered by "${existingId}", overwriting with "${parser.id}"`,
-                );
+            const ids = this.extensionMap.get(extLower);
+            if (ids === undefined) {
+                this.extensionMap.set(extLower, [parser.id]);
+                continue;
             }
-            this.extensionMap.set(extLower, parser.id);
+            // Two parsers of the SAME family on one extension is the ambiguity this warning has always been
+            // about - nothing can tell them apart - so the later one still wins. Across families both are kept.
+            const clash = ids.findIndex((id) => this.parsers.get(id)?.family === parser.family);
+            if (clash === -1) {
+                ids.push(parser.id);
+                continue;
+            }
+            console.warn(
+                `Extension ".${ext}" already registered by "${ids[clash]}" for the ${parser.family} family, ` +
+                    `overwriting with "${parser.id}"`,
+            );
+            ids[clash] = parser.id;
         }
     }
 
@@ -42,13 +57,17 @@ class ParserRegistry {
     }
 
     /**
-     * Get parser for a file extension
+     * Get parser for a file extension, optionally restricted to one game family.
+     *
+     * Without a family this answers "some parser claims this extension", which is all a caller holding only a
+     * file path can ask - and where the families collide it returns the first registered, which is a guess. A
+     * caller that knows the family passes it and gets a parser that really reads that game's format.
      */
-    getByExtension(extension: string): BinaryParser | undefined {
+    getByExtension(extension: string, family?: GameFamily): BinaryParser | undefined {
         const ext = extension.toLowerCase().replace(/^\./, "");
-        const parserId = this.extensionMap.get(ext);
-        if (parserId) {
-            return this.parsers.get(parserId);
+        for (const id of this.extensionMap.get(ext) ?? []) {
+            const parser = this.parsers.get(id);
+            if (parser && (family === undefined || parser.family === family)) return parser;
         }
         return undefined;
     }

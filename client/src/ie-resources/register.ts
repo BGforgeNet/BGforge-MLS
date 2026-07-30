@@ -91,8 +91,8 @@ export function registerIeResources(context: vscode.ExtensionContext): {
      * Open one resource of a game by resref+ext. Shared by the tree's own open and the binary editor's
      * open-a-referenced-resource affordance, so the binary-vs-default-editor choice lives in one place.
      *
-     * Everything reached from here is an IE resource by construction, so `viewTypeForResource` decides -
-     * see it for why the parser registry cannot be asked and why the view is always named.
+     * Everything reached from here is an IE resource by construction, so `viewTypeForResource` decides - see it
+     * for why the registry is asked about that family specifically, and why the view is always named.
      */
     const openRef = async (gameDir: string, resref: string, ext: string): Promise<void> => {
         let game;

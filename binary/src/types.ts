@@ -197,6 +197,16 @@ export interface ParseOptions {
 }
 
 /**
+ * Which game's formats a parser reads.
+ *
+ * The families collide on extensions - a Fallout `.pro` is a PROTOTYPE, an Infinity Engine `.pro` is a
+ * PROJECTILE - so an extension alone cannot say whether any parser reads a given file, and a lookup by
+ * extension answers about whichever family registered it. A caller that knows which game a resource came from
+ * passes the family and gets a truthful answer instead.
+ */
+export type GameFamily = "fallout" | "infinity-engine";
+
+/**
  * Interface for binary file parsers
  */
 export interface BinaryParser {
@@ -206,6 +216,8 @@ export interface BinaryParser {
     readonly name: string;
     /** File extensions this parser handles (without dot) */
     readonly extensions: string[];
+    /** Which game's formats this parser reads - see `GameFamily` for why the extension is not enough. */
+    readonly family: GameFamily;
     /** Parse binary data and return structured result */
     parse(data: Uint8Array, options?: ParseOptions): ParseResult;
     /** Serialize structured result back to binary data (optional, for editors) */

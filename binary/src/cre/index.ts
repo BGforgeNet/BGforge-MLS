@@ -95,6 +95,7 @@ class CreParser implements BinaryParser {
     readonly id = FORMAT_ID;
     readonly name = FORMAT_NAME;
     readonly extensions = ["cre"];
+    readonly family = "infinity-engine" as const;
 
     private fail(message: string): ParseResult {
         return {

@@ -1,28 +1,30 @@
 /**
  * Which editor a resource opened from an Infinity Engine game goes to.
  *
- * Its own module so it is testable without the vscode-heavy registration around it, and so the `.pro`
- * exclusion below has somewhere to be pinned - it looks like an oversight and is the opposite.
+ * Its own module so it is testable without the vscode-heavy registration around it.
  */
 
+import { parserRegistry } from "@bgforge/binary";
+
 /**
- * The Infinity Engine formats the binary editor can parse. Everything else a game ships opens in the ordinary
- * editor: correct for a format with no parser (BCS, DLG), and REQUIRED for `.pro`.
+ * Whether the binary editor can read this extension AS AN INFINITY ENGINE RECORD - the one question both the
+ * tree's affordance and the view choice below are decided by, so they cannot drift apart.
  *
- * `.pro` is the trap. The parser registry is keyed by extension alone, and the two game families collide on
- * that one: a Fallout `.pro` is a PROTOTYPE, an Infinity Engine `.pro` is a PROJECTILE. Asking the registry
- * "do you handle .pro?" answers yes - about the Fallout reader - so every IE projectile was routed into it and
- * failed with "Unknown object type". Do not add `pro` here, and do not restore a registry lookup in its place,
- * until the registry can say WHICH family a parser serves.
+ * The family is the whole point of asking. `.pro` is a Fallout PROTOTYPE to the parser registry and an Infinity
+ * Engine PROJECTILE here; a family-blind lookup answers yes about the Fallout reader, which is what routed every
+ * IE projectile into it to fail with "Unknown object type". Naming the family also means a new IE parser routes
+ * itself the moment it registers, where the hand-kept extension list this replaced could silently omit it.
  */
-export const IE_BINARY_EDITOR_EXTENSIONS: ReadonlySet<string> = new Set(["itm", "spl", "eff", "cre"]);
+export function isIeBinaryRecord(ext: string): boolean {
+    return parserRegistry.getByExtension(ext, "infinity-engine") !== undefined;
+}
 
 /**
  * The custom-editor view a game resource opens with - always named explicitly, never left to file association.
  * The binary editor is registered for `*.pro` at DEFAULT priority, so a plain `vscode.open` resolves a `.pro`
- * to it regardless of what this decided; naming the built-in `"default"` view is what actually pins the other
- * formats to the ordinary editor.
+ * to it regardless of what this decided; naming the built-in `"default"` view is what actually pins the formats
+ * we do not parse to the ordinary editor.
  */
 export function viewTypeForResource(ext: string): string {
-    return IE_BINARY_EDITOR_EXTENSIONS.has(ext.toLowerCase()) ? "bgforge.binaryEditor" : "default";
+    return isIeBinaryRecord(ext) ? "bgforge.binaryEditor" : "default";
 }

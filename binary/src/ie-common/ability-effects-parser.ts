@@ -185,6 +185,8 @@ export function createIeAbilityEffectsParser<HeaderData extends IeAbilityEffects
         id: formatId,
         name: formatName,
         extensions: [extension],
+        // Intrinsic to this factory rather than per-format config: it builds only Infinity Engine formats.
+        family: "infinity-engine",
         parse,
         serialize,
     };

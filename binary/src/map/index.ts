@@ -25,6 +25,7 @@ class MapParser implements BinaryParser {
     readonly id = "map";
     readonly name = "Fallout MAP";
     readonly extensions = ["map"];
+    readonly family = "fallout" as const;
 
     private fail(message: string): ParseResult {
         return {

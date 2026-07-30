@@ -24,6 +24,7 @@ class EffParser implements BinaryParser {
     readonly id = FORMAT_ID;
     readonly name = FORMAT_NAME;
     readonly extensions = ["eff"];
+    readonly family = "infinity-engine" as const;
 
     private fail(message: string): ParseResult {
         return {

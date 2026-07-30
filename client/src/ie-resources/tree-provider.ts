@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { parserRegistry, resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
+import { resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
+import { isIeBinaryRecord } from "./editor-routing";
 import { type GameSession } from "./session";
 import { resourceUri } from "./uri";
 
@@ -84,7 +85,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
             return [{ kind: "game", label: current.game.identity.label, dir: current.dir }, ...typeNodes];
         }
         if (element.kind === "type") {
-            const openable = parserRegistry.getByExtension(`.${element.ext}`) !== undefined;
+            const openable = isIeBinaryRecord(element.ext);
             return (this.ensureGrouped().get(element.type) ?? [])
                 .map(
                     (r): ResourceNode => ({

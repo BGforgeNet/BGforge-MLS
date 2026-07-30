@@ -1,10 +1,10 @@
 /**
- * Which editor a game resource opens with. Pins one non-obvious exclusion and one non-obvious mechanism, both
- * of which shipped as a live defect ("Unknown object type: 80" when following a projectile reference).
+ * Which editor a game resource opens with. Pins the mechanism that keeps the two game families apart, which
+ * shipped as a live defect ("Unknown object type: 80" when following a projectile reference).
  */
 import { describe, expect, it } from "vitest";
-import { parserRegistry } from "@bgforge/binary";
-import { IE_BINARY_EDITOR_EXTENSIONS, viewTypeForResource } from "../src/ie-resources/editor-routing";
+import { parserRegistry, type BinaryParser } from "@bgforge/binary";
+import { isIeBinaryRecord, viewTypeForResource } from "../src/ie-resources/editor-routing";
 
 describe("viewTypeForResource", () => {
     it("sends the four parsed IE formats to the binary editor", () => {
@@ -20,14 +20,13 @@ describe("viewTypeForResource", () => {
 
     /**
      * The regression this exists for. `.pro` is a Fallout PROTOTYPE to the parser registry and an Infinity
-     * Engine PROJECTILE to this viewer, so routing an IE projectile by extension lands it in the Fallout
-     * reader, which rejects it. The registry cannot tell them apart - it is keyed by extension alone - so the
-     * exclusion is the fix and must not be "corrected" back.
+     * Engine PROJECTILE to this viewer, so a family-blind lookup lands an IE projectile in the Fallout reader,
+     * which rejects it. The exclusion is no longer a hand-kept one: the Fallout parser simply is not an answer
+     * to the question this asks.
      */
     it("keeps IE .pro out of the binary editor, which parses the Fallout format of that name", () => {
-        expect(IE_BINARY_EDITOR_EXTENSIONS.has("pro")).toBe(false);
         expect(viewTypeForResource("pro")).toBe("default");
-        // ...and the trap is live: the registry does claim the extension, which is what made this look safe.
+        // ...and the trap is live: a parser DOES claim the extension, which is what made a bare lookup look safe.
         expect(parserRegistry.getByExtension(".pro")).toBeDefined();
     });
 
@@ -38,14 +37,34 @@ describe("viewTypeForResource", () => {
         expect(viewTypeForResource("dlg")).toBe("default");
     });
 
-    // Every extension the set claims must really have a parser, or the binary editor opens a record it cannot
-    // read. This does NOT catch the reverse - a NEW IE parser added without listing it here - because the
-    // registry has no game-family dimension to ask. That gap closes only when it gains one.
-    it("claims no extension the parser registry cannot read", () => {
-        const unparseable = [...IE_BINARY_EDITOR_EXTENSIONS].filter(
-            (ext) => parserRegistry.getByExtension(`.${ext}`) === undefined,
-        );
+    /**
+     * The blind spot the hand-kept extension list had: a new IE parser was invisible to routing until someone
+     * remembered to list it here, and no test could catch the omission because the registry could not be asked
+     * which game a parser serves. It can now, so registration IS the wiring.
+     */
+    it("routes a newly registered IE format without being told about it", () => {
+        const added: BinaryParser = {
+            id: "routing-test-ie",
+            name: "routing-test-ie",
+            extensions: ["rtie"],
+            family: "infinity-engine",
+            parse: () => ({ fields: [] }) as unknown as ReturnType<BinaryParser["parse"]>,
+        };
+        expect(viewTypeForResource("rtie")).toBe("default");
 
-        expect(unparseable).toEqual([]);
+        parserRegistry.register(added);
+
+        expect(viewTypeForResource("rtie")).toBe("bgforge.binaryEditor");
+    });
+});
+
+// The tree's "this is a record we can read" affordance and the view choice above are one decision, so they
+// cannot disagree about a format - `.pro` used to be openable in the tree while routing sent it elsewhere.
+describe("isIeBinaryRecord", () => {
+    it("agrees with the view choice, including on the Fallout-shared extension", () => {
+        for (const ext of ["itm", "spl", "eff", "cre", "pro", "bcs", "2da"]) {
+            expect(isIeBinaryRecord(ext)).toBe(viewTypeForResource(ext) === "bgforge.binaryEditor");
+        }
+        expect(isIeBinaryRecord("pro")).toBe(false);
     });
 });

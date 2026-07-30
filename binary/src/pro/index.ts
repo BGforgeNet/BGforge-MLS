@@ -337,6 +337,9 @@ class ProParser implements BinaryParser {
     readonly id = "pro";
     readonly name = "Fallout PRO (Prototype)";
     readonly extensions = ["pro"];
+    // The extension an Infinity Engine PROJECTILE shares with this Fallout PROTOTYPE; the family is what keeps
+    // a caller holding one from being handed the other's parser.
+    readonly family = "fallout" as const;
 
     private fail(message: string): ParseResult {
         return {
