@@ -697,12 +697,13 @@ await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
     );
 
     // The other side of that gate: once the user IS searching, an external change must not overwrite the query.
+    // The click here lands on an ALREADY-FOCUSED field, which is the case that needs the first keystroke to
+    // replace the shown label: the click collapses the open edge's selection to a caret, so without that the
+    // query came out as the label with the keystrokes wedged into it.
     await dmg.click();
     await page.keyboard.type("cru");
-    // Whatever the click left in the box plus what was typed - the invariant is that the external change does
-    // not REPLACE it, not that the query equals the keystrokes (a click into an already-focused input places
-    // the caret rather than selecting, so the two differ).
     const query = await dmg.inputValue();
+    check("search: the first keystroke replaces the shown label", query === "cru", `shown=${query}`);
     const dmgField = abilityField(0, "Damage Type");
     const other = dmgField.raw === 2 ? 3 : 2;
     const edited = dispatch({ type: "editField", sessionId, nodeId: dmgField.id, value: other });

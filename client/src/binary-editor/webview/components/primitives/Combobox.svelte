@@ -105,9 +105,10 @@
         if (inputEl && inputEl.value !== selectedLabel) inputEl.value = selectedLabel;
     });
 
-    // On the rising edge of `open` (however it opened - click, chevron, or keyboard), select the shown value so
-    // the first keystroke replaces it and starts a fresh filter instead of appending to the label. Same edge
-    // tells a consumer to load its options, so a large list is fetched on first use rather than on mount.
+    // On the rising edge of `open` (however it opened - click, chevron, or keyboard), select the shown value to
+    // show that typing replaces it; the replacement itself is enforced at the keystroke (see handleKeydown),
+    // since a later click collapses this selection. Same edge tells a consumer to load its options, so a large
+    // list is fetched on first use rather than on mount.
     let wasOpen = false;
     $effect(() => {
         if (open && !wasOpen) {
@@ -235,6 +236,12 @@
                 open = openBeforeShortcut;
             });
             return;
+        }
+        if (pristine && e.key.length === 1) {
+            // A printable key REPLACES the shown label rather than editing it - while pristine the input holds the
+            // selected label, not text the user wrote. Enforced here, not only on the open edge, since a click
+            // into an already-focused field collapses that selection to a caret and typing would append.
+            inputEl?.select();
         }
         if (e.key === "Enter" && allowCustom) {
             const custom = customValue(inputValue);

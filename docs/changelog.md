@@ -54,6 +54,8 @@
   the control kept showing the value you had just undone until you opened and closed it.
 - Pressing an editor shortcut while a binary-editor dropdown has focus - Ctrl+Z, Ctrl+S - no longer pops the
   dropdown list open over the form.
+- Typing in a binary-editor dropdown now starts a fresh search even after clicking into the value shown. The
+  click placed a cursor there, so what you typed was appended to the value and matched nothing.
 
 ## 3.12.0
 
