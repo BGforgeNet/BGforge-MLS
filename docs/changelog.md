@@ -30,7 +30,8 @@
   - The projectile an item or spell ability fires is named from the game's `MISSILE.IDS` and `PROJECTL.IDS`,
     which key it differently - the field is a named dropdown instead of a bare number. Both tables are read,
     since a game often ships one of them only partly filled in. An effect's impact projectile is named too,
-    from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file.
+    from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file. The values that mean "no
+    projectile" - which no game table names - read `None` instead of as a bare number.
 
 ### Syntax highlighting
 

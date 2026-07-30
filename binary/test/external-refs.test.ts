@@ -270,12 +270,17 @@ describe.skipIf(!have2daFixtures)("projectile fields declare both naming tables 
         expect(spl?.enumOpen).toBe(true);
     });
 
-    // NOT on the impact projectile: that field is keyed straight into PROJECTL, so its stored 1 is ARROW, a
-    // real projectile. Copying the ability pair onto it would relabel a projectile as "None".
-    it("leaves the impact projectile unvendored, whose 1 is a real PROJECTL entry", () => {
+    /**
+     * The impact projectile vendors the same idea and NOT the same table. It is keyed straight into PROJECTL, so
+     * only its 0 sits below the key space (PROJECTL starts at 1 on both installs) - its stored 1 is ARROW, a real
+     * projectile. Reusing the ability pair here would relabel that projectile "None", which is why these are two
+     * declarations rather than one shared constant.
+     */
+    it("vendors only the 0 on the impact projectile, whose 1 is a real PROJECTL entry", () => {
         const eff = parseFields(effParser, EFF_FIXTURE).find((f) => f.name === "Projectile");
 
-        expect(eff?.enumOptions).toBeUndefined();
+        expect(eff?.enumOptions).toEqual({ "0": "None" });
+        expect(eff?.enumOpen).toBe(true);
     });
 });
 

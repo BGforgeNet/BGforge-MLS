@@ -169,6 +169,9 @@ const TABLE_SOURCES: Record<string, string> = {
     // table names. Sourced from the tables' own absence of those keys (measured on BG:EE and BG2:ToB) plus
     // IESDP's missile.ids note that the game reads the stored value as the PROJECTL index plus one.
     "ie-common.AbilityProjectileNone": "IESDP projectl.ids/missile.ids - values below both tables' key space",
+    // Same idea on the directly-keyed impact field, so only its 0 qualifies - projectl.ids's key 1 is a real
+    // projectile there. A separate table for that reason, not a duplicate of the one above.
+    "ie-common.ImpactProjectileNone": "IESDP projectl.ids - the value below the table's key space",
 };
 
 // --- B. sfall cross-check ------------------------------------------------------------------------

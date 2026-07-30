@@ -18,6 +18,7 @@ import {
     EffectTiming,
     EFFECT_RESOURCE_REF,
     IMPACT_PROJECTILE_REF,
+    ImpactProjectileNone,
     SCHOOL_REF,
     Schools,
     SECTYPE_REF,
@@ -53,8 +54,14 @@ export const effBodySpecAnnotated = {
     school: { ...effBodySpec.school, enum: Schools, enumOpen: true, ref: SCHOOL_REF },
     sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true, ref: SECTYPE_REF },
     // The impact projectile, keyed directly by PROJECTL.IDS - NOT the ability fields' missile-keyed lookup,
-    // despite IESDP listing all three offsets on one page. See IMPACT_PROJECTILE_REF.
-    projectile: { ...effBodySpec.projectile, ref: IMPACT_PROJECTILE_REF },
+    // despite IESDP listing all three offsets on one page. See IMPACT_PROJECTILE_REF. The vendored table holds
+    // only the unset 0, which no install can name, and stays open so the table never poses as the domain.
+    projectile: {
+        ...effBodySpec.projectile,
+        enum: ImpactProjectileNone,
+        enumOpen: true,
+        ref: IMPACT_PROJECTILE_REF,
+    },
     // All four resrefs defer rather than declaring a type - see EFFECT_RESOURCE_REF. `parentResource` is the
     // one with a nearby discriminator (`parentResourceType`), but it holds 0/None on most records, so it
     // cannot type the field either.

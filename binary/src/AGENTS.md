@@ -126,7 +126,10 @@ that carries both.
   (see the "do NOT vendor a name table" rule above) but vendors `AbilityProjectileNone`, the two values below
   both tables' key space - so they cannot go stale against an install or a mod, where a copied projectile list
   would. Keep such a table to exactly those keys; the moment it holds a value a table could name, it is the
-  closed list the rule forbids.
+  closed list the rule forbids. Which keys qualify follows from the DECLARATION, not from the concept, so two
+  fields naming the same thing can need different tables and must not share one: the EFF impact projectile is
+  keyed directly where the ability fields are offset by one, so `ImpactProjectileNone` holds only `0` - its `1`
+  is a real projectile that the ability pair would mislabel.
 - **A vendored table that mirrors an IDS carries the game's identifiers VERBATIM - never humanized.** `HALF_ELF`,
   `MAGESCHOOL_ABJURER`, and `ASSASIN` with the engine's own misspelling. Two reasons: the same field must read
   identically with and without a game (a humanized vendored table beside raw IDS entries mixes two vocabularies

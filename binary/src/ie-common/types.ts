@@ -151,7 +151,7 @@ export const SECTYPE_REF = { kind: "2da", tables: ["MSECTYPE"] } as const;
  *
  * The projectiles themselves are NOT vendored, as with CRE `animationId`: that value space is per-install and
  * mod-extended, so a vendored copy would pose as a closed list. `AbilityProjectileNone` is the exception that
- * proves it - see there.
+ * proves it - only the values no table can reach - see there.
  */
 export const PROJECTILE_REF = {
     kind: "ids",
@@ -200,6 +200,21 @@ export const IMPACT_PROJECTILE_REF = {
     tables: ["PROJECTL"],
     symbolResource: { table: "PROJECTL", type: "PRO" },
 } as const;
+
+/**
+ * The one impact-projectile value that names no projectile. Same reasoning as `AbilityProjectileNone` - vendor
+ * only what is below the table's key space - applied to a field with ONE directly-keyed table.
+ *
+ * PROJECTL.IDS starts at key 1 on both a real BG:EE (272 entries) and BG2:ToB (171), so a stored 0 names nothing
+ * even with a game open, and that is every one of the 1053 EFF records both installs ship.
+ *
+ * Deliberately NOT `AbilityProjectileNone`, which the near-identical shape invites. The ability fields store
+ * PROJECTL's key plus one, so their 1 is the table's absent key 0 and unset; this field is keyed directly, so
+ * its 1 is PROJECTL's ARROW. Merging the two tables would relabel a real projectile as "None" here.
+ */
+export const ImpactProjectileNone: Readonly<Record<number, string>> = {
+    0: "None",
+};
 
 /**
  * Primary type / magic school (`mschool.2da`; `school.2da` in IWD). Shared by the SPL header `school`, the ITM
