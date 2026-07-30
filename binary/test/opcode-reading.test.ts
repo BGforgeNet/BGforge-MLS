@@ -52,10 +52,17 @@ describe("opcodeReading", () => {
 });
 
 describe("engineForFlavour", () => {
-    // The Baldur's Gate EEs share one engine and one set of readings. IWD:EE rides along because IESDP has no
-    // column for it, not because that equivalence was established - see the note on ENGINE_BY_FLAVOUR.
+    // The opcode set belongs to the ENGINE, so every flavour running the EE engine shares one set of readings -
+    // IWD:EE included, whose Icewind Dale content does not make it a classic Icewind Dale engine.
     it.each(["bgee", "sod", "bg2ee", "iwdee", "eet"])("maps the EE flavour %s to the EE engine", (flavour) => {
         expect(engineForFlavour(flavour)).toBe("bgee");
+    });
+
+    // The consequence worth pinning: on IWD:EE a number the classic engines read differently takes the EE
+    // reading, which is the whole point of keying on the engine rather than on the content a game ships.
+    it("gives IWD:EE the EE reading, not the classic Icewind Dale one", () => {
+        expect(opcodeReading(238, engineForFlavour("iwdee"))?.name).toBe("Death: Disintegrate");
+        expect(opcodeReading(238, engineForFlavour("how"))?.name).toBe("Stat: Save vs. all");
     });
 
     // PSTEE runs the same engine as the other EEs and reads all but a handful of opcodes identically. It keeps

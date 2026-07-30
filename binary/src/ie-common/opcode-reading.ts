@@ -18,11 +18,11 @@ import { Opcodes } from "./opcodes";
  * (347 Move View to Target, 352 Change Background, the Non-cumulative family), which `bgee` marks Unused.
  * IESDP gives it a column for exactly those; the classic engines diverge far more (iwd2 on 131 opcodes).
  *
- * IWD:EE has NO column of its own in IESDP, so there is no reading to select and it takes the fallback. It is
- * mapped explicitly all the same, to record that the absence was looked at rather than overlooked - the entry
- * is a no-op, `bgee` and no-engine resolving identically for every opcode. Which reading it SHOULD get is a
- * real open question: the EE engine argues `bgee`, the Icewind Dale content it ships argues `iwd1`, and the
- * ~111 opcodes those two disagree about are precisely the Icewind Dale-specific ones a mod would touch.
+ * IWD:EE reads its opcodes as `bgee` because the opcode set is a property of the engine, and it runs the EE
+ * engine - not the classic Icewind Dale one whose content it ships. The distinction is load-bearing for the
+ * ~111 opcodes where `iwd1` and `bgee` disagree, which are the Icewind Dale-specific ones a mod would touch.
+ * IESDP documents no column of its own for it, so the entry happens to resolve the same as no engine at all;
+ * it is stated rather than left implicit because the mapping is a decision, not an absence.
  */
 const ENGINE_BY_FLAVOUR: Readonly<Record<IeFlavour, string>> = {
     bg1: "bg1",
