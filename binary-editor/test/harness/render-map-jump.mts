@@ -131,8 +131,10 @@ if (sidHex !== null) {
                 const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
                     (f) => f.querySelector(".label")?.textContent?.trim() === "SID",
                 );
-                const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
-                return input !== null && input.value.length > 0;
+                // Absent field -> false, never a throw: the detail pane is empty while the jump lands, which is
+                // the state this polls through, and a throwing predicate rejects the wait (swallowed below).
+                const input = field?.querySelector<HTMLInputElement>(".hex-input input");
+                return (input?.value.length ?? 0) > 0;
             },
             undefined,
             { timeout: 5000 },

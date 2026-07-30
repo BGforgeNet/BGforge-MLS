@@ -53,9 +53,11 @@ failure.
 
 Three shared helpers back the drivers:
 
-- `csp-gate.ts` - `installCspGate(page, label)` registers the Content-Security-Policy violation listeners
-  and returns an `assertNoViolations()` that fails the run if any violation was captured. Every driver
-  uses it so the CSP gate stays identical across formats.
+- `csp-gate.ts` - `installCspGate(page, label)` registers the page-health listeners and returns an
+  `assertNoViolations()` that fails the run on any Content-Security-Policy violation or uncaught page error.
+  Every driver uses it so the gate stays identical across formats. An uncaught error fails rather than logs
+  because it is usually a driver's own `waitForFunction` predicate throwing, which silently turns that wait
+  into a no-op while the run still reports every assertion green.
 - `clip-gate.ts` - `collectClipViolations(page, context)` scans the current view for clipped value inputs
   (`scrollWidth > clientWidth`) and unsized dropdowns (a `.bb-combobox` with no `dd-*` width class), and
   `reportClipViolations(all, label)` logs and fails the run on any. Used by `render-clip-sweep.mts`; reusable

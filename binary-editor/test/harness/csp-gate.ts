@@ -1,5 +1,5 @@
 /**
- * Shared CSP-violation gate for all headless harness drivers.
+ * Shared page-health gate for all headless harness drivers: CSP violations and uncaught page errors.
  *
  * Install once per Playwright page after the browser is launched. The returned
  * assertNoViolations() function must be called before browser.close(); it logs
@@ -28,6 +28,7 @@ function isCspViolation(text: string): boolean {
  */
 export function installCspGate(page: Page, label: string): () => void {
     const violations: string[] = [];
+    const pageErrors: string[] = [];
 
     page.on("console", (msg) => {
         const text = msg.text();
@@ -35,17 +36,21 @@ export function installCspGate(page: Page, label: string): () => void {
     });
     page.on("pageerror", (e) => {
         if (isCspViolation(e.message)) violations.push("[pageerror] " + e.message);
-        else console.log("[pageerror]", e.message);
+        // An uncaught error fails the run rather than logging it: the usual source is a driver's own
+        // waitForFunction predicate throwing, which the `.catch(() => undefined)` convention swallows - the wait
+        // silently never happens and every assertion after it still reports green. Two stack frames, since the
+        // message alone does not say whether the throw came from the app or from a predicate.
+        else pageErrors.push([e.message, ...(e.stack ?? "").split("\n").slice(1, 3)].join("\n    "));
     });
 
     return function assertNoViolations(): void {
-        if (violations.length === 0) {
-            console.log("CSP: no violations");
+        if (violations.length === 0 && pageErrors.length === 0) {
+            console.log("PAGE GATE: no CSP violations, no page errors");
             return;
         }
-        console.log("\nCSP VIOLATION(S) detected:");
-        for (const m of violations) console.log("  " + m);
-        console.log("\n" + label + " CSP FAILED");
+        for (const m of violations) console.log("  CSP VIOLATION: " + m);
+        for (const m of pageErrors) console.log("  PAGE ERROR: " + m);
+        console.log("\n" + label + " PAGE GATE FAILED");
         process.exit(1);
     };
 }
