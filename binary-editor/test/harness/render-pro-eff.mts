@@ -22,7 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { WebviewToHost, HostToWebview } from "../../../client/src/binary-editor/webview/messages";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -84,7 +84,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-const assertNoCsp = installCspGate(page, "PRO+EFF");
+const assertPageClean = installPageGate(page, "PRO+EFF");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -235,7 +235,7 @@ await page.screenshot({ path: shotPath("shot-pro-range-error.png") });
 //
 // We create a second page so the first page's exposeFunction binding does not interfere.
 const page2 = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-const assertNoCsp2 = installCspGate(page2, "EFF");
+const assertPageClean2 = installPageGate(page2, "EFF");
 currentOpenResult = effOpen.result;
 
 await page2.exposeFunction("__hostUp", async (m: WebviewToHost) => {
@@ -291,6 +291,6 @@ console.log("\n=== PRO+EFF harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL PRO+EFF ASSERTIONS PASS" : `\n${failed} PRO+EFF ASSERTIONS FAILED`);
-assertNoCsp();
-assertNoCsp2();
+assertPageClean();
+assertPageClean2();
 if (failed > 0) process.exit(1);

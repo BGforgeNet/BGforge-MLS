@@ -53,8 +53,8 @@ failure.
 
 Three shared helpers back the drivers:
 
-- `csp-gate.ts` - `installCspGate(page, label)` registers the page-health listeners and returns an
-  `assertNoViolations()` that fails the run on any Content-Security-Policy violation or uncaught page error.
+- `page-gate.ts` - `installPageGate(page, label)` registers the page-health listeners and returns an
+  `assertPageClean()` that fails the run on any Content-Security-Policy violation or uncaught page error.
   Every driver uses it so the gate stays identical across formats. An uncaught error fails rather than logs
   because it is usually a driver's own `waitForFunction` predicate throwing, which silently turns that wait
   into a no-op while the run still reports every assertion green.

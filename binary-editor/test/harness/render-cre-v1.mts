@@ -16,7 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { creParser } from "../../../binary/src/cre/index";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../../../binary/src/cre/canonical-reader";
@@ -92,7 +92,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-const assertNoCsp = installCspGate(page, "CRE-v1");
+const assertPageClean = installPageGate(page, "CRE-v1");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -153,5 +153,5 @@ console.log("\n=== CRE v1 effect harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL CRE-v1 ASSERTIONS PASS" : `\n${failed} CRE-v1 ASSERTIONS FAILED`);
-assertNoCsp();
+assertPageClean();
 if (failed > 0) process.exit(1);

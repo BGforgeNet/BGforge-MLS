@@ -17,7 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -49,7 +49,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
-const assertNoCsp = installCspGate(page, "PRO-subtypes");
+const assertPageClean = installPageGate(page, "PRO-subtypes");
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
@@ -108,5 +108,5 @@ console.log("\n=== PRO subtype layout harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL PRO SUBTYPE ASSERTIONS PASS" : `\n${failed} PRO SUBTYPE ASSERTIONS FAILED`);
-assertNoCsp();
+assertPageClean();
 if (failed > 0) process.exit(1);

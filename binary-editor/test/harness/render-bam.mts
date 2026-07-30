@@ -8,7 +8,7 @@ import { chromium, type Page } from "playwright";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/image-editor/webview/messages";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { buildBamFixture, buildDirectionalBamFixture, buildMultiSequenceBamFixture } from "./image-fixtures";
 
@@ -28,7 +28,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 const browser = await chromium.launch({ headless: true });
 const page: Page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-const assertNoCsp = installCspGate(page, "BAM");
+const assertPageClean = installPageGate(page, "BAM");
 
 await page.exposeFunction("__hostUpImage", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -200,5 +200,5 @@ console.log("\n=== BAM render harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL BAM ASSERTIONS PASS" : `\n${failed} BAM ASSERTIONS FAILED`);
-assertNoCsp();
+assertPageClean();
 if (failed > 0) process.exit(1);

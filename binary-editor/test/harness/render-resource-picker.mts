@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { withGameContext } from "../../../client/src/binary-editor/game-rows";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -106,7 +106,7 @@ async function pickers(page: Page): Promise<Record<string, { combobox: boolean; 
 // ---- Without a game: the same fields must stay plain text boxes ----
 const browser = await chromium.launch({ headless: true });
 const page: Page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-const assertNoCsp = installCspGate(page, "resource picker");
+const assertPageClean = installPageGate(page, "resource picker");
 
 let gameOpen = false;
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
@@ -266,5 +266,5 @@ console.log("\n=== resource picker harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL RESOURCE PICKER ASSERTIONS PASS" : `\n${failed} RESOURCE PICKER ASSERTIONS FAILED`);
-assertNoCsp();
+assertPageClean();
 if (failed > 0) process.exit(1);

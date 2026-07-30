@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -45,7 +45,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
-const assertNoCsp = installCspGate(page, "MAP-banner");
+const assertPageClean = installPageGate(page, "MAP-banner");
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
@@ -82,5 +82,5 @@ console.log("\n=== MAP banner harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL MAP BANNER ASSERTIONS PASS" : `\n${failed} MAP BANNER ASSERTIONS FAILED`);
-assertNoCsp();
+assertPageClean();
 if (failed > 0) process.exit(1);

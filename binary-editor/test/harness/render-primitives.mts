@@ -27,7 +27,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { installCspGate } from "./csp-gate";
+import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { THEME_VARS } from "./theme-vars";
 
@@ -79,7 +79,7 @@ console.log("wrote showcase.html (" + (html.length / 1024).toFixed(0) + " kb)");
 // ---- Drive it under Chromium, capturing console + page errors ----
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 700, height: 600 } });
-const assertNoCsp = installCspGate(page, "PRIMITIVES");
+const assertPageClean = installPageGate(page, "PRIMITIVES");
 
 await page.goto("file://" + htmlPath);
 
@@ -483,6 +483,6 @@ if (!tabsVArrowWorks) {
     console.log("\nTABS-V ARROW FAILED: expected 'abilities', got '" + tabsVAfterArrow + "'");
     process.exit(1);
 }
-assertNoCsp();
+assertPageClean();
 console.log("\nPRIMITIVES CSP OK");
 console.log("screenshot: " + shotPath("shot-primitives.png"));

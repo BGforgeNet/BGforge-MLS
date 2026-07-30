@@ -1,14 +1,13 @@
 /**
  * Shared page-health gate for all headless harness drivers: CSP violations and uncaught page errors.
  *
- * Install once per Playwright page after the browser is launched. The returned
- * assertNoViolations() function must be called before browser.close(); it logs
- * each captured message and exits non-zero if any were captured.
+ * Install once per Playwright page after the browser is launched. The returned assertPageClean() function
+ * must be called before browser.close(); it logs each captured message and exits non-zero if any were captured.
  *
  * Usage:
- *   const assertNoViolations = installCspGate(page, "MAP");
+ *   const assertPageClean = installPageGate(page, "MAP");
  *   // ... drive the page ...
- *   assertNoViolations();  // at the end of the run
+ *   assertPageClean();  // at the end of the run
  *   await browser.close();
  */
 import type { Page } from "playwright";
@@ -19,14 +18,13 @@ function isCspViolation(text: string): boolean {
 }
 
 /**
- * Registers CSP-violation listeners on `page` and returns a function that checks
- * whether any violations were captured. The check function logs and exits non-zero
- * on a violation; it is a no-op when the run is clean.
+ * Registers the CSP-violation and page-error listeners on `page` and returns a function that checks whether
+ * either fired. The check function logs and exits non-zero on a hit; it is a no-op when the run is clean.
  *
  * @param page - The Playwright page to instrument.
  * @param label - Short driver label used in log messages (e.g. "MAP", "ITM").
  */
-export function installCspGate(page: Page, label: string): () => void {
+export function installPageGate(page: Page, label: string): () => void {
     const violations: string[] = [];
     const pageErrors: string[] = [];
 
@@ -43,7 +41,7 @@ export function installCspGate(page: Page, label: string): () => void {
         else pageErrors.push([e.message, ...(e.stack ?? "").split("\n").slice(1, 3)].join("\n    "));
     });
 
-    return function assertNoViolations(): void {
+    return function assertPageClean(): void {
         if (violations.length === 0 && pageErrors.length === 0) {
             console.log("PAGE GATE: no CSP violations, no page errors");
             return;
