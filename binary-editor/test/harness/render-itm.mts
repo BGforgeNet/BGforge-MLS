@@ -99,6 +99,16 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
     return [];
 }
 
+/** One field of the nth ability, by display name - the node id an edit needs, plus its current raw value. */
+function abilityField(abilityIndex: number, name: string): { id: string; raw: number | string | undefined } {
+    const abilities = dispatch({ type: "getChildren", sessionId, nodeId: abilitiesNodeId, start: 0, end: 10 });
+    const ability = abilities.type === "children" ? abilities.rows[abilityIndex] : undefined;
+    if (!ability) return { id: "", raw: undefined };
+    const fields = dispatch({ type: "getChildren", sessionId, nodeId: ability.id, start: 0, end: 100 });
+    const row = fields.type === "children" ? fields.rows.find((r) => r.name === name) : undefined;
+    return { id: row?.id ?? "", raw: row?.rawValue };
+}
+
 function sectionKids(nodeId: string): { total: number; names: string[] } {
     const r = dispatch({ type: "getChildren", sessionId, nodeId, start: 0, end: 400 });
     return r.type === "children" ? { total: r.total, names: r.rows.map((row) => row.name) } : { total: 0, names: [] };
@@ -130,11 +140,15 @@ async function clickTab(label: string): Promise<void> {
         .first()
         .waitFor({ timeout: 5000 });
 }
-// Undo a structure op and refresh the webview (the host pushes the op onto the undo stack; "invalidated"
-// makes the tree re-fetch), so each op test runs from the same baseline.
+// Undo and refresh the webview exactly as the extension host does: the worker's undo returns a full changeSet
+// and the host posts THAT (client/src/binary-editor/provider.ts refreshDocumentPanels), never the bare
+// "invalidated" this used to send. Both bump the webview's version and so both re-fetch, which is why the
+// weaker message passed every assertion here - it was a fidelity gap, not the cause of anything.
 async function doUndo(): Promise<void> {
-    dispatch({ type: "undo", sessionId });
-    await page.evaluate((rr) => window.postMessage(rr, "*"), { type: "invalidated" } as HostToWebview);
+    const r = dispatch({ type: "undo", sessionId });
+    const message: HostToWebview =
+        r.type === "structure" ? { type: "changeSet", changeSet: r.result.changeSet } : { type: "invalidated" };
+    await page.evaluate((rr) => window.postMessage(rr, "*"), message);
     // The invalidation triggers an async version-bump -> re-fetch round trip inside the webview with no single
     // DOM-observable completion signal generic across every call site (dispatch-level checks, tree re-renders,
     // and RowActions targets all key off it differently) - bounded settle, not a condition poll.
@@ -636,6 +650,76 @@ check(
     JSON.stringify(ddWidths),
 );
 await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
+
+// ============================================================
+// A dropdown reflects a value changed from OUTSIDE it (undo/redo, a cascade) - REGRESSION
+// ============================================================
+// Both halves need the input FOCUSED, which is where it is left after a pick - i.e. exactly the state a user is
+// in when they undo the edit they just made. Driven through the real keyboard and the real host reply, because
+// neither half exists at the data layer: the changeSet always carried the right value, and only the control
+// disagreed with it.
+{
+    const dmg = page.locator('.eff-tree .detail .bb-combobox-input[aria-label="Damage Type"]').first();
+    const before = await dmg.inputValue();
+    await dmg.click();
+    await page.locator(".bb-combobox-item").first().waitFor({ timeout: 5000 });
+    const pick = (await page.locator(".bb-combobox-item").allInnerTexts()).find((t) => t.trim() !== before)!;
+    await page.locator(".bb-combobox-item", { hasText: pick.trim() }).first().click();
+    await page.waitForFunction(
+        (b) => {
+            const el = document.querySelector('.eff-tree .detail .bb-combobox-input[aria-label="Damage Type"]');
+            return el instanceof HTMLInputElement && el.value !== b;
+        },
+        before,
+        { timeout: 5000 },
+    );
+
+    // An editor shortcut typed into the focused input must not open the list. bits-ui opens for any keydown
+    // outside its own interaction set, and that set holds only the bare modifier - so the `z` of Ctrl+Z arrives
+    // as a character. A dropdown popping open over the form on every undo is the visible half of that.
+    await page.keyboard.press("Control+z");
+    check(
+        "undo: an editor shortcut in a focused dropdown does not open the list",
+        (await dmg.getAttribute("aria-expanded")) === "false",
+        `aria-expanded=${await dmg.getAttribute("aria-expanded")}`,
+    );
+
+    // With the list OPEN and untyped, the control is still idle, so an externally-changed value must reach it.
+    // Gating the display sync on "closed" instead of "not searching" left the pre-undo label on screen until
+    // the list was dismissed.
+    await dmg.click();
+    await page.locator(".bb-combobox-item").first().waitFor({ timeout: 5000 });
+    await doUndo();
+    check(
+        "undo: an open, untyped dropdown shows the restored value",
+        (await dmg.inputValue()) === before,
+        `shown=${await dmg.inputValue()} expected=${before}`,
+    );
+
+    // The other side of that gate: once the user IS searching, an external change must not overwrite the query.
+    await dmg.click();
+    await page.keyboard.type("cru");
+    // Whatever the click left in the box plus what was typed - the invariant is that the external change does
+    // not REPLACE it, not that the query equals the keystrokes (a click into an already-focused input places
+    // the caret rather than selecting, so the two differ).
+    const query = await dmg.inputValue();
+    const dmgField = abilityField(0, "Damage Type");
+    const other = dmgField.raw === 2 ? 3 : 2;
+    const edited = dispatch({ type: "editField", sessionId, nodeId: dmgField.id, value: other });
+    if (edited.type === "edited") {
+        await page.evaluate((rr) => window.postMessage(rr, "*"), {
+            type: "changeSet",
+            changeSet: edited.result.changeSet,
+        } as HostToWebview);
+    }
+    check(
+        "undo: a search in progress survives an external change",
+        (await dmg.inputValue()) === query && query.includes("cru"),
+        `shown=${await dmg.inputValue()} query=${query}`,
+    );
+    await page.keyboard.press("Escape");
+    await doUndo(); // drop that edit so the structure-op section below starts from the same baseline
+}
 
 // ============================================================
 // Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)

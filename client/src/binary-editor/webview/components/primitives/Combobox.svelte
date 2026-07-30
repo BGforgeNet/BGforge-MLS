@@ -91,15 +91,18 @@
     let viewportEl = $state<HTMLElement | null>(null);
 
     $effect(() => {
-        // Re-runs on EVERY open/close transition and on value change: snap the input back to the selected label
-        // and reset to pristine. Opening shows the value (the old code blanked it here, which is what made the
-        // field look "cleared" on focus); closing discards a half-typed search.
-        if (!open) {
-            inputValue = selectedLabel;
-            pristine = true;
-            // Force the DOM directly: the controlled prop is not reliably re-applied after a user edit (above).
-            if (inputEl) inputEl.value = selectedLabel;
-        }
+        // The idle input shows the SELECTED label; only a search in progress may replace it. So the gate is
+        // `pristine`, NOT `!open`: an open-but-untyped list is still idle, and gating on `!open` skipped the
+        // sync AND stopped tracking `selectedLabel` while open - so a value changed from outside (undo/redo, a
+        // cascade) kept the pre-change label on screen until the list closed. Closing still discards a
+        // half-typed search and returns to pristine, which is the same branch.
+        if (open && !pristine) return;
+        inputValue = selectedLabel;
+        pristine = true;
+        // Force the DOM directly: the controlled prop is not reliably re-applied after a user edit (above).
+        // Only on a real difference - assigning `value` resets the caret and selection even when the text is
+        // unchanged, which would fight the select-on-open below.
+        if (inputEl && inputEl.value !== selectedLabel) inputEl.value = selectedLabel;
     });
 
     // On the rising edge of `open` (however it opened - click, chevron, or keyboard), select the shown value so
@@ -221,6 +224,18 @@
     }
 
     function handleKeydown(e: KeyboardEvent): void {
+        if (e.ctrlKey || e.metaKey || e.altKey) {
+            // An editor shortcut (Ctrl+Z, Ctrl+S, ...), not typing - but bits-ui opens its list for any keydown
+            // outside its own interaction set, and that set holds only the BARE modifier, so the `z` of a Ctrl+Z
+            // reaches it as a character and pops the list open over the form. Its handler runs immediately after
+            // this one (mergeProps composes ours first), so put `open` back once it has run; a microtask lands
+            // before paint. preventDefault would also stop it, at the cost of the input's own Ctrl+C/V/A/X.
+            const openBeforeShortcut = open;
+            queueMicrotask(() => {
+                open = openBeforeShortcut;
+            });
+            return;
+        }
         if (e.key === "Enter" && allowCustom) {
             const custom = customValue(inputValue);
             if (custom !== undefined) {
