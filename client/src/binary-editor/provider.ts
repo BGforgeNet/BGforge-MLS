@@ -7,6 +7,7 @@ import {
     isGameDocument,
     type NamingTableResolver,
     type ResourceListResolver,
+    type EngineResolver,
     type ResourceTypeResolver,
     type SlotLabelResolver,
     type StrrefResolver,
@@ -24,6 +25,7 @@ export interface GameResolvers {
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
     resourceList: ResourceListResolver;
+    engine: EngineResolver;
 }
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
@@ -107,7 +109,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // A hot-exit restore hands back the backup written by backupCustomDocument, whose bytes carry the unsaved
         // edits; reading the file instead would silently discard them while the editor still shows as dirty.
         const backup = openContext.backupId ? vscode.Uri.parse(openContext.backupId) : undefined;
-        const document = await BinaryEditorDocument.open(uri, workerScript, backup);
+        // The engine the record's game runs, so the worker's overlay reads its opcodes the way that game
+        // does. Resolved here rather than in the worker, which is handed no game.
+        const document = await BinaryEditorDocument.open(uri, workerScript, backup, this.gameLookups.engine(uri));
         document.onDidChange((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh((changeSet) => this.refreshDocumentPanels(document, changeSet));
         return document;

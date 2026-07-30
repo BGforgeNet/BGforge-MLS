@@ -3,7 +3,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
-import { ieEffectsModel, ieEffectsFieldOverride, ieEffectsDependents } from "../src/relationship/ie-effects";
+import {
+    createIeEffectsModel,
+    ieEffectsModel,
+    ieEffectsFieldOverride,
+    ieEffectsDependents,
+} from "../src/relationship/ie-effects";
 import { getRelationshipModel } from "../src/relationship/registry";
 import { normKey } from "../src/relationship/model-helpers";
 import { openSession, sessionStore } from "../src/session";
@@ -196,6 +201,79 @@ describe("ieEffectsModel.fieldOverride opcode-typed resource (real ITM display t
         const session = openItmSession();
         const f = firstEffectFields(session.model);
         expect(ieEffectsModel.dependents(session.model, f.get("opcode")!)).toContain(f.get("resource")!.id);
+    });
+});
+
+/**
+ * An opcode number means whatever the game's engine says it means. The tables hold one entry per reading and
+ * the session carries the engine of the game the record came from, so a record opened out of an Icewind Dale
+ * install reads its opcodes as Icewind Dale does - and one opened off disk falls back to BG(2)EE.
+ */
+describe("ieEffectsModel.fieldOverride engine-specific readings (real ITM display tree)", () => {
+    // The overlay is per session and captures its engine, so a test builds the one its game would get.
+    const openAt = (engine?: string) => {
+        const session = openItmSession();
+        return { rel: createIeEffectsModel(engine), model: session.model, f: firstEffectFields(session.model) };
+    };
+
+    // 238 is Death: Disintegrate on BG2/EE and Stat: Save vs. all on Icewind Dale, which reads parameter1 as a
+    // plain statistic modifier rather than as an entry in an IDS file.
+    it("reads opcode 238's parameters as its own engine does", () => {
+        if (!itmFixturePresent()) return;
+        const ee = openAt("bgee");
+        setRaw(ee.f.get("opcode")!, 238);
+        setRaw(ee.f.get("parameter2")!, 4);
+        expect(ee.rel.fieldOverride(ee.model, ee.f.get("parameter1")!)).toMatchObject({
+            label: "IDS Entry",
+            ref: { kind: "ids", tables: ["RACE"] },
+        });
+
+        const iwd = openAt("iwd2");
+        setRaw(iwd.f.get("opcode")!, 238);
+        setRaw(iwd.f.get("parameter2")!, 4);
+        const p1 = iwd.rel.fieldOverride(iwd.model, iwd.f.get("parameter1")!);
+        expect(p1?.label).toBe("Statistic Modifier");
+        expect(p1?.ref).toBeUndefined();
+    });
+
+    // The resource target follows the reading too: 283 applies an EFF on the EE and is a text opcode on IWD.
+    it("types the resource per engine, and not at all where that engine has no target", () => {
+        if (!itmFixturePresent()) return;
+        const ee = openAt("bgee");
+        setRaw(ee.f.get("opcode")!, 177);
+        expect(ee.rel.fieldOverride(ee.model, ee.f.get("resource")!)?.ref).toEqual({
+            kind: "resource",
+            type: "EFF",
+        });
+
+        const iwd = openAt("iwd2");
+        setRaw(iwd.f.get("opcode")!, 248); // Set Melee Effect on BG2/EE; "Empty (will crash)" on IWD2
+        expect(iwd.rel.fieldOverride(iwd.model, iwd.f.get("resource")!)).toBeUndefined();
+    });
+
+    // No game means no engine to ask, and the preferred reading is what the spec's own enum already shows - so
+    // the opcode field is left alone rather than pushed a redundant copy of the same names.
+    it("leaves the opcode names alone with no engine, and swaps them where the engine disagrees", () => {
+        if (!itmFixturePresent()) return;
+        const none = openAt(undefined);
+        setRaw(none.f.get("opcode")!, 238);
+        expect(none.rel.fieldOverride(none.model, none.f.get("opcode")!)?.enumOptions).toBeUndefined();
+
+        const iwd = openAt("iwd2");
+        setRaw(iwd.f.get("opcode")!, 238);
+        const ov = iwd.rel.fieldOverride(iwd.model, iwd.f.get("opcode")!);
+        expect(ov?.enumOptions?.[238]).toBe("Stat: Save vs. all");
+        // Still the whole list, since the control is a dropdown over every opcode, not just the current one -
+        // including the numbers this engine reads exactly as the preferred reading does.
+        expect(ov?.enumOptions?.[177]).toBe("Use EFF File");
+    });
+
+    // An engine that reads the opcode identically must not pay for a swap it does not need.
+    it("emits no opcode enum for an engine that agrees with the preferred reading", () => {
+        if (!itmFixturePresent()) return;
+        const iwd = openAt("iwd2");
+        setRaw(iwd.f.get("opcode")!, 177); // Use EFF File - IESDP documents one reading, shared by every engine
+        expect(iwd.rel.fieldOverride(iwd.model, iwd.f.get("opcode")!)?.enumOptions).toBeUndefined();
     });
 });
 
@@ -419,8 +497,8 @@ describe("IE relationship model parity across formats", () => {
         for (const fmt of ["itm", "spl", "eff"]) {
             const model = getRelationshipModel(fmt);
             expect(model, fmt).toBeDefined();
-            expect(model!.fieldOverride).toBe(ieEffectsFieldOverride);
-            expect(model!.dependents).toBe(ieEffectsDependents);
+            expect(model!.fieldOverride).toBe(ieEffectsFieldOverride(undefined));
+            expect(model!.dependents).toBe(ieEffectsDependents(undefined));
         }
     });
     it("cre composes a named-item slot overlay + dependents over the shared IE behavior", () => {

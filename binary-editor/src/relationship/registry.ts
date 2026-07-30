@@ -22,21 +22,23 @@ interface ExtraOverlay {
  *  overlay is tried first (CRE weapon dropdowns). */
 function ieModel(
     formatId: string,
+    engine: string | undefined,
     extra?: ExtraOverlay,
     extraConstraints?: (model: Model) => Diagnostic[],
 ): RelationshipModel {
     const rels = formatAdapterRegistry.get(formatId)?.crossRefRelationships ?? [];
     const hasIndexDropdown = rels.some((r) => r.kind === "index" && r.targetLabelField !== undefined);
+    const effectsOverride = ieEffectsFieldOverride(engine);
+    const effectsDependents = ieEffectsDependents(engine);
     const baseOverride = hasIndexDropdown
-        ? (model: Model, node: FlatNode) =>
-              crossRefFieldOverride(model, node, rels) ?? ieEffectsFieldOverride(model, node)
-        : ieEffectsFieldOverride;
+        ? (model: Model, node: FlatNode) => crossRefFieldOverride(model, node, rels) ?? effectsOverride(model, node)
+        : effectsOverride;
     const baseDependents = hasIndexDropdown
         ? (model: Model, node: FlatNode) => [
               ...crossRefDependents(model, node, rels),
-              ...ieEffectsDependents(model, node),
+              ...effectsDependents(model, node),
           ]
-        : ieEffectsDependents;
+        : effectsDependents;
     return {
         formatId,
         fieldOverride: extra
@@ -66,21 +68,37 @@ const mapModel: RelationshipModel = {
     cascade: () => [],
 };
 
-const registry = new Map<string, RelationshipModel>([
-    ["map", mapModel],
-    ["itm", ieModel("itm")],
-    ["spl", ieModel("spl")],
-    ["eff", ieModel("eff")],
-    [
-        "cre",
-        ieModel(
-            "cre",
-            { fieldOverride: creWeaponFieldOverride, dependents: creWeaponDependents },
-            spellbookCapacityDiagnostics,
-        ),
-    ],
-]);
+function buildModelFor(formatId: string, engine: string | undefined): RelationshipModel | undefined {
+    switch (formatId) {
+        case "map":
+            return mapModel;
+        case "itm":
+        case "spl":
+        case "eff":
+            return ieModel(formatId, engine);
+        case "cre":
+            return ieModel(
+                formatId,
+                engine,
+                { fieldOverride: creWeaponFieldOverride, dependents: creWeaponDependents },
+                spellbookCapacityDiagnostics,
+            );
+        default:
+            return undefined;
+    }
+}
 
-export function getRelationshipModel(formatId: string): RelationshipModel | undefined {
-    return registry.get(formatId);
+// One model per (format, engine). Memoized rather than rebuilt per session, since a model is a closure over
+// static tables - and a session holds its instance for its whole life, which is what keeps the engine from
+// being lost when a structure op or JSON load rebuilds the parse Model.
+const registry = new Map<string, RelationshipModel | undefined>();
+
+/**
+ * The overlay for a format, reading opcodes the way `engine` does. An omitted engine - a record opened off
+ * disk rather than out of a game - takes the preferred (BG(2)EE) reading.
+ */
+export function getRelationshipModel(formatId: string, engine?: string): RelationshipModel | undefined {
+    const key = `${formatId}|${engine ?? ""}`;
+    if (!registry.has(key)) registry.set(key, buildModelFor(formatId, engine));
+    return registry.get(key);
 }

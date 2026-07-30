@@ -159,15 +159,22 @@ that carries both.
   and transcribed per page (opcode 72 is 0-based where 55/100/175 are 2-based; 178's slot 2 is OBJECT, not
   EA), so never copy one opcode's list to another. Whatever computes such a ref must also list the sibling in
   `dependents`, or the dropdown goes stale the moment the sibling is edited.
-- **An opcode number has no engine-neutral meaning; the generated tables describe ONE reading, BG(2)EE.** Each
+- **An opcode number has no engine-neutral meaning, so the table holds one entry per engine reading.** Each
   engine makes a number mean what it likes - 238 is "Stat: Save vs. all" on Icewind Dale and "Death:
   Disintegrate" on BG2/EE - and IESDP writes one page per reading, each carrying the availability matrix that
   says which engines it covers. The unsuffixed `opNNN.html` filename is NOT authoritative (`op025.html` covers
-  BG2 alone), so `ENGINE_PREFERENCE` in the generator picks by that matrix instead. Anything transcribed by
-  hand therefore records the reading it came from (`ResourceDeclaration.reading`), guarded by a test, because a
-  type read off another engine's page describes a different effect. Where the chosen reading gives a field no
-  target - or names two at once ("the BAM/VVC") - it stays bare and is listed in `OPCODE_RESOURCE_UNRESOLVED`
-  with the reason: resolving against the wrong namespace is worse than not resolving.
+  BG2 alone), so the generator groups pages by `opname` and orders the readings by `ENGINE_PREFERENCE`.
+  Resolve with `opcodeReading(opcode, engine)`, never by indexing `OpcodeReadings` - it owns the engine match
+  AND the fallback to the preferred reading (BG(2)EE), so the whole editor cannot disagree with itself about
+  which reading a record gets. The engine is captured by the SESSION's relationship overlay at open, from the
+  open game's flavour - deliberately not stored on the `Model`, which every structure op, undo and JSON load
+  rebuilds and would therefore drop it from. A file opened off disk has no engine and takes the fallback.
+- **Anything hand-transcribed records the reading it came from** (`ResourceDeclaration.reading`, an override's
+  `reading`), because a type or parameter table read off another engine's page describes a different effect.
+  The generator THROWS when a curated entry omits it for a multi-reading opcode, rather than attaching it to
+  whichever sorted first. Where a reading gives a field no target - or names two at once ("the BAM/VVC") - it
+  stays bare and is listed in `OPCODE_RESOURCE_UNRESOLVED` with the reason: resolving against the wrong
+  namespace is worse than not resolving.
 - **A field whose documentation names an IDS/2DA table must declare it or record why not.** Unlike a resref,
   an IDS-backed field is a plain number with no shape to spot, so `binary/test/ids-table-declarations.test.ts`
   sweeps the specs for a `*.IDS`/`*.2DA` mention in the description and requires a declaration or an entry in

@@ -63,7 +63,12 @@ export function closeSession(id: SessionId): void {
     sessionStore.delete(id);
 }
 
-export function openSession(uri: string, bytes: Uint8Array, options: ParseOptions = {}): OpenResult {
+/**
+ * Opens a parse session. `engine` is the IE engine key of the game the record came from, where the host knew
+ * one: an effect opcode means what its engine says it means, and the bytes cannot tell you which. Omitted for a
+ * file opened off disk, which falls back to the preferred reading.
+ */
+export function openSession(uri: string, bytes: Uint8Array, options: ParseOptions = {}, engine?: string): OpenResult {
     const ext = extOf(uri);
     const parser = parserRegistry.getByExtension(ext);
     if (!parser) {
@@ -92,7 +97,7 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         };
     }
     const model = buildModel(parseResult);
-    const relationshipModel = getRelationshipModel(parser.id);
+    const relationshipModel = getRelationshipModel(parser.id, engine);
     const session: EditorSession = {
         id: nextId(),
         uri,

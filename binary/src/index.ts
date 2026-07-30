@@ -107,9 +107,18 @@ export {
     type FileDerivedDiagnostics,
 } from "./parse-options";
 
-// IE opcode relationship data (param labels, enum tables, engine availability)
-export { OpcodeRelationships } from "./ie-common/opcode-relationships";
+// IE opcode relationship data (param labels, enum tables, engine availability), one entry per engine reading
+// of each number. Reach for `opcodeReading` rather than indexing `OpcodeReadings` directly - it owns the
+// engine match and the fallback, so a consumer cannot pick a different reading than the rest of the editor.
+export { OpcodeReadings } from "./ie-common/opcode-relationships";
 export type { OpcodeRelationship } from "./ie-common/opcode-relationships";
+export {
+    opcodeReading,
+    opcodeNames,
+    opcodeNameDiffers,
+    engineForFlavour,
+    DEFAULT_ENGINE,
+} from "./ie-common/opcode-reading";
 
 // Infinity Engine KEY/BIF archives: read an installed game's resource namespace (chitin.key + its BIFs).
 // Read-only and streamed - a large BIF is never bulk-loaded. Entry point: openGame(dir).

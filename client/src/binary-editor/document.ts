@@ -35,6 +35,9 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
     readonly bridge: WorkerBridge;
     sessionId: string;
     openResult: OpenResult;
+    /** Engine of the game this record came from; re-sent on reload so a reopened session reads its own game's
+     *  opcodes. Undefined for a file opened off disk. */
+    private readonly engine?: string;
 
     private readonly worker: Worker;
     private readonly _onDidChange = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryEditorDocument>>();
@@ -45,12 +48,19 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
      *  can refresh panels exactly as it does after an edit (fields, tab counts, diagnostics, tree). */
     readonly onDidRefresh = this._onDidRefresh.event;
 
-    private constructor(uri: vscode.Uri, worker: Worker, bridge: WorkerBridge, openResult: OpenResult) {
+    private constructor(
+        uri: vscode.Uri,
+        worker: Worker,
+        bridge: WorkerBridge,
+        openResult: OpenResult,
+        engine?: string,
+    ) {
         this.uri = uri;
         this.worker = worker;
         this.bridge = bridge;
         this.openResult = openResult;
         this.sessionId = openResult.sessionId;
+        this.engine = engine;
     }
 
     /**
@@ -59,7 +69,12 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
      * restore parses the backup while still saving to the original file. An unreadable backup falls back to the
      * saved file (see `readDocumentBytes`).
      */
-    static async open(uri: vscode.Uri, workerScript: string, backup?: vscode.Uri): Promise<BinaryEditorDocument> {
+    static async open(
+        uri: vscode.Uri,
+        workerScript: string,
+        backup?: vscode.Uri,
+        engine?: string,
+    ): Promise<BinaryEditorDocument> {
         const bytes = await readDocumentBytes(uri, backup);
         const worker = new Worker(workerScript);
         const bridge = new WorkerBridge(workerPort(worker));
@@ -67,6 +82,7 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
             type: "open",
             uri: uri.toString(),
             bytes: new Uint8Array(bytes),
+            engine,
         });
         if (response.type !== "opened" || !response.result.sessionId) {
             const message =
@@ -79,7 +95,7 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
             await worker.terminate();
             throw new Error(message);
         }
-        return new BinaryEditorDocument(uri, worker, bridge, response.result);
+        return new BinaryEditorDocument(uri, worker, bridge, response.result, engine);
     }
 
     /** Replace the cached OpenResult (after loadJson or a disk revert that changed the model/layout). */
@@ -94,6 +110,7 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
             type: "open",
             uri: this.uri.toString(),
             bytes: new Uint8Array(bytes),
+            engine: this.engine,
         });
         if (opened.type !== "opened" || !opened.result.sessionId) {
             throw new Error(opened.type === "error" ? opened.message : "Failed to reopen binary file");

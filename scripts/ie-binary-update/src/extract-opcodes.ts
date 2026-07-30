@@ -14,11 +14,6 @@ import path from "node:path";
 import { OpcodeRelationshipOverrides } from "./opcode-relationships.overrides.ts";
 import { OpcodeResourceOverrides } from "./opcode-resources.overrides.ts";
 
-interface OpcodeFrontmatter {
-    readonly n: number;
-    readonly opname: string;
-}
-
 /** One opcode-dependent field's display data: what to call it, and the values it is known to take. */
 export interface OpcodeSlot {
     label?: string;
@@ -44,6 +39,15 @@ export const OPCODE_SLOT_KEYS = [
 export type OpcodeSlotKey = (typeof OPCODE_SLOT_KEYS)[number];
 
 export type OpcodeRelationship = Partial<Record<OpcodeSlotKey, OpcodeSlot>> & {
+    /** IESDP `opname` - what this engine calls the opcode. */
+    name?: string;
+    /** The engines this reading applies to, unioned from the pages behind it. */
+    engines?: readonly string[];
+    /**
+     * Curated entries only: the reading this was transcribed from, as its IESDP `opname`. Required whenever
+     * the opcode has more than one reading - see `readingFor`. Never emitted; `name` carries it downstream.
+     */
+    reading?: string;
     availability?: Readonly<Record<string, boolean>>;
     /**
      * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's stored
@@ -130,46 +134,16 @@ function pagesForOpcode(opcodesDir: string): ReadonlyMap<number, readonly Opcode
     return out;
 }
 
-function parseFrontmatter(text: string): OpcodeFrontmatter | undefined {
-    if (!text.startsWith("---")) return undefined;
-    const end = text.indexOf("\n---", 3);
-    if (end === -1) return undefined;
-    const block = text.slice(4, end);
-
-    let n: number | undefined;
-    let opname: string | undefined;
-    for (const line of block.split("\n")) {
-        const colonAt = line.indexOf(":");
-        if (colonAt === -1) continue;
-        const key = line.slice(0, colonAt).trim();
-        const rest = line.slice(colonAt + 1).trim();
-        if (key === "n") {
-            const parsed = Number.parseInt(rest, 10);
-            if (Number.isFinite(parsed)) n = parsed;
-        } else if (key === "opname") {
-            // opname may be quoted ("..." or '...') or bare. Strip surrounding
-            // quotes; we do NOT interpret YAML escapes (none in real IESDP).
-            const trimmed = rest.replace(/^['"]/, "").replace(/['"]$/, "");
-            opname = trimmed;
-        }
-    }
-    if (n === undefined || opname === undefined) return undefined;
-    return { n, opname };
-}
-
-/** Returns a sorted-by-number map of opcode -> name. */
+/**
+ * Opcode -> the name of its preferred reading. This is the flat table the effect spec uses as its `enum`, so
+ * a record parsed with no game to ask still shows a name; a session that knows its engine re-picks from
+ * `OpcodeReadings` instead.
+ */
 export function extractOpcodes(opcodesDir: string): ReadonlyMap<number, string> {
     const out = new Map<number, string>();
-    if (!fs.existsSync(opcodesDir)) {
-        throw new Error(`Opcodes directory not found: ${opcodesDir}`);
-    }
-    for (const [n, pages] of pagesForOpcode(opcodesDir)) {
-        for (const page of pages) {
-            const fm = parseFrontmatter(fs.readFileSync(page.file, "utf8"));
-            if (!fm) continue;
-            out.set(n, fm.opname);
-            break;
-        }
+    for (const [n, readings] of extractOpcodeReadings(opcodesDir)) {
+        const name = readings[0]?.name;
+        if (name !== undefined && name !== "") out.set(n, name);
     }
     return new Map([...out].sort((a, b) => a[0] - b[0]));
 }
@@ -222,9 +196,17 @@ function parseRelationshipFrontmatter(text: string):
     return { n, opname, labels, availability };
 }
 
-/** Returns a sorted-by-number map of opcode number -> relationship data. */
-export function extractOpcodeRelationships(opcodesDir: string): ReadonlyMap<number, OpcodeRelationship> {
-    const out = new Map<number, OpcodeRelationship>();
+/**
+ * Every reading of every opcode, each opcode's readings ordered by `ENGINE_PREFERENCE` so index 0 is the one
+ * an editor with no game to ask should use.
+ *
+ * A reading is a set of pages sharing an `opname`: the same effect described once per engine, or per engine
+ * group. They are grouped rather than deduplicated because the engines that share a name still differ in what
+ * their pages document - the EE-era `param3`-`param5` and `special` keys appear on only some of them - so the
+ * slots are merged across a reading's own pages and never across two readings.
+ */
+export function extractOpcodeReadings(opcodesDir: string): ReadonlyMap<number, readonly OpcodeRelationship[]> {
+    const out = new Map<number, readonly OpcodeRelationship[]>();
     if (!fs.existsSync(opcodesDir)) {
         throw new Error(`Opcodes directory not found: ${opcodesDir}`);
     }
@@ -232,68 +214,118 @@ export function extractOpcodeRelationships(opcodesDir: string): ReadonlyMap<numb
         const parsed = pages
             .map((p) => parseRelationshipFrontmatter(fs.readFileSync(p.file, "utf8")))
             .filter((fm) => fm !== undefined);
-        const primary = parsed[0];
-        if (primary === undefined) continue;
-        // Only a page describing the SAME reading may fill the primary's gaps. Where a number was reused, the
-        // other engine's page describes a different effect and its fields mean nothing here.
-        const sameReading = parsed.filter((fm) => fm.opname === primary.opname);
+        if (parsed.length === 0) continue;
 
-        const rel: OpcodeRelationship = {};
-        // Per SLOT, not per page: the primary page wins any slot it defines, but the EE-era slots (param3-5,
-        // special) are often written on only one of an engine's pages. Filling a gap from a page describing the
-        // same reading can only add a label, never contradict one.
-        for (const key of OPCODE_SLOT_KEYS) {
-            const label = sameReading.map((fm) => fm.labels[key]).find((l) => l !== undefined);
-            if (label !== undefined) rel[key] = { label };
+        // Insertion order is the page order, which `pagesForOpcode` already sorted by engine preference - so
+        // the readings come out preference-ordered too, and index 0 is the BG(2)EE one wherever it exists.
+        const byName = new Map<string, typeof parsed>();
+        for (const fm of parsed) {
+            const name = fm.opname ?? "";
+            byName.set(name, [...(byName.get(name) ?? []), fm]);
         }
-        // Availability is the union over EVERY page, the readings not chosen included: the question it answers
-        // is "which engines have this opcode at all", which is what the editor shows beside the opcode field.
+
+        const readings: OpcodeRelationship[] = [];
+        for (const [name, group] of byName) {
+            const rel: OpcodeRelationship = { name };
+            for (const key of OPCODE_SLOT_KEYS) {
+                const label = group.map((fm) => fm.labels[key]).find((l) => l !== undefined);
+                if (label !== undefined) rel[key] = { label };
+            }
+            // Which engines read the opcode THIS way - the union over the reading's own pages. Distinct from
+            // `availability` below, which answers the broader "which engines have this opcode at all".
+            const engines = ENGINE_KEYS.filter((e) => group.some((fm) => fm.availability?.[e] === true));
+            if (engines.length > 0) rel.engines = engines;
+            readings.push(rel);
+        }
+
+        // Availability spans every reading: it is displayed beside the opcode field to say where the number
+        // exists, which is a different question from which engines read it the way the chosen reading does.
         const availability = parsed.reduce<Record<string, boolean>>((acc, fm) => {
             for (const [engine, on] of Object.entries(fm.availability ?? {})) {
                 acc[engine] = (acc[engine] ?? false) || on;
             }
             return acc;
         }, {});
-        if (Object.keys(availability).length > 0) rel.availability = availability;
-        out.set(n, rel);
+        if (Object.keys(availability).length > 0) {
+            for (const rel of readings) rel.availability = availability;
+        }
+        out.set(n, readings);
     }
     return new Map([...out].sort((a, b) => a[0] - b[0]));
 }
 
 /**
- * Merges harvested opcode relationship data with curated overrides. For each opcode
- * the override wins on a per-field basis: if the override supplies an `enum`, it
- * replaces any harvested enum; if the override supplies a `label`, it replaces the
- * harvested label. Fields absent from the override fall back to the harvested value.
+ * Picks the reading a curated entry was transcribed for, by its `reading` name.
+ *
+ * Where an opcode has one reading the name may be omitted. Where it has several, omitting it is an ERROR
+ * rather than a default: a hand-read parameter table or resref type belongs to the engine whose page it was
+ * read from, and quietly attaching it to whichever reading sorted first is how the wrong namespace gets
+ * published (opcode 41's sparkle BAM is PSTEE's alone; the BG(2)EE reading of that number uses no resource).
  */
-export function buildMergedRelationships(opcodesDir: string): ReadonlyMap<number, OpcodeRelationship> {
-    const harvested = extractOpcodeRelationships(opcodesDir);
-    const out = new Map<number, OpcodeRelationship>(harvested);
+function readingFor(
+    readings: readonly OpcodeRelationship[],
+    opcode: number,
+    reading: string | undefined,
+    what: string,
+): OpcodeRelationship {
+    if (reading === undefined) {
+        if (readings.length > 1) {
+            const names = readings.map((r) => JSON.stringify(r.name)).join(", ");
+            throw new Error(
+                `Opcode ${opcode} has ${readings.length} readings (${names}); the ${what} override must name ` +
+                    `the one it was transcribed from.`,
+            );
+        }
+        return readings[0]!;
+    }
+    const match = readings.find((r) => r.name === reading);
+    if (match === undefined) {
+        const names = readings.map((r) => JSON.stringify(r.name)).join(", ");
+        throw new Error(
+            `Opcode ${opcode}'s ${what} override names reading ${JSON.stringify(reading)}, which IESDP no ` +
+                `longer documents; it has ${names}.`,
+        );
+    }
+    return match;
+}
+
+/**
+ * Merges the harvested readings with the curated overrides. Within the reading each override names, it wins
+ * per field: an override `enum` replaces any harvested one, an override `label` replaces the harvested label,
+ * and a field the override omits keeps its harvested value.
+ */
+export function buildMergedReadings(opcodesDir: string): ReadonlyMap<number, readonly OpcodeRelationship[]> {
+    const out = new Map<number, readonly OpcodeRelationship[]>();
+    for (const [n, readings] of extractOpcodeReadings(opcodesDir)) {
+        out.set(
+            n,
+            readings.map((r) => ({ ...r })),
+        );
+    }
 
     for (const [n, override] of Object.entries(OpcodeRelationshipOverrides)) {
         const num = Number(n);
-        const base = out.get(num) ?? {};
-        const merged: OpcodeRelationship = { ...base };
+        const readings = out.get(num);
+        if (readings === undefined) continue;
+        const target = readingFor(readings, num, override.reading, "parameter");
 
         for (const key of OPCODE_SLOT_KEYS) {
             const slot = override[key];
             if (slot === undefined) continue;
-            merged[key] = {
-                label: slot.label ?? base[key]?.label,
+            target[key] = {
+                label: slot.label ?? target[key]?.label,
                 ...(slot.enum !== undefined ? { enum: slot.enum } : {}),
             };
         }
-        if (override.availability !== undefined) merged.availability = override.availability;
-        if (override.idsFileByParam2 !== undefined) merged.idsFileByParam2 = override.idsFileByParam2;
-
-        out.set(num, merged);
+        if (override.idsFileByParam2 !== undefined) target.idsFileByParam2 = override.idsFileByParam2;
     }
 
-    // Resref target types come from their own curated file, which carries the reading each was transcribed
-    // from alongside the type. Only the type reaches the generated table; the reading is what the test guards.
+    // Resref target types come from their own curated file, which states the reading alongside the type.
     for (const [n, decl] of Object.entries(OpcodeResourceOverrides)) {
         const num = Number(n);
-        out.set(num, { ...out.get(num), resourceType: decl.type });
+        const readings = out.get(num);
+        if (readings === undefined) continue;
+        readingFor(readings, num, decl.reading, "resource").resourceType = decl.type;
     }
 
     return new Map([...out].sort((a, b) => a[0] - b[0]));
@@ -310,7 +342,7 @@ function emitEnumLiteral(e: Readonly<Record<number, string>> | undefined): strin
 
 /** Emit the generated `opcode-relationships.ts` source for the IE-common module. */
 export function emitOpcodeRelationshipsModule(
-    rels: ReadonlyMap<number, OpcodeRelationship>,
+    readings: ReadonlyMap<number, readonly OpcodeRelationship[]>,
     sourceRel: string,
 ): string {
     const lines: string[] = [
@@ -322,7 +354,16 @@ export function emitOpcodeRelationshipsModule(
         "    enum?: Readonly<Record<number, string>>;",
         "}",
         "",
+        "/**",
+        " * One engine's reading of an opcode number. There is no engine-neutral definition: 238 is",
+        ' * "Stat: Save vs. all" on Icewind Dale and "Death: Disintegrate" on BG2/EE. Resolve with',
+        " * `opcodeReading(opcode, engine)` rather than indexing, so the fallback stays in one place.",
+        " */",
         "export interface OpcodeRelationship {",
+        "    /** What this engine calls the opcode. */",
+        "    name?: string;",
+        "    /** The engines that read the opcode this way. */",
+        "    engines?: readonly string[];",
         "    param1?: OpcodeSlot;",
         "    param2?: OpcodeSlot;",
         "    /** EE-era extra parameters; present only for the minority of opcodes that read them. */",
@@ -333,6 +374,7 @@ export function emitOpcodeRelationshipsModule(
         "    special?: OpcodeSlot;",
         "    savingthrow?: OpcodeSlot;",
         "    power?: OpcodeSlot;",
+        "    /** Which engines have the opcode AT ALL - spans every reading, unlike `engines` above. */",
         "    availability?: Readonly<Record<string, boolean>>;",
         "    /**",
         "     * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's",
@@ -342,43 +384,55 @@ export function emitOpcodeRelationshipsModule(
         "     */",
         "    idsFileByParam2?: Readonly<Record<number, readonly string[]>>;",
         "    /**",
-        "     * What the effect's `resource` resref points at, as a resource-type extension. Declared only where",
-        "     * every IESDP page for the opcode agrees; where engines disagree about the target the field stays",
-        "     * unresolved rather than resolving against the wrong type.",
+        "     * What the effect's `resource` resref points at, as a resource-type extension. Per reading, since",
+        "     * two engines sharing a number can point it at different namespaces; absent where the reading's",
+        "     * pages name no target, or name two at once.",
         "     */",
         "    resourceType?: string;",
         "}",
         "",
-        "export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> = {",
+        "/** Readings per opcode, most-preferred engine first. See `opcodeReading` for the selection rule. */",
+        "export const OpcodeReadings: Readonly<Record<number, readonly OpcodeRelationship[]>> = {",
     ];
-    for (const [n, rel] of rels) {
-        const parts: string[] = [];
-        for (const key of OPCODE_SLOT_KEYS) {
-            const slot = rel[key];
-            if (slot === undefined) continue;
-            const label = slot.label !== undefined ? `label: ${JSON.stringify(slot.label)}` : undefined;
-            const enumPart = emitEnumLiteral(slot.enum);
-            parts.push(`${key}: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
-        }
-        if (rel.availability !== undefined) {
-            const entries = Object.entries(rel.availability)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(", ");
-            parts.push(`availability: { ${entries} }`);
-        }
-        if (rel.idsFileByParam2 !== undefined) {
-            const entries = Object.entries(rel.idsFileByParam2)
-                .map(([k, tables]) => `${k}: [${tables.map((t) => JSON.stringify(t)).join(", ")}]`)
-                .join(", ");
-            parts.push(`idsFileByParam2: { ${entries} }`);
-        }
-        if (rel.resourceType !== undefined) {
-            parts.push(`resourceType: ${JSON.stringify(rel.resourceType)}`);
-        }
-        lines.push(`    ${n}: { ${parts.join(", ")} },`);
+    for (const [n, rels] of readings) {
+        lines.push(`    ${n}: [`);
+        for (const rel of rels) lines.push(`        { ${emitReading(rel)} },`);
+        lines.push("    ],");
     }
     lines.push("};", "");
     return lines.join("\n");
+}
+
+/** Serializes one reading's populated fields to an inline object-literal body. */
+function emitReading(rel: OpcodeRelationship): string {
+    const parts: string[] = [];
+    if (rel.name !== undefined) parts.push(`name: ${JSON.stringify(rel.name)}`);
+    if (rel.engines !== undefined) {
+        parts.push(`engines: [${rel.engines.map((e) => JSON.stringify(e)).join(", ")}]`);
+    }
+    for (const key of OPCODE_SLOT_KEYS) {
+        const slot = rel[key];
+        if (slot === undefined) continue;
+        const label = slot.label !== undefined ? `label: ${JSON.stringify(slot.label)}` : undefined;
+        const enumPart = emitEnumLiteral(slot.enum);
+        parts.push(`${key}: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
+    }
+    if (rel.availability !== undefined) {
+        const entries = Object.entries(rel.availability)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+        parts.push(`availability: { ${entries} }`);
+    }
+    if (rel.idsFileByParam2 !== undefined) {
+        const entries = Object.entries(rel.idsFileByParam2)
+            .map(([k, tables]) => `${k}: [${tables.map((t) => JSON.stringify(t)).join(", ")}]`)
+            .join(", ");
+        parts.push(`idsFileByParam2: { ${entries} }`);
+    }
+    if (rel.resourceType !== undefined) {
+        parts.push(`resourceType: ${JSON.stringify(rel.resourceType)}`);
+    }
+    return parts.join(", ");
 }
 
 /** Emit the generated `opcodes.ts` source for the IE-common module. */

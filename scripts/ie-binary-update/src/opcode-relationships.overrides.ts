@@ -64,6 +64,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op025: State: Poison
     // Verified from op025.html body text: "Known values for 'Type' are".
     25: {
+        reading: "State: Poison",
         param2: {
             enum: {
                 0: "1 HP per second (nonzero amount)",
@@ -77,6 +78,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op039: State: Unconsciousness
     // Verified from op039.html body <ul> block.
     39: {
+        reading: "State: Unconsciousness",
         param2: {
             enum: {
                 0: "Yes",
@@ -94,6 +96,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op055: Death: Kill Creature Type
     // Verified from op055.html body text: "Known values for IDS File are".
     55: {
+        reading: "Death: Kill Creature Type",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -109,6 +112,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op072: Creature Type: Change
     // Verified from op072.html body text. This one is 0-BASED, unlike every other opcode here.
     72: {
+        reading: "IDS: Set IDS State",
         idsFileByParam2: {
             0: ["EA"],
             1: ["GENERAL"],
@@ -124,6 +128,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // Verified from op100.html body text: "Known values for IDS File are". Same mapping as op055; IESDP notes
     // its slot 9 (KIT) is broken in at least engine 2.5, which is engine behaviour, not a naming difference.
     100: {
+        reading: "Protection: from Creature Type",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -153,6 +158,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op178: Spell Effect: THAC0 vs. Creature Type Modifier
     // Verified from op178.html body text. Slot 2 is OBJECT here, not EA, and the list stops at GENDER.
     178: {
+        reading: "Spell Effect: THAC0 vs. Creature Type Modifier",
         idsFileByParam2: {
             2: ["OBJECT"],
             3: ["GENERAL"],
@@ -168,9 +174,10 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // across BG:EE and BG2:ToB than all five entries above together. Each is still transcribed from its own
     // page: they happen to agree today, which is not a reason to share one list.
 
-    // op109: State: Hold
+    // op109: State: Paralyze - the BG(2)EE reading; the classic engines call this number State: Hold.
     // Verified from op109-bgee.html body text: "Known values for 'IDS File' are".
     109: {
+        reading: "State: Paralyze",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -202,6 +209,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op179: Spell Effect: Damage vs. Creature Type Modifier
     // Verified from op179-bgee.html.
     179: {
+        reading: "Spell Effect: Damage vs. Creature Type Modifier",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -217,6 +225,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op185: State: Hold (II)
     // Verified from op185-bgee.html.
     185: {
+        reading: "State: Hold (II)",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -232,6 +241,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op219: Stat: AC vs. Creature Type Modifier
     // Verified from op219-bg2.html.
     219: {
+        reading: "Stat: AC vs. Creature Type Modifier",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -248,6 +258,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // Verified from op238-bg2.html. Icewind Dale reads this number as "Stat: Save vs. all" instead, which is
     // why the entry is safe only because the tables describe the BG(2)EE reading - see ENGINE_PREFERENCE.
     238: {
+        reading: "Death: Disintegrate",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],
@@ -263,6 +274,7 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
     // op283: Use EFF File (Cursed)
     // Verified from op283-bgee.html. Same engine-split caveat as op238: Icewind Dale reads 283 as Float Text.
     283: {
+        reading: "Use EFF File (Cursed)",
         idsFileByParam2: {
             2: ["EA"],
             3: ["GENERAL"],

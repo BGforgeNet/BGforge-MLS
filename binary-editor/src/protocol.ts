@@ -13,7 +13,13 @@ import { projectEffectTree, type EffectTreeView } from "./effect-tree";
 import type { EditResult, NodeId, OpenResult, Row, SessionId, StructureResult } from "./types";
 
 export type Request =
-    | { type: "open"; uri: string; bytes: Uint8Array; options?: ParseOptions }
+    | {
+          type: "open";
+          uri: string;
+          bytes: Uint8Array;
+          options?: ParseOptions;
+          /** IE engine key of the game this record came from, where the host knows one. */ engine?: string;
+      }
     | { type: "close"; sessionId: SessionId }
     | { type: "getWindow"; sessionId: SessionId; start: number; end: number }
     | { type: "expand"; sessionId: SessionId; nodeId: string; expanded: boolean }
@@ -70,7 +76,7 @@ export function dispatch(req: Request): Response {
                 // A parse/extension failure is carried inside the OpenResult (empty sessionId plus
                 // errors[] and any known format/formatName), not raised as an {type:"error"} response,
                 // so the editor shell can show the failure with format context instead of a bare message.
-                return { type: "opened", result: openSession(req.uri, req.bytes, req.options) };
+                return { type: "opened", result: openSession(req.uri, req.bytes, req.options, req.engine) };
             case "close":
                 closeSession(req.sessionId);
                 return { type: "closed" };

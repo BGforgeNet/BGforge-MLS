@@ -1,4 +1,5 @@
 import type * as vscode from "vscode";
+import { engineForFlavour } from "@bgforge/binary";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 
 /**
@@ -60,6 +61,14 @@ export type ResourceTypeResolver = (
  * consumer offers this list without confining the field to it.
  */
 export type ResourceListResolver = (uri: vscode.Uri, ext: string) => readonly string[] | undefined;
+
+/**
+ * The IE engine key of the game a record was opened from, or undefined outside one.
+ *
+ * Needed because an effect opcode number has no engine-neutral meaning - 238 is Disintegrate on BG2/EE and a
+ * saving-throw modifier on Icewind Dale - and the record's own bytes cannot say which game they belong to.
+ */
+export type EngineResolver = (uri: vscode.Uri) => string | undefined;
 
 /** The format-wide "no string" sentinel; every strref field uses it, so a lookup is never attempted for it. */
 const NO_STRING = -1;
@@ -229,5 +238,23 @@ export function createResourceListResolver(session: TlkSource): ResourceListReso
             // Unreadable game - the field stays a plain text box, exactly as outside a game.
         }
         return resrefs;
+    };
+}
+
+/**
+ * Maps the open game's detected flavour to the engine whose opcode readings apply. Returns undefined for a
+ * record not from a game, which leaves the editor on its preferred reading.
+ */
+export function createEngineResolver(session: TlkSource): EngineResolver {
+    return (uri) => {
+        const gameDir = gameDirOf(uri);
+        if (gameDir === undefined) return;
+        let engine: string | undefined;
+        try {
+            engine = engineForFlavour(session.ensureOpen(gameDir).identity.flavour);
+        } catch {
+            // Unreadable game - no engine, exactly as outside a game.
+        }
+        return engine;
     };
 }
