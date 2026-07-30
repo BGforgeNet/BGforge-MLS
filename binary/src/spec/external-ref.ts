@@ -14,28 +14,48 @@
 // `byFlavour` key checked against the real set instead of being an open string.
 import type { IeFlavour } from "../archive/game-type";
 
+/** The relations between a table's key and the value a field stores. See `keyEncoding` below for each. */
+export type IdsKeyEncoding = "swappedWords" | "keyPlusOne";
+
 export type ExternalRef =
     /** Value is a `dialog.tlk` string reference. Stays a signed number; -1 is the format-wide "no string". */
     | { readonly kind: "strref" }
     /**
-     * Value is a key into an IDS table. `tables` is an ordered candidate list, most preferred first. The order
-     * is not only ranking: it is how a ref resolves across editions that disagree (BG2 names sound slots in
-     * SNDSLOT.IDS, BG1 in SOUNDOFF.IDS), since only one of them exists in any given install.
+     * Value is a key into an IDS table. `tables` is an ordered candidate list, most preferred first. A consumer
+     * takes every candidate the install actually ships and lets the earlier one win a key they both name, so
+     * the order ranks authority rather than selecting a single table. Both halves of that matter in practice:
+     * editions disagree on which table exists at all (BG2 names sound slots in SNDSLOT.IDS, BG1 in
+     * SOUNDOFF.IDS), and where two do coexist they are often complementary rather than rival - a projectile
+     * field's two tables each name keys the other cannot, so taking the first present outright drops whatever
+     * only the runner-up covers, however authoritative the leader is.
      */
     | {
           readonly kind: "ids";
           readonly tables: readonly string[];
           /**
-           * How the field's stored value encodes the table's key. Absent - the usual case - means the stored
-           * value IS the key.
+           * How the field's stored value encodes a table's key, per table - the same value can be one table's
+           * key outright and another's at an offset. A table absent from this map - the usual case - is keyed
+           * exactly as the field stores it.
            *
            * `swappedWords` exchanges the two halves of a dword: a CRE kit stores KIT.IDS 0x4003 KENSAI as
            * 0x40030000. It is an involution, so it converts in both directions, and every key stays inside
            * the field - which a shift does not: the EE tables key BARBARIAN as 0x40000000 and WILDMAGE as
            * 0x80000000, and IWD2 keys eight cleric kits above 0x10000, all of which a left-shift pushes off
            * the end of the dword. Declared only on 4-byte fields; it means nothing on a narrower one.
+           *
+           * `keyPlusOne` means the stored value is the table's key plus one: an ability's projectile stores
+           * MISSILE.IDS 2 Arrow, which is PROJECTL.IDS 0x1 ARROW.
            */
-          readonly keyEncoding?: "swappedWords";
+          readonly keyEncoding?: Readonly<Record<string, IdsKeyEncoding>>;
+          /**
+           * A table whose SYMBOLS are resrefs of `type`, so the field's value identifies a real resource and
+           * not merely a name - PROJECTL.IDS's symbols are `.PRO` basenames, making a projectile openable.
+           *
+           * The consumer offers to OPEN that resource; the field stays a numeric named list and never becomes
+           * a resref picker. Names the table because a declaration's candidates need not agree: MISSILE.IDS
+           * sits beside PROJECTL.IDS and its symbols are labels with no file behind them.
+           */
+          readonly symbolResource?: { readonly table: string; readonly type: string };
       }
     /**
      * Value is a row INDEX in a 2DA table, whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Same

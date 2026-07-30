@@ -68,6 +68,22 @@ describe("parseIds", () => {
         expect(parseIds(idsBytes("0x0010 BATTLE_CRY1\r\n")).get(16)).toBe("BATTLE_CRY1");
     });
 
+    /**
+     * Radix is per FILE, so two tables naming one value space can disagree about it - PROJECTL.IDS is written
+     * in hex (`0x0001 ARROW`) and MISSILE.IDS in decimal (`1 None`), and a consumer joins them on the key. The
+     * keys must therefore land in ONE numeric space, which is only observable across a PAIR: either file alone
+     * reads consistently under a wrong radix for its `0x0001`-`0x0009` rows, and 64 of BG2:ToB's 172 projectl
+     * rows carry a letter in the key, so a decimal parse would silently drop exactly those.
+     */
+    it("folds hex and decimal spellings of one value onto the same key", () => {
+        const hexTable = parseIds(idsBytes("0x006B ACIDBLOB\r\n0x000A AXE\r\n"));
+        const decimalTable = parseIds(idsBytes("107 Acid_Blob\r\n10 Axe_Heavy\r\n"));
+
+        expect([...hexTable.keys()]).toEqual([...decimalTable.keys()]);
+        expect(hexTable.get(107)).toBe("ACIDBLOB");
+        expect(decimalTable.get(107)).toBe("Acid_Blob");
+    });
+
     it("skips blank and malformed lines rather than failing the table", () => {
         const ids = parseIds(idsBytes("IDS V1.0\r\n\r\n0 MORALE\r\nnonsense\r\n\r\n1 HAPPY\r\n"));
 

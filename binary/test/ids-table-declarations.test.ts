@@ -68,18 +68,6 @@ const NAMES_A_TABLE_BUT_INDEXES_NONE: Readonly<Record<string, string>> = {
     "itmAbility.projectileType":
         "Stores the launcher category the ability requires (0 None, 1 Bow, ...), not an ITEMCAT.IDS key. The " +
         "description names ITEMCAT for the LAUNCHER WEAPON that has to match, which is a different value.",
-    // The projectile pair is not blocked on evidence any more - it is blocked on the ref shape. The offset
-    // between the stored value and the PROJECTL.IDS key is CONDITIONAL: resolved as a projectile the value is
-    // the key, resolved as a missile it is the key plus one, and Near Infinity applies exactly that split.
-    // `keyEncoding` is a property of the declaration, so it cannot say "minus one, but only down the MISSILE
-    // branch" - and IESDP naming both tables on the ITM field is the same fork. Declaring either table alone
-    // would misname every value on the other branch. Needs a ref that can carry the per-table encoding.
-    "itmAbility.projectileAnimation":
-        "Indexes PROJECTL.IDS or MISSILE.IDS, and the offset differs BETWEEN those two - which a single " +
-        "`keyEncoding` on one declaration cannot express. Blocked on the ref shape, not on evidence.",
-    "splAbility.projectile":
-        "Same fork, and IESDP states the off-by-one outright: 'in BG2, this value is off-by-one from " +
-        "projectl.ids value'. Blocked on the same missing per-table encoding.",
 };
 
 const TABLE_MENTION = /\b[A-Za-z][A-Za-z0-9_]{1,11}\.(?:ids|2da)\b/gi;

@@ -27,6 +27,10 @@
     own entries, re-read from the game whenever the file is changed.
   - An item's weapon proficiency is named from the game's own proficiency table, so proficiencies a mod adds
     are listed instead of showing as a bare number.
+  - The projectile an item or spell ability fires is named from the game's `MISSILE.IDS` and `PROJECTL.IDS`,
+    which key it differently - the field is a named dropdown instead of a bare number. Both tables are read,
+    since a game often ships one of them only partly filled in. An effect's impact projectile is named too,
+    from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file.
 
 ### Syntax highlighting
 
@@ -42,6 +46,9 @@
 - CRE kits whose identifier is keyed in the high half of the table entry - Barbarian and Wild Mage on the
   Enhanced Editions - can now be named and selected. They were missing from the list entirely.
 - Values in the CRE sound-slot grid no longer clip, and the cells line up in columns.
+- Opening an Infinity Engine `.pro` from a game no longer fails with "Unknown object type": `.pro` is a
+  projectile there and a Fallout prototype here, and the viewer was routing it to the Fallout reader. Formats
+  the binary editor cannot read now open in the ordinary editor.
 
 ## 3.12.0
 

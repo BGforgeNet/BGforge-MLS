@@ -2,19 +2,34 @@ import { describe, expect, it, vi } from "vitest";
 import { withGameContext } from "../../src/binary-editor/game-rows";
 
 const LINE = "Ring of Protection +1";
+
+/** The candidate tables the host reports as present, in declaration order - what `namingTable` answers with. */
+type Named = readonly { table: string; entries: ReadonlyMap<number, string> }[] | undefined;
+const one = (table: string, entries: readonly (readonly [number, string])[]): Named => [
+    { table, entries: new Map(entries) },
+];
+
+/**
+ * The option list a row came out with. A cast because `withGameContext` is generic over the message shape and
+ * returns it unchanged, so a row literal that declares no vendored `enumOptions` - which is exactly the shape
+ * of the fields the game alone names - has no such property to read back.
+ */
+const optionsOf = (row: unknown): Record<string, string> | undefined =>
+    (row as { enumOptions?: Record<string, string> }).enumOptions;
+
 const lookups = {
     strref: (strref: number): string | undefined => (strref === 6348 ? LINE : undefined),
     slotLabel: (): string | undefined => undefined,
-    namingTable: (): ReadonlyMap<number, string> | undefined => undefined,
+    namingTable: (): Named => undefined,
     resourceType: (): { type: string; present: boolean } | undefined => undefined,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
 const withRaceIds = {
     ...lookups,
-    namingTable: (_kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined =>
+    namingTable: (_kind: string, tables: readonly string[]): Named =>
         tables[0] === "RACE"
-            ? new Map([
+            ? one("RACE", [
                   [1, "HUMAN"],
                   [6, "GNOME"],
               ])
@@ -126,6 +141,165 @@ describe("withGameContext", () => {
         expect(out.rows[0]?.enumOptions).toEqual({ "1": "HUMAN", "2": "Elf", "6": "GNOME" });
     });
 
+    /**
+     * A projectile field is named by MISSILE.IDS and PROJECTL.IDS at once, and which one carries the value is
+     * per-install: BG:EE ships a full 365-entry MISSILE while BG2 classic ships a 29-entry stub beside a full
+     * PROJECTL. So every present candidate contributes, and the declaration's order decides only who wins a key
+     * they both name - taking the first table outright leaves BG2 classic mostly unnamed.
+     */
+    it("merges every candidate table the install ships, earlier ones winning a shared key", () => {
+        const projectile = {
+            id: "p1",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: { kind: "ids", tables: ["MISSILE", "PROJECTL"] },
+            rawValue: 2,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => [
+                { table: "MISSILE", entries: new Map([[2, "Arrow"]]) },
+                {
+                    table: "PROJECTL",
+                    entries: new Map([
+                        [2, "LOSES_TO_MISSILE"],
+                        [7, "AXEEX"],
+                    ]),
+                },
+            ],
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        // No vendored table on this field, so the merge is also what turns it into a dropdown at all.
+        expect(out.rows[0]).toMatchObject({ valueType: "enum", enumOpen: true });
+        expect(optionsOf(out.rows[0])).toEqual({ "2": "Arrow", "7": "AXEEX" });
+    });
+
+    // The encoding is declared per TABLE, so one candidate can be keyed as the field stores it while the other
+    // sits at an offset: stored 2 is MISSILE key 2 and PROJECTL key 1, both naming an arrow.
+    it("applies each candidate's own key encoding, not one encoding for the whole declaration", () => {
+        const projectile = {
+            id: "p2",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: { kind: "ids", tables: ["MISSILE", "PROJECTL"], keyEncoding: { PROJECTL: "keyPlusOne" } },
+            rawValue: 2,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => [
+                { table: "MISSILE", entries: new Map([[1, "None"]]) },
+                {
+                    table: "PROJECTL",
+                    entries: new Map([
+                        [1, "ARROW"],
+                        [6, "AXE"],
+                    ]),
+                },
+            ],
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        // MISSILE's key 1 stays at 1; PROJECTL's 1 and 6 shift to the 2 and 7 the field actually stores.
+        expect(optionsOf(out.rows[0])).toEqual({ "1": "None", "2": "ARROW", "7": "AXE" });
+    });
+
+    /**
+     * PROJECTL.IDS symbols are `.PRO` resource basenames, so a projectile VALUE identifies a real file - the
+     * open chip beside it is the same affordance a resref field gets, reached from a number. Near Infinity
+     * carries the same pairing on this field.
+     */
+    it("offers to open the resource a numeric value names through its table's symbol", () => {
+        const projectile = {
+            id: "p3",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: {
+                kind: "ids",
+                tables: ["PROJECTL"],
+                keyEncoding: { PROJECTL: "keyPlusOne" },
+                symbolResource: { table: "PROJECTL", type: "PRO" },
+            },
+            rawValue: 108,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => one("PROJECTL", [[107, "ACIDBLOB"]]),
+            // The symbol is looked up at the value's own KEY - 108 stored is PROJECTL 107, not 108.
+            resourceType: (decl: { type: string }, resref: string) =>
+                decl.type === "PRO" && resref === "ACIDBLOB" ? { type: "PRO", present: true } : undefined,
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        expect(out.rows[0]).toMatchObject({ openTarget: { resref: "ACIDBLOB", ext: "PRO" } });
+        // Openable, never pickable: the field stores a number from a named list, so it must not turn into a
+        // resref picker the way a `kind: "resource"` field does.
+        expect(out.rows[0]).not.toHaveProperty("refExt");
+    });
+
+    // Same rule as a resref: an install that does not have the file gets no chip rather than a dangling one.
+    it("withholds the chip when the game cannot resolve the named resource", () => {
+        const projectile = {
+            id: "p4",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: { kind: "ids", tables: ["PROJECTL"], symbolResource: { table: "PROJECTL", type: "PRO" } },
+            rawValue: 5,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => one("PROJECTL", [[5, "MODONLY"]]),
+            resourceType: () => ({ type: "PRO", present: false }),
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
+    // MISSILE.IDS symbols are labels with no file behind them, so a value named only by the co-candidate is
+    // named but not openable - which is why the declaration names the table rather than applying to all.
+    it("derives the resource only from the table the ref names, not from a co-candidate", () => {
+        const projectile = {
+            id: "p5",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: {
+                kind: "ids",
+                tables: ["PROJECTL", "MISSILE"],
+                keyEncoding: { PROJECTL: "keyPlusOne" },
+                symbolResource: { table: "PROJECTL", type: "PRO" },
+            },
+            rawValue: 300,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => [
+                { table: "PROJECTL", entries: new Map([[107, "ACIDBLOB"]]) },
+                { table: "MISSILE", entries: new Map([[300, "Label_Only"]]) },
+            ],
+            resourceType: () => ({ type: "PRO", present: true }),
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        expect(optionsOf(out.rows[0])?.["300"]).toBe("Label_Only");
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
     it("leaves the vendored enum untouched when the game has no such table", () => {
         const clazz = {
             id: "c1",
@@ -153,7 +327,7 @@ describe("withGameContext", () => {
             ref: { kind: "ids", tables: ["ANIMATE"] },
             rawValue: 24832,
         };
-        const named = { ...lookups, namingTable: () => new Map([[24832, "MFIE_BAAL"]]) };
+        const named = { ...lookups, namingTable: () => one("ANIMATE", [[24832, "MFIE_BAAL"]]) };
 
         const out = withGameContext({ rows: [anim] }, named);
 
@@ -174,11 +348,11 @@ describe("withGameContext", () => {
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } },
             rawValue: 0x4003_0000,
             enumOptions: { "1073938432": "Kensai" },
         };
-        const named = { ...lookups, namingTable: () => new Map([[0x4003, "KENSAI"]]) };
+        const named = { ...lookups, namingTable: () => one("KIT", [[0x4003, "KENSAI"]]) };
 
         const out = withGameContext({ rows: [kit] }, named);
 
@@ -195,14 +369,14 @@ describe("withGameContext", () => {
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } },
             rawValue: 0,
             enumOptions: {},
         };
         const named = {
             ...lookups,
             namingTable: () =>
-                new Map([
+                one("KIT", [
                     [0x4003, "KENSAI"],
                     [0x4000_0000, "BARBARIAN"],
                     [0x8000_0000, "WILDMAGE"],
@@ -227,7 +401,7 @@ describe("withGameContext", () => {
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } },
             rawValue: 0x4000,
             enumOptions: {},
         };
@@ -235,7 +409,7 @@ describe("withGameContext", () => {
         const named = {
             ...lookups,
             namingTable: () =>
-                new Map([
+                one("KIT", [
                     [0x4000, "TRUE_CLASS"],
                     [0x4000_0000, "BARBARIAN"],
                 ]),
@@ -255,11 +429,11 @@ describe("withGameContext", () => {
             name: "Kit",
             valueType: "enum",
             size: 4,
-            ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+            ref: { kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } },
             rawValue: 0,
             enumOptions: {},
         };
-        const named = { ...lookups, namingTable: () => new Map([[0x8000, "HIGHBIT"]]) };
+        const named = { ...lookups, namingTable: () => one("KIT", [[0x8000, "HIGHBIT"]]) };
 
         const out = withGameContext({ rows: [kit] }, named);
 
@@ -285,7 +459,7 @@ describe("withGameContext", () => {
         const named = {
             ...lookups,
             namingTable: () =>
-                new Map([
+                one("GENDER", [
                     [-1, "NEGATIVE"],
                     [1, "MALE"],
                     [256, "TOO_WIDE"],
@@ -313,7 +487,7 @@ describe("withGameContext", () => {
         const named = {
             ...lookups,
             namingTable: (kind: string, tables: readonly string[]) =>
-                kind === "2da" && tables[0] === "MSCHOOL" ? new Map([[1, "ABJURER"]]) : undefined,
+                kind === "2da" && tables[0] === "MSCHOOL" ? one("MSCHOOL", [[1, "ABJURER"]]) : undefined,
         };
 
         const out = withGameContext({ rows: [school] }, named);

@@ -191,21 +191,28 @@ describe("createNamingTableResolver", () => {
     it("returns the whole table, so a consumer can build an option list from it", () => {
         const resolve = createNamingTableResolver(session({ tables: ["sndslot"] }));
 
-        expect(resolve(gameUri(), "ids", ["SNDSLOT"])).toEqual(new Map([[21, "AREA_FOREST"]]));
+        expect(resolve(gameUri(), "ids", ["SNDSLOT"])).toEqual([
+            { table: "SNDSLOT", entries: new Map([[21, "AREA_FOREST"]]) },
+        ]);
     });
 
-    // First table PRESENT wins outright - not a per-key merge. Two installs' tables mean different things at
-    // the same key, so blending them would invent entries that exist in neither.
-    it("returns the first table the game ships, never a blend of both", () => {
+    // Every present candidate is reported, tagged with the table it came from, because the caller needs both:
+    // which key encoding to apply (declared per table) and which name wins a key two tables share.
+    it("reports every candidate the game ships, in declaration order", () => {
         const resolve = createNamingTableResolver(session({ tables: ["sndslot", "soundoff"] }));
 
-        expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])).toEqual(new Map([[21, "AREA_FOREST"]]));
+        expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])?.map((t) => t.table)).toEqual([
+            "SNDSLOT",
+            "SOUNDOFF",
+        ]);
     });
 
-    it("falls back to the next table when the preferred one is absent", () => {
+    it("reports only the candidates present when the preferred one is absent", () => {
         const resolve = createNamingTableResolver(session({ tables: ["soundoff"] }));
 
-        expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])?.get(35)).toBe("SELECT_RARE");
+        expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])).toEqual([
+            { table: "SOUNDOFF", entries: TABLES["soundoff"] },
+        ]);
     });
 
     it("returns nothing when the game ships none of the candidates", () => {

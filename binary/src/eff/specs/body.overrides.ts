@@ -17,6 +17,7 @@ import {
     EffectTarget,
     EffectTiming,
     EFFECT_RESOURCE_REF,
+    IMPACT_PROJECTILE_REF,
     SCHOOL_REF,
     Schools,
     SECTYPE_REF,
@@ -51,6 +52,9 @@ export const effBodySpecAnnotated = {
     // shared with the SPL header and ITM ability fields of the same name.
     school: { ...effBodySpec.school, enum: Schools, enumOpen: true, ref: SCHOOL_REF },
     sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true, ref: SECTYPE_REF },
+    // The impact projectile, keyed directly by PROJECTL.IDS - NOT the ability fields' missile-keyed lookup,
+    // despite IESDP listing all three offsets on one page. See IMPACT_PROJECTILE_REF.
+    projectile: { ...effBodySpec.projectile, ref: IMPACT_PROJECTILE_REF },
     // All four resrefs defer rather than declaring a type - see EFFECT_RESOURCE_REF. `parentResource` is the
     // one with a nearby discriminator (`parentResourceType`), but it holds 0/None on most records, so it
     // cannot type the field either.

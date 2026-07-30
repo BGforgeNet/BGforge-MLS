@@ -6,9 +6,9 @@ export interface OpcodeRelationship {
     availability?: Readonly<Record<string, boolean>>;
     /**
      * For the opcodes that read parameter1 as an entry in an IDS file parameter2 SELECTS: parameter2's
-     * stored value -> the candidate tables it names, most preferred first (first present wins, since
-     * editions disagree - ALIGN vs ALIGNMEN). The mapping is per opcode, not shared: 72 is 0-based
-     * where 55/100/175 are 2-based, and 178's slot 2 is OBJECT rather than EA.
+     * stored value -> the candidate tables it names, most preferred first (every present one contributes
+     * and the earlier wins a shared key, since editions disagree - ALIGN vs ALIGNMEN). The mapping is per
+     * opcode, not shared: 72 is 0-based where 55/100/175 are 2-based, and 178's slot 2 is OBJECT not EA.
      */
     idsFileByParam2?: Readonly<Record<number, readonly string[]>>;
 }

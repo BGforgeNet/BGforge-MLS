@@ -13,7 +13,12 @@
 /** Row shapes this fills in. Matched structurally: this module never imports the editor's Row type, so it
  *  walks messages whose row-bearing shape it does not need to know. */
 interface ValueRefRow {
-    ref: { kind: string; tables?: readonly string[]; keyEncoding?: string };
+    ref: {
+        kind: string;
+        tables?: readonly string[];
+        keyEncoding?: Readonly<Record<string, string>>;
+        symbolResource?: { readonly table: string; readonly type: string };
+    };
     rawValue: number;
     enumOptions?: Record<string, string>;
     valueType?: string;
@@ -31,16 +36,25 @@ interface SlotRefRow {
     name: string;
 }
 
+/** One naming table the install ships, tagged with which of the declared candidates it is. Restated here
+ *  rather than imported from the host's resolver, as `resourceType`'s declaration below is - this module is
+ *  deliberately free of imports so it can walk message shapes it does not own. */
+export interface NamedTable {
+    readonly table: string;
+    readonly entries: ReadonlyMap<number, string>;
+}
+
 /** What the host can answer about the open game. Undefined from any of these means "no game, or nothing there". */
 export interface GameLookups {
     strref(strref: number): string | undefined;
     slotLabel(tables: readonly string[], index: number): string | undefined;
     /**
-     * The whole naming table for a field whose value space the game defines. `kind` selects the source - an IDS
-     * table keyed by value, or a 2DA keyed by row index - because the merge below is identical either way and
-     * only the resource differs.
+     * The naming tables for a field whose value space the game defines - every declared candidate the install
+     * ships, in declaration order, each tagged with its own name so the ref's per-table key encoding can be
+     * applied. `kind` selects the source - an IDS table keyed by value, or a 2DA keyed by row index - because
+     * the merge below is identical either way and only the resource differs.
      */
-    namingTable(kind: string, tables: readonly string[]): ReadonlyMap<number, string> | undefined;
+    namingTable(kind: string, tables: readonly string[]): readonly NamedTable[] | undefined;
     /**
      * What this resref field points at in the open game, or undefined outside one. Takes the whole declaration
      * because a few fields store a different type in one flavour (ITM `replacement` is an item everywhere but
@@ -102,10 +116,66 @@ function isValueRefRow(value: object): value is ValueRefRow {
 }
 
 /**
- * The row's option list once the install's own naming table is folded in: the game wins per value, the vendored
- * table fills what it does not cover. Vendored entries are kept rather than replaced wholesale because the two
- * disagree in both directions - BG2's RACE.IDS carries 82 entries against 8 vendored, while its SPECIFIC.IDS
- * carries 3 against 11.
+ * The value a field stores for a table key, per the encoding the ref declares for THAT table - a table absent
+ * from the map is keyed exactly as the field stores it. Per table because one declaration can name a value in
+ * two keyings at once: a projectile is MISSILE.IDS's key outright and PROJECTL.IDS's key plus one.
+ */
+function storedFromKey(key: number, encoding: string | undefined): number {
+    switch (encoding) {
+        case "swappedWords":
+            return swapWords(key);
+        case "keyPlusOne":
+            return key + 1;
+        default:
+            return key;
+    }
+}
+
+/** The inverse: a stored value back to the table key it came from. `swappedWords` is its own inverse. */
+function keyFromStored(stored: number, encoding: string | undefined): number {
+    switch (encoding) {
+        case "swappedWords":
+            return swapWords(stored);
+        case "keyPlusOne":
+            return stored - 1;
+        default:
+            return stored;
+    }
+}
+
+/**
+ * The resource a NUMERIC field's current value names, when the ref says one of its tables holds resrefs -
+ * PROJECTL.IDS's symbols are `.PRO` basenames, so a projectile value identifies a real file. Near Infinity
+ * carries the same pairing on this field.
+ *
+ * Only the openTarget half, never `refExt`: the field stores a number chosen from a named list, so it must not
+ * become a resref picker. And only when the game HAS the resource, matching the resref rule - a name the
+ * install cannot resolve gets no chip rather than a dangling one.
+ */
+function resourceNamedByValue(
+    row: ValueRefRow,
+    tables: readonly NamedTable[],
+    lookups: GameLookups,
+): { resref: string; ext: string } | undefined {
+    const decl = row.ref.symbolResource;
+    const source = decl === undefined ? undefined : tables.find((t) => t.table === decl.table);
+    if (decl === undefined || source === undefined) return;
+    const symbol = source.entries.get(keyFromStored(row.rawValue, row.ref.keyEncoding?.[decl.table]));
+    if (symbol === undefined || symbol === "") return;
+    const target = lookups.resourceType({ type: decl.type }, symbol);
+    return target?.present === true ? { resref: symbol, ext: target.type } : undefined;
+}
+
+/**
+ * The row's option list once the install's own naming tables are folded in: the game wins per value, the
+ * vendored table fills what it does not cover. Vendored entries are kept rather than replaced wholesale because
+ * the two disagree in both directions - BG2's RACE.IDS carries 82 entries against 8 vendored, while its
+ * SPECIFIC.IDS carries 3 against 11.
+ *
+ * Every candidate the install ships contributes, with the earlier declaration winning a key they both name.
+ * A pair's tables each name keys the other cannot - a projectile's authoritative table has no entry for the
+ * commonest stored value, which only its co-candidate names - so stopping at the first present drops whatever
+ * only the runner-up covers.
  *
  * A field with no vendored table at all (CRE animationId) arrives as a plain number, so it is also re-typed to
  * an enum here - otherwise the names would resolve into a control that never reads them. Always open: these
@@ -113,7 +183,7 @@ function isValueRefRow(value: object): value is ValueRefRow {
  */
 function namedByGame(
     row: ValueRefRow,
-    table: ReadonlyMap<number, string>,
+    tables: readonly NamedTable[],
 ): { enumOptions: Record<string, string>; valueType: string; enumOpen: true } {
     const merged: Record<string, string> = { ...row.enumOptions };
     // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in the
@@ -121,9 +191,13 @@ function namedByGame(
     // option list must never offer a value the field cannot hold. Bounded at BOTH ends: an IDS is plain text a
     // mod can put anything in, and a negative key is as unstorable as an oversized one.
     const limit = row.size === undefined ? Infinity : 2 ** (8 * row.size);
-    for (const [key, name] of table) {
-        const stored = row.ref.keyEncoding === "swappedWords" ? swapWords(key) : key;
-        if (stored >= 0 && stored < limit) merged[String(stored)] = name;
+    // Least-preferred candidate first, so an earlier one overwrites it and both overwrite the vendored table.
+    for (const { table, entries } of tables.toReversed()) {
+        const encoding = row.ref.keyEncoding?.[table];
+        for (const [key, name] of entries) {
+            const stored = storedFromKey(key, encoding);
+            if (stored >= 0 && stored < limit) merged[String(stored)] = name;
+        }
     }
     return { enumOptions: merged, valueType: "enum", enumOpen: true };
 }
@@ -149,8 +223,14 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         if (text !== undefined) row = { ...row, strrefText: text };
     }
     if (isValueRefRow(row) && NAMING_KINDS.has(row.ref.kind) && row.ref.tables !== undefined) {
-        const table = lookups.namingTable(row.ref.kind, row.ref.tables);
-        if (table !== undefined) row = { ...row, ...namedByGame(row, table) };
+        const tables = lookups.namingTable(row.ref.kind, row.ref.tables);
+        if (tables !== undefined) {
+            // Read before the spread: `row` is re-typed to the merged shape below, and the value the resource
+            // is derived from is the one this row already holds.
+            const open = resourceNamedByValue(row, tables, lookups);
+            row = { ...row, ...namedByGame(row, tables) };
+            if (open !== undefined) row = { ...row, openTarget: open };
+        }
     }
     if (isResourceRefRow(row) && row.ref.kind === "resource" && row.ref.type !== undefined) {
         // The declaration says WHAT it points at; the game is asked only whether it is there. The type is

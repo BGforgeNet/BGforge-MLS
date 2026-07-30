@@ -99,10 +99,16 @@ that carries both.
   8, which the resource tree's hover tooltip reads raw.
 - **`tables` is an ordered candidate list; a resource `type` is NOT.** The two look alike and are decided
   differently, so keep them apart. WHICH IDS/2DA names a value depends on what the install ships - the tables
-  are data files editions differ on and mods add to - so `tables` is probed by presence, first present wins.
-  BG1 and BG2 disagree on most sound slots (slot 35 is SELECT_ACTION4 in one, SELECT_RARE in the other), a
-  single install can ship both, so declare `["SNDSLOT", "SOUNDOFF"]` and let the install decide; Near Infinity
-  resolves this same field the same way. Do NOT vendor a name table.
+  are data files editions differ on and mods add to - so `tables` is probed by presence, EVERY present candidate
+  contributing and the earlier one winning a key they both name. BG1 and BG2 disagree on most sound slots (slot
+  35 is SELECT_ACTION4 in one, SELECT_RARE in the other), a single install can ship both, so declare
+  `["SNDSLOT", "SOUNDOFF"]` and let the install decide; Near Infinity resolves this same field the same way. Do
+  NOT vendor a name table. Order ranks authority, it does not select one table: two coexisting tables are as
+  often complementary as rival - a projectile field declares PROJECTL first (the game's own index) with MISSILE
+  behind it (labels only, and the one table that can name a stored 1), and either alone leaves a chunk of a real
+  install's values unnamed. Ordering decides only who wins a key both name, never how many values get named, so
+  rank by which table is AUTHORITATIVE, not by which happens to be fuller. Nothing is invented either way -
+  every option comes from a table the install holds.
   WHAT a resref points at is not like that: it follows from the record version and the game, both known before
   any lookup, so it is one `type` plus a `byFlavour` exception where a game genuinely differs. Probing types by
   presence picks whichever happens to exist and is wrong wherever both do.
@@ -155,7 +161,11 @@ that carries both.
   header, ITM ability and EFF body), declare the ref ONCE as a shared constant so the sites cannot drift.
 - **Check the table's key space against real stored values before declaring, and use `keyEncoding` when they
   differ.** A table is not always keyed the way the field stores it: CRE `kit` holds the KIT.IDS key in the
-  dword's other half (0x4003 KENSAI -> 0x40030000), so it declares `keyEncoding: "swappedWords"`. Establish
+  dword's other half (0x4003 KENSAI -> 0x40030000), so it declares `keyEncoding: { KIT: "swappedWords" }`.
+  Keyed PER TABLE, because one declaration's candidates can disagree about it: an ability's projectile stores
+  PROJECTL.IDS's key plus one and MISSILE.IDS's key outright, so `PROJECTILE_REF` encodes only PROJECTL
+  (`keyEncoding: { PROJECTL: "keyPlusOne" }`) and leaves its co-candidate alone. A table absent from the map is keyed
+  exactly as the field stores it. Establish
   this from a corpus, not from the vendored table - the vendored `CreKit` places Barbarian at 0x4000, a value
   no CRE in the 4020-record BG2 corpus holds, while 19 of the 20 values that DO occur are the key with its
   words swapped. Prefer an encoding that is a BIJECTION over one that only fits the common case: a left shift

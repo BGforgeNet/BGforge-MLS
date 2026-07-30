@@ -125,6 +125,61 @@ export const SCHOOL_REF = { kind: "2da", tables: ["MSCHOOL"] } as const;
 export const SECTYPE_REF = { kind: "2da", tables: ["MSECTYPE"] } as const;
 
 /**
+ * The projectile an ABILITY fires - the ITM ability's `projectileAnimation` and the SPL ability's
+ * `projectile`. One engine concept across the two formats, so one declaration, for the same reason the
+ * school/sectype pair shares one. The EFF v2 body's projectile field is NOT this one despite IESDP's
+ * projectl.ids page listing all three offsets together - see `IMPACT_PROJECTILE_REF`.
+ *
+ * TWO tables, and they are NOT peers. PROJECTL.IDS is the real one and leads: it is the game's own
+ * projectile index, its symbols are `.PRO` resource basenames (171 of 171 resolve to a real `.PRO` on
+ * BG2:ToB, 238 of 272 on BG:EE), and the stored value is its key PLUS ONE. MISSILE.IDS is a label
+ * convenience with nothing behind it - IESDP's own missile.ids page: "Nothing in-game is linked to
+ * MISSILE.IDS, it's just for user-friendly labels, and is only used by WeiDU/NearInfinity. The game only
+ * uses PROJECTL.IDS but for most purposes adds 1 to index [...] you can wipe out the entirety of
+ * MISSILE.IDS and the game won't care." Neither table is named by any action or trigger signature, in
+ * either install's `action.ids`/`trigger.ids` - these are file-format symbol tables, not script types.
+ *
+ * MISSILE still earns second place rather than none, for two things PROJECTL structurally cannot do: name a
+ * stored 1 (PROJECTL's keys start at 1, so a stored 1 would need its key 0, which does not exist) - and that
+ * is 2292 of 3537 BG:EE spell abilities - and cover the keys a sparse install omits. BG:EE ships a full
+ * 365-entry MISSILE.IDS while BG2 classic ships a 29-entry stub of it beside a full 171-entry PROJECTL.IDS,
+ * so the candidates merge rather than the first present winning outright; ordering only decides who wins a
+ * key both name, never how many values get named.
+ *
+ * "For most purposes adds 1" is the caveat that makes `IMPACT_PROJECTILE_REF` a separate declaration - the
+ * EFF v2 field is one of the purposes it does not.
+ *
+ * No vendored fallback table, as with CRE `animationId`: the value space is per-install and mod-extended, so
+ * outside a game the field stays a plain number rather than posing as a closed list.
+ */
+export const PROJECTILE_REF = {
+    kind: "ids",
+    tables: ["PROJECTL", "MISSILE"],
+    keyEncoding: { PROJECTL: "keyPlusOne" },
+    symbolResource: { table: "PROJECTL", type: "PRO" },
+} as const;
+
+/**
+ * The EFF v2 body's projectile (0xA0) - the projectile spawned on IMPACT, not the one an ability launches, and
+ * keyed DIRECTLY by PROJECTL.IDS with no MISSILE candidate and no offset.
+ *
+ * A separate declaration from `PROJECTILE_REF` on purpose. IESDP's projectl.ids page lists this offset beside
+ * the ITM and SPL ones, which invites treating all three as one field; they are not. Near Infinity reads the
+ * ability fields through a missile-aware lookup that maps a stored key to PROJECTL key minus one, and reads
+ * THIS field as a plain PROJECTL.IDS entry - and names it "Impact projectile" rather than reusing the ability
+ * label. IESDP states the off-by-one only for the ability fields, which agrees.
+ *
+ * The corpus cannot arbitrate: the field is 0 in all 1053 EFF records across a real BG:EE and BG2:ToB install.
+ * So this rests on the two documentary sources agreeing, not on measurement - a populated record contradicting
+ * them would be reason to revisit.
+ */
+export const IMPACT_PROJECTILE_REF = {
+    kind: "ids",
+    tables: ["PROJECTL"],
+    symbolResource: { table: "PROJECTL", type: "PRO" },
+} as const;
+
+/**
  * Primary type / magic school (`mschool.2da`; `school.2da` in IWD). Shared by the SPL header `school`, the ITM
  * ability `primaryType`, and the EFF v2 effect `school` - all reference the same 2DA, so one table serves them.
  * Mod-extensible (up to 256 rows), so callers mark the field `enumOpen`. Number-keyed, so it works for either

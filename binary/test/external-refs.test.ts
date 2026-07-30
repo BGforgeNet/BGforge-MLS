@@ -136,7 +136,7 @@ describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () =
     it("declares the encoding between KIT.IDS keys and the stored kit dword", () => {
         const kit = parseFields(creParser, CRE_FIXTURE).find((f) => f.name === "Kit");
 
-        expect(kit?.ref).toEqual({ kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" });
+        expect(kit?.ref).toEqual({ kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } });
     });
 
     // Additive, not a replacement: the vendored table stays as the fallback for a record opened outside a game,
@@ -181,6 +181,73 @@ describe.skipIf(!have2daFixtures)("2DA-backed school/sectype fields declare thei
 
         expect(refFor(fields, "School")).toEqual(school);
         expect(refFor(fields, "Sectype")).toEqual(sectype);
+    });
+});
+
+/**
+ * The projectile an ability fires is named by TWO tables that key the same value space differently, so the
+ * declaration has to carry a per-table encoding - the stored value is the MISSILE.IDS key outright and the
+ * PROJECTL.IDS key plus one (IESDP: "in BG2, this value is off-by-one from projectl.ids value").
+ *
+ * Measured across a real BG:EE and BG2:ToB install: for every value the corpus holds, `MISSILE[v]` and
+ * `PROJECTL[v-1]` name the same projectile (stored 2 is Arrow / ARROW, 48 Sparkle_Gold / SPARKLGO), and no
+ * PROJECTL key on BG:EE lacks a MISSILE counterpart. Neither table alone suffices across editions, which is
+ * why both are declared - see the shared constant's comment.
+ *
+ * One shared ref for the two ABILITY sites, like the school/sectype pair above: they are one engine concept,
+ * and a field named in one editor but not another is the drift a shared declaration prevents. The EFF v2 body
+ * field is deliberately NOT that ref - it is the impact projectile, keyed straight into PROJECTL.IDS - and is
+ * pinned below precisely because IESDP's projectl.ids page lists all three offsets together and invites the
+ * mistake (which this suite caught once already).
+ */
+describe.skipIf(!have2daFixtures)("projectile fields declare both naming tables and their encodings", () => {
+    const projectile = {
+        kind: "ids",
+        tables: ["PROJECTL", "MISSILE"],
+        keyEncoding: { PROJECTL: "keyPlusOne" },
+        symbolResource: { table: "PROJECTL", type: "PRO" },
+    };
+
+    it("declares it on both ability fields, which are one concept in two formats", () => {
+        const itm = parseFields(itmParser, ITM_FIXTURE).find((f) => f.name === "Projectile Animation");
+        const spl = parseFields(splParser, SPL_FIXTURE).find((f) => f.name === "Projectile");
+
+        expect(itm?.ref).toEqual(projectile);
+        expect(spl?.ref).toEqual(projectile);
+    });
+
+    // Near Infinity reads the ability fields through a missile-aware lookup mapping a stored key to PROJECTL
+    // key minus one, and reads THIS field as a plain PROJECTL.IDS entry - naming it "Impact projectile", a
+    // different field. IESDP states the off-by-one for the ability fields only. Two sources, same answer.
+    it("keys the EFF v2 impact projectile straight into PROJECTL, with no missile candidate or offset", () => {
+        const eff = parseFields(effParser, EFF_FIXTURE).find((f) => f.name === "Projectile");
+
+        expect(eff?.ref).toEqual({
+            kind: "ids",
+            tables: ["PROJECTL"],
+            symbolResource: { table: "PROJECTL", type: "PRO" },
+        });
+    });
+
+    // PROJECTL's symbols ARE `.PRO` basenames, so the value identifies a real resource and earns the same open
+    // chip a resref field gets. Declared against PROJECTL by name, never the whole ref: MISSILE sits beside it
+    // in the ability declaration and its symbols are labels with no file behind them.
+    it("pairs the projectile value with the .PRO its PROJECTL symbol names, on PROJECTL only", () => {
+        const itm = parseFields(itmParser, ITM_FIXTURE).find((f) => f.name === "Projectile Animation");
+
+        const decl = itm?.ref?.kind === "ids" ? itm.ref.symbolResource : undefined;
+        expect(decl).toEqual({ table: "PROJECTL", type: "PRO" });
+    });
+
+    // The encoding is per TABLE, not per declaration: the same ref names one candidate directly and the other
+    // at an offset. A single whole-declaration encoding - what CRE `kit` carries - cannot express that, which
+    // is what kept these three fields undeclared.
+    it("encodes only the offset table, leaving the directly-keyed one alone", () => {
+        const spl = parseFields(splParser, SPL_FIXTURE).find((f) => f.name === "Projectile");
+
+        const encodings = spl?.ref?.kind === "ids" ? spl.ref.keyEncoding : undefined;
+        expect(encodings?.["MISSILE"]).toBeUndefined();
+        expect(encodings?.["PROJECTL"]).toBe("keyPlusOne");
     });
 });
 

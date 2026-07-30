@@ -44,6 +44,13 @@ Absent `openTarget` renders NOTHING - no marker, no dimming, no advisory. That i
 a mod record legitimately references what a later install step creates, so flagging it would fire on correct
 input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte`.
 
+**A NUMERIC field can carry the chip too, and it is not a resref.** Where an `{ kind: "ids" }` ref declares
+`symbolResource`, the value's symbol in that table IS a resref - PROJECTL.IDS's symbols are `.PRO` basenames -
+so an ability's projectile offers to open the projectile file while staying a numeric dropdown. The chip is
+keyed off `row.openTarget` alone, so nothing in the render layer needs to know which of the two produced it.
+The pairing sets `openTarget` ONLY, never `refExt`: `refExt` turns a field into a resref picker, which would
+be wrong for a field whose value is a number chosen from a named list.
+
 ## A resref field is a picker with a game, and the list is a suggestion set - never the domain
 
 `row.refExt` (the type the field points at in THIS game) is the separate, weaker signal: the host sets it

@@ -17,7 +17,7 @@ import {
     type SlotLabelResolver,
     type StrrefResolver,
 } from "./game-lookups";
-import { parserRegistry } from "@bgforge/binary";
+import { viewTypeForResource } from "./editor-routing";
 import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 
 const LAST_DIR_KEY = "bgforge.ieResources.lastDir";
@@ -90,6 +90,9 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     /**
      * Open one resource of a game by resref+ext. Shared by the tree's own open and the binary editor's
      * open-a-referenced-resource affordance, so the binary-vs-default-editor choice lives in one place.
+     *
+     * Everything reached from here is an IE resource by construction, so `viewTypeForResource` decides -
+     * see it for why the parser registry cannot be asked and why the view is always named.
      */
     const openRef = async (gameDir: string, resref: string, ext: string): Promise<void> => {
         let game;
@@ -105,17 +108,10 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             return;
         }
         const uri = resourceUri(gameDir, resref, ext);
-        const openable = parserRegistry.getByExtension(`.${ext}`) !== undefined;
         // `preview: false` pins each resource to its own tab: following a reference is deliberate, not the
-        // browse-and-discard a preview tab models, so a second follow must not evict the first. Both commands
-        // take the options last (after the uri, or after the view id), so the spread lands them correctly.
+        // browse-and-discard a preview tab models, so a second follow must not evict the first.
         const showOptions: vscode.TextDocumentShowOptions = { preview: false };
-        await vscode.commands.executeCommand(
-            openable ? "vscode.openWith" : "vscode.open",
-            uri,
-            ...(openable ? ["bgforge.binaryEditor"] : []),
-            showOptions,
-        );
+        await vscode.commands.executeCommand("vscode.openWith", uri, viewTypeForResource(ext), showOptions);
     };
 
     const openResource = async (element?: ResourceNode): Promise<void> => {

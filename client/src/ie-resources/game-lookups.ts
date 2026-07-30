@@ -13,12 +13,18 @@ export type StrrefResolver = (uri: vscode.Uri, strref: number) => string | undef
 /** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
 export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
 
-/** Resolves a whole naming table (an IDS keyed by value, or a 2DA keyed by row index) for a document. */
+/** One naming table the install ships, tagged with which candidate it is so the caller can key it correctly. */
+export interface NamedTable {
+    readonly table: string;
+    readonly entries: ReadonlyMap<number, string>;
+}
+
+/** Resolves the naming tables (IDS keyed by value, or 2DA keyed by row index) a document's install ships. */
 export type NamingTableResolver = (
     uri: vscode.Uri,
     kind: string,
     tables: readonly string[],
-) => ReadonlyMap<number, string> | undefined;
+) => readonly NamedTable[] | undefined;
 
 /** A resref field's declared target: one type, plus the flavours that store something else. */
 export interface ResourceRefDecl {
@@ -143,31 +149,32 @@ export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
 }
 
 /**
- * Resolves the whole naming table for a value space the game owns, from the first of `tables` the install
- * actually ships.
+ * Resolves the naming tables for a value space the game owns: every candidate in `tables` the install actually
+ * ships, in declaration order.
  *
- * First table PRESENT wins outright, rather than the per-key search `createSlotLabelResolver` does: a slot
- * array wants the best name available for each index, but an option LIST has to come from one table, since two
- * installs' tables mean different things at the same key and blending them would offer entries that exist in
- * neither.
+ * Every present candidate rather than only the first, because two tables naming one value space are as often
+ * complementary as rival - BG2 classic ships a 29-entry MISSILE.IDS beside a full PROJECTL.IDS, and stopping
+ * at the first would leave most of a projectile field unnamed. Each is tagged with its own name so the caller
+ * can apply the key encoding the ref declares for it and decide who wins a key both name; nothing is blended
+ * here, so an entry always comes from a table this install holds.
  */
 export function createNamingTableResolver(session: TlkSource): NamingTableResolver {
     return (uri, kind, tables) => {
         const gameDir = gameDirOf(uri);
         if (gameDir === undefined) return;
-        // Accumulate rather than returning from inside the loop, matching the resolvers above: a bare `return`
-        // plus a single value return is the shape that satisfies both the linter and `noImplicitReturns`.
-        let resolved: ReadonlyMap<number, string> | undefined;
+        const found: NamedTable[] = [];
         try {
             const game = session.ensureOpen(gameDir);
             for (const table of tables) {
-                resolved = kind === "2da" ? game.twoDa(table) : game.ids(table);
-                if (resolved !== undefined) break;
+                const entries = kind === "2da" ? game.twoDa(table) : game.ids(table);
+                if (entries !== undefined) found.push({ table, entries });
             }
         } catch {
             // Unreadable game - the field falls back to its vendored table, as it does outside a game.
         }
-        return resolved;
+        // Undefined rather than an empty list when the install ships none: the caller reads a table's presence
+        // as "the game names this field", and an empty list would turn a plain number into an empty dropdown.
+        return found.length === 0 ? undefined : found;
     };
 }
 

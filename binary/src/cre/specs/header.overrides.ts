@@ -113,7 +113,7 @@ export const creHeaderSpecAnnotated = {
         ...creHeaderSpec.kit,
         enum: CreKit,
         enumOpen: true,
-        ref: { kind: "ids", tables: ["KIT"], keyEncoding: "swappedWords" },
+        ref: { kind: "ids", tables: ["KIT"], keyEncoding: { KIT: "swappedWords" } },
     },
     /**
      * ANIMATE.IDS, and the only one of these with NO vendored table: the value space is per-install (321
