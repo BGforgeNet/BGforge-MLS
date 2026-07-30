@@ -81,7 +81,7 @@ const creLabels: Record<string, string> = {
     // Inside the "Morale" subgroup, so the members drop the "Morale" prefix.
     [k("moraleBreak")]: "Break",
     [k("moraleRecoveryTime")]: "Recovery",
-    [k("thaco")]: "THAC0",
+    [k("thac0")]: "THAC0",
     [k("numAttacks")]: "Attacks",
     [k("acNatural")]: "Natural",
     [k("acEffective")]: "Effective",
@@ -397,7 +397,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         {
                                             kind: "fields",
                                             columns: 1,
-                                            fields: [k("thaco"), k("numAttacks")],
+                                            fields: [k("thac0"), k("numAttacks")],
                                         },
                                     ],
                                 },

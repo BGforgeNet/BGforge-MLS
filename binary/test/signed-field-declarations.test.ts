@@ -2,7 +2,7 @@
  * Completeness sweep: a field whose documentation calls it a bonus, modifier or penalty must either be typed
  * SIGNED or be excluded here with the reason it cannot go negative.
  *
- * IESDP's type vocabulary has no signed integer - everything 32 bits wide is a `dword` - so the generator maps
+ * The IE half: IESDP has no signed integer at all - everything 32 bits wide is a `dword` - so the generator maps
  * every one to `u32` and a stored -4 surfaces as 4294967292. Nothing about the field's shape gives it away: a
  * signed field and an unsigned one are the same bytes and the same `codec:` line, and both round-trip
  * byte-identically, so the whole test suite stays green either way. The only signal is what IESDP CALLS it,
@@ -12,8 +12,9 @@
  * sweep was written for holds a negative in ~2,500 records of a real BG2/BG:EE install and in NONE of the
  * reproducible `external/` corpus - a corpus-gated check would have been green the whole time it was wrong.
  *
- * The discriminator is narrow on purpose: it fires on 8 fields, of which 5 are genuinely signed and 3 are
- * excluded below. Widening it to every numeric field would mean an exclusion list longer than the specs.
+ * The discriminator is narrow on purpose: across every spec of both engine families it fires on 10 fields, of
+ * which 7 are genuinely signed and 3 are excluded below. Widening it to every numeric field would mean an
+ * exclusion list longer than the specs.
  */
 
 import { describe, expect, it } from "vitest";
@@ -24,9 +25,22 @@ import { splAbilitySpecAnnotated } from "../src/spl/specs/ability.overrides";
 import { effBodySpecAnnotated } from "../src/eff/specs/body.overrides";
 import { effectSpecAnnotated } from "../src/ie-common/specs/effect.overrides";
 import { creHeaderSpecAnnotated } from "../src/cre/specs/header.overrides";
+import { ammoSpec } from "../src/pro/specs/ammo";
+import { armorSpec } from "../src/pro/specs/armor";
+import { critterSpec } from "../src/pro/specs/critter";
+import { drugSpec } from "../src/pro/specs/drug";
+import { weaponSpec } from "../src/pro/specs/weapon";
+import { itemCommonSpec } from "../src/pro/specs/item-common";
+import { headerSpec } from "../src/pro/specs/header";
 import type { FieldSpec } from "../src/spec/types";
 
-/** Every spec that can carry a numeric bonus. CRE's is hand-written; the rest are generated. */
+/**
+ * Every spec that can carry a numeric bonus, across BOTH engine families - the mis-typing follows from a
+ * source's type vocabulary, not from any one game. IESDP has no signed integer at all; the Fallout specs are
+ * hand-transcribed from the engine's own structs, where `long` IS signed and can be read past.
+ *
+ * CRE's and the Fallout specs are hand-written; the IE ones are generated.
+ */
 const SPECS: Record<string, Record<string, FieldSpec>> = {
     itmHeaderSpec: itmHeaderSpecAnnotated,
     itmAbilitySpec: itmAbilitySpecAnnotated,
@@ -35,6 +49,13 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     effBodySpec: effBodySpecAnnotated,
     effectSpec: effectSpecAnnotated,
     creHeaderSpec: creHeaderSpecAnnotated,
+    proHeaderSpec: headerSpec,
+    proAmmoSpec: ammoSpec,
+    proArmorSpec: armorSpec,
+    proCritterSpec: critterSpec,
+    proDrugSpec: drugSpec,
+    proWeaponSpec: weaponSpec,
+    proItemCommonSpec: itemCommonSpec,
 };
 
 /**
@@ -47,8 +68,8 @@ const CANNOT_BE_NEGATIVE: Record<string, string> = {
     "itmAbilitySpec.alternativeDamageBonus": "Every one of 2,914 abilities stores 0 - no evidence it is used",
 };
 
-/** What IESDP calls a field when the value can be a penalty as well as a gain. */
-const BONUS_WORD = /bonus|modifier|penalty/i;
+/** What a source calls a field when the value can be a penalty as well as a gain. */
+const BONUS_WORD = /bonus|modifier|penalty|adjust/i;
 
 /** typed-binary exposes its schemas by constructor name; the signed ones start with `Int`. */
 function isSigned(spec: FieldSpec): boolean {
@@ -98,7 +119,10 @@ describe("a field documented as a bonus is typed signed", () => {
         ["effBodySpec", "saveBonus"],
         ["itmAbilitySpec", "damageBonus"],
         ["itmAbilitySpec", "thac0Bonus"],
-        ["creHeaderSpec", "thaco"],
+        ["creHeaderSpec", "thac0"],
+        // Fallout: armour-piercing ammo lowers AC and DR, and the engine struct types both signed.
+        ["proAmmoSpec", "acModifier"],
+        ["proAmmoSpec", "drModifier"],
     ])("%s.%s is signed", (specName, field) => {
         expect(isSigned(SPECS[specName]![field]!)).toBe(true);
     });

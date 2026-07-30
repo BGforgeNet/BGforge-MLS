@@ -60,10 +60,10 @@
 
 ### Fixes
 
-- Negative values in an effect's Save Bonus, an item ability's Damage Bonus and THAC0 Bonus, and a creature's
-  THAC0 now read as the penalties they are. They previously showed as huge positive numbers - a save penalty of
-  -4 appeared as 4294967292 - because the reference data these are generated from has no signed number type.
-
+- Penalties now read as negative numbers rather than huge positive ones. A save penalty of -4 used to read
+  as a value in the billions. This affects an effect's Save Bonus, an item ability's Damage Bonus and THAC0
+  Bonus, a creature's THAC0, and Fallout ammo's AC and DR Modifier, which armour-piercing rounds use to
+  lower both.
 - Unsaved binary-editor and animation-editor changes now survive a window reload or crash, instead of being
   silently lost.
 - CRE kits whose identifier is keyed in the high half of the table entry - Barbarian and Wild Mage on the
