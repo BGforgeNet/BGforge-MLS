@@ -6,6 +6,7 @@
 import type { FieldSpec } from "../../spec/types";
 import {
     AbilityIdRequiredFlags,
+    AbilityProjectileNone,
     AbilityTargetType,
     PROJECTILE_REF,
     SCHOOL_REF,
@@ -49,8 +50,14 @@ export const itmAbilitySpecAnnotated = {
     },
     // Open: launcher / projectile values are mod-extensible via ITEMCAT.
     projectileType: { ...itmAbilitySpec.projectileType, enum: ItmAbilityProjectileType, enumOpen: true },
-    // Named by MISSILE.IDS and PROJECTL.IDS together - see PROJECTILE_REF for the keying and why both.
-    projectileAnimation: { ...itmAbilitySpec.projectileAnimation, ref: PROJECTILE_REF },
+    // Named by MISSILE.IDS and PROJECTL.IDS together - see PROJECTILE_REF for the keying and why both. The
+    // vendored pair covers only the two values below their key space; every projectile comes from the install.
+    projectileAnimation: {
+        ...itmAbilitySpec.projectileAnimation,
+        enum: AbilityProjectileNone,
+        enumOpen: true,
+        ref: PROJECTILE_REF,
+    },
     // Open: per IESDP, damage type values 10+ behave as `None` rather than
     // rejecting, so the engine tolerates out-of-table values.
     damageType: { ...itmAbilitySpec.damageType, enum: ItmAbilityDamageType, enumOpen: true },

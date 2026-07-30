@@ -249,6 +249,34 @@ describe.skipIf(!have2daFixtures)("projectile fields declare both naming tables 
         expect(encodings?.["MISSILE"]).toBeUndefined();
         expect(encodings?.["PROJECTL"]).toBe("keyPlusOne");
     });
+
+    /**
+     * The two values below both tables' key space are vendored, because no install can name them: PROJECTL
+     * would need a key -1 or 0, and MISSILE.IDS starts at 1 on both a real BG:EE and a BG2:ToB. Measured
+     * there: stored 0 occurs in 99 of ToB's 1845 item abilities and read bare, and stored 1 - the DOMINANT
+     * value at 1529 of those and 2300 of 3683 spell abilities - is only named because MISSILE happens to ship.
+     *
+     * Kept to exactly those two keys. The projectiles themselves stay un-vendored (see PROJECTILE_REF), so a
+     * table growing past {0, 1} would be the closed list that declaration refuses to carry.
+     */
+    it("vendors the two values below the tables' key space, and only those", () => {
+        const itm = parseFields(itmParser, ITM_FIXTURE).find((f) => f.name === "Projectile Animation");
+        const spl = parseFields(splParser, SPL_FIXTURE).find((f) => f.name === "Projectile");
+
+        expect(itm?.enumOptions).toEqual({ "0": "None", "1": "None" });
+        expect(spl?.enumOptions).toEqual(itm?.enumOptions);
+        // Open, or the vendored pair would read as the field's whole domain the moment no game is attached.
+        expect(itm?.enumOpen).toBe(true);
+        expect(spl?.enumOpen).toBe(true);
+    });
+
+    // NOT on the impact projectile: that field is keyed straight into PROJECTL, so its stored 1 is ARROW, a
+    // real projectile. Copying the ability pair onto it would relabel a projectile as "None".
+    it("leaves the impact projectile unvendored, whose 1 is a real PROJECTL entry", () => {
+        const eff = parseFields(effParser, EFF_FIXTURE).find((f) => f.name === "Projectile");
+
+        expect(eff?.enumOptions).toBeUndefined();
+    });
 });
 
 /**

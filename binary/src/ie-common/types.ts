@@ -149,8 +149,9 @@ export const SECTYPE_REF = { kind: "2da", tables: ["MSECTYPE"] } as const;
  * "For most purposes adds 1" is the caveat that makes `IMPACT_PROJECTILE_REF` a separate declaration - the
  * EFF v2 field is one of the purposes it does not.
  *
- * No vendored fallback table, as with CRE `animationId`: the value space is per-install and mod-extended, so
- * outside a game the field stays a plain number rather than posing as a closed list.
+ * The projectiles themselves are NOT vendored, as with CRE `animationId`: that value space is per-install and
+ * mod-extended, so a vendored copy would pose as a closed list. `AbilityProjectileNone` is the exception that
+ * proves it - see there.
  */
 export const PROJECTILE_REF = {
     kind: "ids",
@@ -158,6 +159,27 @@ export const PROJECTILE_REF = {
     keyEncoding: { PROJECTL: "keyPlusOne" },
     symbolResource: { table: "PROJECTL", type: "PRO" },
 } as const;
+
+/**
+ * The two ability-projectile values that name no projectile, vendored because no install table can supply them.
+ *
+ * This is not the closed list `PROJECTILE_REF` refuses to vendor: it holds only the values BELOW the tables'
+ * key space, never a projectile, so it cannot go stale against an install or a mod.
+ * - `0` is named by nothing. PROJECTL would need its key -1, and neither install's MISSILE.IDS has a key 0, so
+ *   the value read bare even with a game open - 99 of BG2:ToB's 1845 item abilities store it. Near Infinity
+ *   synthesises a label here for the same reason.
+ * - `1` is PROJECTL's absent key 0, and it is the DOMINANT stored value (1529 of those 1845, 2300 of 3683 spell
+ *   abilities). MISSILE.IDS names it `None` on both installs and wins per value where it ships - but it is the
+ *   table an install may omit entirely, and the whole field would otherwise read bare without a game.
+ *
+ * Both read `None` because that is what each is: the value prefix the dropdown renders (`0 None` / `1 None`)
+ * keeps them apart. `None` is the editor's own word for unset, as in `Schools` - not an invented identifier,
+ * which the vendored-mirror rule forbids (`binary/src/AGENTS.md`).
+ */
+export const AbilityProjectileNone: Readonly<Record<number, string>> = {
+    0: "None",
+    1: "None",
+};
 
 /**
  * The EFF v2 body's projectile (0xA0) - the projectile spawned on IMPACT, not the one an ability launches, and

@@ -165,6 +165,10 @@ const TABLE_SOURCES: Record<string, string> = {
     "ie-common.SecondaryTypes": "IESDP msectype.2da (bgee)",
     "ie-common.AbilityTargetType": "IESDP itm/spl ability target",
     "ie-common.AbilityIdRequiredFlags": "IESDP itm/spl ability id-required flags",
+    // Not an IDS mirror: the two stored values BELOW projectl.ids/missile.ids's key space, which no install
+    // table names. Sourced from the tables' own absence of those keys (measured on BG:EE and BG2:ToB) plus
+    // IESDP's missile.ids note that the game reads the stored value as the PROJECTL index plus one.
+    "ie-common.AbilityProjectileNone": "IESDP projectl.ids/missile.ids - values below both tables' key space",
 };
 
 // --- B. sfall cross-check ------------------------------------------------------------------------

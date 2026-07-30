@@ -3,7 +3,7 @@
  */
 
 import type { FieldSpec } from "../../spec/types";
-import { AbilityTargetType, PROJECTILE_REF } from "../../ie-common/types";
+import { AbilityProjectileNone, AbilityTargetType, PROJECTILE_REF } from "../../ie-common/types";
 import { SplAbilityForm, SplAbilityFriendly, SplAbilityLocation } from "../types";
 import { splAbilitySpec } from "./ability";
 
@@ -15,8 +15,9 @@ export const splAbilitySpecAnnotated = {
     friendly: { ...splAbilitySpec.friendly, flags: SplAbilityFriendly },
     location: { ...splAbilitySpec.location, enum: SplAbilityLocation },
     target: { ...splAbilitySpec.target, enum: AbilityTargetType },
-    // Named by MISSILE.IDS and PROJECTL.IDS together - see PROJECTILE_REF for the keying and why both.
-    projectile: { ...splAbilitySpec.projectile, ref: PROJECTILE_REF },
+    // Named by MISSILE.IDS and PROJECTL.IDS together - see PROJECTILE_REF for the keying and why both. The
+    // vendored pair covers only the two values below their key space; every projectile comes from the install.
+    projectile: { ...splAbilitySpec.projectile, enum: AbilityProjectileNone, enumOpen: true, ref: PROJECTILE_REF },
     // Six reserved slots: real wire bytes that round-trip, but no user-editable data. Hide them from the
     // ability detail form (the rebuilder reads them back by label, so the byte round-trip is unaffected).
     unused1: { ...splAbilitySpec.unused1, hidden: true },

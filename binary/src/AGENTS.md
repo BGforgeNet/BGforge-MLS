@@ -121,6 +121,12 @@ that carries both.
   and the vendored one fills what it does not cover. The gap runs both ways - BG2's RACE.IDS carries 82 entries
   against 8 vendored, its SPECIFIC.IDS only 3 against 11. Keep such fields `enumOpen`: the declaration adds
   names, never a closed value set.
+  This is also the one way a field whose value space must NOT be vendored can still name a value: vendor only
+  the keys the tables structurally cannot reach. An ability's projectile leaves every projectile to the install
+  (see the "do NOT vendor a name table" rule above) but vendors `AbilityProjectileNone`, the two values below
+  both tables' key space - so they cannot go stale against an install or a mod, where a copied projectile list
+  would. Keep such a table to exactly those keys; the moment it holds a value a table could name, it is the
+  closed list the rule forbids.
 - **A vendored table that mirrors an IDS carries the game's identifiers VERBATIM - never humanized.** `HALF_ELF`,
   `MAGESCHOOL_ABJURER`, and `ASSASIN` with the engine's own misspelling. Two reasons: the same field must read
   identically with and without a game (a humanized vendored table beside raw IDS entries mixes two vocabularies
