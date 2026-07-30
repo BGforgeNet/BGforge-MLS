@@ -1,6 +1,6 @@
 // Auto-generated from IESDP _data/file_formats/eff_v2/body.yml. Do not hand-edit.
 
-import { u16, u32, u8 } from "typed-binary";
+import { i32, u16, u32, u8 } from "typed-binary";
 import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const effBodySpec = {
@@ -20,7 +20,7 @@ export const effBodySpec = {
     diceThrown: { codec: u32, description: "Dice Thrown" },
     diceSides: { codec: u32, description: "Dice Sides" },
     saveType: { codec: u32, description: "Saving throw type - bit 0 -> Spells - bit 1 -> Breath - bit 2 -> Paralyze / Poison / Death - bit 3 -> Wands - bit 4 -> Petrify / Polymorph - bit 5 -> Spells (EE only) - see opcode #322 - bit 6 -> ...", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/eff_v2.htm" },
-    saveBonus: { codec: u32, description: "Save bonus If called via opcode #183 , this field is ignored." },
+    saveBonus: { codec: i32, description: "Save bonus If called via opcode #183 , this field is ignored." },
     stackingIdTobex: { codec: u32, description: "Special (EE games) TobEx: Stacking ID.", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/eff_v2.htm" },
     school: { codec: u32, description: "Primary Type (School) - See MSCHOOL.2DA ." },
     unused2: { codec: u32 },
@@ -33,10 +33,10 @@ export const effBodySpec = {
     timeApplied: { codec: u32, description: "Time applied (ticks) - It stores the gametime (ticks) at which the effect was originally applied." },
     resource2: charsSpec(8),
     resource3: charsSpec(8),
-    casterXCoord: { codec: u32, description: "Caster X coordinate" },
-    casterYCoord: { codec: u32, description: "Caster Y coordinate" },
-    targetXCoord: { codec: u32, description: "Target X coordinate" },
-    targetYCoord: { codec: u32, description: "Target Y coordinate" },
+    casterXCoord: { codec: i32, description: "Caster X coordinate" },
+    casterYCoord: { codec: i32, description: "Caster Y coordinate" },
+    targetXCoord: { codec: i32, description: "Target X coordinate" },
+    targetYCoord: { codec: i32, description: "Target Y coordinate" },
     parentResourceType: { codec: u32, description: "Parent resource type - 0 -> None - 1 -> Spell - 2 -> Item" },
     parentResource: charsSpec(8),
     parentResourceFlags: { codec: u32, description: "Parent resource flags - bit 10 -> Hostile - bit 11 -> No LOS required - bit 12 -> Allow spotting - bit 13 -> Outdoors only - bit 14 -> Non-magical ability - bit 15 -> Ignore Wild Surge - bit 16 -> ...", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/eff_v2.htm" },

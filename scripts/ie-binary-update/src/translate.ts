@@ -1,4 +1,5 @@
 import type { OffsetItem } from "../../ie-update/src/ie/types.ts";
+import { applySignedness } from "./signed-fields.ts";
 
 export interface TranslatedField {
     readonly name: string;
@@ -142,11 +143,16 @@ function lookupCodec(type: string): string {
     return codec;
 }
 
+/** IESDP has no signed integer type, so a semantically signed field is corrected from its curated list. */
+function signedCodec(specConst: string | undefined, fieldName: string, codec: string): string {
+    return specConst === undefined ? codec : applySignedness(specConst, fieldName, codec);
+}
+
 function arraySource(elementCodec: string, count: number): string {
     return `arraySpec({ element: { codec: ${elementCodec} }, count: ${count} })`;
 }
 
-export function translateField(item: OffsetItem, docBaseUrl?: string): TranslatedField {
+export function translateField(item: OffsetItem, docBaseUrl?: string, specConst?: string): TranslatedField {
     const isUnused = item.unused !== undefined || item.unknown !== undefined;
     const name = isUnused ? "" : item.id !== undefined ? snakeToCamel(item.id) : descToCamelCase(item.desc);
 
@@ -170,11 +176,11 @@ export function translateField(item: OffsetItem, docBaseUrl?: string): Translate
     }
 
     if (item.mult !== undefined) {
-        const codec = lookupCodec(item.type);
+        const codec = signedCodec(specConst, name, lookupCodec(item.type));
         return { name, fieldSource: arraySource(codec, item.mult), imports: [codec, "arraySpec"] };
     }
 
-    const codec = lookupCodec(item.type);
+    const codec = signedCodec(specConst, name, lookupCodec(item.type));
     // Scalars are the only spec form that carries tooltip metadata in this pass: the `{ codec }` object literal
     // has slots for it, whereas `charsSpec()` / `arraySpec()` (resref, string, byte-run fields) do not - left
     // for a follow-up. Emit the CAPPED desc plus, when the full write-up is longer, a link to the field's IESDP
@@ -234,7 +240,11 @@ function fieldByteSize(item: OffsetItem): number {
  * Names unused/unknown fields `unused1..N` so the wire bytes round-trip
  * verbatim - they're padding from the parser's POV but real bytes on disk.
  */
-export function translateStruct(items: readonly OffsetItem[], docBaseUrl?: string): TranslatedStruct {
+export function translateStruct(
+    items: readonly OffsetItem[],
+    docBaseUrl?: string,
+    specConst?: string,
+): TranslatedStruct {
     const fields: TranslatedField[] = [];
     const imports = new Set<string>();
     let offset = items[0]?.offset ?? 0;
@@ -248,7 +258,7 @@ export function translateStruct(items: readonly OffsetItem[], docBaseUrl?: strin
             );
         }
 
-        const translated = translateField(item, docBaseUrl);
+        const translated = translateField(item, docBaseUrl, specConst);
         const isUnused = item.unused !== undefined || item.unknown !== undefined;
         const finalField = isUnused ? { ...translated, name: `unused${++unusedCount}` } : translated;
 

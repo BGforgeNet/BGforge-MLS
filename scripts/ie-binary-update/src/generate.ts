@@ -45,7 +45,7 @@ export function generate(opts: GenerateOptions): GenerateResult {
 
     for (const target of opts.targets) {
         const items = loadOffsetItems(path.join(opts.iesdpDir, target.iesdpRelPath));
-        const struct = translateStruct(items, `${IESDP_DOC_BASE}${target.docPage}`);
+        const struct = translateStruct(items, `${IESDP_DOC_BASE}${target.docPage}`, target.specConst);
         const expected = emitSpecModule({
             struct,
             specConst: target.specConst,

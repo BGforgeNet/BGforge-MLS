@@ -1,6 +1,6 @@
 // Auto-generated from IESDP _data/file_formats/itm_v1/extended_header.yml. Do not hand-edit.
 
-import { u16, u32, u8 } from "typed-binary";
+import { i16, u16, u32, u8 } from "typed-binary";
 import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const itmAbilitySpec = {
@@ -16,12 +16,12 @@ export const itmAbilitySpec = {
     alternativeDiceThrown: { codec: u8, description: "Alternative dice thrown" },
     speed: { codec: u8, description: "Speed Factor - See opcode #190." },
     alternativeDamageBonus: { codec: u8, description: "Alternative damage bonus" },
-    thac0Bonus: { codec: u16, description: "THAC0 bonus A successful hit will always occur if any of the conditions below is true - This field is set to `32767`.", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm" },
+    thac0Bonus: { codec: i16, description: "THAC0 bonus A successful hit will always occur if any of the conditions below is true - This field is set to `32767`.", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm" },
     diceSides: { codec: u8, description: "Dice sides" },
     primaryType: { codec: u8, description: "Primary Type (School) - See MSCHOOL.2DA ." },
     diceThrown: { codec: u8, description: "Dice thrown" },
     secondaryType: { codec: u8, description: "Secondary Type - See MSECTYPE.2DA ." },
-    damageBonus: { codec: u16, description: "Damage bonus" },
+    damageBonus: { codec: i16, description: "Damage bonus" },
     damageType: { codec: u16, description: "Damage type - 0 -> None - Deals Crushing damage, uses base AC (ignores all 4 specific AC).", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm" },
     featureBlockCount: { codec: u16, description: "Count of feature blocks" },
     featureBlockIndex: { codec: u16, description: "Index into feature blocks" },

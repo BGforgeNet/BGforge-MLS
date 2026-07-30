@@ -4,9 +4,12 @@
  * + timing + resistance + saveType) but uses wider field widths (mostly
  * dword instead of word/char). Lookup tables are number-keyed and work for
  * either wire type.
+ *
+ * Signedness is NOT corrected here. IESDP has no signed integer type, so several fields need re-typing, and
+ * doing it per format is what left the save bonus reading 4294967292 beside coordinates that had been fixed.
+ * It now happens at generation - `scripts/ie-binary-update/src/signed-fields.ts`.
  */
 
-import { i32 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 import {
@@ -73,15 +76,6 @@ export const effBodySpecAnnotated = {
     parentResourceType: { ...effBodySpec.parentResourceType, enum: EffectParentResourceType, enumOpen: true },
     // Bitfield (flags of the parent SPL); was rendering as a raw integer for want of a flag table.
     parentResourceFlags: { ...effBodySpec.parentResourceFlags, flags: EffectParentResourceFlags },
-    // Caster/target coordinates are signed: -1 is a real engine value ("no/origin coordinate"), and
-    // negative map coordinates occur. IESDP types them `dword` and has no signed-integer type, so the
-    // generator emits u32 (surfacing -1 as 4294967295). Override to i32 here until IESDP/the generator gain
-    // a signed-dword type; wire bytes are unchanged (i32 and u32 read/write the same 4 bytes), so this is a
-    // lossless display/type correction, not a wire change.
-    casterXCoord: { ...effBodySpec.casterXCoord, codec: i32 },
-    casterYCoord: { ...effBodySpec.casterYCoord, codec: i32 },
-    targetXCoord: { ...effBodySpec.targetXCoord, codec: i32 },
-    targetYCoord: { ...effBodySpec.targetYCoord, codec: i32 },
     // `variableName` is the per-effect local-variable name used by the variable-related opcodes (set/inc/
     // check global or local). IESDP types it as `bytes, length: 32`, but for those opcodes it holds a
     // NUL-terminated ASCII identifier; surface it as a string so the editor renders the name directly

@@ -55,7 +55,10 @@ export const creHeaderSpec = {
     acMissileMod: { codec: i16 },
     acPiercingMod: { codec: i16 },
     acSlashingMod: { codec: i16 },
-    thaco: { codec: u8 },
+    // Signed: THAC0 improves downwards and goes below zero for the strongest creatures - 39 across the two
+    // installs store one, which as u8 read as 251 for -5. This spec is hand-written, so it carries its own
+    // signedness; the generated specs get theirs from the generator's signed-field table.
+    thaco: { codec: i8 },
     numAttacks: { codec: u8 },
     saveVsDeath: { codec: u8 },
     saveVsWands: { codec: u8 },

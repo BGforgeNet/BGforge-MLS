@@ -1,6 +1,6 @@
 // Auto-generated from IESDP _data/file_formats/itm_v1/feature_block.yml. Do not hand-edit.
 
-import { u16, u32, u8 } from "typed-binary";
+import { i32, u16, u32, u8 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const effectSpec = {
@@ -18,7 +18,7 @@ export const effectSpec = {
     maxLevel: { codec: u32, description: "Dice Thrown / Maximum Level See here for further details." },
     minLevel: { codec: u32, description: "Dice Sides / Minimum Level See here for further details." },
     saveType: { codec: u32, description: "Saving throw type - bit 0 -> Spells - bit 1 -> Breath - bit 2 -> Paralyze / Poison / Death - bit 3 -> Wands - bit 4 -> Petrify / Polymorph - bit 10 -> Ignore primary target (EE only) - bit 11 -> ...", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm" },
-    saveBonus: { codec: u32, description: "Saving Throw Bonus" },
+    saveBonus: { codec: i32, description: "Saving Throw Bonus" },
     stackingIdEx: { codec: u32, description: "TobEx: Stacking ID.", docUrl: "https://gibberlings3.github.io/iesdp/file_formats/ie_formats/itm_v1.htm" },
 } satisfies Record<string, FieldSpec>;
 

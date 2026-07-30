@@ -60,6 +60,10 @@
 
 ### Fixes
 
+- Negative values in an effect's Save Bonus, an item ability's Damage Bonus and THAC0 Bonus, and a creature's
+  THAC0 now read as the penalties they are. They previously showed as huge positive numbers - a save penalty of
+  -4 appeared as 4294967292 - because the reference data these are generated from has no signed number type.
+
 - Unsaved binary-editor and animation-editor changes now survive a window reload or crash, instead of being
   silently lost.
 - CRE kits whose identifier is keyed in the high half of the table entry - Barbarian and Wild Mage on the
