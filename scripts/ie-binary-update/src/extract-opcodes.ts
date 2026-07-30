@@ -2,12 +2,11 @@
  * Extracts opcode-number -> name mapping from IESDP `_opcodes/op<NNN>.html`
  * frontmatter and emits a generated TS lookup table.
  *
- * IESDP files come in two flavours: `opNNN.html` (canonical, primary
- * opname) and `opNNN-<engine>.html` (engine-specific variant - same
- * number, alternative opname). The canonical page wins wherever one exists;
- * the variants describe alternate behaviours rather than alternate names.
- * An opcode with NO canonical page falls back to its variants - see
- * `pagesForOpcode` for why that fallback is load-bearing rather than an edge case.
+ * IESDP writes one page per engine reading of an opcode - `opNNN.html` and
+ * `opNNN-<engine>.html` alike, each carrying the availability matrix that says
+ * which engines it speaks for. The unsuffixed filename is NOT a neutral or
+ * primary definition; see `ENGINE_PREFERENCE` for which reading these tables
+ * describe and why one has to be chosen.
  */
 
 import fs from "node:fs";
@@ -66,57 +65,67 @@ export type OpcodeRelationship = Partial<Record<OpcodeSlotKey, OpcodeSlot>> & {
 const ENGINE_KEYS = ["bg1", "bg2", "bgee", "iwd1", "iwd2", "pst", "pstee"] as const;
 
 /**
- * Which engine's page speaks for an opcode that has no canonical one. The EE pages are both the most complete
- * (they carry the extra parameter/special keys at all) and the edition most of these opcodes belong to.
- * Matched by prefix, so `bg1-derived` ranks with `bg1`; an unlisted suffix sorts last, alphabetically.
+ * The engine whose reading of an opcode the generated tables describe, most preferred first.
+ *
+ * There is no engine-neutral definition to fall back on. An opcode number means whatever each engine makes it
+ * mean - often the same thing, sometimes not: 238 is "Stat: Save vs. all" on Icewind Dale and "Death:
+ * Disintegrate" on BG2/EE, 283 is "Text: Float Text" against "Use EFF File (Cursed)". IESDP writes one page
+ * per reading and the availability matrix on each page says which engines it speaks for; the unsuffixed
+ * `opNNN.html` filename carries no special authority (`op025.html` covers BG2 alone, `op283.html` Icewind
+ * Dale alone), so selecting by filename picked an arbitrary engine's meaning and applied it to every record.
+ *
+ * The editor has one flat table and no game to ask at parse time, so it needs one reading: BG(2)EE, being the
+ * edition most installs run. Where no page covers an EE engine, the rest of this order picks the next.
  */
-const VARIANT_PREFERENCE = ["bgee", "pstee", "ee", "bg2", "bg1", "iwd2", "iwd1", "pst"] as const;
+const ENGINE_PREFERENCE = ["bgee", "pstee", "bg2", "bg1", "iwd2", "iwd1", "pst"] as const;
 
-/** The pages documenting one opcode: its canonical page if it has one, plus its variants in preference order. */
-interface OpcodePages {
-    canonical?: string;
-    variants: readonly string[];
-}
-
-function variantRank(suffix: string): number {
-    const i = VARIANT_PREFERENCE.findIndex((p) => suffix.startsWith(p));
-    return i === -1 ? VARIANT_PREFERENCE.length : i;
+/** One IESDP page: which engines its reading covers, per its own frontmatter. */
+interface OpcodePage {
+    file: string;
+    engines: ReadonlySet<string>;
 }
 
 /**
- * Every page documenting one opcode, most authoritative first: the canonical `opNNN.html` alone when it
- * exists, otherwise the engine variants in `VARIANT_PREFERENCE` order.
+ * Rank a page by the most-preferred engine it covers. A page whose matrix marks nothing (a handful do) sorts
+ * last rather than being dropped - it is still the only description some opcode has.
+ */
+function pageRank(page: OpcodePage): number {
+    const i = ENGINE_PREFERENCE.findIndex((e) => page.engines.has(e));
+    return i === -1 ? ENGINE_PREFERENCE.length : i;
+}
+
+/**
+ * Every page documenting one opcode, the preferred engine's reading first.
  *
- * The fallback is not a corner case. 137 of the 442 documented opcodes have no canonical page at all - every
- * EE opcode (318-383), every IWD2 opcode (400-457), and 13 others including 177 "Use EFF File", the single
- * most common effect opcode in a real install. Reading canonical files only dropped all of them from both
+ * Coverage matters as much as the ordering: 137 of the 442 documented opcodes have no unsuffixed page at all -
+ * every EE opcode (318-383), every IWD2 opcode (400-457), and 13 others including 177 "Use EFF File", the most
+ * common effect opcode in a real install. Reading unsuffixed files only dropped all of them from both
  * generated tables, so those opcodes rendered as a bare number with no name and no parameter labels.
  */
-function pagesForOpcode(opcodesDir: string): ReadonlyMap<number, OpcodePages> {
-    const canonical = new Map<number, string>();
-    const variants = new Map<number, { suffix: string; file: string }[]>();
+function pagesForOpcode(opcodesDir: string): ReadonlyMap<number, readonly OpcodePage[]> {
+    const byOpcode = new Map<number, OpcodePage[]>();
     for (const entry of fs.readdirSync(opcodesDir)) {
-        const m = /^op(\d+)(?:-([a-z0-9-]+))?\.html$/.exec(entry);
+        const m = /^op(\d+)(?:-[a-z0-9-]+)?\.html$/.exec(entry);
         if (!m) continue;
         const n = Number.parseInt(m[1]!, 10);
-        if (m[2] === undefined) {
-            canonical.set(n, entry);
-            continue;
-        }
-        const list = variants.get(n) ?? [];
-        list.push({ suffix: m[2], file: entry });
-        variants.set(n, list);
+        const file = path.join(opcodesDir, entry);
+        const fm = parseRelationshipFrontmatter(fs.readFileSync(file, "utf8"));
+        const engines = new Set(
+            Object.entries(fm?.availability ?? {})
+                .filter(([, on]) => on)
+                .map(([engine]) => engine),
+        );
+        const list = byOpcode.get(n) ?? [];
+        list.push({ file, engines });
+        byOpcode.set(n, list);
     }
-    const out = new Map<number, OpcodePages>();
-    for (const n of new Set([...canonical.keys(), ...variants.keys()])) {
-        const c = canonical.get(n);
-        const ordered = (variants.get(n) ?? [])
-            .sort((a, b) => variantRank(a.suffix) - variantRank(b.suffix) || a.suffix.localeCompare(b.suffix))
-            .map((v) => path.join(opcodesDir, v.file));
-        out.set(n, {
-            canonical: c === undefined ? undefined : path.join(opcodesDir, c),
-            variants: ordered,
-        });
+    const out = new Map<number, readonly OpcodePage[]>();
+    for (const [n, pages] of byOpcode) {
+        // Filename as the tiebreak so two pages of equal rank always order the same way across runs.
+        out.set(
+            n,
+            [...pages].sort((a, b) => pageRank(a) - pageRank(b) || a.file.localeCompare(b.file)),
+        );
     }
     return out;
 }
@@ -155,8 +164,8 @@ export function extractOpcodes(opcodesDir: string): ReadonlyMap<number, string> 
         throw new Error(`Opcodes directory not found: ${opcodesDir}`);
     }
     for (const [n, pages] of pagesForOpcode(opcodesDir)) {
-        for (const page of [pages.canonical, ...pages.variants].filter((p) => p !== undefined)) {
-            const fm = parseFrontmatter(fs.readFileSync(page, "utf8"));
+        for (const page of pages) {
+            const fm = parseFrontmatter(fs.readFileSync(page.file, "utf8"));
             if (!fm) continue;
             out.set(n, fm.opname);
             break;
@@ -220,34 +229,31 @@ export function extractOpcodeRelationships(opcodesDir: string): ReadonlyMap<numb
         throw new Error(`Opcodes directory not found: ${opcodesDir}`);
     }
     for (const [n, pages] of pagesForOpcode(opcodesDir)) {
-        const read = (p: string) => parseRelationshipFrontmatter(fs.readFileSync(p, "utf8"));
-        const canonical = pages.canonical === undefined ? undefined : read(pages.canonical);
-        const variants = pages.variants.map(read).filter((fm) => fm !== undefined);
-        // A variant is only allowed to fill gaps in a canonical page when both describe the SAME opcode. Some
-        // numbers were reused between editions - canonical 283 is Float Text where its EE page is Use EFF File
-        // (Cursed) - and there the two pages' fields have nothing to do with each other.
-        const sameOpcode = canonical === undefined ? variants : variants.filter((v) => v.opname === canonical.opname);
-        const ordered = [canonical, ...sameOpcode].filter((fm) => fm !== undefined);
-        if (ordered.length === 0) continue;
+        const parsed = pages
+            .map((p) => parseRelationshipFrontmatter(fs.readFileSync(p.file, "utf8")))
+            .filter((fm) => fm !== undefined);
+        const primary = parsed[0];
+        if (primary === undefined) continue;
+        // Only a page describing the SAME reading may fill the primary's gaps. Where a number was reused, the
+        // other engine's page describes a different effect and its fields mean nothing here.
+        const sameReading = parsed.filter((fm) => fm.opname === primary.opname);
 
         const rel: OpcodeRelationship = {};
-        // Per SLOT, not per page: the canonical page always wins a slot it defines, but the EE-era slots
-        // (param3-5, special) are documented only on the engine variants, so a canonical opcode would otherwise
-        // lose them entirely. Filling a gap can only add a label, never contradict one.
+        // Per SLOT, not per page: the primary page wins any slot it defines, but the EE-era slots (param3-5,
+        // special) are often written on only one of an engine's pages. Filling a gap from a page describing the
+        // same reading can only add a label, never contradict one.
         for (const key of OPCODE_SLOT_KEYS) {
-            const label = ordered.map((fm) => fm.labels[key]).find((l) => l !== undefined);
+            const label = sameReading.map((fm) => fm.labels[key]).find((l) => l !== undefined);
             if (label !== undefined) rel[key] = { label };
         }
-        // Availability comes from the canonical page alone where there is one - it already carries the full
-        // engine matrix. A variant declares only its own engine, so a variant-only opcode needs the union.
-        const availability =
-            canonical?.availability ??
-            variants.reduce<Record<string, boolean>>((acc, fm) => {
-                for (const [engine, on] of Object.entries(fm.availability ?? {})) {
-                    acc[engine] = (acc[engine] ?? false) || on;
-                }
-                return acc;
-            }, {});
+        // Availability is the union over EVERY page, the readings not chosen included: the question it answers
+        // is "which engines have this opcode at all", which is what the editor shows beside the opcode field.
+        const availability = parsed.reduce<Record<string, boolean>>((acc, fm) => {
+            for (const [engine, on] of Object.entries(fm.availability ?? {})) {
+                acc[engine] = (acc[engine] ?? false) || on;
+            }
+            return acc;
+        }, {});
         if (Object.keys(availability).length > 0) rel.availability = availability;
         out.set(n, rel);
     }
@@ -264,32 +270,30 @@ export function buildMergedRelationships(opcodesDir: string): ReadonlyMap<number
     const harvested = extractOpcodeRelationships(opcodesDir);
     const out = new Map<number, OpcodeRelationship>(harvested);
 
-    // Two curated sources, one shape: parameter tables and IDS-file maps in one file, resref target types in
-    // the other. Applied in sequence so each keeps its own file rather than one growing to hold both.
-    const sources: readonly Readonly<Record<number, OpcodeRelationship>>[] = [
-        OpcodeRelationshipOverrides,
-        OpcodeResourceOverrides,
-    ];
-    for (const source of sources) {
-        for (const [n, override] of Object.entries(source)) {
-            const num = Number(n);
-            const base = out.get(num) ?? {};
-            const merged: OpcodeRelationship = { ...base };
+    for (const [n, override] of Object.entries(OpcodeRelationshipOverrides)) {
+        const num = Number(n);
+        const base = out.get(num) ?? {};
+        const merged: OpcodeRelationship = { ...base };
 
-            for (const key of OPCODE_SLOT_KEYS) {
-                const slot = override[key];
-                if (slot === undefined) continue;
-                merged[key] = {
-                    label: slot.label ?? base[key]?.label,
-                    ...(slot.enum !== undefined ? { enum: slot.enum } : {}),
-                };
-            }
-            if (override.availability !== undefined) merged.availability = override.availability;
-            if (override.idsFileByParam2 !== undefined) merged.idsFileByParam2 = override.idsFileByParam2;
-            if (override.resourceType !== undefined) merged.resourceType = override.resourceType;
-
-            out.set(num, merged);
+        for (const key of OPCODE_SLOT_KEYS) {
+            const slot = override[key];
+            if (slot === undefined) continue;
+            merged[key] = {
+                label: slot.label ?? base[key]?.label,
+                ...(slot.enum !== undefined ? { enum: slot.enum } : {}),
+            };
         }
+        if (override.availability !== undefined) merged.availability = override.availability;
+        if (override.idsFileByParam2 !== undefined) merged.idsFileByParam2 = override.idsFileByParam2;
+
+        out.set(num, merged);
+    }
+
+    // Resref target types come from their own curated file, which carries the reading each was transcribed
+    // from alongside the type. Only the type reaches the generated table; the reading is what the test guards.
+    for (const [n, decl] of Object.entries(OpcodeResourceOverrides)) {
+        const num = Number(n);
+        out.set(num, { ...out.get(num), resourceType: decl.type });
     }
 
     return new Map([...out].sort((a, b) => a[0] - b[0]));

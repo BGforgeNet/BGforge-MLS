@@ -7,7 +7,7 @@ import {
     buildMergedRelationships,
 } from "../src/extract-opcodes.ts";
 import { OpcodeRelationshipOverrides } from "../src/opcode-relationships.overrides.ts";
-import { OPCODE_RESOURCE_UNRESOLVED } from "../src/opcode-resources.overrides.ts";
+import { OPCODE_RESOURCE_UNRESOLVED, OpcodeResourceOverrides } from "../src/opcode-resources.overrides.ts";
 
 const IESDP_DIR = path.join(__dirname, "..", "..", "..", "external/infinity-engine/iesdp");
 const OPCODES_DIR = path.join(IESDP_DIR, "_opcodes");
@@ -18,7 +18,9 @@ describe("extractOpcodeRelationships", () => {
         const op1 = rels.get(1);
         expect(op1?.param1?.label).toBe("Key Modifier");
         expect(op1?.param2?.label).toBe("Type");
-        expect(op1?.availability).toMatchObject({ bg1: true, bgee: false, pst: true, pstee: false });
+        // Every engine, from the union across op001.html and op001-bgee.html. A single page's `bgee: 0` scopes
+        // that page's reading; it does not mean the opcode is absent there, which its own EE page shows.
+        expect(op1?.availability).toMatchObject({ bg1: true, bgee: true, pst: true, pstee: true });
     });
 
     test("emitted module has the do-not-hand-edit banner and a typed export", () => {
@@ -107,22 +109,49 @@ describe("buildMergedRelationships", () => {
         expect(resolved).toEqual([]);
     });
 
-    test("the IDS-file map covers the opcodes documented only on an engine-variant page", () => {
+    // The declaration is only true of the reading it was read from. Opcodes 41 and 352 are the worked example:
+    // both name a resource on their PSTEE page, while the BG(2)EE reading of 41 documents no resource use and
+    // of 352 is "Unused" - so a type transcribed there would resolve against a namespace the effect never uses.
+    test("every resource declaration still matches the reading it was transcribed from", () => {
+        const opcodes = extractOpcodes(OPCODES_DIR);
+        const drifted = Object.entries(OpcodeResourceOverrides)
+            .filter(([n, decl]) => opcodes.get(Number(n)) !== decl.reading)
+            .map(([n, decl]) => `${n}: declared for "${decl.reading}", table now says "${opcodes.get(Number(n))}"`);
+
+        expect(drifted).toEqual([]);
+    });
+
+    test("the IDS-file map covers the opcodes with no unsuffixed page", () => {
         const merged = buildMergedRelationships(OPCODES_DIR);
-        // op177 has no canonical page at all, so a canonical-only harvest could never have carried this.
+        // op177 has no unsuffixed page at all, so a filename-driven harvest could never have carried this.
         expect(merged.get(177)?.idsFileByParam2?.[4]).toEqual(["RACE"]);
         expect(merged.get(344)?.idsFileByParam2?.[9]).toEqual(["KIT"]);
     });
 });
 
 /**
- * IESDP documents 137 of its 442 opcodes ONLY on engine-variant pages - the whole EE (318-383) and IWD2
- * (400-457) ranges, plus 13 others including 177 "Use EFF File". Reading canonical pages only dropped every
- * one of them from both tables, so they rendered as a bare number. These pin the fallback and its two bounds:
- * a variant never overrides a canonical page, and never donates fields when it describes a different opcode.
+ * An opcode number means whatever each engine makes it mean, and IESDP writes one page per reading; the
+ * unsuffixed `opNNN.html` filename carries no authority (`op025.html` covers BG2 alone, `op283.html` Icewind
+ * Dale alone). The tables therefore describe ONE chosen reading - BG(2)EE - selected from each page's own
+ * availability matrix. These pin that choice, and the coverage that reading a single filename pattern lost.
  */
-describe("engine-variant fallback", () => {
-    test("an opcode with no canonical page still gets a name and parameter labels", () => {
+describe("engine reading selection", () => {
+    test("picks the BG(2)EE reading where engines disagree about the opcode", () => {
+        const opcodes = extractOpcodes(OPCODES_DIR);
+        // Each of these numbers was reused: the Icewind Dale pages say Stat: Save vs. all / Text: Float Text /
+        // State: Hold, and those pages happen to own the unsuffixed filename for two of the three.
+        expect(opcodes.get(238)).toBe("Death: Disintegrate");
+        expect(opcodes.get(283)).toBe("Use EFF File (Cursed)");
+        expect(opcodes.get(109)).toBe("State: Paralyze");
+    });
+
+    test("picks the BG(2)EE parameter labels too, not the unsuffixed page's", () => {
+        const rels = extractOpcodeRelationships(OPCODES_DIR);
+        // op025.html is the BG2 reading ("Damage Amount"); op025-bgee.html is the EE one.
+        expect(rels.get(25)?.param1?.label).toBe("Amount_1");
+    });
+
+    test("an opcode with no unsuffixed page still gets a name and parameter labels", () => {
         const opcodes = extractOpcodes(OPCODES_DIR);
         const rels = extractOpcodeRelationships(OPCODES_DIR);
         // op177 exists only as op177-bg2/-bgee/-iwd2/-pst/-bg1-derived.
@@ -131,44 +160,40 @@ describe("engine-variant fallback", () => {
         expect(rels.get(177)?.param2?.label).toBe("IDS File");
     });
 
-    test("covers the EE and IWD2 ranges, which have no canonical pages at all", () => {
+    test("covers the EE and IWD2 ranges, which have no unsuffixed pages at all", () => {
         const opcodes = extractOpcodes(OPCODES_DIR);
         expect(opcodes.get(328)).toBe("State: Set Extended or Spell State");
         expect(opcodes.get(457)).toBe("Spell Effect: Rapid Shot");
     });
 
-    test("a variant does not override a label the canonical page defines", () => {
+    test("another page of the SAME reading fills a slot the chosen page omits", () => {
         const rels = extractOpcodeRelationships(OPCODES_DIR);
-        // op025.html says "Damage Amount"; op025-bgee.html says "Amount_1". The canonical page wins.
-        expect(rels.get(25)?.param1?.label).toBe("Damage Amount");
-    });
-
-    test("a variant fills an EE-era slot the canonical page leaves undefined", () => {
-        const rels = extractOpcodeRelationships(OPCODES_DIR);
-        // op025.html has no param3/param4 keys; op025-bgee.html does, and both pages name the same opcode.
+        // Both op025 pages read the opcode as State: Poison; only one writes param3/param4.
         expect(rels.get(25)?.param3?.label).toBe("Amount_2");
         expect(rels.get(25)?.param4?.label).toBe("Frequency Multiplier");
     });
 
-    test("a variant describing a DIFFERENT opcode donates nothing", () => {
+    test("a page describing a DIFFERENT reading donates nothing", () => {
         const rels = extractOpcodeRelationships(OPCODES_DIR);
-        // op109.html is "State: Hold"; op109-bgee.html is "State: Paralyze" and carries special: "Mode".
-        // Different opname, so the slot is not borrowed - the numbers were reused between editions.
-        expect(rels.get(109)?.special).toBeUndefined();
+        // 260 is Spell Sequencer Activation on the EE, Graphics: Animation Removal on IWD1, and "Crash" on BG2.
+        // Only the chosen reading's own pages may contribute, so no IWD label leaks in.
+        expect(rels.get(260)?.param1?.label).not.toBe("Graphics: Animation Removal");
+        expect(rels.get(260)?.param2?.label).not.toMatch(/animation/i);
     });
 
-    test("availability comes from the canonical page, or the union of variants when there is none", () => {
+    test("availability is the union over every reading - which engines have the opcode at all", () => {
         const rels = extractOpcodeRelationships(OPCODES_DIR);
-        // op001.html carries the whole matrix itself, including the false entries.
-        expect(rels.get(1)?.availability).toMatchObject({ bg1: true, bgee: false, pstee: false });
-        // Each op177 variant declares only its own engine, so only their union says where it exists.
+        // op001.html's own matrix says bgee:false because that page describes the pre-EE reading; the opcode
+        // exists on the EE all the same, which its own page states.
+        expect(rels.get(1)?.availability).toMatchObject({ bg1: true, bgee: true });
+        // Each op177 page declares only its own engine, so only the union says where it exists.
         expect(rels.get(177)?.availability).toMatchObject({ bg1: true, bg2: true, bgee: true, iwd2: true });
     });
 
     test("frontmatter labels are decoded, not passed through as HTML entities", () => {
         const rels = extractOpcodeRelationships(OPCODES_DIR);
         // op012-bgee.html writes `param2: "Mode &amp; Damage Type"`.
-        expect(rels.get(12)?.special?.label).toBe("Flags");
+        expect(rels.get(12)?.param2?.label).toBe("Mode & Damage Type");
         expect(Object.values(rels.get(12) ?? {}).some((v) => JSON.stringify(v).includes("&amp;"))).toBe(false);
     });
 });

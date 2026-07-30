@@ -44,6 +44,9 @@
 - Effect opcodes added after the original games are now named instead of showing as a bare number. That covers
   every Enhanced Edition and Icewind Dale II opcode, plus a dozen older ones - `Use EFF File` among them, which
   is one of the most common effects there is. Their parameters are named too, where documented.
+- Where the games disagree about what an opcode number means - 238 is Disintegrate on BG2 and a saving-throw
+  modifier on Icewind Dale - the editor now consistently shows the BG(2)EE meaning. It previously showed
+  whichever game's description happened to come first in the reference data, which varied from opcode to opcode.
 - The extra parameter, special and power fields an effect record carries now take the name the current opcode
   gives them, the way Parameter 1 and Parameter 2 already did.
 

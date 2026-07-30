@@ -159,10 +159,15 @@ that carries both.
   and transcribed per page (opcode 72 is 0-based where 55/100/175 are 2-based; 178's slot 2 is OBJECT, not
   EA), so never copy one opcode's list to another. Whatever computes such a ref must also list the sibling in
   `dependents`, or the dropdown goes stale the moment the sibling is edited.
-- **Declare an opcode-derived target only where every IESDP page for the opcode agrees on one.** Numbers were
-  reused between editions (283 is Float Text canonically and Use EFF File (Cursed) on the EE), and some pages
-  name two targets at once ("the BAM/VVC"). Resolving against the wrong namespace is worse than leaving the
-  field bare, so those stay out of the table and are listed in `OPCODE_RESOURCE_UNRESOLVED` with the reason.
+- **An opcode number has no engine-neutral meaning; the generated tables describe ONE reading, BG(2)EE.** Each
+  engine makes a number mean what it likes - 238 is "Stat: Save vs. all" on Icewind Dale and "Death:
+  Disintegrate" on BG2/EE - and IESDP writes one page per reading, each carrying the availability matrix that
+  says which engines it covers. The unsuffixed `opNNN.html` filename is NOT authoritative (`op025.html` covers
+  BG2 alone), so `ENGINE_PREFERENCE` in the generator picks by that matrix instead. Anything transcribed by
+  hand therefore records the reading it came from (`ResourceDeclaration.reading`), guarded by a test, because a
+  type read off another engine's page describes a different effect. Where the chosen reading gives a field no
+  target - or names two at once ("the BAM/VVC") - it stays bare and is listed in `OPCODE_RESOURCE_UNRESOLVED`
+  with the reason: resolving against the wrong namespace is worse than not resolving.
 - **A field whose documentation names an IDS/2DA table must declare it or record why not.** Unlike a resref,
   an IDS-backed field is a plain number with no shape to spot, so `binary/test/ids-table-declarations.test.ts`
   sweeps the specs for a `*.IDS`/`*.2DA` mention in the description and requires a declaration or an entry in

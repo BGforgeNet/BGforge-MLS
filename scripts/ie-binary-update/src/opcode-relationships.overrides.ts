@@ -163,10 +163,10 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
         },
     },
 
-    // The nine below document the same pair but were reachable only from an engine-variant page, so the
-    // canonical-only harvest never saw them. They carry the bulk of the real usage - opcode 177 alone occurs an
-    // order of magnitude more often across BG:EE and BG2:ToB than all five entries above together. Each is
-    // still transcribed from its own page: they happen to agree today, which is not a reason to share one list.
+    // The nine below document the same pair but sit on pages the old unsuffixed-filename-only harvest never
+    // read. They carry the bulk of the real usage - opcode 177 alone occurs an order of magnitude more often
+    // across BG:EE and BG2:ToB than all five entries above together. Each is still transcribed from its own
+    // page: they happen to agree today, which is not a reason to share one list.
 
     // op109: State: Hold
     // Verified from op109-bgee.html body text: "Known values for 'IDS File' are".
@@ -244,11 +244,36 @@ export const OpcodeRelationshipOverrides: Readonly<Record<number, OpcodeRelation
         },
     },
 
-    // Opcodes 238 and 283 document the same pair on their bg2 / bgee pages and are deliberately NOT here. Both
-    // numbers were reused between editions - canonical 238 is "Stat: Save vs. all" against bg2's "Death:
-    // Disintegrate", canonical 283 is "Text: Float Text" against the EE's "Use EFF File (Cursed)" - so the
-    // table's one entry per opcode cannot hold both meanings, and adding the IDS map would pair an IDS-file
-    // dropdown with the other edition's parameter labels. They resolve when the table gains an engine axis.
+    // op238: Death: Disintegrate
+    // Verified from op238-bg2.html. Icewind Dale reads this number as "Stat: Save vs. all" instead, which is
+    // why the entry is safe only because the tables describe the BG(2)EE reading - see ENGINE_PREFERENCE.
+    238: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
+
+    // op283: Use EFF File (Cursed)
+    // Verified from op283-bgee.html. Same engine-split caveat as op238: Icewind Dale reads 283 as Float Text.
+    283: {
+        idsFileByParam2: {
+            2: ["EA"],
+            3: ["GENERAL"],
+            4: ["RACE"],
+            5: ["CLASS"],
+            6: ["SPECIFIC"],
+            7: ["GENDER"],
+            8: ["ALIGN", "ALIGNMEN"],
+            9: ["KIT"],
+        },
+    },
 
     // op319: Usability: Item Usability
     // Verified from op319-bgee.html.
