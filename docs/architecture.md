@@ -166,7 +166,7 @@ vscode-mls/
 +-- scripts/                Build, test, data generation scripts
 +-- actions/                Reusable composite GitHub Actions (binary, format, transpile) + _shared/ scripts
 +-- transpilers/            Transpiler implementations + user documentation
-|   +-- common/                 Shared utilities (no package.json)
+|   +-- common/                 Shared utilities (@bgforge/transpiler-common, workspace-internal)
 |   +-- tssl/                   @bgforge/tssl: TypeScript to Fallout SSL
 |   +-- tbaf/                   @bgforge/tbaf: TypeScript to WeiDU BAF
 |   +-- td/                     @bgforge/td: TypeScript to WeiDU D
