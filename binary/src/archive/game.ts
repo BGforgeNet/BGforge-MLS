@@ -64,6 +64,13 @@ export interface Game {
      */
     remove(resref: string, type: number | string, options?: { folder?: string }): boolean;
     /**
+     * Re-scan the override folders and rebuild their layer of the resolution tree, picking up loose files
+     * another tool (WeiDU, Near Infinity, a file manager) wrote since the game was opened, and dropping ones it
+     * deleted. The KEY/BIF layer, open archive handles and the TLK/IDS caches are untouched - a KEY change
+     * needs a reopen, not a re-scan.
+     */
+    rescan(): void;
+    /**
      * Write an auxiliary loose file (e.g. a JSON snapshot sidecar) into the `override` folder under the given
      * name. Unlike `write`, this is NOT a game resource: it is not indexed, and the open-time scan ignores it
      * because its extension has no resType, so it never appears in `list()`. Returns the written path.
@@ -345,30 +352,39 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         }
     }
 
-    folders.forEach((folder, rank) => {
-        const dirPath = resolveGamePath(gameDir, folder);
-        if (!dirPath) return;
-        let names: string[];
-        try {
-            names = fs.readdirSync(dirPath);
-        } catch {
-            return;
-        }
-        for (const name of names) {
-            const dot = name.lastIndexOf(".");
-            if (dot <= 0) continue;
-            const type = resourceTypeCode(name.slice(dot + 1));
-            if (type === undefined) continue;
-            const resref = name.slice(0, dot).toUpperCase();
-            const k = keyOf(resref, type);
-            const source: Source = { kind: "file", folder, path: path.join(dirPath, name), rank };
-            const entry = tree.get(k);
-            if (entry) entry.sources.push(source);
-            else tree.set(k, { resref, type, sources: [source] });
-        }
-    });
+    // Layer the override folders' loose files over the BIF winners. Shared with `rescan`, which drops this
+    // layer and rebuilds it, so both paths derive the tree from disk the same way.
+    function scanOverrideFolders(): void {
+        folders.forEach((folder, rank) => {
+            const dirPath = resolveGamePath(gameDir, folder);
+            if (!dirPath) return;
+            let names: string[];
+            try {
+                names = fs.readdirSync(dirPath);
+            } catch {
+                return;
+            }
+            for (const name of names) {
+                const dot = name.lastIndexOf(".");
+                if (dot <= 0) continue;
+                const type = resourceTypeCode(name.slice(dot + 1));
+                if (type === undefined) continue;
+                const resref = name.slice(0, dot).toUpperCase();
+                const k = keyOf(resref, type);
+                const source: Source = { kind: "file", folder, path: path.join(dirPath, name), rank };
+                const entry = tree.get(k);
+                if (entry) entry.sources.push(source);
+                else tree.set(k, { resref, type, sources: [source] });
+            }
+        });
+    }
 
-    for (const entry of tree.values()) entry.sources.sort((a, b) => a.rank - b.rank);
+    function sortSources(): void {
+        for (const entry of tree.values()) entry.sources.sort((a, b) => a.rank - b.rank);
+    }
+
+    scanOverrideFolders();
+    sortSources();
 
     // Refine the flavour against the live game (override resources + loose files) for the conversions/expansions
     // that the KEY alone can't reveal: EET, SoD, BGT.
@@ -526,6 +542,18 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             entry.sources = entry.sources.filter((s) => s !== source);
             if (entry.sources.length === 0) tree.delete(k);
             return true;
+        },
+        rescan() {
+            // Drop the whole loose-file layer, then rebuild it from disk. Collect the emptied keys before
+            // deleting so the map is not mutated while it is being walked.
+            const emptied: string[] = [];
+            for (const [k, entry] of tree) {
+                entry.sources = entry.sources.filter((s) => s.kind !== "file");
+                if (entry.sources.length === 0) emptied.push(k);
+            }
+            for (const k of emptied) tree.delete(k);
+            scanOverrideFolders();
+            sortSources();
         },
         writeAuxFile(fileName, bytes) {
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());

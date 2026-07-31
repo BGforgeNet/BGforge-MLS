@@ -692,6 +692,51 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    it("rescan picks up override files another tool wrote, and drops ones it deleted", () => {
+        const OUTSIDE_EDIT = Uint8Array.from([0x5a, 0x5a]);
+        const OVERRIDE_ITEM = Uint8Array.from([0xde, 0xad, 0xbe, 0xef]);
+        const dir = makeGameDir({ "override/item01.itm": OVERRIDE_ITEM });
+        const game = openGame(dir);
+        try {
+            expect(arr(game.read("item01", "itm"))).toEqual(arr(OVERRIDE_ITEM));
+            expect(game.list().some((r) => r.resref === "NEWMOD")).toBe(false);
+
+            // Another tool mutates override/ behind the open game: one resource added, one removed.
+            fs.writeFileSync(path.join(dir, "override", "newmod.itm"), OUTSIDE_EDIT);
+            fs.rmSync(path.join(dir, "override", "item01.itm"));
+
+            // Nothing is visible until the rescan - the tree is built once at open.
+            expect(game.list().some((r) => r.resref === "NEWMOD")).toBe(false);
+            game.rescan();
+
+            expect(arr(game.read("newmod", "itm"))).toEqual(arr(OUTSIDE_EDIT));
+            // The deleted override stops shadowing the biffed copy rather than vanishing outright.
+            expect(arr(game.read("item01", "itm"))).toEqual(arr(ITEM_DATA));
+            expect(game.list()).toContainEqual({
+                resref: "ITEM01",
+                type: RESTYPE_ITM,
+                ext: "itm",
+                bif: "DATA/TEST.BIF",
+            });
+        } finally {
+            game.close();
+        }
+    });
+
+    it("rescan drops a resource whose only source was a deleted override file", () => {
+        const dir = makeGameDir({ "override/newmod.itm": Uint8Array.from([7, 7]) });
+        const game = openGame(dir);
+        try {
+            expect(game.list().some((r) => r.resref === "NEWMOD")).toBe(true);
+            fs.rmSync(path.join(dir, "override", "newmod.itm"));
+            game.rescan();
+            expect(game.list().some((r) => r.resref === "NEWMOD")).toBe(false);
+            expect(game.canRead("newmod", "itm")).toBe(false);
+        } finally {
+            game.close();
+        }
+    });
+
     // A KEY's BIF names are untrusted file bytes: `..` or an absolute name would address files outside the
     // install. Real KEYs use neither, so resolution refuses them rather than walking out of the game dir.
     it.each([

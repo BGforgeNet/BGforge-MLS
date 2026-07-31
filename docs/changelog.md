@@ -41,6 +41,9 @@
 - A `chitin.key` that names a BIF archive outside the game folder - by a parent-directory step or an absolute
   path - is refused with a message naming the archive, rather than reading a file from elsewhere on the disk.
   No real install does this; a corrupt or hand-crafted index can.
+- Refresh now re-reads the game's `override` folders, so a resource WeiDU, Near Infinity or a file manager
+  wrote since the game was opened shows up - and one deleted there stops being listed, falling back to the
+  biffed copy where there is one.
 
 ### Binary editor
 

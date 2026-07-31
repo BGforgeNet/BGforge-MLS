@@ -143,7 +143,14 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             isCaseSensitive: false,
         }),
         vscode.commands.registerCommand("bgforge.ieResources.openGame", openGameFolder),
-        vscode.commands.registerCommand("bgforge.ieResources.refresh", () => tree.refresh()),
+        vscode.commands.registerCommand("bgforge.ieResources.refresh", () => {
+            // Re-read the override folders first: the resolution tree is built at open, so a file WeiDU or
+            // Near Infinity wrote since then is invisible until this runs. Cached bytes go too, or a resource
+            // rewritten in place would still render from the copy taken before the refresh.
+            session.current?.game.rescan();
+            fsProvider.clearCache();
+            tree.refresh();
+        }),
         vscode.commands.registerCommand("bgforge.ieResources.closeGame", async () => {
             session.close();
             fsProvider.clearCache();
