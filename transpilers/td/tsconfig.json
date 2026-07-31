@@ -1,9 +1,0 @@
-{
-    "extends": "../../tsconfig.base.json",
-    "compilerOptions": {
-        "lib": ["es2023"],
-        "rootDir": "..",
-        "tsBuildInfoFile": "../../tmp/td.tsbuildinfo"
-    },
-    "include": ["src", "../common"]
-}
