@@ -1,5 +1,5 @@
 /**
- * Shared helpers for the in-webview bundles (binary editor + dialog editor):
+ * Shared helpers for the in-webview bundles (binary, dialog, and animation editors):
  * `installFatalErrorHandler` (global error/rejection reporting),
  * `installInitTimeout` + `DEFAULT_INIT_TIMEOUT_MS` (bounded host-reply wait),
  * and `isBenignWebviewError` (ResizeObserver-notice filtering, also used
@@ -17,7 +17,7 @@ export interface FatalErrorHandlerOptions {
     /** The `acquireVsCodeApi()` handle, used to report the error to the host. */
     readonly vscode: VsCodeApi;
     /**
-     * Human label for this webview ("Dialog editor" / "Binary editor"). Drives
+     * Human label for this webview ("Dialog editor" / "Binary editor" / "Animation editor"). Drives
      * the console prefix and the default messages for uncaught errors; the
      * lowercased form is spliced into the "Unhandled ... error" defaults.
      */
@@ -80,7 +80,7 @@ export function installFatalErrorHandler(options: FatalErrorHandlerOptions): voi
     });
 }
 
-/** Bounded wait for the host's initial reply, shared by the dialog and binary-editor webviews. */
+/** Bounded wait for the host's initial reply, shared by the webviews. */
 export const DEFAULT_INIT_TIMEOUT_MS = 8000;
 
 export interface InitTimeoutOptions {
@@ -95,8 +95,8 @@ export interface InitTimeoutOptions {
 /**
  * Start a one-shot bounded wait: if `isResolved()` is still false when `ms` elapses, call `onTimeout()`.
  * A loading state that waits on an out-of-process reply (host/LSP round-trip) must fail visibly rather
- * than hang forever - this is the timer mechanics both webview roots (dialog App.svelte, binary App.svelte)
- * wire into their own reactive state. Returns a cleanup that cancels the pending timer (call on
+ * than hang forever - this is the timer mechanics each webview root (the editors' App.svelte files)
+ * wires into its own reactive state. Returns a cleanup that cancels the pending timer (call on
  * unmount/dispose, or once the wait resolves early).
  */
 export function installInitTimeout(options: InitTimeoutOptions): () => void {

@@ -43,7 +43,7 @@ export function getCachedJsAsset(cacheKey: string, extensionPath: string, relati
 }
 
 /**
- * Generate a base64 nonce for a webview's CSP. Both webviews lock their inline
+ * Generate a base64 nonce for a webview's CSP. The webviews lock their inline
  * <style>/<script> to a fresh per-load nonce; 16 random bytes is the standard
  * width.
  */
