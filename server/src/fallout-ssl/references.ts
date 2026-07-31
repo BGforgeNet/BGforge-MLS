@@ -14,6 +14,7 @@ import { parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { ScopeKind } from "./scope-kinds";
 import { getSymbolScope } from "./symbol-scope";
 import { findScopedReferences } from "./reference-finder";
+import { rivalDefinitionUris } from "./symbol-definitions";
 import { getLocalDefinition } from "./definition";
 
 /**
@@ -32,19 +33,6 @@ function excludeDeclaration(locations: Location[], text: string, uri: string, po
             loc.range.start.line !== defLocation.range.start.line ||
             loc.range.start.character !== defLocation.range.start.character,
     );
-}
-
-/**
- * The URIs, other than `ownUri`, that define `name` at file scope - each one a rival symbol that merely shares
- * the name. The workspace symbol index holds exactly SSL's file-scope constructs (procedures, macros, top-level
- * variables, exports); procedure-locals live in the per-document index and never appear here.
- */
-function filesDefining(symbols: Symbols, name: string, ownUri: string): Set<string> {
-    const uris = new Set<string>();
-    for (const symbol of symbols.lookupAll(name)) {
-        if (symbol.location && symbol.location.uri !== ownUri) uris.add(symbol.location.uri);
-    }
-    return uris;
 }
 
 /**
@@ -113,7 +101,7 @@ export function findReferences(
         // its own `Node004`, so without this every sibling script's `Node004` came back as a reference. Rename
         // has always applied the rule (it skips a candidate file that redefines the name); this is the same
         // rule on the read side, which is what keeps the two agreeing about what a reference is.
-        const rivals = symbols ? filesDefining(symbols, scopeInfo.name, uri) : new Set<string>();
+        const rivals = symbols ? rivalDefinitionUris(symbols, scopeInfo.name, uri) : new Set<string>();
         const crossFileRefs = refsIndex.lookup(scopeInfo.name).filter((loc) => loc.uri !== uri && !rivals.has(loc.uri));
         allLocations = [...localLocations, ...crossFileRefs];
     }

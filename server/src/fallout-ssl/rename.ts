@@ -335,9 +335,10 @@ export async function renameSymbolWorkspace(
             continue;
         }
 
-        // For consuming files: skip entirely if the symbol is redefined at file scope
-        // (a different procedure/macro/export with the same name). Procedure-local
-        // shadows are handled by findScopedReferences (it skips those subtrees).
+        // The rival-definition rule (see symbol-definitions.ts): skip a consuming file that redefines the name
+        // at file scope - a different procedure/macro/export that merely shares it. Asked of the parsed tree
+        // rather than the workspace index because this loop already holds the tree and the index lags an
+        // unsaved edit. Procedure-local shadows are handled by findScopedReferences (it skips those subtrees).
         if (candidateUri !== definitionUri && isFileScopeDef(candidateTree.rootNode, symbolName)) {
             conlog(`rename: skipping ${candidateUri} (symbol redefined at file scope)`, "debug");
             continue;
