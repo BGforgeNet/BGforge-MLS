@@ -8,11 +8,13 @@ import type { ExternalRef } from "./external-ref";
  * - `"derivedCount"` - the length of a sibling array.
  * - `"derivedOffset"` - the byte offset of a section within the file.
  * - `"derivedIndex"` - the index of a record into a sibling table.
- * - `"reserved"` - engine-set value the user must not edit, but the writer
- *   has no derivation formula for (unknown fields, runtime pointers,
- *   tool-generated metadata). Editor lock applies; enforceDerivedFields and
- *   validateDerivedFields are no-ops on these - the writer trusts whatever
- *   value was on the wire and round-trips it byte-identically.
+ * - `"reserved"` - engine-set value the user must not edit, which the
+ *   write-time recompute has no formula for (unknown fields, runtime
+ *   pointers, tool-generated metadata) or which a separate mechanism already
+ *   maintains - the ITM/SPL effect-range fields are the latter, derived by
+ *   ie-common/effect-partition.ts on each structure op. Editor lock applies;
+ *   enforceDerivedFields and validateDerivedFields are no-ops on these - the
+ *   writer trusts the value it is handed and round-trips it byte-identically.
  *
  * The role flows into three downstream behaviours from one declaration:
  *   - presentation derivation emits `editable: false` (locks the editor input);
@@ -37,11 +39,14 @@ export interface ScalarFieldSpec {
      * When `true`, treat `enum` as an advisory display lookup rather than a
      * closed value set: walkStruct still resolves named values, but the
      * `toZodSchema` strict-mode refinement does NOT enforce membership.
-     * Used for fields whose value space is open by design - e.g. effect
-     * opcodes (mods can define new ones; the engine accepts any 16-bit
-     * value) or item types backed by `itemtype.2da` (mod-extensible). The
-     * default (`undefined`) keeps the existing strict-enforce behaviour
-     * suitable for closed enums like PRO `objectType`.
+     * Used where the vendored table cannot be treated as the full value set -
+     * either because the value space really is extensible (item types backed
+     * by `itemtype.2da`), or because the table is narrower than the engines
+     * are: effect opcodes are fixed per engine, but a number's meaning is
+     * per-engine and our readings do not cover every engine, so a file legal
+     * in its own engine must still save. The default (`undefined`) keeps the
+     * strict-enforce behaviour suitable for closed enums like PRO
+     * `objectType`.
      */
     readonly enumOpen?: boolean;
     readonly flags?: Readonly<Record<number, string>>;

@@ -26,17 +26,16 @@ export const splAbilitySpecAnnotated = {
     unused4: { ...splAbilitySpec.unused4, hidden: true },
     unused5: { ...splAbilitySpec.unused5, hidden: true },
     unused6: { ...splAbilitySpec.unused6, hidden: true },
-    // Per-ability slice into the global effect table; not user data. Locked
-    // for the same reason as the ITM ability counterparts.
+    // Per-ability slice into the global effect table; not user data. Locked and partition-owned for the same
+    // reason as the ITM ability counterparts - `featureBlocksOffset` is this range's START INDEX, not a byte
+    // offset (see spl/entity-ops.ts).
     featureBlocksCount: {
         ...splAbilitySpec.featureBlocksCount,
-        role: "derivedCount" as const,
-        derivedFrom: { array: "effects" } as const,
+        role: "reserved" as const,
     },
     featureBlocksOffset: {
         ...splAbilitySpec.featureBlocksOffset,
-        role: "derivedOffset" as const,
-        derivedFrom: { section: "effects" } as const,
+        role: "reserved" as const,
     },
 } satisfies Record<string, FieldSpec>;
 

@@ -86,8 +86,8 @@ export const itmHeaderSpecAnnotated = {
     },
     // Structural pointers into the abilities + effects sections that follow
     // the header. Editing these by hand silently corrupts the file, so the
-    // editor renders them as read-only and (eventually) the canonical writer
-    // recomputes them from the doc shape. See `FieldRole` in spec/types.
+    // editor renders them as read-only and the canonical writer recomputes
+    // them from the doc shape. See `FieldRole` in spec/types.
     extendedHeadersOffset: {
         ...itmHeaderSpec.extendedHeadersOffset,
         role: "derivedOffset" as const,
@@ -103,19 +103,16 @@ export const itmHeaderSpecAnnotated = {
         role: "derivedOffset" as const,
         derivedFrom: { section: "effects" } as const,
     },
-    // featureBlocksIndex partitions effects between equipped (global) and
-    // ability-triggered subsets - see IESDP. The split is decided at the
-    // canonical-doc level, not by a single sibling array's length, but the
-    // value remains derived rather than user data; the writer is responsible
-    // for emitting it correctly. Locking the editor input is still right.
+    // The equipped (global) effect range: its start, always 0, and the size of that subset - NOT the total
+    // effect count, which is why neither can come from a sibling array's length. The effect partition owns
+    // both (ie-common/effect-partition.ts, via entity-ops); `reserved` locks the editor input and leaves the
+    // write-time recompute alone, so the partition stays the single writer of these values.
     featureBlocksIndex: {
         ...itmHeaderSpec.featureBlocksIndex,
-        role: "derivedIndex" as const,
-        derivedFrom: { table: "effects" } as const,
+        role: "reserved" as const,
     },
     featureBlocksCount: {
         ...itmHeaderSpec.featureBlocksCount,
-        role: "derivedCount" as const,
-        derivedFrom: { array: "effects" } as const,
+        role: "reserved" as const,
     },
 } satisfies Record<string, FieldSpec>;

@@ -67,18 +67,17 @@ export const itmAbilitySpecAnnotated = {
     isArrow: { ...itmAbilitySpec.isArrow, enum: YesNo },
     isBolt: { ...itmAbilitySpec.isBolt, enum: YesNo },
     isBullet: { ...itmAbilitySpec.isBullet, enum: YesNo },
-    // Per-ability slice into the global effect table. The values are decided
-    // by which effects belong to this ability and where the ability sits in
-    // the writer's serialisation order - not user data.
+    // Per-ability slice into the global effect table - this ability's own effect count and its start, a running
+    // offset over the preceding owners' counts. Neither is a sibling array's length; the effect partition
+    // derives them (ie-common/effect-partition.ts, via entity-ops), so `reserved` locks the editor input and
+    // keeps the write-time recompute out of it.
     featureBlockCount: {
         ...itmAbilitySpec.featureBlockCount,
-        role: "derivedCount" as const,
-        derivedFrom: { array: "effects" } as const,
+        role: "reserved" as const,
     },
     featureBlockIndex: {
         ...itmAbilitySpec.featureBlockIndex,
-        role: "derivedIndex" as const,
-        derivedFrom: { table: "effects" } as const,
+        role: "reserved" as const,
     },
 } satisfies Record<string, FieldSpec>;
 

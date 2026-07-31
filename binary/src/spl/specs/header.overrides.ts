@@ -45,17 +45,16 @@ export const splHeaderSpecAnnotated = {
         derivedFrom: { section: "effects" } as const,
     },
     // Renamed from `castingFeatureBlocksOffset` per IESDP (it is, and always was, the casting-range START
-    // INDEX into the flat effects array - see spl/entity-ops.ts - not a byte offset). The role/derivedFrom
-    // are kept exactly as before to preserve round-trip behavior; the `derivedOffset` classification predates
-    // the rename and is a separate cleanup, not changed here.
+    // INDEX into the flat effects array - see spl/entity-ops.ts - not a byte offset). The casting range's
+    // start and size are owned by the effect partition (ie-common/effect-partition.ts, via entity-ops), not by
+    // the write-time recompute: there is no `castingEffects` array or section for it to read, and the count is
+    // the casting subset's size rather than the total. `reserved` states that and keeps the editor lock.
     castingFeatureBlocksIndex: {
         ...splHeaderSpec.castingFeatureBlocksIndex,
-        role: "derivedOffset" as const,
-        derivedFrom: { section: "castingEffects" } as const,
+        role: "reserved" as const,
     },
     castingFeatureBlocksCount: {
         ...splHeaderSpec.castingFeatureBlocksCount,
-        role: "derivedCount" as const,
-        derivedFrom: { array: "castingEffects" } as const,
+        role: "reserved" as const,
     },
 } satisfies Record<string, FieldSpec>;
