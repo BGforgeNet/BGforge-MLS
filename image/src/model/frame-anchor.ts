@@ -7,9 +7,9 @@ import { type SourceFormat } from "./animation.ts";
  * frame within its tile) and the cross-format converters - so the two conventions cannot drift apart.
  *
  * FRM: the anchor is the frame's bottom-centre - `(width/2, height-1)` - adjusted by the per-DIRECTION
- * header offset (`x_offsets[6]`/`y_offsets[6]`, a static base adjustment per rotation). Verified against
- * fallout2-ce object.cc: base `sx = screenX - width/2`, `sy = screenY - (height-1)`. The per-FRAME x/y
- * offset is an animation MOTION DELTA accumulated only as the animation advances (`obj->sx += x`), NOT
+ * header offset (`x_offsets[6]`/`y_offsets[6]`, a static base adjustment per rotation). Matches how
+ * fallout2-ce renders objects: the base screen position is `screenX - width/2`, `screenY - (height-1)`.
+ * The per-FRAME x/y offset is an animation MOTION DELTA accumulated only as the animation advances, NOT
  * part of the static anchor, so `offsetToAnchor` deliberately does NOT read it.
  * BAM: the stored per-frame centre coordinate (`Frame center X/Y`) IS the anchor, directly.
  *

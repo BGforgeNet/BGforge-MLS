@@ -1,7 +1,7 @@
 // Versioned on-disk manifest for an exported animation directory (indexed PNG frames +
 // manifest.json). This is a FROZEN wire format, deliberately decoupled from the internal
 // `Animation` IR so the IR can evolve without breaking directories exported by older builds.
-// No palette here - palettes live in the exported PNGs (Task 7, directory layer).
+// No palette here - palettes live in the exported PNGs.
 import type { Animation, AnimationMeta, DirectionLayout, Facing, Sequence, SourceFormat } from "../model/animation.ts";
 
 // Owned by this module, deliberately NOT `AnimationMeta` itself: the wire format is

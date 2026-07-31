@@ -22,8 +22,8 @@ export interface HighlightPattern {
 }
 
 /**
- * Byte-level string comparison matching Python's default sort order.
- * Unlike localeCompare, this sorts by character code (e.g. '_' after 'Z').
+ * Byte-level string comparison: sorts by character code (e.g. '_' after 'Z'),
+ * unlike localeCompare, so generated output is deterministic across locales.
  */
 export function cmpStr(a: string, b: string): number {
     if (a < b) return -1;
@@ -31,7 +31,8 @@ export function cmpStr(a: string, b: string): number {
     return 0;
 }
 
-/** YAML dump options matching the Python ruamel.yaml configuration */
+/** YAML dump options for the data files: a wide lineWidth so entries never wrap, 2-space indent with
+ * indented sequences - the format the checked-in `server/data/*.yml` files use. */
 export const YAML_DUMP_OPTIONS = {
     lineWidth: 4096,
     indent: 2,
@@ -39,10 +40,8 @@ export const YAML_DUMP_OPTIONS = {
 } as const;
 
 /**
- * Dedents text by removing common leading whitespace.
- * Equivalent to Python's textwrap.dedent(string).
- * In Python, the result is wrapped in LiteralScalarString for |- block style,
- * but that's handled by makeBlockScalar at the YAML serialization layer.
+ * Dedents text by removing common leading whitespace. Block-scalar (|-)
+ * emission is handled separately by makeBlockScalar at the serialization layer.
  */
 export function litscal(text: string): string {
     const lines = text.split("\n");
@@ -78,9 +77,8 @@ export function findFiles(
 
     function walk(dir: string): void {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
-        // Sort entries alphabetically for deterministic cross-platform ordering.
-        // Python's os.walk uses inode order which is filesystem-dependent;
-        // alphabetical sort ensures consistent results.
+        // Sort entries alphabetically for deterministic cross-platform ordering
+        // (raw directory order is filesystem-dependent).
         entries.sort((a, b) => cmpStr(a.name, b.name));
         for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
@@ -122,8 +120,8 @@ export function parseYamlDocStrict(
 }
 
 /**
- * Creates a YAML Scalar node with literal block style (|-).
- * Matches Python ruamel.yaml's LiteralScalarString - always emits as a block scalar.
+ * Creates a YAML Scalar node with literal block style (|-),
+ * emitted as a block scalar regardless of content.
  */
 export function makeBlockScalar(doc: Document, value: string): Scalar {
     const node = doc.createNode(value);

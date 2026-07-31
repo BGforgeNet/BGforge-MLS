@@ -57,7 +57,7 @@ export interface BinaryFormatAdapter {
     /**
      * How the editor invalidates this format's cached canonical `document` after a display-tree
      * mutation (field edit / structure op). Required so a new format must consciously choose rather
-     * than silently inherit a reflection heuristic (review finding #6a):
+     * than silently inherit a reflection heuristic:
      *  - "clear": the format caches a canonical document (own property or lazy getter/setter) that is
      *    rebuildable from the display tree; the editor sets `parseResult.document = undefined` so the
      *    next serialize/snapshot rebuilds from the edited tree. All current formats use this.

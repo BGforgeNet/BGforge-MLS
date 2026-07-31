@@ -190,7 +190,7 @@ const critterRows: LayoutRow[] = [
                 blocks: [
                     {
                         // 260px: the longest secondary-stat label ("Better Criticals" / "Unarmed Damage")
-                        // plus the two Base|Bonus value cells fit without the label ellipsizing (#16).
+                        // plus the two Base|Bonus value cells fit without the label ellipsizing.
                         kind: "matrix",
                         columnWidthPx: 260,
                         valueColumns: [

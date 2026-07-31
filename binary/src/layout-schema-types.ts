@@ -256,7 +256,7 @@ const flagGroupsBlockSchema = z.strictObject({
         .min(1),
 });
 
-/** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */
+/** A hex/raw-bytes pane. Specified now; the webview `RawBlock` is a stub no format layout declares yet. */
 const rawBlockSchema = z.strictObject({ kind: z.literal("raw") });
 
 /**

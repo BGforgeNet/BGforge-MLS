@@ -12,7 +12,7 @@ import type { ChangeSet, NamePath, NodeId, StructureResult } from "./types";
  * entry (entryId). The editor resolves each NodeId to the section's structural
  * path plus the entry's 0-based ordinal among its siblings before calling the
  * byte-builders - so a presentation relabel / i18n / override cannot misaddress
- * a byte op (review finding #1).
+ * a byte op.
  */
 export type StructureOpRequest =
     | { op: "add"; sectionId: NodeId }

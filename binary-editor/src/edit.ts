@@ -10,7 +10,7 @@ import type { EditResult, NodeId } from "./types";
  * next serialize/snapshot rebuilds from the edited tree.
  *
  * The per-format choice is declared explicitly on the adapter as
- * `documentCacheStrategy` (review finding #6a) rather than inferred from the
+ * `documentCacheStrategy` rather than inferred from the
  * shape of the `document` property: a "clear" format has a rebuildable cached
  * document (IE/PRO own writable property, MAP lazy getter+setter) and the
  * assignment to undefined either nulls the property or invokes the setter that

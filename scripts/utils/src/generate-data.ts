@@ -1,6 +1,5 @@
 /**
  * Generates LSP completion, hover, and signature JSON files from YAML data.
- * Replaces the former generate_data.py script.
  *
  * Usage:
  *   pnpm exec tsx scripts/utils/src/generate-data.ts \

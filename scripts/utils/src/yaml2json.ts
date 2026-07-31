@@ -3,8 +3,6 @@
  * Expands shorthand: inherits `name` fields from repository entries
  * to their child patterns that lack a `name` field.
  *
- * Replaces the former yaml2json.py script.
- *
  * Usage:
  *   pnpm exec tsx scripts/utils/src/yaml2json.ts input.yml output.json
  */
