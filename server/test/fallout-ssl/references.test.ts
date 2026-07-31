@@ -20,6 +20,7 @@ import { findReferences } from "../../src/fallout-ssl/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { normalizeUri } from "../../src/core/normalized-uri";
+import { Symbols } from "../../src/core/symbol-index";
 
 /** Extract refs only (convenience wrapper for tests migrated from call-sites). */
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
@@ -257,6 +258,61 @@ end
             const crossRefs = refs.filter((r) => r.uri === otherUri);
             expect(crossRefs).toHaveLength(1);
             expect(crossRefs[0]).toEqual(crossLoc);
+        });
+
+        // Fallout dialogs almost all define their own `Node004`, so a workspace-wide lookup by bare name
+        // reported every sibling script's unrelated procedure as a reference to this one. Measured on the real
+        // corpus before the fix: asking from abtom.ssl's `Node004` returned abbill.ssl's declaration, call site
+        // and definition. Rename already skipped a file that redefines the name; this holds the read side to it.
+        it("omits a same-named procedure that another file defines for itself", () => {
+            const text = `
+procedure Node004 begin end
+procedure main begin
+    call Node004;
+end
+`;
+            const rivalUri = "file:///rival.ssl";
+            const rivalText = `
+procedure Node004 begin end
+procedure main begin
+    call Node004;
+end
+`;
+            const index = new ReferencesIndex();
+            index.updateFile(normalizeUri(rivalUri), extractCallSites(rivalText, rivalUri));
+            const symbols = new Symbols();
+            symbols.updateFile(normalizeUri(rivalUri), parseFile(rivalUri, rivalText).symbols);
+
+            const refs = findReferences(text, { line: 1, character: 12 }, TEST_URI, true, index, symbols);
+
+            expect(refs.map((r) => r.uri)).not.toContain(rivalUri);
+            // The current file's own definition and call site still come back.
+            expect(refs).toHaveLength(2);
+        });
+
+        // The counter-case: a file that merely USES a symbol it does not define is a genuine consumer, and its
+        // references must survive the filter above.
+        it("keeps cross-file refs from a file that only uses the procedure", () => {
+            const text = `
+procedure helper begin end
+procedure main begin
+    call helper;
+end
+`;
+            const consumerUri = "file:///consumer.ssl";
+            const consumerText = `
+procedure main begin
+    call helper;
+end
+`;
+            const index = new ReferencesIndex();
+            index.updateFile(normalizeUri(consumerUri), extractCallSites(consumerText, consumerUri));
+            const symbols = new Symbols();
+            symbols.updateFile(normalizeUri(consumerUri), parseFile(consumerUri, consumerText).symbols);
+
+            const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index, symbols);
+
+            expect(refs.map((r) => r.uri)).toContain(consumerUri);
         });
 
         it("filters out cross-file refs from current URI to avoid duplicates", () => {

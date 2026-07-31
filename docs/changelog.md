@@ -89,6 +89,10 @@
   only itself; and rename, which uses the same search, rewrote the definition alone - leaving the file declaring
   a procedure it no longer defines and calling a name that is gone. Macros keep matching exactly, since the
   preprocessor that expands them distinguishes case.
+- Find references on a Fallout SSL procedure no longer lists same-named procedures belonging to other scripts.
+  A procedure is local to its own file, but references were collected by name across the whole workspace, and
+  since nearly every dialog script defines its own `Node004` the result was mostly unrelated files. Symbols that
+  genuinely come from an included header still resolve across files.
 
 ## 3.12.0
 

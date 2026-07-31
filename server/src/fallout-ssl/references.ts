@@ -9,6 +9,7 @@
 import type { Location, Position } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import type { ReferencesIndex } from "../shared/references-index";
+import type { Symbols } from "../core/symbol-index";
 import { parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { ScopeKind } from "./scope-kinds";
 import { getSymbolScope } from "./symbol-scope";
@@ -34,6 +35,19 @@ function excludeDeclaration(locations: Location[], text: string, uri: string, po
 }
 
 /**
+ * The URIs, other than `ownUri`, that define `name` at file scope - each one a rival symbol that merely shares
+ * the name. The workspace symbol index holds exactly SSL's file-scope constructs (procedures, macros, top-level
+ * variables, exports); procedure-locals live in the per-document index and never appear here.
+ */
+function filesDefining(symbols: Symbols, name: string, ownUri: string): Set<string> {
+    const uris = new Set<string>();
+    for (const symbol of symbols.lookupAll(name)) {
+        if (symbol.location && symbol.location.uri !== ownUri) uris.add(symbol.location.uri);
+    }
+    return uris;
+}
+
+/**
  * Find all references to the symbol at the given position.
  *
  * For locally defined symbols (procedures, macros, variables), uses scope-aware
@@ -50,6 +64,7 @@ export function findReferences(
     uri: string,
     includeDeclaration: boolean,
     refsIndex?: ReferencesIndex,
+    symbols?: Symbols,
 ): Location[] {
     const tree = parseWithCache(text);
     if (!tree) {
@@ -92,7 +107,14 @@ export function findReferences(
     // For file-scoped symbols, add cross-file references from the index
     let allLocations = localLocations;
     if (scopeInfo.scope === ScopeKind.File && refsIndex) {
-        const crossFileRefs = refsIndex.lookup(scopeInfo.name).filter((loc) => loc.uri !== uri);
+        // Reaching this branch means the CURRENT file defines the symbol, so any other file that also defines
+        // it at file scope has its own unrelated symbol of that name, and its occurrences are not references to
+        // this one. Fallout dialogs make that the common case rather than an edge: nearly every script defines
+        // its own `Node004`, so without this every sibling script's `Node004` came back as a reference. Rename
+        // has always applied the rule (it skips a candidate file that redefines the name); this is the same
+        // rule on the read side, which is what keeps the two agreeing about what a reference is.
+        const rivals = symbols ? filesDefining(symbols, scopeInfo.name, uri) : new Set<string>();
+        const crossFileRefs = refsIndex.lookup(scopeInfo.name).filter((loc) => loc.uri !== uri && !rivals.has(loc.uri));
         allLocations = [...localLocations, ...crossFileRefs];
     }
 

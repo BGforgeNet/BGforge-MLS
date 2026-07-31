@@ -232,7 +232,7 @@ class FalloutSslProvider
             return [];
         }
         // Single-file AST traversal - bounded work; no per-iteration cancellation needed.
-        return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
+        return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs, this.fileIndex?.symbols);
     }
 
     /**
