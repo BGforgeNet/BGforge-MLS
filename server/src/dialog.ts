@@ -7,7 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
 import { conlog } from "./logger";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
-import { sslNameKey } from "../../shared/dialog-ssl-names";
+import { sslNameKey } from "../../shared/fallout-ssl-names";
 import type {
     SSLDialogBlock,
     SSLDialogBlockItem,

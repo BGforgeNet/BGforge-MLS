@@ -7,7 +7,7 @@
  * `docs/superpowers/specs/2026-06-18-dialog-editor-design.md`.
  */
 
-import { sslNameKey } from "./dialog-ssl-names";
+import { sslNameKey } from "./fallout-ssl-names";
 import type {
     DDialogData,
     DDialogState,

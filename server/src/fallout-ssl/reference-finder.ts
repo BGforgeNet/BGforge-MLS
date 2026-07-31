@@ -12,6 +12,7 @@ import { ScopeKind, assertNeverScope } from "./scope-kinds";
 import type { SslSymbolScope } from "./symbol-scope";
 import { isLocalToProc, resolveIdentifierDefinitionNode } from "./symbol-definitions";
 import { parseMacroParams } from "./macro-utils";
+import { sslNamesEqual } from "../../../shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
 /**
@@ -135,8 +136,16 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
             return;
         }
 
-        if (node.type === SyntaxType.Identifier && node.text === symbolInfo.name) {
-            refs.push(node);
+        if (node.type === SyntaxType.Identifier) {
+            // Case-folded, as SSL binds its names: a reference spelled `Node005` IS a reference to `NOde005`,
+            // and missing it would leave that call site behind on a rename - the file then names a procedure it
+            // no longer defines. A macro parameter is the exception, matched exactly, because the preprocessor
+            // that substitutes it does distinguish case.
+            const matches =
+                symbolInfo.scope === ScopeKind.Macro
+                    ? node.text === symbolInfo.name
+                    : sslNamesEqual(node.text, symbolInfo.name);
+            if (matches) refs.push(node);
         }
 
         for (const child of node.children) {

@@ -20,7 +20,7 @@ import {
     rewriteSameFileExternRef,
 } from "./dialog-model";
 import { allChoices, allStates } from "./dialog-edit-common";
-import { sslNameKey } from "./dialog-ssl-names";
+import { sslNameKey } from "./fallout-ssl-names";
 
 /** Every state id across the model - a thin projection over the shared `allStates` flatten. */
 function stateIdsOf(model: DialogModel): string[] {

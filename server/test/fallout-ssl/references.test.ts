@@ -54,6 +54,24 @@ end
             // 2 call sites only (definition excluded)
             expect(refs).toHaveLength(2);
         });
+
+        // SSL binds these as one procedure whatever the casing, so every one of them is a reference. Matched
+        // exactly, asking from the definition returned only the definition - and the same search backs rename,
+        // which then rewrote one site of four.
+        it("finds call sites that spell the name differently", () => {
+            const divergent = `
+procedure Node005;
+procedure main begin
+    call Node005;
+    call NODE005;
+end
+procedure NOde005 begin end
+`;
+            // Cursor on the definition, which matches none of the three references exactly.
+            const refs = findReferences(divergent, { line: 6, character: 12 }, TEST_URI, true);
+            // declaration + 2 call sites + definition
+            expect(refs).toHaveLength(4);
+        });
     });
 
     describe("variable references (procedure-scoped)", () => {

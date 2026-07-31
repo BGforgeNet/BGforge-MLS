@@ -1,5 +1,6 @@
 import type { Node } from "web-tree-sitter";
 import { extractProcedures, findMacroDefinition } from "./utils";
+import { sslMapGet, sslNamesEqual } from "../../../shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
 /**
@@ -32,6 +33,9 @@ export function findContainingDefine(node: Node): Node | null {
 /**
  * Find the identifier node in a Define's params that matches symbolName.
  * Returns null if the define has no params or if the name is not among them.
+ *
+ * Matched exactly, where every other resolver in this file folds case: a macro parameter is substituted by the
+ * preprocessor, which distinguishes case even though SSL itself does not.
  */
 export function findMacroParamDefinitionNode(defineNode: Node, symbolName: string): Node | null {
     const params = defineNode.childForFieldName("params");
@@ -59,7 +63,7 @@ function findProcedureLocalDefinitionNode(procedureNode: Node, symbolName: strin
         for (const child of params.children) {
             if (child.type === SyntaxType.Param) {
                 const nameNode = child.childForFieldName("name");
-                if (nameNode?.text === symbolName) {
+                if (sslNamesEqual(nameNode?.text, symbolName)) {
                     return nameNode;
                 }
             }
@@ -83,20 +87,20 @@ function searchProcBody(node: Node, symbolName: string): Node | null {
         for (const child of node.children) {
             if (child.type === SyntaxType.VarInit) {
                 const nameNode = child.childForFieldName("name");
-                if (nameNode?.text === symbolName) {
+                if (sslNamesEqual(nameNode?.text, symbolName)) {
                     return nameNode;
                 }
             }
         }
     } else if (node.type === SyntaxType.ForVarDecl) {
         const nameNode = node.childForFieldName("name");
-        if (nameNode?.text === symbolName) {
+        if (sslNamesEqual(nameNode?.text, symbolName)) {
             return nameNode;
         }
     } else if (node.type === SyntaxType.ForeachStmt) {
         for (const field of ["var", "key", "value"] as const) {
             const fieldNode = node.childForFieldName(field);
-            if (fieldNode?.text === symbolName) {
+            if (sslNamesEqual(fieldNode?.text, symbolName)) {
                 return fieldNode;
             }
         }
@@ -116,7 +120,7 @@ function searchProcBody(node: Node, symbolName: string): Node | null {
  * declarations, macros, exports.
  */
 export function findFileScopeDefinitionNode(rootNode: Node, symbolName: string): Node | null {
-    const procedure = extractProcedures(rootNode).get(symbolName)?.node;
+    const procedure = sslMapGet(extractProcedures(rootNode), symbolName)?.node;
     if (procedure) {
         return procedure.childForFieldName("name");
     }
@@ -124,7 +128,7 @@ export function findFileScopeDefinitionNode(rootNode: Node, symbolName: string):
     for (const child of rootNode.children) {
         if (child.type === SyntaxType.ExportDecl) {
             const nameNode = child.childForFieldName("name");
-            if (nameNode?.text === symbolName) {
+            if (sslNamesEqual(nameNode?.text, symbolName)) {
                 return nameNode;
             }
         }
@@ -135,7 +139,7 @@ export function findFileScopeDefinitionNode(rootNode: Node, symbolName: string):
             for (const varInit of child.children) {
                 if (varInit.type === SyntaxType.VarInit) {
                     const nameNode = varInit.childForFieldName("name");
-                    if (nameNode?.text === symbolName) {
+                    if (sslNamesEqual(nameNode?.text, symbolName)) {
                         return nameNode;
                     }
                 }

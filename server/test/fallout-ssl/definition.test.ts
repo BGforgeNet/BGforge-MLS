@@ -43,6 +43,22 @@ procedure helper begin end
             expect(result?.range.start.line).toBe(4);
         });
 
+        // The definition wins over a forward declaration - and that has to hold when the two spell the name
+        // differently, since SSL binds them as one procedure. Matched exactly, both were listed and the
+        // declaration shadowed the definition, so this landed on `procedure Node005;` instead.
+        it("finds the definition, not the declaration, when the two disagree on casing", () => {
+            const text = `
+procedure Node005;
+procedure main begin
+    call Node005;
+end
+procedure NOde005 begin end
+`;
+            const result = getLocalDefinition(text, "file:///test.ssl", { line: 3, character: 10 });
+
+            expect(result?.range.start.line).toBe(5);
+        });
+
         it("finds variable definition in procedure", () => {
             const text = `
 procedure foo begin

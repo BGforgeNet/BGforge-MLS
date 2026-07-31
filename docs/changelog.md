@@ -83,6 +83,12 @@
   as entered from another file with no incoming link, `Node999`/`Node998` written any other way drew a node card
   instead of an Exit or Combat marker, and adding a node to a file numbered `node001` upward could produce a
   duplicate procedure name.
+- Go to definition, find references and rename now match Fallout SSL names the way the compiler does, ignoring
+  case for procedures and variables. Go to definition on a call whose capitalisation differs from the procedure
+  landed on the forward declaration rather than the procedure itself; find references from that procedure listed
+  only itself; and rename, which uses the same search, rewrote the definition alone - leaving the file declaring
+  a procedure it no longer defines and calling a name that is gone. Macros keep matching exactly, since the
+  preprocessor that expands them distinguishes case.
 
 ## 3.12.0
 

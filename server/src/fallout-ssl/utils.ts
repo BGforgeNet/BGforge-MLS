@@ -22,6 +22,7 @@ import {
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { sslMapGet, sslNameKey, sslNamesEqual } from "../../../shared/fallout-ssl-names";
 import { jsdocToMarkdown } from "./jsdoc-format";
 import {
     type MacroData,
@@ -163,19 +164,29 @@ export function buildTooltipBase(
  */
 export function extractProcedures(root: Node): Map<string, { node: Node; isForward: boolean }> {
     const procedures = new Map<string, { node: Node; isForward: boolean }>();
+    // Dedup is by SSL's own name binding, which ignores case - `procedure Node005;` declares the very procedure
+    // `procedure NOde005 begin` defines, and keying on the raw text would list one file's single procedure
+    // twice, the forward declaration shadowing the definition for every by-name lookup. The map itself stays
+    // keyed as the source spells each entry, since callers display the key; this tracks which key holds each.
+    const keyOf = new Map<string, string>();
 
     for (const node of root.children) {
         if (node.type === SyntaxType.Procedure) {
             const nameNode = node.childForFieldName("name");
             if (nameNode) {
-                // Definition always wins
+                // Definition always wins - including over a forward declaration that spells the name differently,
+                // whose entry is dropped so the surviving key is the definition's own spelling.
+                const superseded = keyOf.get(sslNameKey(nameNode.text));
+                if (superseded !== undefined) procedures.delete(superseded);
                 procedures.set(nameNode.text, { node, isForward: false });
+                keyOf.set(sslNameKey(nameNode.text), nameNode.text);
             }
         } else if (node.type === SyntaxType.ProcedureForward) {
             const nameNode = node.childForFieldName("name");
-            if (nameNode && !procedures.has(nameNode.text)) {
+            if (nameNode && !keyOf.has(sslNameKey(nameNode.text))) {
                 // Only add forward if definition doesn't exist
                 procedures.set(nameNode.text, { node, isForward: true });
+                keyOf.set(sslNameKey(nameNode.text), nameNode.text);
             }
         }
     }
@@ -188,7 +199,7 @@ export function extractProcedures(root: Node): Map<string, { node: Node; isForwa
  */
 export function findProcedure(root: Node, symbol: string): Node | null {
     const procedures = extractProcedures(root);
-    const proc = procedures.get(symbol);
+    const proc = sslMapGet(procedures, symbol);
     return proc?.node ?? null;
 }
 
@@ -234,12 +245,13 @@ export function findIdentifierNodeAtPosition(root: Node, position: Position): No
 export function findDefinitionNode(root: Node, symbol: string): Node | null {
     // Check procedures first (with deduplication)
     const procedures = extractProcedures(root);
-    const proc = procedures.get(symbol);
+    const proc = sslMapGet(procedures, symbol);
     if (proc) {
         return proc.node;
     }
 
-    // Check macros
+    // Check macros. Exact match, unlike everything else here: a macro name is resolved by the preprocessor,
+    // which does distinguish case (sslc rejects `my_macro` against `#define MY_MACRO`).
     const macroNode = findMacroDefinition(root, symbol);
     if (macroNode) {
         return macroNode;
@@ -254,7 +266,7 @@ export function findDefinitionNode(root: Node, symbol: string): Node | null {
                 for (const child of params.children) {
                     if (child.type === SyntaxType.Param) {
                         const paramName = child.childForFieldName("name");
-                        if (paramName?.text === symbol) {
+                        if (sslNamesEqual(paramName?.text, symbol)) {
                             return child;
                         }
                     }
@@ -269,32 +281,32 @@ export function findDefinitionNode(root: Node, symbol: string): Node | null {
             for (const child of node.children) {
                 if (child.type === SyntaxType.VarInit) {
                     const nameNode = child.childForFieldName("name");
-                    if (nameNode?.text === symbol) {
+                    if (sslNamesEqual(nameNode?.text, symbol)) {
                         return child;
                     }
                 }
             }
         } else if (node.type === SyntaxType.ForVarDecl) {
             const nameNode = node.childForFieldName("name");
-            if (nameNode?.text === symbol) {
+            if (sslNamesEqual(nameNode?.text, symbol)) {
                 return node;
             }
         } else if (node.type === SyntaxType.ForeachStmt) {
             const varNode = node.childForFieldName("var");
-            if (varNode?.text === symbol) {
+            if (sslNamesEqual(varNode?.text, symbol)) {
                 return varNode;
             }
             const keyNode = node.childForFieldName("key");
-            if (keyNode?.text === symbol) {
+            if (sslNamesEqual(keyNode?.text, symbol)) {
                 return keyNode;
             }
             const valueNode = node.childForFieldName("value");
-            if (valueNode?.text === symbol) {
+            if (sslNamesEqual(valueNode?.text, symbol)) {
                 return valueNode;
             }
         } else if (node.type === SyntaxType.ExportDecl) {
             const nameNode = node.childForFieldName("name");
-            if (nameNode?.text === symbol) {
+            if (sslNamesEqual(nameNode?.text, symbol)) {
                 return node;
             }
         }

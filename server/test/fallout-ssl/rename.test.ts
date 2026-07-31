@@ -97,6 +97,63 @@ end
             }
         });
 
+        // SSL binds a procedure reference case-insensitively (verified against the bundled sslc), and 72
+        // procedure/reference pairs across the Fallout corpus disagree on casing. A rename that matched
+        // exactly rewrote only the definition, leaving the file declaring a procedure it no longer defines
+        // and two calls to a name that is gone - a rename that silently breaks the script.
+        it("renames every case-divergent reference to a procedure, declaration included", () => {
+            const text = `
+procedure Node005;
+procedure main begin
+    call Node005;
+    call NODE005;
+end
+procedure NOde005 begin end
+`;
+            const uri = "file:///test.ssl";
+            // Cursor on the definition, whose spelling matches none of the references.
+            const result = renameSymbol(text, { line: 6, character: 12 }, "Greeting", uri);
+
+            const edits = result?.changes?.[uri];
+            // forward declaration + 2 calls + definition
+            expect(edits?.length).toBe(4);
+            for (const edit of edits ?? []) expect(edit.newText).toBe("Greeting");
+        });
+
+        it("renames every case-divergent reference to a variable", () => {
+            const text = `
+procedure foo begin
+    variable my_flag;
+    My_Flag := 0;
+    display_msg(MY_FLAG);
+end
+`;
+            const uri = "file:///test.ssl";
+            const result = renameSymbol(text, { line: 2, character: 14 }, "flag", uri);
+
+            // declaration + 2 usages
+            expect(result?.changes?.[uri]!.length).toBe(3);
+        });
+
+        // The preprocessor substitutes a macro parameter and DOES distinguish case - sslc rejects `my_macro`
+        // against `#define MY_MACRO`. So this is the one name comparison that must stay exact; folding it
+        // would rewrite a token the preprocessor never treated as the same parameter.
+        it("leaves a differently-cased macro parameter alone", () => {
+            const text = `
+#define ADD(a, b) ((a) + (A))
+procedure foo begin
+    variable x;
+    x := ADD(1, 2);
+end
+`;
+            const uri = "file:///test.ssl";
+            // Cursor on the `a` parameter in the macro's parameter list.
+            const result = renameSymbol(text, { line: 1, character: 12 }, "left", uri);
+
+            // The parameter and its one lower-case use in the body; the `(A)` is a different token.
+            expect(result?.changes?.[uri]!.length).toBe(2);
+        });
+
         it("returns null for symbol not defined locally", () => {
             const text = `
 procedure foo begin

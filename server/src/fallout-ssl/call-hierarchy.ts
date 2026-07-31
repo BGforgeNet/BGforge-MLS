@@ -35,6 +35,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./syntax-type";
 import { extractProcedures, findIdentifierNodeAtPosition, findMacroDefinition, makeRange } from "./utils";
+import { sslMapGet } from "../../../shared/fallout-ssl-names";
 import { resolveIdentifierDefinitionNode } from "./symbol-definitions";
 
 /** Resolve a callable name to its definition Location across the workspace (null if unknown). */
@@ -109,7 +110,9 @@ function isShadowedByNonCallable(idNode: SyntaxNode, root: SyntaxNode): boolean 
 
 /** The callable definition node named `name` in `root`: a procedure, or a callable macro. */
 function findCallableDefNode(root: SyntaxNode, name: string): SyntaxNode | null {
-    const proc = extractProcedures(root).get(name);
+    // Procedure lookup folds case, as SSL binds it; the macro lookup below stays exact, as the preprocessor
+    // resolves that one.
+    const proc = sslMapGet(extractProcedures(root), name);
     if (proc) return proc.node;
     const macro = findMacroDefinition(root, name);
     return macro && isCallableMacro(macro) ? macro : null;
