@@ -2,6 +2,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
+import { backupHandle } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import {
     isGameDocument,
@@ -341,14 +342,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     ): Promise<vscode.CustomDocumentBackup> {
         const bytes = await document.getBytes();
         await vscode.workspace.fs.writeFile(context.destination, bytes);
-        return {
-            id: context.destination.toString(),
-            delete: () =>
-                vscode.workspace.fs.delete(context.destination).then(
-                    () => {},
-                    () => {},
-                ),
-        };
+        return backupHandle(context.destination);
     }
 
     private async writeSave(

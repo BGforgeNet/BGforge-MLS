@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import { type Animation, importPngDirectory } from "@bgforge/image";
+import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
@@ -22,19 +23,17 @@ import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToH
 /**
  * The hot-exit backup for `backupId`, or undefined when there is none or it cannot be used.
  *
- * A backup that fails to read or decode is not fatal, and a decode failure is an EXPECTED condition: the
- * container is versioned precisely because a backup can outlive the extension version that wrote it. The
- * unsaved edits are unrecoverable either way, so propagating would make the SAVED file unopenable too.
- * `decodeBackup` still refuses a header it cannot read - only the caller's handling is forgiving.
+ * A decode failure is an EXPECTED condition here, not just a read failure: the container is versioned
+ * precisely because a backup can outlive the extension version that wrote it. `decodeBackup` still refuses a
+ * header it cannot read - only the caller's handling is forgiving, per the shared policy in
+ * `warnBackupUnreadable`.
  */
 async function readBackup(uri: vscode.Uri, backupId: string | undefined): Promise<DocumentBackup | undefined> {
     if (backupId === undefined) return undefined;
     try {
         return decodeBackup(await vscode.workspace.fs.readFile(vscode.Uri.parse(backupId)));
     } catch {
-        void vscode.window.showWarningMessage(
-            `Could not restore unsaved changes to ${path.basename(uri.fsPath)}. Opened the saved file instead.`,
-        );
+        warnBackupUnreadable(uri);
         return undefined;
     }
 }
@@ -163,7 +162,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // re-encode of the source (see saveAsTargetPath), and a split set's combined <base>.frm
             // is overwrite-by-design (see document.savePath).
             const inPlace = targetPath === document.uri.fsPath || targetPath === document.savePath;
-            if (!inPlace && (await this.destinationExists(targetPath))) {
+            if (!inPlace && (await this.fileExists(vscode.Uri.file(targetPath)))) {
                 const overwrite = await vscode.window.showWarningMessage(
                     `${path.basename(targetPath)} already exists - overwrite?`,
                     { modal: true },
@@ -317,6 +316,8 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
+    /** True when the path already exists (file or directory) - the Save As overwrite check and the
+     *  sidecar-manifest probe both ask this. */
     private async fileExists(uri: vscode.Uri): Promise<boolean> {
         try {
             await vscode.workspace.fs.stat(uri);
@@ -372,14 +373,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         _token: vscode.CancellationToken,
     ): Promise<vscode.CustomDocumentBackup> {
         await vscode.workspace.fs.writeFile(context.destination, encodeBackup(document.backup()));
-        return {
-            id: context.destination.toString(),
-            delete: () =>
-                vscode.workspace.fs.delete(context.destination).then(
-                    () => {},
-                    () => {},
-                ),
-        };
+        return backupHandle(context.destination);
     }
 
     private async writeSave(
@@ -412,16 +406,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // never leaves a sidecar describing a palette for a file that was never written.
             // eslint-disable-next-line no-await-in-loop
             await vscode.workspace.fs.writeFile(target, write.bytes);
-        }
-    }
-
-    /** True when the Save As destination already exists on disk (file or directory). */
-    private async destinationExists(fsPath: string): Promise<boolean> {
-        try {
-            await vscode.workspace.fs.stat(vscode.Uri.file(fsPath));
-            return true;
-        } catch {
-            return false;
         }
     }
 

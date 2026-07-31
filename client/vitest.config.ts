@@ -63,16 +63,18 @@ export default defineConfig({
                 // covered by the spawned-worker integration test (which bundles it through
                 // esbuild and runs it out of process), not by in-process vitest coverage.
                 "client/src/binary-editor/worker.ts",
-                // Worker-backed binary editor host glue: the provider, document, and command
-                // registration are built entirely around vscode.CustomEditorProvider,
-                // vscode.WebviewPanel, and worker_threads; their behaviour is exercised by the
-                // spawned-worker integration test, not by mocking the vscode runtime.
+                // Worker-backed binary editor host glue: the provider, document, and command registration are
+                // built around vscode.CustomEditorProvider, vscode.WebviewPanel and worker_threads, so their
+                // behaviour comes from the spawned-worker integration test. Excluded from the COVERAGE RATIO
+                // rather than from testing: restore-backup.test.ts drives the hot-exit path here against a
+                // mocked vscode, which is worth pinning but would report as thin partial coverage of files
+                // whose bulk is framework wiring.
                 "client/src/binary-editor/provider.ts",
                 "client/src/binary-editor/document.ts",
                 "client/src/binary-editor/register.ts",
-                // Same reasoning for the animation (FRM/BAM) custom editor: provider/document/register are
-                // built around vscode.CustomEditorProvider/CustomDocument; their pure logic already has
-                // dedicated coverage in document-model.ts/sidecar.ts/save.ts/export-actions.ts.
+                // Same reasoning for the animation (FRM/BAM) custom editor, including its own
+                // restore-backup.test.ts; the rest of its pure logic already has dedicated coverage in
+                // document-model.ts/sidecar.ts/save.ts/export-actions.ts.
                 "client/src/image-editor/provider.ts",
                 "client/src/image-editor/document.ts",
                 "client/src/image-editor/register.ts",

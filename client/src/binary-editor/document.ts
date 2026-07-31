@@ -1,25 +1,20 @@
-import * as path from "path";
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import type { ChangeSet, OpenResult } from "@bgforge/binary-editor";
+import { warnBackupUnreadable } from "../hot-exit-backup";
 import { WorkerBridge, workerPort } from "./worker-bridge";
 
 /**
- * Bytes to parse: the hot-exit backup when one is readable, otherwise the file itself.
- *
- * A backup that cannot be read is not fatal. VS Code hands back whatever backup id it stored, which can
- * outlive the extension version that wrote it or be cleaned up underneath us - and the unsaved edits are
- * unrecoverable either way, so failing the open would lose access to the SAVED file too. The scope is
- * deliberately the read alone: with no backup in play, an unreadable file still fails the open.
+ * Bytes to parse: the hot-exit backup when one is readable, otherwise the file itself. The unreadable-backup
+ * policy and its message are shared with the other custom editors (see `warnBackupUnreadable`). The scope here
+ * is deliberately the read alone: with no backup in play, an unreadable file still fails the open.
  */
 async function readDocumentBytes(uri: vscode.Uri, backup?: vscode.Uri): Promise<Uint8Array> {
     if (!backup) return vscode.workspace.fs.readFile(uri);
     try {
         return await vscode.workspace.fs.readFile(backup);
     } catch {
-        void vscode.window.showWarningMessage(
-            `Could not restore unsaved changes to ${path.basename(uri.path)}. Opened the saved file instead.`,
-        );
+        warnBackupUnreadable(uri);
         return vscode.workspace.fs.readFile(uri);
     }
 }
