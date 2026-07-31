@@ -46,13 +46,13 @@
         "build": "tsdown && chmod +x out/cli.js"
     },
     "dependencies": {
-        "cac": "^7.0.0",
-        "diff": "^9.0.0",
-        "esbuild-wasm": "^0.28.1"
+        "cac": "catalog:",
+        "diff": "catalog:",
+        "esbuild-wasm": "catalog:"
     },
     "devDependencies": {
-        "fast-check": "^4.9.0",
-        "tsdown": "^0.22.4"
+        "fast-check": "catalog:",
+        "tsdown": "catalog:"
     },
     "engines": {
         "node": ">=20"

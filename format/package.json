@@ -47,16 +47,16 @@
         "test": "vitest run --config vitest.config.ts"
     },
     "dependencies": {
-        "cac": "^7.0.0",
-        "diff": "^9.0.0",
+        "cac": "catalog:",
+        "diff": "catalog:",
         "ini": "^6.0.0",
-        "quick-lru": "^7.3.0",
-        "web-tree-sitter": "^0.26.10"
+        "quick-lru": "catalog:",
+        "web-tree-sitter": "catalog:"
     },
     "devDependencies": {
         "@types/ini": "^4.1.1",
-        "fast-check": "^4.9.0",
-        "tsdown": "^0.22.4",
+        "fast-check": "catalog:",
+        "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {

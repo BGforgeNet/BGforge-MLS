@@ -14,9 +14,10 @@ packages:
   - transpilers/td
 
 # Mechanical enforcement for the lockstep dependency groups documented in
-# docs/dependencies.md. A member manifest references `catalog:` instead of
-# a literal range, so an out-of-lockstep bump in one package.json fails `pnpm install`
-# rather than silently drifting until noticed by convention.
+# docs/dependencies.md, plus single-version enforcement for deps that several
+# workspace packages declare independently. A member manifest references `catalog:`
+# instead of a literal range, so an out-of-lockstep bump in one package.json fails
+# `pnpm install` rather than silently drifting until noticed by convention.
 catalog:
   vscode-languageclient: 10.1.0
   vscode-languageserver: 10.1.0
@@ -25,6 +26,13 @@ catalog:
   typescript: ^5.9.3
   vitest: ^4.1.10
   "@types/node": ^24.13.3
+  cac: ^7.0.0
+  diff: ^9.0.0
+  esbuild-wasm: ^0.28.1
+  fast-check: ^4.9.0
+  quick-lru: ^7.3.0
+  tsdown: ^0.22.4
+  web-tree-sitter: ^0.26.10
 
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive

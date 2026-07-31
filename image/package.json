@@ -49,7 +49,7 @@
         "test": "vitest run --config vitest.config.ts"
     },
     "devDependencies": {
-        "tsdown": "^0.22.4",
+        "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {

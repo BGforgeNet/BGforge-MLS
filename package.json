@@ -102,8 +102,8 @@
         "@vitest/coverage-v8": "^4.1.10",
         "@vscode/codicons": "^0.0.45",
         "@vscode/vsce": "^3.9.2",
-        "cac": "^7.0.0",
-        "diff": "^9.0.0",
+        "cac": "catalog:",
+        "diff": "catalog:",
         "esbuild": "^0.28.1",
         "esbuild-svelte": "^0.9.5",
         "jsonc-parser": "^3.3.1",
@@ -113,7 +113,7 @@
         "oxfmt": "0.58.0",
         "oxlint": "1.73.0",
         "playwright": "1.61.1",
-        "quick-lru": "^7.3.0",
+        "quick-lru": "catalog:",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "svelte": "^5.56.4",
@@ -125,7 +125,7 @@
         "vitest": "catalog:",
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2",
-        "web-tree-sitter": "^0.26.10",
+        "web-tree-sitter": "catalog:",
         "yaml": "^2.9.0"
     },
     "contributes": {

@@ -37,12 +37,12 @@
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
-        "esbuild-wasm": "^0.28.1"
+        "esbuild-wasm": "catalog:"
     },
     "devDependencies": {
         "@bgforge/format": "workspace:*",
         "@types/node": "catalog:",
-        "fast-check": "^4.9.0",
+        "fast-check": "catalog:",
         "fast-glob": "^3.3.3",
         "p-limit": "^7.3.0",
         "ts-morph": "catalog:",
@@ -50,7 +50,7 @@
         "vitest": "catalog:",
         "vscode-languageserver": "catalog:",
         "vscode-languageserver-textdocument": "^1.0.12",
-        "web-tree-sitter": "^0.26.10",
+        "web-tree-sitter": "catalog:",
         "yaml": "^2.9.0"
     },
     "optionalDependencies": {

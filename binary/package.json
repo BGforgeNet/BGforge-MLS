@@ -48,13 +48,13 @@
         "test": "vitest run --config vitest.config.ts"
     },
     "dependencies": {
-        "cac": "^7.0.0",
-        "diff": "^9.0.0",
+        "cac": "catalog:",
+        "diff": "catalog:",
         "typed-binary": "^4.3.3",
         "zod": "^4.4.3"
     },
     "devDependencies": {
-        "tsdown": "^0.22.4",
+        "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {
