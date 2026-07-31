@@ -40,6 +40,7 @@ import { normalizeUri } from "./core/normalized-uri";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
+import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
 
 class ProviderRegistry {
     private providers: Map<string, LanguageProvider> = new Map();
@@ -90,10 +91,17 @@ class ProviderRegistry {
         // Background, not awaited: awaiting would gate the initialize handshake on a full
         // workspace walk (seconds to minutes on large mods). Requests served before it
         // finishes read a partially populated index; failures log, never reject.
-        this.workspaceScan = scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot).catch((error) => {
-            // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
-            conlog(`Workspace scan failed: ${errorMessage(error)}`, "error");
-        });
+        this.workspaceScan = scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot)
+            .catch((error) => {
+                // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
+                conlog(`Workspace scan failed: ${errorMessage(error)}`, "error");
+            })
+            .finally(() => {
+                // Announce readiness, since nothing else does: until this lands, a cross-file answer is drawn
+                // from a partially populated index and looks no different from a complete one. Emitted on the
+                // failure path too - a client waiting on it must not hang because the scan threw.
+                conlog(LSP_LOG_WORKSPACE_SCAN_COMPLETE);
+            });
     }
 
     /** Settles when the startup workspace scan is done (used by tests and explicit waiters). */

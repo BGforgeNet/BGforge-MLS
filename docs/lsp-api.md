@@ -128,3 +128,19 @@ Rationale:
 
 - standard LSP `workspace/symbol` provides only a free-form `query` string, with no current document URI or language id
 - a dedicated per-language executeCommand carries the scope explicitly instead of overloading the query string
+
+### Knowing when cross-file results are complete
+
+The startup workspace scan is deliberately backgrounded: awaiting it would gate the `initialize` handshake on a
+full tree walk, which is seconds to minutes on a large mod. Requests are served throughout, so a cross-file
+answer asked for too early - find references, go to definition into another file, workspace symbols - is drawn
+from a partially populated index and is indistinguishable from a complete one.
+
+When the scan finishes, the server emits a `window/logMessage` whose text contains
+`Workspace scan complete` (the `LSP_LOG_WORKSPACE_SCAN_COMPLETE` constant in `shared/protocol.ts`). A client
+that cares about cross-file completeness can wait for it before issuing such a request, or surface it as an
+indexing indicator. It is emitted exactly once per session, on the failure path as well, so a client waiting on
+it cannot hang because the scan threw.
+
+Single-file requests (hover, completion, document symbols, signature help, formatting) do not depend on the
+scan and need no such wait.

@@ -26,6 +26,16 @@ export const LSP_COMMAND_SAVE_TRA = "bgforge.saveDialogTra";
  */
 export const LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX = "bgforge.workspaceSymbols.";
 
+/**
+ * The `window/logMessage` the server emits once the startup workspace scan has finished, after which
+ * cross-file results (references, definition into another file) are complete.
+ *
+ * The scan is deliberately backgrounded, so a client that asks a cross-file question before this arrives gets a
+ * partially-populated index and no indication of it. This is the signal to wait on - it is part of the shared
+ * surface, not a log string, precisely so a consumer cannot be broken by a reworded message.
+ */
+export const LSP_LOG_WORKSPACE_SCAN_COMPLETE = "Workspace scan complete";
+
 /** Languages whose providers implement workspace-symbol search. */
 export const WORKSPACE_SYMBOL_SCOPED_LANGUAGES = ["fallout-ssl", "weidu-d", "weidu-tp2"] as const;
 

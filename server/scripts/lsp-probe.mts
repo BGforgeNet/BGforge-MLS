@@ -10,18 +10,25 @@
  *   flags:    --lang <id>        override the extension-derived languageId (e.g. weidu-ssl for .ssl)
  *             --workspace <dir>  workspace root sent at initialize (default: the file's directory)
  *             --new-name <name>  required for rename
+ *             --scan-timeout <ms> how long to wait for the workspace scan (default 20000; 0 = don't wait)
  *             --json             full JSON output (completion is summarized to labels by default)
  *             --verbose          forward server window/logMessage notifications to stderr
  *
- * The workspace scan runs in the background after initialize, so cross-file results
- * (references, definition into another file) may be incomplete if probed instantly on a
- * huge workspace; point --workspace at a small directory when that matters.
+ * The workspace scan runs in the background after initialize, so the probe waits for the
+ * server to report it finished before asking its question - otherwise a cross-file result
+ * is drawn from a half-built index and prints exactly like a complete one. If the scan
+ * outlasts the wait, the partial answer is still printed, with a warning on stderr saying
+ * so; point --workspace at a smaller directory when that happens.
  */
 
 import { spawn } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
+
+/** How long to wait for the workspace scan before answering anyway, loudly. Under the 30s overall timeout. */
+const SCAN_WAIT_MS = 20_000;
 
 const LANG_BY_EXT: Record<string, string> = {
     ".ssl": "fallout-ssl",
@@ -47,7 +54,7 @@ const POSITIONLESS = new Set(["symbols", "inlay"]);
 function usage(message?: string): never {
     if (message) console.error(`lsp-probe: ${message}`);
     console.error(
-        "Usage: pnpm lsp-probe <request> <file> [line] [col] [--lang id] [--workspace dir] [--new-name n] [--json] [--verbose]",
+        "Usage: pnpm lsp-probe <request> <file> [line] [col] [--lang id] [--workspace dir] [--new-name n] [--scan-timeout ms] [--json] [--verbose]",
     );
     console.error(`Requests: ${REQUESTS.join(", ")}. line/col are 1-based.`);
     process.exit(1);
@@ -63,11 +70,20 @@ interface Args {
     newName?: string;
     json: boolean;
     verbose: boolean;
+    scanTimeoutMs: number;
 }
 
 function parseArgs(argv: string[]): Args {
     const positional: string[] = [];
-    const args: Args = { request: "", file: "", line: 0, col: 0, json: false, verbose: false };
+    const args: Args = {
+        request: "",
+        file: "",
+        line: 0,
+        col: 0,
+        json: false,
+        verbose: false,
+        scanTimeoutMs: SCAN_WAIT_MS,
+    };
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === undefined) continue;
@@ -76,7 +92,11 @@ function parseArgs(argv: string[]): Args {
         else if (a === "--lang") args.lang = argv[++i];
         else if (a === "--workspace") args.workspace = argv[++i];
         else if (a === "--new-name") args.newName = argv[++i];
-        else if (a.startsWith("--")) usage(`unknown flag ${a}`);
+        else if (a === "--scan-timeout") {
+            const ms = Number(argv[++i]);
+            if (!Number.isFinite(ms) || ms < 0) usage("--scan-timeout takes a non-negative number of milliseconds");
+            args.scanTimeoutMs = ms;
+        } else if (a.startsWith("--")) usage(`unknown flag ${a}`);
         else positional.push(a);
     }
     const [requestName, file, line, col] = positional;
@@ -158,6 +178,12 @@ interface RpcMessage {
     error?: unknown;
 }
 
+/** Resolves when the server reports the startup workspace scan finished; see `waitForWorkspaceScan`. */
+let scanComplete: () => void = () => {};
+const scanFinished = new Promise<void>((resolvePromise) => {
+    scanComplete = resolvePromise;
+});
+
 function handleMessage(message: RpcMessage): void {
     if (message.id !== undefined && message.method === undefined) {
         pending.get(message.id)?.(message.result, message.error);
@@ -165,8 +191,30 @@ function handleMessage(message: RpcMessage): void {
     } else if (message.id !== undefined) {
         // Server-to-client request (e.g. capability registration): answer null so nothing hangs.
         send({ id: message.id, result: null });
-    } else if (args.verbose && message.method === "window/logMessage") {
-        console.error(`[server] ${message.params?.message}`);
+    } else if (message.method === "window/logMessage") {
+        if (message.params?.message?.includes(LSP_LOG_WORKSPACE_SCAN_COMPLETE)) scanComplete();
+        if (args.verbose) console.error(`[server] ${message.params?.message}`);
+    }
+}
+
+/**
+ * Hold the request until the server has finished indexing the workspace.
+ *
+ * The scan is backgrounded, so without this a cross-file request is answered from whatever happens to be
+ * indexed - on any workspace bigger than a couple of files, usually nothing - and the partial answer prints
+ * exactly like a complete one. That silence is the failure worth removing: a probe exists to be believed, so it
+ * either waits for a complete answer or says plainly that it could not.
+ */
+async function waitForWorkspaceScan(): Promise<void> {
+    const deadline = new Promise<"timeout">((resolvePromise) => {
+        setTimeout(() => resolvePromise("timeout"), args.scanTimeoutMs).unref();
+    });
+    if ((await Promise.race([scanFinished, deadline])) === "timeout") {
+        console.error(
+            `lsp-probe: workspace scan still running after ${args.scanTimeoutMs}ms - cross-file results ` +
+                `(references, definition into another file) may be INCOMPLETE. Point --workspace at a smaller ` +
+                `directory, raise --scan-timeout, or re-run with --verbose to watch the scan.`,
+        );
     }
 }
 
@@ -232,6 +280,7 @@ await request("initialize", {
 });
 send({ method: "initialized", params: {} });
 send({ method: "textDocument/didOpen", params: { textDocument: { uri, languageId, version: 1, text } } });
+await waitForWorkspaceScan();
 
 const shape = REQUEST_SHAPES[args.request];
 if (!shape) usage(`request ${args.request} has no request shape`);
