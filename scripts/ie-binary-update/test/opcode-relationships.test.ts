@@ -197,3 +197,29 @@ describe("engine reading selection", () => {
         expect(Object.values(rels.get(12) ?? {}).some((v) => JSON.stringify(v).includes("&amp;"))).toBe(false);
     });
 });
+
+// Both override tables are keyed by opcode NUMBER, and `buildMergedReadings` skips a key the harvest does not
+// know. That is right for an opcode IESDP later drops, but it also swallows a typo: a transposed digit stops
+// applying its curation and nothing says so. The `reading` string is already checked (readingFor throws), so
+// the number is the remaining silent failure - hence this sweep, matching what
+// binary/test/signed-field-declarations.test.ts does for SIGNED_FIELDS.
+describe("override tables name opcodes the harvest actually has", () => {
+    const harvested = extractOpcodeReadings(OPCODES_DIR);
+
+    test.each([
+        ["OpcodeRelationshipOverrides", OpcodeRelationshipOverrides],
+        ["OpcodeResourceOverrides", OpcodeResourceOverrides],
+    ])("every %s key exists in the harvested readings", (_label, table) => {
+        const unknown = Object.keys(table)
+            .map(Number)
+            .filter((num) => !harvested.has(num));
+        expect(unknown).toEqual([]);
+    });
+
+    test("every OPCODE_RESOURCE_UNRESOLVED key exists in the harvested readings", () => {
+        const unknown = Object.keys(OPCODE_RESOURCE_UNRESOLVED)
+            .map(Number)
+            .filter((num) => !harvested.has(num));
+        expect(unknown).toEqual([]);
+    });
+});
