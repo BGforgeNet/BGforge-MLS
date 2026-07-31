@@ -340,4 +340,37 @@ describe("modelToFlow - Node998/Node999 as Combat/Exit terminals (SSL)", () => {
         expect(edges.find((e) => e.id === "Node001#0")).toMatchObject({ target: "exit", category: "exit" });
         expect(edges.find((e) => e.id === "Node001#1")).toMatchObject({ target: "combat", category: "combat" });
     });
+
+    // SSL binds a procedure name case-insensitively, and 22 corpus references to these two sinks are spelled
+    // non-canonically (`NOde999`, `node998`). Matched exactly, each would be drawn as an ordinary dialog card
+    // with a dangling edge instead of routing to its terminal.
+    test("routes a non-canonically-cased support node to its terminal all the same", () => {
+        const divergent: DialogModel = {
+            ...sslModel,
+            roots: [
+                {
+                    ...sslModel.roots[0]!,
+                    states: [
+                        {
+                            id: "Node001",
+                            text: "@1",
+                            faithful: true,
+                            procRange: { start: 0, end: 1 },
+                            choices: [
+                                { id: "Node001#0", text: "@2", target: { kind: "state", stateId: "NOde999" } },
+                                { id: "Node001#1", text: "@3", target: { kind: "state", stateId: "node998" } },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        const { nodes, edges } = modelToFlow(divergent);
+        expect(nodes.filter((n) => n.type === "card").map((n) => n.id)).toEqual(["Node001"]);
+        expect(edges.find((e) => e.id === "Node001#0")).toMatchObject({ target: "exit", category: "exit" });
+        expect(edges.find((e) => e.id === "Node001#1")).toMatchObject({ target: "combat", category: "combat" });
+        // One combat terminal serves every option routing to it, so its tooltip names the convention rather
+        // than any single call site's spelling.
+        expect(nodes.find((n) => n.type === "combat")!.data.title).toBe("Node998");
+    });
 });

@@ -132,6 +132,45 @@ describe("write-back faithfulness: idempotence (no-op edit does not touch the so
     }
 });
 
+// The SSL parser resolves a reference to its definition's spelling, because SSL binds procedure names
+// case-insensitively - so on a case-divergent file the source token and the unedited model id legitimately
+// differ. A writer that decides "was this retargeted?" by comparing the model id against the SOURCE TOKEN then
+// rewrites a name nobody touched: 11 real corpus dialogs stopped round-tripping byte-identically. The question
+// belongs to the model, so it is asked of the two model values. Guarded here as well as over the corpus
+// (`integration/fallout-ssl-writeback.test.ts`), because only this suite runs in the dev loop.
+describe("write-back faithfulness: a case-divergent reference is not rewritten", () => {
+    const CASE_DIVERGENT = `procedure NOde002;
+
+procedure Node001 begin
+    Reply(100);
+    NOption(101, NOde002, 4);
+end
+
+procedure Node002 begin
+    Reply(200);
+    NMessage(201);
+end
+
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+
+    it("SSL: re-emitting an unedited model leaves the authored spelling alone", async () => {
+        const original = modelFromSSL(await parseDialog(CASE_DIVERGENT));
+        expect(computeDialogSourceEdit(CASE_DIVERGENT, clone(original), original).newText).toBeNull();
+    });
+
+    it("SSL: a genuine retarget still rewrites the token", async () => {
+        const original = modelFromSSL(await parseDialog(CASE_DIVERGENT));
+        const edited = clone(original);
+        const choice = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        choice.target = { kind: "state", stateId: "Node001" };
+        const { newText } = computeDialogSourceEdit(CASE_DIVERGENT, edited, original);
+        expect(newText).toContain("NOption(101, Node001, 4)");
+    });
+});
+
 describe("write-back faithfulness: locality (a one-field edit reflows nothing else)", () => {
     // Retarget the first option of the first multi-option node, then assert every OTHER node is byte-identical
     // across the reparse. Fixtures whose first node is not option-bearing pick their own node below.

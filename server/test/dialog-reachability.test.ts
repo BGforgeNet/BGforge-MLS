@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogModel, type DialogState } from "../../shared/dialog-model";
+import { parseDialog } from "../src/dialog";
+import { modelFromD, modelFromSSL, type DialogModel, type DialogState } from "../../shared/dialog-model";
 import { classifyReachability } from "../../shared/dialog-reachability";
 
 // 1C reachability lens: honest three-way split (reachable / external-entry / orphan).
@@ -231,5 +232,33 @@ END
         const r = classifyReachability(model);
         expect(r.get("oob_entry")).toBe("external-entry");
         expect(r.get("oob_reply")).toBe("reachable");
+    });
+
+    // Driven through the real SSL parser, because the defect this guards lives in the step BEFORE the walk: SSL
+    // binds a procedure reference case-insensitively, so `NOption(101, Node005, 4)` reaches `procedure NOde005`
+    // and the parser must resolve the two to one id. Left divergent, the state has no in-file inbound edge and
+    // the walk honestly reports what it sees - external-entry, an entered-from-elsewhere state - for a node the
+    // file plainly points at. Shape taken from abtom.ssl, one of 72 such pairs in the Fallout corpus.
+    it("reaches a state whose definition and references disagree on casing (real SSL parse)", async () => {
+        const data = await parseDialog(`
+procedure Node005;
+
+procedure Node001 begin
+    Reply(100);
+    NOption(101, Node005, 4);
+end
+
+procedure NOde005 begin
+    Reply(200);
+    NMessage(201);
+end
+
+procedure talk_p_proc begin
+    call Node001;
+end
+`);
+        const r = classifyReachability(modelFromSSL(data));
+        expect(r.get("Node001")).toBe("reachable"); // the talk_p_proc entry
+        expect(r.get("NOde005")).toBe("reachable"); // reached only through the case-divergent option edge
     });
 });

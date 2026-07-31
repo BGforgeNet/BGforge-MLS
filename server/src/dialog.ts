@@ -7,6 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
 import { conlog } from "./logger";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
+import { sslNameKey } from "../../shared/dialog-ssl-names";
 import type {
     SSLDialogBlock,
     SSLDialogBlockItem,
@@ -93,7 +94,9 @@ export async function parseDialog(
 
     // Forward declarations (`procedure Name;`) carry a name token that a rename must also rewrite, or the
     // file is left with an orphan decl for the old name and the renamed procedure undeclared. Capture each
-    // decl's name-token span by procedure name (first wins - a redeclaration is invalid SSL anyway).
+    // decl's name-token span by procedure name (first wins - a redeclaration is invalid SSL anyway). Keyed by
+    // `sslNameKey` because a decl and its definition need not agree on casing (`procedure Node005;` declaring
+    // `procedure NOde005`), and an exact-match miss would leave the rename with no decl to rewrite.
     const forwardDeclRanges = new Map<string, { start: number; end: number }>();
     // Full `procedure Name;` statement span (not just the name token) so a node DELETE can splice the whole
     // forward declaration out - removing only the name token would leave a broken `procedure ;`.
@@ -101,9 +104,11 @@ export async function parseDialog(
     for (const child of root.children) {
         if (child.type !== SyntaxType.ProcedureForward) continue;
         const nameNode = child.childForFieldName("name");
-        if (nameNode && !forwardDeclRanges.has(nameNode.text)) {
-            forwardDeclRanges.set(nameNode.text, { start: nameNode.startIndex, end: nameNode.endIndex });
-            forwardDeclStmtRanges.set(nameNode.text, { start: child.startIndex, end: child.endIndex });
+        if (!nameNode) continue;
+        const declKey = sslNameKey(nameNode.text);
+        if (!forwardDeclRanges.has(declKey)) {
+            forwardDeclRanges.set(declKey, { start: nameNode.startIndex, end: nameNode.endIndex });
+            forwardDeclStmtRanges.set(declKey, { start: child.startIndex, end: child.endIndex });
         }
     }
 
@@ -116,7 +121,7 @@ export async function parseDialog(
         if (!nameNode) continue;
         const procName = nameNode.text;
 
-        if (procName === "talk_p_proc") {
+        if (sslNameKey(procName) === "talk_p_proc") {
             extractEntryPoints(child, entryPoints);
             newProcAnchor = child.startIndex;
             entryCalls = collectEntryCalls(child);
@@ -125,9 +130,9 @@ export async function parseDialog(
         }
         const node = parseProcedure(child, procName, sideEffectFns, text);
         node.procRange = { start: child.startIndex, end: child.endIndex };
-        const fwd = forwardDeclRanges.get(procName);
+        const fwd = forwardDeclRanges.get(sslNameKey(procName));
         if (fwd) node.forwardDeclRange = fwd;
-        const fwdStmt = forwardDeclStmtRanges.get(procName);
+        const fwdStmt = forwardDeclStmtRanges.get(sslNameKey(procName));
         if (fwdStmt) node.forwardDeclStmtRange = fwdStmt;
         parsed.set(procName, node);
     }
@@ -149,6 +154,26 @@ export async function parseDialog(
             outOfBandCalls.push({ name, targetRange: { start: arg.startIndex, end: arg.endIndex } });
         }
     });
+
+    // Resolve every reference to the spelling its DEFINITION uses, here at the one point where the file's whole
+    // procedure set is known, so that every consumer downstream can compare ids with `===` and still agree with
+    // the engine - SSL binds a reference case-insensitively (`call Node005` reaches `procedure NOde005`), and 72
+    // corpus pairs disagree. A name this file does not define (a cross-file EXTERN, an engine sink like
+    // `Node999`) has nothing to resolve against and stays exactly as authored.
+    const definedNames = new Map<string, string>();
+    for (const name of parsed.keys()) definedNames.set(sslNameKey(name), name);
+    const resolveRef = (name: string): string => definedNames.get(sslNameKey(name)) ?? name;
+
+    // Resolution can collapse two spellings onto one name, so the sets that were deduped on raw text are
+    // re-deduped here rather than carrying a doubled entry into the model.
+    entryPoints.splice(0, entryPoints.length, ...new Set(entryPoints.map((name) => resolveRef(name))));
+    for (const call of entryCalls ?? []) call.name = resolveRef(call.name);
+    for (const call of outOfBandCalls) call.name = resolveRef(call.name);
+    for (const node of parsed.values()) {
+        for (const opt of node.options) if (opt.target) opt.target = resolveRef(opt.target);
+        node.callTargets = [...new Set(node.callTargets.map(resolveRef))];
+        for (const transition of node.callTransitions ?? []) transition.name = resolveRef(transition.name);
+    }
 
     // Second pass: include only procedures reachable from a dialog entry point
     // (talk_p_proc calls + force_dialog_start targets), following option and call
@@ -172,15 +197,19 @@ export async function parseDialog(
     // or duplicated node visible before it is wired - an orphan NodeNNN is a dialog node in progress - whereas a
     // `*_p_proc` lifecycle handler (pickup_p_proc, look_at_p_proc, ...) is never a dialog node even when it
     // contains a Reply, so it stays excluded.
-    const isHookProc = (name: string): boolean => name.endsWith("_p_proc");
+    const isHookProc = (name: string): boolean => sslNameKey(name).endsWith("_p_proc");
     // A `NodeNNN`-named procedure is a dialog node by convention; the reserved sinks (998 combat / 999 end)
     // are transition TARGETS, not nodes, so they never project on their own (an option routing to one renders
     // as exit/combat). An empty such node is a just-created or scaffolded node in progress - kept visible so
     // `+ State` on an existing dialogue does not write an invisible disk orphan (BUG A). A renamed empty node
     // (not `NodeNNN`) still needs wiring to show; the general pending-node layer covers that case.
-    const isDialogNodeName = (name: string): boolean => /^Node\d+$/.test(name);
+    // Both conventions are matched case-insensitively for the same reason the references above are resolved
+    // that way: the engine does not distinguish `NOde999` from `Node999`, and 22 corpus references to the
+    // reserved sinks are spelled non-canonically. A case-sensitive test would draw one of those as an ordinary
+    // dialog node instead of an Exit chip.
+    const isDialogNodeName = (name: string): boolean => /^node\d+$/.test(sslNameKey(name));
     const isReservedSink = (name: string): boolean => {
-        const num = /^Node0*(\d+)$/.exec(name);
+        const num = /^node0*(\d+)$/.exec(sslNameKey(name));
         return num !== null && (num[1] === "998" || num[1] === "999");
     };
     for (const [procName, node] of parsed) {
@@ -216,7 +245,7 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
             }
         } else if (node.type === SyntaxType.CallExpr) {
             const func = node.childForFieldName("func");
-            if (func?.text.startsWith("Node") && !entryPoints.includes(func.text)) {
+            if (func !== null && sslNameKey(func.text).startsWith("node") && !entryPoints.includes(func.text)) {
                 entryPoints.push(func.text);
             }
         }

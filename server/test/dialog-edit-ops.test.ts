@@ -343,6 +343,15 @@ END
         expect(m.roots[0]!.states).toHaveLength(1); // pure - offered a suggestion, added nothing
     });
 
+    // SSL binds procedure names case-insensitively, so a file numbered `node001`..`node003` already occupies
+    // the low ids. Counting only the canonical spelling would restart allocation at Node001 and save a second
+    // `procedure` with the same name - a redefinition the compiler rejects. 65 corpus files number their nodes
+    // non-canonically.
+    it("suggestStateId counts non-canonically-cased node names, so a new id cannot collide", () => {
+        expect(ops.suggestStateId(sslModel(["node001", "NODE002", "NOde003"]))).toBe("Node004");
+        expect(ops.suggestStateId(sslModel(["Node001"], ["node007"]))).toBe("Node008");
+    });
+
     it("addState uses an explicit (validated) id when given, else auto-assigns", () => {
         const m = sslModel(["Node001"]);
         expect(ops.addState(m, undefined, "GreetAgain").id).toBe("GreetAgain");
@@ -368,6 +377,21 @@ END
         });
         it("SSL: accepts a fresh valid identifier", () => {
             expect(ops.newStateIdError(sslModel(["Node001"]), "GreetAgain")).toBeNull();
+        });
+        // The rejections above must hold under SSL's own name binding, or the editor accepts a name that saves
+        // as a duplicate `procedure` (or as a second definition of a reserved sink).
+        it("SSL: judges duplicates and reserved sinks case-insensitively, as the engine binds them", () => {
+            expect(ops.newStateIdError(sslModel(["Node001", "Node002"]), "node002")).toMatch(/already used/);
+            expect(ops.newStateIdError(sslModel(["Node001"], ["Helper_Proc"]), "helper_proc")).toMatch(/already used/);
+            expect(ops.newStateIdError(sslModel(["Node001"]), "NOde999")).toMatch(/reserved/);
+        });
+        it("D: keeps label comparison case-sensitive - D labels are distinct names", () => {
+            const d: DialogModel = {
+                sourceLang: "d",
+                editable: true,
+                roots: [{ id: "r", label: "r", kind: "dialog", states: [{ id: "start", text: "", choices: [] }] }],
+            };
+            expect(ops.newStateIdError(d, "Start")).toBeNull();
         });
         it("D: enforces only uniqueness (no SSL identifier rule), matching renameState's D scope", () => {
             const d: DialogModel = {

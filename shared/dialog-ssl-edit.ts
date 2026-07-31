@@ -156,7 +156,12 @@ function survivorReplacement(text: string, moved: DialogChoice, movedOrig: Dialo
         return msgIdText !== undefined ? `NMessage(${msgIdText})` : origCall;
     }
     const newTarget = moved.target.stateId;
-    const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
+    // "Did the user retarget this option?" is a question about the MODEL, so it is asked of the two model
+    // values - not of the source token, which is a different thing that merely used to coincide. The SSL parser
+    // resolves a reference to its definition's spelling (`NOption(101, Node005, ...)` -> `NOde005`, since SSL
+    // binds procedure names case-insensitively), so on a case-divergent file the token and the UNEDITED model id
+    // differ and a text comparison would rewrite a name nobody touched - losing byte-identical round-trip.
+    const origTarget = movedOrig.target.kind === "state" ? movedOrig.target.stateId : undefined;
     const lowChanged = Boolean(moved.lowIq) !== Boolean(movedOrig.lowIq);
 
     if (lowChanged) {
@@ -174,7 +179,7 @@ function survivorReplacement(text: string, moved: DialogChoice, movedOrig: Dialo
     // other's offsets - never touching the msg-id/skill args, so an untouched expression there (a
     // computed msgId, a non-decimal skill literal) survives byte-exact.
     let call = origCall;
-    if (newTarget !== oldTarget) {
+    if (newTarget !== origTarget) {
         const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
         const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
         call = call.slice(0, relStart) + newTarget + call.slice(relEnd);

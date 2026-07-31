@@ -78,6 +78,11 @@
   dropdown list open over the form.
 - Typing in a binary-editor dropdown now starts a fresh search even after clicking into the value shown. The
   click placed a cursor there, so what you typed was appended to the value and matched nothing.
+- Fallout SSL dialog nodes whose procedure and its callers spell the name with different capitalisation are now
+  treated as one node, matching the compiler, which ignores case. Such a node used to show in the dialog editor
+  as entered from another file with no incoming link, `Node999`/`Node998` written any other way drew a node card
+  instead of an Exit or Combat marker, and adding a node to a file numbered `node001` upward could produce a
+  duplicate procedure name.
 
 ## 3.12.0
 

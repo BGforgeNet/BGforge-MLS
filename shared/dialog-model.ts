@@ -7,6 +7,7 @@
  * `docs/superpowers/specs/2026-06-18-dialog-editor-design.md`.
  */
 
+import { sslNameKey } from "./dialog-ssl-names";
 import type {
     DDialogData,
     DDialogState,
@@ -401,12 +402,22 @@ export type DialogTarget =
 export const SSL_TERMINAL_NODES: Record<string, "exit" | "combat"> = { Node999: "exit", Node998: "combat" };
 
 /**
- * The terminal kind for an SSL state id, or undefined if it is a normal node. Uses `Object.hasOwn` rather than
- * a bare index so a state whose id collides with an `Object.prototype` member (`"toString"`, `"constructor"`)
- * is not mis-read as a terminal. Callers still gate on `renderFamily(sourceLang) === "fallout-ssl"` - an SSL convention.
+ * Lookup for `sslTerminalKind`, keyed the way SSL compares procedure names. A Map, not an object index, so a
+ * state whose id collides with an `Object.prototype` member (`"toString"`, `"constructor"`) cannot be
+ * mis-read as a terminal.
+ */
+const SSL_TERMINAL_BY_NAME = new Map(
+    Object.entries(SSL_TERMINAL_NODES).map(([name, kind]) => [sslNameKey(name), kind] as const),
+);
+
+/**
+ * The terminal kind for an SSL state id, or undefined if it is a normal node. Matched case-insensitively
+ * because the engine binds the name that way and the corpus spells it both ways - 22 references to these two
+ * sinks read `NOde999` or `node998`, and an exact match would draw each as an ordinary node rather than a
+ * terminal chip. Callers still gate on `renderFamily(sourceLang) === "fallout-ssl"` - an SSL convention.
  */
 export function sslTerminalKind(id: string): "exit" | "combat" | undefined {
-    return Object.hasOwn(SSL_TERMINAL_NODES, id) ? SSL_TERMINAL_NODES[id] : undefined;
+    return SSL_TERMINAL_BY_NAME.get(sslNameKey(id));
 }
 
 // --- Display helpers (used by the webview renderer) ------------------------

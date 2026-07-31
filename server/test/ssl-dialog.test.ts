@@ -195,6 +195,116 @@ end
     });
 });
 
+// SSL resolves procedure names case-insensitively - `call Node005` binds to `procedure NOde005`, verified
+// against the bundled sslc (it compiles; a genuinely undefined target fails with "No code for procedure").
+// Real content relies on it: 72 procedure/reference pairs across the Fallout corpus disagree on casing, all in
+// shipped, working scripts. The parser therefore resolves every reference to the DEFINITION's own spelling, so
+// downstream consumers compare ids with `===` and still agree with the engine.
+describe("parseDialog (SSL) case-insensitive procedure resolution", () => {
+    // The shape is abtom.ssl's verbatim: canonical forward declaration and references, a definition that
+    // disagrees. Left unresolved, the option edge dangles and the node reads as entered-from-outside.
+    const CASE_DIVERGENT = `
+procedure Node005;
+
+procedure Node001 begin
+    Reply(100);
+    NOption(101, Node005, 4);
+end
+
+procedure NOde005 begin
+    Reply(200);
+    NMessage(201);
+end
+
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+
+    it("resolves an option target to the defining procedure's spelling", async () => {
+        const result = await parseDialog(CASE_DIVERGENT);
+        expect(result.nodes.map((n) => n.name).sort()).toEqual(["NOde005", "Node001"]);
+        const n1 = result.nodes.find((n) => n.name === "Node001")!;
+        expect(n1.options[0]!.target).toBe("NOde005");
+    });
+
+    it("resolves a call target to the defining procedure's spelling", async () => {
+        const result = await parseDialog(`
+procedure Node001 begin
+    Reply(100);
+    call NOde002;
+end
+procedure Node002 begin
+    Reply(200);
+    NMessage(201);
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`);
+        const n1 = result.nodes.find((n) => n.name === "Node001")!;
+        expect(n1.callTargets).toEqual(["Node002"]);
+    });
+
+    it("resolves a talk_p_proc entry call, so the node reads as an entry point", async () => {
+        const result = await parseDialog(`
+procedure Node001 begin
+    Reply(100);
+    NMessage(101);
+end
+procedure talk_p_proc begin
+    call NOde001;
+end
+`);
+        expect(result.entryPoints).toEqual(["Node001"]);
+    });
+
+    it("resolves a force_dialog_start target, keeping its chain in scope", async () => {
+        const result = await parseDialog(`
+procedure Node050 begin
+    Reply(100);
+    NOption(101, Node051, 4);
+end
+procedure Node051 begin
+    NMessage(102);
+end
+procedure map_enter_p_proc begin
+    force_dialog_start(NOde050);
+end
+procedure talk_p_proc begin
+end
+`);
+        expect(result.entryPoints).toEqual(["Node050"]);
+        expect(result.nodes.map((n) => n.name).sort()).toEqual(["Node050", "Node051"]);
+    });
+
+    // A rename rewrites the forward declaration through this range. Matched case-sensitively, the decl for
+    // `Node005` never attaches to `NOde005`, and renaming the node would leave an orphan `procedure Node005;`
+    // behind - the file then declares a procedure it does not define, which sslc rejects outright.
+    it("attaches a case-divergent forward declaration to its procedure", async () => {
+        const result = await parseDialog(CASE_DIVERGENT);
+        const node = result.nodes.find((n) => n.name === "NOde005")!;
+        expect(node.forwardDeclRange).toBeDefined();
+        expect(CASE_DIVERGENT.slice(node.forwardDeclRange!.start, node.forwardDeclRange!.end)).toBe("Node005");
+    });
+
+    // Only a name the file actually defines is canonicalized. A cross-file EXTERN target or an engine sink has
+    // no definition to resolve against, so it must survive exactly as authored.
+    it("leaves a target with no matching procedure exactly as written", async () => {
+        const result = await parseDialog(`
+procedure Node001 begin
+    Reply(100);
+    call COMBAT;
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`);
+        const n1 = result.nodes.find((n) => n.name === "Node001")!;
+        expect(n1.callTargets).toEqual(["COMBAT"]);
+    });
+});
+
 // The side-effect honesty badge needs to know which builtins a node runs beyond showing
 // its line. The parser does not own the policy of WHICH functions count (that is the
 // void-return classification, derived from static data and injected); it just records the

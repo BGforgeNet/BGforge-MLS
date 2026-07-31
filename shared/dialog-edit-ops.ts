@@ -20,6 +20,7 @@ import {
     rewriteSameFileExternRef,
 } from "./dialog-model";
 import { allChoices, allStates } from "./dialog-edit-common";
+import { sslNameKey } from "./dialog-ssl-names";
 
 /** Every state id across the model - a thin projection over the shared `allStates` flatten. */
 function stateIdsOf(model: DialogModel): string[] {
@@ -225,8 +226,11 @@ function nextSslNodeId(model: DialogModel): string {
     // Union the projected node ids with EVERY existing procedure name (existingProcNames): an empty or
     // side-effect-only `NodeNNN` proc is a real name to dodge even though the model does not carry it as a node,
     // or a new node would collide and the splice/scaffold would emit a duplicate `procedure`.
+    // Matched case-insensitively, as SSL binds procedure names: a file numbered `node001`..`node020` would
+    // otherwise contribute nothing to the max, and the next id allocated would be `Node001` - a duplicate
+    // `procedure` the compiler rejects as a redefinition.
     const nums = [...stateIdsOf(model), ...(model.existingProcNames ?? [])]
-        .map((id) => /^Node(\d+)$/.exec(id)?.[1])
+        .map((id) => /^node(\d+)$/.exec(sslNameKey(id))?.[1])
         .filter((m): m is string => m !== undefined && m !== null)
         .map((m) => Number.parseInt(m, 10))
         .filter((n) => !RESERVED_SSL_NODE_NUMS.has(n));
@@ -277,16 +281,20 @@ export function newStateIdError(model: DialogModel, id: string, targetRoot?: Dia
     if (ssl) {
         if (!/^[A-Za-z_]\w*$/.test(trimmed))
             return "SSL node names must be a procedure identifier: letters, digits, and underscores, not starting with a digit.";
-        const num = /^Node(\d+)$/.exec(trimmed)?.[1];
+        const num = /^node(\d+)$/.exec(sslNameKey(trimmed))?.[1];
         if (num !== undefined && RESERVED_SSL_NODE_NUMS.has(Number.parseInt(num, 10)))
             return `Node${num} is reserved (998 = combat, 999 = end dialog).`;
     }
     const root = resolveTargetRoot(model, targetRoot);
+    // Collision is judged the way the target language binds names: SSL procedures case-insensitively, so
+    // `node006` is taken once `Node006` exists and accepting it would save a duplicate `procedure`. D state
+    // labels are case-sensitive, so that branch compares exactly.
+    const key = (name: string): string => (ssl ? sslNameKey(name) : name);
     const taken = new Set<string>([
-        ...(root?.states ?? []).map((s) => s.id),
-        ...(ssl ? (model.existingProcNames ?? []) : []),
+        ...(root?.states ?? []).map((s) => key(s.id)),
+        ...(ssl ? (model.existingProcNames ?? []).map((name) => sslNameKey(name)) : []),
     ]);
-    if (taken.has(trimmed)) return `"${trimmed}" is already used in this dialogue.`;
+    if (taken.has(key(trimmed))) return `"${trimmed}" is already used in this dialogue.`;
     return null;
 }
 
