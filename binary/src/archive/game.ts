@@ -229,8 +229,20 @@ function resolveLangDir(gameDir: string, edition: string, explicitLang?: string)
     return entries.filter((e) => hasDialog(e)).sort()[0];
 }
 
+/**
+ * True for a game-relative path that would leave the install: a `..` segment, or an absolute/drive-rooted
+ * name. KEY-supplied BIF names reach `resolveGamePath` straight from file bytes, and no real KEY uses either
+ * form, so they are refused rather than resolved. Symlinked data directories keep working - they carry no
+ * `..` and are followed transparently by the `stat`/read below.
+ */
+function escapesGameDir(relative: string): boolean {
+    if (path.isAbsolute(relative) || /^[a-z]:/i.test(relative)) return true;
+    return relative.split("/").some((seg) => seg === "..");
+}
+
 /** Resolve a game-relative path (`data/foo.bif`, `lang/en_US/override`) segment by segment, case-insensitively. */
 function resolveGamePath(gameDir: string, relative: string): string | undefined {
+    if (escapesGameDir(relative)) return undefined;
     let cur = gameDir;
     for (const seg of relative.split("/").filter((s) => s !== "")) {
         const next = resolveCaseInsensitive(cur, seg);
@@ -392,7 +404,15 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         const entry = key.bifs[bifIndex];
         if (!entry) throw new Error(`BIF index ${bifIndex} out of range`);
         const bifPath = resolveBifPath(bifIndex);
-        if (!bifPath) throw new Error(`BIF file not found: ${entry.name}`);
+        if (!bifPath) {
+            // Distinguish the two ways a name fails to resolve: the escaping case is a KEY pointing outside the
+            // install, where the file may well exist, so the caller's log should not read as a missing archive.
+            throw new Error(
+                escapesGameDir(entry.name)
+                    ? `Refusing to load BIF outside the game directory: ${entry.name}`
+                    : `BIF file not found: ${entry.name}`,
+            );
+        }
         const archive = openBif(fileSource(bifPath));
         openBifs.set(bifIndex, archive);
         return archive;

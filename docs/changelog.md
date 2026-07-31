@@ -38,6 +38,9 @@
     since a game often ships one of them only partly filled in. An effect's impact projectile is named too,
     from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file. The values that mean "no
     projectile" - which no game table names - read `None` instead of as a bare number.
+- A `chitin.key` that names a BIF archive outside the game folder - by a parent-directory step or an absolute
+  path - is refused with a message naming the archive, rather than reading a file from elsewhere on the disk.
+  No real install does this; a corrupt or hand-crafted index can.
 
 ### Binary editor
 

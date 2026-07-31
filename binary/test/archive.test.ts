@@ -692,6 +692,37 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    // A KEY's BIF names are untrusted file bytes: `..` or an absolute name would address files outside the
+    // install. Real KEYs use neither, so resolution refuses them rather than walking out of the game dir.
+    it.each([
+        { label: "a parent-dir escape", name: "../outside/escaped.bif" },
+        { label: "an absolute path", name: "/outside/escaped.bif" },
+    ])("refuses to load a BIF named via $label", ({ name }) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-key-escape-"));
+        tmpDirs.push(root);
+        const gameDir = path.join(root, "game");
+        fs.mkdirSync(path.join(root, "outside"), { recursive: true });
+        fs.mkdirSync(gameDir, { recursive: true });
+        // A syntactically valid BIF outside the install: resolution must never reach it, so a failure here
+        // cannot be mistaken for the archive merely being absent.
+        fs.writeFileSync(path.join(root, "outside", "escaped.bif"), sampleBif());
+        fs.writeFileSync(
+            path.join(gameDir, "chitin.key"),
+            buildKey(
+                [{ name, fileLength: 0 }],
+                [{ resref: "item01", type: RESTYPE_ITM, bifIndex: 0, tilesetIndex: 0, fileIndex: 0 }],
+            ),
+        );
+
+        const game = openGame(gameDir, { mode: "engine" });
+        try {
+            expect(() => game.read("item01", "itm")).toThrow(/Refusing to load BIF outside the game directory/);
+            expect(game.canRead("item01", "itm")).toBe(false);
+        } finally {
+            game.close();
+        }
+    });
+
     it("searches lang/<lang> folders only in engine mode with that language set", () => {
         const VOICE = Uint8Array.from([0x11, 0x22]);
         const dir = makeGameDir({ "lang/en_US/sounds/voice1.wav": VOICE });
