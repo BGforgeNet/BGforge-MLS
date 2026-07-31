@@ -1,4 +1,5 @@
 import type { AnimationMeta, Facing, Rgba, SourceFormat } from "@bgforge/image";
+import { isRecord } from "../../is-record";
 
 /** A single decoded frame, trimmed for the wire: no rawEncoding/rleEncoded (re-encoding is host-side). */
 export interface FrameView {
@@ -78,10 +79,6 @@ export type WebviewToHost =
     // the library decoder (importApng in @bgforge/image) is still present.
     | { type: "import"; mode: "replace" | "append" }
     | { type: "runtimeError"; message: string; stack?: string };
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-    return typeof v === "object" && v !== null;
-}
 
 function isValidMetaPatch(patch: unknown): patch is MetaPatch {
     if (!isRecord(patch)) return false;

@@ -9,6 +9,7 @@ import type {
     SpellbookView,
     StructureOpRequest,
 } from "@bgforge/binary-editor";
+import { isRecord } from "../../is-record";
 
 /** Messages the webview posts up to the host. */
 export type WebviewToHost =
@@ -24,10 +25,6 @@ export type WebviewToHost =
     | { type: "dumpJson" }
     | { type: "loadJson" }
     | { type: "runtimeError"; message: string; stack?: string };
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-    return typeof v === "object" && v !== null;
-}
 
 /**
  * Runtime narrow of an incoming webview message before the host acts on it. A same-origin webview

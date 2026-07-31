@@ -1,4 +1,5 @@
 import type { DialogModel } from "../../../../shared/dialog-model";
+import { isRecord } from "../../is-record";
 
 /**
  * Messages the dialog webview posts up to the host (panel.ts). Senders: main.ts ("ready",
@@ -11,10 +12,6 @@ export type WebviewToHost =
     | { type: "notify"; text: string; level?: "info" | "warn" }
     | { type: "edit"; model: DialogModel; seq?: number }
     | { type: "runtimeError"; message: string; stack?: string };
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-    return typeof v === "object" && v !== null;
-}
 
 /**
  * Runtime narrow of an incoming webview message before the host acts on it. A same-origin webview
