@@ -23,6 +23,8 @@ git hooks automatically. Run the hooks manually with `pnpm exec lefthook run pre
 | [docs/architecture.md](docs/architecture.md)                   | System overview, build pipeline, client/server/CLI structure, data pipeline, design decisions |
 | [docs/lsp-api.md](docs/lsp-api.md)                             | Public LSP/client-server contract for third-party clients                                     |
 | [server/INTERNALS.md](server/INTERNALS.md)                     | Server internals: provider registry, symbol system, data flow, tree-sitter integration        |
+| [binary/INTERNALS.md](binary/INTERNALS.md)                     | Binary library internals: spec system, primitives, derivation, format adapters                |
+| [image/README.md](image/README.md)                             | Animation library: FRM/BAM codecs, FRM <-> BAM conversion, PNG/APNG import/export             |
 | [scripts/README.md](scripts/README.md)                         | Build and test scripts reference                                                              |
 | [grammars/README.md](grammars/README.md)                       | Tree-sitter grammars: building, WASM, CJS patching                                            |
 | [server/data/README.md](server/data/README.md)                 | YAML data format for completion/hover                                                         |

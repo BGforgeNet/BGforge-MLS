@@ -118,6 +118,7 @@ pnpm test:cli                              # Exit codes and diff output
 | `verify-package-contents.sh`         | Inspect the packaged VSIX and fail loud on unexpected entries, source/test files, or size regressions - the fail-closed backstop for the `.vscodeignore` denylist.                                                                                                                                                                                                                        |
 | `verify-supply-chain.sh`             | Verify the supply-chain hardening artifacts (Scorecard/CodeQL workflows, SBOM and SLSA provenance steps) are present. First CI step.                                                                                                                                                                                                                                                      |
 | `build-webviews.mjs`                 | esbuild bundler for the Svelte webviews. Invoked by `build-base-webviews.sh`.                                                                                                                                                                                                                                                                                                             |
+| `esbuild-web-tree-sitter.mjs`        | Shared esbuild pieces (asset loaders + Node-import shims) for bundling web-tree-sitter into browser IIFE bundles. Used by `build-webviews.mjs` and the dialog render harness build.                                                                                                                                                                                                       |
 | `split-syntax-type.mjs`              | Split dts-tree-sitter output into the runtime `syntax-type.ts` enum and `tree-sitter.d.ts` declarations (grammar `generate:types` pipeline).                                                                                                                                                                                                                                              |
 | `external-repos-lib.sh`              | Shared lib for cloning/pinning the external fixture repos. Sourced, not executed.                                                                                                                                                                                                                                                                                                         |
 | `parallel-lib.sh`                    | Parallel job runner for test scripts. Sourced, not executed.                                                                                                                                                                                                                                                                                                                              |
@@ -159,3 +160,35 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
 - `scripts/utils/src/update-d-highlight.ts`
   Generates TextMate highlight patterns for 8 D stanzas (actions, chain epilogue, keywords/sugar, state, trans features, trans next, transition, when) from `server/data/weidu-d-base.yml`.
   Called by `generate-data.sh`.
+
+- `scripts/utils/src/generate-data.ts`
+  Generates the LSP completion/hover/signature JSON files under `server/out/` from `server/data/*.yml`.
+  Called by `generate-data.sh`.
+
+- `scripts/utils/src/extract-engine-proc-docs.ts`
+  Extracts Fallout engine procedure names and docs JSON for the TSSL transpiler and TypeScript plugin.
+  Called by `generate-data.sh`.
+
+- `scripts/utils/src/yaml2json.ts`
+  Converts tmLanguage YAML to JSON, expanding shorthand `name` inheritance. Called by `syntaxes-to-json.sh`.
+
+- `scripts/utils/src/generate-ksh.ts`, `scripts/utils/src/generate-udl.ts`, `scripts/utils/src/generate-geany.ts`
+  Generate the Kate KSyntaxHighlighting, Notepad++ UDL, and Geany filetype bundles. Called by `build-editors.sh`.
+
+- `scripts/utils/src/generate-td-lib-blocklist.ts`
+  Regenerates the ES-lib completion blocklist in `plugins/td-plugin/src/filter-completions.ts` from the installed
+  TypeScript's lib reference chain. Invoked via `pnpm regen:td-blocklist`.
+
+- `scripts/utils/src/language-defs.ts`
+  Shared language metadata and keyword collection for the editor-bundle generators (library module, no CLI).
+
+- `scripts/utils/src/yaml-helpers.ts`
+  Shared YAML/text helpers (strict duplicate-rejecting parsing, block scalars, deterministic sort and directory walk)
+  for the data-update tools (library module).
+
+- `scripts/utils/src/validate-helpers.ts`
+  Shared runtime validation helpers asserting types at `YAML.parse()` boundaries for the ie-update/fallout-update
+  tools (library module).
+
+- `scripts/utils/src/vitest-coverage-config.ts`
+  Shared vitest `coverage` block factored out of the per-package unit-test configs (library module).

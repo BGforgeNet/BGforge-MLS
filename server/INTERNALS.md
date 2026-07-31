@@ -519,7 +519,7 @@ This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax
 
 ### Parse Caching
 
-`parseWithCache(text)` hashes the input and checks a 10-entry LRU cache before parsing. This avoids re-parsing on repeated requests (e.g., multiple hovers on same file).
+`parseWithCache(text)` checks a 64-entry LRU cache keyed by the document text before parsing. This avoids re-parsing on repeated requests (e.g., multiple hovers on same file).
 
 ## Feature Matrix
 

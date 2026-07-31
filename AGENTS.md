@@ -41,7 +41,7 @@ VSCode extension providing IDE features for niche scripting languages used in cl
 - **SCS SSL/SLB** - Sword Coast Stratagems scripting (Infinity Engine AI mods)
 - **Transpilers** - TypeScript-like languages compiling to the above: TSSL->SSL, TBAF->BAF, TD->D
 
-**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`).
+**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
 
 **How it works:**
 
@@ -63,6 +63,7 @@ grammars/                # Tree-sitter grammars (6 dirs: 4 LSP + 2 parsed for di
 binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE parser)
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
+image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
 editors/                 # Hand-written editor syntax inputs, merged with generated output by build-editors.sh
 syntaxes/                # TextMate grammars (YAML source + JSON compiled)
@@ -123,7 +124,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 ```
 
-**Testing against real external files.** The `external/` mod trees are gitignored but REPRODUCIBLE - `pnpm test:external` (via `scripts/reset-external.sh` + `scripts/external-repos-lib.sh`) clones/checks them out at pinned refs. So real-corpus coverage belongs in a committed test, not a throwaway: tests that exercise real external files live under `server/test/integration/**` (run by `pnpm test:integration`, config `server/vitest.integration.config.ts`), using `test/integration/test-helpers.ts` (`FALLOUT_FIXTURES` = `external/fallout`, `IE_FIXTURES` = `external/infinity-engine`, `loadFixture`/`loadFixtures`). Gate a corpus sweep with `describe.skipIf(files.length === 0)` so it skips cleanly when the corpus is not checked out. Before placing any real-file test, read a sibling there (`integration/weidu-d.test.ts`, `fallout-ssl/rename.test.ts`) for the fixture/init conventions. Do NOT commit copies of gitignored `external/` files as fixtures, and do NOT hand-run a one-off script where this suite is the home.
+**Testing against real external files.** The `external/` mod trees are gitignored but REPRODUCIBLE - `pnpm test:external` (via `scripts/reset-external.sh` + `scripts/external-repos-lib.sh`) clones/checks them out at pinned refs. So real-corpus coverage belongs in a committed test, not a throwaway: tests that exercise real external files live under `server/test/integration/**` (run by `pnpm test:integration`, config `server/vitest.integration.config.ts`), using `test/integration/test-helpers.ts` (`FALLOUT_FIXTURES` = `external/fallout`, `IE_FIXTURES` = `external/infinity-engine`, `loadFixture`/`loadFixtures`). Gate a corpus sweep with `describe.skipIf(files.length === 0)` so it skips cleanly when the corpus is not checked out. Before placing any real-file test, read a sibling there (`integration/weidu-d.test.ts`, `integration/fallout-ssl.test.ts`) for the fixture/init conventions. Do NOT commit copies of gitignored `external/` files as fixtures, and do NOT hand-run a one-off script where this suite is the home.
 
 ## Publishing & Release
 
@@ -195,6 +196,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Transpiler guides       | `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`)                |
 | Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
+| Image library           | `image/README.md`                                                                                                          |
 | Data files              | `server/data/README.md`                                                                                                    |
 | Data pipeline           | `docs/data-pipeline.md`                                                                                                    |
 | Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |

@@ -133,6 +133,11 @@ vscode-mls/
 |   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
 |   +-- out/                    tsdown output + WASM files
 |
++-- image/                  @bgforge/image package: animation library (Fallout FRM / IE BAM codecs, FRM <-> BAM conversion, PNG/APNG import-export)
+|   +-- src/                    Codecs (frm/, bam/, png/, palette/) + conversions (convert/) + PNG-directory/APNG io (io/)
+|   +-- test/                   Library tests (vitest)
+|   +-- out/                    tsdown output
+|
 +-- shared/                 Pure TypeScript helpers shared across workspaces
 |   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
 |   +-- parsers/                Tree-sitter parser factory/manager + per-language facades + WASM
@@ -154,10 +159,12 @@ vscode-mls/
 |   +-- {lang}-tooltip.tmLanguage.yml   Hover tooltip syntax
 |   +-- bgforge-mls-*.tmLanguage.yml    Comment/string/docstring injection
 |
++-- editors/                Hand-written editor syntax inputs, merged with generated output by build-editors.sh
 +-- language-configurations/  VSCode language settings (brackets, comments, indent)
 +-- themes/                 Color theme (BGforge Monokai) + icon theme
 +-- snippets/               Code snippets (SSL, BAF, TP2)
 +-- scripts/                Build, test, data generation scripts
++-- actions/                Reusable composite GitHub Actions (binary, format, transpile) + _shared/ scripts
 +-- transpilers/            Transpiler implementations + user documentation
 |   +-- common/                 Shared utilities (no package.json)
 |   +-- tssl/                   @bgforge/tssl: TypeScript to Fallout SSL
@@ -175,18 +182,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target        | Input                                                                                  | Output                                      | Notes                                            |
-| ------------- | -------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
-| Client        | `client/src/extension.ts`                                                              | `client/out/extension.js`                   | CJS, `vscode` external                           |
-| Server        | `server/src/server.ts`                                                                 | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
-| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                     | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
-| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                       | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
-| Webviews      | `client/src/dialog-editor/webview/main.ts`, `client/src/binary-editor/webview/main.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
-| Format lib    | `format/src/{index,cli}.ts`                                                            | `format/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgfmt bin     |
-| Transpile lib | `transpilers/src/{index,cli}.ts`                                                       | `transpilers/out/{index,cli}.js`            | ESM, tsdown-bundled; cli.js is the fgtp bin      |
-| Binary lib    | `binary/src/{index,cli}.ts`                                                            | `binary/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgbin bin     |
-| Grammars      | `grammars/*/grammar.js`                                                                | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
-| TextMate      | `syntaxes/*.tmLanguage.yml`                                                            | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
+| Target        | Input                                                                   | Output                                      | Notes                                            |
+| ------------- | ----------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
+| Client        | `client/src/extension.ts`                                               | `client/out/extension.js`                   | CJS, `vscode` external                           |
+| Server        | `server/src/server.ts`                                                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`                                        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
+| Webviews      | `client/src/{dialog-editor,binary-editor,image-editor}/webview/main.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
+| Format lib    | `format/src/{index,cli}.ts`                                             | `format/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgfmt bin     |
+| Transpile lib | `transpilers/src/{index,cli}.ts`                                        | `transpilers/out/{index,cli}.js`            | ESM, tsdown-bundled; cli.js is the fgtp bin      |
+| Binary lib    | `binary/src/{index,cli}.ts`                                             | `binary/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgbin bin     |
+| Grammars      | `grammars/*/grammar.js`                                                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
+| TextMate      | `syntaxes/*.tmLanguage.yml`                                             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
 ### Build Pipeline
 
