@@ -130,7 +130,7 @@
         // Re-runs when the list opens (viewport mounts) and whenever the filtered set changes: scroll the list
         // back to the top so the first item / first match is visible rather than scrolled out of view.
         const list = visibleOptions; // tracked: re-run on every filter change
-        if (!open || !viewportEl || list.length < 0) return;
+        if (!open || !viewportEl || list.length === 0) return;
         const vp = viewportEl;
         const justOpened = pristine; // captured for the deferred callback below
         vp.scrollTop = 0;

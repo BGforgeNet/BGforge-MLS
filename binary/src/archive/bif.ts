@@ -157,9 +157,10 @@ function openPlainBif(source: ByteSource): BifArchive {
 }
 
 /**
- * Inflate one stream, refusing to produce more than deflate could plausibly have compressed. zlib's best
- * ratio is 1032:1, so anything past that multiple of the input is a corrupt or hostile length rather than a
- * real archive, and fails as a clear zlib error instead of an unbounded allocation.
+ * Inflate one stream, refusing to produce more than deflate could plausibly have compressed, so a corrupt or
+ * hostile length fails as a clear zlib error instead of an unbounded allocation. The bound is deflate's
+ * best case: one length/distance pair reproduces at most 258 bytes and costs at least ~2 bits, so a byte of
+ * input yields at most 4 such matches - 1032 bytes out per byte in.
  */
 const MAX_INFLATE_RATIO = 1032;
 

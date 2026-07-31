@@ -485,8 +485,8 @@ the `BinaryParser` / `BinaryFormatAdapter` editor path. Formats: IESDP `key_v1.h
 - **`game-type.ts`** - `detectGameIdentity(key): GameIdentity` (also `openGame().identity`): the game's
   type/edition, detected the way WeiDU does - probe the KEY for marker resources, last
   match wins, from a classic-BG1 default. `variant` is WeiDU's game_type (the EE edition or `generic`),
-  `scriptStyle` its script style, `edition` drives the TLK encoding. `flavour` is the finer WeiDU GAME_IS type
-  (`src/tppe.ml` `PE_GameIs`) resolved by area markers - ToB (`AR6111`) vs SoA (`AR0083`), TotSC (`AR2003`) vs
+  `scriptStyle` its script style, `edition` drives the TLK encoding. `flavour` is the finer type WeiDU's
+  `GAME_IS` tests, resolved by area markers - ToB (`AR6111`) vs SoA (`AR0083`), TotSC (`AR2003`) vs
   BG1, HoW/TotLM vs IWD - and drives `label` ("Baldur's Gate II: Throne of Bhaal") and `shortLabel` ("BG2: ToB").
   `refineGameFlavour(base, resExists, fileExists)` then upgrades the flavour for the conversions/expansions that
   only show against the LIVE game (override + loose files), per WeiDU and Near Infinity markers: EET

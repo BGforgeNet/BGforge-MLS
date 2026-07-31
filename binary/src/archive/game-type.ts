@@ -1,7 +1,7 @@
 /**
  * Infinity Engine game identity. The coarse `variant`/`scriptStyle`/`edition` follow WeiDU's
  * `autodetect_game_type` (KEY marker probe, last match wins) and drive TLK encoding. The finer `flavour` follows
- * WeiDU's GAME_IS area markers (`src/tppe.ml` `PE_GameIs`) - e.g. Throne of Bhaal vs Shadows of Amn - and is
+ * the area markers WeiDU's `GAME_IS` tests - e.g. Throne of Bhaal vs Shadows of Amn - and is
  * what `label`/`shortLabel` describe. `detectGameIdentity` reads the KEY (biffed base markers); a separate
  * `refineGameFlavour` pass then upgrades the flavour for conversions/expansions that show only against the live
  * game - EET, SoD, BGT - via override resources and loose files.
@@ -57,7 +57,7 @@ const COARSE_TESTS: readonly (readonly [string, number, IeVariant, IeScriptStyle
     ["HOWPARTY", TDA, "iwdee", "bg2"],
 ];
 
-// Fine flavour by an area/table marker (WeiDU src/tppe.ml PE_GameIs), MOST SPECIFIC FIRST - a ToB install also
+// Fine flavour by an area/table marker (the set WeiDU's `GAME_IS` tests), MOST SPECIFIC FIRST - a ToB install also
 // has the SoA marker, TotSC also has BG1, TotLM also has HoW/IWD - so the expansion is listed before its base,
 // and the distinctly-marked EE variants come first. First present marker wins.
 const FLAVOUR_MARKERS: readonly (readonly [IeFlavour, string, number])[] = [
@@ -149,8 +149,9 @@ export function detectGameIdentity(key: KeyIndex): GameIdentity {
  * Refine a KEY-detected identity for the conversions/expansions that layer on a base game and are visible only
  * against the LIVE install (override resources and loose files), not the KEY: EET (a BG2EE megamod, `eet.flag`
  * in override or `data/eetTU00.bif`), SoD (BGEE + Siege of Dragonspear, `movies/sodcin01.wbm`), and BGT (BG1
- * rebuilt on the BG2 engine, `AR7200.ARE` in override). Markers per WeiDU (`PE_GameIs`) and Near Infinity
- * (`Profile`). `resExists` = resource resolves (KEY or override); `fileExists` = a loose file under the game dir.
+ * rebuilt on the BG2 engine, `AR7200.ARE` in override). Markers match the ones WeiDU's `GAME_IS` and Near
+ * Infinity's game detection use. `resExists` = resource resolves (KEY or override); `fileExists` = a loose file
+ * under the game dir.
  */
 export function refineGameFlavour(
     base: GameIdentity,
