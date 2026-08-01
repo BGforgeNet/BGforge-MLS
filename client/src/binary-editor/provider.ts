@@ -5,7 +5,6 @@ import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { backupHandle } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import {
-    isGameDocument,
     type NamingTableResolver,
     type ResourceListResolver,
     type EngineResolver,
@@ -27,6 +26,9 @@ export interface GameResolvers {
     resourceType: ResourceTypeResolver;
     resourceList: ResourceListResolver;
     engine: EngineResolver;
+    /** Whether the resolvers can answer anything for this document. Owns the whole policy - the URI's own
+     *  game plus the `file:` fallback - so this module never re-derives what counts as game-backed. */
+    isGameBacked: (uri: vscode.Uri) => boolean;
 }
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
@@ -377,7 +379,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // pays a full recursive walk of every message to find nothing.
         const uri = this.active.get(panel)?.uri;
         const resolved =
-            uri === undefined || !isGameDocument(uri)
+            uri === undefined || !this.gameLookups.isGameBacked(uri)
                 ? message
                 : withGameContext(message, {
                       strref: (strref) => this.gameLookups.strref(uri, strref),

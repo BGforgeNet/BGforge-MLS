@@ -74,25 +74,38 @@ export type EngineResolver = (uri: vscode.Uri) => string | undefined;
 const NO_STRING = -1;
 
 /**
- * The game directory a document was opened from, or undefined when it was not opened from a game. One
- * definition for every resolver below, so they cannot drift on what counts as game-backed.
+ * The game a plain `file:` document resolves against, when any. Supplied by the caller that owns the policy
+ * (the configured game path, the open game) - this module only knows URIs, not settings or sessions.
  */
-function gameDirOf(uri: vscode.Uri): string | undefined {
-    if (uri.scheme !== GAME_RESOURCE_SCHEME) return undefined;
-    const { gameDir } = parseResourceUri(uri);
-    return gameDir === "" ? undefined : gameDir;
+export type GameDirFallback = () => string | undefined;
+
+/**
+ * The game directory a document resolves against, or undefined when there is none. One definition for every
+ * resolver below, so they cannot drift on what counts as game-backed.
+ *
+ * A game-resource URI names its own game. A plain `file:` document (a mod's own record on disk) carries no
+ * game, so the caller-supplied fallback decides; its `g=`-style query, if any, is deliberately never read -
+ * only the dedicated scheme makes a URI self-describing. Other schemes never resolve.
+ */
+export function gameDirOf(uri: vscode.Uri, fallback?: GameDirFallback): string | undefined {
+    if (uri.scheme === GAME_RESOURCE_SCHEME) {
+        const { gameDir } = parseResourceUri(uri);
+        return gameDir === "" ? undefined : gameDir;
+    }
+    if (uri.scheme === "file") return fallback?.();
+    return undefined;
 }
 
 /**
  * Whether anything can be resolved for this document at all.
  *
  * Exported so a caller can skip work that could only ever come back empty: the binary editor walks every
- * host-to-webview message hunting for rows to fill in, and for a record outside a game that traversal is
- * guaranteed to find nothing. Asking here keeps the scheme's meaning in this module rather than spreading a
- * URI check into consumers.
+ * host-to-webview message hunting for rows to fill in, and for a record with no game to resolve against that
+ * traversal is guaranteed to find nothing. Asking here keeps the scheme's meaning in this module rather than
+ * spreading a URI check into consumers.
  */
-export function isGameDocument(uri: vscode.Uri): boolean {
-    return gameDirOf(uri) !== undefined;
+export function isGameDocument(uri: vscode.Uri, fallback?: GameDirFallback): boolean {
+    return gameDirOf(uri, fallback) !== undefined;
 }
 
 /** The slice of GameSession this needs. Narrow on purpose: the resolver only ever reads a line, and depending
@@ -109,10 +122,10 @@ interface TlkSource {
     };
 }
 
-export function createStrrefResolver(session: TlkSource): StrrefResolver {
+export function createStrrefResolver(session: TlkSource, fallback?: GameDirFallback): StrrefResolver {
     return (uri, strref) => {
         if (strref === NO_STRING || strref < 0) return;
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let line: string | undefined;
         try {
@@ -139,9 +152,9 @@ export function createStrrefResolver(session: TlkSource): StrrefResolver {
  * SOUNDOFF.IDS, and an install can have both with different meanings at the same index, so preference order
  * decides rather than a merge.
  */
-export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
+export function createSlotLabelResolver(session: TlkSource, fallback?: GameDirFallback): SlotLabelResolver {
     return (uri, tables, index) => {
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let identifier: string | undefined;
         try {
@@ -167,9 +180,9 @@ export function createSlotLabelResolver(session: TlkSource): SlotLabelResolver {
  * can apply the key encoding the ref declares for it and decide who wins a key both name; nothing is blended
  * here, so an entry always comes from a table this install holds.
  */
-export function createNamingTableResolver(session: TlkSource): NamingTableResolver {
+export function createNamingTableResolver(session: TlkSource, fallback?: GameDirFallback): NamingTableResolver {
     return (uri, kind, tables) => {
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         const found: NamedTable[] = [];
         try {
@@ -197,9 +210,9 @@ export function createNamingTableResolver(session: TlkSource): NamingTableResolv
  * `present: false`, which withholds the open affordance and nothing more, because a mod record legitimately
  * references what a later install step creates.
  */
-export function createResourceTypeResolver(session: TlkSource): ResourceTypeResolver {
+export function createResourceTypeResolver(session: TlkSource, fallback?: GameDirFallback): ResourceTypeResolver {
     return (uri, decl, resref) => {
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let found: ResolvedResourceRef | undefined;
         try {
@@ -221,9 +234,9 @@ export function createResourceTypeResolver(session: TlkSource): ResourceTypeReso
  * Uncached, because the caller asks once per type and holds the answer; caching here would need invalidation
  * on every write into `override/`.
  */
-export function createResourceListResolver(session: TlkSource): ResourceListResolver {
+export function createResourceListResolver(session: TlkSource, fallback?: GameDirFallback): ResourceListResolver {
     return (uri, ext) => {
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         const want = ext.toLowerCase();
         let resrefs: string[] | undefined;
@@ -245,9 +258,9 @@ export function createResourceListResolver(session: TlkSource): ResourceListReso
  * Maps the open game's detected flavour to the engine whose opcode readings apply. Returns undefined for a
  * record not from a game, which leaves the editor on its preferred reading.
  */
-export function createEngineResolver(session: TlkSource): EngineResolver {
+export function createEngineResolver(session: TlkSource, fallback?: GameDirFallback): EngineResolver {
     return (uri) => {
-        const gameDir = gameDirOf(uri);
+        const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let engine: string | undefined;
         try {

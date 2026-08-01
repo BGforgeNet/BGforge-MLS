@@ -4,56 +4,14 @@
 
 ### Infinity Engine game resources
 
-- New IE Game Resources view: point it at a game's `chitin.key` and browse everything the install holds, BIF
-  archives and `override` alike, grouped by resource type. Opening a resource loads it in the matching editor -
-  the binary editor for ITM/SPL/EFF/CRE, the normal one otherwise. Hovering shows the resource's in-game name,
-  read from the game's `dialog.tlk`.
-- A record opened from a game now shows what only the install can say, instead of raw numbers:
-  - The `dialog.tlk` line appears in place of a strref, with the number kept beside it and the full text on
-    hover. Editing the field still edits the number.
-  - CRE sound slots are named from the game's `SNDSLOT.IDS` or `SOUNDOFF.IDS` - whichever the install ships -
-    and are laid out in columns rather than one slot per row.
-  - Gender, alignment, race, class, kit, animation and the other IDS-backed CRE fields list the install's own
-    identifiers, including any a mod adds. Values the install does not name stay editable.
-  - Magic school and secondary type are named from `MSCHOOL.2DA` and `MSECTYPE.2DA`.
-  - A resref the game can actually resolve gets an open affordance beside it, which opens that resource. One
-    the game does not have is left as-is and never flagged: a mod record legitimately refers to a file a later
-    install step creates.
-  - A resref field becomes a searchable picker over the install's resources of that field's type, so a target
-    can be chosen by name instead of typed from memory. It still accepts any name you type, including one the
-    install does not have. Long lists show the first matches and the number left out - keep typing to narrow.
-  - Effects that target a creature type now name both halves: the IDS File parameter lists the tables it can
-    select, and the IDS Entry parameter becomes a dropdown of that table's own entries, re-read from the game
-    whenever the file is changed. This covers fourteen opcodes, including `Use EFF File` - by far the most
-    common of them in a real install.
-  - An effect's resource now opens the file it names, for the fifty-odd opcodes whose target is unambiguous - a
-    spell for `Cast Spell`, a creature for `Summon`, an item, an EFF or a 2DA elsewhere. Opcodes whose
-    documentation names two possible targets, or that mean different things in different games, are left alone
-    rather than guessed at.
-  - An effect's Parent Resource opens too, as the spell or item its own Parent Resource Type says it is.
-  - An item's weapon proficiency is named from the game's own proficiency table, so proficiencies a mod adds
-    are listed instead of showing as a bare number.
-  - The projectile an item or spell ability fires is named from the game's `MISSILE.IDS` and `PROJECTL.IDS`,
-    which key it differently - the field is a named dropdown instead of a bare number. Both tables are read,
-    since a game often ships one of them only partly filled in. An effect's impact projectile is named too,
-    from `PROJECTL.IDS`. Each carries an open link to the projectile's own `.PRO` file. The values that mean "no
-    projectile" - which no game table names - read `None` instead of as a bare number.
-- A `chitin.key` that names a BIF archive outside the game folder - by a parent-directory step or an absolute
-  path - is refused with a message naming the archive, rather than reading a file from elsewhere on the disk.
-  No real install does this; a corrupt or hand-crafted index can.
-- Refresh now re-reads the game's `override` folders, so a resource WeiDU, Near Infinity or a file manager
-  wrote since the game was opened shows up - and one deleted there stops being listed, falling back to the
-  biffed copy where there is one.
+New IE Game Resources view: point it at a game's `chitin.key` and browse game resources, NI/DLTCEP like. Open from sidebar ("BGforge" item), or command ("BGforge: Open IE game").
+It will automatically set `bgforge.weidu.gamePath`. It will also load the game when the view is first shown, if the setting is set and path exists.
+When a game is opened, mod file values (IDS, 2DA references, strings from `dialog.tlk`, etc) will resolve against it. When there's no game, BGEE defaults will be used.
 
 ### Binary editor
 
-- Effect opcodes added after the original games are now named instead of showing as a bare number. That covers
-  every Enhanced Edition and Icewind Dale II opcode, plus a dozen older ones - `Use EFF File` among them, which
-  is one of the most common effects there is. Their parameters are named too, where documented.
-- Where the games disagree about what an opcode number means - 238 is Disintegrate on BG2 and a saving-throw
-  modifier on Icewind Dale - a record opened from a game now shows that game's meaning: its name, its parameter
-  labels, and what its resource points at. Opened outside a game, it shows the BG(2)EE meaning. Previously it
-  showed whichever game's description happened to come first in the reference data, per opcode.
+- Default IE opcode list includes BGEE opcodes now.
+- When an IE game is opened, context-dependent fields reflect its data values.
 - The extra parameter, special and power fields an effect record carries now take the name the current opcode
   gives them, the way Parameter 1 and Parameter 2 already did.
 
@@ -85,16 +43,10 @@
 - Typing in a binary-editor dropdown now starts a fresh search even after clicking into the value shown. The
   click placed a cursor there, so what you typed was appended to the value and matched nothing.
 - Fallout SSL dialog nodes whose procedure and its callers spell the name with different capitalisation are now
-  treated as one node, matching the compiler, which ignores case. Such a node used to show in the dialog editor
-  as entered from another file with no incoming link, `Node999`/`Node998` written any other way drew a node card
-  instead of an Exit or Combat marker, and adding a node to a file numbered `node001` upward could produce a
-  duplicate procedure name.
+  treated as one node, matching the compiler, which ignores case.
 - Go to definition, find references and rename now match Fallout SSL names the way the compiler does, ignoring
-  case for procedures and variables. Go to definition on a call whose capitalisation differs from the procedure
-  landed on the forward declaration rather than the procedure itself; find references from that procedure listed
-  only itself; and rename, which uses the same search, rewrote the definition alone - leaving the file declaring
-  a procedure it no longer defines and calling a name that is gone. Macros keep matching exactly, since the
-  preprocessor that expands them distinguishes case.
+  case for procedures and variables. Macros keep matching exactly, since the preprocessor that expands them
+  distinguishes case.
 - Find references on a Fallout SSL procedure no longer lists same-named procedures belonging to other scripts.
   A procedure is local to its own file, but references were collected by name across the whole workspace, and
   since nearly every dialog script defines its own `Node004` the result was mostly unrelated files. Symbols that

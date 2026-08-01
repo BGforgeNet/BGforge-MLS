@@ -707,7 +707,7 @@
                 "bgforge.weidu.gamePath": {
                     "type": "string",
                     "default": "",
-                    "description": "Absolute path to an IE game. Needed to use parse feature on BAF and D files."
+                    "description": "Absolute path to an IE game. Enables the parse feature on BAF and D files, resolves IE records in workspace files against that game in the binary editor, and auto-loads the game in the IE Resources view. Opening a game in that view writes this setting."
                 },
                 "bgforge.validate": {
                     "type": "string",

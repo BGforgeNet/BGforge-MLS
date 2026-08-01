@@ -12,6 +12,8 @@ import {
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
+    gameDirOf,
+    isGameDocument,
     type NamingTableResolver,
     type ResourceListResolver,
     type EngineResolver,
@@ -20,9 +22,8 @@ import {
     type StrrefResolver,
 } from "./game-lookups";
 import { viewTypeForResource } from "./editor-routing";
-import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
+import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
 
-const LAST_DIR_KEY = "bgforge.ieResources.lastDir";
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
 
 /**
@@ -37,8 +38,32 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     resourceType: ResourceTypeResolver;
     resourceList: ResourceListResolver;
     engine: EngineResolver;
+    isGameBacked: (uri: vscode.Uri) => boolean;
 } {
     const session = new GameSession();
+
+    /**
+     * The game a plain `file:` record (a mod's own file) resolves against: the configured
+     * `bgforge.weidu.gamePath` - the install this workspace's mod targets, already used for WeiDU
+     * diagnostics, and written back whenever a game is opened in the view so the two stay in sync - or,
+     * when unset, whatever game is currently open in the view.
+     *
+     * Validity is memoized per setting value: the check runs once per lookup batch of hundreds of rows,
+     * and a game does not appear at a path mid-session often enough to justify a stat per row. A
+     * `chitin.key` created at the same path later is picked up after a settings touch or reload.
+     */
+    let checkedPath: string | undefined;
+    let checkedValid = false;
+    const configuredGameDir = (): string | undefined => {
+        const dir = vscode.workspace.getConfiguration("bgforge").get<string>("weidu.gamePath", "");
+        if (dir === "") return undefined;
+        if (dir !== checkedPath) {
+            checkedPath = dir;
+            checkedValid = fs.existsSync(path.join(dir, "chitin.key"));
+        }
+        return checkedValid ? dir : undefined;
+    };
+    const fallbackGameDir = (): string | undefined => configuredGameDir() ?? session.current?.dir;
     const tree = new GameResourceTreeProvider(session);
     const fsProvider = new GameResourceFileSystemProvider(session);
     const treeView = vscode.window.createTreeView("bgforge.ieResources", {
@@ -69,7 +94,18 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             void vscode.window.showErrorMessage(`Not an Infinity Engine game folder (no chitin.key): ${dir}`);
             return;
         }
-        await context.workspaceState.update(LAST_DIR_KEY, dir);
+        // Record the opened game in the setting the rest of the toolchain reads (WeiDU diagnostics, the
+        // `file:` record fallback), so opening a game IS pointing the workspace at it - one source of
+        // truth, restored by the view on the next reload. Workspace-scoped when a folder is open, since
+        // the game is a property of the mod being worked on; user-scoped in a folderless window, where a
+        // workspace write would throw.
+        const config = vscode.workspace.getConfiguration("bgforge");
+        if (config.get<string>("weidu.gamePath", "") !== dir) {
+            const target = vscode.workspace.workspaceFolders?.length
+                ? vscode.ConfigurationTarget.Workspace
+                : vscode.ConfigurationTarget.Global;
+            await config.update("weidu.gamePath", dir, target);
+        }
         fsProvider.clearCache(); // a reopened dir must re-read, not serve a prior session's bytes
         await setHasGame(true);
         tree.refresh();
@@ -123,15 +159,19 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await openRef(current.dir, element.resref, element.ext);
     };
 
-    /** The binary editor's open-a-referenced-resource affordance; the document URI names which game. */
+    /**
+     * The binary editor's open-a-referenced-resource affordance. Resolved through the same policy as the
+     * row lookups (`gameDirOf` + the `file:` fallback), so a chip rendered for a mod's own record opens
+     * against the same game that resolved it.
+     */
     const openRefFromDocument = async (arg?: {
         documentUri?: vscode.Uri;
         resref?: string;
         ext?: string;
     }): Promise<void> => {
         if (!arg?.documentUri || !arg.resref || !arg.ext) return;
-        const { gameDir } = parseResourceUri(arg.documentUri);
-        if (!gameDir) return;
+        const gameDir = gameDirOf(arg.documentUri, fallbackGameDir);
+        if (gameDir === undefined) return;
         await openRef(gameDir, arg.resref, arg.ext);
     };
 
@@ -163,37 +203,39 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     );
 
     /**
-     * Restore the last-opened game (independent of the workspace) for continuity across reloads - but not
-     * during activation, and only once the resource view is actually shown.
+     * Restore the configured `bgforge.weidu.gamePath` game into the view - but not during activation, and
+     * only once the resource view is actually shown. The setting is both the configured default and the
+     * record of the last game opened here, since opening a game writes it back.
      *
      * Opening a game is synchronous and proportional to the install: it parses `chitin.key`, indexes every
      * resource it names, and scans the override folders. The extension also activates for a script file, and
      * paying that on the activation path would stall the host for a view the user may never open. A restored
-     * binary editor does not depend on this - the FS provider opens the game from the URI on demand.
+     * binary editor does not depend on this - the FS provider opens the game from the URI on demand, and the
+     * `file:` fallback lookups open the configured game the same way.
      */
-    const lastDir = context.workspaceState.get<string>(LAST_DIR_KEY);
-    const restorable = lastDir !== undefined && fs.existsSync(path.join(lastDir, "chitin.key"));
     let restored = false;
-    const restoreLastGame = async (): Promise<void> => {
-        if (restored || !restorable) return;
+    const restoreGame = async (): Promise<void> => {
+        const restoreDir = configuredGameDir();
+        if (restored || restoreDir === undefined) return;
         restored = true; // set before awaiting, so a second visibility event cannot start a parallel open
-        await openGameDir(lastDir);
+        await openGameDir(restoreDir);
     };
     void setHasGame(false);
     context.subscriptions.push(
         treeView.onDidChangeVisibility((event) => {
-            if (event.visible) void restoreLastGame();
+            if (event.visible) void restoreGame();
         }),
     );
     // Already showing (the view was the reason for activation), so no visibility change is coming.
-    if (treeView.visible) void restoreLastGame();
+    if (treeView.visible) void restoreGame();
 
     return {
-        strref: createStrrefResolver(session),
-        slotLabel: createSlotLabelResolver(session),
-        namingTable: createNamingTableResolver(session),
-        resourceType: createResourceTypeResolver(session),
-        resourceList: createResourceListResolver(session),
-        engine: createEngineResolver(session),
+        strref: createStrrefResolver(session, fallbackGameDir),
+        slotLabel: createSlotLabelResolver(session, fallbackGameDir),
+        namingTable: createNamingTableResolver(session, fallbackGameDir),
+        resourceType: createResourceTypeResolver(session, fallbackGameDir),
+        resourceList: createResourceListResolver(session, fallbackGameDir),
+        engine: createEngineResolver(session, fallbackGameDir),
+        isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),
     };
 }

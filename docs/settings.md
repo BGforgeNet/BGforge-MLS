@@ -25,10 +25,10 @@ All settings are under the `bgforge` namespace.
 
 ## WeiDU
 
-| Setting                  | Default | Description                                                       |
-| ------------------------ | ------- | ----------------------------------------------------------------- |
-| `bgforge.weidu.path`     | `weidu` | Path to WeiDU binary (or add to system PATH)                      |
-| `bgforge.weidu.gamePath` | `""`    | Absolute path to IE game directory (needed for BAF/D diagnostics) |
+| Setting                  | Default | Description                                                                                                                                                                                 |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.weidu.path`     | `weidu` | Path to WeiDU binary (or add to system PATH)                                                                                                                                                |
+| `bgforge.weidu.gamePath` | `""`    | Absolute path to IE game directory: BAF/D diagnostics, binary-editor resolution for workspace files, auto-loaded in the IE Resources view. Opening a game in that view writes this setting. |
 
 ## Translations (`@N` message text)
 

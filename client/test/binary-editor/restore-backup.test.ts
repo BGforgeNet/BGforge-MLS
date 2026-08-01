@@ -101,6 +101,7 @@ const noGame = {
     resourceType: (): undefined => undefined,
     resourceList: (): undefined => undefined,
     engine: (): undefined => undefined,
+    isGameBacked: (): boolean => false,
 };
 
 describe("binary editor hot-exit restore", () => {

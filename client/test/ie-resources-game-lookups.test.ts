@@ -99,6 +99,78 @@ describe("isGameDocument", () => {
     });
 });
 
+/**
+ * A mod's own record is a plain `file:` document, so the caller-supplied fallback (the configured game path,
+ * or the open game) decides what it resolves against. The fallback must never leak beyond `file:` documents,
+ * and a game URI's own directory must always win over it.
+ */
+describe("file-record fallback", () => {
+    const fileUri = { scheme: "file", query: "", path: "/mods/mymod/sw1h01.itm" } as never;
+
+    it("treats a file document as game-backed when the fallback names a game", () => {
+        expect(isGameDocument(fileUri, () => "/games/tob")).toBe(true);
+    });
+
+    it("stays unbacked when the fallback has no game to offer", () => {
+        expect(isGameDocument(fileUri, () => undefined)).toBe(false);
+    });
+
+    it("never applies the fallback to schemes other than file", () => {
+        const untitled = { scheme: "untitled", query: "", path: "/sw1h01.itm" } as never;
+
+        expect(isGameDocument(untitled, () => "/games/tob")).toBe(false);
+    });
+
+    it("resolves a file record's strref against the fallback game", () => {
+        const opened: string[] = [];
+        const base = session();
+        const spied = {
+            ensureOpen: (dir: string) => {
+                opened.push(dir);
+                return base.ensureOpen(dir);
+            },
+        };
+
+        const line = createStrrefResolver(spied, () => "/games/tob")(fileUri, 6348);
+
+        expect(line).toBe("Ring of Protection +1");
+        expect(opened).toEqual(["/games/tob"]);
+    });
+
+    // A file URI can carry any query; only the dedicated scheme makes a URI self-describing, so a `g=` query
+    // on a file document must not outrank the policy's answer.
+    it("ignores a g= query on a file document in favour of the fallback", () => {
+        const queried = { scheme: "file", query: "g=%2Fgames%2Felsewhere", path: "/mods/sw1h01.itm" } as never;
+        const opened: string[] = [];
+        const base = session();
+        const spied = {
+            ensureOpen: (dir: string) => {
+                opened.push(dir);
+                return base.ensureOpen(dir);
+            },
+        };
+
+        createStrrefResolver(spied, () => "/games/tob")(queried, 6348);
+
+        expect(opened).toEqual(["/games/tob"]);
+    });
+
+    it("lets a game URI's own directory win over the fallback", () => {
+        const opened: string[] = [];
+        const base = session();
+        const spied = {
+            ensureOpen: (dir: string) => {
+                opened.push(dir);
+                return base.ensureOpen(dir);
+            },
+        };
+
+        createStrrefResolver(spied, () => "/games/other")(gameUri("/games/tob"), 6348);
+
+        expect(opened).toEqual(["/games/tob"]);
+    });
+});
+
 describe("createStrrefResolver", () => {
     it("resolves a strref against the game the URI names", () => {
         expect(createStrrefResolver(session())(gameUri(), 6348)).toBe("Ring of Protection +1");
