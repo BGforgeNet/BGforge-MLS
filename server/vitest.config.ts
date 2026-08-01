@@ -35,7 +35,13 @@ export default defineConfig({
         // --coverage; a bare "test/**" glob resolves against process.cwd() and silently
         // matches 0 files when the caller's cwd is the repo root.
         include: [path.resolve(__dirname, "test/**/*.test.ts")],
-        exclude: [path.resolve(__dirname, "test/smoke-stdio.test.ts"), path.resolve(__dirname, "test/integration/**")],
+        // smoke-stdio and lsp-probe spawn the built server/out bundle, which Phase 2 of
+        // scripts/test.sh produces AFTER this suite runs - they live in vitest.smoke.config.ts.
+        exclude: [
+            path.resolve(__dirname, "test/smoke-stdio.test.ts"),
+            path.resolve(__dirname, "test/lsp-probe.test.ts"),
+            path.resolve(__dirname, "test/integration/**"),
+        ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner (the .td cohort
         // parse ran past 30s there); the timeout guards against hangs, not slowness.
