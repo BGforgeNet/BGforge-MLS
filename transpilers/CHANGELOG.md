@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
-## Unreleased
+## 0.2.0
 
 ### Added
 

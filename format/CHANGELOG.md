@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
-## Unreleased
+## 0.4.0
 
 ### Added
 

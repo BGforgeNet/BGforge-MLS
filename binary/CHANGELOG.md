@@ -2,13 +2,30 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
-## Unreleased
+## 0.5.0
 
 ### Added
 
+- Infinity Engine game archives: `openGame(dir)` reads an installed game through its `chitin.key` -
+  BIF archives (plain, `BIF `, and BIFC compression), `dialog.tlk` strings, IDS and 2DA tables - with
+  `override/` resolution and game identity detection (BG1/BG2/IWD/PST and the Enhanced Editions,
+  including SoD/EET/BGT refinement). Read-only and streamed. A `chitin.key` naming a BIF outside the
+  game folder is refused.
+- Effect opcode reference: `opcodeReading(opcode, engine)` and `OpcodeReadings` carry one entry per
+  engine reading of each opcode number - every Enhanced Edition and Icewind Dale 2 opcode included -
+  with names, parameter labels, enum tables, and per-engine availability.
+- `BinaryParser` declares its game `family` (`fallout` / `infinity-engine`), and `getByExtension`
+  takes an optional family, so an extension both engines claim (`.pro`) resolves to the right parser.
 - `fgbin --jobs <n>` processes directory files with `n` parallel workers. Output order matches the
   sequential walk; with `--check`, all files are checked before the exit code instead of stopping at
   the first mismatch.
+
+### Fixed
+
+- Signed fields no longer read as huge positive numbers: an effect's Save Bonus, an item ability's
+  Damage and THAC0 bonuses, a creature's THAC0, and Fallout ammo's AC and DR modifiers now parse and
+  serialise as the signed values the engines store. JSON snapshots of affected records change
+  accordingly.
 
 ## 0.4.0
 
