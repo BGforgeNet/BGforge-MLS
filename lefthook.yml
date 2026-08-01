@@ -44,7 +44,9 @@ pre-commit:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,json,md,yml,yaml}"
         - ".oxfmtrc.json"
-      run: pnpm exec oxfmt --check {staged_files}
+      # Same zero-target case as oxlint above: a commit staging only oxfmt-ignored files
+      # (e.g. pnpm-lock.yaml alone) must pass, not error out.
+      run: pnpm exec oxfmt --check --no-error-on-unmatched-pattern {staged_files}
     lint-shell:
       glob: "*.sh"
       run: pnpm lint:shell
