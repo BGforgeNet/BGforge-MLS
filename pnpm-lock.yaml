@@ -53,7 +53,6 @@ overrides:
   mocha>diff: '>=8.0.3'
   mocha>serialize-javascript: '>=7.0.5'
   qs: '>=6.15.2'
-  fast-uri: ^3.1.4
 
 importers:
 
