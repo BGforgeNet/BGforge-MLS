@@ -24,10 +24,8 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 
 ### Fixes
 
-- Penalties now read as negative numbers rather than huge positive ones. A save penalty of -4 used to read
-  as a value in the billions. This affects an effect's Save Bonus, an item ability's Damage Bonus and THAC0
-  Bonus, a creature's THAC0, and Fallout ammo's AC and DR Modifier, which armour-piercing rounds use to
-  lower both.
+- Various values such as Save Bonus, THAC0/Damage Bonus and AC and DR Modifier, etc are now correctly
+  interpreted as signed for display.
 - Unsaved binary-editor and animation-editor changes now survive a window reload or crash, instead of being
   silently lost.
 - CRE kits whose identifier is keyed in the high half of the table entry - Barbarian and Wild Mage on the
@@ -35,7 +33,7 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Values in the CRE sound-slot grid no longer clip, and the cells line up in columns.
 - Opening an Infinity Engine `.pro` from a game no longer fails with "Unknown object type": `.pro` is a
   projectile there and a Fallout prototype here, and the viewer was routing it to the Fallout reader. Formats
-  the binary editor cannot read now open in the ordinary editor.
+  the binary editor cannot read now open in the ordinary editor, unless another editor handles them.
 - Undoing a binary-editor dropdown change now updates the dropdown. The document was restored correctly, but
   the control kept showing the value you had just undone until you opened and closed it.
 - Pressing an editor shortcut while a binary-editor dropdown has focus - Ctrl+Z, Ctrl+S - no longer pops the
