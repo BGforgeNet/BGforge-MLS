@@ -146,6 +146,27 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
+    /**
+     * The path Save As names its destination against, and the one gate on writing an export of a
+     * document that is not a file. A resource read out of a game's archives has no containing folder
+     * - its URI path is just `<resref>.<ext>` - so the usual "next to the source" name would put the
+     * export at the root of the filesystem; ask for a folder instead. Undefined when the user
+     * dismisses the picker, which cancels the save.
+     */
+    private async saveAsSourcePath(document: ImageEditorDocument): Promise<string | undefined> {
+        if (document.uri.scheme === "file") return document.uri.fsPath;
+        const basename = path.posix.basename(document.uri.path);
+        const picked = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: "Save here",
+            title: `Choose a folder for ${basename}`,
+        });
+        const dir = picked?.[0]?.fsPath;
+        return dir === undefined ? undefined : path.join(dir, basename);
+    }
+
     private async handleSaveAs(
         document: ImageEditorDocument,
         target: SaveAsTarget,
@@ -155,13 +176,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder, so a
             // raw-animation export would write black-silhouette PNGs / a black BAM (see document-model).
             const anim = document.resolvedAnimation();
-            const targetPath = saveAsTargetPath(document.uri.fsPath, target);
+            const sourcePath = await this.saveAsSourcePath(document);
+            if (sourcePath === undefined) return; // user dismissed the destination picker
+            const targetPath = saveAsTargetPath(sourcePath, target);
 
             // Save As auto-names its destination instead of showing a dialog, so overwrite consent
             // needs its own gate. In-place targets are exempt: BAMC's .bam collision is a deliberate
             // re-encode of the source (see saveAsTargetPath), and a split set's combined <base>.frm
-            // is overwrite-by-design (see document.savePath).
-            const inPlace = targetPath === document.uri.fsPath || targetPath === document.savePath;
+            // is overwrite-by-design (see document.saveUri).
+            const inPlace = targetPath === document.uri.fsPath || targetPath === document.saveUri.fsPath;
             if (!inPlace && (await this.fileExists(vscode.Uri.file(targetPath)))) {
                 const overwrite = await vscode.window.showWarningMessage(
                     `${path.basename(targetPath)} already exists - overwrite?`,
@@ -347,11 +370,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     async saveCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {
-        // A Fallout .fr0-.fr5 split set saves to the combined <base>.frm (document.savePath), never
+        // A Fallout .fr0-.fr5 split set saves to the combined <base>.frm (document.saveUri), never
         // back to the opened .frN member; the six split files are left untouched.
-        const targetPath = document.savePath;
-        const primary = targetPath === document.uri.fsPath ? document.uri : vscode.Uri.file(targetPath);
-        await this.writeSave(document, targetPath, primary);
+        await this.writeSave(document, document.saveUri);
     }
 
     async saveCustomDocumentAs(
@@ -359,7 +380,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         destination: vscode.Uri,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        await this.writeSave(document, destination.fsPath, destination);
+        await this.writeSave(document, destination);
     }
 
     async revertCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {
@@ -376,32 +397,30 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         return backupHandle(context.destination);
     }
 
-    private async writeSave(
-        document: ImageEditorDocument,
-        targetPath: string,
-        primaryDestination: vscode.Uri,
-    ): Promise<void> {
+    private async writeSave(document: ImageEditorDocument, destination: vscode.Uri): Promise<void> {
         // An IE base/east pair saves in place by splitting back into its two member files; a Save As
         // to another destination falls through and writes the single combined form instead.
-        if (targetPath === document.savePath) {
+        if (destination.toString() === document.saveUri.toString()) {
             const pairWrites = document.pairSaveWrites();
             if (pairWrites) {
                 // Sequential by design: the base lands before the companion so a crash never leaves a
                 // fresh east file next to a stale base.
                 for (const write of pairWrites) {
                     // eslint-disable-next-line no-await-in-loop
-                    await vscode.workspace.fs.writeFile(vscode.Uri.file(write.path), write.bytes);
+                    await vscode.workspace.fs.writeFile(write.uri, write.bytes);
                 }
                 return;
             }
         }
+        const targetPath = destination.fsPath;
         const bytes = document.getBytes();
         const sidecarBytes = document.sidecarBytes();
         const sidecar = sidecarBytes ? { path: sidecarPalPath(targetPath), bytes: sidecarBytes } : undefined;
         for (const write of planImageSave({ targetPath, bytes, sidecar })) {
             // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar
-            // is always a plain filesystem path, same as the binary editor's writeSave.
-            const target = write.path === targetPath ? primaryDestination : vscode.Uri.file(write.path);
+            // is always a plain filesystem path, same as the binary editor's writeSave. Only an FRM
+            // has a sidecar, and an FRM is always a real file, so that stays a `file:` write.
+            const target = write.path === targetPath ? destination : vscode.Uri.file(write.path);
             // Sequential by design: the main artifact lands before the .pal sidecar so a crash
             // never leaves a sidecar describing a palette for a file that was never written.
             // eslint-disable-next-line no-await-in-loop

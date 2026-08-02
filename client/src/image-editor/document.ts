@@ -13,16 +13,25 @@ import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
-import { type SaveWrite } from "./save";
 import { sidecarPalPath } from "./sidecar";
 import type { AnimationView, MetaPatch } from "./webview/messages";
 
 type BamFormat = "bam" | "bamc";
 
-/** The on-disk identity of an IE base/east pair: both paths and each member's own encoding. */
+/** One write of an in-place pair save, addressed by URI so it lands back where the member was read. */
+export interface PairWrite {
+    uri: vscode.Uri;
+    bytes: Uint8Array;
+}
+
+/**
+ * The stored identity of an IE base/east pair: both members and each one's own encoding. URIs, not
+ * filesystem paths, so a pair opened out of a game's archives keeps the scheme and query that route
+ * a read or a write back to that game.
+ */
 interface IePairInfo {
-    basePath: string;
-    eastPath: string;
+    baseUri: vscode.Uri;
+    eastUri: vscode.Uri;
     baseFormat: BamFormat;
     eastFormat: BamFormat;
 }
@@ -79,11 +88,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             return new ImageEditorDocument(uri, model, true);
         }
         const bytes = await vscode.workspace.fs.readFile(uri);
-        if (isBamPath(uri.fsPath)) {
-            const pair = await ImageEditorDocument.tryReadIePair(uri.fsPath, bytes);
+        if (isBamPath(uri.path)) {
+            const pair = await ImageEditorDocument.tryReadIePair(uri, bytes);
             if (pair) {
                 // Present under the base file's identity, whichever member was opened.
-                const basename = path.basename(pair.info.basePath);
+                const basename = path.posix.basename(pair.info.baseUri.path);
                 const model = backup
                     ? ImageDocumentModel.fromBackup(backup, basename)
                     : ImageDocumentModel.fromAnimation(pair.animation, basename);
@@ -99,14 +108,17 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     /**
-     * The path an in-place save writes to: the combined `<base>.frm` for a split set, the base member
-     * for an IE pair (the provider splits a pair save across both members), else the source. A
-     * split-set save deliberately overwrites any pre-existing `<base>.frm` without prompting - the
-     * split members are the source of truth for that basename.
+     * What an in-place save writes to: the combined `<base>.frm` for a split set, the base member for
+     * an IE pair (the provider splits a pair save across both members), else the source. A split-set
+     * save deliberately overwrites any pre-existing `<base>.frm` without prompting - the split members
+     * are the source of truth for that basename.
+     *
+     * A URI rather than a path so the write lands back where the document was read from; only the
+     * Fallout split set, which exists on a real filesystem by definition, names a `file:` path itself.
      */
-    get savePath(): string {
-        if (this.isFrSplit) return frSplitCombinedPath(this.uri.fsPath);
-        return this.iePair?.basePath ?? this.uri.fsPath;
+    get saveUri(): vscode.Uri {
+        if (this.isFrSplit) return vscode.Uri.file(frSplitCombinedPath(this.uri.fsPath));
+        return this.iePair?.baseUri ?? this.uri;
     }
 
     /**
@@ -114,7 +126,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * serialized with its member's own encoding. Undefined for non-pair documents; throws when edits
      * broke the 8-slot block structure a split needs.
      */
-    pairSaveWrites(): SaveWrite[] | undefined {
+    pairSaveWrites(): PairWrite[] | undefined {
         if (!this.iePair) return undefined;
         const split = splitIeBamPair(this.model.animation);
         if (!split) {
@@ -123,46 +135,51 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             );
         }
         return [
-            { path: this.iePair.basePath, bytes: serializeBamAs(split.base, this.iePair.baseFormat) },
-            { path: this.iePair.eastPath, bytes: serializeBamAs(split.east, this.iePair.eastFormat) },
+            { uri: this.iePair.baseUri, bytes: serializeBamAs(split.base, this.iePair.baseFormat) },
+            { uri: this.iePair.eastUri, bytes: serializeBamAs(split.east, this.iePair.eastFormat) },
         ];
     }
 
     // Probe the opened .bam's siblings for the other pair member: first as the base (companion =
     // stem + "e"/"E"), then as the companion (base = stem minus its trailing "e"). combineIeBamPair
     // does the actual shape validation, so an unrelated same-named sibling never pairs.
+    //
+    // Siblings are derived from the opened URI rather than a filesystem path, so the probe stays in
+    // whatever served it: a game resource looks for its companion in the same game, where the pair
+    // actually lives, instead of at the root of the local filesystem.
     private static async tryReadIePair(
-        fsPath: string,
+        uri: vscode.Uri,
         bytes: Uint8Array,
     ): Promise<{ animation: Animation; info: IePairInfo } | undefined> {
-        const opened = ImageEditorDocument.tryParseBam(bytes, fsPath);
+        const opened = ImageEditorDocument.tryParseBam(bytes, uri);
         if (!opened) return undefined;
 
-        const candidates = eastCompanionCandidates(fsPath);
-        const eastReads = await Promise.all(candidates.map((p) => ImageEditorDocument.tryReadFile(p)));
+        const candidates = eastCompanionCandidates(uri.path).map((p) => uri.with({ path: p }));
+        const eastReads = await Promise.all(candidates.map((c) => ImageEditorDocument.tryReadUri(c)));
         const hit = eastReads.findIndex((b) => b !== undefined);
-        const eastPath = candidates[hit];
+        const eastUri = candidates[hit];
         const eastBytes = eastReads[hit];
-        if (eastPath !== undefined && eastBytes !== undefined) {
-            const east = ImageEditorDocument.tryParseBam(eastBytes, eastPath);
+        if (eastUri !== undefined && eastBytes !== undefined) {
+            const east = ImageEditorDocument.tryParseBam(eastBytes, eastUri);
             const combined = east && combineIeBamPair(opened.animation, east.animation);
             if (east && combined) {
                 return {
                     animation: combined,
-                    info: { basePath: fsPath, eastPath, baseFormat: opened.format, eastFormat: east.format },
+                    info: { baseUri: uri, eastUri, baseFormat: opened.format, eastFormat: east.format },
                 };
             }
         }
 
-        const basePath = baseCandidatePath(fsPath);
+        const basePath = baseCandidatePath(uri.path);
         if (basePath !== undefined) {
-            const baseBytes = await ImageEditorDocument.tryReadFile(basePath);
-            const base = baseBytes && ImageEditorDocument.tryParseBam(baseBytes, basePath);
+            const baseUri = uri.with({ path: basePath });
+            const baseBytes = await ImageEditorDocument.tryReadUri(baseUri);
+            const base = baseBytes && ImageEditorDocument.tryParseBam(baseBytes, baseUri);
             const combined = base && combineIeBamPair(base.animation, opened.animation);
             if (base && combined) {
                 return {
                     animation: combined,
-                    info: { basePath, eastPath: fsPath, baseFormat: base.format, eastFormat: opened.format },
+                    info: { baseUri, eastUri: uri, baseFormat: base.format, eastFormat: opened.format },
                 };
             }
         }
@@ -171,10 +188,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     private static tryParseBam(
         bytes: Uint8Array,
-        fsPath: string,
+        uri: vscode.Uri,
     ): { animation: Animation; format: BamFormat } | undefined {
         try {
-            const animation = loadImage(bytes, path.basename(fsPath));
+            const animation = loadImage(bytes, path.posix.basename(uri.path));
             const format = animation.meta.sourceFormat;
             // A .bam-named file whose bytes are something else never joins a pair.
             if (format !== "bam" && format !== "bamc") return undefined;
@@ -196,8 +213,12 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     private static async tryReadFile(fsPath: string): Promise<Uint8Array | undefined> {
+        return ImageEditorDocument.tryReadUri(vscode.Uri.file(fsPath));
+    }
+
+    private static async tryReadUri(uri: vscode.Uri): Promise<Uint8Array | undefined> {
         try {
-            return await vscode.workspace.fs.readFile(vscode.Uri.file(fsPath));
+            return await vscode.workspace.fs.readFile(uri);
         } catch {
             return undefined;
         }
@@ -240,8 +261,9 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     toView(): AnimationView {
         // dirName lives here, not in the model: the model is deliberately path-free, and the
-        // document owns the file identity (see savePath).
-        return { ...this.model.toView(), dirName: path.basename(path.dirname(this.savePath)) };
+        // document owns the file identity (see saveUri). Only FRM naming reads it, and an FRM is
+        // always a real file, so the filesystem path is the right form to take the folder from.
+        return { ...this.model.toView(), dirName: path.basename(path.dirname(this.saveUri.fsPath)) };
     }
 
     getBytes(): Uint8Array {
@@ -275,7 +297,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         if (this.iePair) {
             // Re-pair from disk; if the companion vanished, fall back to the opened file alone (the
             // document keeps its pair identity - the next save recreates the companion).
-            const pair = await ImageEditorDocument.tryReadIePair(this.uri.fsPath, bytes);
+            const pair = await ImageEditorDocument.tryReadIePair(this.uri, bytes);
             if (pair) {
                 this.model.reloadAnimation(pair.animation);
                 return;

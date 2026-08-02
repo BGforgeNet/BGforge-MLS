@@ -25,7 +25,14 @@ vi.mock("vscode", () => {
         fire(): void {}
         dispose(): void {}
     }
-    const uri = (fsPath: string) => ({ fsPath, path: fsPath, scheme: "file", toString: () => fsPath });
+    // `with` is what the pair probe derives sibling members through, so the stand-in has to honour it.
+    const uri = (fsPath: string): Record<string, unknown> => ({
+        fsPath,
+        path: fsPath,
+        scheme: "file",
+        toString: () => fsPath,
+        with: (change: { path?: string }) => uri(change.path ?? fsPath),
+    });
     return {
         EventEmitter,
         Uri: { file: uri, parse: uri },
@@ -42,7 +49,13 @@ const context = { extensionUri: { fsPath: "/ext" } } as unknown as vscode.Extens
 const token = {} as vscode.CancellationToken;
 
 function fileUri(fsPath: string): vscode.Uri {
-    return { fsPath, path: fsPath, scheme: "file", toString: () => fsPath } as unknown as vscode.Uri;
+    return {
+        fsPath,
+        path: fsPath,
+        scheme: "file",
+        toString: () => fsPath,
+        with: (change: { path?: string }) => fileUri(change.path ?? fsPath),
+    } as unknown as vscode.Uri;
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
@@ -104,7 +117,7 @@ describe("animation editor hot-exit restore", () => {
         // The on-disk animation, not the pending edit: fps 10 and the sidecar's auto-on palette.
         expect(document.toView().meta.fps).toBe(10);
         expect(document.toView().externalPaletteActive).toBe(true);
-        expect(document.savePath).toBe(DOC_PATH);
+        expect(document.saveUri.fsPath).toBe(DOC_PATH);
         expect(showWarningMock).toHaveBeenCalledTimes(1);
         expect(String(showWarningMock.mock.calls[0]?.[0])).toContain("hero.frm");
     });
@@ -132,7 +145,7 @@ describe("animation editor hot-exit restore", () => {
         expect(view.hasSidecarPal).toBe(true);
         expect(view.externalPaletteActive).toBe(false);
         // Identity stays on the real file so a subsequent save writes there, not into the backup.
-        expect(document.savePath).toBe(DOC_PATH);
+        expect(document.saveUri.fsPath).toBe(DOC_PATH);
     });
 
     it("reads the file itself when opening without a backup", async () => {
@@ -157,7 +170,7 @@ describe("animation editor hot-exit restore", () => {
         const document = await provider.openCustomDocument(fileUri(BASE_PATH), openContext(BACKUP_PATH), token);
 
         expect(document.toView().meta.transparentIndex).toBe(5);
-        expect(document.savePath).toBe(BASE_PATH);
-        expect(document.pairSaveWrites()?.map((w) => w.path)).toEqual([BASE_PATH, EAST_PATH]);
+        expect(document.saveUri.fsPath).toBe(BASE_PATH);
+        expect(document.pairSaveWrites()?.map((w) => w.uri.fsPath)).toEqual([BASE_PATH, EAST_PATH]);
     });
 });
