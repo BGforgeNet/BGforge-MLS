@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { parserRegistry, type BinaryParser } from "@bgforge/binary";
-import { isIeBinaryRecord, viewTypeForResource } from "../src/ie-resources/editor-routing";
+import pkg from "../../package.json";
+import { isIeBinaryRecord, opensInOurEditor, viewTypeForResource } from "../src/ie-resources/editor-routing";
 
 describe("viewTypeForResource", () => {
     it("sends the four parsed IE formats to the binary editor", () => {
@@ -28,6 +29,17 @@ describe("viewTypeForResource", () => {
         expect(viewTypeForResource("pro")).toBe("default");
         // ...and the trap is live: a parser DOES claim the extension, which is what made a bare lookup look safe.
         expect(parserRegistry.getByExtension(".pro")).toBeDefined();
+    });
+
+    /**
+     * The binary editor is not the only editor a game resource can open in. Routing asked the parser registry
+     * and nothing else, so a `.bam` followed from an item's animation field fell through to the plain text
+     * editor and rendered as "the file is not displayed ... because it is either binary or uses an unsupported
+     * text encoding" - with the animation editor registered for that very extension.
+     */
+    it("sends a BAM to the animation editor", () => {
+        expect(viewTypeForResource("bam")).toBe("bgforge.animationEditor");
+        expect(viewTypeForResource("BAM")).toBe("bgforge.animationEditor");
     });
 
     // Never left to file association: the binary editor is registered for `*.pro` at DEFAULT priority, so an
@@ -58,13 +70,47 @@ describe("viewTypeForResource", () => {
     });
 });
 
+/**
+ * A named view only routes if the extension registers it for that extension: a renamed view type, or a
+ * selector that stopped covering a format, would send the resource to an editor nothing answers for. The
+ * manifest is the registration, so it is what this checks against.
+ */
+describe("the named views against the manifest", () => {
+    const editors = pkg.contributes.customEditors as {
+        viewType: string;
+        selector: { filenamePattern: string }[];
+    }[];
+
+    it("registers every routed extension with the view routing picks for it", () => {
+        for (const ext of ["itm", "spl", "eff", "cre", "bam"]) {
+            const viewType = viewTypeForResource(ext);
+            const editor = editors.find((e) => e.viewType === viewType);
+            expect(editor?.selector.map((s) => s.filenamePattern)).toContain(`*.${ext}`);
+        }
+    });
+});
+
 // The tree's "this is a record we can read" affordance and the view choice above are one decision, so they
 // cannot disagree about a format - `.pro` used to be openable in the tree while routing sent it elsewhere.
 describe("isIeBinaryRecord", () => {
     it("agrees with the view choice, including on the Fallout-shared extension", () => {
-        for (const ext of ["itm", "spl", "eff", "cre", "pro", "bcs", "2da"]) {
+        for (const ext of ["itm", "spl", "eff", "cre", "pro", "bcs", "2da", "bam"]) {
             expect(isIeBinaryRecord(ext)).toBe(viewTypeForResource(ext) === "bgforge.binaryEditor");
         }
         expect(isIeBinaryRecord("pro")).toBe(false);
+    });
+});
+
+/**
+ * The tree's affordance covers every editor of ours, not the binary one alone - it meant "binary record"
+ * while a BAM opened in the animation editor, so the tree called openable exactly the wrong set.
+ */
+describe("opensInOurEditor", () => {
+    it("is true for whatever routing names a view for, and false for the rest", () => {
+        for (const ext of ["itm", "spl", "eff", "cre", "bam", "pro", "bcs", "2da", "mos"]) {
+            expect(opensInOurEditor(ext)).toBe(viewTypeForResource(ext) !== "default");
+        }
+        expect(opensInOurEditor("bam")).toBe(true);
+        expect(opensInOurEditor("mos")).toBe(false);
     });
 });

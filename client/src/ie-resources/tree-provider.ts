@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import { resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
-import { isIeBinaryRecord } from "./editor-routing";
+import { opensInOurEditor } from "./editor-routing";
 import { type GameSession } from "./session";
 import { resourceUri } from "./uri";
 
@@ -85,7 +85,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
             return [{ kind: "game", label: current.game.identity.label, dir: current.dir }, ...typeNodes];
         }
         if (element.kind === "type") {
-            const openable = isIeBinaryRecord(element.ext);
+            const openable = opensInOurEditor(element.ext);
             return (this.ensureGrouped().get(element.type) ?? [])
                 .map(
                     (r): ResourceNode => ({
@@ -133,9 +133,10 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
         // icon (keeping the explicit resref label). Falls back to the theme's generic file icon for unknown types.
         const current = this.session.current;
         if (current) item.resourceUri = resourceUri(current.dir, element.resref, element.ext);
-        item.contextValue = element.openable ? "bgforgeRecord" : "bgforgeResource";
-        // Every resource opens; the handler routes binary records to the binary editor and the rest to the
-        // default editor (text formats render as text with their language mode; blobs get VS Code's binary notice).
+        item.contextValue = element.openable ? "bgforgeOpenableResource" : "bgforgeResource";
+        // Every resource opens; the handler routes records to the binary editor, animations to the animation
+        // editor, and the rest to the default editor (text formats render as text with their language mode;
+        // blobs get VS Code's binary notice).
         item.command = { command: "bgforge.ieResources.open", title: "Open", arguments: [element] };
         return item;
     }
