@@ -56,7 +56,7 @@ allowBuilds:
 #     DoS; fixed in 7.0.5).
 #   - qs via typed-rest-client under @vscode/vsce and the Stryker packages
 #     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2). Still load-bearing
-#     as of 2026-08-01: without it one typed-rest-client copy resolves qs 6.15.1.
+#     as of 2026-08-04: without it one typed-rest-client copy resolves qs 6.15.1.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
