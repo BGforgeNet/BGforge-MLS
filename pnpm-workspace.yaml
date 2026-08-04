@@ -68,13 +68,17 @@ allowBuilds:
 # naturally through @vscode/vsce and the Stryker -> vitest -> vite chain; the
 # uuid pin (GHSA-w5hq-g745-h8pq), since msal-node no longer pulls uuid into the tree;
 # and the fast-uri pin (^3.1.4, GHSA-v2hh-gcrm-f6hx - its second stint: an earlier
-# drop was reversed when the advisory widened to <=3.1.3), since ajv now resolves
-# 3.1.4 naturally.
+# drop was reversed when the advisory widened to <=3.1.3), since ajv declares ^3.0.1
+# and resolves each patched version naturally - most recently 3.1.5, closing
+# GHSA-7p8r-x3mc-p8w7 with no pin.
 # brace-expansion (GHSA-mh99-v99m-4gvg) needed no override in the end: it was briefly
 # an accepted risk while the advisory patched only 5.0.8 - minimatch@9 default-imports
 # brace-expansion, 5.x is named-export only, so a ">=5.0.8" override breaks the build -
 # but upstream then backported the fix to the 2.x line (2.1.3) and the lockfile
 # resolves a patched 2.x within minimatch@9's own range.
+# undici under @vscode/vsce -> cheerio (GHSA-4cwx-7wf7-3272 high, plus four moderate)
+# needed no override either: cheerio declares ^7.19.0, so re-resolving picked up the
+# patched 7.29.0 in range. A stale lockfile entry, not a range that excluded the fix.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
