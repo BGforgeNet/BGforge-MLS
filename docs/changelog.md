@@ -10,6 +10,10 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 
 ### Binary editor
 
+- With a game open, a resref field offers that game's resources of the right type as a searchable list.
+  Names the game does not have are still accepted, for files a later install step creates.
+- A resref the open game can resolve carries a chip that opens it in its own editor - including numeric
+  fields whose value names a file, like an ability's projectile.
 - Default IE opcode list includes BGEE opcodes now.
 - When an IE game is opened, context-dependent fields reflect its data values.
 - The extra parameter, special and power fields an effect record carries now take the name the current opcode
