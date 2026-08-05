@@ -9,7 +9,15 @@
  */
 
 import { arraySpec, type FieldSpec } from "../../spec/types";
+import type { FlagsRef } from "../../spec/external-ref";
 import { u8 } from "typed-binary";
+
+// One constant per byte rather than an inline literal at each site: the byte number is the whole content of the
+// declaration, and a transposed pair would silently name another quarter's kits.
+const KIT_BYTE_1: FlagsRef = { kind: "itmKitUsability", byte: 1 };
+const KIT_BYTE_2: FlagsRef = { kind: "itmKitUsability", byte: 2 };
+const KIT_BYTE_3: FlagsRef = { kind: "itmKitUsability", byte: 3 };
+const KIT_BYTE_4: FlagsRef = { kind: "itmKitUsability", byte: 4 };
 import {
     ItmFlags,
     ItmKitUsabilityByte1Flags,
@@ -65,10 +73,13 @@ export const itmHeaderSpecAnnotated = {
     // carries a distinct kit table. They sit non-contiguously (interleaved with the min-stat bytes), so unlike
     // usabilityFlags they stay four separate flag fields rather than one slots array. Canonical doc models a
     // scalar flags field as a string[], like the header `flags` field.
-    kitUsability1: { ...itmHeaderSpec.kitUsability1, flags: ItmKitUsabilityByte1Flags },
-    kitUsability2: { ...itmHeaderSpec.kitUsability2, flags: ItmKitUsabilityByte2Flags },
-    kitUsability3: { ...itmHeaderSpec.kitUsability3, flags: ItmKitUsabilityByte3Flags },
-    kitUsability4: { ...itmHeaderSpec.kitUsability4, flags: ItmKitUsabilityByte4Flags },
+    // `flagsRef` names which quarter of the 32-bit kit mask each byte holds, so a consumer with a game open can
+    // widen a bit to the mask KITLIST.2DA's UNUSABLE column is keyed by. Byte 1 is the HIGH quarter: the four
+    // bytes read 24-31 / 16-23 / 8-15 / 0-7, verified against all 31 stock kits on BG2:ToB and BG:EE.
+    kitUsability1: { ...itmHeaderSpec.kitUsability1, flags: ItmKitUsabilityByte1Flags, flagsRef: KIT_BYTE_1 },
+    kitUsability2: { ...itmHeaderSpec.kitUsability2, flags: ItmKitUsabilityByte2Flags, flagsRef: KIT_BYTE_2 },
+    kitUsability3: { ...itmHeaderSpec.kitUsability3, flags: ItmKitUsabilityByte3Flags, flagsRef: KIT_BYTE_3 },
+    kitUsability4: { ...itmHeaderSpec.kitUsability4, flags: ItmKitUsabilityByte4Flags, flagsRef: KIT_BYTE_4 },
     // Required weapon proficiency (IESDP "Header Proficiency") - a proficiency-type code, not a scalar. Open
     // because 0x74+ are mod-extensible slots.
     //

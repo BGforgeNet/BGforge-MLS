@@ -18,7 +18,7 @@ import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
 import { parseIds } from "./ids";
-import { parse2daRowNames } from "./two-da";
+import { parse2daRowNames, parse2daTable, type TwoDaTable } from "./two-da";
 import { openTlk, type Tlk } from "./tlk";
 
 /** IDS and 2DA resource types (IESDP general.htm resource-type table). */
@@ -96,6 +96,12 @@ export interface Game {
      * for the same reason as `ids`: the tables are per-install and mod-extensible.
      */
     twoDa(resref: string): ReadonlyMap<number, string> | undefined;
+    /**
+     * The same 2DA read WITH its columns and cells (e.g. `twoDaTable("KITLIST")`), for a consumer that needs a
+     * table's data rather than only its row names - KITLIST's `UNUSABLE` column carries the ITM kit-usability
+     * mask. Undefined when the game has no such table.
+     */
+    twoDaTable(resref: string): TwoDaTable | undefined;
     close(): void;
 }
 
@@ -315,6 +321,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const tlkCache = new Map<"male" | "female", Tlk | null>();
     const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
     const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
+    const twoDaTableCache = new Map<string, TwoDaTable | null>();
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
     // the folder is taken from weidu.conf (or the sorted-first lang subdir that has a dialog.tlk). Classic games
@@ -609,6 +616,21 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     // Resource not found, or unreadable - reported as "no table" by the null above.
                 }
                 twoDaCache.set(cacheKey, entry);
+            }
+            return entry ?? undefined;
+        },
+        twoDaTable(resref) {
+            const cacheKey = resref.toLowerCase();
+            let entry = twoDaTableCache.get(cacheKey);
+            if (entry === undefined) {
+                // Absent caches as null, same as `twoDa` above: a missing table is a normal answer, not an error.
+                entry = null;
+                try {
+                    entry = parse2daTable(readResource(resref, TWO_DA_RESTYPE));
+                } catch {
+                    // Resource not found, or unreadable - reported as "no table" by the null above.
+                }
+                twoDaTableCache.set(cacheKey, entry);
             }
             return entry ?? undefined;
         },

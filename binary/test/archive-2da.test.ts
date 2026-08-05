@@ -9,7 +9,7 @@
  * (a strref, sounds) that no field maps to, so they are not read.
  */
 import { describe, it, expect } from "vitest";
-import { parse2daRowNames } from "../src/archive/two-da";
+import { parse2daRowNames, parse2daTable } from "../src/archive/two-da";
 
 function bytes(body: string): Uint8Array {
     return new TextEncoder().encode(body);
@@ -80,5 +80,63 @@ describe("parse2daRowNames", () => {
 
     it("returns an empty table for a file with headers but no rows", () => {
         expect(parse2daRowNames(bytes("2DA V1.0\r\n0\r\n   COL\r\n")).size).toBe(0);
+    });
+});
+
+/**
+ * Column-aware reading, for the tables whose DATA a consumer needs rather than only their row names. Shaped on
+ * KITLIST.2DA, whose `UNUSABLE` column holds the ITM kit-usability mask and whose `MIXED` column holds the
+ * strref of the kit's display name (IESDP kitlist.htm). Cell alignment is the whole point: the header names the
+ * data columns only, so a row's first token is its NAME and the rest align to `columns` one-for-one - reading
+ * the row name as a data cell shifts every column by one and silently returns a neighbour's value.
+ */
+const KITLIST =
+    "2DA V1.0\r\n*\r\n           ROWNAME    LOWER  MIXED  UNUSABLE    CLASS\r\n" +
+    "0          RESERVE    *      *      *           *\r\n" +
+    "1          BERSERKER\t25179  25151  0x00000001  2\r\n" +
+    "33         SHADOWDANCER 31970 31971 0x00004000  4\r\n";
+
+describe("parse2daTable", () => {
+    it("aligns each row's cells to the column names, with the row name kept separate", () => {
+        const table = parse2daTable(bytes(KITLIST));
+
+        expect(table.columns).toEqual(["ROWNAME", "LOWER", "MIXED", "UNUSABLE", "CLASS"]);
+        expect(table.rows.map((r) => r.name)).toEqual(["0", "1", "33"]);
+        expect(table.rows[1]).toEqual({
+            name: "1",
+            cells: ["BERSERKER", "25179", "25151", "0x00000001", "2"],
+        });
+    });
+
+    // The reason this reader exists: a consumer looks a column up by NAME, so the index it gets must address the
+    // right cell. Off-by-one here would read CLASS as the usability mask on every row.
+    it("addresses a named column's cell by its position in the header", () => {
+        const table = parse2daTable(bytes(KITLIST));
+        const unusable = table.columns.indexOf("UNUSABLE");
+
+        expect(table.rows.map((r) => r.cells[unusable])).toEqual(["*", "0x00000001", "0x00004000"]);
+    });
+
+    it("skips the three header lines and blank lines", () => {
+        const table = parse2daTable(bytes("2DA V1.0\r\n0\r\n   A  B\r\nr1\t1  2\r\n\r\nr2\t3  4\r\n"));
+
+        expect(table.rows).toEqual([
+            { name: "r1", cells: ["1", "2"] },
+            { name: "r2", cells: ["3", "4"] },
+        ]);
+    });
+
+    it("decrypts a file behind the 0xFFFF marker", () => {
+        const body = bytes(KITLIST);
+        const encrypted = new Uint8Array(2 + body.length);
+        encrypted[0] = 0xff;
+        encrypted[1] = 0xff;
+        for (const [i, byte] of body.entries()) encrypted[2 + i] = byte ^ IE_XOR_KEY[i % IE_XOR_KEY.length]!;
+
+        expect(parse2daTable(encrypted).columns).toEqual(["ROWNAME", "LOWER", "MIXED", "UNUSABLE", "CLASS"]);
+    });
+
+    it("returns no rows for a file with headers but no data", () => {
+        expect(parse2daTable(bytes("2DA V1.0\r\n0\r\n   COL\r\n")).rows).toEqual([]);
     });
 });

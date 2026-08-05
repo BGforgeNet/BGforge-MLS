@@ -371,3 +371,31 @@ describe.skipIf(!have2daFixtures)("resrefs whose type depends on another field a
         expect(deferredNames(parseFields(itmParser, ITM_FIXTURE))).toEqual(["Resource"]);
     });
 });
+
+/**
+ * `flagsRef` is the bit-level sibling of `ref`: it says what a bitfield's individual BITS refer to outside the
+ * file. ITM kit usability is the one case - four bytes forming a 32-bit mask that KITLIST.2DA's UNUSABLE column
+ * is keyed by - and the BYTE NUMBER is the whole content of the declaration, so a transposed pair would name
+ * another quarter's kits with nothing to catch it. Read off a real parse, not the spec object, because the
+ * consumer reads it from the display tree.
+ */
+describe.skipIf(!haveFixtures)("ITM kit-usability bytes declare which quarter of the kit mask they hold", () => {
+    it("carries one flagsRef per byte, in high-to-low order", () => {
+        const kitFields = parseFields(itmParser, ITM_FIXTURE).filter((f) => f.flagsRef !== undefined);
+
+        expect(kitFields.map((f) => [f.name, f.flagsRef])).toEqual([
+            ["Kit Usability1", { kind: "itmKitUsability", byte: 1 }],
+            ["Kit Usability2", { kind: "itmKitUsability", byte: 2 }],
+            ["Kit Usability3", { kind: "itmKitUsability", byte: 3 }],
+            ["Kit Usability4", { kind: "itmKitUsability", byte: 4 }],
+        ]);
+    });
+
+    // The vendored flag table stays: it is what a record opened outside a game falls back to, and on classic
+    // BG2 it is the complete answer (31 kits, 31 distinct bits).
+    it("keeps its vendored flag table alongside the declaration", () => {
+        const byte1 = parseFields(itmParser, ITM_FIXTURE).find((f) => f.name === "Kit Usability1");
+
+        expect(byte1?.flagOptions?.["64"]).toBe("Barbarian");
+    });
+});

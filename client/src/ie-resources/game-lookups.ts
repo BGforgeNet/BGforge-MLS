@@ -1,6 +1,7 @@
 import type * as vscode from "vscode";
-import { engineForFlavour } from "@bgforge/binary";
+import { engineForFlavour, type TwoDaTable } from "@bgforge/binary";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
+import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 
 /**
  * Resolves a `dialog.tlk` string reference for a document, or undefined when there is nothing to resolve.
@@ -53,6 +54,17 @@ export type ResourceTypeResolver = (
     decl: ResourceRefDecl,
     resref: string,
 ) => ResolvedResourceRef | undefined;
+
+/** What a bitfield's bits refer to, as the display tree carries it. Only `byte` is read. */
+export interface FlagsBitRefDecl {
+    kind: string;
+    byte: number;
+}
+
+export type FlagBitNamesResolver = (
+    uri: vscode.Uri,
+    ref: FlagsBitRefDecl,
+) => Readonly<Record<string, readonly string[]>> | undefined;
 
 /**
  * Every resref of one type the game holds, sorted, or undefined when the record is not from a game.
@@ -115,6 +127,7 @@ interface TlkSource {
         tlk(): { get(strref: number): string | undefined } | undefined;
         ids(resref: string): ReadonlyMap<number, string> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
+        twoDaTable(resref: string): TwoDaTable | undefined;
         canRead(resref: string, type: string): boolean;
         list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
         /** WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override. */
@@ -197,6 +210,41 @@ export function createNamingTableResolver(session: TlkSource, fallback?: GameDir
         // Undefined rather than an empty list when the install ships none: the caller reads a table's presence
         // as "the game names this field", and an empty list would turn a plain number into an empty dropdown.
         return found.length === 0 ? undefined : found;
+    };
+}
+
+/**
+ * Which install kits each bit of an ITM kit-usability byte covers, from KITLIST.2DA.
+ *
+ * Kept per-bit rather than reduced to one name per bit, because the relation genuinely is many-to-one: eight
+ * Enhanced Edition kits share `0x00004000`. The presentation decides what to do with a multi-kit bit; this only
+ * reports what the install says. A bit the table says nothing about is absent, so the vendored flag label stands.
+ */
+export function createFlagBitNamesResolver(session: TlkSource, fallback?: GameDirFallback): FlagBitNamesResolver {
+    return (uri, ref) => {
+        if (ref.kind !== "itmKitUsability") return;
+        const byte = ref.byte;
+        if (byte !== 1 && byte !== 2 && byte !== 3 && byte !== 4) return;
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return;
+        // Accumulated rather than returned from inside the try, so the catch can simply swallow - same shape as
+        // the naming-table resolver above.
+        let byBit: Readonly<Record<string, readonly string[]>> = {};
+        try {
+            const game = session.ensureOpen(gameDir);
+            const table = game.twoDaTable("KITLIST");
+            const tlk = table === undefined ? undefined : game.tlk();
+            if (table !== undefined)
+                byBit = kitNamesByBit(
+                    kitsByUsabilityMask(table, (id) => tlk?.get(id)),
+                    byte,
+                );
+        } catch {
+            // Unreadable game - the bits fall back to their vendored labels, as they do outside a game.
+        }
+        // Undefined rather than an empty object when the table names none of this byte's bits: the caller reads
+        // presence as "the install has something to say here", and an empty map would claim it does.
+        return Object.keys(byBit).length === 0 ? undefined : byBit;
     };
 }
 

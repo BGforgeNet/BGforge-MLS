@@ -31,3 +31,35 @@ export function parse2daRowNames(bytes: Uint8Array): Map<number, string> {
     }
     return rows;
 }
+
+/** One data row: its row name, then the cells aligned one-for-one to the table's column names. */
+export interface TwoDaRow {
+    readonly name: string;
+    readonly cells: readonly string[];
+}
+
+/** A 2DA read with its columns, for the tables whose cell DATA a consumer needs and not only their row names. */
+export interface TwoDaTable {
+    readonly columns: readonly string[];
+    readonly rows: readonly TwoDaRow[];
+}
+
+/**
+ * Parse a 2DA resource into its column names plus per-row cells.
+ *
+ * The header line names the DATA columns only, so each row carries one token more than there are columns - its
+ * name. Keeping the name out of `cells` is what makes `columns.indexOf(name)` address the right cell; folding it
+ * in would shift every column by one and hand back a neighbour's value with no error.
+ */
+export function parse2daTable(bytes: Uint8Array): TwoDaTable {
+    const lines = decodeTextResource(bytes).split(/\r?\n/);
+    const columns = (lines[HEADER_LINES - 1] ?? "").trim().split(/\s+/).filter(Boolean);
+    const rows: TwoDaRow[] = [];
+    for (const line of lines.slice(HEADER_LINES)) {
+        const tokens = line.trim().split(/\s+/).filter(Boolean);
+        const [name, ...cells] = tokens;
+        if (name === undefined) continue;
+        rows.push({ name, cells });
+    }
+    return { columns, rows };
+}

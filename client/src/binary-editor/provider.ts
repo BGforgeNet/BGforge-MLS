@@ -9,6 +9,7 @@ import {
     type ResourceListResolver,
     type EngineResolver,
     type ResourceTypeResolver,
+    type FlagBitNamesResolver,
     type SlotLabelResolver,
     type StrrefResolver,
 } from "../ie-resources/game-lookups";
@@ -24,6 +25,7 @@ export interface GameResolvers {
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
+    flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
     engine: EngineResolver;
     /** Whether the resolvers can answer anything for this document. Owns the whole policy - the URI's own
@@ -386,6 +388,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
                       resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
+                      flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
                   });
         void panel.webview.postMessage(resolved);
     }

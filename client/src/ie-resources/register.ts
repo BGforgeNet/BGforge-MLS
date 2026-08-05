@@ -10,6 +10,7 @@ import {
     createResourceListResolver,
     createEngineResolver,
     createResourceTypeResolver,
+    createFlagBitNamesResolver,
     createSlotLabelResolver,
     createStrrefResolver,
     gameDirOf,
@@ -18,6 +19,7 @@ import {
     type ResourceListResolver,
     type EngineResolver,
     type ResourceTypeResolver,
+    type FlagBitNamesResolver,
     type SlotLabelResolver,
     type StrrefResolver,
 } from "./game-lookups";
@@ -36,6 +38,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
+    flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
     engine: EngineResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
@@ -234,6 +237,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),
         namingTable: createNamingTableResolver(session, fallbackGameDir),
         resourceType: createResourceTypeResolver(session, fallbackGameDir),
+        flagBitNames: createFlagBitNamesResolver(session, fallbackGameDir),
         resourceList: createResourceListResolver(session, fallbackGameDir),
         engine: createEngineResolver(session, fallbackGameDir),
         isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),

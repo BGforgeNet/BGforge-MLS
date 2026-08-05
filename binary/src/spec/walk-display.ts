@@ -429,6 +429,7 @@ function scalarFieldValue(
             type: "flags",
             rawValue: numeric,
             flagOptions: stringifyKeys(fs.flags),
+            ...(fs.flagsRef ? { flagsRef: fs.flagsRef } : {}),
         };
     }
 

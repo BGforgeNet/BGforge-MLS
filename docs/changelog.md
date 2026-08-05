@@ -18,6 +18,11 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - When an IE game is opened, context-dependent fields reflect its data values.
 - The extra parameter, special and power fields an effect record carries now take the name the current opcode
   gives them, the way Parameter 1 and Parameter 2 already did.
+- An item's "Unusable By Kit" checkbox that several Enhanced Edition kits share now says so. It reads "EE kits"
+  and names them on hover - on a BG:EE install, Shadowdancer, Dwarven Defender, Dragon Disciple, Dark Moon Monk,
+  Sun Soul Monk, Priest of Tyr and Priest of Tempus are all one bit, so ticking it excludes every one of them.
+  The other kit checkboxes are unchanged: an item file has room for 32 kits, classic Baldur's Gate II already
+  fills all of them, and the extra kits later editions add have to reuse a bit.
 
 ### Syntax highlighting
 

@@ -1,4 +1,4 @@
-import type { ExternalRef, FieldRef, LayoutRow, ParsedFieldType } from "@bgforge/binary";
+import type { ExternalRef, FieldRef, FlagsRef, LayoutRow, ParsedFieldType } from "@bgforge/binary";
 
 export type SessionId = string;
 
@@ -41,6 +41,14 @@ export interface Row {
     docUrl?: string;
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
+    /** What this bitfield's BITS refer to outside the file (from the spec's `flagsRef`) - the bit-level sibling
+     *  of `ref`, which resolves the row's VALUE. A bitfield can carry both. */
+    flagsRef?: FlagsRef;
+    /** Per-bit names the OPEN GAME gives this bitfield's bits, keyed by the bit as a decimal string, resolved
+     *  by the host from `flagsRef`. Many names per bit is normal and is why this is a list: several Enhanced
+     *  Edition kits share one ITM kit-usability bit. Absent outside a game, and absent for a bit the install
+     *  says nothing about - the vendored flag label stands in both cases. */
+    flagBitNames?: Readonly<Record<string, readonly string[]>>;
     /** Display hint (from the spec's `enumOpen`): the enum is advisory, so the dropdown accepts a custom
      *  numeric value (shown as "N Unknown"). Closed enums omit this and reject off-list values at save. */
     enumOpen?: boolean;

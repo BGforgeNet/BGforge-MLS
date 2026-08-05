@@ -71,6 +71,7 @@ export function projectRow(
     if (field.description !== undefined) base.description = field.description;
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
+    if (field.flagsRef !== undefined) base.flagsRef = field.flagsRef;
     if (field.enumOpen === true) base.enumOpen = true;
     if (field.ref !== undefined) base.ref = field.ref;
     if (field.slotRef !== undefined) base.slotRef = field.slotRef;

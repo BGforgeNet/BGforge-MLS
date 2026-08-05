@@ -1,4 +1,4 @@
-import type { ExternalRef } from "./spec/external-ref";
+import type { ExternalRef, FlagsRef } from "./spec/external-ref";
 import type { CreCanonicalDocument } from "./cre/canonical";
 import type { EffCanonicalDocument } from "./eff/canonical";
 import type { ItmCanonicalDocument } from "./itm/canonical";
@@ -82,6 +82,12 @@ export interface ParsedField {
      * no game context (see `spec/external-ref.ts`).
      */
     ref?: ExternalRef;
+    /**
+     * Display hint (from the spec's `flagsRef`): what this bitfield's individual BITS refer to outside the
+     * file, for a consumer holding the game to resolve. `ref` above resolves the field's VALUE; a bitfield can
+     * carry both. Reported only - the library resolves neither.
+     */
+    flagsRef?: FlagsRef;
     /**
      * This field is one slot of an array whose slots are NAMED by an external source (e.g. a CRE sound slot,
      * named by an IDS table the game ships). Distinct from `ref` above, which resolves the field's VALUE - a

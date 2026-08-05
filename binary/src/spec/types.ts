@@ -1,5 +1,5 @@
 import type { ISchema } from "typed-binary";
-import type { ExternalRef } from "./external-ref";
+import type { ExternalRef, FlagsRef } from "./external-ref";
 
 /**
  * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
@@ -50,6 +50,12 @@ export interface ScalarFieldSpec {
      */
     readonly enumOpen?: boolean;
     readonly flags?: Readonly<Record<number, string>>;
+    /**
+     * What this field's BITS mean outside the file - the bit-level sibling of `ref`, which names what its VALUE
+     * means. Declared where the vendored `flags` table above cannot be the whole answer because the install
+     * decides which kits a bit covers. Resolution stays with the consumer holding the game, as for `ref`.
+     */
+    readonly flagsRef?: FlagsRef;
     /**
      * Bit-packed wire layout: this field is one part of a multi-field packed
      * slot named `packedAs`. All ScalarFieldSpec entries sharing one

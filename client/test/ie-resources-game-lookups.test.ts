@@ -5,7 +5,9 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 
 // Imported after vi.mock so the mocked vscode is in place.
+import type { TwoDaTable } from "@bgforge/binary";
 import {
+    createFlagBitNamesResolver,
     createNamingTableResolver,
     createResourceListResolver,
     createResourceTypeResolver,
@@ -33,12 +35,14 @@ function session(
         twoDa?: string[];
         resources?: string[];
         flavour?: string;
+        kitlist?: TwoDaTable;
     } = {},
 ): {
     ensureOpen: (dir: string) => {
         tlk: () => { get: (n: number) => string | undefined } | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
+        twoDaTable: (resref: string) => TwoDaTable | undefined;
         canRead: (resref: string, type: string) => boolean;
         list: () => { resref: string; ext: string | undefined }[];
         identity: { flavour: string };
@@ -53,6 +57,7 @@ function session(
                     (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 twoDa: (resref: string) =>
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
+                twoDaTable: (resref: string) => (resref.toLowerCase() === "kitlist" ? overrides.kitlist : undefined),
                 canRead: (resref: string, type: string) =>
                     (overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()),
                 // The install's whole namespace, biffed and override alike - `resources` doubles as it, split
@@ -193,6 +198,7 @@ describe("createStrrefResolver", () => {
                 tlk: () => ({ get }),
                 ids: () => undefined,
                 twoDa: () => undefined,
+                twoDaTable: () => undefined,
                 canRead: () => false,
                 list: () => [],
                 identity: { flavour: "tob" },
@@ -405,5 +411,58 @@ describe("createResourceListResolver", () => {
 
     it("swallows an unopenable game", () => {
         expect(createResourceListResolver(session({ throws: true }))(gameUri(), "itm")).toBeUndefined();
+    });
+});
+
+/**
+ * ITM kit-usability bits -> the install's kits, through the resolver the editor actually calls.
+ *
+ * The pure mapping is covered in `ie-resources-kit-usability.test.ts`; this pins the resolver's own decisions:
+ * that it reads KITLIST.2DA off the session, resolves display names through the game's tlk, answers only for its
+ * own ref kind, and reports "nothing" rather than an empty object so a bit falls back to its vendored label.
+ */
+describe("createFlagBitNamesResolver", () => {
+    // Byte 3 bit 0x40 (mask 0x00004000) is what the Enhanced Editions pile their extra kits onto - the one bit
+    // where the install genuinely knows more than the vendored table. One row's display strref resolves and the
+    // other's does not, so both the tlk path and the identifier fallback are exercised.
+    const KITLIST: TwoDaTable = {
+        columns: ["ROWNAME", "LOWER", "MIXED", "UNUSABLE"],
+        rows: [
+            { name: "33", cells: ["SHADOWDANCER", "1", "6348", "0x00004000"] },
+            { name: "34", cells: ["DWARVEN_DEFENDER", "2", "999999", "0x00004000"] },
+        ],
+    };
+
+    it("names a shared bit with every kit the install maps onto it", () => {
+        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+
+        expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toEqual({
+            "64": ["Ring of Protection +1", "DWARVEN_DEFENDER"],
+        });
+    });
+
+    it("answers nothing for a byte whose bits the install does not claim", () => {
+        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+
+        expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 1 })).toBeUndefined();
+    });
+
+    it("answers nothing when the install ships no KITLIST", () => {
+        const resolve = createFlagBitNamesResolver(session());
+
+        expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toBeUndefined();
+    });
+
+    // Another bit-ref kind would have its own table and its own key relation; answering for it would be a guess.
+    it("declines a ref kind it does not own", () => {
+        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+
+        expect(resolve(gameUri(), { kind: "somethingElse", byte: 3 })).toBeUndefined();
+    });
+
+    it("answers nothing when the game cannot be opened", () => {
+        const resolve = createFlagBitNamesResolver(session({ throws: true, kitlist: KITLIST }));
+
+        expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toBeUndefined();
     });
 });

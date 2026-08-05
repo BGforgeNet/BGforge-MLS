@@ -167,6 +167,19 @@ box; a flag block that is the SOLE content of a titled panel takes no inner bord
 chrome. Don't second-guess that in CSS - the share-vs-sole decision is the schema's (see `binary/src/AGENTS.md`);
 render it as marked.
 
+**A bit can be named by the install, and only a SHARED bit is relabelled.** Where the spec declares `flagsRef`
+(see `binary/src/AGENTS.md`), the host resolves the kits the open game maps onto each bit into
+`row.flagBitNames` - a LIST per bit, because the relation is many-to-one. `FlagGroups.svelte` leaves a bit the
+install claims for one kit exactly as it was: the vendored label already names it, and more tersely than the
+game's own string (a "Cleric" subgroup shows "Talos", not "Priest of Talos"). A bit several kits share cannot be
+named after any one of them, so it takes a group label with the kits listed in its `title`. Do NOT "improve"
+this into naming every bit from the game - it would undo the deliberate terse labels and, on a shared bit, pick
+an arbitrary winner.
+
+`FlagColumns.svelte` is the declared N/A for the shared-layer rule at the top: no field it renders declares
+`flagsRef` (ITM kit usability is the only one, and it renders only through `flagGroups`), so there is nothing
+for it to resolve. Wire it the same way if a second bitfield ever declares one.
+
 ## Nested-group detail uses stacked headed sections
 
 An auto-form detail with sub-groups (e.g. a MAP object's Object Data / Subtype Data) renders each group as its

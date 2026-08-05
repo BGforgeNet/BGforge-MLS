@@ -65,6 +65,12 @@ export interface GameLookups {
         decl: { type: string; byFlavour?: Readonly<Record<string, string>> },
         resref: string,
     ): { type: string; present: boolean } | undefined;
+    /**
+     * The names the install gives a BITFIELD's bits, keyed by the bit as a decimal string. Many names per bit is
+     * normal - several Enhanced Edition kits share one ITM kit-usability bit - so the caller must not reduce a
+     * list to one. Undefined outside a game or when the install's table says nothing.
+     */
+    flagBitNames(ref: FlagsBitRef): Readonly<Record<string, readonly string[]>> | undefined;
 }
 
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
@@ -103,6 +109,24 @@ function isSlotRefRow(value: object): value is SlotRefRow {
 
 function isResourceRefRow(value: object): value is ResourceRefRow {
     return "ref" in value && isRef(value.ref) && "rawValue" in value && typeof value.rawValue === "string";
+}
+
+/** Matched structurally like the ref rows above - `byte` is the only member this module passes on. */
+interface FlagsBitRef {
+    kind: string;
+    byte: number;
+}
+
+type FlagsRefRow = { flagsRef: FlagsBitRef };
+
+function isFlagsRefRow(value: object): value is FlagsRefRow {
+    return (
+        "flagsRef" in value &&
+        typeof value.flagsRef === "object" &&
+        value.flagsRef !== null &&
+        "kind" in value.flagsRef &&
+        !("flagBitNames" in value)
+    );
 }
 
 function isValueRefRow(value: object): value is ValueRefRow {
@@ -231,6 +255,12 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
             row = { ...row, ...namedByGame(row, tables) };
             if (open !== undefined) row = { ...row, openTarget: open };
         }
+    }
+    // A third axis beside `ref` (the row's VALUE) and `slotRef` (its label): what its BITS mean. A bitfield can
+    // carry `flagsRef` and nothing else, so this is its own pass rather than a branch of the ref handling.
+    if (isFlagsRefRow(row)) {
+        const names = lookups.flagBitNames(row.flagsRef);
+        if (names !== undefined) row = { ...row, flagBitNames: names };
     }
     if (isResourceRefRow(row) && row.ref.kind === "resource" && row.ref.type !== undefined) {
         // The declaration says WHAT it points at; the game is asked only whether it is there. The type is

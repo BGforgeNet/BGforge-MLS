@@ -42,6 +42,8 @@ const lookups = {
         type: decl.type,
         present: decl.type === "BAM" && resref === PRESENT_BAM,
     }),
+    // This driver plays a host with a game for the RESREF picker only; no kit-usability bit is in frame.
+    flagBitNames: () => undefined,
 };
 
 let sessionId = "";

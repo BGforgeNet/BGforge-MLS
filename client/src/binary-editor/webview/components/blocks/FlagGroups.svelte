@@ -42,8 +42,30 @@
 
     // Default checkbox label is the backing byte's own flag-table name (single source of truth); the block's
     // optional `label` overrides it for terser display (e.g. "Cleric of Talos" -> "Talos").
-    const labelOf = (item: Item, row: Row | undefined): string =>
+    const vendoredLabel = (item: Item, row: Row | undefined): string =>
         item.label ?? row?.flagOptions?.[String(item.mask)] ?? `0x${item.mask.toString(16)}`;
+
+    // The kits the OPEN GAME maps onto this bit, when it maps more than one. A bit the install claims for a
+    // single kit is left alone: the vendored label already names it, and more tersely than the game's own
+    // string (a "Cleric" subgroup's "Talos" against "Priest of Talos"). Only a SHARED bit carries information
+    // the vendored table cannot - stock BG2 fills all 32 bits, so the Enhanced Editions' extra kits pile onto
+    // masks that are already taken, eight of them onto one.
+    const sharedKits = (item: Item, row: Row | undefined): readonly string[] | undefined => {
+        const names = row?.flagBitNames?.[String(item.mask)];
+        return names !== undefined && names.length > 1 ? names : undefined;
+    };
+
+    // A shared bit cannot be named after any one of its kits, so it takes a group label and lists them on hover.
+    const labelOf = (item: Item, row: Row | undefined): string =>
+        sharedKits(item, row) !== undefined ? "EE kits" : vendoredLabel(item, row);
+
+    // Only ever set where the label alone is not the whole answer, so it never merely repeats visible text. The
+    // vendored meaning leads: `0x4000` is IESDP's documented "no kit" bit AND what the EE kits share.
+    const titleOf = (item: Item, row: Row | undefined): string | undefined => {
+        const kits = sharedKits(item, row);
+        if (kits === undefined) return undefined;
+        return `${vendoredLabel(item, row)} - this game also maps ${kits.length} kits to this bit: ${kits.join(", ")}`;
+    };
 
     function toggle(item: Item, checked: boolean): void {
         const row = fields[item.field];
@@ -91,6 +113,7 @@
                                     {#each sub as item (item.field + ":" + item.mask)}
                                         {@const row = fields[item.field]}
                                         <Checkbox checked={(raw(row) & item.mask) !== 0} label={labelOf(item, row)}
+                                                  title={titleOf(item, row)}
                                                   disabled={!row?.editable} onchange={(checked) => toggle(item, checked)} />
                                     {/each}
                                 </div>

@@ -12,7 +12,7 @@ export type {
     ParsedGroup,
     ParseOpaqueRange,
 } from "./types";
-export type { ExternalRef } from "./spec/external-ref";
+export type { ExternalRef, FlagsRef } from "./spec/external-ref";
 
 // JSON snapshot helpers
 export { createBinaryJsonSnapshot, parseBinaryJsonSnapshot, loadBinaryJsonSnapshot } from "./json-snapshot";
@@ -129,6 +129,7 @@ export {
     openTlk,
     parseIds,
     parse2daRowNames,
+    parse2daTable,
     parseTlk,
     openGame,
     engineOverrideFolders,
@@ -147,6 +148,8 @@ export type {
     BifTilesetEntry,
     Tlk,
     TlkOptions,
+    TwoDaRow,
+    TwoDaTable,
     ByteSource,
     Game,
     GameResourceRef,

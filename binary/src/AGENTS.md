@@ -175,6 +175,14 @@ that carries both.
   whichever sorted first. Where a reading gives a field no target - or names two at once ("the BAM/VVC") - it
   stays bare and is listed in `OPCODE_RESOURCE_UNRESOLVED` with the reason: resolving against the wrong
   namespace is worse than not resolving.
+- **A bitfield whose BITS point outside the file declares `flagsRef`, and the relation may be many-to-one.**
+  `ref` says what a field's VALUE means; `flagsRef` says what its BITS mean, and a bitfield can carry both. One
+  case today: ITM kit usability, four bytes forming one 32-bit mask that KITLIST.2DA's `UNUSABLE` column is keyed
+  by, each byte declaring which quarter it holds (byte 1 is the HIGH one, bits 24-31). Do NOT read it as
+  bit-names-a-kit: stock BG2 fills all 32 bits with 31 kits plus a documented "no kit" bit, so the Enhanced
+  Editions' extra kits REUSE masks - eight share `0x00004000` - and Blackguard's mask is two bits rather than
+  one. A consumer therefore resolves a bit to EVERY kit it covers and must not reduce that to one; the vendored
+  `flags` table stays as the no-game fallback, and on classic BG2 it is already the complete answer.
 - **A field whose documentation names an IDS/2DA table must declare it or record why not.** Unlike a resref,
   an IDS-backed field is a plain number with no shape to spot, so `binary/test/ids-table-declarations.test.ts`
   sweeps the specs for a `*.IDS`/`*.2DA` mention in the description and requires a declaration or an entry in

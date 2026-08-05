@@ -22,6 +22,7 @@ const lookups = {
     slotLabel: (): string | undefined => undefined,
     namingTable: (): Named => undefined,
     resourceType: (): { type: string; present: boolean } | undefined => undefined,
+    flagBitNames: (): Readonly<Record<string, readonly string[]>> | undefined => undefined,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */

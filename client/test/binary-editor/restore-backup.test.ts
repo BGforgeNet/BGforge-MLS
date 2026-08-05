@@ -99,6 +99,7 @@ const noGame = {
     slotLabel: (): undefined => undefined,
     namingTable: (): undefined => undefined,
     resourceType: (): undefined => undefined,
+    flagBitNames: (): undefined => undefined,
     resourceList: (): undefined => undefined,
     engine: (): undefined => undefined,
     isGameBacked: (): boolean => false,
