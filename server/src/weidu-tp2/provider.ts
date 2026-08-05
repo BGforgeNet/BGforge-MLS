@@ -324,7 +324,7 @@ class WeiduTp2Provider
 
         await initParser();
 
-        this.fileIndex = new FileIndex();
+        this.fileIndex = new FileIndex(this.id);
         const staticSymbols = loadStaticSymbols(LANG_WEIDU_TP2);
         this.fileIndex.loadStatic(staticSymbols);
 
@@ -503,7 +503,7 @@ class WeiduTp2Provider
     }
 
     incomingCalls(item: CallHierarchyItem): CallHierarchyIncomingCall[] {
-        const refs = this.fileIndex?.refs.lookup(item.name) ?? [];
+        const refs = this.fileIndex?.refsOf(item.name) ?? [];
         return computeIncomingCalls(item, refs, (fileUri) => this.readFileText(fileUri));
     }
 

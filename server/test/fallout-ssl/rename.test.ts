@@ -38,6 +38,7 @@ import { parseFile } from "../../src/fallout-ssl/header-parser";
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
 import { Symbols } from "../../src/core/symbol-index";
 import { FileIndex } from "../../src/core/file-index";
+import { LANG_FALLOUT_SSL } from "../../../shared/languages";
 import { pathToUri } from "../../src/uri-utils";
 import { isHeaderFile } from "../../src/core/location-utils";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -1472,7 +1473,7 @@ end
                 files[uri] = { uri, text };
             }
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
 
             // Index all files exactly as scanWorkspaceFiles does:
             // headers get SourceType.Workspace, .ssl files get SourceType.Navigation
@@ -1545,7 +1546,7 @@ end
                 files[uri] = { uri, text };
             }
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
             for (const { uri, text } of Object.values(files)) {
                 const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
                 const result = parseFile(uri, text, fixtureBase, st);
@@ -1591,6 +1592,45 @@ end
                 editUris.filter((u) => u.endsWith(".ssl")).length,
                 "rename from .ssl should include other .ssl files",
             ).toBeGreaterThanOrEqual(2);
+        });
+    });
+
+    describe("#define names across files (preprocessor, case-sensitive)", () => {
+        // sslc rejects `my_macro` against `#define MY_MACRO`, so the two are different macros to the
+        // compiler. Renaming one must not rewrite the other, however SSL folds its own constructs.
+        const HEADER_URI = "file:///mod/headers/defs.h";
+        const CALLER_URI = "file:///mod/scripts/caller.ssl";
+        const HEADER = `#define MY_MACRO(X)   display_msg(X)\n`;
+        const CALLER = `#include "../headers/defs.h"\n\nprocedure main begin\n    MY_MACRO("a");\n    my_macro("b");\nend\n`;
+
+        it("does not rewrite a differently-spelled occurrence in another file", async () => {
+            const files: Record<string, string> = { [HEADER_URI]: HEADER, [CALLER_URI]: CALLER };
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
+            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, "/mod", SourceType.Workspace));
+            fileIndex.updateFile(
+                normalizeUri(CALLER_URI),
+                parseFile(CALLER_URI, CALLER, "/mod", SourceType.Navigation),
+            );
+
+            const result = await renameSymbolWorkspace(
+                HEADER,
+                { line: 0, character: 10 },
+                "MY_MACRO_RENAMED",
+                HEADER_URI,
+                fileIndex.refs,
+                fileIndex.symbols,
+                (uri: string) => files[uri] ?? null,
+                "/mod",
+            );
+
+            const edits = (result?.documentChanges ?? [])
+                .filter((dc: unknown): dc is TextDocumentEdit => TextDocumentEdit.is(dc))
+                .flatMap((dc: TextDocumentEdit) =>
+                    dc.edits.map((e) => ({ uri: dc.textDocument.uri, line: e.range.start.line })),
+                );
+
+            // The exact call site on line 3 is renamed; the `my_macro` on line 4 is a different macro.
+            expect(edits.filter((e) => e.uri === CALLER_URI).map((e) => e.line)).toEqual([3]);
         });
     });
 });

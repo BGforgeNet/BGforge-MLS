@@ -25,6 +25,7 @@ import {
     CompletionItemKind,
     SymbolKind as VscodeSymbolKind,
 } from "vscode-languageserver/node";
+import type { NameCase } from "../../../shared/name-case";
 // =============================================================================
 // Symbol Kind
 // =============================================================================
@@ -254,6 +255,13 @@ interface BaseSymbol {
 
     /** Pre-computed signature (only for callables) */
     readonly signature?: SignatureInformation;
+
+    /**
+     * How this symbol's name compares, when its language folds identifier case. Omitted means the
+     * language's own rule (see `shared/name-case.ts`). Set it only to opt OUT of a fold: an SSL `#define`
+     * name is matched case-sensitively by the preprocessor even though SSL folds everything else.
+     */
+    readonly nameCase?: NameCase;
 }
 
 // =============================================================================

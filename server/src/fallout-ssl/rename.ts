@@ -318,7 +318,13 @@ export async function renameSymbolWorkspace(
     // Uses documentChanges format (TextDocumentEdit[]) so VS Code treats the
     // entire rename as a single atomic undo operation across all files.
     const documentChanges: TextDocumentEdit[] = [];
-    const fileScopeInfo: SslSymbolScope = { name: symbolName, scope: ScopeKind.File };
+    // A candidate file is searched by NAME (its tree holds no definition node to resolve against), so the
+    // case rule has to be carried in: the defining symbol declares it, and a `#define` compares exactly.
+    const fileScopeInfo: SslSymbolScope = {
+        name: symbolName,
+        scope: ScopeKind.File,
+        nameCase: symbolStore.nameCaseOf(symbolName),
+    };
 
     for (const candidateUri of candidateUris) {
         // eslint-disable-next-line no-await-in-loop -- sequential reads keep log ordering deterministic; rename is user-initiated and bounded

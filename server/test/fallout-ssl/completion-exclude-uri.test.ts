@@ -7,6 +7,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 import type { CompletionItem } from "vscode-languageserver/node";
 import { type IndexedSymbol, SourceType } from "../../src/core/symbol";
 import { FileIndex } from "../../src/core/file-index";
+import { LANG_FALLOUT_SSL } from "../../../shared/languages";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
 vi.mock("../../src/lsp-connection", () => ({
@@ -54,7 +55,7 @@ describe("SSL getCompletions excludeUri", () => {
     });
 
     it("should exclude symbols from the given URI", () => {
-        const fileIndex = new FileIndex();
+        const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
         const headerA = "file:///headers/a.h";
         const headerB = "file:///headers/b.h";
 
@@ -73,7 +74,7 @@ describe("SSL getCompletions excludeUri", () => {
     });
 
     it("should include static symbols regardless of URI", () => {
-        const fileIndex = new FileIndex();
+        const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
         const headerA = "file:///headers/a.h";
 
         fileIndex.loadStatic([createSymbol("builtin_func", null)]);

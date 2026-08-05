@@ -97,4 +97,42 @@ describe("ReferencesIndex", () => {
             expect(index.lookup("MY_FUNC")).toHaveLength(1);
         });
     });
+
+    describe("folding keys", () => {
+        it("aggregates case-divergent spellings of one name", () => {
+            const index = new ReferencesIndex({ nameCase: "fold" });
+            index.updateFile(normalizeUri("file:///a.ssl"), new Map([["Node005", [makeLoc("file:///a.ssl", 1, 0)]]]));
+            index.updateFile(normalizeUri("file:///b.ssl"), new Map([["NOde005", [makeLoc("file:///b.ssl", 2, 0)]]]));
+
+            expect(index.lookup("node005")).toHaveLength(2);
+        });
+
+        // A folding language can still hold names its own preprocessor matches exactly, so the caller that
+        // knows it is asking about one (an SSL `#define`) can demand the exact spelling.
+        it("answers an exact query exactly, without losing the folded default", () => {
+            const index = new ReferencesIndex({ nameCase: "fold" });
+            index.updateFile(normalizeUri("file:///a.ssl"), new Map([["MY_MACRO", [makeLoc("file:///a.ssl", 1, 0)]]]));
+            index.updateFile(normalizeUri("file:///b.ssl"), new Map([["my_macro", [makeLoc("file:///b.ssl", 2, 0)]]]));
+
+            expect(index.lookup("MY_MACRO", "exact")).toHaveLength(1);
+            expect(index.lookup("MY_MACRO")).toHaveLength(2);
+        });
+
+        it("restricts an exact URI query to files spelling the name that way", () => {
+            const index = new ReferencesIndex({ nameCase: "fold" });
+            index.updateFile(normalizeUri("file:///a.ssl"), new Map([["MY_MACRO", [makeLoc("file:///a.ssl", 1, 0)]]]));
+            index.updateFile(normalizeUri("file:///b.ssl"), new Map([["my_macro", [makeLoc("file:///b.ssl", 2, 0)]]]));
+
+            expect(index.lookupUris("MY_MACRO", "exact")).toEqual(new Set(["file:///a.ssl"]));
+            expect(index.lookupUris("MY_MACRO")).toEqual(new Set(["file:///a.ssl", "file:///b.ssl"]));
+        });
+
+        it("reports every file spelling a name differently, so rename reaches them all", () => {
+            const index = new ReferencesIndex({ nameCase: "fold" });
+            index.updateFile(normalizeUri("file:///a.ssl"), new Map([["Node005", [makeLoc("file:///a.ssl", 1, 0)]]]));
+            index.updateFile(normalizeUri("file:///b.ssl"), new Map([["NOde005", [makeLoc("file:///b.ssl", 2, 0)]]]));
+
+            expect(index.lookupUris("node005")).toEqual(new Set(["file:///a.ssl", "file:///b.ssl"]));
+        });
+    });
 });

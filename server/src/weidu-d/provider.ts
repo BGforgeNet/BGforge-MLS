@@ -107,7 +107,7 @@ class WeiduDProvider
 
         await initParser();
 
-        this.fileIndex = new FileIndex();
+        this.fileIndex = new FileIndex(this.id);
         const staticSymbols = loadStaticSymbols(LANG_WEIDU_D);
         this.fileIndex.loadStatic(staticSymbols);
         initEmbeddedBaf();

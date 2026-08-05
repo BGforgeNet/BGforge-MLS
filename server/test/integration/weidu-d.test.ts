@@ -17,6 +17,7 @@ import { formatWeiduD as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-d/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
+import { LANG_WEIDU_D } from "../../../shared/languages";
 import { parseFile } from "../../src/weidu-d/file-parser";
 import { loadFixture, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -176,7 +177,7 @@ describe("weidu-d integration", () => {
         it("indexes D state labels for workspace search", () => {
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_WEIDU_D);
             fileIndex.updateFile(normalizeUri(f.uri), parseFile(f.uri, f.text, IE_FIXTURES));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("a39");
@@ -188,7 +189,7 @@ describe("weidu-d integration", () => {
             const first = loadFixture(BGT_BASE, "bgt/base/d_bg1/durlyle1.d");
             const second = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_WEIDU_D);
             fileIndex.updateFile(normalizeUri(first.uri), parseFile(first.uri, first.text, IE_FIXTURES));
             fileIndex.updateFile(normalizeUri(second.uri), parseFile(second.uri, second.text, IE_FIXTURES));
 
@@ -210,7 +211,7 @@ END
 `;
             const uri = "file:///test/multi-dialog.d";
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_WEIDU_D);
             fileIndex.updateFile(normalizeUri(uri), parseFile(uri, text, "/test"));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("0");

@@ -20,6 +20,7 @@ import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-tp2/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
+import { LANG_WEIDU_TP2 } from "../../../shared/languages";
 import { loadFixture, loadFixtures, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
@@ -220,7 +221,7 @@ describe("weidu-tp2 integration", () => {
         it("searches for function definitions across indexed files", () => {
             const files = loadFixtures(TNT_BASE, ["tnt/lib/functions.tph"]);
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_WEIDU_TP2);
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
                 fileIndex.updateFile(normalizeUri(uri), result);
@@ -236,7 +237,7 @@ describe("weidu-tp2 integration", () => {
             const rrFiles = loadFixtures(RR_BASE, ["rr/lib/rr#afix.tph"]);
             const allFiles = new Map([...files, ...rrFiles]);
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_WEIDU_TP2);
             for (const { uri, text } of allFiles.values()) {
                 const result = parseFile(uri, text);
                 fileIndex.updateFile(normalizeUri(uri), result);

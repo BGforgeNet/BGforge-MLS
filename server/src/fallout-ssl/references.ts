@@ -64,6 +64,11 @@ export function findReferences(
         return [];
     }
 
+    // The defining symbol declares how its name compares: SSL folds its own constructs, but a `#define` is
+    // resolved by the preprocessor, which distinguishes case. Both the index lookups and the name-based tree
+    // search below need it, so it is read once here rather than per call site.
+    const nameCase = symbols?.nameCaseOf(scopeInfo.name);
+
     if (scopeInfo.scope === ScopeKind.External) {
         // Symbol not defined in the current file - fall back to cross-file lookup.
         // This handles cases like GVAR_DEN_GANGWAR used in den.h but defined in global.h.
@@ -71,9 +76,9 @@ export function findReferences(
             return [];
         }
         // Get cross-file references from the index (includes current file)
-        const crossFileRefs = refsIndex.lookup(scopeInfo.name);
+        const crossFileRefs = refsIndex.lookup(scopeInfo.name, nameCase);
         // Also search the current file for matching identifiers using file-scope traversal
-        const fileScopeInfo = { name: scopeInfo.name, scope: ScopeKind.File };
+        const fileScopeInfo = { name: scopeInfo.name, scope: ScopeKind.File, nameCase };
         const localNodes = findScopedReferences(tree.rootNode, fileScopeInfo);
         const localLocations = localNodes.map((node) => ({ uri, range: makeRange(node) }));
         // Merge: local refs + cross-file refs (excluding current file to avoid duplicates)
@@ -102,7 +107,9 @@ export function findReferences(
         // has always applied the rule (it skips a candidate file that redefines the name); this is the same
         // rule on the read side, which is what keeps the two agreeing about what a reference is.
         const rivals = symbols ? rivalDefinitionUris(symbols, scopeInfo.name, uri) : new Set<string>();
-        const crossFileRefs = refsIndex.lookup(scopeInfo.name).filter((loc) => loc.uri !== uri && !rivals.has(loc.uri));
+        const crossFileRefs = refsIndex
+            .lookup(scopeInfo.name, nameCase)
+            .filter((loc) => loc.uri !== uri && !rivals.has(loc.uri));
         allLocations = [...localLocations, ...crossFileRefs];
     }
 

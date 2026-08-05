@@ -21,6 +21,8 @@ import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import { Symbols } from "../../src/core/symbol-index";
+import { FileIndex } from "../../src/core/file-index";
+import { LANG_FALLOUT_SSL } from "../../../shared/languages";
 
 /** Extract refs only (convenience wrapper for tests migrated from call-sites). */
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
@@ -72,6 +74,55 @@ procedure NOde005 begin end
             const refs = findReferences(divergent, { line: 6, character: 12 }, TEST_URI, true);
             // declaration + 2 call sites + definition
             expect(refs).toHaveLength(4);
+        });
+    });
+
+    describe("#define names (preprocessor, case-sensitive)", () => {
+        // The preprocessor resolves these, and it distinguishes case - sslc rejects `my_macro` against
+        // `#define MY_MACRO`. Folding them would offer, and rename would rewrite, a name that is a different
+        // macro to the compiler.
+        const text = `
+#define MY_MACRO(X)   display_msg(X)
+procedure main begin
+    MY_MACRO("a");
+    my_macro("b");
+end
+`;
+
+        it("does not treat a differently-spelled occurrence as a reference", () => {
+            // Cursor on the #define name itself.
+            const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true);
+
+            expect(refs).toHaveLength(2);
+            expect(refs.map((r) => r.range.start.line).sort()).toEqual([1, 3]);
+        });
+    });
+
+    describe("#define names from an included header (cross-file)", () => {
+        // The consumer file does not define the macro, so this is the External path: references come from
+        // the workspace index plus a name-based search of the local tree. Both must stay case-exact - the
+        // preprocessor distinguishes `my_macro` from `MY_MACRO`, so they are different macros.
+        const HEADER_URI = "file:///mod/headers/defs.h";
+        const CALLER_URI = "file:///mod/scripts/caller.ssl";
+        const HEADER = `#define MY_MACRO(X)   display_msg(X)\n`;
+        const CALLER = `#include "../headers/defs.h"\n\nprocedure main begin\n    MY_MACRO("a");\n    my_macro("b");\nend\n`;
+
+        it("does not report a differently-spelled occurrence as a reference", () => {
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
+            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, "/mod"));
+            fileIndex.updateFile(normalizeUri(CALLER_URI), parseFile(CALLER_URI, CALLER, "/mod"));
+
+            const refs = findReferences(
+                CALLER,
+                { line: 3, character: 6 },
+                CALLER_URI,
+                true,
+                fileIndex.refs,
+                fileIndex.symbols,
+            );
+
+            const callerLines = refs.filter((r) => r.uri === CALLER_URI).map((r) => r.range.start.line);
+            expect(callerLines).toEqual([3]);
         });
     });
 

@@ -20,6 +20,7 @@ import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { formatFalloutSsl as formatDocument } from "@bgforge/format";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";
+import { LANG_FALLOUT_SSL } from "../../../shared/languages";
 import { SyntaxType } from "../../src/fallout-ssl/syntax-type";
 import { loadFixture, loadFixtures, findIdentifierPosition, FALLOUT_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -426,7 +427,7 @@ describe("fallout-ssl integration", () => {
         it("indexes header symbols for workspace search", () => {
             const files = loadFixtures(FALLOUT_FIXTURES, ["sfall/artifacts/scripting/headers/sfall.h"]);
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
                 fileIndex.updateFile(normalizeUri(uri), result);
@@ -443,7 +444,7 @@ describe("fallout-ssl integration", () => {
                 "Fallout2_Restoration_Project/scripts_src/headers/define.h",
             ]);
 
-            const fileIndex = new FileIndex();
+            const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
                 fileIndex.updateFile(normalizeUri(uri), result);

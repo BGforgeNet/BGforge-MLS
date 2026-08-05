@@ -86,6 +86,9 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
         // truthy guard above; TypeScript does not preserve property-narrowing
         // through nested function expressions when the property is accessed
         // via `symbolInfo`, hence the non-null assertion at each read site.
+        // Identity, not spelling: each candidate is resolved to its own definition and compared by node id, so
+        // case-divergent and case-sensitive names both come out right here with no rule of their own. The
+        // name-comparison fallback in `visit` below is where the case rules live.
         const visitResolved = (node: Node): void => {
             if (node.type === SyntaxType.Identifier) {
                 if (node.id === symbolInfo.definitionNode!.id) {
@@ -137,14 +140,20 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
         }
 
         if (node.type === SyntaxType.Identifier) {
-            // Case-folded, as SSL binds its names: a reference spelled `Node005` IS a reference to `NOde005`,
-            // and missing it would leave that call site behind on a rename - the file then names a procedure it
-            // no longer defines. A macro parameter is the exception, matched exactly, because the preprocessor
-            // that substitutes it does distinguish case.
-            const matches =
-                symbolInfo.scope === ScopeKind.Macro
-                    ? node.text === symbolInfo.name
-                    : sslNamesEqual(node.text, symbolInfo.name);
+            // The NAME-comparison path, reached only without a definitionNode to resolve against - a candidate
+            // file during a workspace rename, or a symbol defined in an included header. `visitResolved` above
+            // is the other path, and it compares resolved-definition IDENTITY, so case never enters there;
+            // do not read this fold as describing what the whole module does.
+            //
+            // Folded, as SSL binds its names: a reference spelled `Node005` IS a reference to `NOde005`, and
+            // missing it would leave that call site behind on a rename - the file then names a procedure it no
+            // longer defines. Two exceptions, both preprocessor: a macro parameter (substituted by the
+            // preprocessor, which distinguishes case), and any symbol whose definition declares `nameCase:
+            // "exact"` - a `#define`, which sslc matches case-sensitively. The second arrives as DATA because
+            // this tree cannot see the definition: the caller reads it off the defining symbol
+            // (`Symbols.nameCaseOf`) and passes it in.
+            const exact = symbolInfo.scope === ScopeKind.Macro || symbolInfo.nameCase === "exact";
+            const matches = exact ? node.text === symbolInfo.name : sslNamesEqual(node.text, symbolInfo.name);
             if (matches) refs.push(node);
         }
 

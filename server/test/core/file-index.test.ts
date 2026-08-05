@@ -9,6 +9,7 @@ import { FileIndex } from "../../src/core/file-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 import type { ParseResult } from "../../src/core/parse-result";
 import { normalizeUri } from "../../src/core/normalized-uri";
+import { LANG_FALLOUT_SSL, LANG_WEIDU_TP2 } from "../../../shared/languages";
 
 function makeLoc(uri: string, line: number, char: number): Location {
     return Location.create(uri, Range.create(Position.create(line, char), Position.create(line, char + 5)));
@@ -28,7 +29,7 @@ function makeSymbol(name: string, uri: string, line = 0): IndexedSymbol {
 
 describe("FileIndex", () => {
     it("updates both stores from a single ParseResult", () => {
-        const index = new FileIndex();
+        const index = new FileIndex(LANG_FALLOUT_SSL);
         const uri = "file:///a.ssl";
         const result: ParseResult = {
             symbols: [makeSymbol("my_proc", uri)],
@@ -46,7 +47,7 @@ describe("FileIndex", () => {
     });
 
     it("removes from both stores", () => {
-        const index = new FileIndex();
+        const index = new FileIndex(LANG_FALLOUT_SSL);
         const uri = "file:///a.ssl";
         const result: ParseResult = {
             symbols: [makeSymbol("my_proc", uri)],
@@ -61,7 +62,7 @@ describe("FileIndex", () => {
     });
 
     it("delegates loadStatic to symbols store", () => {
-        const index = new FileIndex();
+        const index = new FileIndex(LANG_FALLOUT_SSL);
         const symbol = makeSymbol("built_in", "");
 
         index.loadStatic([symbol]);
@@ -69,8 +70,66 @@ describe("FileIndex", () => {
         expect(index.symbols.lookup("built_in")).toBeDefined();
     });
 
+    it("folds identifier case in both stores for a case-insensitive language", () => {
+        const index = new FileIndex(LANG_FALLOUT_SSL);
+        const uri = "file:///a.ssl";
+
+        index.updateFile(normalizeUri(uri), {
+            symbols: [makeSymbol("NOde005", uri)],
+            refs: new Map([["NOde005", [makeLoc(uri, 1, 0)]]]),
+        });
+
+        expect(index.symbols.lookup("Node005")?.name).toBe("NOde005");
+        expect(index.refs.lookup("Node005")).toHaveLength(1);
+    });
+
+    it("keeps identifier case distinct in both stores for a case-sensitive language", () => {
+        const index = new FileIndex(LANG_WEIDU_TP2);
+        const uri = "file:///a.tp2";
+
+        index.updateFile(normalizeUri(uri), {
+            symbols: [makeSymbol("MY_VAR", uri)],
+            refs: new Map([["MY_VAR", [makeLoc(uri, 1, 0)]]]),
+        });
+
+        expect(index.symbols.lookup("my_var")).toBeUndefined();
+        expect(index.refs.lookup("my_var")).toHaveLength(0);
+    });
+
+    describe("refsOf()", () => {
+        const uriA = "file:///a.ssl";
+        const uriB = "file:///b.ssl";
+
+        /** Index one name per file, spelled as each file spells it. */
+        function indexPair(defName: string, defSymbol: IndexedSymbol, otherSpelling: string): FileIndex {
+            const index = new FileIndex(LANG_FALLOUT_SSL);
+            index.updateFile(normalizeUri(uriA), {
+                symbols: [defSymbol],
+                refs: new Map([[defName, [makeLoc(uriA, 1, 0)]]]),
+            });
+            index.updateFile(normalizeUri(uriB), {
+                symbols: [],
+                refs: new Map([[otherSpelling, [makeLoc(uriB, 2, 0)]]]),
+            });
+            return index;
+        }
+
+        it("follows the language fold for an ordinary symbol", () => {
+            const index = indexPair("Helper_Proc", makeSymbol("Helper_Proc", uriA), "HELPER_PROC");
+
+            expect(index.refsOf("Helper_Proc")).toHaveLength(2);
+        });
+
+        it("stays exact for a symbol that opted out of the fold", () => {
+            const macro = { ...makeSymbol("MY_MACRO", uriA), nameCase: "exact" } as IndexedSymbol;
+            const index = indexPair("MY_MACRO", macro, "my_macro");
+
+            expect(index.refsOf("MY_MACRO")).toHaveLength(1);
+        });
+    });
+
     it("replaces data on re-update", () => {
-        const index = new FileIndex();
+        const index = new FileIndex(LANG_FALLOUT_SSL);
         const uri = "file:///a.ssl";
 
         index.updateFile(normalizeUri(uri), {

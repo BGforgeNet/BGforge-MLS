@@ -611,6 +611,10 @@ export function buildMacroSymbol(macro: MacroData, uri: string, displayPath?: st
         completion: completionItem,
         hover: { contents: hoverContents },
         signature: sig,
+        // A `#define` name is the one SSL vocabulary the index must not fold: sslc rejects `my_macro`
+        // against `#define MY_MACRO`, so offering the definition under a spelling that will not compile
+        // would be worse than not finding it.
+        nameCase: "exact" as const,
     };
 
     if (macro.hasParams) {

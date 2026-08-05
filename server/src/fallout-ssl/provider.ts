@@ -138,7 +138,7 @@ class FalloutSslProvider
 
         await initParser();
 
-        this.fileIndex = new FileIndex();
+        this.fileIndex = new FileIndex(this.id);
         const staticSymbols = loadStaticSymbols(LANG_FALLOUT_SSL);
         this.fileIndex.loadStatic(staticSymbols);
 
@@ -275,7 +275,7 @@ class FalloutSslProvider
         if (!isInitialized()) {
             return [];
         }
-        const refs = this.fileIndex?.refs.lookup(item.name) ?? [];
+        const refs = this.fileIndex?.refsOf(item.name) ?? [];
         return callHierarchy.incomingCalls(item, refs, (uri) => this.readTextSync(uri));
     }
 

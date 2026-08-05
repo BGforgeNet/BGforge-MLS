@@ -11,6 +11,7 @@
 
 import type { Node } from "web-tree-sitter";
 import type { Position } from "vscode-languageserver/node";
+import type { NameCase } from "../../../shared/name-case";
 import { findIdentifierNodeAtPosition } from "./utils";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
 import {
@@ -38,6 +39,16 @@ export interface SslSymbolScope {
     procedureNode?: Node;
     /** The containing Define node; only set when scope === ScopeKind.Macro. */
     defineNode?: Node;
+    /**
+     * How this symbol's name compares. Omitted means SSL's own rule, which folds case. Set `"exact"` for a
+     * name the PREPROCESSOR resolves (a `#define`), which distinguishes case - only consulted on the
+     * name-comparison path, since a search that holds the definition node compares identity instead.
+     *
+     * `getSymbolScope` does not set it: it reads one tree, and the rule belongs to the DEFINING symbol, which
+     * for the cases this matters to (a header `#define`) lives in another file. The callers that search by
+     * name fill it in from `Symbols.nameCaseOf`.
+     */
+    nameCase?: NameCase;
 }
 
 /**

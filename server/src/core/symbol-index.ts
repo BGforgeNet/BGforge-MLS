@@ -14,6 +14,7 @@
 
 import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./normalized-uri";
+import { type NameCase, nameCaseKey } from "../../../shared/name-case";
 import {
     type SymbolKind,
     type IndexedSymbol,
@@ -69,6 +70,12 @@ interface QueryOptions {
  */
 interface SymbolsOptions {
     /**
+     * How this instance compares identifiers. Defaults to `"exact"`; a language whose identifiers bind
+     * case-insensitively passes `"fold"` (see `shared/name-case.ts`).
+     */
+    nameCase?: NameCase;
+
+    /**
      * Maximum number of files to retain in the index.
      *
      * When the limit is exceeded the least-recently-updated file is evicted
@@ -110,8 +117,14 @@ export class Symbols {
     // Secondary indices (for fast lookup)
     // -------------------------------------------------------------------------
 
-    /** Name -> Symbols (multiple symbols can share a name across scopes) */
+    /**
+     * Name key -> Symbols (multiple symbols can share a name across scopes). Keyed through
+     * {@link nameCaseKey}, so under a folding language one key holds every case spelling of a name.
+     */
     private readonly byName: Map<string, IndexedSymbol[]> = new Map();
+
+    /** How this instance compares identifiers. */
+    private readonly nameCase: NameCase;
 
     /**
      * Materialised flat list of all symbols (file + static, excluding Navigation
@@ -167,6 +180,7 @@ export class Symbols {
 
     constructor(options?: SymbolsOptions) {
         this.maxFiles = options?.maxFiles ?? DEFAULT_MAX_FILES;
+        this.nameCase = options?.nameCase ?? "exact";
     }
 
     // -------------------------------------------------------------------------
@@ -262,6 +276,19 @@ export class Symbols {
     }
 
     /**
+     * How `name` compares, as DECLARED by its defining symbol: undefined means the language default, and
+     * `"exact"` means that symbol opted out of the fold (an SSL `#define`). Callers that search by name -
+     * a cross-file reference lookup, a name-based tree walk - ask here rather than deciding for themselves.
+     *
+     * When several definitions share a name, the highest-precedence one decides (see {@link lookupAll}), so a
+     * name that is BOTH a `#define` and a procedure resolves per context. That ambiguity is the toolchain's,
+     * not this method's - such a name is already ambiguous to the preprocessor - so it is not resolved here.
+     */
+    nameCaseOf(name: string): NameCase | undefined {
+        return this.lookup(name)?.nameCase;
+    }
+
+    /**
      * Look up definition location for a symbol by name.
      * Returns null for symbols without locations (e.g., static/built-in symbols).
      *
@@ -280,7 +307,12 @@ export class Symbols {
      * Use for go-to-definition when multiple definitions may exist.
      */
     lookupAll(name: string, context?: QueryContext): IndexedSymbol[] {
-        const candidates = this.byName.get(name);
+        // One folded key holds every spelling, so a symbol that opted out of the fold (an SSL `#define`
+        // name, which the preprocessor matches case-sensitively) is filtered back out here unless the
+        // query spells it exactly.
+        const candidates = this.byName
+            .get(this.key(name))
+            ?.filter((symbol) => symbol.nameCase !== "exact" || symbol.name === name);
         if (!candidates || candidates.length === 0) {
             return [];
         }
@@ -491,24 +523,30 @@ export class Symbols {
     // Private helpers
     // -------------------------------------------------------------------------
 
+    private key(name: string): string {
+        return nameCaseKey(name, this.nameCase);
+    }
+
     private addToNameIndex(symbol: IndexedSymbol): void {
-        const existing = this.byName.get(symbol.name);
+        const key = this.key(symbol.name);
+        const existing = this.byName.get(key);
         if (existing) {
             existing.push(symbol);
         } else {
-            this.byName.set(symbol.name, [symbol]);
+            this.byName.set(key, [symbol]);
         }
     }
 
     private removeFromNameIndex(symbol: IndexedSymbol): void {
-        const existing = this.byName.get(symbol.name);
+        const key = this.key(symbol.name);
+        const existing = this.byName.get(key);
         if (!existing) return;
 
         const index = existing.indexOf(symbol);
         if (index !== -1) {
             existing.splice(index, 1);
             if (existing.length === 0) {
-                this.byName.delete(symbol.name);
+                this.byName.delete(key);
             }
         }
     }
