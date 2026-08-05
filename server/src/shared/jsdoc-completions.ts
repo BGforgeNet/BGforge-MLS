@@ -7,6 +7,10 @@
  * Position-based: analyzes the line text before cursor to determine
  * whether to return tags, types, or nothing.
  *
+ * Consumed by the SSL and TP2 providers only, deliberately not by D or BAF: neither has user-defined functions
+ * or variables for `@param`/`@ret`/`@type` to attach to, so D's JSDoc is a description-only hover on state
+ * labels and BAF has none.
+ *
  * SYNC: shared/jsdoc-types.ts (canonical tag/type lists)
  */
 
