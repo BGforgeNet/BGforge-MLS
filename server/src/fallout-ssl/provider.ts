@@ -305,6 +305,11 @@ class FalloutSslProvider
         if (context === SslCompletionContext.Jsdoc) {
             return getJsdocCompletions(FALLOUT_JSDOC_TYPES, getLinePrefix(text, position));
         }
+        // A string holds message text or an include path, and SSL interpolates nothing into either - unlike
+        // TP2, where a `%var%` makes the same position worth completing.
+        if (isInsideString(text, position)) {
+            return [];
+        }
 
         if (triggerCharacter === "@") {
             return [];

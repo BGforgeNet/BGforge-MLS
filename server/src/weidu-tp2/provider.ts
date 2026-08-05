@@ -399,8 +399,16 @@ class WeiduTp2Provider
         }
 
         const localCompletions = collectLocalCompletions(text, version, uri, { excludeWord: currentWord });
-
         const baseItems: Tp2CompletionItem[] = [...items, ...localCompletions];
+
+        // Inside a string the only thing that resolves is a `%var%` interpolation, so keep the variables and
+        // drop the rest of the vocabulary. Selected by CATEGORY, not by completion kind: looksLikeConstant
+        // gives an uppercase name the constant icon, so a kind filter would drop MOD_FOLDER and every other
+        // automatic - the names most often interpolated into a path.
+        if (isInsideString(text, position)) {
+            return baseItems.filter((item) => item.category === CompletionCategory.Vars);
+        }
+
         const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols);
         const withSnippets = applySnippets(withParams, contexts, text, version, uri, this.fileIndex?.symbols);
 

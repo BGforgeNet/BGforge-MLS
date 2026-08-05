@@ -6,9 +6,9 @@
  * Sync note:
  * - TP2 stanza-backed completion categories are consumed from here by
  *   server/src/shared/completion-context.ts.
- * - Non-stanza TP2 categories such as "action", "patch", and "vars" remain
- *   local to completion-context.ts because they are cursor-context categories,
- *   not YAML stanza names.
+ * - TP2 categories such as "action", "patch", and "vars" are stanza names too -
+ *   an item's category defaults to its stanza - but they stay local to
+ *   completion-context.ts, since no build-time script needs them.
  */
 
 export const FALLOUT_SSL_STANZAS = {

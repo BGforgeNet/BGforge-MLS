@@ -65,6 +65,11 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
   longer offers them inside dialogue text, a filename or any other tilde-quoted string - it used to offer the
   same list at every position in the file. Trigger and action strings still complete against the BAF
   vocabulary, and a quoted `.baf` argument still completes, since that is where `Global()` takes `"GLOBAL"`.
+- Fallout SSL completion no longer fires inside a string. Message text and `#include` paths were getting the
+  whole vocabulary - some 800 names - over what was being typed.
+- TP2 completion inside a string now offers the variables alone, instead of the whole vocabulary. A `%var%` is
+  the only thing that resolves there, so a path string now suggests `MOD_FOLDER`, `DEST_FILE` and your own
+  variables rather than several hundred commands as well.
 
 ## 3.12.0
 

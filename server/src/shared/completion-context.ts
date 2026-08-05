@@ -22,9 +22,9 @@ import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
  * Categories determine where completions should appear based on context.
  *
  * Split of responsibility:
- * - YAML stanza-backed category strings come from shared/stanza-names.ts.
- * - Non-stanza categories ("action", "patch", "vars", etc.) stay local here
- *   because they are runtime filtering buckets, not YAML stanza identifiers.
+ * - Category strings the build-time scripts also need come from shared/stanza-names.ts.
+ * - The rest stay local here. "action", "patch", "vars" and friends ARE stanza keys in the data files - each
+ *   item's category defaults to the stanza it sits in - but only runtime reads them.
  *
  * When adding or renaming a stanza-backed TP2 category, update both this file
  * and shared/stanza-names.ts together.
