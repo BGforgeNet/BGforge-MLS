@@ -331,6 +331,17 @@ function parseMisc(data: MiscData): ParsedGroup {
 const MAX_PRO_SIZE = 1024;
 
 /**
+ * The 4-byte ASCII signature an Infinity Engine projectile opens with. A Fallout prototype opens with a
+ * big-endian PID whose high byte is the object type 0-5, so the two are disjoint at byte 0: 'P' is 0x50, which
+ * read as a prototype is the "Unknown object type: 80" this discriminator replaces.
+ */
+const IE_PROJECTILE_SIGNATURE = "PRO ";
+
+function isIeProjectile(data: Uint8Array): boolean {
+    return [...IE_PROJECTILE_SIGNATURE].every((char, index) => data[index] === char.codePointAt(0));
+}
+
+/**
  * PRO file parser implementation
  */
 class ProParser implements BinaryParser {
@@ -364,6 +375,15 @@ class ProParser implements BinaryParser {
 
     private parseInternal(data: Uint8Array): ParseResult {
         const fileSize = data.length;
+
+        // Before any size or header check, so an Infinity Engine projectile is named whatever its length.
+        if (isIeProjectile(data)) {
+            return this.fail(
+                "Not a Fallout prototype: this file carries the Infinity Engine projectile signature " +
+                    `"${IE_PROJECTILE_SIGNATURE}". The two formats share the .pro extension; ` +
+                    "Infinity Engine projectiles are not supported.",
+            );
+        }
 
         // Validate file size limits
         if (fileSize > MAX_PRO_SIZE) {

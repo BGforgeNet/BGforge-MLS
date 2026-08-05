@@ -38,6 +38,8 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Opening an Infinity Engine `.pro` from a game no longer fails with "Unknown object type": `.pro` is a
   projectile there and a Fallout prototype here, and the viewer was routing it to the Fallout reader. Formats
   the binary editor cannot read now open in the ordinary editor, unless another editor handles them.
+  Opening one as a plain file - from the file explorer, where nothing says which game it belongs to - still
+  cannot show it, but now says it is an Infinity Engine projectile instead of reporting an unknown object type.
 - Undoing a binary-editor dropdown change now updates the dropdown. The document was restored correctly, but
   the control kept showing the value you had just undone until you opened and closed it.
 - Pressing an editor shortcut while a binary-editor dropdown has focus - Ctrl+Z, Ctrl+S - no longer pops the

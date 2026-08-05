@@ -115,6 +115,27 @@ describe("PRO parser - error cases", () => {
         expect(result.errors![0]).toContain("Unknown object type");
     });
 
+    // `.pro` is a Fallout PROTOTYPE here and an Infinity Engine PROJECTILE there, and a bare file carries no
+    // game to ask. Read as a prototype, the IE signature's leading "P" is object type 0x50, so the old
+    // diagnosis was "Unknown object type: 80" - true of the bytes, useless about the file.
+    it("names the Infinity Engine projectile format rather than reporting an unknown object type", () => {
+        const data = new Uint8Array(512);
+        data.set(new TextEncoder().encode("PRO V1.0"), 0);
+        const result = proParser.parse(data);
+        expect(result.errors).toBeDefined();
+        expect(result.errors![0]).toContain("Infinity Engine");
+        expect(result.errors![0]).not.toContain("Unknown object type");
+    });
+
+    // Sniffed before the size gates, so an oversized projectile is still named rather than reported as too big.
+    it("names an Infinity Engine projectile even when it exceeds the prototype size limit", () => {
+        const data = new Uint8Array(4096);
+        data.set(new TextEncoder().encode("PRO V2.0"), 0);
+        const result = proParser.parse(data);
+        expect(result.errors![0]).toContain("Infinity Engine");
+        expect(result.errors![0]).not.toContain("too large");
+    });
+
     it("rejects truncated critter files", () => {
         const proPath = path.join(FIXTURES, "bad", "truncated-critter.pro");
         const data = new Uint8Array(fs.readFileSync(proPath));
