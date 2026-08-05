@@ -47,8 +47,9 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Fallout SSL dialog nodes whose procedure and its callers spell the name with different capitalisation are now
   treated as one node, matching the compiler, which ignores case.
 - Go to definition, find references and rename now match Fallout SSL names the way the compiler does, ignoring
-  case for procedures and variables. Macros keep matching exactly, since the preprocessor that expands them
-  distinguishes case.
+  case for procedures and variables. This holds across files too, so a procedure declared in a header is found
+  from a script that spells it differently. Macros keep matching exactly, since the preprocessor that expands
+  them distinguishes case - renaming `MY_MACRO` leaves an unrelated `my_macro` in another file alone.
 - Find references on a Fallout SSL procedure no longer lists same-named procedures belonging to other scripts.
   A procedure is local to its own file, but references were collected by name across the whole workspace, and
   since nearly every dialog script defines its own `Node004` the result was mostly unrelated files. Symbols that
