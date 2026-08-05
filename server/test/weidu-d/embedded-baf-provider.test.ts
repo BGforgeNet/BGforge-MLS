@@ -82,9 +82,24 @@ describe("weiduDProvider.filterCompletions - embedded BAF", () => {
         expect(labels).not.toContain("ActionOverride");
     });
 
-    it("returns the D completions unchanged outside any embedded region", () => {
+    it("returns the D completions unchanged at a code position", () => {
         const dItems: CompletionItem[] = [{ label: "SENTINEL_D_ITEM" }];
-        const out = weiduDProvider.filterCompletions!(dItems, text, at(3, "Hi"), URI);
+        const out = weiduDProvider.filterCompletions!(dItems, text, at(2, "THEN"), URI);
         expect(out).toBe(dItems);
+    });
+});
+
+describe("weiduDProvider.filterCompletions - position gating", () => {
+    const dItems: CompletionItem[] = [{ label: "SENTINEL_D_ITEM" }];
+    const filter = (position: Position): CompletionItem[] =>
+        weiduDProvider.filterCompletions!(dItems, text, position, URI);
+
+    // The bulk of a .d file is dialogue text, where no D keyword is valid.
+    it("suppresses the D vocabulary inside say text", () => {
+        expect(filter(at(3, "Hi"))).toEqual([]);
+    });
+
+    it("suppresses the D vocabulary inside a docstring", () => {
+        expect(filter(at(1, "Greeting"))).toEqual([]);
     });
 });

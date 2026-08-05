@@ -50,7 +50,7 @@ import {
 import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
-import { isInsideComment } from "./ast-utils";
+import { isInsideComment, isInsideString } from "./ast-utils";
 import { parseFile } from "./file-parser";
 import { getDefinition } from "./definition";
 import { getStateLabelHover } from "./hover";
@@ -202,7 +202,17 @@ class WeiduDProvider
         // Inside an embedded BAF string, replace the D vocabulary with the field-scoped BAF vocabulary -
         // D structural keywords (SAY/IF/THEN) are invalid inside a BAF trigger/action expression.
         const kind = detectEmbeddedBaf(text, position);
-        return kind ? getEmbeddedBafCompletions(kind) : items;
+        if (kind) {
+            return getEmbeddedBafCompletions(kind);
+        }
+        // Every other string is prose, a filename or a search/replace fragment - no D keyword is valid in
+        // one, nor in a comment, and dialogue text is most of a .d file. Checked after the embedded case,
+        // which is itself inside a string; an unterminated string has no string node, so mid-typing falls
+        // through to the D vocabulary.
+        if (isInsideComment(text, position) || isInsideString(text, position)) {
+            return [];
+        }
+        return items;
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {

@@ -61,6 +61,10 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
   A procedure is local to its own file, but references were collected by name across the whole workspace, and
   since nearly every dialog script defines its own `Node004` the result was mostly unrelated files. Symbols that
   genuinely come from an included header still resolve across files.
+- WeiDU `.d` and `.baf` completion no longer offers the language's keywords inside a comment, and in `.d` no
+  longer offers them inside dialogue text, a filename or any other tilde-quoted string - it used to offer the
+  same list at every position in the file. Trigger and action strings still complete against the BAF
+  vocabulary, and a quoted `.baf` argument still completes, since that is where `Global()` takes `"GLOBAL"`.
 
 ## 3.12.0
 

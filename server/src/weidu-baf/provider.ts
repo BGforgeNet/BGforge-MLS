@@ -108,6 +108,12 @@ class WeiduBafProvider
         return getStaticCompletions(this.symbolStore);
     }
 
+    filterCompletions(items: CompletionItem[], text: string, position: Position): CompletionItem[] {
+        // Strings are deliberately NOT gated, unlike D's: a quoted BAF argument is a value slot this
+        // vocabulary answers - "GLOBAL"/"LOCALS"/"MYAREA" are the scope names Global() takes.
+        return isInsideComment(text, position) ? [] : items;
+    }
+
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
         if (!this.storedContext) {
             conlog("WeiDU BAF provider not initialized, cannot compile");
