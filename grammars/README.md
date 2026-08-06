@@ -64,14 +64,15 @@ are regenerated on every build and their canonical format is the generator's. A 
 
 - `dist/bgforge-mls-tree-sitter-grammars.zip`, one self-contained directory per grammar, each with
   `grammar.js`, the generated `src/`, `queries/highlights.scm` and the `.wasm` build.
-- Per-editor query variants beside it, at `queries/helix/` and `queries/zed/`. The canonical
-  `queries/highlights.scm` uses Neovim capture names; Helix names several captures differently and Zed
-  styles a different subset, so the canonical file leaves tokens unstyled in both -- numbers render as
-  plain text in Helix, and Zed has no fallback for a dotted name its themes lack. The variants are
-  generated at package time by `scripts/utils/src/generate-editor-queries.ts` from the mapping tables in
-  `editor-captures.ts`, which also carries the vendored capture set each editor supports and the
-  provenance of each. `scripts/utils/test/editor-captures.test.ts` asserts every emitted capture is one
-  the target actually styles -- the check that makes this verifiable without installing three editors.
+- A Helix query variant beside it, at `queries/helix/`. The canonical `queries/highlights.scm` uses
+  Neovim capture names, and Helix names several of them differently: it has no `number` scope at all
+  (numerics are `constant.numeric`), so numbers render as plain text there until remapped. Generated at
+  package time by `scripts/utils/src/generate-editor-queries.ts` from the mapping table in
+  `editor-captures.ts`, which also carries the capture set each editor styles and where each came from.
+  Neovim and Zed read the canonical file directly -- all three resolve a capture by the longest dotted
+  prefix their theme defines, so an editor needs a variant only where its NAME for a concept differs, not
+  merely where it lacks the specific one. `scripts/utils/test/editor-captures.test.ts` asserts every
+  emitted capture is one the target styles, which is what makes this checkable without installing editors.
 - Attached to every release, and to the rolling `grammars-nightly` prerelease built daily from the
   default branch by `.github/workflows/nightly-grammars.yml`. Stable URLs:
   `releases/latest/download/bgforge-mls-tree-sitter-grammars.zip` and
@@ -90,7 +91,7 @@ so a bundle missing an external `scanner.c` would otherwise build here and fail 
 
 ## Highlight Queries
 
-Each grammar has a `queries/highlights.scm` file following Neovim capture name conventions. These are used by Neovim, Helix, Zed, and Emacs for tree-sitter highlighting. See the [editor setup docs](../docs/editors/) for installation instructions.
+Each grammar has a `queries/highlights.scm` file following Neovim capture name conventions. Neovim and Zed use it directly; Helix uses the remapped variant the published bundle carries (see above). Emacs does not read `.scm` queries at all - its font-lock rules are elisp, and the queries serve as a reference for node types. See the [editor setup docs](../docs/editors/) for installation instructions.
 
 ## Type Generation
 

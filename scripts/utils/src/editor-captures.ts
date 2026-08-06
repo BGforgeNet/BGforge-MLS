@@ -15,9 +15,6 @@
 
 export type Editor = "neovim" | "helix" | "zed";
 
-/** Editors whose canonical (unmapped) queries are shipped as-is; the rest get a rewritten copy. */
-export const CANONICAL_EDITOR: Editor = "neovim";
-
 /**
  * Source: neovim `runtime/doc/treesitter.txt`, the `@`-prefixed names under
  * treesitter-highlight-groups. Vendored 2026-08-06 from the master doc.
@@ -291,11 +288,16 @@ const SUPPORTED: Record<Editor, ReadonlySet<string>> = {
 };
 
 /**
- * Whether an unlisted dotted capture inherits its parent's style. Neovim documents the fallback;
- * Helix uses "the longest matching theme key". Zed has neither - its only documented fallback is
- * multiple captures on one node - so an unmapped name there is simply unstyled.
+ * Whether an unlisted dotted capture inherits its parent's style. All three do, which is why the mapping
+ * tables below are as small as they are - an editor only needs an entry where its NAME for a concept
+ * differs, not merely where it lacks the specific one.
+ *
+ * Neovim and Helix document theirs ("the longest matching theme key"). Zed's is not in its docs, which
+ * describe only the multi-capture form and thereby suggest there is nothing else; the source settles it -
+ * `SyntaxTheme::highlight_id` (crates/syntax_theme) ranges the theme's keys from the capture's first
+ * segment to its full name and takes the longest that is a dotted prefix.
  */
-const PREFIX_FALLBACK: Record<Editor, boolean> = { neovim: true, helix: true, zed: false };
+const PREFIX_FALLBACK: Record<Editor, boolean> = { neovim: true, helix: true, zed: true };
 
 /**
  * Canonical capture -> the target's own name for it. Only entries that change something are listed:
@@ -319,29 +321,11 @@ export const CAPTURE_MAPPINGS: Record<Editor, Readonly<Record<string, string>>> 
         "keyword.type": "keyword.storage.type",
         "keyword.directive.define": "keyword.directive",
     },
-    // Zed matches theme keys exactly, so every capture its themes do not define is flattened to the
-    // nearest one they do. Deliberately NOT the documented multi-capture form (`@keyword
-    // @keyword.modifier`, resolved right-to-left): that would keep more fidelity for themes carrying
-    // the specific key, but it rests on behaviour nothing here could verify - Zed runs under Xvfb with
-    // SwiftShader but would not yield a readable frame. Flattening is guaranteed to be styled.
-    zed: {
-        "constant.builtin": "constant",
-        "constant.macro": "constant",
-        "function.call": "function",
-        "function.macro": "function",
-        "keyword.conditional": "keyword",
-        "keyword.conditional.ternary": "keyword",
-        "keyword.directive": "keyword",
-        "keyword.directive.define": "keyword",
-        "keyword.function": "keyword",
-        "keyword.import": "keyword",
-        "keyword.modifier": "keyword",
-        "keyword.operator": "keyword",
-        "keyword.repeat": "keyword",
-        "keyword.return": "keyword",
-        "keyword.type": "keyword",
-        "variable.builtin": "variable",
-    },
+    // Zed needs no entries: every first segment we use (keyword, function, constant, variable, ...) is a
+    // key its themes define, so its prefix fallback resolves the specific names on its own. Flattening
+    // them here would be worse than doing nothing - it would discard the specific name for the themes
+    // that DO define it.
+    zed: {},
 };
 
 /** Does `editor` style `capture`, directly or through its prefix fallback? */

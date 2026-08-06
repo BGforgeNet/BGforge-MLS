@@ -16,9 +16,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { CANONICAL_EDITOR, mapQuery, type Editor } from "./editor-captures.ts";
+import { CAPTURE_MAPPINGS, mapQuery, type Editor } from "./editor-captures.ts";
 
-const EDITORS: readonly Editor[] = ["neovim", "helix", "zed"];
+/**
+ * Only editors that rename something get a variant. Neovim reads the canonical file because that is the
+ * convention it is written in; Zed reads it because its own prefix fallback resolves our names already.
+ */
+const EDITORS: readonly Editor[] = (["neovim", "helix", "zed"] as const).filter(
+    (e) => Object.keys(CAPTURE_MAPPINGS[e]).length > 0,
+);
 
 function main(): void {
     const { values } = parseArgs({ options: { "bundle-dir": { type: "string" } } });
@@ -36,9 +42,6 @@ function main(): void {
 
         const source = fs.readFileSync(canonical, "utf-8");
         for (const editor of EDITORS) {
-            // The canonical file already IS the Neovim flavour and stays at queries/highlights.scm,
-            // which is where the Neovim guide points; a duplicate copy would just drift.
-            if (editor === CANONICAL_EDITOR) continue;
             const outDir = path.join(bundleDir, grammar.name, "queries", editor);
             fs.mkdirSync(outDir, { recursive: true });
             fs.writeFileSync(path.join(outDir, "highlights.scm"), mapQuery(editor, source), "utf-8");

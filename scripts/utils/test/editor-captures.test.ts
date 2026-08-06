@@ -65,16 +65,19 @@ describe("per-editor highlight queries", () => {
 
     it("rewrites code lines but not the header comments that document canonical names", () => {
         const source = ["; number -> @number", "(number) @number", "(x) @keyword.modifier"].join("\n");
-        expect(mapQuery("zed", source).split("\n")).toEqual([
+        expect(mapQuery("helix", source).split("\n")).toEqual([
             "; number -> @number",
-            "(number) @number",
-            "(x) @keyword",
+            "(number) @constant.numeric",
+            "(x) @keyword.storage.modifier",
         ]);
     });
 
-    it("leaves the canonical Neovim flavour untouched", () => {
+    // Neovim reads the canonical file because it is written in Neovim's convention; Zed reads it because
+    // its own longest-dotted-prefix lookup resolves those names already. Only Helix needs a variant, and
+    // a mapping table appearing for either of the other two is a decision to re-examine, not a detail.
+    it.each(["neovim", "zed"] as const)("leaves the canonical file untouched for %s", (editor) => {
         for (const grammar of GRAMMARS) {
-            expect(mapQuery("neovim", canonicalQuery(grammar))).toBe(canonicalQuery(grammar));
+            expect(mapQuery(editor, canonicalQuery(grammar))).toBe(canonicalQuery(grammar));
         }
     });
 });
