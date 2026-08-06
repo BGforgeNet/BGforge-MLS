@@ -46,6 +46,11 @@ For a per-language layout such as `tra/english/x#viconia.tra`, point `translatio
 subdirectory: `auto_tra` matches by basename _within_ `directory`, so a bare `tra` never finds a file nested under
 `tra/<language>/`, and every `@N` stays unresolved.
 
+The same setting decides which language a tp2 path like `COMPILE ~mymod/dlg/x#npc.d~ USING
+~mymod/tra/%LANGUAGE%/x#npc.tra~` navigates to. `%LANGUAGE%` has no value until install time and the file exists
+once per language, so go-to-definition opens the copy in `translation.directory`; with the setting unset it stays
+put rather than picking a language for you.
+
 The keys nest under a top-level `mls:` block (a bare top-level `translation:` is not read):
 
 ```yaml

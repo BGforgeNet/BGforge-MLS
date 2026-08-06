@@ -85,6 +85,12 @@ export interface ProviderContext {
      * unchanged content so the cache can short-circuit without scanning text.
      */
     getDocumentVersion?: (uri: string) => number | undefined;
+    /**
+     * The configured translation directory (`mls.translation.directory`), absolute, or undefined when it is
+     * unset or resolves outside the workspace. Read from the translation service so a provider cannot grow a
+     * second answer to "which language directory does this workspace mean".
+     */
+    getTranslationDir?: () => string | undefined;
 }
 
 // =============================================================================

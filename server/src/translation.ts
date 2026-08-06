@@ -84,6 +84,15 @@ export class Translation {
     // =========================================================================
 
     /**
+     * The configured tra directory as an absolute path, or undefined when unset or outside the workspace.
+     * Exposed so features that need to know which language directory the workspace means - tp2 path
+     * navigation, for one - read the same answer `@N` resolution uses.
+     */
+    directory(): string | undefined {
+        return resolveTraDir(this.state);
+    }
+
+    /**
      * Get hover for a translation reference.
      * @param uri - Document URI
      * @param langId - Language ID

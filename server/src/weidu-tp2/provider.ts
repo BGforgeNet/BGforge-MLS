@@ -450,7 +450,7 @@ class WeiduTp2Provider
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {
-        return getDefinition(text, uri, position, this.fileIndex?.symbols);
+        return getDefinition(text, uri, position, this.fileIndex?.symbols, this.storedContext?.getTranslationDir?.());
     }
 
     reloadFileData(uri: NormalizedUri, text: string): void {

@@ -118,6 +118,7 @@ export function register(ctx: HandlerContext): void {
             settings: defaultSettings,
             getDocumentText: (uri) => ctx.documents.get(uri)?.getText(),
             getDocumentVersion: (uri) => ctx.documents.get(uri)?.version,
+            getTranslationDir: () => translation.directory(),
         });
 
         initServerContext({

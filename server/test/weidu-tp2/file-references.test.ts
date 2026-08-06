@@ -185,3 +185,75 @@ describe("TP2 definition: path strings own the click (no wrong-jump to a same-na
         expect(classify(result, uri)).toBe("self@2");
     });
 });
+
+describe("TP2 definition: a %LANGUAGE% translation path resolves through the configured tra directory", () => {
+    // A `%LANGUAGE%`-parameterised .tra reference has no static path, and its basename exists once per
+    // language directory - so the unique-match rule above declines rather than pick one. The workspace has
+    // already named a language directory for `@N` resolution (`mls.translation.directory` in .bgforge.yml);
+    // navigation reads that same setting instead of guessing, and declines when it is not set.
+    let gameDir: string;
+    let tp2Uri: string;
+
+    beforeEach(() => {
+        gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "tp2-lang-"));
+        const tp2Path = path.join(gameDir, "mymod", "mymod.tp2");
+        fs.mkdirSync(path.dirname(tp2Path), { recursive: true });
+        fs.writeFileSync(tp2Path, "// mod");
+        tp2Uri = pathToFileURL(tp2Path).toString();
+    });
+
+    afterEach(() => {
+        fs.rmSync(gameDir, { recursive: true, force: true });
+    });
+
+    function write(rel: string, content = ""): string {
+        const f = path.join(gameDir, rel);
+        fs.mkdirSync(path.dirname(f), { recursive: true });
+        fs.writeFileSync(f, content);
+        return f;
+    }
+    const englishDir = (): string => path.join(gameDir, "mymod", "tra", "english");
+    const at = (text: string, needle: string): Position => ({ line: 0, character: text.indexOf(needle) });
+    const outcome = (text: string, needle: string, traDir?: string): string =>
+        classify(getDefinition(text, tp2Uri, at(text, needle), undefined, traDir), tp2Uri);
+
+    const TEXT = `COMPILE ~mymod/dlg/x#npc.d~ USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`;
+
+    beforeEach(() => {
+        write("mymod/tra/english/x#npc.tra", "@1 = ~hello~");
+        write("mymod/tra/french/x#npc.tra", "@1 = ~bonjour~");
+    });
+
+    it("jumps into the configured language directory", () => {
+        const result = getDefinition(TEXT, tp2Uri, at(TEXT, "x#npc.tra"), undefined, englishDir());
+
+        expect(result).not.toBeNull();
+        expect(fileURLToPath(result!.uri)).toBe(path.join(englishDir(), "x#npc.tra"));
+    });
+
+    it("stays put when no tra directory is configured", () => {
+        expect(outcome(TEXT, "x#npc.tra")).toBe("self@0");
+    });
+
+    it("stays put when the configured directory does not hold that file", () => {
+        expect(outcome(TEXT, "x#npc.tra", path.join(gameDir, "mymod", "tra", "german"))).toBe("self@0");
+    });
+
+    // The setting names the TRANSLATION directory, so it licenses resolving a .tra/.msg reference and
+    // nothing else: a variable-pathed .d stays ambiguous rather than being redirected there.
+    it("does not redirect a non-translation reference", () => {
+        write("mymod/dlg/a/x#dup.d");
+        write("mymod/dlg/b/x#dup.d");
+        const text = `COMPILE ~%custom%/x#dup.d~`;
+
+        expect(outcome(text, "x#dup.d", englishDir())).toBe("self@0");
+    });
+
+    // A literal path is resolved on its own terms; a missing file must not silently become the tra dir's
+    // same-named one, which would send a click on the french path into english.
+    it("does not redirect a literal path that simply does not exist", () => {
+        const text = `COMPILE ~mymod/tra/german/x#npc.tra~`;
+
+        expect(outcome(text, "x#npc.tra", englishDir())).toBe("self@0");
+    });
+});

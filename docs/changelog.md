@@ -70,6 +70,10 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - TP2 completion inside a string now offers the variables alone, instead of the whole vocabulary. A `%var%` is
   the only thing that resolves there, so a path string now suggests `MOD_FOLDER`, `DEST_FILE` and your own
   variables rather than several hundred commands as well.
+- Go to definition now follows a tp2 path whose language is a variable - `USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`
+  opens the file in the language directory `mls.translation.directory` names, the same one `@N` previews use.
+  It used to stay put, because the file exists once per language and there was nothing to say which you meant.
+  With that setting unset it still stays put rather than guessing.
 
 ## 3.12.0
 

@@ -28,5 +28,9 @@ export default defineConfig({
         // local run, and near-threshold tests trip stochastically. 60s like every suite
         // in the block; the timeout guards against hangs, not slowness.
         testTimeout: 60000,
+        // Same reasoning, and these suites need it MORE than the test bodies do: the corpus sweeping happens
+        // in beforeAll, which otherwise keeps vitest's 10s default while the tests it feeds get 60s. The
+        // tssl write-back hook parses its corpus in ~9s idle, so a contended run failed the hook, not a test.
+        hookTimeout: 60000,
     },
 });

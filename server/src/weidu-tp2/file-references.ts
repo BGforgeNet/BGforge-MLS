@@ -2,13 +2,17 @@
  * File-reference go-to-definition / Ctrl+Click for WeiDU TP2: the file paths in
  * COPY / COPY_LARGE (`from` field only), COMPILE (`source` + `USING tra`), and INCLUDE.
  *
- * Three-way target model, in WeiDU's own precedence order:
+ * Target model, in WeiDU's own precedence order:
  *  1. Inline heredoc block (`<<<<<<<< label ... >>>>>>>>`): the reference is a symbol defined in the
  *     source, so jump to the label line. Matched by exact string identity - no variable resolution -
  *     and checked FIRST because a defined inline label shadows a same-named file in WeiDU.
  *  2. Filesystem path, only when the target extension is one the extension can display. Resolve
  *     `%MOD_FOLDER%` by WeiDU's own rule (see resolveModContext) and existence-check.
- *  3. Otherwise no navigation (user `%var%`, COPY_EXISTING game resref, opaque binary, absent file).
+ *  3. A `.tra`/`.msg` whose path still holds a `%var%`: the configured translation directory
+ *     (see resolveInTranslationDir).
+ *  4. A basename that is unique in the mod, which is what the variable path prefixes real mods use leave
+ *     to match on.
+ *  5. Otherwise no navigation (unresolvable `%var%`, COPY_EXISTING game resref, opaque binary, absent file).
  *
  * Infinity-Engine only: Fallout uses sslc, not tp2, so `.pro`/`.map` never appear here.
  */
@@ -75,7 +79,12 @@ const FILENAME_SEARCH_BUDGET = 20000;
  * Returns null only when the cursor is NOT on a file-directive path string (so ordinary tokens keep
  * their normal go-to-definition behavior).
  */
-export function tryFileReferenceDefinition(node: SyntaxNode, text: string, uri: string): Location | null {
+export function tryFileReferenceDefinition(
+    node: SyntaxNode,
+    text: string,
+    uri: string,
+    traDir?: string,
+): Location | null {
     const stringNode = findAncestorOfType(node, STRING_TYPES);
     if (!stringNode) {
         return null;
@@ -118,14 +127,51 @@ export function tryFileReferenceDefinition(node: SyntaxNode, text: string, uri: 
     if (precise) {
         return precise;
     }
-    // 3. Filename-first: real mods parameterize path prefixes with mutable OUTER_SPRINT/OUTER_SET user
+    // 3. Configured translation directory: a `%LANGUAGE%` path's basename exists once per language, so the
+    // unique-match step below declines it. The workspace has already named the language it means.
+    const byTraDir = resolveInTranslationDir(raw, traDir);
+    if (byTraDir) {
+        return byTraDir;
+    }
+    // 4. Filename-first: real mods parameterize path prefixes with mutable OUTER_SPRINT/OUTER_SET user
     // variables that have no reliable static value, but the basename is literal - search the mod for it.
     const byName = resolveByBasename(raw, uri);
     if (byName) {
         return byName;
     }
-    // 4. Recognized path with no resolvable target: no-op, but authoritative (suppresses the wrong jump).
+    // 5. Recognized path with no resolvable target: no-op, but authoritative (suppresses the wrong jump).
     return self;
+}
+
+/** SYNC: translation/loader.ts `extensions` - the file types the translation directory holds. */
+const TRANSLATION_EXT: ReadonlySet<string> = new Set(["tra", "msg"]);
+
+/**
+ * Resolve a variable-pathed translation reference (`mymod/tra/%LANGUAGE%/x.tra`) inside the tra directory
+ * the workspace configured for `@N` resolution, so navigation and the `@N` hover agree on which language
+ * they mean. Unset, or the file is not there: null, and the caller declines rather than picking a language.
+ *
+ * Requires an unresolved `%var%` and a translation extension. A literal path is resolved on its own terms
+ * above - redirecting one here would send a click on `tra/german/x.tra` into english - and the setting names
+ * the translation directory only, so it licenses nothing else.
+ */
+function resolveInTranslationDir(raw: string, traDir: string | undefined): Location | null {
+    if (traDir === undefined) {
+        return null;
+    }
+    const p = raw.replaceAll("\\", "/");
+    if (!p.includes("%")) {
+        return null;
+    }
+    const base = p.split("/").pop() ?? "";
+    if (!base || base.includes("%")) {
+        return null;
+    }
+    if (!TRANSLATION_EXT.has(path.extname(base).slice(1).toLowerCase())) {
+        return null;
+    }
+    const resolved = resolveExisting(path.join(traDir, base));
+    return resolved ? fileLocation(resolved) : null;
 }
 
 /**

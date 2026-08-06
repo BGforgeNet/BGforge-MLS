@@ -24,7 +24,13 @@ import type { Symbols } from "../core/symbol-index";
 /**
  * Get definition location for the symbol at the given position.
  */
-export function getDefinition(text: string, uri: string, position: Position, symbols?: Symbols): Location | null {
+export function getDefinition(
+    text: string,
+    uri: string,
+    position: Position,
+    symbols?: Symbols,
+    traDir?: string,
+): Location | null {
     if (!isInitialized()) {
         return null;
     }
@@ -65,7 +71,7 @@ export function getDefinition(text: string, uri: string, position: Position, sym
     // Check if cursor is on a COPY/COMPILE/INCLUDE file path (or inline heredoc reference).
     // Authoritative for path strings: returns non-null so the definition handler does not fall through
     // to its bare-word symbol lookup (which would wrongly jump to a same-named function).
-    const fileRefResult = tryFileReferenceDefinition(targetNode, text, uri);
+    const fileRefResult = tryFileReferenceDefinition(targetNode, text, uri, traDir);
     if (fileRefResult) {
         return fileRefResult;
     }
