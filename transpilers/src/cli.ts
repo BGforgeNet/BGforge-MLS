@@ -13,6 +13,7 @@ import {
     tbaf as transpileTBAF,
     td as transpileTD,
     createBatchState,
+    outputPathFor,
     type TranspileBatchState,
 } from "./index";
 import {
@@ -48,16 +49,6 @@ function getTranspileType(filePath: string): TranspileType | null {
     return null;
 }
 
-function getOutputPath(filePath: string, type: TranspileType): string {
-    if (type === "td") {
-        return filePath.replace(/\.td$/i, ".d");
-    }
-    if (type === "tssl") {
-        return filePath.replace(/\.tssl$/i, ".ssl");
-    }
-    return filePath.replace(/\.tbaf$/i, ".baf");
-}
-
 // Shared batch state for TSSL files - reuses ts-morph Project and caches
 // inline function extraction across files, avoiding redundant parsing of
 // shared libraries like folib.
@@ -90,7 +81,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             output = await transpileTBAF(resolved, text);
         }
 
-        const outPath = getOutputPath(filePath, type);
+        // The library's mapping, not a local copy: an extension it does not map throws here rather than
+        // returning the input path, which `--save` would then overwrite with the transpiled output.
+        const outPath = outputPathFor(filePath);
 
         // Read with try/catch instead of existsSync->readFileSync to avoid the
         // TOCTOU window CodeQL js/file-system-race flags.

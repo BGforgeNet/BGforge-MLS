@@ -134,6 +134,22 @@ describe("transpile CLI integration", () => {
             expect(fs.existsSync(path.join(tmpDir, "out.d"))).toBe(true);
         });
 
+        // A mapping that fails to swap the extension returns the INPUT path, which --save then overwrites
+        // with the transpiled output - one-way, so unrecoverable. Hence the source-unchanged assertion.
+        it("writes beside an uppercase-extension source without overwriting it", () => {
+            const tdFile = path.join(SAMPLES_DIR, "botsmith.td");
+            if (!fs.existsSync(tdFile)) return;
+
+            const tmpTd = path.join(tmpDir, "Upper.TD");
+            fs.copyFileSync(tdFile, tmpTd);
+            const sourceBefore = fs.readFileSync(tmpTd, "utf-8");
+
+            const { code } = run(tmpTd, "--save");
+            expect(code).toBe(0);
+            expect(fs.existsSync(path.join(tmpDir, "Upper.d"))).toBe(true);
+            expect(fs.readFileSync(tmpTd, "utf-8")).toBe(sourceBefore);
+        });
+
         it("does not rewrite up-to-date output", () => {
             const tdFile = path.join(SAMPLES_DIR, "botsmith.td");
             if (!fs.existsSync(tdFile)) return;
