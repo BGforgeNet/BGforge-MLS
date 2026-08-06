@@ -48,10 +48,19 @@ grammar_highlight() {
     #       but our grammars use domain names (weidu-baf, fallout-ssl, etc.).
     #       Only the CLI cares about this - editors (Neovim, Helix, Zed, Emacs)
     #       discover grammars through their own config, not directory names.
-    #    b) Its built-in list is very conservative and doesn't include
-    #       Neovim-convention captures (keyword.conditional, function.builtin,
-    #       function.call, string.special, etc.) that are widely supported by
-    #       all editors. Every capture we use would produce a warning.
+    #    b) Its built-in list is very conservative and doesn't include the
+    #       Neovim-convention captures we use (keyword.conditional,
+    #       function.builtin, function.call, string.special, etc.), so every
+    #       one of them would produce a warning.
+    #
+    # Support for those captures is NOT uniform across editors, contrary to what
+    # this comment claimed until measured 2026-08-06. Neovim documents all 32 we
+    # use and falls back on dotted prefixes; Helix resolves the longest matching
+    # theme key, so only `number` is unstyled there (it has no `number` root -
+    # numerics are `constant.numeric`); Zed's theme capture list is flat with no
+    # prefix fallback, leaving 276 of our 564 capture uses unstyled, dominated by
+    # `function.builtin`. Both facts were confirmed by rendering real files in
+    # nvim and hx, not read off docs. A per-editor query variant is the open fix.
     #
     # So this step only checks that highlights.scm exists as a smoke test.
     if [[ ! -f "$GRAMMAR_DIR/queries/highlights.scm" ]]; then

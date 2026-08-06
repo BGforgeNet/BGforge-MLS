@@ -141,20 +141,23 @@ Build them (`hx --grammar fetch` is only for git sources; a local path has nothi
 hx --grammar build
 ```
 
-Copy highlight queries to `~/.config/helix/runtime/queries/<grammar>/` from the same bundle, so the
-queries match the parsers they were generated with:
+Copy highlight queries from the same bundle, so the queries match the parsers they were generated with.
+Note the destination directory is the **language** name from `[[language]]` above (`fallout-ssl`), not the
+grammar name (`ssl`) -- Helix resolves queries per language, and queries under a grammar name are silently
+never loaded, and `hx --health <language>` then reports its highlight queries as missing:
 
 ```bash
 BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 HELIX_QUERIES="${XDG_CONFIG_HOME:-$HOME/.config}/helix/runtime/queries"
 
-for pair in "fallout-ssl:ssl" "weidu-baf:baf" "weidu-d:weidu_d" "weidu-tp2:weidu_tp2" "fallout-msg:fallout_msg" "weidu-tra:weidu_tra"; do
-  grammar="${pair%%:*}"
-  lang="${pair##*:}"
-  mkdir -p "$HELIX_QUERIES/$lang"
-  cp "$BUNDLE/$grammar/queries/highlights.scm" "$HELIX_QUERIES/$lang/highlights.scm"
+for grammar in fallout-ssl weidu-baf weidu-d weidu-tp2 fallout-msg weidu-tra; do
+  mkdir -p "$HELIX_QUERIES/$grammar"
+  cp "$BUNDLE/$grammar/queries/highlights.scm" "$HELIX_QUERIES/$grammar/highlights.scm"
 done
 ```
+
+Confirm both halves loaded before looking for color: `hx --health weidu-tp2` reports `Tree-sitter parser`
+and `Highlight queries` separately, and both must be present.
 
 ## TypeScript plugins (TSSL/TD)
 
