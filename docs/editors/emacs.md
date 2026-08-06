@@ -80,17 +80,42 @@ Note: `.h` files default to C in Emacs. The config above overrides this globally
 
 ## Tree-sitter highlighting (Emacs 29+)
 
+### Download the grammar bundle
+
+The generated parsers are not in the git repository, so `treesit-install-language-grammar` cannot build
+them from a clone -- it looks for `parser.c`, which is produced at build time. Download the published
+bundle instead:
+
+```bash
+mkdir -p ~/.local/share/bgforge-mls
+curl -fsSL -o /tmp/bgforge-grammars.zip \
+  https://github.com/BGforgeNet/BGforge-MLS/releases/latest/download/bgforge-mls-tree-sitter-grammars.zip
+unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
+```
+
+That yields `~/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/<grammar>/`, one directory per
+grammar. For daily builds from the default branch, replace `latest/download` with
+`download/grammars-nightly`.
+
 ### Compile grammars
 
+`treesit-language-source-alist` accepts a local directory in place of a repository URL, and looks for
+`parser.c` under `src` by default -- which is the bundle's layout, so no revision or source directory is
+needed:
+
 ```elisp
-(setq treesit-language-source-alist
-      '((ssl "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/fallout-ssl/src")
-        (baf "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/weidu-baf/src")
-        (weidu_d "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/weidu-d/src")
-        (weidu_tp2 "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/weidu-tp2/src")
-        (fallout_msg "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/fallout-msg/src")
-        (weidu_tra "https://github.com/BGforgeNet/BGforge-MLS" "master" "grammars/weidu-tra/src")))
+(let ((bundle (expand-file-name "~/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/")))
+  (setq treesit-language-source-alist
+        `((ssl ,(concat bundle "fallout-ssl"))
+          (baf ,(concat bundle "weidu-baf"))
+          (weidu_d ,(concat bundle "weidu-d"))
+          (weidu_tp2 ,(concat bundle "weidu-tp2"))
+          (fallout_msg ,(concat bundle "fallout-msg"))
+          (weidu_tra ,(concat bundle "weidu-tra")))))
 ```
+
+Leaving the revision out matters: with one set, Emacs runs `git checkout` in that directory, and the
+extracted bundle is not a git repository.
 
 Compile each grammar (one-time):
 

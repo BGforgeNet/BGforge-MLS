@@ -141,6 +141,19 @@ jobs:
       - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
         run: pnpm build:editors
 
+      # Generated parser sources are gitignored, so a clone cannot feed the tree-sitter
+      # recipes in docs/editors/. This archive is what those recipes consume. It lands in
+      # dist/ as a .zip, which the artifact-hash, upload and release steps below already
+      # glob - so it is provenance-covered and attached to the release without listing it
+      # again. Requires the Build tree-sitter grammar step above to have run.
+      - name: Package tree-sitter grammars
+        run: ./scripts/package-grammars.sh
+
+      # Runs on every push, not just releases: the suites parse through WASM and never open
+      # this archive, so this is the only check that the shipped sources build for a consumer.
+      - name: Verify the grammar bundle compiles
+        run: ./scripts/verify-grammar-bundle.sh
+
       # Two separate uploads so the VSIX can be fetched on its own, apart from the
       # editor bundles and SBOM. Default 90-day retention is excessive for branch
       # builds; 14 days is enough to inspect a CI artifact from a recent push or PR.

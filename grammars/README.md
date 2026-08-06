@@ -52,6 +52,34 @@ WASM files are copied to `server/out/` by `scripts/build-base-server.sh` during 
 
 The MSG and TRA grammars ship to `server/out/` for parse-error diagnostics, but are not copied to the `@bgforge/format` CLI bundle (`format/out/`) since their formatters are string-based, not tree-sitter. They are also built for external editors that install tree-sitter grammars natively.
 
+## Published bundle (external editors)
+
+The generated `src/` directories -- `parser.c`, `grammar.json`, `node-types.json` -- are gitignored
+(`.gitignore`: `grammars/*/src/*`, with the hand-written `scanner.c` as the only exception), because they
+are regenerated on every build and their canonical format is the generator's. A clone therefore carries
+`grammar.js` but nothing an editor can compile, and every editor that builds a grammar from a git ref
+(nvim-treesitter, Helix, Emacs `treesit`, Zed) needs those files.
+
+`scripts/package-grammars.sh` (via `pnpm package:grammars`) bundles them instead:
+
+- `dist/bgforge-mls-tree-sitter-grammars.zip`, one self-contained directory per grammar, each with
+  `grammar.js`, the generated `src/`, `queries/highlights.scm` and the `.wasm` build.
+- Attached to every release, and to the rolling `grammars-nightly` prerelease built daily from the
+  default branch by `.github/workflows/nightly-grammars.yml`. Stable URLs:
+  `releases/latest/download/bgforge-mls-tree-sitter-grammars.zip` and
+  `releases/download/grammars-nightly/bgforge-mls-tree-sitter-grammars.zip` -- which is why the filename
+  carries no version, unlike the editor bundles.
+- The archive's README records the parser ABI and the tree-sitter CLI version it was generated with. A
+  consumer's tree-sitter runtime has to support that ABI, and it is the first thing to check when a
+  parser refuses to load.
+
+`scripts/verify-grammar-bundle.sh` gates it on every push: it extracts the archive and builds each
+grammar with `cc` the way a consuming editor does, then checks the `tree_sitter_<language>` entrypoint is
+exported. Nothing else covers that -- the test suites parse through WASM and never open the archive.
+`-Wl,--no-undefined` is what makes the gate real: a shared object links happily with unresolved symbols,
+so a bundle missing an external `scanner.c` would otherwise build here and fail only on the user's
+`dlopen`.
+
 ## Highlight Queries
 
 Each grammar has a `queries/highlights.scm` file following Neovim capture name conventions. These are used by Neovim, Helix, Zed, and Emacs for tree-sitter highlighting. See the [editor setup docs](../docs/editors/) for installation instructions.

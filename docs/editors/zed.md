@@ -189,7 +189,39 @@ Fallout Worldmap has no `path_suffixes` to avoid matching all `.txt` files. Use 
 
 ### Tree-sitter grammars
 
-Add grammar entries to `extension.toml`. Update the `commit` SHA to the latest from the [repository](https://github.com/BGforgeNet/BGforge-MLS):
+Zed builds grammars from a git repository at a revision, and the generated parsers are not committed to
+this one -- they are produced at build time. Unlike the other editors, Zed accepts no prebuilt parser and
+no plain directory, so the published bundle has to be turned into a local repository first:
+
+```bash
+mkdir -p ~/.local/share/bgforge-mls
+curl -fsSL -o /tmp/bgforge-grammars.zip \
+  https://github.com/BGforgeNet/BGforge-MLS/releases/latest/download/bgforge-mls-tree-sitter-grammars.zip
+unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
+cd ~/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars
+git init -q && git add -A && git commit -qm "bgforge-mls grammars"
+git rev-parse HEAD    # the rev for extension.toml below
+```
+
+For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
+Then reference it with a `file://` URL, which Zed supports for local extension development, using the
+commit printed above:
+
+```toml
+[grammars.ssl]
+repository = "file:///home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
+commit = "<the rev printed above>"
+path = "fallout-ssl"
+```
+
+Repeat per grammar, changing `path` to `weidu-baf`, `weidu-d`, `weidu-tp2`, `fallout-msg`, `weidu-tra`.
+Re-run the `git add`/`commit` after downloading a newer bundle and update the commit.
+
+Alternatively, build from the repository itself. That needs the
+[tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md) to
+generate the parser into `grammars/<name>/src` in a clone first, then point `repository` at that clone
+the same way -- Zed will not run the generator for you. Add grammar entries to `extension.toml`, updating
+the `commit` SHA to the latest from the [repository](https://github.com/BGforgeNet/BGforge-MLS):
 
 ```toml
 [grammars.ssl]
@@ -225,15 +257,15 @@ path = "grammars/weidu-tra"
 
 ### Highlight queries
 
-Copy the highlight queries into each language directory (`languages/<lang>/highlights.scm`):
+Copy the highlight queries into each language directory (`languages/<lang>/highlights.scm`), from the
+bundle you extracted above so the queries match the parsers they were generated with:
 
 ```bash
-REPO="https://raw.githubusercontent.com/BGforgeNet/BGforge-MLS/master"
+BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 EXT_DIR="$HOME/zed-extensions/bgforge-mls"
 
 for lang in fallout-ssl weidu-baf weidu-d weidu-tp2 fallout-msg weidu-tra; do
-  curl -fsSL "$REPO/grammars/$lang/queries/highlights.scm" \
-    -o "$EXT_DIR/languages/$lang/highlights.scm"
+  cp "$BUNDLE/$lang/queries/highlights.scm" "$EXT_DIR/languages/$lang/highlights.scm"
 done
 ```
 

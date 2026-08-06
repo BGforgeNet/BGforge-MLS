@@ -67,6 +67,7 @@
         "test:e2e": "./scripts/test-e2e.sh",
         "test:coverage": "cd server && vitest run --coverage",
         "package": "./scripts/package.sh",
+        "package:grammars": "./scripts/package-grammars.sh && ./scripts/verify-grammar-bundle.sh",
         "format": "node --no-warnings format/out/cli.js",
         "binary": "node binary/out/cli.js",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",

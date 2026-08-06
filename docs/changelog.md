@@ -31,6 +31,16 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
   `ADD_TRANS_ACTION` and `REPLACE_TRANS_ACTION` colour their tilde-quoted body with the BAF vocabulary, the
   way `IF ~...~` and `DO ~...~` already did.
 
+### Other editors
+
+- Tree-sitter grammars are now published as a downloadable bundle,
+  `bgforge-mls-tree-sitter-grammars.zip`, attached to every release and rebuilt daily from the default
+  branch as the `grammars-nightly` prerelease. It carries the generated parsers, the highlight queries and
+  the WASM builds, one directory per grammar.
+  This is what the Neovim, Helix, Zed and Emacs setup guides now install from. The recipes there
+  previously pointed at the repository, where the parsers are generated at build time rather than
+  committed, so there was nothing for those editors to compile and highlighting never came up.
+
 ### Fixes
 
 - Various values such as Save Bonus, THAC0/Damage Bonus and AC and DR Modifier, etc are now correctly

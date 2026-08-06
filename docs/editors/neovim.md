@@ -89,7 +89,53 @@ vim.lsp.enable("bgforge-mls")
 
 ### Parser registration
 
-Using [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter), register the parsers via a `TSUpdate` autocmd. The `location` field points to the grammar subdirectory in the monorepo, and `queries` specifies the highlight query files:
+The generated parsers are not in the git repository (they are produced at build time), so a recipe
+pointing `url` at it has nothing to compile. Two ways round that; the first needs no extra tooling.
+
+**From the published bundle.** Download and extract it:
+
+```bash
+mkdir -p ~/.local/share/bgforge-mls
+curl -fsSL -o /tmp/bgforge-grammars.zip \
+  https://github.com/BGforgeNet/BGforge-MLS/releases/latest/download/bgforge-mls-tree-sitter-grammars.zip
+unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
+```
+
+For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
+Then register each parser with `path` (a local directory) rather than `url`, pointing `queries` at the
+bundled query files:
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "TSUpdate",
+  callback = function()
+    local parsers = require("nvim-treesitter.parsers")
+    local bundle = vim.fn.expand("~/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars")
+
+    for lang, grammar in pairs({
+      ssl = "fallout-ssl",
+      baf = "weidu-baf",
+      weidu_d = "weidu-d",
+      weidu_tp2 = "weidu-tp2",
+      fallout_msg = "fallout-msg",
+      weidu_tra = "weidu-tra",
+    }) do
+      parsers[lang] = {
+        install_info = {
+          path = bundle .. "/" .. grammar,
+          queries = bundle .. "/" .. grammar .. "/queries",
+        },
+      }
+    end
+  end,
+})
+```
+
+**From the repository, generating the parser locally.** Requires the
+[tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md) on
+`PATH`; `generate = true` runs it, which is what makes a repository without a committed `src/parser.c`
+usable. The `location` field points to the grammar subdirectory in the monorepo, and `queries` specifies
+the highlight query files:
 
 ```lua
 vim.api.nvim_create_autocmd("User", {
@@ -103,6 +149,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/fallout-ssl",
         queries = "grammars/fallout-ssl/queries",
+        generate = true,
       },
     }
     parsers.baf = {
@@ -110,6 +157,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/weidu-baf",
         queries = "grammars/weidu-baf/queries",
+        generate = true,
       },
     }
     parsers.weidu_d = {
@@ -117,6 +165,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/weidu-d",
         queries = "grammars/weidu-d/queries",
+        generate = true,
       },
     }
     parsers.weidu_tp2 = {
@@ -124,6 +173,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/weidu-tp2",
         queries = "grammars/weidu-tp2/queries",
+        generate = true,
       },
     }
     parsers.fallout_msg = {
@@ -131,6 +181,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/fallout-msg",
         queries = "grammars/fallout-msg/queries",
+        generate = true,
       },
     }
     parsers.weidu_tra = {
@@ -138,6 +189,7 @@ vim.api.nvim_create_autocmd("User", {
         url = url,
         location = "grammars/weidu-tra",
         queries = "grammars/weidu-tra/queries",
+        generate = true,
       },
     }
   end,
@@ -163,18 +215,18 @@ Install the parsers:
 
 ### Manual query installation
 
-If highlights aren't installed automatically, copy them manually:
+If highlights aren't installed automatically, copy them from the extracted bundle -- keeping queries and
+parsers from the same build, rather than pulling queries from the default branch:
 
 ```bash
-REPO="https://raw.githubusercontent.com/BGforgeNet/BGforge-MLS/master"
+BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 NVIM_QUERIES="${XDG_CONFIG_HOME:-$HOME/.config}/nvim/queries"
 
 for pair in "fallout-ssl:ssl" "weidu-baf:baf" "weidu-d:weidu_d" "weidu-tp2:weidu_tp2" "fallout-msg:fallout_msg" "weidu-tra:weidu_tra"; do
   grammar="${pair%%:*}"
   lang="${pair##*:}"
   mkdir -p "$NVIM_QUERIES/$lang"
-  curl -fsSL "$REPO/grammars/$grammar/queries/highlights.scm" \
-    -o "$NVIM_QUERIES/$lang/highlights.scm"
+  cp "$BUNDLE/$grammar/queries/highlights.scm" "$NVIM_QUERIES/$lang/highlights.scm"
 done
 ```
 

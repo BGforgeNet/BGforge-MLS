@@ -8,16 +8,29 @@ The extension is the repository's primary product, so it uses the bare, GitHub-s
 
 ## Tag forms
 
-| Tag form                | Workflow              | Result                                                                                                                                                                    |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vX.Y.Z`                | `build.yml`           | Builds the VSIX, publishes it to the VS Marketplace and Open VSX, publishes `@bgforge/mls-server` to npm, and creates the GitHub Release (with SBOM and SLSA provenance). |
-| `binary/vX.Y.Z`         | `publish-library.yml` | Publishes `@bgforge/binary` to npm.                                                                                                                                       |
-| `format/vX.Y.Z`         | `publish-library.yml` | Publishes `@bgforge/format` to npm.                                                                                                                                       |
-| `transpile/vX.Y.Z`      | `publish-library.yml` | Publishes `@bgforge/transpile` to npm.                                                                                                                                    |
-| `actions/<name>/vX.Y.Z` | none                  | Immutable release ref for a reusable Action (`<name>` is `binary`, `format`, or `transpile`).                                                                             |
-| `actions/<name>/v1`     | none                  | Moving major alias, re-pointed to the latest `actions/<name>/v1.x`.                                                                                                       |
+| Tag form                | Workflow               | Result                                                                                                                                                                     |
+| ----------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vX.Y.Z`                | `build.yml`            | Builds the VSIX, publishes it to the VS Marketplace and Open VSX, publishes `@bgforge/mls-server` to npm, and creates the GitHub Release (with SBOM and SLSA provenance).  |
+| `binary/vX.Y.Z`         | `publish-library.yml`  | Publishes `@bgforge/binary` to npm.                                                                                                                                        |
+| `format/vX.Y.Z`         | `publish-library.yml`  | Publishes `@bgforge/format` to npm.                                                                                                                                        |
+| `transpile/vX.Y.Z`      | `publish-library.yml`  | Publishes `@bgforge/transpile` to npm.                                                                                                                                     |
+| `actions/<name>/vX.Y.Z` | none                   | Immutable release ref for a reusable Action (`<name>` is `binary`, `format`, or `transpile`).                                                                              |
+| `actions/<name>/v1`     | none                   | Moving major alias, re-pointed to the latest `actions/<name>/v1.x`.                                                                                                        |
+| `grammars-nightly`      | `nightly-grammars.yml` | Rolling prerelease of the tree-sitter grammar bundle, rebuilt daily from the default branch. Created by the workflow, not pushed by hand; the tag is moved on every build. |
 
 `build.yml` filters its push trigger to `v[0-9]+.[0-9]+.[0-9]+`, and `publish-library.yml` to the three `<lib>/v...` patterns. Any tag matching neither - including every `actions/*` tag - starts no workflow. An Action needs none: it is consumed directly from its source at the pinned git ref, not built or published.
+
+### Release assets
+
+The `vX.Y.Z` release carries the VSIX, the SBOM, the editor bundles, and
+`bgforge-mls-tree-sitter-grammars.zip` - the generated tree-sitter parsers, which are gitignored in the
+repository and so cannot be built from a clone (see [grammars/README.md](../grammars/README.md)). All
+of them are globbed into the release from `dist/`, and the same glob feeds the SLSA provenance subjects,
+so a new `dist/*.zip` is covered by both without being listed again.
+
+The grammar bundle is also published outside the release cycle, as the rolling `grammars-nightly`
+prerelease, so a grammar fix reaches external-editor users before the next version. That workflow is the
+only one here that creates a release without a hand-pushed tag.
 
 ## Pre-release checklist
 

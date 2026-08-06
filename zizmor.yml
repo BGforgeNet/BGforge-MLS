@@ -4,6 +4,11 @@
 # with the technical reason recorded here rather than only in a commit message.
 # Composite-action findings (actions/*/action.yml) cannot be ignored through this
 # file - see the inline `# zizmor: ignore[...]` comments in those files instead.
+#
+# Entries are LINE-ANCHORED: adding or removing steps in a workflow shifts the lines below and
+# the ignore stops matching, so the accepted finding resurfaces. Re-point the numbers in the
+# same change that moves the step. The lint fails rather than passing quietly, so this is
+# fail-closed - but the error names the finding, not the stale anchor.
 rules:
   unpinned-uses:
     ignore:
@@ -12,7 +17,7 @@ rules:
       # provenance attestation against the trusted builder's published tag, so a
       # SHA pin would make the resulting attestation unverifiable. Documented
       # in-line at the `uses:` line itself (build.yml, provenance job).
-      - build.yml:248
+      - build.yml:261
   cache-poisoning:
     ignore:
       # actions/setup-node's `cache: pnpm` restores the pnpm store from the
@@ -35,4 +40,4 @@ rules:
       # `files:` glob input, `fail_on_unmatched_files`, templated `name:`) without
       # a hand-rolled script. Keeping the action is a readability tradeoff, not
       # an oversight.
-      - build.yml:186
+      - build.yml:199

@@ -93,53 +93,66 @@ Note: `.h` files default to C in Helix. The config above overrides this globally
 
 ### Grammar configuration
 
-Add grammar entries to `~/.config/helix/languages.toml` and add `grammar` to each `[[language]]` block above to link them:
+The generated parsers are not in the git repository -- they are produced at build time -- so
+`hx --grammar build` has nothing to compile when it fetches from a git source. Download the published
+bundle and point Helix at it locally:
+
+```bash
+mkdir -p ~/.local/share/bgforge-mls
+curl -fsSL -o /tmp/bgforge-grammars.zip \
+  https://github.com/BGforgeNet/BGforge-MLS/releases/latest/download/bgforge-mls-tree-sitter-grammars.zip
+unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
+```
+
+For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
+
+Add grammar entries to `~/.config/helix/languages.toml` and add `grammar` to each `[[language]]` block
+above to link them. `source.path` takes an absolute path -- expand `~` yourself, Helix does not:
 
 ```toml
 [[grammar]]
 name = "ssl"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/fallout-ssl" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/fallout-ssl" }
 
 [[grammar]]
 name = "baf"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/weidu-baf" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/weidu-baf" }
 
 [[grammar]]
 name = "weidu_d"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/weidu-d" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/weidu-d" }
 
 [[grammar]]
 name = "weidu_tp2"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/weidu-tp2" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/weidu-tp2" }
 
 [[grammar]]
 name = "fallout_msg"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/fallout-msg" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/fallout-msg" }
 
 [[grammar]]
 name = "weidu_tra"
-source = { git = "https://github.com/BGforgeNet/BGforge-MLS", rev = "master", subpath = "grammars/weidu-tra" }
+source = { path = "/home/you/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/weidu-tra" }
 ```
 
-Fetch and build:
+Build them (`hx --grammar fetch` is only for git sources; a local path has nothing to fetch):
 
 ```bash
-hx --grammar fetch
 hx --grammar build
 ```
 
-Copy highlight queries to `~/.config/helix/runtime/queries/<grammar>/`:
+Copy highlight queries to `~/.config/helix/runtime/queries/<grammar>/` from the same bundle, so the
+queries match the parsers they were generated with:
 
 ```bash
-REPO="https://raw.githubusercontent.com/BGforgeNet/BGforge-MLS/master"
+BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 HELIX_QUERIES="${XDG_CONFIG_HOME:-$HOME/.config}/helix/runtime/queries"
 
 for pair in "fallout-ssl:ssl" "weidu-baf:baf" "weidu-d:weidu_d" "weidu-tp2:weidu_tp2" "fallout-msg:fallout_msg" "weidu-tra:weidu_tra"; do
   grammar="${pair%%:*}"
   lang="${pair##*:}"
   mkdir -p "$HELIX_QUERIES/$lang"
-  curl -fsSL "$REPO/grammars/$grammar/queries/highlights.scm" \
-    -o "$HELIX_QUERIES/$lang/highlights.scm"
+  cp "$BUNDLE/$grammar/queries/highlights.scm" "$HELIX_QUERIES/$lang/highlights.scm"
 done
 ```
 
