@@ -64,6 +64,14 @@ are regenerated on every build and their canonical format is the generator's. A 
 
 - `dist/bgforge-mls-tree-sitter-grammars.zip`, one self-contained directory per grammar, each with
   `grammar.js`, the generated `src/`, `queries/highlights.scm` and the `.wasm` build.
+- Per-editor query variants beside it, at `queries/helix/` and `queries/zed/`. The canonical
+  `queries/highlights.scm` uses Neovim capture names; Helix names several captures differently and Zed
+  styles a different subset, so the canonical file leaves tokens unstyled in both -- numbers render as
+  plain text in Helix, and Zed has no fallback for a dotted name its themes lack. The variants are
+  generated at package time by `scripts/utils/src/generate-editor-queries.ts` from the mapping tables in
+  `editor-captures.ts`, which also carries the vendored capture set each editor supports and the
+  provenance of each. `scripts/utils/test/editor-captures.test.ts` asserts every emitted capture is one
+  the target actually styles -- the check that makes this verifiable without installing three editors.
 - Attached to every release, and to the rolling `grammars-nightly` prerelease built daily from the
   default branch by `.github/workflows/nightly-grammars.yml`. Stable URLs:
   `releases/latest/download/bgforge-mls-tree-sitter-grammars.zip` and

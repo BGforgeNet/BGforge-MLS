@@ -258,14 +258,16 @@ path = "grammars/weidu-tra"
 ### Highlight queries
 
 Copy the highlight queries into each language directory (`languages/<lang>/highlights.scm`), from the
-bundle you extracted above so the queries match the parsers they were generated with:
+bundle you extracted above. Use each grammar's `queries/zed/` directory rather than `queries/`: the
+canonical file uses Neovim capture names, and Zed matches theme keys exactly with no fallback for a
+dotted name its themes do not define, so a third of the captures would go unstyled.
 
 ```bash
 BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 EXT_DIR="$HOME/zed-extensions/bgforge-mls"
 
 for lang in fallout-ssl weidu-baf weidu-d weidu-tp2 fallout-msg weidu-tra; do
-  cp "$BUNDLE/$lang/queries/highlights.scm" "$EXT_DIR/languages/$lang/highlights.scm"
+  cp "$BUNDLE/$lang/queries/zed/highlights.scm" "$EXT_DIR/languages/$lang/highlights.scm"
 done
 ```
 

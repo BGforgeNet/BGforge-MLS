@@ -177,6 +177,14 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
 - `scripts/utils/src/generate-ksh.ts`, `scripts/utils/src/generate-udl.ts`, `scripts/utils/src/generate-geany.ts`
   Generate the Kate KSyntaxHighlighting, Notepad++ UDL, and Geany filetype bundles. Called by `build-editors.sh`.
 
+- **`editor-captures.ts`**, **`generate-editor-queries.ts`**, **`check-editor-captures.ts`**
+  Per-editor highlight queries. The canonical `grammars/<g>/queries/highlights.scm` uses Neovim capture
+  names; `generate-editor-queries.ts --bundle-dir <dir>` writes Helix and Zed variants into the grammar
+  bundle using the mapping tables in `editor-captures.ts`, which also vendors the capture set each editor
+  styles. `check-editor-captures.ts [--zed]` re-derives those sets upstream and reports drift (manual -
+  needs the network). Guarded by `scripts/utils/test/editor-captures.test.ts`, which asserts every emitted
+  capture is one the target styles.
+
 - `scripts/utils/src/generate-td-lib-blocklist.ts`
   Regenerates the ES-lib completion blocklist in `plugins/td-plugin/src/filter-completions.ts` from the installed
   TypeScript's lib reference chain. Invoked via `pnpm regen:td-blocklist`.

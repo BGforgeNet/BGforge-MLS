@@ -141,10 +141,12 @@ Build them (`hx --grammar fetch` is only for git sources; a local path has nothi
 hx --grammar build
 ```
 
-Copy highlight queries from the same bundle, so the queries match the parsers they were generated with.
-Note the destination directory is the **language** name from `[[language]]` above (`fallout-ssl`), not the
-grammar name (`ssl`) -- Helix resolves queries per language, and queries under a grammar name are silently
-never loaded, and `hx --health <language>` then reports its highlight queries as missing:
+Copy highlight queries from the same bundle. Take them from each grammar's `queries/helix/` directory,
+not `queries/` -- the latter uses Neovim capture names, several of which Helix names differently, and
+numbers in particular would render as plain text. Note also that the destination directory is the
+**language** name from `[[language]]` above (`fallout-ssl`), not the grammar name (`ssl`): Helix resolves
+queries per language, and queries under a grammar name are silently never loaded, with
+`hx --health <language>` then reporting its highlight queries as missing.
 
 ```bash
 BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
@@ -152,7 +154,7 @@ HELIX_QUERIES="${XDG_CONFIG_HOME:-$HOME/.config}/helix/runtime/queries"
 
 for grammar in fallout-ssl weidu-baf weidu-d weidu-tp2 fallout-msg weidu-tra; do
   mkdir -p "$HELIX_QUERIES/$grammar"
-  cp "$BUNDLE/$grammar/queries/highlights.scm" "$HELIX_QUERIES/$grammar/highlights.scm"
+  cp "$BUNDLE/$grammar/queries/helix/highlights.scm" "$HELIX_QUERIES/$grammar/highlights.scm"
 done
 ```
 

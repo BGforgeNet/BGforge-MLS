@@ -69,6 +69,10 @@ if [ ${#packaged[@]} -eq 0 ]; then
     exit 1
 fi
 
+# Helix and Zed name several captures differently and style a different subset, so shipping only the
+# canonical (Neovim-convention) file leaves tokens unstyled in both. See scripts/utils/src/editor-captures.ts.
+pnpm exec tsx scripts/utils/src/generate-editor-queries.ts --bundle-dir "$stage"
+
 {
     echo "# BGforge MLS tree-sitter grammars ${version}"
     echo
@@ -84,6 +88,11 @@ fi
     echo "Each directory is self-contained: \`grammar.js\`, the generated \`src/\` (\`parser.c\`,"
     echo "\`grammar.json\`, \`node-types.json\`, headers, and an external \`scanner.c\` where the"
     echo "grammar has one), \`queries/highlights.scm\`, and the \`.wasm\` build."
+    echo
+    echo "\`queries/highlights.scm\` uses Neovim capture conventions. Helix and Zed name several"
+    echo "captures differently and style a different subset, so use \`queries/helix/highlights.scm\`"
+    echo "or \`queries/zed/highlights.scm\` in those editors - the canonical file leaves tokens"
+    echo "unstyled in both."
     echo
     echo "Point your editor's local-path grammar recipe at the directory you want. Per-editor"
     echo "instructions: https://github.com/BGforgeNet/BGforge-MLS/tree/master/docs/editors"
