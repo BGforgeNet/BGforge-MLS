@@ -55,12 +55,17 @@ grammar_highlight() {
     #
     # Support for those captures is NOT uniform across editors, contrary to what
     # this comment claimed until measured 2026-08-06. Neovim documents all 32 we
-    # use and falls back on dotted prefixes; Helix resolves the longest matching
-    # theme key, so only `number` is unstyled there (it has no `number` root -
-    # numerics are `constant.numeric`); Zed's theme capture list is flat with no
-    # prefix fallback, leaving 276 of our 564 capture uses unstyled, dominated by
-    # `function.builtin`. Both facts were confirmed by rendering real files in
-    # nvim and hx, not read off docs. A per-editor query variant is the open fix.
+    # use and falls back on dotted prefixes. Helix resolves the longest matching
+    # theme key, so only `number` is unstyled there - it has no `number` root,
+    # numerics being `constant.numeric` - confirmed by rendering, where numbers
+    # come out in the plain-text colour while keywords and strings do not. Zed's
+    # theme keys are a flat map: 135 of our 564 capture uses have no entry in any
+    # bundled theme, `keyword.modifier` (33) and `keyword.operator` (22) leading.
+    # That set is read from the theme JSON embedded in the Zed binary, which is
+    # authoritative where the published capture table is not - it omits
+    # `function.builtin`, which the themes do style, and our 142 uses of it are
+    # the reason a docs-derived count of this came out at 276. A per-editor query
+    # variant is the open fix.
     #
     # So this step only checks that highlights.scm exists as a smoke test.
     if [[ ! -f "$GRAMMAR_DIR/queries/highlights.scm" ]]; then
