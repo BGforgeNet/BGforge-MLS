@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased
+
+### Binary editor
+
+- An item's "Unusable By Kit" checkbox that several Enhanced Edition kits share now reads "EE kits" and names
+  them on hover. An item file has room for 32 kits, all used by classic Baldur's Gate II, so the later kits
+  reuse a bit - ticking it excludes every one of them.
+
+### Other editors
+
+- Tree-sitter grammars are now published as a downloadable bundle, `bgforge-mls-tree-sitter-grammars.zip`,
+  attached to every release and rebuilt daily from the default branch as the `grammars-nightly` prerelease. It
+  carries the generated parsers, the highlight queries and the WASM builds, one directory per grammar, and is
+  what the Neovim, Helix, Zed and Emacs setup guides now install from. The recipes previously pointed at the
+  repository, where the parsers are generated at build time rather than committed, so there was nothing for
+  those editors to compile and highlighting never came up.
+- The bundle also carries a Helix copy of the highlight queries under `queries/helix/`, using the capture names
+  Helix themes colour. Numbers rendered as plain text there before. Neovim and Zed read the canonical queries.
+- The Helix guide now puts the queries under the language name (`runtime/queries/fallout-ssl/`), not the grammar
+  name. Following it before gave you a working parser and no highlighting, with nothing to say why.
+
+### Fixes
+
+- Opening an Infinity Engine `.pro` as a plain file still cannot show it, but now says it is an Infinity Engine
+  projectile instead of reporting an unknown object type.
+- Fallout SSL name matching now spans files: a procedure declared in a header is found from a script that
+  spells it with different capitalisation. Macros keep matching exactly, since the preprocessor that expands
+  them distinguishes case - renaming `MY_MACRO` leaves an unrelated `my_macro` in another file alone.
+- WeiDU `.d` and `.baf` completion no longer offers the language's keywords inside a comment, and in `.d` no
+  longer inside dialogue text, a filename or any other tilde-quoted string - it used to offer the same list at
+  every position in the file. Trigger and action strings still complete against the BAF vocabulary.
+- Fallout SSL completion no longer fires inside a string. Message text and `#include` paths were getting the
+  whole vocabulary - some 800 names - over what was being typed.
+- TP2 completion inside a string now offers the variables alone, since a `%var%` is the only thing that
+  resolves there.
+- Go to definition now follows a tp2 path whose language is a variable - `USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`
+  opens the file in the language directory `mls.translation.directory` names. It used to stay put, because the
+  file exists once per language and there was nothing to say which you meant; with the setting unset it still
+  does.
+
 ## 3.13.0
 
 ### Infinity Engine game resources
@@ -18,11 +58,6 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - When an IE game is opened, context-dependent fields reflect its data values.
 - The extra parameter, special and power fields an effect record carries now take the name the current opcode
   gives them, the way Parameter 1 and Parameter 2 already did.
-- An item's "Unusable By Kit" checkbox that several Enhanced Edition kits share now says so. It reads "EE kits"
-  and names them on hover - on a BG:EE install, Shadowdancer, Dwarven Defender, Dragon Disciple, Dark Moon Monk,
-  Sun Soul Monk, Priest of Tyr and Priest of Tempus are all one bit, so ticking it excludes every one of them.
-  The other kit checkboxes are unchanged: an item file has room for 32 kits, classic Baldur's Gate II already
-  fills all of them, and the extra kits later editions add have to reuse a bit.
 
 ### Syntax highlighting
 
@@ -30,16 +65,6 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
   `ADD_STATE_TRIGGER`, `ADD_TRANS_TRIGGER`, `REPLACE_STATE_TRIGGER`, `REPLACE_TRANS_TRIGGER`,
   `ADD_TRANS_ACTION` and `REPLACE_TRANS_ACTION` colour their tilde-quoted body with the BAF vocabulary, the
   way `IF ~...~` and `DO ~...~` already did.
-
-### Other editors
-
-- Tree-sitter grammars are now published as a downloadable bundle,
-  `bgforge-mls-tree-sitter-grammars.zip`, attached to every release and rebuilt daily from the default
-  branch as the `grammars-nightly` prerelease. It carries the generated parsers, the highlight queries and
-  the WASM builds, one directory per grammar.
-  This is what the Neovim, Helix, Zed and Emacs setup guides now install from. The recipes there
-  previously pointed at the repository, where the parsers are generated at build time rather than
-  committed, so there was nothing for those editors to compile and highlighting never came up.
 
 ### Fixes
 
@@ -53,8 +78,6 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Opening an Infinity Engine `.pro` from a game no longer fails with "Unknown object type": `.pro` is a
   projectile there and a Fallout prototype here, and the viewer was routing it to the Fallout reader. Formats
   the binary editor cannot read now open in the ordinary editor, unless another editor handles them.
-  Opening one as a plain file - from the file explorer, where nothing says which game it belongs to - still
-  cannot show it, but now says it is an Infinity Engine projectile instead of reporting an unknown object type.
 - Undoing a binary-editor dropdown change now updates the dropdown. The document was restored correctly, but
   the control kept showing the value you had just undone until you opened and closed it.
 - Pressing an editor shortcut while a binary-editor dropdown has focus - Ctrl+Z, Ctrl+S - no longer pops the
@@ -64,26 +87,12 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Fallout SSL dialog nodes whose procedure and its callers spell the name with different capitalisation are now
   treated as one node, matching the compiler, which ignores case.
 - Go to definition, find references and rename now match Fallout SSL names the way the compiler does, ignoring
-  case for procedures and variables. This holds across files too, so a procedure declared in a header is found
-  from a script that spells it differently. Macros keep matching exactly, since the preprocessor that expands
-  them distinguishes case - renaming `MY_MACRO` leaves an unrelated `my_macro` in another file alone.
+  case for procedures and variables. Macros keep matching exactly, since the preprocessor that expands them
+  distinguishes case.
 - Find references on a Fallout SSL procedure no longer lists same-named procedures belonging to other scripts.
   A procedure is local to its own file, but references were collected by name across the whole workspace, and
   since nearly every dialog script defines its own `Node004` the result was mostly unrelated files. Symbols that
   genuinely come from an included header still resolve across files.
-- WeiDU `.d` and `.baf` completion no longer offers the language's keywords inside a comment, and in `.d` no
-  longer offers them inside dialogue text, a filename or any other tilde-quoted string - it used to offer the
-  same list at every position in the file. Trigger and action strings still complete against the BAF
-  vocabulary, and a quoted `.baf` argument still completes, since that is where `Global()` takes `"GLOBAL"`.
-- Fallout SSL completion no longer fires inside a string. Message text and `#include` paths were getting the
-  whole vocabulary - some 800 names - over what was being typed.
-- TP2 completion inside a string now offers the variables alone, instead of the whole vocabulary. A `%var%` is
-  the only thing that resolves there, so a path string now suggests `MOD_FOLDER`, `DEST_FILE` and your own
-  variables rather than several hundred commands as well.
-- Go to definition now follows a tp2 path whose language is a variable - `USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`
-  opens the file in the language directory `mls.translation.directory` names, the same one `@N` previews use.
-  It used to stay put, because the file exists once per language and there was nothing to say which you meant.
-  With that setting unset it still stays put rather than guessing.
 
 ## 3.12.0
 
