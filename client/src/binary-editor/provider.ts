@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { backupHandle } from "../hot-exit-backup";
-import { opensInOurEditor } from "../ie-resources/editor-routing";
+import { hasViewerFor } from "../ie-resources/editor-routing";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import {
     type NamingTableResolver,
@@ -392,7 +392,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
                       // Passed directly, unlike the closures above: viewability is a property of the type, not
                       // of the document this message is for.
-                      canOpen: opensInOurEditor,
+                      canOpen: hasViewerFor,
                   });
         void panel.webview.postMessage(resolved);
     }

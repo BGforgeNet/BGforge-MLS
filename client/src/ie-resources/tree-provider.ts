@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import { resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
-import { opensInOurEditor } from "./editor-routing";
+import { hasViewerFor } from "./editor-routing";
 import { type GameSession } from "./session";
 import { resourceUri } from "./uri";
 
@@ -85,7 +85,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
             return [{ kind: "game", label: current.game.identity.label, dir: current.dir }, ...typeNodes];
         }
         if (element.kind === "type") {
-            const openable = opensInOurEditor(element.ext);
+            const openable = hasViewerFor(element.ext);
             return (this.ensureGrouped().get(element.type) ?? [])
                 .map(
                     (r): ResourceNode => ({

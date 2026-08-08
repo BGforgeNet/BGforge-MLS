@@ -31,26 +31,45 @@ function isIeAnimation(ext: string): boolean {
 }
 
 /**
+ * Formats VS Code's own bundled previewers read, mapped to the view that reads them. These need naming for the
+ * same reason ours do, and for a reason that is easy to miss: `"default"` is documented as the plain TEXT
+ * editor, not "pick a suitable editor", so a portrait routed there renders as bytes even though the image
+ * preview claims `.bmp` at builtin priority and would have shown it.
+ *
+ * Only the formats a game archive actually serves are listed; the previewers cover more.
+ */
+const BUILTIN_VIEWS = new Map([
+    ["bmp", "imagePreview.previewEditor"],
+    ["wav", "vscode.audioPreview"],
+]);
+
+/**
  * The custom-editor view a game resource opens with - always named explicitly, never left to file association.
  * The binary editor is registered for `*.pro` at DEFAULT priority, so a plain `vscode.open` resolves a `.pro`
- * to it regardless of what this decided; naming the built-in `"default"` view is what actually pins the formats
- * no editor of ours reads to the ordinary editor.
+ * to it regardless of what this decided; naming a view is what actually routes a format elsewhere.
  *
- * Both editors are asked, in the order a format can only answer one of: a record goes to the binary editor, an
- * animation to the animation editor. Asking only the first sent every BAM to the text editor, which showed it
- * as an undisplayable binary file.
+ * Three sources are asked, in the order a format can only answer one of: a record goes to the binary editor, an
+ * animation to the animation editor, and the rest to a bundled previewer where VS Code ships one. Asking only
+ * the first sent every BAM to the text editor, which showed it as an undisplayable binary file.
+ *
+ * `"default"` is the last resort and means the plain TEXT editor - the right answer only for a format nothing
+ * can render, which is why the previewer map above exists rather than falling through to it.
  */
 export function viewTypeForResource(ext: string): string {
     if (isIeBinaryRecord(ext)) return "bgforge.binaryEditor";
     if (isIeAnimation(ext)) return "bgforge.animationEditor";
-    return "default";
+    return BUILTIN_VIEWS.get(ext.toLowerCase()) ?? "default";
 }
 
 /**
- * Whether one of our editors opens this extension, rather than VS Code's ordinary one - the tree's
- * "we can show you this" affordance. Derived from the view choice instead of asked separately, so the
- * two cannot disagree about a format the way they did while this meant "binary record" alone.
+ * Whether opening this extension reaches an editor that can SHOW it, rather than the plain text editor - the
+ * tree's "we can show you this" affordance and the binary editor's open-chip gate. Derived from the view choice
+ * instead of asked separately, so the two cannot disagree about a format the way they did while this meant
+ * "binary record" alone.
+ *
+ * Not limited to our own editors, despite where it started: a portrait opens in VS Code's image preview, which
+ * answers the question just as well from a reader's point of view.
  */
-export function opensInOurEditor(ext: string): boolean {
+export function hasViewerFor(ext: string): boolean {
     return viewTypeForResource(ext) !== "default";
 }

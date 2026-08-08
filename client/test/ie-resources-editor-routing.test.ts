@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { parserRegistry, type BinaryParser } from "@bgforge/binary";
 import pkg from "../../package.json";
-import { isIeBinaryRecord, opensInOurEditor, viewTypeForResource } from "../src/ie-resources/editor-routing";
+import { isIeBinaryRecord, hasViewerFor, viewTypeForResource } from "../src/ie-resources/editor-routing";
 
 describe("viewTypeForResource", () => {
     it("sends the four parsed IE formats to the binary editor", () => {
@@ -50,6 +50,17 @@ describe("viewTypeForResource", () => {
     });
 
     /**
+     * `"default"` means the plain TEXT editor, not "pick a suitable editor" - so a portrait routed there showed
+     * bytes while VS Code's own image preview claimed `.bmp` at builtin priority and would have drawn it. The
+     * previewers have to be named as explicitly as ours.
+     */
+    it("names VS Code's own previewer for a format it ships one for", () => {
+        expect(viewTypeForResource("bmp")).toBe("imagePreview.previewEditor");
+        expect(viewTypeForResource("BMP")).toBe("imagePreview.previewEditor");
+        expect(viewTypeForResource("wav")).toBe("vscode.audioPreview");
+    });
+
+    /**
      * The blind spot the hand-kept extension list had: a new IE parser was invisible to routing until someone
      * remembered to list it here, and no test could catch the omission because the registry could not be asked
      * which game a parser serves. It can now, so registration IS the wiring.
@@ -88,6 +99,16 @@ describe("the named views against the manifest", () => {
             expect(editor?.selector.map((s) => s.filenamePattern)).toContain(`*.${ext}`);
         }
     });
+
+    // The builtin previewers are deliberately NOT in our manifest - they are VS Code's, contributed by its
+    // bundled media-preview extension. Nothing here can pin those view ids, so they are verified by opening a
+    // portrait in a real editor rather than by this suite; the check that stays possible is that we never
+    // claim one of them ourselves, which would shadow the real registration.
+    it("does not itself register the builtin previewer view ids", () => {
+        const ours = editors.map((e) => e.viewType);
+        expect(ours).not.toContain("imagePreview.previewEditor");
+        expect(ours).not.toContain("vscode.audioPreview");
+    });
 });
 
 // The tree's "this is a record we can read" affordance and the view choice above are one decision, so they
@@ -102,27 +123,34 @@ describe("isIeBinaryRecord", () => {
 });
 
 /**
- * The tree's affordance covers every editor of ours, not the binary one alone - it meant "binary record"
- * while a BAM opened in the animation editor, so the tree called openable exactly the wrong set.
+ * The tree's affordance and the binary editor's open-chip gate both read this - it meant "binary record" while
+ * a BAM opened in the animation editor, so the tree called openable exactly the wrong set.
  */
-describe("opensInOurEditor", () => {
+describe("hasViewerFor", () => {
     it("is true for whatever routing names a view for, and false for the rest", () => {
-        for (const ext of ["itm", "spl", "eff", "cre", "bam", "pro", "bcs", "2da", "mos"]) {
-            expect(opensInOurEditor(ext)).toBe(viewTypeForResource(ext) !== "default");
+        for (const ext of ["itm", "spl", "eff", "cre", "bam", "bmp", "wav", "pro", "bcs", "2da", "mos"]) {
+            expect(hasViewerFor(ext)).toBe(viewTypeForResource(ext) !== "default");
         }
-        expect(opensInOurEditor("bam")).toBe(true);
-        expect(opensInOurEditor("mos")).toBe(false);
+        expect(hasViewerFor("bam")).toBe(true);
+        expect(hasViewerFor("mos")).toBe(false);
     });
 
     // The binary editor gates its open chip on this, and a field's declared ref type is UPPERCASE
     // (`ref: { kind: "resource", type: "ITM" }`), where the tree passes a filename's lowercase extension. A
     // case-sensitive lookup here would withhold the chip from every field that currently has one.
     it("answers the same for a declared ref type as for a filename extension", () => {
-        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM"]) {
-            expect(opensInOurEditor(ext)).toBe(true);
+        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP"]) {
+            expect(hasViewerFor(ext)).toBe(true);
         }
-        for (const ext of ["BCS", "DLG", "BMP", "PRO"]) {
-            expect(opensInOurEditor(ext)).toBe(false);
+        for (const ext of ["BCS", "DLG", "PRO"]) {
+            expect(hasViewerFor(ext)).toBe(false);
         }
+    });
+
+    // A creature's portraits are the reason this covers more than our own editors: they were withheld with the
+    // scripts, though only the scripts are genuinely unviewable.
+    it("covers a portrait, which only VS Code's previewer can show", () => {
+        expect(hasViewerFor("BMP")).toBe(true);
+        expect(hasViewerFor("BCS")).toBe(false);
     });
 });
