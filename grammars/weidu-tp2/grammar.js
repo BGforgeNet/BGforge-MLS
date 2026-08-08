@@ -197,6 +197,9 @@ const getStrref =
 export default grammar({
     name: "weidu_tp2",
 
+    // Block comments nest, which no internal token can express - see src/scanner.c.
+    externals: ($) => [$.comment],
+
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
     word: ($) => $.identifier,
@@ -281,7 +284,7 @@ export default grammar({
         // COMMENTS
         // =========================================
 
-        comment: ($) => seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/"),
+        // comment is produced by the external scanner (nesting); only line_comment is internal.
         line_comment: ($) => seq("//", /[^\n]*/),
 
         // =========================================

@@ -39,6 +39,11 @@
   opens the file in the language directory `mls.translation.directory` names. It used to stay put, because the
   file exists once per language and there was nothing to say which you meant; with the setting unset it still
   does.
+- Fallout SSL no longer reports a spurious error on a `#define` whose last statement omits its semicolon, as in
+  `#define export_self_obj if (is_night) then export_obj := self_obj`. The macro body is pasted verbatim, so no
+  terminator is required, and the error surfaced on the next line rather than the macro itself.
+- TP2 block comments now nest, matching WeiDU: `/* outer /* inner */ still commented */` is one comment.
+  Commenting out a region that already contained a comment used to break highlighting for the rest of the file.
 
 ## 3.13.0
 

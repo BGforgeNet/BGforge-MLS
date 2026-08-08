@@ -1,26 +1,13 @@
 {
     "fallout-ssl": {
-        "reason": "Pre-existing fallout-ssl grammar gaps, unrelated to the weidu-tra sound_ref fix this suite guards. Not addressed here; tracked as known parser gaps.",
+        "reason": "Decided never-fixes, all inside #define bodies, in three shapes. (1) Body left empty for the modder to fill: `#define FFIELD_PID ()` (genffld, sprtrp0). These are templates - the error exists only while the placeholder is unfilled, and filling it in makes the file parse with no grammar change, so flagging them is correct signal rather than a gap. (2) Body that is a syntactic fragment completed at the expansion site - ends on a bare `if (cond)` with no `then` (hcdoc, vcdrtroy). (3) Source the compiler never sees, inside macros that are never expanded: one unbalanced closing paren (ncftully) and a doubled line continuation (ncnikki). Not counted toward the allowlist-shrink metric. The unterminated-final-statement gap that covered 13 other files is fixed - see macro_body/_macro_tail in the grammar.",
         "files": [
-            "Fallout2_Party_Orders/source/gl_p_party_orders.ssl",
             "Fallout2_Restoration_Project/scripts_src/brokhill/hcdoc.ssl",
-            "Fallout2_Restoration_Project/scripts_src/main/nhmyron.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mcatkdog.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mcbrahmn.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mccornel.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mcfarrel.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mcrose.ssl",
-            "Fallout2_Restoration_Project/scripts_src/modoc/mcslag.ssl",
-            "Fallout2_Restoration_Project/scripts_src/ncr/waypnt.ssl",
             "Fallout2_Restoration_Project/scripts_src/newreno/ncftully.ssl",
             "Fallout2_Restoration_Project/scripts_src/newreno/ncnikki.ssl",
-            "Fallout2_Restoration_Project/scripts_src/newreno/nihscrat.ssl",
-            "Fallout2_Restoration_Project/scripts_src/redding/rtlndmin.ssl",
-            "Fallout2_Restoration_Project/scripts_src/sierra/wtlndmin.ssl",
             "Fallout2_Restoration_Project/scripts_src/template/genffld.ssl",
             "Fallout2_Restoration_Project/scripts_src/template/sprtrp0.ssl",
-            "Fallout2_Restoration_Project/scripts_src/valtcity/vcdrtroy.ssl",
-            "Fallout2_Restoration_Project/scripts_src/vault13/waypnt.ssl"
+            "Fallout2_Restoration_Project/scripts_src/valtcity/vcdrtroy.ssl"
         ]
     },
     "fallout-msg": {
@@ -223,12 +210,12 @@
         ]
     },
     "weidu-d": {
-        "reason": "Pre-existing weidu-d grammar gap, unrelated to weidu-tra. Out of scope.",
+        "reason": "Decided never-fix: a bare %var% standing in a say-text slot (`CHAIN ... %kivan17%`, which OUTER_SPRINT sets to the strref `#32793`). The grammar's _text accepts string/@N/#strref/(AT \"..\") and deliberately not a variable, even though the neighbouring transition slot has macro_expansion. Not counted toward the allowlist-shrink metric.",
         "files": ["BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d"]
     },
     "weidu-tp2": {
-        "reason": "Pre-existing weidu-tp2 grammar gaps, unrelated to weidu-tra. Out of scope.",
-        "files": ["BG1NPC/bg1npc/core/tpa/a64_beregost.tpa", "BG1NPC/bg1npc/phase2/tpa/bg1npc_xzarqst.tpa"]
+        "reason": "Decided never-fix: this file closes one more END than it opens (8 BEGIN, 9 END). WeiDU tolerates the stray END - verified by INCLUDEing the file from a wrapper tp2, which installs clean, and reduced to `ACTION_IF 1 THEN BEGIN ... END END`, which parses too. Matching that would mean accepting unbalanced BEGIN/END everywhere, losing a real error signal on every genuinely unbalanced file, so the grammar stays stricter than WeiDU here. Not counted toward the allowlist-shrink metric. The other tp2 entry, nested block comments, is fixed - the grammar now scans them externally.",
+        "files": ["BG1NPC/bg1npc/core/tpa/a64_beregost.tpa"]
     },
     "weidu-tra": {
         "reason": "worldmap.tra files use non-numeric `@BGT_781001` keys, which are not standard WeiDU tra - the tra lexer (WeiDUorg/weidu src/tlexer.in) only accepts `@['-']?['0'-'9']+`. These are preprocessed by BGT, not parsed directly; a grammar fix is not appropriate. The charset, two-sound, and percent-string gaps that previously errored here are now fixed.",

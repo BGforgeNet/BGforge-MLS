@@ -286,7 +286,13 @@ All syntaxes are equivalent in expression context:
 ```tp2
 // Line comment
 /* Block comment */
+/* Outer /* inner */ still the outer comment */
 ```
+
+Block comments nest: WeiDU recurses on an inner opener and closes only at the matching closer, so a
+commented-out region may itself contain comments. Nesting is not a regular language, so `comment` is the
+one token produced by the external scanner (`src/scanner.c`), which counts depth; `line_comment` is
+internal.
 
 ### Expressions (Values)
 

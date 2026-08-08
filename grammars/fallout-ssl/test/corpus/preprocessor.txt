@@ -347,6 +347,90 @@ Macro body final assignment without trailing semicolon
           right: (number))))))
 
 ==================
+Macro body final assignment nested in an if
+==================
+
+#define export_self_obj   if is_night then export_obj := self_obj
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      body: (macro_body
+        (if_stmt
+          cond: (identifier)
+          then: (assignment
+            left: (identifier)
+            right: (identifier)))))))
+
+==================
+Macro body if/else chain ending without a semicolon
+==================
+
+#define set_ptr   if a then begin ptr := 1; end else if b then ptr := 2
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      body: (macro_body
+        (if_stmt
+          cond: (identifier)
+          then: (block
+            (assignment
+              left: (identifier)
+              right: (number)))
+          else: (if_stmt
+            cond: (identifier)
+            then: (assignment
+              left: (identifier)
+              right: (number))))))))
+
+==================
+Macro body final return without trailing semicolon
+==================
+
+#define get_tile(x)   return tile_of(x)
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (return_stmt
+          (call_expr
+            func: (identifier)
+            args: (identifier)))))))
+
+==================
+Macro body final call without trailing semicolon
+==================
+
+#define warp_to(t)   call warp_proc(t)
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (call_stmt
+          target: (call_expr
+            func: (identifier)
+            args: (identifier)))))))
+
+==================
 Include with bare identifier macro
 ==================
 

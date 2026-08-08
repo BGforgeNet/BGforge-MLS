@@ -77,18 +77,53 @@ export default grammar({
         // Macro body: parsed as real SSL statements (expressions are covered via expression_stmt).
         // Terminated by LINE_END from the external scanner (bare newline = end of #define).
         // Line continuations (\<newline>) are in extras, so multi-line macros work transparently.
-        // The final statement may be an assignment without a trailing `;` (valid: the C
-        // preprocessor pastes macro bodies verbatim, so no trailing `;` is required).
-        macro_body: ($) =>
-            choice(repeat1($._statement), seq(repeat($._statement), alias($.macro_final_assign, $.assignment))),
+        // The final statement may omit its trailing `;` (valid: the C preprocessor pastes macro
+        // bodies verbatim), so the body ends in an optional unterminated tail.
+        macro_body: ($) => choice(repeat1($._statement), seq(repeat($._statement), $._macro_tail)),
 
-        // Assignment without trailing semicolon - valid only as the final statement of a macro body.
-        // The C preprocessor pastes macro bodies verbatim, so a trailing `;` is not required.
+        // Unterminated final statement of a macro body: only statements that REQUIRE a `;` need a
+        // twin here (variable_decl, export_decl, macro_call_stmt and expression_stmt already take
+        // an optional one; break/continue never end a macro in the real corpus). Each twin aliases
+        // to its terminated counterpart, and the two are distinguishable only at the terminator,
+        // where the scanner emits `;` or LINE_END.
+        _macro_tail: ($) =>
+            choice(
+                alias($.macro_final_assign, $.assignment),
+                alias($.macro_final_return, $.return_stmt),
+                alias($.macro_final_call, $.call_stmt),
+                alias($.macro_final_if, $.if_stmt),
+            ),
+
         macro_final_assign: ($) =>
             seq(
                 field("left", choice($.identifier, $.token_paste_identifier, $.subscript_expr, $.member_expr)),
                 choice(":=", "=", "+=", "-=", "*=", "/="),
                 field("right", $._expression),
+            ),
+
+        macro_final_return: ($) => seq("return", optional($._expression)),
+
+        macro_final_call: ($) =>
+            seq(
+                "call",
+                choice(field("target", $.identifier), field("target", $.call_expr)),
+                optional(seq("in", field("delay", $._expression))),
+            ),
+
+        // An if/else whose taken branch is itself unterminated: `#define m if (c) then x := 0`.
+        // The tail recurses through `else`, so an if/else-if chain ending in a bare assignment
+        // parses - the shape most real macros take.
+        macro_final_if: ($) =>
+            prec.right(
+                seq(
+                    "if",
+                    field("cond", $._expression),
+                    "then",
+                    choice(
+                        field("then", $._macro_tail),
+                        seq(field("then", $._stmt_or_block), "else", field("else", $._macro_tail)),
+                    ),
+                ),
             ),
 
         // #include "file" or #include <file>

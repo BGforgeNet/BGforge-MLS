@@ -55,7 +55,7 @@ for dir in grammars/*/; do
     cp "${dir}grammar.js" "${dir}tree-sitter.json" "${dir}package.json" "$out/"
     cp -r "${dir}src/tree_sitter" "$out/src/"
     cp "${dir}src/parser.c" "${dir}src/grammar.json" "${dir}src/node-types.json" "$out/src/"
-    # Hand-written external scanner, present for two of the six grammars.
+    # Hand-written external scanner, present for three of the six grammars.
     [ -f "${dir}src/scanner.c" ] && cp "${dir}src/scanner.c" "$out/src/"
     cp -r "${dir}queries" "$out/"
     # The WASM build serves web-tree-sitter consumers; native editors ignore it.
