@@ -110,6 +110,10 @@ export default defineConfig({
                 // Exercised in-context by ResourceField and the LayoutRenderer that provides it, and
                 // end-to-end by the resource-picker render harness.
                 "client/src/binary-editor/webview/state/resource-list-context.ts",
+                // And again: the fetch-a-resource's-picture callback wrapper. Exercised in-context by
+                // ResourceThumbnail and the LayoutRenderer that provides it, and end-to-end by the
+                // resource-picker render harness, which asserts the picture draws and opens.
+                "client/src/binary-editor/webview/state/thumbnail-context.ts",
                 // Dialog editor: the render harness (mounts the real App in Chromium via Playwright,
                 // delivers the model through the real postMessage channel) is e2e-tier and run out of
                 // process, not under in-process vitest. Same category as client/src/test/**.

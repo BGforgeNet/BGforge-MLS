@@ -11,6 +11,8 @@ import {
     dropdownWidth,
     controlWidthClass,
     rangeTooltip,
+    showsOpenChip,
+    thumbnailOpens,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -410,5 +412,29 @@ describe("controlWidthClass", () => {
         expect(controlWidthClass(picker)).toBe("dd-2");
         // Same field without a game behind it is a plain text box on the tier scale.
         expect(controlWidthClass({ ...picker, refExt: undefined })).toBe("tier-m");
+    });
+
+    // The chip-vs-picture split. Both renderers ask these rather than deciding inline, so a row cannot come
+    // out with two affordances in one block and one in another - which is the only failure a per-renderer
+    // condition would produce, and the one no screenshot of a single block would show.
+    const openTarget = { resref: "ISW1H01", ext: "BAM" };
+
+    it("gives an openable row the chip only while it has no picture", () => {
+        const chip: Row = { ...base, openTarget };
+        expect(showsOpenChip(chip)).toBe(true);
+        // The picture becomes the link, so the chip goes: one control per action.
+        expect(showsOpenChip({ ...chip, thumbnail: openTarget })).toBe(false);
+    });
+
+    it("gives a row with neither affordance no chip", () => {
+        expect(showsOpenChip(base)).toBe(false);
+    });
+
+    it("links the picture only where the target also opens", () => {
+        expect(thumbnailOpens({ ...base, thumbnail: openTarget, openTarget })).toEqual(openTarget);
+        // Drawable but unopenable renders an inert image - the two answers are independent.
+        expect(thumbnailOpens({ ...base, thumbnail: openTarget })).toBeUndefined();
+        // An openable row with no picture has nothing for the picture to link; it keeps the chip above.
+        expect(thumbnailOpens({ ...base, openTarget })).toBeUndefined();
     });
 });

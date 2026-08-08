@@ -164,3 +164,64 @@ describe("Bridge.requestResourceList", () => {
         expect(bridge.handle({ type: "resourceList", requestId: 999, resrefs: [] })).toBe(false);
     });
 });
+
+describe("Bridge.requestThumbnail", () => {
+    it("correlates a thumbnail response to its request by requestId", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const p = bridge.requestThumbnail("ISW1H01", "BAM");
+        bridge.handle({ type: "thumbnail", requestId: sent[0]!.requestId, dataUri: "data:image/png;base64,AA" });
+
+        await expect(p).resolves.toBe("data:image/png;base64,AA");
+        expect(sent[0]).toMatchObject({ type: "requestThumbnail", resref: "ISW1H01", ext: "BAM" });
+    });
+
+    it("resolves undefined when the host has no picture for the resource", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const p = bridge.requestThumbnail("MISSING", "BAM");
+        // The host answers every request; an absent dataUri is its "nothing to draw", not a failure.
+        bridge.handle({ type: "thumbnail", requestId: sent[0]!.requestId });
+
+        await expect(p).resolves.toBeUndefined();
+    });
+
+    // The fold that matters here: two rows of one record commonly name the same icon with different casing,
+    // and each miss costs a host-side decode. Identical spellings would hit the cache without any folding.
+    it("caches per resource, case-insensitively, and keys the extension too", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestThumbnail("ISW1H01", "BAM");
+        const differentlySpelled = bridge.requestThumbnail("isw1h01", "bam");
+        bridge.handle({ type: "thumbnail", requestId: sent[0]!.requestId, dataUri: "data:image/png;base64,AA" });
+
+        expect(sent).toHaveLength(1);
+        await expect(first).resolves.toBe("data:image/png;base64,AA");
+        await expect(differentlySpelled).resolves.toBe("data:image/png;base64,AA");
+        // Same name under another type is a different resource, so it is a second request.
+        void bridge.requestThumbnail("ISW1H01", "BMP");
+        expect(sent).toHaveLength(2);
+    });
+
+    it("drops a failed request from the cache so a later render retries", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestThumbnail("ISW1H01", "BAM");
+        bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "no game" });
+        await expect(first).rejects.toThrow("no game");
+        // Without the eviction the cached rejection would replay forever and the box stay empty for good.
+        await Promise.resolve();
+        void bridge.requestThumbnail("ISW1H01", "BAM");
+
+        expect(sent).toHaveLength(2);
+    });
+
+    it("leaves a thumbnail for no live request unhandled rather than throwing", () => {
+        const bridge = new Bridge(() => {});
+        expect(bridge.handle({ type: "thumbnail", requestId: 999, dataUri: "data:image/png;base64,AA" })).toBe(false);
+    });
+});
