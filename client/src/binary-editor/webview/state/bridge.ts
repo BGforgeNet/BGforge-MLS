@@ -28,6 +28,10 @@ interface PendingResourceList {
     resolve: (v: readonly string[]) => void;
     reject: (e: Error) => void;
 }
+interface PendingThumbnail {
+    resolve: (v: string | undefined) => void;
+    reject: (e: Error) => void;
+}
 
 export class Bridge {
     private readonly post: (m: WebviewToHost) => void;
@@ -37,6 +41,8 @@ export class Bridge {
     private pendingEffectTree = new Map<number, PendingEffectTree>();
     private pendingResourceList = new Map<number, PendingResourceList>();
     private resourceLists = new Map<string, Promise<readonly string[]>>();
+    private pendingThumbnail = new Map<number, PendingThumbnail>();
+    private thumbnails = new Map<string, Promise<string | undefined>>();
 
     /** Called with an error message that matches no pending request - an edit/structureOp/spellbookEdit failure
      *  (which carries no requestId) or a stale requestId. Set by the view so the failure surfaces to the user
@@ -98,6 +104,32 @@ export class Bridge {
         return promise;
     }
 
+    /**
+     * Fetch a `data:` URI for one resource's picture, or undefined when it has none.
+     *
+     * Cached per resource for the same reason the lists are, plus one of its own: several rows of a record
+     * commonly name the SAME icon (an item's inventory and description icons, a spell's book and memorised
+     * icons), and each is a decode host-side. A rejection drops out so a later render retries.
+     *
+     * Keyed case-insensitively, since two rows can spell one resref differently. Carries the same accepted
+     * staleness as the lists: a picture REPLACED in `override/` while this panel is open (the animation editor
+     * can do that) keeps showing the old art until the record is reopened. Editing the field is unaffected -
+     * a new value is a new key.
+     */
+    requestThumbnail(resref: string, ext: string): Promise<string | undefined> {
+        const key = `${ext.toLowerCase()}:${resref.toLowerCase()}`;
+        const cached = this.thumbnails.get(key);
+        if (cached) return cached;
+        const requestId = this.nextId++;
+        this.post({ type: "requestThumbnail", requestId, resref, ext });
+        const promise = new Promise<string | undefined>((resolve, reject) => {
+            this.pendingThumbnail.set(requestId, { resolve, reject });
+        });
+        this.thumbnails.set(key, promise);
+        void promise.catch(() => this.thumbnails.delete(key));
+        return promise;
+    }
+
     editField(nodeId: NodeId, value: number | string): void {
         this.post({ type: "editField", nodeId, value });
     }
@@ -152,6 +184,14 @@ export class Bridge {
                 return true;
             }
         }
+        if (message.type === "thumbnail") {
+            const p = this.pendingThumbnail.get(message.requestId);
+            if (p) {
+                this.pendingThumbnail.delete(message.requestId);
+                p.resolve(message.dataUri);
+                return true;
+            }
+        }
         if (message.type === "error") {
             if (message.requestId !== undefined) {
                 const p = this.pending.get(message.requestId);
@@ -176,6 +216,12 @@ export class Bridge {
                 if (pr) {
                     this.pendingResourceList.delete(message.requestId);
                     pr.reject(new Error(message.message));
+                    return true;
+                }
+                const pt = this.pendingThumbnail.get(message.requestId);
+                if (pt) {
+                    this.pendingThumbnail.delete(message.requestId);
+                    pt.reject(new Error(message.message));
                     return true;
                 }
             }

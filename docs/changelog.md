@@ -14,6 +14,10 @@
 - Portraits and sounds opened from a game now use VS Code's own image and audio previews instead of the text
   editor, so a creature's portrait fields have a working "open" button and show the picture. Opening a `.bmp` or
   `.wav` from the IE Game Resources view previews it too, rather than showing bytes.
+- An item or spell icon field, and a creature's portrait fields, now show the picture itself beside the value
+  when the game has it - so you can see which icon a resref names without opening it. Clicking the picture
+  opens it, replacing the "open" button on those fields; fields with nothing to show keep the button. Nothing
+  is shown for a name the game does not have, and the row's layout is unchanged either way.
 
 ### Other editors
 

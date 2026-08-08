@@ -1,6 +1,8 @@
-// Curated public surface. The PNG codec, palette-remap, and direction-order helpers are
+// Curated public surface. The PNG decoder, palette-remap, and direction-order helpers are
 // implementation details of the io/convert layers - import them by module path in-package;
-// they are deliberately not re-exported here.
+// they are deliberately not re-exported here. The PNG ENCODER is public: turning a decoded
+// frame into a displayable image is what a consumer holding an Animation wants, and it now has
+// a second caller outside the io/ layer (the binary editor's resref thumbnails).
 
 // Shared model.
 export {
@@ -32,6 +34,7 @@ export { parseBamV1 } from "./bam/parse.ts";
 export { serializeBamV1 } from "./bam/serialize.ts";
 export { combineIeBamPair, splitIeBamPair } from "./bam/pair.ts";
 export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";
+export { encodeIndexedPng } from "./png/encode.ts";
 export { parsePal, serializePal } from "./palette/pal.ts";
 export { DEFAULT_FALLOUT_PALETTE } from "./palette/default-palette.ts";
 export { loadImage } from "./load.ts";

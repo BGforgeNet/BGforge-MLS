@@ -1,11 +1,12 @@
 <script lang="ts">
     import type { Diagnostic, Row } from "@bgforge/binary-editor";
-    import { controlWidthClass } from "../state/controls";
+    import { controlWidthClass, showsOpenChip, thumbnailOpens } from "../state/controls";
     import CellControl from "./CellControl.svelte";
     import DocLink from "./DocLink.svelte";
     import Icon from "./Icon.svelte";
     import JumpLink from "./JumpLink.svelte";
     import OpenResourceLink from "./OpenResourceLink.svelte";
+    import ResourceThumbnail from "./ResourceThumbnail.svelte";
     const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[] } = $props();
@@ -44,14 +45,20 @@
     <span class="field-control {widthClass}"
           title={readOnly ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
         <CellControl {row} {onedit} />
+        <!-- The picture sits right after the value it renders, and IS the open affordance when the target can
+             be opened - so the chip below is suppressed for exactly these rows (showsOpenChip). Its box is
+             fixed, so nothing moves at runtime. -->
+        {#if row.thumbnail}
+            <ResourceThumbnail target={row.thumbnail} opens={thumbnailOpens(row)} />
+        {/if}
         <!-- Cross-record jump (kv / detail form): a field whose value references another record - e.g. a MAP
              object's script SID pointing at the reverse-referenced object - carries `row.link`, rendered as a
              chip beside the value. Here the label names the FIELD and the target is a separate object, so a
              chip is the right affordance. The CRE item-slots GRID instead makes the slot LABEL itself the link
              (see GridBlock.svelte), because there the label names the referent ("Weapon 2" IS the linked entry).
              JumpLink renders nothing when no jump handler is in context (a view with no navigable sections). -->
-        {#if row.openTarget}
-            <OpenResourceLink target={row.openTarget} />
+        {#if showsOpenChip(row)}
+            <OpenResourceLink target={row.openTarget!} />
         {/if}
         {#if row.link}
             <JumpLink link={row.link} />

@@ -8,6 +8,7 @@ import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
     createNamingTableResolver,
     createResourceListResolver,
+    createResourceBytesResolver,
     createEngineResolver,
     createResourceTypeResolver,
     createFlagBitNamesResolver,
@@ -17,6 +18,7 @@ import {
     isGameDocument,
     type NamingTableResolver,
     type ResourceListResolver,
+    type ResourceBytesResolver,
     type EngineResolver,
     type ResourceTypeResolver,
     type FlagBitNamesResolver,
@@ -40,6 +42,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
+    resourceBytes: ResourceBytesResolver;
     engine: EngineResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
 } {
@@ -239,6 +242,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         resourceType: createResourceTypeResolver(session, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(session, fallbackGameDir),
         resourceList: createResourceListResolver(session, fallbackGameDir),
+        resourceBytes: createResourceBytesResolver(session, fallbackGameDir),
         engine: createEngineResolver(session, fallbackGameDir),
         isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),
     };

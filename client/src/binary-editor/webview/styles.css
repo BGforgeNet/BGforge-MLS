@@ -494,6 +494,44 @@ button:disabled {
     overflow: auto;
     padding: 0.5rem 0.75rem;
 }
+/* Inline picture of what a resref points at (an item icon, a creature portrait). Fixed box, always the same
+   size whether or not any pixels arrived, so a thumbnail resolving cannot reflow the field grid - the editor's
+   stable-layout rule. `contain` fits a tall portrait and a square icon into the same box without distorting
+   either. Scaling is left smooth: every real source is LARGER than the box, so this is always a downscale,
+   where pixelation only adds aliasing.
+
+   22px is chosen against a measured ceiling, not by eye: a kv row is 32px tall and stops absorbing the box at
+   28px, so this keeps 4px of headroom for a theme with roomier controls. Raising it needs that measurement
+   redone - the picker harness fails if a row's height moves. */
+.thumb {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--thumb-size, 22px);
+    height: var(--thumb-size, 22px);
+}
+/* The picture doubles as the open control where the target can be shown, so a button here is reset to the image
+   it wraps - no border, padding or button background, exactly as `.jump-link` is. The hover/focus outline is
+   what tells the reader it is clickable at all, since an icon-only control has no text to underline. */
+.thumb.linked {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 2px;
+}
+.thumb.linked:hover {
+    outline: 1px solid var(--vscode-textLink-activeForeground);
+}
+.thumb.linked:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+}
+.thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
 /* Cross-record jump chip rendered beside a reference field's value (MAP script Owner ID -> object, object
    SID -> script). A themed text link, not a button-looking control, so it reads as navigation. */
 .jump-link {

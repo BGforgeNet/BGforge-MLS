@@ -1,11 +1,12 @@
 <script lang="ts">
     // Flat grid of label + control cells (the critter Skills block, the CRE sound slots). Clumps left.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
-    import { controlWidthClass } from "../../state/controls";
+    import { controlWidthClass, showsOpenChip, thumbnailOpens } from "../../state/controls";
     import { useJump } from "../../state/jump-context";
     import CellControl from "../CellControl.svelte";
     import DocLink from "../DocLink.svelte";
     import OpenResourceLink from "../OpenResourceLink.svelte";
+    import ResourceThumbnail from "../ResourceThumbnail.svelte";
 
     const { columns, items, fields, onedit }: {
         columns: number;
@@ -88,9 +89,13 @@
                 <CellControl row={cell.row} {onedit} />
             </span>
             <!-- Per `webview/AGENTS.md`, a per-field affordance covers every block renderer, not just the kv
-                 form - a grid cell holding a resref (a CRE item slot) offers the same open chip. -->
-            {#if cell.row.openTarget}
-                <OpenResourceLink target={cell.row.openTarget} />
+                 form - a grid cell holding a resref (a CRE item slot) offers the same open chip and, where the
+                 target is a picture, the same thumbnail. -->
+            {#if cell.row.thumbnail}
+                <ResourceThumbnail target={cell.row.thumbnail} opens={thumbnailOpens(cell.row)} />
+            {/if}
+            {#if showsOpenChip(cell.row)}
+                <OpenResourceLink target={cell.row.openTarget!} />
             {/if}
         </div>
     {/each}

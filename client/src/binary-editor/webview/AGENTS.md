@@ -42,7 +42,9 @@ different resource entirely, via a host command so the binary-vs-default editor 
 
 Absent `openTarget` renders NOTHING - no marker, no dimming, no advisory. That is deliberate and must stay:
 a mod record legitimately references what a later install step creates, so flagging it would fire on correct
-input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte`.
+input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte` -
+and SUPPRESSED on a row that also carries a picture, which becomes the link instead (see the picture section
+below; the decision is `showsOpenChip`, never an inline condition in a renderer).
 
 **A NUMERIC field can carry the chip too, and it is not a resref.** Where an `{ kind: "ids" }` ref declares
 `symbolResource`, the value's symbol in that table IS a resref - PROJECTL.IDS's symbols are `.PRO` basenames -
@@ -50,6 +52,39 @@ so an ability's projectile offers to open the projectile file while staying a nu
 keyed off `row.openTarget` alone, so nothing in the render layer needs to know which of the two produced it.
 The pairing sets `openTarget` ONLY, never `refExt`: `refExt` turns a field into a resref picker, which would
 be wrong for a field whose value is a number chosen from a named list.
+
+## A resolvable picture draws inline, in a box that never changes size
+
+A resref field whose resolved type is a PICTURE - an icon BAM, a portrait BMP - additionally carries
+`row.thumbnail`, and `ResourceThumbnail.svelte` draws it beside the value. Which types qualify is the host's
+answer, not the render layer's (`client/src/ie-resources/thumbnails.ts` owns both the predicate and the decode),
+because the row is marked at build time and the bytes are fetched later: a type the host cannot draw would
+reserve a box nothing ever fills.
+
+**The picture IS the open control, and it replaces the chip.** Where the target can be opened the image is a
+`<button>` that opens it, and the row drops the `-> ext` chip - one control per action, and the one that shows
+what it will open. Rows with no picture keep the chip, which is the only affordance a resource with nothing to
+show can have. Neither renderer decides this itself: `showsOpenChip(row)` and `thumbnailOpens(row)`
+(`state/controls.ts`) are shared, so a row cannot end up with both affordances in one block and one in another.
+A drawable type nothing can open renders an inert `<span>` - it promises nothing - and the button carries an
+`aria-label`/`title` because an icon-only control has no visible text to name it.
+
+Three properties are load-bearing and are guarded rather than left to care:
+
+- **The box is fixed and present from the first paint**, before any bytes exist. A picture that appeared on
+  arrival would push every control in its row, which the stable-layout rule above forbids.
+  `render-resource-picker.mts` measures the row's height with and without a picture and fails if they differ.
+  Its 22px size was measured against that, not chosen by eye: a 32px kv row absorbs the box up to 26px and
+  grows at 28px, so it is deliberately BIGGER than the ~21px control beside it and still short of the row.
+  Raising it means redoing that measurement.
+- **`img-src data:` is in the CSP** (`index.html`), and the harness's policy matches. Without it
+  `default-src 'none'` blocks every thumbnail SILENTLY - the box renders, the picture does not.
+- **Marked only when the game HAS the resource**, like the open chip, so an unresolvable resref reserves nothing
+  and fetches nothing.
+
+The two affordances are independent, and neither implies the other: a portrait draws AND opens (VS Code's own
+image preview shows it), while a CRE's script opens and is not a picture. Do not collapse them into one flag.
+Bytes are fetched per resource and cached by the bridge, so several fields naming one icon cost one decode.
 
 ## A resref field is a picker with a game, and the list is a suggestion set - never the domain
 

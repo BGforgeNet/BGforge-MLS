@@ -4,10 +4,12 @@ import { getSnapshotPath } from "@bgforge/binary";
 import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { backupHandle } from "../hot-exit-backup";
 import { hasViewerFor } from "../ie-resources/editor-routing";
+import { canThumbnail, thumbnailDataUri } from "../ie-resources/thumbnails";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import {
     type NamingTableResolver,
     type ResourceListResolver,
+    type ResourceBytesResolver,
     type EngineResolver,
     type ResourceTypeResolver,
     type FlagBitNamesResolver,
@@ -28,6 +30,7 @@ export interface GameResolvers {
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
+    resourceBytes: ResourceBytesResolver;
     engine: EngineResolver;
     /** Whether the resolvers can answer anything for this document. Owns the whole policy - the URI's own
      *  game plus the `file:` fallback - so this module never re-derives what counts as game-backed. */
@@ -220,6 +223,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 }
                 break;
             }
+            case "requestThumbnail": {
+                // Read and decoded on demand, not pushed with the row: a record carries many picture fields, the
+                // bytes are far larger than the row, and the view caches per resource - several rows commonly
+                // name the same icon.
+                const bytes = this.gameLookups.resourceBytes(document.uri, message.resref, message.ext);
+                const dataUri = bytes === undefined ? undefined : thumbnailDataUri(bytes, message.ext, message.resref);
+                this.post(panel, { type: "thumbnail", requestId: message.requestId, dataUri });
+                break;
+            }
             case "requestResourceList": {
                 // Answered from the game session, not the worker: the record's own bytes say nothing about what
                 // else the install holds. An empty list is the honest answer outside a game - the picker then
@@ -390,9 +402,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
                       resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
                       flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
-                      // Passed directly, unlike the closures above: viewability is a property of the type, not
-                      // of the document this message is for.
+                      // Passed directly, unlike the closures above: what can be done with a TYPE is not a
+                      // property of the document this message is for.
                       canOpen: hasViewerFor,
+                      canThumbnail,
                   });
         void panel.webview.postMessage(resolved);
     }

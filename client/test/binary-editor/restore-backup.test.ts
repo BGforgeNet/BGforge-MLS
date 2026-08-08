@@ -101,6 +101,7 @@ const noGame = {
     resourceType: (): undefined => undefined,
     flagBitNames: (): undefined => undefined,
     resourceList: (): undefined => undefined,
+    resourceBytes: (): undefined => undefined,
     engine: (): undefined => undefined,
     isGameBacked: (): boolean => false,
 };

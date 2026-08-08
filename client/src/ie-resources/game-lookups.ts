@@ -75,6 +75,15 @@ export type FlagBitNamesResolver = (
 export type ResourceListResolver = (uri: vscode.Uri, ext: string) => readonly string[] | undefined;
 
 /**
+ * The bytes of one resource in the game a document resolves against, or undefined when there is no game or the
+ * resource is not there.
+ *
+ * Deliberately the raw bytes and nothing more: what a consumer wants them FOR (a thumbnail, a preview) decides
+ * how to decode them, and this module has no business knowing about formats.
+ */
+export type ResourceBytesResolver = (uri: vscode.Uri, resref: string, ext: string) => Uint8Array | undefined;
+
+/**
  * The IE engine key of the game a record was opened from, or undefined outside one.
  *
  * Needed because an effect opcode number has no engine-neutral meaning - 238 is Disintegrate on BG2/EE and a
@@ -129,6 +138,7 @@ interface TlkSource {
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
         twoDaTable(resref: string): TwoDaTable | undefined;
         canRead(resref: string, type: string): boolean;
+        read(resref: string, type: string): Uint8Array;
         list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
         /** WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override. */
         readonly identity: { readonly flavour: string };
@@ -299,6 +309,29 @@ export function createResourceListResolver(session: TlkSource, fallback?: GameDi
             // Unreadable game - the field stays a plain text box, exactly as outside a game.
         }
         return resrefs;
+    };
+}
+
+/**
+ * Reads one resource out of the game a document resolves against.
+ *
+ * Uncached, like the resource list: the caller asks once per distinct resource and holds what it makes of the
+ * bytes, and caching here would need invalidating on every write into `override/`.
+ */
+export function createResourceBytesResolver(session: TlkSource, fallback?: GameDirFallback): ResourceBytesResolver {
+    return (uri, resref, ext) => {
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return;
+        let bytes: Uint8Array | undefined;
+        try {
+            bytes = session.ensureOpen(gameDir).read(resref, ext);
+        } catch {
+            // Every miss lands here, including the ordinary one: `read` throws for an absent resource, and a
+            // resref naming what a later install step creates is normal rather than an error. Deliberately not
+            // gated on a `canRead` first - it would resolve the resref twice on every HIT to avoid a throw on a
+            // rare miss, and the answer is the same either way.
+        }
+        return bytes;
     };
 }
 

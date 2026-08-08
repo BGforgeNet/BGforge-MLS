@@ -78,6 +78,12 @@ export interface GameLookups {
      * view, so registering a reader for a format re-enables its chip with no change here.
      */
     canOpen(ext: string): boolean;
+    /**
+     * Whether a resource of this type can be drawn as an inline thumbnail. Asked here rather than in the view
+     * because the decode is the host's, and the two must agree: the view reserves the slot off this answer, so a
+     * type the host cannot draw would leave a permanent gap in the row.
+     */
+    canThumbnail(ext: string): boolean;
 }
 
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
@@ -174,28 +180,49 @@ function keyFromStored(stored: number, encoding: string | undefined): number {
     }
 }
 
+/** The row properties a resource that the game HAS earns, by what can be done with its type. */
+interface Affordances {
+    openTarget?: { resref: string; ext: string };
+    thumbnail?: { resref: string; ext: string };
+}
+
+/**
+ * What a present resource offers: an open chip where an editor can show it, an inline picture where it IS one.
+ *
+ * One function for both, and shared by the two paths that resolve a target, because they are independent
+ * questions asked of the same pair - a type could be drawable without being openable - and deciding them apart
+ * is how a resref field and its numeric sibling end up disagreeing about the same resource.
+ */
+function affordancesFor(resref: string, ext: string, lookups: GameLookups): Affordances {
+    const target = { resref, ext };
+    return {
+        ...(lookups.canOpen(ext) ? { openTarget: target } : {}),
+        ...(lookups.canThumbnail(ext) ? { thumbnail: target } : {}),
+    };
+}
+
 /**
  * The resource a NUMERIC field's current value names, when the ref says one of its tables holds resrefs -
  * PROJECTL.IDS's symbols are `.PRO` basenames, so a projectile value identifies a real file. Near Infinity
  * carries the same pairing on this field.
  *
- * Only the openTarget half, never `refExt`: the field stores a number chosen from a named list, so it must not
- * become a resref picker. And only when the game HAS the resource and something can display it, matching the
- * resref rule below - an unresolvable name and an unviewable type both get no chip rather than a broken one.
+ * Never `refExt`: the field stores a number chosen from a named list, so it must not become a resref picker.
+ * And only when the game HAS the resource, matching the resref rule below - an unresolvable name gets nothing
+ * rather than a broken affordance.
  */
 function resourceNamedByValue(
     row: ValueRefRow,
     tables: readonly NamedTable[],
     lookups: GameLookups,
-): { resref: string; ext: string } | undefined {
+): Affordances | undefined {
     const decl = row.ref.symbolResource;
     const source = decl === undefined ? undefined : tables.find((t) => t.table === decl.table);
     if (decl === undefined || source === undefined) return;
     const symbol = source.entries.get(keyFromStored(row.rawValue, row.ref.keyEncoding?.[decl.table]));
     if (symbol === undefined || symbol === "") return;
     const target = lookups.resourceType({ type: decl.type }, symbol);
-    if (target?.present !== true || !lookups.canOpen(target.type)) return;
-    return { resref: symbol, ext: target.type };
+    if (target?.present !== true) return;
+    return affordancesFor(symbol, target.type, lookups);
 }
 
 /**
@@ -259,9 +286,9 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         if (tables !== undefined) {
             // Read before the spread: `row` is re-typed to the merged shape below, and the value the resource
             // is derived from is the one this row already holds.
-            const open = resourceNamedByValue(row, tables, lookups);
+            const offers = resourceNamedByValue(row, tables, lookups);
             row = { ...row, ...namedByGame(row, tables) };
-            if (open !== undefined) row = { ...row, openTarget: open };
+            if (offers !== undefined) row = { ...row, ...offers };
         }
     }
     // A third axis beside `ref` (the row's VALUE) and `slotRef` (its label): what its BITS mean. A bitfield can
@@ -278,16 +305,15 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         // affordance is withheld. A `deferred` ref never reaches here, so an opcode-typed effect resref renders
         // like an undeclared one.
         //
-        // The chip additionally needs an editor that can SHOW the target, which is a separate question from
-        // whether the game has it: a CRE points at five BCS scripts and a DLG, none of which anything here
-        // reads, so the chip used to open six hex dumps per creature.
+        // What a PRESENT resource then offers is a question about its type, not about the game: an editor that
+        // can SHOW it earns the chip - a CRE points at five BCS scripts and a DLG, none of which anything here
+        // reads, so the chip used to open six hex dumps per creature - and a type that IS a picture earns a
+        // thumbnail, which is how an item's icon and a creature's portraits draw in the row.
         const resref = row.rawValue;
         const target = lookups.resourceType({ type: row.ref.type, byFlavour: row.ref.byFlavour }, resref);
         if (target !== undefined) {
             row = { ...row, refExt: target.type };
-            if (target.present && lookups.canOpen(target.type)) {
-                row = { ...row, openTarget: { resref, ext: target.type } };
-            }
+            if (target.present) row = { ...row, ...affordancesFor(resref, target.type, lookups) };
         }
     }
     if (isSlotRefRow(row)) {

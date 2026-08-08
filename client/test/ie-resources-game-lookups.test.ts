@@ -10,6 +10,7 @@ import {
     createFlagBitNamesResolver,
     createNamingTableResolver,
     createResourceListResolver,
+    createResourceBytesResolver,
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
@@ -44,6 +45,7 @@ function session(
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDaTable: (resref: string) => TwoDaTable | undefined;
         canRead: (resref: string, type: string) => boolean;
+        read: (resref: string, type: string) => Uint8Array;
         list: () => { resref: string; ext: string | undefined }[];
         identity: { flavour: string };
     };
@@ -60,6 +62,14 @@ function session(
                 twoDaTable: (resref: string) => (resref.toLowerCase() === "kitlist" ? overrides.kitlist : undefined),
                 canRead: (resref: string, type: string) =>
                     (overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()),
+                // Stands in for the real archive read: identifiable bytes for a resource the install has, and a
+                // throw for one it does not - the real `Game.read` throws, which is why the resolver asks
+                // `canRead` first rather than catching.
+                read: (resref: string, type: string) => {
+                    if (!(overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()))
+                        throw new Error(`no ${resref}.${type}`);
+                    return new TextEncoder().encode(`${resref}.${type}`.toLowerCase());
+                },
                 // The install's whole namespace, biffed and override alike - `resources` doubles as it, split
                 // back into the resref/ext pair `Game.list()` yields.
                 list: () =>
@@ -200,6 +210,9 @@ describe("createStrrefResolver", () => {
                 twoDa: () => undefined,
                 twoDaTable: () => undefined,
                 canRead: () => false,
+                read: (): Uint8Array => {
+                    throw new Error("empty game");
+                },
                 list: () => [],
                 identity: { flavour: "tob" },
             }),
@@ -376,6 +389,38 @@ describe("createResourceTypeResolver", () => {
         expect(
             createResourceTypeResolver(session({ throws: true }))(gameUri(), { type: "ITM" }, "SW1H01"),
         ).toBeUndefined();
+    });
+});
+
+describe("createResourceBytesResolver", () => {
+    const INSTALL = { resources: ["isw1h01.bam", "imoenm.bmp"] };
+
+    it("reads a resource the install has", () => {
+        const read = createResourceBytesResolver(session(INSTALL));
+
+        expect(new TextDecoder().decode(read(gameUri(), "ISW1H01", "BAM"))).toBe("isw1h01.bam");
+    });
+
+    /**
+     * The archive THROWS for an absent resource, and a resref naming what a later install step creates is the
+     * normal case rather than an error - so the miss has to reach the caller as "no bytes", never as an
+     * exception that would take the field beside it down.
+     */
+    it("answers nothing for a resource the install does not have, without throwing", () => {
+        const read = createResourceBytesResolver(session(INSTALL));
+
+        expect(read(gameUri(), "MODONLY", "BAM")).toBeUndefined();
+    });
+
+    // An unreadable game is the same answer as no game: nothing to draw, and nothing that fails an open.
+    it("answers nothing when the game cannot be opened", () => {
+        expect(createResourceBytesResolver(session({ throws: true }))(gameUri(), "ISW1H01", "BAM")).toBeUndefined();
+    });
+
+    it("answers nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
+
+        expect(createResourceBytesResolver(session(INSTALL))(fileUri, "ISW1H01", "BAM")).toBeUndefined();
     });
 });
 

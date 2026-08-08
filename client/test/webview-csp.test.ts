@@ -70,4 +70,26 @@ describe("webview CSP", () => {
         const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).toContain("font-src {{cspSource}}");
     });
+
+    /**
+     * Resref thumbnails are data URIs the host builds, and `default-src 'none'` blocks them QUIETLY - the
+     * reserved box renders and the picture does not, which reads as a decode bug rather than a policy one.
+     * Pinned narrowly: `data:` and no origin, since no image is ever loaded from the extension.
+     */
+    it("binary editor CSP allows thumbnail data URIs, and only those", () => {
+        const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
+        expect(html).toContain("img-src data:");
+        expect(html).not.toContain("img-src {{cspSource}}");
+    });
+
+    /**
+     * The harness renders the same components behind its own policy, so a laxer one there would false-green
+     * exactly this class of bug: the picture draws in every screenshot and the shipped panel shows an empty box.
+     * Only the directives that differ by construction (nonce vs cspSource for style/script) are exempt.
+     */
+    it("the render harness enforces the same img policy as the real panel", () => {
+        const build = fs.readFileSync(path.join(REPO_ROOT, "binary-editor/test/harness/build.mts"), "utf8");
+        expect(build).toContain("img-src data:");
+        expect(build).toContain("default-src 'none'");
+    });
 });

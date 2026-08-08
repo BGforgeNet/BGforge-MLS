@@ -51,7 +51,9 @@ async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: str
 
     // Strict nonce CSP mirrors the real webview (provider.ts). font-src allows data: so the inlined codicon
     // @font-face (data: URI above) loads; the same nonce is applied to both the inlined <style> and the
-    // inlined <script> so Chromium enforces the policy identically to the real webview.
+    // inlined <script> so Chromium enforces the policy identically to the real webview. `img-src data:`
+    // matches index.html exactly, and matching MATTERS in this direction: a laxer harness policy would render
+    // thumbnails that the real panel's CSP silently blocks.
     const nonce = crypto.randomBytes(16).toString("base64");
 
     // VS Code Dark+ fallbacks for every --vscode-* variable styles.css consumes, so the harness renders the
@@ -59,7 +61,7 @@ async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: str
     const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; font-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
+    content="default-src 'none'; font-src data:; img-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
 <style nonce="${nonce}">
 ${THEME_VARS}${codiconCss}${css}
 </style></head>

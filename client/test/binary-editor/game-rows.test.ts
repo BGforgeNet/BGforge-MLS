@@ -25,6 +25,9 @@ const lookups = {
     flagBitNames: (): Readonly<Record<string, readonly string[]>> | undefined => undefined,
     // Default open: the routing question is the host's, and the cases below that turn it off say so locally.
     canOpen: (): boolean => true,
+    // Default NOT drawable - the opposite default from `canOpen`, deliberately: most resource types are not
+    // pictures, so this keeps the unrelated cases below asserting on rows with no thumbnail to explain.
+    canThumbnail: (): boolean => false,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
@@ -583,6 +586,52 @@ describe("withGameContext", () => {
 
         expect(out.rows[0]).not.toHaveProperty("openTarget");
         expect(out.rows[0]).toMatchObject({ refExt: "BCS" });
+    });
+
+    /** The same game, now able to draw a BAM - the state a real host is always in for an icon field. */
+    const drawsIcon = { ...hasIcon, canThumbnail: (ext: string) => ext === "BAM" };
+
+    it("marks a present icon for an inline picture as well as an open chip", () => {
+        const out = withGameContext({ rows: [iconRow] }, drawsIcon);
+
+        expect(out.rows[0]).toMatchObject({ thumbnail: { resref: "ISW1H01", ext: "BAM" } });
+    });
+
+    // The slot is reserved from the marking, so marking a row whose resource is absent would leave a permanent
+    // gap in the field - the same presence rule the chip follows, and for a sharper reason.
+    it("marks no picture for a resref the game does not have", () => {
+        const out = withGameContext({ rows: [{ ...iconRow, rawValue: "MODONLY" }] }, drawsIcon);
+
+        expect(out.rows[0]).not.toHaveProperty("thumbnail");
+        expect(out.rows[0]).toMatchObject({ refExt: "BAM" });
+    });
+
+    /**
+     * The two affordances answer different questions, so neither implies the other. A portrait proves it in the
+     * live direction - VS Code's own image preview shows it, so it earns both - while this pins the direction
+     * that has no live example yet: something drawable that no editor opens still draws.
+     */
+    it("draws a picture for a type nothing can open", () => {
+        const out = withGameContext({ rows: [iconRow] }, { ...drawsIcon, canOpen: (ext: string) => ext !== "BAM" });
+
+        expect(out.rows[0]).toMatchObject({ thumbnail: { resref: "ISW1H01", ext: "BAM" } });
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
+    // ...and the converse, which is the common case: an item a CRE carries resolves and opens, and is not a
+    // picture, so it must not reserve a box beside its value.
+    it("offers to open a resource that is not a picture, without marking one", () => {
+        const itemRow = { ...iconRow, name: "Item", ref: { kind: "resource", type: "ITM" } };
+        const out = withGameContext(
+            { rows: [itemRow] },
+            {
+                ...drawsIcon,
+                resourceType: () => ({ type: "ITM", present: true }),
+            },
+        );
+
+        expect(out.rows[0]).toMatchObject({ openTarget: { resref: "ISW1H01", ext: "ITM" } });
+        expect(out.rows[0]).not.toHaveProperty("thumbnail");
     });
 
     // Outside a game there is nothing to resolve and nothing to suggest: the field stays a plain text box.

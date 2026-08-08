@@ -233,3 +233,28 @@ export function rangeTooltip(row: Row): string | undefined {
     if (row.min === undefined || row.max === undefined) return undefined;
     return `${row.min} to ${row.max}`;
 }
+
+// ---- which "open this resource" affordance a row gets ----
+/**
+ * Whether the row shows the textual `-> ext` chip.
+ *
+ * False when the row also has a picture: the thumbnail IS the link there, so a chip beside it would be a second
+ * control for one action - the reader clicks the thing they can see. Every other openable row keeps the chip,
+ * which is the only affordance a resource with nothing to show can have.
+ *
+ * Shared rather than repeated in each block renderer, so the two cannot end up disagreeing about which
+ * affordance a row gets (`webview/AGENTS.md`, the shared-layer rule).
+ */
+export function showsOpenChip(row: Row): boolean {
+    return row.openTarget !== undefined && row.thumbnail === undefined;
+}
+
+/**
+ * The resource a row's thumbnail opens when clicked, or undefined when the picture is not a link.
+ *
+ * Undefined only for a type that draws but that no editor can show - the two answers are independent (see
+ * `game-rows.ts`). The picture then renders as a plain image, which is honest: it promises nothing.
+ */
+export function thumbnailOpens(row: Row): Row["openTarget"] {
+    return row.thumbnail === undefined ? undefined : row.openTarget;
+}

@@ -67,6 +67,11 @@ export interface Row {
      *  exists. Absent outside a game and for a resref nothing resolves - the view offers to open it only when
      *  this is set, and never marks its absence (a mod record may point at what a later install step creates). */
     openTarget?: { resref: string; ext: string };
+    /** The resolved target is a picture (an icon BAM, a portrait BMP), so the view shows it inline. Carried as
+     *  its own row property, and set at the same moment as `openTarget`, so the fixed-size slot exists from the
+     *  first paint - a thumbnail that appeared once its bytes arrived would reflow the field grid. The bytes
+     *  themselves are fetched lazily by the view, keyed on this. */
+    thumbnail?: { resref: string; ext: string };
     /** The extension a `resource` ref points at IN THIS GAME (the declared type, or this flavour's override),
      *  set whenever the record was opened from a game - unlike `openTarget`, which additionally requires the
      *  current value to resolve. It is what makes the field pickable: the view offers the game's resources of
