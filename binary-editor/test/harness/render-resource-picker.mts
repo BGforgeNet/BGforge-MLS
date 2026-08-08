@@ -28,22 +28,33 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../external/infinity-engine/bg2-wildmage/wildmage/wild_spells/itm/wm_sbook.itm");
 const itmBytes = new Uint8Array(fs.readFileSync(FIXTURE));
 
-/** The one BAM the synthetic install actually has, so exactly one field also gets the open affordance. */
+/** The BAMs the synthetic install actually has, so those fields also get the open affordance. Two of them, with
+ *  different prefixes so the filter assertion below still narrows to one: the viewability check needs a SECOND
+ *  present name to change one variable at a time against the first. */
 const PRESENT_BAM = "ISW1H01";
+const PRESENT_BAM_2 = "XBOW01";
 /** More BAMs than the combobox renders (cap 200), so the overflow notice is exercised - a real BG:EE has ~12300. */
-const BAM_INDEX = [PRESENT_BAM, ...Array.from({ length: 260 }, (_, i) => `BAM${String(i).padStart(4, "0")}`)].sort();
+const BAM_INDEX = [
+    PRESENT_BAM,
+    PRESENT_BAM_2,
+    ...Array.from({ length: 260 }, (_, i) => `BAM${String(i).padStart(4, "0")}`),
+].sort();
 
-/** A game that resolves every declared type and holds only PRESENT_BAM. */
+/** Types this synthetic host can DISPLAY. Mutable so one check can hold the value fixed and vary only this. */
+let unviewable = new Set<string>();
+
+/** A game that resolves every declared type and holds only the present BAMs. */
 const lookups = {
     strref: () => undefined,
     slotLabel: () => undefined,
     namingTable: () => undefined,
     resourceType: (decl: { type: string }, resref: string) => ({
         type: decl.type,
-        present: decl.type === "BAM" && resref === PRESENT_BAM,
+        present: decl.type === "BAM" && (resref === PRESENT_BAM || resref === PRESENT_BAM_2),
     }),
     // This driver plays a host with a game for the RESREF picker only; no kit-usability bit is in frame.
     flagBitNames: () => undefined,
+    canOpen: (ext: string) => !unviewable.has(ext.toUpperCase()),
 };
 
 let sessionId = "";
@@ -248,6 +259,24 @@ check(
     (await pickers(page))["Inventory Icon"]?.chip === true,
     JSON.stringify((await pickers(page))["Inventory Icon"]),
 );
+
+// One variable apart from the check above: the value still resolves, only its type became undisplayable. The chip
+// promises a VIEW, and `vscode.openWith`'s "default" is the plain text editor - a real CRE points at five BCS
+// scripts and a DLG, none of which anything here reads. Picking is untouched: unviewable is not invalid.
+unviewable = new Set(["BAM"]);
+await firstIcon.fill("");
+await firstIcon.pressSequentially(PRESENT_BAM_2, { delay: 10 });
+await firstIcon.press("Enter");
+await page.waitForTimeout(500);
+{
+    const row = (await pickers(page))["Inventory Icon"];
+    check(
+        "viewability: a value the install HAS is pickable but not openable when nothing can show its type",
+        row?.combobox === true && row.chip === false,
+        JSON.stringify(row),
+    );
+}
+unviewable = new Set();
 
 // A second picker of the same type reuses the fetched list rather than asking again.
 const secondIcon = page.locator('.layout-root .bb-combobox-input[aria-label="Ground Icon"]');

@@ -23,6 +23,8 @@ const lookups = {
     namingTable: (): Named => undefined,
     resourceType: (): { type: string; present: boolean } | undefined => undefined,
     flagBitNames: (): Readonly<Record<string, readonly string[]>> | undefined => undefined,
+    // Default open: the routing question is the host's, and the cases below that turn it off say so locally.
+    canOpen: (): boolean => true,
 };
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
@@ -266,6 +268,33 @@ describe("withGameContext", () => {
 
         const out = withGameContext({ rows: [projectile] }, named);
 
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
+    // The live case, not a hypothetical: an IE `.pro` is a PROJECTILE, which no parser here reads - the Fallout
+    // one rejects it by signature. So the game having the file is not enough, and the chip goes for the same
+    // reason a BCS row's does.
+    it("withholds the chip when the named resource resolves but nothing can show it", () => {
+        const projectile = {
+            id: "p6",
+            kind: "field",
+            name: "Projectile",
+            valueType: "uint16",
+            size: 2,
+            ref: { kind: "ids", tables: ["PROJECTL"], symbolResource: { table: "PROJECTL", type: "PRO" } },
+            rawValue: 5,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => one("PROJECTL", [[5, "ACIDBLOB"]]),
+            resourceType: () => ({ type: "PRO", present: true }),
+            canOpen: (ext: string) => ext !== "PRO",
+        };
+
+        const out = withGameContext({ rows: [projectile] }, named);
+
+        // Still NAMED - withholding the chip must not cost the option list, which is the field's main feature.
+        expect(optionsOf(out.rows[0])?.["5"]).toBe("ACIDBLOB");
         expect(out.rows[0]).not.toHaveProperty("openTarget");
     });
 
@@ -537,6 +566,23 @@ describe("withGameContext", () => {
 
         expect(out.rows[0]).toMatchObject({ refExt: "BAM" });
         expect(out.rows[0]).not.toHaveProperty("openTarget");
+    });
+
+    // A CRE points at five BCS scripts and a DLG, and nothing here reads either - `vscode.openWith`'s "default"
+    // is the plain text editor, so the chip used to open a hex dump per script. Withheld rather than opened:
+    // the row stays pickable, since being unviewable says nothing about being a valid target.
+    it("withholds the open affordance for a type no editor can show, but keeps it pickable", () => {
+        const scriptRow = { ...iconRow, name: "Class Script", ref: { kind: "resource", type: "BCS" } };
+        const hasScript = {
+            ...hasIcon,
+            resourceType: () => ({ type: "BCS", present: true }),
+            canOpen: (ext: string) => ext !== "BCS",
+        };
+
+        const out = withGameContext({ rows: [scriptRow] }, hasScript);
+
+        expect(out.rows[0]).not.toHaveProperty("openTarget");
+        expect(out.rows[0]).toMatchObject({ refExt: "BCS" });
     });
 
     // Outside a game there is nothing to resolve and nothing to suggest: the field stays a plain text box.

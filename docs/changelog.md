@@ -7,6 +7,10 @@
 - An item's "Unusable By Kit" checkbox that several Enhanced Edition kits share now reads "EE kits" and names
   them on hover. An item file has room for 32 kits, all used by classic Baldur's Gate II, so the later kits
   reuse a bit - ticking it excludes every one of them.
+- The "open" button beside a field pointing at another game resource now appears only for resources this editor
+  can actually show. A creature's five script slots and its dialogue file offered one and opened raw bytes in a
+  text editor; those fields stay searchable and editable as before. The button returns for a format the moment
+  it becomes viewable.
 
 ### Other editors
 

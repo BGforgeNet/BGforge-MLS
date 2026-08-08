@@ -113,4 +113,16 @@ describe("opensInOurEditor", () => {
         expect(opensInOurEditor("bam")).toBe(true);
         expect(opensInOurEditor("mos")).toBe(false);
     });
+
+    // The binary editor gates its open chip on this, and a field's declared ref type is UPPERCASE
+    // (`ref: { kind: "resource", type: "ITM" }`), where the tree passes a filename's lowercase extension. A
+    // case-sensitive lookup here would withhold the chip from every field that currently has one.
+    it("answers the same for a declared ref type as for a filename extension", () => {
+        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM"]) {
+            expect(opensInOurEditor(ext)).toBe(true);
+        }
+        for (const ext of ["BCS", "DLG", "BMP", "PRO"]) {
+            expect(opensInOurEditor(ext)).toBe(false);
+        }
+    });
 });

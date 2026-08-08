@@ -71,6 +71,13 @@ export interface GameLookups {
      * list to one. Undefined outside a game or when the install's table says nothing.
      */
     flagBitNames(ref: FlagsBitRef): Readonly<Record<string, readonly string[]>> | undefined;
+    /**
+     * Whether opening a resource of this type reaches an editor that can show it. The chip promises a view, and
+     * `vscode.openWith`'s `"default"` is the plain TEXT editor, so a type no editor of ours reads renders as
+     * bytes - a promise broken rather than degraded. Derived host-side from the same routing that picks the
+     * view, so registering a reader for a format re-enables its chip with no change here.
+     */
+    canOpen(ext: string): boolean;
 }
 
 /** Ref kinds that name a value from a whole table the game ships (as opposed to a per-value lookup like a
@@ -173,8 +180,8 @@ function keyFromStored(stored: number, encoding: string | undefined): number {
  * carries the same pairing on this field.
  *
  * Only the openTarget half, never `refExt`: the field stores a number chosen from a named list, so it must not
- * become a resref picker. And only when the game HAS the resource, matching the resref rule - a name the
- * install cannot resolve gets no chip rather than a dangling one.
+ * become a resref picker. And only when the game HAS the resource and something can display it, matching the
+ * resref rule below - an unresolvable name and an unviewable type both get no chip rather than a broken one.
  */
 function resourceNamedByValue(
     row: ValueRefRow,
@@ -187,7 +194,8 @@ function resourceNamedByValue(
     const symbol = source.entries.get(keyFromStored(row.rawValue, row.ref.keyEncoding?.[decl.table]));
     if (symbol === undefined || symbol === "") return;
     const target = lookups.resourceType({ type: decl.type }, symbol);
-    return target?.present === true ? { resref: symbol, ext: target.type } : undefined;
+    if (target?.present !== true || !lookups.canOpen(target.type)) return;
+    return { resref: symbol, ext: target.type };
 }
 
 /**
@@ -269,11 +277,17 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         // points at what a later install step creates, so there is no marker and no advisory - only the open
         // affordance is withheld. A `deferred` ref never reaches here, so an opcode-typed effect resref renders
         // like an undeclared one.
+        //
+        // The chip additionally needs an editor that can SHOW the target, which is a separate question from
+        // whether the game has it: a CRE points at five BCS scripts and a DLG, none of which anything here
+        // reads, so the chip used to open six hex dumps per creature.
         const resref = row.rawValue;
         const target = lookups.resourceType({ type: row.ref.type, byFlavour: row.ref.byFlavour }, resref);
         if (target !== undefined) {
             row = { ...row, refExt: target.type };
-            if (target.present) row = { ...row, openTarget: { resref, ext: target.type } };
+            if (target.present && lookups.canOpen(target.type)) {
+                row = { ...row, openTarget: { resref, ext: target.type } };
+            }
         }
     }
     if (isSlotRefRow(row)) {
