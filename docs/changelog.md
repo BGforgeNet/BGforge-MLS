@@ -17,8 +17,7 @@
 
 - Tree-sitter grammars are now published as `bgforge-mls-tree-sitter-grammars.zip`, attached to every release:
   generated parsers, highlight queries and WASM builds, one directory per grammar. The Neovim, Helix, Zed and
-  Emacs guides install from it - they pointed at the repository before, which has no committed parsers, so
-  highlighting never came up.
+  Emacs guides install from it.
 - The bundle carries Helix highlight queries under `queries/helix/`, using the capture names Helix themes
   colour. Numbers rendered as plain text there before.
 - The Helix guide now puts the queries under the language name (`runtime/queries/fallout-ssl/`), not the
