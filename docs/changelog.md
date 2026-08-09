@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.13.1
 
 ### Binary editor
 
