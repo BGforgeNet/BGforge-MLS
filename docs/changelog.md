@@ -4,57 +4,42 @@
 
 ### Binary editor
 
-- An item's "Unusable By Kit" checkbox that several Enhanced Edition kits share now reads "EE kits" and names
-  them on hover. An item file has room for 32 kits, all used by classic Baldur's Gate II, so the later kits
-  reuse a bit - ticking it excludes every one of them.
-- The "open" button beside a field pointing at another game resource now appears only for resources that can
-  actually be shown. A creature's five script slots and its dialogue file offered one and opened raw bytes in a
-  text editor; those fields stay searchable and editable as before. The button returns for a format the moment
-  it becomes viewable.
-- Portraits and sounds opened from a game now use VS Code's own image and audio previews instead of the text
-  editor, so a creature's portrait fields have a working "open" button and show the picture. Opening a `.bmp` or
-  `.wav` from the IE Game Resources view previews it too, rather than showing bytes.
-- An item or spell icon field, and a creature's portrait fields, now show the picture itself beside the value
-  when the game has it - so you can see which icon a resref names without opening it. Clicking the picture
-  opens it, replacing the "open" button on those fields; fields with nothing to show keep the button. Nothing
-  is shown for a name the game does not have, and the row's layout is unchanged either way.
+- An item's "Unusable By Kit" checkbox shared by several Enhanced Edition kits now reads "EE kits" and names
+  them on hover.
+- The "open" button beside a resource field now appears only where the resource can be shown. A creature's
+  script slots and dialogue file offered one and opened raw bytes.
+- Portraits and sounds now open in VS Code's image and audio previews instead of the text editor, including a
+  `.bmp` or `.wav` opened from the IE Game Resources view.
+- Item and spell icons, and creature portraits, show the picture beside the value when the game has it.
+  Clicking it opens it, replacing the "open" button on those fields.
 
 ### Other editors
 
-- Tree-sitter grammars are now published as a downloadable bundle, `bgforge-mls-tree-sitter-grammars.zip`,
-  attached to every release alongside the editor bundles. It
-  carries the generated parsers, the highlight queries and the WASM builds, one directory per grammar, and is
-  what the Neovim, Helix, Zed and Emacs setup guides now install from. The recipes previously pointed at the
-  repository, where the parsers are generated at build time rather than committed, so there was nothing for
-  those editors to compile and highlighting never came up.
-- The bundle also carries a Helix copy of the highlight queries under `queries/helix/`, using the capture names
-  Helix themes colour. Numbers rendered as plain text there before. Neovim and Zed read the canonical queries.
-- The Helix guide now puts the queries under the language name (`runtime/queries/fallout-ssl/`), not the grammar
-  name. Following it before gave you a working parser and no highlighting, with nothing to say why.
+- Tree-sitter grammars are now published as `bgforge-mls-tree-sitter-grammars.zip`, attached to every release:
+  generated parsers, highlight queries and WASM builds, one directory per grammar. The Neovim, Helix, Zed and
+  Emacs guides install from it - they pointed at the repository before, which has no committed parsers, so
+  highlighting never came up.
+- The bundle carries Helix highlight queries under `queries/helix/`, using the capture names Helix themes
+  colour. Numbers rendered as plain text there before.
+- The Helix guide now puts the queries under the language name (`runtime/queries/fallout-ssl/`), not the
+  grammar name.
 
 ### Fixes
 
-- Opening an Infinity Engine `.pro` as a plain file still cannot show it, but now says it is an Infinity Engine
-  projectile instead of reporting an unknown object type.
+- An Infinity Engine `.pro` opened as a plain file now says it is an IE projectile instead of reporting an
+  unknown object type.
 - Fallout SSL name matching now spans files: a procedure declared in a header is found from a script that
-  spells it with different capitalisation. Macros keep matching exactly, since the preprocessor that expands
-  them distinguishes case - renaming `MY_MACRO` leaves an unrelated `my_macro` in another file alone.
-- WeiDU `.d` and `.baf` completion no longer offers the language's keywords inside a comment, and in `.d` no
-  longer inside dialogue text, a filename or any other tilde-quoted string - it used to offer the same list at
-  every position in the file. Trigger and action strings still complete against the BAF vocabulary.
-- Fallout SSL completion no longer fires inside a string. Message text and `#include` paths were getting the
-  whole vocabulary - some 800 names - over what was being typed.
-- TP2 completion inside a string now offers the variables alone, since a `%var%` is the only thing that
-  resolves there.
+  spells it with different capitalisation. Macros keep matching exactly - the preprocessor distinguishes case.
+- WeiDU `.d` and `.baf` completion no longer offers keywords inside a comment, nor in `.d` inside dialogue
+  text, a filename or any other tilde-quoted string. Trigger and action strings still complete.
+- Fallout SSL completion no longer fires inside a string, where message text and `#include` paths were getting
+  the whole vocabulary.
+- TP2 completion inside a string now offers the variables alone.
 - Go to definition now follows a tp2 path whose language is a variable - `USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`
-  opens the file in the language directory `mls.translation.directory` names. It used to stay put, because the
-  file exists once per language and there was nothing to say which you meant; with the setting unset it still
-  does.
+  opens the file in the language directory `mls.translation.directory` names.
 - Fallout SSL no longer reports a spurious error on a `#define` whose last statement omits its semicolon, as in
-  `#define export_self_obj if (is_night) then export_obj := self_obj`. The macro body is pasted verbatim, so no
-  terminator is required, and the error surfaced on the next line rather than the macro itself.
+  `#define export_self_obj if (is_night) then export_obj := self_obj`.
 - TP2 block comments now nest, matching WeiDU: `/* outer /* inner */ still commented */` is one comment.
-  Commenting out a region that already contained a comment used to break highlighting for the rest of the file.
 
 ## 3.13.0
 
