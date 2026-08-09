@@ -22,7 +22,7 @@
 ### Other editors
 
 - Tree-sitter grammars are now published as a downloadable bundle, `bgforge-mls-tree-sitter-grammars.zip`,
-  attached to every release and rebuilt daily from the default branch as the `grammars-nightly` prerelease. It
+  attached to every release alongside the editor bundles. It
   carries the generated parsers, the highlight queries and the WASM builds, one directory per grammar, and is
   what the Neovim, Helix, Zed and Emacs setup guides now install from. The recipes previously pointed at the
   repository, where the parsers are generated at build time rather than committed, so there was nothing for

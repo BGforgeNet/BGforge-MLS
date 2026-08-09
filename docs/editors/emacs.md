@@ -94,8 +94,7 @@ unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
 ```
 
 That yields `~/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars/<grammar>/`, one directory per
-grammar. For daily builds from the default branch, replace `latest/download` with
-`download/grammars-nightly`.
+grammar.
 
 ### Compile grammars
 

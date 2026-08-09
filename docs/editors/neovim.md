@@ -101,7 +101,6 @@ curl -fsSL -o /tmp/bgforge-grammars.zip \
 unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
 ```
 
-For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
 Then register each parser with `path` (a local directory) rather than `url`, pointing `queries` at the
 bundled query files:
 

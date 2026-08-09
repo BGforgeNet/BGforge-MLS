@@ -73,11 +73,10 @@ are regenerated on every build and their canonical format is the generator's. A 
   prefix their theme defines, so an editor needs a variant only where its NAME for a concept differs, not
   merely where it lacks the specific one. `scripts/utils/test/editor-captures.test.ts` asserts every
   emitted capture is one the target styles, which is what makes this checkable without installing editors.
-- Attached to every release, and to the rolling `grammars-nightly` prerelease built daily from the
-  default branch by `.github/workflows/nightly-grammars.yml`. Stable URLs:
-  `releases/latest/download/bgforge-mls-tree-sitter-grammars.zip` and
-  `releases/download/grammars-nightly/bgforge-mls-tree-sitter-grammars.zip` -- which is why the filename
-  carries no version, unlike the editor bundles.
+- Attached to every release, exactly like the editor bundles: packaged into `dist/` on every push, so
+  the release glob picks it up on a tag and the `bgforge-mls-bundles` CI artifact carries it in between.
+  Stable URL: `releases/latest/download/bgforge-mls-tree-sitter-grammars.zip` -- which is why the
+  filename carries no version, unlike the editor bundles.
 - The archive's README records the parser ABI and the tree-sitter CLI version it was generated with. A
   consumer's tree-sitter runtime has to support that ABI, and it is the first thing to check when a
   parser refuses to load.

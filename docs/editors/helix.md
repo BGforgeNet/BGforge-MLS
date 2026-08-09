@@ -104,8 +104,6 @@ curl -fsSL -o /tmp/bgforge-grammars.zip \
 unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
 ```
 
-For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
-
 Add grammar entries to `~/.config/helix/languages.toml` and add `grammar` to each `[[language]]` block
 above to link them. `source.path` takes an absolute path -- expand `~` yourself, Helix does not:
 

@@ -203,7 +203,6 @@ git init -q && git add -A && git commit -qm "bgforge-mls grammars"
 git rev-parse HEAD    # the rev for extension.toml below
 ```
 
-For daily builds from the default branch, replace `latest/download` with `download/grammars-nightly`.
 Then reference it with a `file://` URL, which Zed supports for local extension development, using the
 commit printed above:
 

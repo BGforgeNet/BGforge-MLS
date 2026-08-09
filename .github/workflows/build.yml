@@ -165,7 +165,9 @@ jobs:
           path: dist/*.vsix
           retention-days: 14
 
-      - name: Upload editor bundles and SBOM
+      # The `dist/*.zip` glob carries the editor bundles AND the tree-sitter grammar bundle, so an
+      # unreleased grammar fix is consumable from this artifact rather than from a channel of its own.
+      - name: Upload editor and grammar bundles and SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: "!startsWith(github.ref, 'refs/tags/')"
         with:
