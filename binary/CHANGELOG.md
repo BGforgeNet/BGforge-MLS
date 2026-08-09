@@ -2,6 +2,22 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## 0.6.0
+
+### Added
+
+- `parse2daTable(bytes)` reads a 2DA into its column names plus per-row cells (`TwoDaTable`, `TwoDaRow`).
+  The row name is kept out of `cells`, so `columns.indexOf(name)` addresses the right cell.
+- `FlagsRef` declares what a bitfield's individual bits refer to outside the file, where `ExternalRef`
+  names what a field's value means. Its one kind, `itmKitUsability`, gives which quarter of the 32-bit kit
+  mask a byte holds, for widening a bit to the mask `KITLIST.2DA`'s `UNUSABLE` column is keyed by.
+  Many-to-one: the Enhanced Editions' kits reuse masks, so a bit does not name a single kit.
+
+### Fixed
+
+- An Infinity Engine projectile is named as one instead of reported as an unknown object type. Read as a
+  Fallout prototype, its `PRO ` signature was object type 0x50; the two formats are disjoint at byte 0.
+
 ## 0.5.0
 
 ### Added
