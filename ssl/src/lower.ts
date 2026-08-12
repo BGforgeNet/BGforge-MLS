@@ -700,21 +700,22 @@ class Lowering {
             return { kind: "callStmt", target: callee, args, ...(checkArgCount ? { checkArgCount } : {}) };
         }
         const callee = this.procedureRef(target, scope);
-        return {
-            kind: "callStmt",
-            target: callee,
-            args: [],
-            ...(callee.kind === "procRef" ? {} : { checkArgCount: true }),
-        };
+        if (callee.kind !== "procRef") return { kind: "callStmt", target: callee, args: [], checkArgCount: true };
+        return { kind: "callStmt", target: callee, args: this.padWithDefaults(callee.index, []) };
     }
 
     /**
      * A bare expression statement is either an engine function used for its effect or a procedure call
      * whose result is discarded; the two compile differently, so the callee decides.
      */
-    private lowerExpressionStatement(node: SyntaxNode, scope: Scope): Stmt {
+    private lowerExpressionStatement(node: SyntaxNode, scope: Scope): Stmt | null {
         const increment = this.incrementOf(node, scope);
         if (increment) return increment;
+
+        // A bare literal as a statement (`0;`) emits nothing: statement position only generates code
+        // for recognised statement forms, and a lone value is not one. Real scripts use it as a no-op
+        // to give a conditional branch an empty body.
+        if (this.literalOf(node) !== null) return null;
         if (node.type === "call_expr") {
             const callee = node.childForFieldName("func");
             if (callee?.type === "identifier") {
@@ -755,14 +756,22 @@ class Lowering {
             // The target is only known at run time, so the engine checks the argument count instead.
             return { callee, args, checkArgCount: true };
         }
-        // A call may omit trailing arguments that declare a default; the default is supplied here.
-        const defaults = this.paramDefaults.get(callee.index) ?? [];
-        for (let position = args.length; position < defaults.length; position++) {
+        return { callee, args: this.padWithDefaults(callee.index, args), checkArgCount: false };
+    }
+
+    /**
+     * A call may omit trailing arguments whose parameters declare a default; the default is supplied
+     * at the CALL SITE. `call foo;` with no parentheses is the same call and pads identically.
+     */
+    private padWithDefaults(procedure: number, args: Expr[]): Expr[] {
+        const defaults = this.paramDefaults.get(procedure) ?? [];
+        const padded = [...args];
+        for (let position = padded.length; position < defaults.length; position++) {
             const fallback = defaults[position];
             if (!fallback) break;
-            args.push(fallback);
+            padded.push(fallback);
         }
-        return { callee, args, checkArgCount: false };
+        return padded;
     }
 
     /**
