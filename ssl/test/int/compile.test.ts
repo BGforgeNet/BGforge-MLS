@@ -135,6 +135,15 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable a;\n a := [1, [2, 3]];\nend\n",
     },
     {
+        name: "array subscript and member access",
+        source: "procedure start begin\n variable a;\n variable x;\n x := a[1];\n x := a.field;\nend\n",
+    },
+    {
+        // `andalso`/`orelse` short-circuit even though this file compiles without the pragma.
+        name: "explicitly short-circuiting operators",
+        source: "procedure start begin\n variable x;\n x := (x andalso 1) orelse 2;\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

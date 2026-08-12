@@ -603,7 +603,7 @@ class Emitter {
     }
 
     private writeBinary(expr: Extract<Expr, { kind: "binary" }>): void {
-        if (expr.op === "and" || expr.op === "or") {
+        if (expr.op === "and" || expr.op === "or" || expr.op === "andalso" || expr.op === "orelse") {
             this.writeLogical(expr);
             return;
         }
@@ -620,17 +620,20 @@ class Emitter {
      * evaluates both sides unconditionally, which matters when the right side has side effects.
      */
     private writeLogical(expr: Extract<Expr, { kind: "binary" }>): void {
+        // `andalso`/`orelse` are the explicitly short-circuiting spellings and ignore the mode.
+        const explicit = expr.op === "andalso" || expr.op === "orelse";
+        const isOr = expr.op === "or" || expr.op === "orelse";
         this.writeExpression(expr.left);
-        if (!this.shortCircuit) {
+        if (!this.shortCircuit && !explicit) {
             this.writeExpression(expr.right);
-            this.w.op(expr.op === "and" ? Op.AND : Op.OR);
+            this.w.op(isOr ? Op.OR : Op.AND);
             return;
         }
         this.w.op(Op.DUP);
         const skipPatch = this.w.tell() + OPCODE_SIZE;
         this.w.int(0);
         this.w.op(Op.SWAP);
-        if (expr.op === "or") this.w.op(Op.NOT);
+        if (isOr) this.w.op(Op.NOT);
         this.w.op(Op.IF);
         this.w.op(Op.POP);
         this.writeExpression(expr.right);

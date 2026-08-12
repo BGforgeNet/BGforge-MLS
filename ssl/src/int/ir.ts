@@ -31,6 +31,9 @@ export type BinaryOp =
     | ">"
     | "and"
     | "or"
+    /** Always short-circuits, whatever the compilation mode `and`/`or` are in. */
+    | "andalso"
+    | "orelse"
     | "bwand"
     | "bwor"
     | "bwxor";

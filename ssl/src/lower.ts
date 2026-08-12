@@ -44,6 +44,8 @@ const BINARY_OPS = new Set<string>([
     ">",
     "and",
     "or",
+    "andalso",
+    "orelse",
     "bwand",
     "bwor",
     "bwxor",
@@ -727,6 +729,28 @@ class Lowering {
                     whenTrue: this.lowerExpression(whenTrue, scope),
                     whenFalse: this.lowerExpression(whenFalse, scope),
                 };
+            }
+
+            // Both index and field access read through the same engine call; a field name is just a
+            // string key, and chains nest one call inside the next.
+            case "subscript_expr": {
+                const object = node.childForFieldName("object");
+                const index = node.childForFieldName("index");
+                if (!object || !index) throw new LowerError("malformed subscript", node);
+                return this.engineCall(node, "get_array", [
+                    this.lowerExpression(object, scope),
+                    this.lowerExpression(index, scope),
+                ]);
+            }
+
+            case "member_expr": {
+                const object = node.childForFieldName("object");
+                const member = node.childForFieldName("member");
+                if (!object || !member) throw new LowerError("malformed member access", node);
+                return this.engineCall(node, "get_array", [
+                    this.lowerExpression(object, scope),
+                    { kind: "string", value: member.text },
+                ]);
             }
 
             case "array_expr":
