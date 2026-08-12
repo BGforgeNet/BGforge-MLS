@@ -1,0 +1,25 @@
+{
+    "name": "@bgforge/ssl",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Fallout SSL front end: preprocessor, and later the lexer and parser feeding an INT back end.",
+    "license": "SEE LICENSE IN ../LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "ssl"
+    },
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "test": "vitest run --config vitest.config.ts",
+        "test:integration": "vitest run --config vitest.integration.config.ts"
+    },
+    "devDependencies": {
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

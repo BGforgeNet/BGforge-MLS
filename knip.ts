@@ -130,6 +130,13 @@ const config: KnipConfig = {
         image: {
             entry: ["test/**/*.test.ts"],
         },
+        ssl: {
+            // Both suites, since the gcc differential runs from its own config in the close-out phase.
+            entry: ["test/**/*.test.ts", "test/integration/**/*.test.ts"],
+            // gcc is the differential's reference preprocessor - an environment prerequisite for that
+            // suite (which skips without it), not a dependency this package can declare.
+            ignoreBinaries: ["gcc"],
+        },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.

@@ -5,6 +5,7 @@ packages:
   - format
   - image
   - server
+  - ssl
   - grammars/*
   - plugins/*
   - transpilers
