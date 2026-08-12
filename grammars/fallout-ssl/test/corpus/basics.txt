@@ -932,3 +932,31 @@ end
         (assignment
           left: (identifier)
           right: (number))))))
+
+================================================================================
+Procedure modifier and case-insensitive call keyword
+================================================================================
+
+pure procedure foo(variable a) begin
+    return a;
+end
+
+procedure bar begin
+    Call foo;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    modifier: (procedure_modifier)
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)))
+    body: (return_stmt
+      (identifier)))
+  (procedure
+    name: (identifier)
+    body: (call_stmt
+      target: (identifier))))

@@ -45,6 +45,7 @@ export enum SyntaxType {
   ProcRef = "proc_ref",
   Procedure = "procedure",
   ProcedureForward = "procedure_forward",
+  ProcedureModifier = "procedure_modifier",
   ReturnStmt = "return_stmt",
   SourceFile = "source_file",
   SubscriptExpr = "subscript_expr",

@@ -272,7 +272,10 @@ export function formatCallStmt(node: SyntaxNode): string {
 
     if (!target) return node.text;
 
-    let result = "call ";
+    // Keep the keyword as written. It is case-insensitive and real scripts use `Call`; emitting a
+    // fixed spelling would rewrite source the formatter is only meant to re-indent.
+    const keyword = node.children.find((c) => c.type === "call");
+    let result = `${keyword?.text ?? "call"} `;
     if (target.type === SyntaxType.CallExpr) {
         result += formatCallExpr(target);
     } else {

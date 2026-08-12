@@ -19,19 +19,12 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
+// The sfall headers both gcc and our preprocessor need are linked in by this project's globalSetup.
 const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
-const SFALL_HEADERS = path.join(REPO_ROOT, "external/fallout/sfall/artifacts/scripting/headers");
-
-/**
- * RP's scripts include `../sfall/sfall.h`, but the sfall headers ship with sfall rather than with RP, so
- * a bare corpus checkout cannot resolve them. RP's own build expects them placed here; gcc and our
- * preprocessor both need it, so the link is part of the fixture rather than a workaround for either.
- */
-const SFALL_LINK = path.join(RP_SCRIPTS, "sfall");
 
 function hasGcc(): boolean {
     try {
@@ -66,20 +59,6 @@ const scripts = listScripts();
 const gccAvailable = hasGcc();
 
 describe.skipIf(scripts.length === 0 || !gccAvailable)("preprocessor vs gcc over the RP corpus", () => {
-    let linkCreated = false;
-
-    beforeAll(() => {
-        if (!fs.existsSync(SFALL_LINK) && fs.existsSync(SFALL_HEADERS)) {
-            fs.symlinkSync(path.relative(RP_SCRIPTS, SFALL_HEADERS), SFALL_LINK);
-            linkCreated = true;
-        }
-    });
-
-    afterAll(() => {
-        // Remove only what this fixture created, never whatever was already there.
-        if (linkCreated) fs.rmSync(SFALL_LINK, { force: true });
-    });
-
     it("matches gcc on every script", () => {
         const mismatches: string[] = [];
         const failures: string[] = [];

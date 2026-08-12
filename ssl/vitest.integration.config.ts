@@ -13,6 +13,9 @@ export default defineConfig({
         name: "ssl-integration",
         // Absolute so discovery works from the package directory and from the repo root alike.
         include: [path.resolve(__dirname, "test/integration/**/*.test.ts")],
+        // Links the sfall headers into the corpus once for the whole project. Both suites need them,
+        // and doing it per-file raced when the files ran in parallel.
+        globalSetup: [path.resolve(__dirname, "test/integration/global-setup.ts")],
         // ~1500 gcc invocations plus the same number of in-process runs, against other suites running in
         // parallel on a contended runner. The timeout guards against hangs, not slowness.
         testTimeout: 600000,

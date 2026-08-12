@@ -108,7 +108,10 @@ export default grammar({
 
         macro_final_call: ($) =>
             seq(
-                "call",
+                // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
+                // literal it lexes as an identifier and the statement silently becomes two expression
+                // statements rather than a call.
+                alias(/[Cc][Aa][Ll][Ll]/, "call"),
                 choice(field("target", $.identifier), field("target", $.call_expr)),
                 optional(seq("in", field("delay", $._expression))),
             ),
@@ -174,8 +177,16 @@ export default grammar({
             ),
 
         // Forward declaration: procedure name; or procedure name(params);
+        // `pure` and `inline` are procedure modifiers. Without them the modifier lexes as a bare
+        // identifier and becomes a top-level macro call sitting beside the procedure - a silent
+        // misparse, not an error. Only `pure` occurs in the corpus (once, in a widely-included header,
+        // so it reaches 55 scripts); `inline` is its counterpart in the language's keyword set.
+        procedure_modifier: ($) =>
+            choice(alias(/[Pp][Uu][Rr][Ee]/, "pure"), alias(/[Ii][Nn][Ll][Ii][Nn][Ee]/, "inline")),
+
         procedure_forward: ($) =>
             seq(
+                optional(field("modifier", $.procedure_modifier)),
                 alias(/[Pp]rocedure/, "procedure"),
                 field("name", $.identifier),
                 optional(field("params", $.param_list)),
@@ -185,6 +196,7 @@ export default grammar({
         // Procedure definition: procedure name begin ... end
         procedure: ($) =>
             seq(
+                optional(field("modifier", $.procedure_modifier)),
                 alias(/[Pp]rocedure/, "procedure"),
                 field("name", $.identifier),
                 optional(field("params", $.param_list)),
@@ -389,7 +401,10 @@ export default grammar({
         // call procedure_name; or call func(args); or call proc in ticks;
         call_stmt: ($) =>
             seq(
-                "call",
+                // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
+                // literal it lexes as an identifier and the statement silently becomes two expression
+                // statements rather than a call.
+                alias(/[Cc][Aa][Ll][Ll]/, "call"),
                 choice(field("target", $.identifier), field("target", $.call_expr)),
                 optional(seq("in", field("delay", $._expression))),
                 ";",
