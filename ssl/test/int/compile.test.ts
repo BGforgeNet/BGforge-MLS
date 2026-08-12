@@ -153,6 +153,11 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable x;\n x := (7 div 2) + (2 ^ 3);\nend\n",
     },
     {
+        // A bare return is not a void return: the language supplies zero.
+        name: "bare return returns zero",
+        source: "procedure foo(variable a) begin\n if a == 0 then return;\n a := 1;\nend\nprocedure start begin end\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

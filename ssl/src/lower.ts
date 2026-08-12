@@ -334,7 +334,12 @@ class Lowering {
 
             case "return_stmt": {
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
-                return { kind: "return", value: value ? this.lowerExpression(value, scope) : undefined };
+                // A bare `return;` returns zero rather than nothing: the language synthesises the value,
+                // so it compiles to the same value-returning sequence as `return 0`.
+                return {
+                    kind: "return",
+                    value: value ? this.lowerExpression(value, scope) : { kind: "int", value: 0 },
+                };
             }
 
             case "break_stmt":
