@@ -104,16 +104,16 @@ export default grammar({
                 field("right", $._expression),
             ),
 
-        macro_final_return: ($) => seq("return", optional($._expression)),
+        macro_final_return: ($) => seq(kw("return"), optional($._expression)),
 
         macro_final_call: ($) =>
             seq(
                 // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
                 // literal it lexes as an identifier and the statement silently becomes two expression
                 // statements rather than a call.
-                alias(/[Cc][Aa][Ll][Ll]/, "call"),
+                kw("call"),
                 choice(field("target", $.identifier), field("target", $.call_expr)),
-                optional(seq("in", field("delay", $._expression))),
+                optional(seq(kw("in"), field("delay", $._expression))),
             ),
 
         // An if/else whose taken branch is itself unterminated: `#define m if (c) then x := 0`.
@@ -122,12 +122,12 @@ export default grammar({
         macro_final_if: ($) =>
             prec.right(
                 seq(
-                    "if",
+                    kw("if"),
                     field("cond", $._expression),
-                    "then",
+                    kw("then"),
                     choice(
                         field("then", $._macro_tail),
-                        seq(field("then", $._stmt_or_block), "else", field("else", $._macro_tail)),
+                        seq(field("then", $._stmt_or_block), kw("else"), field("else", $._macro_tail)),
                     ),
                 ),
             ),
@@ -181,13 +181,12 @@ export default grammar({
         // identifier and becomes a top-level macro call sitting beside the procedure - a silent
         // misparse, not an error. Only `pure` occurs in the corpus (once, in a widely-included header,
         // so it reaches 55 scripts); `inline` is its counterpart in the language's keyword set.
-        procedure_modifier: ($) =>
-            choice(alias(/[Pp][Uu][Rr][Ee]/, "pure"), alias(/[Ii][Nn][Ll][Ii][Nn][Ee]/, "inline")),
+        procedure_modifier: ($) => choice(kw("pure"), kw("inline")),
 
         procedure_forward: ($) =>
             seq(
                 optional(field("modifier", $.procedure_modifier)),
-                alias(/[Pp]rocedure/, "procedure"),
+                kw("procedure"),
                 field("name", $.identifier),
                 optional(field("params", $.param_list)),
                 ";",
@@ -197,12 +196,12 @@ export default grammar({
         procedure: ($) =>
             seq(
                 optional(field("modifier", $.procedure_modifier)),
-                alias(/[Pp]rocedure/, "procedure"),
+                kw("procedure"),
                 field("name", $.identifier),
                 optional(field("params", $.param_list)),
-                alias(/[Bb]egin/, "begin"),
+                kw("begin"),
                 field("body", repeat($._statement)),
-                alias(/[Ee]nd/, "end"),
+                kw("end"),
             ),
 
         // A trailing comma after the last parameter is accepted, as it is in shipped scripts.
@@ -212,7 +211,7 @@ export default grammar({
         // Function calls and other compound expressions are not valid here.
         param: ($) =>
             seq(
-                "variable",
+                kw("variable"),
                 field("name", $.identifier),
                 optional(seq(choice("=", ":="), field("default", $.param_default))),
             ),
@@ -223,13 +222,7 @@ export default grammar({
         param_default_group: ($) => seq("(", $.param_default, ")"),
 
         param_default_unary: ($) =>
-            prec(
-                11,
-                seq(
-                    field("op", choice(alias(/[Nn][Oo][Tt]/, "not"), alias(/[Bb][Ww][Nn][Oo][Tt]/, "bwnot"), "-")),
-                    field("expr", $.param_default),
-                ),
-            ),
+            prec(11, seq(field("op", choice(kw("not"), kw("bwnot"), "-")), field("expr", $.param_default))),
 
         // Variable: variable name; or variable name := expr; or variable a = 1, b = 2;
         // Begin blocks support comma-separated var_inits per line: variable begin a = 0, b = 0; end
@@ -244,8 +237,8 @@ export default grammar({
                 // ternary_expr sits at -1 precisely so `x := 1` followed by a new `if` statement closes
                 // the statement instead of being swallowed. Parenthesising works and is what the
                 // affected scripts can do; see the corpus allowlist entry.
-                prec.right(seq(optional("import"), "variable", commaSep($.var_init), optional(";"))),
-                seq("variable", "begin", repeat(seq(commaSep($.var_init), ";")), "end"),
+                prec.right(seq(optional("import"), kw("variable"), commaSep($.var_init), optional(";"))),
+                seq(kw("variable"), kw("begin"), repeat(seq(commaSep($.var_init), ";")), "end"),
             ),
 
         var_init: ($) =>
@@ -259,8 +252,8 @@ export default grammar({
         export_decl: ($) =>
             prec.right(
                 seq(
-                    "export",
-                    "variable",
+                    kw("export"),
+                    kw("variable"),
                     field("name", $.identifier),
                     optional(seq(choice(":=", "="), field("value", $._expression))),
                     optional(";"),
@@ -298,19 +291,19 @@ export default grammar({
         if_stmt: ($) =>
             prec.right(
                 seq(
-                    "if",
+                    kw("if"),
                     field("cond", $._expression),
-                    "then",
+                    kw("then"),
                     field("then", $._stmt_or_block),
-                    optional(seq("else", field("else", $._stmt_or_block))),
+                    optional(seq(kw("else"), field("else", $._stmt_or_block))),
                 ),
             ),
 
-        while_stmt: ($) => seq("while", field("cond", $._expression), "do", field("body", $._stmt_or_block)),
+        while_stmt: ($) => seq(kw("while"), field("cond", $._expression), kw("do"), field("body", $._stmt_or_block)),
 
         for_stmt: ($) =>
             seq(
-                "for",
+                kw("for"),
                 "(",
                 field("init", optional(choice($.for_var_decl, $.for_init_assign, $._expression))),
                 ";",
@@ -323,7 +316,7 @@ export default grammar({
 
         // Variable declaration in for loop init: variable i = 0
         for_var_decl: ($) =>
-            seq("variable", field("name", $.identifier), choice(":=", "="), field("value", $._expression)),
+            seq(kw("variable"), field("name", $.identifier), choice(":=", "="), field("value", $._expression)),
 
         // Assignment in for loop init without variable keyword: i = 0
         for_init_assign: ($) => seq(field("name", $.identifier), choice(":=", "="), field("value", $._expression)),
@@ -343,33 +336,33 @@ export default grammar({
         // The parenthesized form can have optional "while condition" before closing paren.
         foreach_stmt: ($) =>
             seq(
-                "foreach",
+                kw("foreach"),
                 choice(
                     // foreach k: v in expr body (no parens, key:value)
                     seq(
                         field("key", $.identifier),
                         ":",
                         field("value", $.identifier),
-                        "in",
+                        kw("in"),
                         field("iter", $._expression),
                         field("body", $._stmt_or_block),
                     ),
                     // foreach var in expr body (no parens, single var)
                     seq(
                         field("var", $.identifier),
-                        "in",
+                        kw("in"),
                         field("iter", $._expression),
                         field("body", $._stmt_or_block),
                     ),
                     // foreach (var in expr) body or foreach (k: v in expr while cond) body
                     seq(
                         "(",
-                        optional("variable"),
+                        optional(kw("variable")),
                         field("key", $.identifier),
                         optional(seq(":", field("value", $.identifier))),
-                        "in",
+                        kw("in"),
                         field("iter", $._expression),
-                        optional(seq("while", field("while_cond", $._expression))),
+                        optional(seq(kw("while"), field("while_cond", $._expression))),
                         ")",
                         field("body", $._stmt_or_block),
                     ),
@@ -378,25 +371,25 @@ export default grammar({
 
         switch_stmt: ($) =>
             seq(
-                "switch",
+                kw("switch"),
                 field("value", $._expression),
-                "begin",
+                kw("begin"),
                 repeat($.case_clause),
                 optional($.default_clause),
-                "end",
+                kw("end"),
             ),
 
         // `repeat($._statement)` already covers a single `begin ... end` body now that a block is a
         // statement; listing block separately would make every braced clause ambiguous.
-        case_clause: ($) => seq("case", field("value", $._expression), ":", repeat($._statement)),
+        case_clause: ($) => seq(kw("case"), field("value", $._expression), ":", repeat($._statement)),
 
-        default_clause: ($) => seq("default", ":", repeat($._statement)),
+        default_clause: ($) => seq(kw("default"), ":", repeat($._statement)),
 
-        return_stmt: ($) => seq("return", optional($._expression), ";"),
+        return_stmt: ($) => seq(kw("return"), optional($._expression), ";"),
 
-        break_stmt: ($) => seq("break", ";"),
+        break_stmt: ($) => seq(kw("break"), ";"),
 
-        continue_stmt: ($) => seq("continue", ";"),
+        continue_stmt: ($) => seq(kw("continue"), ";"),
 
         // call procedure_name; or call func(args); or call proc in ticks;
         call_stmt: ($) =>
@@ -404,9 +397,9 @@ export default grammar({
                 // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
                 // literal it lexes as an identifier and the statement silently becomes two expression
                 // statements rather than a call.
-                alias(/[Cc][Aa][Ll][Ll]/, "call"),
+                kw("call"),
                 choice(field("target", $.identifier), field("target", $.call_expr)),
-                optional(seq("in", field("delay", $._expression))),
+                optional(seq(kw("in"), field("delay", $._expression))),
                 ";",
             ),
 
@@ -453,7 +446,7 @@ export default grammar({
         // through `_statement`, so listing it again here would make every block ambiguous.
         _stmt_or_block: ($) => $._statement,
 
-        block: ($) => seq(alias(/[Bb]egin/, "begin"), repeat($._statement), alias(/[Ee]nd/, "end")),
+        block: ($) => seq(kw("begin"), repeat($._statement), kw("end")),
 
         // Expressions
         _expression: ($) =>
@@ -480,9 +473,9 @@ export default grammar({
             prec.right(
                 seq(
                     field("true_value", $._expression),
-                    "if",
+                    kw("if"),
                     field("cond", $._expression),
-                    "else",
+                    kw("else"),
                     field("false_value", $._expression),
                 ),
             ),
@@ -529,26 +522,26 @@ export default grammar({
         binary_expr: ($) =>
             choice(
                 ...[
-                    [alias(/[Oo][Rr]/, "or"), 1],
-                    [alias(/[Oo][Rr][Ee][Ll][Ss][Ee]/, "orelse"), 1], // short-circuit or
-                    [alias(/[Aa][Nn][Dd]/, "and"), 2],
-                    [alias(/[Aa][Nn][Dd][Aa][Ll][Ss][Oo]/, "andalso"), 2], // short-circuit and
+                    [kw("or"), 1],
+                    [kw("orelse"), 1], // short-circuit or
+                    [kw("and"), 2],
+                    [kw("andalso"), 2], // short-circuit and
                     ["==", 6],
                     ["!=", 6],
-                    [alias(/[Ii][Nn]/, "in"), 6], // membership test: expr in array
+                    [kw("in"), 6], // membership test: expr in array
                     ["<", 7],
                     [">", 7],
                     ["<=", 7],
                     [">=", 7],
                     ["+", 8],
                     ["-", 8],
-                    [alias(/[Bb][Ww][Oo][Rr]/, "bwor"), 8],
-                    [alias(/[Bb][Ww][Xx][Oo][Rr]/, "bwxor"), 8],
-                    [alias(/[Bb][Ww][Aa][Nn][Dd]/, "bwand"), 8],
+                    [kw("bwor"), 8],
+                    [kw("bwxor"), 8],
+                    [kw("bwand"), 8],
                     ["*", 9],
                     ["/", 9],
                     ["%", 9],
-                    [alias(/[Dd][Ii][Vv]/, "div"), 9], // integer division, distinct from '/'
+                    [kw("div"), 9], // integer division, distinct from '/'
                     ["^", 9], // exponentiation
                 ].map(([op, p]) =>
                     prec.left(p, seq(field("left", $._expression), field("op", op), field("right", $._expression))),
@@ -562,18 +555,7 @@ export default grammar({
             choice(
                 prec(
                     11,
-                    seq(
-                        field(
-                            "op",
-                            choice(
-                                alias(/[Nn][Oo][Tt]/, "not"),
-                                alias(/[Bb][Ww][Nn][Oo][Tt]/, "bwnot"),
-                                alias(/[Ff][Ll][Oo][Oo][Rr]/, "floor"),
-                                "-",
-                            ),
-                        ),
-                        field("expr", $._expression),
-                    ),
+                    seq(field("op", choice(kw("not"), kw("bwnot"), kw("floor"), "-")), field("expr", $._expression)),
                 ),
                 // Pre-increment/decrement
                 prec(11, seq(field("op", choice("++", "--")), field("expr", $.identifier))),
@@ -614,7 +596,7 @@ export default grammar({
 
         number: ($) => token(choice(/\d+\.\d+/, /\.\d+/, /\d+/, /0x[0-9a-fA-F]+/)),
 
-        boolean: ($) => choice("true", "false"),
+        boolean: ($) => choice(kw("true", 1), kw("false", 1)),
 
         string: ($) => /"([^"\\]|\\.)*"/,
 
@@ -627,6 +609,28 @@ export default grammar({
 /**
  * Comma-separated list
  */
+/**
+ * A case-insensitive keyword, aliased back to its canonical lowercase spelling.
+ *
+ * SSL keywords fold case - `IF`, `If` and `if` are one token, and real scripts mix them - so matching a
+ * keyword as a plain literal makes it lex as an identifier instead. That is not a parse error: the
+ * construct silently becomes something else (`Call Foo;` turns into two expression statements), so it
+ * survives an error-based corpus check and only shows up in the tree.
+ *
+ * Preprocessor directives are deliberately NOT built with this. `#define` and friends are handled by
+ * the C preprocessor, which is case-sensitive.
+ *
+ * @param {string} word - the keyword, spelled lowercase; this becomes the node's name
+ * @param {number} [precedence] - lexical precedence, needed only where `identifier` is also valid at
+ *   the same position. tree-sitter's keyword extraction applies to string literals, not regexes, so a
+ *   case-insensitive keyword competing with `identifier` (a boolean literal in expression position)
+ *   loses the tie without it.
+ */
+function kw(word, precedence = 0) {
+    const insensitive = [...word].map((c) => `[${c}${c.toUpperCase()}]`).join("");
+    return alias(token(prec(precedence, new RegExp(insensitive))), word);
+}
+
 function commaSep(rule) {
     return seq(rule, repeat(seq(",", rule)));
 }

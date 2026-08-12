@@ -960,3 +960,30 @@ end
     name: (identifier)
     body: (call_stmt
       target: (identifier))))
+
+================================================================================
+Keywords are case-insensitive
+================================================================================
+
+PROCEDURE Foo BEGIN
+    VARIABLE x := TRUE;
+    IF (x) THEN BEGIN
+        RETURN FALSE;
+    END
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        value: (boolean)))
+    body: (if_stmt
+      cond: (paren_expr
+        (identifier))
+      then: (block
+        (return_stmt
+          (boolean))))))
