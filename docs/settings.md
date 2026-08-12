@@ -22,6 +22,7 @@ All settings are under the `bgforge` namespace.
 | `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                        |
 | `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                             |
 | `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output. |
+| `bgforge.falloutSSL.compiler`          | `bundled`               | Which compiler runs when no `compilePath` is set. `typescript` needs no native binary but does not optimize.           |
 
 ## WeiDU
 

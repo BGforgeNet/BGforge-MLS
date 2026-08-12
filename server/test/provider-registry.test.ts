@@ -86,6 +86,7 @@ describe("ProviderRegistry", () => {
                 outputDirectory: "",
                 headersDirectory: "",
                 compileOnValidate: true,
+                compiler: "bundled" as const,
             },
             weidu: {
                 path: "weidu",

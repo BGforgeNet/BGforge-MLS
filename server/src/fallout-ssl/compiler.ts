@@ -11,8 +11,12 @@
 
 import * as cp from "child_process";
 import * as crypto from "crypto";
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { compileFile } from "../../../ssl/src/compile";
+import { PreprocessError } from "../../../ssl/src/preprocess";
+import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
     addFallbackDiagnostic,
     errorMessage,
@@ -151,6 +155,68 @@ function parseCompileOutput(text: string, uri: string) {
         conlog(`fallout-ssl parse output failed: ${errorMessage(error)}`, "error");
     }
     return { errors, warnings };
+}
+
+/**
+ * Compiles with the extension's own compiler.
+ *
+ * It needs no child process and no native binary, which is what makes it the path that works where the
+ * bundled one cannot run. It has no optimizer, so it stays opt-in rather than becoming the default.
+ *
+ * The tmp file the caller already wrote is reused as the preprocessor's entry point, so relative
+ * `#include` paths resolve against the source's own directory exactly as they do for the other
+ * compilers.
+ */
+function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SSLsettings) {
+    const parser = getSSLParser();
+    if (!parser) {
+        return {
+            errors: [
+                {
+                    uri: pathToUri(tmpPath),
+                    line: 1,
+                    columnStart: 0,
+                    columnEnd: 0,
+                    message: "The SSL grammar is not loaded yet; retry in a moment.",
+                },
+            ],
+            warnings: [],
+        };
+    }
+    const includeDirs = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
+    try {
+        const bytes = compileFile(parser, tmpPath, { preprocess: { includeDirs } });
+        fs.writeFileSync(dstPath, bytes);
+        return { errors: [], warnings: [] };
+    } catch (error) {
+        return { errors: [toDiagnostic(error, tmpPath)], warnings: [] };
+    }
+}
+
+/**
+ * Turns a compiler error into a diagnostic, reading the `line:column:` prefix the front end puts on
+ * the ones it can locate. A preprocessor error names its own file, which may be an included header
+ * rather than the script being compiled.
+ */
+function toDiagnostic(error: unknown, tmpPath: string) {
+    if (error instanceof PreprocessError) {
+        return {
+            uri: pathToUri(error.file),
+            line: error.line,
+            columnStart: 0,
+            columnEnd: 0,
+            message: error.message,
+        };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    const located = /^(\d+):(\d+): (.*)$/s.exec(message);
+    return {
+        uri: pathToUri(tmpPath),
+        line: located ? Number(located[1]) : 1,
+        columnStart: 0,
+        columnEnd: located ? Number(located[2]) : 0,
+        message: located ? located[3]! : message,
+    };
 }
 
 function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {
@@ -292,6 +358,16 @@ export async function compile(
                         return;
                     }
                 }
+            }
+
+            if (useBuiltInCompiler && sslSettings.compiler === "typescript") {
+                const result = compileWithTypeScript(tmpPath, dstPath, sslSettings);
+                if (signal.aborted) {
+                    return;
+                }
+                reportCompileResult(result, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
+                sendParseResult(result, uri, tmpUri);
+                return;
             }
 
             if (useBuiltInCompiler) {

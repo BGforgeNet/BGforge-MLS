@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Fallout SSL
+
+- Compiled `.int` scripts can be read. "BGforge: Decompile Fallout Script", on the explorer's context menu
+  for a `.int`, opens it as SSL source with the usual highlighting, outline and search. Local and argument
+  names are not stored in a compiled script, so those are generated; scripts built with optimisation enabled
+  may show an instruction listing instead.
+- A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
+  without a native binary and without writing a temporary file, at the cost of no optimisation.
+- Several engine function signatures were wrong and are corrected: nine had the wrong number of arguments
+  (`give_exp_points`, `explosion`, `gSay_End` and six others), `art_anim` and `critter_heal` were shown as
+  returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing
+  parenthesis of their parameter list. Hover and signature help show all of these.
+
 ## 3.13.2
 
 ### WeiDU TP2

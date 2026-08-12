@@ -427,9 +427,27 @@
                 "command": "bgforge.ieResources.closeGame",
                 "title": "BGforge: Close IE Game",
                 "icon": "$(close)"
+            },
+            {
+                "command": "bgforge.decompileInt",
+                "title": "BGforge: Decompile Fallout Script",
+                "icon": "$(file-code)"
             }
         ],
         "menus": {
+            "explorer/context": [
+                {
+                    "command": "bgforge.decompileInt",
+                    "when": "resourceExtname == .int",
+                    "group": "navigation"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "bgforge.decompileInt",
+                    "when": "resourceExtname == .int"
+                }
+            ],
             "view/title": [
                 {
                     "command": "bgforge.ieResources.openGame",
@@ -699,6 +717,19 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Whether validation triggered by save/edit should also write the compiled .int output. Disable this to validate SSL without overwriting compiled artifacts."
+                },
+                "bgforge.falloutSSL.compiler": {
+                    "type": "string",
+                    "enum": [
+                        "bundled",
+                        "typescript"
+                    ],
+                    "enumDescriptions": [
+                        "The compiler shipped with the extension. Optimizes, and is what the compileOptions setting applies to.",
+                        "The extension's own compiler, written in TypeScript. Needs no native binary and no temporary file on disk, but does not optimize yet, so its output is larger and slower."
+                    ],
+                    "default": "bundled",
+                    "description": "Which compiler to use when no external compilePath is set."
                 },
                 "bgforge.weidu.path": {
                     "type": "string",

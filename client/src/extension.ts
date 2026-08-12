@@ -20,6 +20,7 @@ import {
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerImageEditor } from "./image-editor/register";
+import { registerIntViewer } from "./int-viewer/register";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
 
@@ -65,7 +66,11 @@ export async function activate(context: ExtensionContext) {
 
     // Register binary file and animation editors
     // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
-    context.subscriptions.push(registerBinaryEditor(context, gameLookups), registerImageEditor(context));
+    context.subscriptions.push(
+        registerBinaryEditor(context, gameLookups),
+        registerImageEditor(context),
+        registerIntViewer(),
+    );
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used

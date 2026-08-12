@@ -12,11 +12,13 @@ vi.mock("child_process", () => ({
 
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
 const mockUnlink = vi.fn().mockResolvedValue(undefined);
+const mockWriteFileSync = vi.fn();
 vi.mock("fs", () => ({
     promises: {
         writeFile: (...args: unknown[]) => mockWriteFile(...args),
         unlink: (...args: unknown[]) => mockUnlink(...args),
     },
+    writeFileSync: (...args: unknown[]) => mockWriteFileSync(...args),
 }));
 
 const mockShowInfo = vi.fn();
@@ -74,6 +76,16 @@ vi.mock("../../src/sslc/ssl_compiler", () => ({
     ssl_compile: (...args: unknown[]) => mockBuiltinCompiler(...args),
 }));
 
+const mockCompileFile = vi.fn();
+vi.mock("../../../ssl/src/compile", () => ({
+    compileFile: (...args: unknown[]) => mockCompileFile(...args),
+}));
+
+const mockGetParser = vi.fn();
+vi.mock("../../../shared/parsers/fallout-ssl", () => ({
+    getParser: () => mockGetParser(),
+}));
+
 import { compile, TMP_SSL_NAME, _resetCompilerCache } from "../../src/fallout-ssl/compiler";
 import type { SSLsettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -85,6 +97,8 @@ describe("fallout-ssl compiler", () => {
         mockWriteFile.mockResolvedValue(undefined);
         mockUnlink.mockResolvedValue(undefined);
         mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
+        mockCompileFile.mockReturnValue(new Uint8Array([1, 2, 3]));
+        mockGetParser.mockReturnValue({});
         mockSendRequest.mockResolvedValue(true);
         setMockDocument("line one\nline two\nline three\n");
     });
@@ -95,6 +109,7 @@ describe("fallout-ssl compiler", () => {
         outputDirectory: "/output",
         headersDirectory: "/headers",
         compileOnValidate: true,
+        compiler: "bundled" as const,
     };
 
     describe("TMP_SSL_NAME", () => {
@@ -357,6 +372,45 @@ describe("fallout-ssl compiler", () => {
                 "file:///project/test.ssl",
                 expect.stringContaining(TMP_SSL_NAME),
             );
+        });
+    });
+
+    describe("TypeScript compiler", () => {
+        const tsSettings: SSLsettings = { ...baseSettings, compiler: "typescript" };
+
+        it("compiles through the TypeScript back end instead of the bundled one", async () => {
+            await compile(normalizeUri("file:///project/test.ssl"), tsSettings, true, "code");
+
+            expect(mockBuiltinCompiler).not.toHaveBeenCalled();
+            expect(mockCompileFile).toHaveBeenCalledWith({}, `/project/${TMP_SSL_NAME}`, {
+                preprocess: { includeDirs: ["/headers"] },
+            });
+            expect(mockWriteFileSync).toHaveBeenCalledWith("/output/test.int", new Uint8Array([1, 2, 3]));
+        });
+
+        it("reports a located compile error at the line it names", async () => {
+            mockCompileFile.mockImplementation(() => {
+                throw new Error("2:7: unknown identifier 'foo'");
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), tsSettings, true, "code");
+
+            expect(mockWriteFileSync).not.toHaveBeenCalled();
+            expect(mockShowError).toHaveBeenCalledWith("Failed to compile test.ssl!");
+            expect(mockShowInfo).not.toHaveBeenCalled();
+        });
+
+        it("defers to an external compiler when one is configured", async () => {
+            mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, cb: () => void) => cb());
+
+            await compile(
+                normalizeUri("file:///project/test.ssl"),
+                { ...tsSettings, compilePath: "compile.exe" },
+                true,
+                "code",
+            );
+
+            expect(mockCompileFile).not.toHaveBeenCalled();
         });
     });
 
