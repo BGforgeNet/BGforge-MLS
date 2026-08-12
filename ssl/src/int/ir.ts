@@ -118,6 +118,13 @@ export type Declaration =
  */
 export interface Program {
     declarations: Declaration[];
+    /**
+     * Every string constant in SOURCE ORDER, which fixes the string table's layout. The emitter cannot
+     * derive this by walking the tree: the language writes a conditional value-first (`x if c else y`)
+     * while the tree stores the condition first, so a structural walk emits those three in the wrong
+     * order and shifts every later string offset. The front end records the written order instead.
+     */
+    stringLiterals?: string[];
 }
 
 /** Procedures in declaration order, which is also their procedure-table order. */

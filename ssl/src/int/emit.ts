@@ -171,6 +171,10 @@ class Emitter {
      * order the emitter later writes them in.
      */
     private internStrings(): void {
+        // Seed from the front end's source-order list where it supplied one; the structural walk below
+        // then finds everything already interned and only adds what the list could not know about.
+        for (const literal of this.program.stringLiterals ?? []) this.strings.intern(literal);
+
         const value = (expr: Expr): void => {
             switch (expr.kind) {
                 case "string":

@@ -85,7 +85,7 @@ class Lowering {
     lower(root: SyntaxNode): Program {
         this.collect(root);
         this.lowerBodies(root);
-        return { declarations: this.declarations };
+        return { declarations: this.declarations, stringLiterals: collectStringLiterals(root) };
     }
 
     /**
@@ -685,7 +685,7 @@ class Lowering {
             if (callee?.type === "identifier") {
                 const engine = engineFunction(callee.text.toLowerCase(), this.game);
                 if (engine) {
-                    const args = this.argumentsOf(node, scope);
+                    const args = this.argumentsOf(node, scope, engine.procArgs);
                     const statement: Stmt = { kind: "libStmt", opcode: engine.opcode, args };
                     return engine.popsResult ? { ...statement, popsResult: true } : statement;
                 }
@@ -717,12 +717,22 @@ class Lowering {
         return { callee: this.procedureRef(func, scope), args: this.argumentsOf(node, scope) };
     }
 
-    private argumentsOf(node: SyntaxNode, scope: Scope): Expr[] {
+    /**
+     * `procArgs` marks argument positions that take a PROCEDURE rather than a value. A procedure named
+     * there is passed by reference; the same name anywhere else calls it, so the position decides.
+     */
+    private argumentsOf(node: SyntaxNode, scope: Scope, procArgs = 0): Expr[] {
         // namedChildren[0] is the callee; comments can appear between arguments.
-        return node.namedChildren
+        const args = node.namedChildren
             .slice(1)
-            .filter((c): c is SyntaxNode => Boolean(c) && c.type !== "comment" && c.type !== "line_comment")
-            .map((c) => this.lowerExpression(c, scope));
+            .filter((c): c is SyntaxNode => Boolean(c) && c.type !== "comment" && c.type !== "line_comment");
+        return args.map((argument, index) => {
+            if ((procArgs & (1 << index)) !== 0 && argument.type === "identifier") {
+                const procedure = this.procedures.get(argument.text.toLowerCase());
+                if (procedure !== undefined) return { kind: "procRef", index: procedure };
+            }
+            return this.lowerExpression(argument, scope);
+        });
     }
 
     /**
@@ -838,7 +848,11 @@ class Lowering {
                 if (func?.type === "identifier") {
                     const engine = engineFunction(func.text.toLowerCase(), this.game);
                     if (engine) {
-                        return { kind: "libCall", opcode: engine.opcode, args: this.argumentsOf(node, scope) };
+                        return {
+                            kind: "libCall",
+                            opcode: engine.opcode,
+                            args: this.argumentsOf(node, scope, engine.procArgs),
+                        };
                     }
                 }
                 const { callee, args } = this.callParts(node, scope);
@@ -936,6 +950,31 @@ class Lowering {
         if (procedure !== undefined) return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
         throw new LowerError(`unknown identifier '${node.text}'`, node);
     }
+}
+
+/**
+ * String constants in the order the source writes them, which is the order the table is built in.
+ * A pre-order walk of the tree is exactly that order, since children are stored by position - unlike a
+ * walk of the lowered IR, whose conditional stores its condition before the value written ahead of it.
+ *
+ * A field access contributes its member name, which becomes a string constant even though the source
+ * never quotes it.
+ */
+function collectStringLiterals(root: SyntaxNode): string[] {
+    const out: string[] = [];
+    const visit = (node: SyntaxNode): void => {
+        if (node.type === "string") out.push(unquote(node.text));
+        for (const child of node.namedChildren) {
+            if (!child) continue;
+            if (node.type === "member_expr" && child.id === node.childForFieldName("member")?.id) {
+                out.push(child.text);
+                continue;
+            }
+            visit(child);
+        }
+    };
+    visit(root);
+    return out;
 }
 
 function unquote(text: string): string {
