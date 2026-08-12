@@ -522,10 +522,14 @@ export default grammar({
         binary_expr: ($) =>
             choice(
                 ...[
+                    // The boolean operators share ONE precedence level and associate left, so
+                    // `a or b and c` is `(a or b) and c` rather than `a or (b and c)`. This is
+                    // unlike C and easy to assume wrong; the language's own parser gives all four
+                    // the same level, and getting it wrong silently changes which operands pair up.
                     [kw("or"), 1],
                     [kw("orelse"), 1], // short-circuit or
-                    [kw("and"), 2],
-                    [kw("andalso"), 2], // short-circuit and
+                    [kw("and"), 1],
+                    [kw("andalso"), 1], // short-circuit and
                     ["==", 6],
                     ["!=", 6],
                     [kw("in"), 6], // membership test: expr in array
