@@ -27,11 +27,12 @@ function viewUri(source: vscode.Uri): vscode.Uri {
     return vscode.Uri.from({ scheme: INT_SCHEME, path: `${source.fsPath}.ssl` });
 }
 
-function sourcePath(view: vscode.Uri): string {
+export function sourcePath(view: vscode.Uri): string {
     return view.path.replace(/\.ssl$/, "");
 }
 
-function render(file: string): string {
+/** The document body for a compiled script: its source, or a listing when that cannot be recovered. */
+export function render(file: string): string {
     const bytes = new Uint8Array(fs.readFileSync(file));
     try {
         return printProgram(decompileToProgram(bytes), { origin: file });
