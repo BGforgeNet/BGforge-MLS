@@ -817,12 +817,14 @@ class Lowering {
             case "identifier":
                 return this.reference(node, scope);
 
+            // `@Name` passes the procedure by NAME, not by index: the engine resolves the string at
+            // run time. The name therefore also occupies a slot in the string table.
             case "proc_ref": {
                 const name = node.namedChildren[0];
                 if (!name) throw new LowerError("malformed procedure reference", node);
                 const index = this.procedures.get(name.text.toLowerCase());
                 if (index === undefined) throw new LowerError(`unknown procedure '${name.text}'`, name);
-                return { kind: "procRef", index };
+                return { kind: "procRef", index, stringify: true };
             }
 
             case "unary_expr": {
@@ -1012,6 +1014,8 @@ function collectStringLiterals(root: SyntaxNode): string[] {
     const out: string[] = [];
     const visit = (node: SyntaxNode): void => {
         if (node.type === "string") out.push(unquote(node.text));
+        // `@Name` interns the procedure's name, though the source never quotes it.
+        if (node.type === "proc_ref" && node.namedChildren[0]) out.push(node.namedChildren[0].text);
         for (const child of node.namedChildren) {
             if (!child) continue;
             if (node.type === "member_expr" && child.id === node.childForFieldName("member")?.id) {
