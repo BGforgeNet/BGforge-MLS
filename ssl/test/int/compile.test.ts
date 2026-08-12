@@ -117,6 +117,24 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable x;\n switch x begin\n  case 1: x := 10;\n  case 2: x := 20;\n end\nend\n",
     },
     {
+        // Built by summing engine calls, not by a dedicated instruction.
+        name: "array literal",
+        source: "procedure start begin\n variable a;\n a := [1, 2, 3];\nend\n",
+    },
+    {
+        name: "empty array literal",
+        source: "procedure start begin\n variable a;\n a := [];\nend\n",
+    },
+    {
+        name: "map literal",
+        source: 'procedure start begin\n variable m;\n m := {"a": 1, "b": 2};\nend\n',
+    },
+    {
+        // A nested literal is flagged and terminated so the engine's expression stack unwinds.
+        name: "nested array literal",
+        source: "procedure start begin\n variable a;\n a := [1, [2, 3]];\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
@@ -132,7 +150,7 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
     });
 
     it("covers every case in the table", () => {
-        expect(CASES.length).toBeGreaterThanOrEqual(14);
+        expect(CASES.length).toBeGreaterThanOrEqual(27);
     });
 
     it.each(CASES)("$name", ({ name, source }) => {

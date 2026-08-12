@@ -51,6 +51,10 @@ const BINARY_OPS = new Set<string>([
 
 const ASSIGN_OPS = new Set<string>(["=", ":=", "+=", "-=", "*=", "/="]);
 
+/** Marks a literal built inside another array expression, and the terminator that closes one. */
+const ARRAY_FLAG_EXPR_PUSH = 32;
+const ARRAY_FLAG_EXPR_POP = 64;
+
 /** A procedure's locals, arguments first - the slot order the emitter and the engine both assume. */
 interface Scope {
     slots: Map<string, number>;
@@ -68,6 +72,8 @@ class Lowering {
      * than per procedure, and the dot keeps the name out of the user identifier space.
      */
     private tempCounter = 0;
+    /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
+    private arrayNesting = 0;
     private currentTarget: ProcedureDecl | null = null;
 
     constructor(options: LowerOptions) {
@@ -438,11 +444,7 @@ class Lowering {
             throw new LowerError("foreach loop variable is not a variable", node);
         }
 
-        const call = (name: string, args: Expr[]): Expr => {
-            const fn = engineFunction(name, this.game);
-            if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
-            return { kind: "libCall", opcode: fn.opcode, args };
-        };
+        const call = (name: string, args: Expr[]): Expr => this.engineCall(node, name, args);
 
         statements.push(
             { kind: "assign", target: count, op: "=", value: { kind: "int", value: 0 } },
@@ -727,6 +729,12 @@ class Lowering {
                 };
             }
 
+            case "array_expr":
+                return this.lowerArrayLiteral(node, scope, false);
+
+            case "map_expr":
+                return this.lowerArrayLiteral(node, scope, true);
+
             case "call_expr": {
                 const func = node.childForFieldName("func");
                 if (func?.type === "identifier") {
@@ -740,6 +748,75 @@ class Lowering {
             }
         }
         throw new LowerError(`unsupported expression '${node.type}'`, node);
+    }
+
+    /**
+     * Array and map literals build their value by SUMMING engine calls rather than by any dedicated
+     * instruction: a `temp_array` seed plus one `arrayexpr(key, value)` term per entry, added
+     * left to right. An array numbers its own keys from zero; a map takes the written key.
+     *
+     * The seed's size argument distinguishes the two (0 for an array, -1 for a map), and its flags
+     * argument marks a NESTED literal, which additionally emits a terminator so the engine's expression
+     * stack unwinds. Nesting depth is therefore part of the emitted code, not just a parsing concern.
+     */
+    private lowerArrayLiteral(node: SyntaxNode, scope: Scope, isMap: boolean): Expr {
+        this.arrayNesting++;
+        try {
+            const nested = this.arrayNesting > 1;
+            const seed = this.engineCall(node, "temp_array", [
+                { kind: "int", value: isMap ? -1 : 0 },
+                { kind: "int", value: nested ? ARRAY_FLAG_EXPR_PUSH : 0 },
+            ]);
+
+            let result: Expr = seed;
+            const add = (term: Expr): void => {
+                result = { kind: "binary", op: "+", left: result, right: term };
+            };
+
+            if (isMap) {
+                for (const entry of node.namedChildren) {
+                    if (!entry || entry.type !== "map_entry") continue;
+                    const key = entry.childForFieldName("key");
+                    const value = entry.childForFieldName("value");
+                    if (!key || !value) throw new LowerError("malformed map entry", entry);
+                    add(
+                        this.engineCall(node, "arrayexpr", [
+                            this.lowerExpression(key, scope),
+                            this.lowerExpression(value, scope),
+                        ]),
+                    );
+                }
+            } else {
+                let index = 0;
+                for (const element of node.namedChildren) {
+                    if (!element || element.type === "comment" || element.type === "line_comment") continue;
+                    add(
+                        this.engineCall(node, "arrayexpr", [
+                            { kind: "int", value: index++ },
+                            this.lowerExpression(element, scope),
+                        ]),
+                    );
+                }
+            }
+
+            if (nested) {
+                add(
+                    this.engineCall(node, "temp_array", [
+                        { kind: "int", value: 0 },
+                        { kind: "int", value: ARRAY_FLAG_EXPR_POP },
+                    ]),
+                );
+            }
+            return result;
+        } finally {
+            this.arrayNesting--;
+        }
+    }
+
+    private engineCall(node: SyntaxNode, name: string, args: Expr[]): Expr {
+        const fn = engineFunction(name, this.game);
+        if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
+        return { kind: "libCall", opcode: fn.opcode, args };
     }
 
     /** Resolves a bare identifier: locals shadow globals, which shadow shared variables. */
