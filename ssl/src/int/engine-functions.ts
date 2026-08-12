@@ -5,7 +5,7 @@
  * opcode the engine dispatches on. This table is what turns the source spelling into that number, so
  * the front end needs no knowledge of the opcode layout.
  *
- * `popsResult` marks the 16 functions that return a value even when called as a statement; their
+ * `popsResult` marks the 27 functions that return a value even when called as a statement; their
  * statement form drops the result rather than leaving it on the stack.
  *
  * Fallout 1 reuses 7 opcode numbers for different functions under different source names (see
@@ -56,6 +56,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     array_key: { opcode: EngineOp.TS_GET_ARRAY_KEY },
     arrayexpr: { opcode: EngineOp.TS_STACK_ARRAY },
     art_anim: { opcode: EngineOp.ART_ANIM },
+    art_exists: { opcode: EngineOp.TS_ART_EXISTS },
     atof: { opcode: EngineOp.TS_ATOF },
     atoi: { opcode: EngineOp.TS_ATOI },
     attack: { opcode: EngineOp.ATTACK },
@@ -73,6 +74,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     call_offset_v2: { opcode: EngineOp.TS_CALL_OFFSET_V2 },
     call_offset_v3: { opcode: EngineOp.TS_CALL_OFFSET_V3 },
     call_offset_v4: { opcode: EngineOp.TS_CALL_OFFSET_V4 },
+    ceil: { opcode: EngineOp.TS_CEIL },
     charcode: { opcode: EngineOp.TS_ORD },
     checkregion: { opcode: LibOp.CHECKREGION },
     clear_selectable_perks: { opcode: EngineOp.TS_CLEAR_SELECTABLE_PERKS },
@@ -83,6 +85,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     create_array: { opcode: EngineOp.TS_CREATE_ARRAY },
     create_message_window: { opcode: EngineOp.TS_CREATE_MESSAGE_WINDOW },
     create_object_sid: { opcode: EngineOp.CREATE_OBJECT_SID, popsResult: true },
+    create_spatial: { opcode: EngineOp.TS_CREATE_SPATIAL, popsResult: true },
     createwin: { opcode: LibOp.CREATEWIN },
     critter_add_trait: { opcode: EngineOp.CRITTER_ADD_TRAIT, popsResult: true },
     critter_attempt_placement: { opcode: EngineOp.CRITTER_ATTEMPT_PLACEMENT, popsResult: true },
@@ -123,6 +126,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     endgame_movie: { opcode: EngineOp.ENDGAME_MOVIE },
     endgame_slideshow: { opcode: EngineOp.ENDGAME_SLIDESHOW },
     explosion: { opcode: EngineOp.EXPLOSION },
+    exponent: { opcode: EngineOp.TS_EXP },
     fadein: { opcode: LibOp.FADEIN },
     fadeout: { opcode: LibOp.FADEOUT },
     fillrect: { opcode: LibOp.FILLRECT },
@@ -265,13 +269,15 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     load_shader: { opcode: EngineOp.TS_LOAD_SHADER },
     loadpalettetable: { opcode: LibOp.LOADPALETTETABLE },
     local_var: { opcode: EngineOp.LOCAL_VAR },
+    log: { opcode: EngineOp.TS_LOG },
     make_daytime: { opcode: EngineOp.MAKE_DAYTIME },
     map_var: { opcode: EngineOp.MAP_VAR },
     mark_area_known: { opcode: EngineOp.MARK_AREA_KNOWN },
     mark_movie_played: { opcode: EngineOp.TS_MARK_MOVIE_PLAYED },
     message_str: { opcode: EngineOp.MESSAGE_STR },
+    message_str_game: { opcode: EngineOp.TS_MESSAGE_STR_GAME },
     metarule: { opcode: EngineOp.METARULE, popsResult: true },
-    metarule2_explosions: { opcode: EngineOp.TS_EXPLOSIONS_METARULE },
+    metarule2_explosions: { opcode: EngineOp.TS_EXPLOSIONS_METARULE, popsResult: true },
     metarule3: { opcode: EngineOp.METARULE3, popsResult: true },
     mod_kill_counter: { opcode: EngineOp.TS_MOD_KILL_COUNTER },
     mod_skill_points_per_level: { opcode: EngineOp.TS_MOD_SKILL_POINTS_PER_LEVEL },
@@ -283,10 +289,13 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     nb_create_char: { opcode: EngineOp.TS_NB_CREATE_CHAR },
     obj_art_fid: { opcode: EngineOp.OBJ_ART_FID },
     obj_being_used_with: { opcode: EngineOp.OBJ_BEING_USED_WITH },
+    obj_blocking_line: { opcode: EngineOp.TS_MAKE_STRAIGHT_PATH },
+    obj_blocking_tile: { opcode: EngineOp.TS_OBJ_BLOCKING_AT },
     obj_can_hear_obj: { opcode: EngineOp.OBJ_CAN_HEAR_OBJ },
     obj_can_see_obj: { opcode: EngineOp.OBJ_CAN_SEE_OBJ },
     obj_carrying_pid_obj: { opcode: EngineOp.OBJ_CARRYING_PID_OBJ },
     obj_close: { opcode: EngineOp.OBJ_CLOSE },
+    obj_is_carrying_obj: { opcode: EngineOp.TS_OBJ_IS_CARRYING_OBJ },
     obj_is_carrying_obj_pid: { opcode: EngineOp.OBJ_IS_CARRYING_OBJ_PID },
     obj_is_locked: { opcode: EngineOp.OBJ_IS_LOCKED },
     obj_is_open: { opcode: EngineOp.OBJ_IS_OPEN },
@@ -301,8 +310,10 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     obj_unlock: { opcode: EngineOp.OBJ_UNLOCK },
     override_map_start: { opcode: EngineOp.OVERRIDE_MAP_START },
     party_add: { opcode: EngineOp.PARTY_ADD },
+    party_member_list: { opcode: EngineOp.TS_GET_PARTY_MEMBERS },
     party_member_obj: { opcode: EngineOp.PARTY_MEMBER_OBJ },
     party_remove: { opcode: EngineOp.PARTY_REMOVE },
+    path_find_to: { opcode: EngineOp.TS_PATH_FIND },
     perk_add_mode: { opcode: EngineOp.TS_PERK_ADD_MODE },
     pickup_obj: { opcode: EngineOp.PICKUP_OBJ },
     play_gmovie: { opcode: EngineOp.PLAY_GMOVIE },
@@ -330,6 +341,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     reg_anim_animate_and_hide: { opcode: EngineOp.TS_REG_ANIM_ANIMATE_AND_HIDE },
     reg_anim_animate_forever: { opcode: EngineOp.REG_ANIM_ANIMATE_FOREVER },
     reg_anim_animate_reverse: { opcode: EngineOp.REG_ANIM_ANIMATE_REVERSE },
+    reg_anim_callback: { opcode: EngineOp.TS_REG_ANIM_CALLBACK },
     reg_anim_change_fid: { opcode: EngineOp.TS_REG_ANIM_CHANGE_FID },
     reg_anim_combat_check: { opcode: EngineOp.TS_REG_ANIM_COMBAT_CHECK },
     reg_anim_destroy: { opcode: EngineOp.TS_REG_ANIM_DESTROY },
@@ -342,6 +354,8 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     reg_anim_take_out: { opcode: EngineOp.TS_REG_ANIM_TAKE_OUT },
     reg_anim_turn_towards: { opcode: EngineOp.TS_REG_ANIM_TURN_TOWARDS },
     register_hook: { opcode: EngineOp.TS_REGISTER_HOOK },
+    register_hook_proc: { opcode: EngineOp.TS_REGISTER_HOOK_PROC },
+    register_hook_proc_spec: { opcode: EngineOp.TS_REGISTER_HOOK_PROC2 },
     remove_attacker_knockback: { opcode: EngineOp.TS_REMOVE_ATTACKER_KNOCKBACK },
     remove_script: { opcode: EngineOp.TS_REMOVE_SCRIPT },
     remove_target_knockback: { opcode: EngineOp.TS_REMOVE_TARGET_KNOCKBACK },
@@ -357,6 +371,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     roll_dice: { opcode: EngineOp.ROLL_DICE, popsResult: true },
     roll_vs_skill: { opcode: EngineOp.ROLL_VS_SKILL, popsResult: true },
     rotation_to_tile: { opcode: EngineOp.ROTATION_TO_TILE },
+    round: { opcode: EngineOp.TS_ROUND },
     running_burning_guy: { opcode: EngineOp.RUNNING_BURNING_GUY },
     save_array: { opcode: EngineOp.TS_SAVE_ARRAY },
     sayborder: { opcode: LibOp.SAYBORDER },
@@ -493,6 +508,15 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     setoneoptpause: { opcode: LibOp.SETONEOPTPAUSE },
     settextcolor: { opcode: LibOp.SETTEXTCOLOR },
     settextflags: { opcode: LibOp.SETTEXTFLAGS },
+    sfall_func0: { opcode: EngineOp.TS_SFALL_METARULE0, popsResult: true },
+    sfall_func1: { opcode: EngineOp.TS_SFALL_METARULE1, popsResult: true },
+    sfall_func2: { opcode: EngineOp.TS_SFALL_METARULE2, popsResult: true },
+    sfall_func3: { opcode: EngineOp.TS_SFALL_METARULE3, popsResult: true },
+    sfall_func4: { opcode: EngineOp.TS_SFALL_METARULE4, popsResult: true },
+    sfall_func5: { opcode: EngineOp.TS_SFALL_METARULE5, popsResult: true },
+    sfall_func6: { opcode: EngineOp.TS_SFALL_METARULE6, popsResult: true },
+    sfall_func7: { opcode: EngineOp.TS_SFALL_METARULE7, popsResult: true },
+    sfall_func8: { opcode: EngineOp.TS_SFALL_METARULE8, popsResult: true },
     sfall_ver_build: { opcode: EngineOp.TS_SFALL_VER_BUILD },
     sfall_ver_major: { opcode: EngineOp.TS_SFALL_VER_MAJOR },
     sfall_ver_minor: { opcode: EngineOp.TS_SFALL_VER_MINOR },
@@ -510,6 +534,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     signalnamed: { opcode: LibOp.SIGNALNAMED },
     sin: { opcode: EngineOp.TS_SIN },
     skill_contest: { opcode: EngineOp.SKILL_CONTEST, popsResult: true },
+    sneak_success: { opcode: EngineOp.TS_SNEAK_SUCCESS },
     sounddelete: { opcode: LibOp.SOUNDDELETE },
     soundpause: { opcode: LibOp.SOUNDPAUSE },
     soundplay: { opcode: LibOp.SOUNDPLAY },
@@ -535,8 +560,10 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     tile_contains_pid_obj: { opcode: EngineOp.TILE_CONTAINS_PID_OBJ },
     tile_distance: { opcode: EngineOp.TILE_DISTANCE },
     tile_distance_objs: { opcode: EngineOp.TILE_DISTANCE_OBJS },
+    tile_get_objs: { opcode: EngineOp.TS_TILE_GET_OBJECTS },
     tile_in_tile_rect: { opcode: EngineOp.TILE_IN_TILE_RECT },
     tile_is_visible: { opcode: EngineOp.TILE_IS_VISIBLE },
+    tile_light: { opcode: EngineOp.TS_TILE_LIGHT },
     tile_num: { opcode: EngineOp.TILE_NUM },
     tile_num_in_direction: { opcode: EngineOp.TILE_NUM_IN_DIRECTION },
     tile_under_cursor: { opcode: EngineOp.TS_TILE_UNDER_CURSOR },
@@ -555,10 +582,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     write_short: { opcode: EngineOp.TS_WRITE_SHORT },
 };
 
-/**
- * Fallout 1 spellings for the reused opcode slots. Resolved through `engineOpcodeName` so the number
- * comes from the one ordered table rather than being restated here.
- */
+/** Fallout 1 spellings for the reused opcode slots, resolved through the one ordered table. */
 const FALLOUT1_ONLY: Readonly<Record<string, string>> = {
     animate_jump: "ANIMATE_JUMP",
     barter_asking: "BARTER_ASKING",

@@ -46,7 +46,7 @@ describe("engine function lookup", () => {
 
     it("marks the statement forms that discard a returned value", () => {
         const popping = Object.values(ENGINE_FUNCTIONS).filter((fn) => fn.popsResult);
-        expect(popping.length).toBe(16);
+        expect(popping.length).toBe(27);
     });
 
     it("keeps Fallout 1 spellings out of a Fallout 2 compile", () => {
@@ -58,6 +58,6 @@ describe("engine function lookup", () => {
 
     it("covers the full engine vocabulary", () => {
         // A collapse here would let the lookup tests above pass while most functions were unreachable.
-        expect(Object.keys(ENGINE_FUNCTIONS).length).toBe(530);
+        expect(Object.keys(ENGINE_FUNCTIONS).length).toBe(557);
     });
 });
