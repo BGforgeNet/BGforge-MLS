@@ -89,6 +89,20 @@ const CASES: Case[] = [
         source: "procedure start begin\n for (variable i := 0; i < 3; i += 1) begin\n  i := i;\n end\nend\n",
     },
     {
+        // Expands to an indexed while loop over generated temporaries; their allocation order fixes
+        // both the `tmp.<n>` names in the name table and the local slot indices.
+        name: "foreach over a variable",
+        source: "procedure start begin\n variable a;\n variable v;\n foreach v in a begin\n  v := v;\n end\nend\n",
+    },
+    {
+        name: "foreach over an expression needs a temporary",
+        source: "procedure start begin\n variable v;\n foreach v in load_array(1) begin\n  v := v;\n end\nend\n",
+    },
+    {
+        name: "foreach with key and value",
+        source: "procedure start begin\n variable a;\n variable k;\n variable v;\n foreach k: v in a begin\n  v := k;\n end\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

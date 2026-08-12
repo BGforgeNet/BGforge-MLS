@@ -114,7 +114,10 @@ describe.skipIf(!ready)("real corpus compiles to matching bytecode", () => {
                 actual = compileText(parser, text);
             } catch (error) {
                 // Group by message shape so the report names the gaps, not 1500 individual scripts.
-                const reason = (error as Error).message.replace(/^\d+:\d+: /, "").replaceAll(/'[^']*'/g, "'X'");
+                // Only `unknown X` messages quote a user identifier worth collapsing; everywhere else
+                // the quoted text is a node or operator kind, which is the whole point of the report.
+                const message = (error as Error).message.replace(/^\d+:\d+: /, "");
+                const reason = message.startsWith("unknown ") ? message.replaceAll(/'[^']*'/g, "'X'") : message;
                 failures.set(reason, (failures.get(reason) ?? 0) + 1);
                 continue;
             }

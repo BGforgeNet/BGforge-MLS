@@ -63,6 +63,12 @@ class Lowering {
     private readonly globals = new Map<string, number>();
     private readonly externals = new Map<string, string>();
     private readonly declarations: Declaration[] = [];
+    /**
+     * Names generated temporaries `tmp.<n>`. The counter runs across the whole compilation unit rather
+     * than per procedure, and the dot keeps the name out of the user identifier space.
+     */
+    private tempCounter = 0;
+    private currentTarget: ProcedureDecl | null = null;
 
     constructor(options: LowerOptions) {
         this.game = options.game ?? 2;
@@ -234,42 +240,31 @@ class Lowering {
         // `childForFieldName` would silently return only the first statement.
         const body = node.childrenForFieldName("body").filter((c): c is SyntaxNode => c !== null);
 
-        // Local declarations are hoisted: their initial values are pushed once at procedure entry, so
-        // the declaration statement itself emits nothing wherever it appears in the body.
-        for (const statement of body) this.hoistLocals(statement, scope, target);
+        // Slots are allocated during this walk, in source order, rather than in a hoisting pre-pass.
+        // Generated temporaries are interleaved with declared locals in the reference, so collecting
+        // declarations first would renumber every slot after a `foreach`.
+        this.currentTarget = target;
         target.body = this.lowerEach(body, scope);
+        this.currentTarget = null;
 
         if (node.children.some((c) => c?.type === "critical")) target.critical = true;
     }
 
-    private hoistLocals(node: SyntaxNode, scope: Scope, target: ProcedureDecl): void {
-        // `for (variable i = 0; ...)` declares a local too, but carries name and value directly
-        // rather than wrapping a var_init.
-        if (node.type === "for_var_decl") {
-            const name = this.nameOf(node);
-            if (!scope.slots.has(name.toLowerCase())) {
-                scope.slots.set(name.toLowerCase(), scope.slots.size);
-                const value = node.childForFieldName("value");
-                const literal = value ? this.literalOf(value) : null;
-                target.locals.push({ name, initial: literal ?? { kind: "int", value: 0 } });
-            }
-            return;
-        }
-        if (node.type === "variable_decl") {
-            for (const init of node.namedChildren) {
-                if (!init || init.type !== "var_init") continue;
-                const name = this.nameOf(init);
-                if (scope.slots.has(name.toLowerCase())) continue;
-                scope.slots.set(name.toLowerCase(), scope.slots.size);
-                const value = init.childForFieldName("value");
-                const literal = value ? this.literalOf(value) : ({ kind: "int", value: 0 } as const);
-                target.locals.push({ name, initial: literal ?? { kind: "int", value: 0 } });
-            }
-            return;
-        }
-        for (const child of node.namedChildren) {
-            if (child) this.hoistLocals(child, scope, target);
-        }
+    /** Allocates the next local slot. Its initial value is pushed at procedure entry, in slot order. */
+    private declareLocal(scope: Scope, name: string, initial: VariableDecl["initial"]): Expr {
+        const target = this.currentTarget;
+        if (!target) throw new Error("local declared outside a procedure");
+        const key = name.toLowerCase();
+        const existing = scope.slots.get(key);
+        if (existing !== undefined) return { kind: "var", scope: "local", index: existing, name };
+        const index = scope.slots.size;
+        scope.slots.set(key, index);
+        target.locals.push({ name, initial });
+        return { kind: "var", scope: "local", index, name };
+    }
+
+    private newTemp(scope: Scope): Expr {
+        return this.declareLocal(scope, `tmp.${this.tempCounter++}`, { kind: "int", value: 0 });
     }
 
     /** Lowers an explicit statement list, dropping the ones that emit nothing. */
@@ -323,6 +318,9 @@ class Lowering {
             case "for_stmt":
                 return this.lowerFor(node, scope);
 
+            case "foreach_stmt":
+                return this.lowerForeach(node, scope);
+
             case "return_stmt": {
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
                 return { kind: "return", value: value ? this.lowerExpression(value, scope) : undefined };
@@ -364,19 +362,105 @@ class Lowering {
         const body = node.childForFieldName("body");
         if (!cond) throw new LowerError("for loop has no condition", node);
 
+        // Lowering order is the reference's PARSE order - init, condition, update, then body - because
+        // slots are allocated as they are encountered, so a different order here renumbers them.
+        const initStmt = init ? this.lowerForClause(init, scope) : null;
+        const condition = this.lowerExpression(cond, scope);
+        const updateStmt = update ? this.lowerForClause(update, scope) : null;
+
         const inner: Stmt[] = [];
         if (body) inner.push(this.lowerBranchNode(body, scope));
         inner.push({ kind: "loopEnd" });
-        const updateStmt = update ? this.lowerForClause(update, scope) : null;
         if (updateStmt) inner.push(updateStmt);
 
-        const loop: Stmt = {
-            kind: "while",
-            cond: this.lowerExpression(cond, scope),
-            body: { kind: "block", body: inner },
-        };
-        const initStmt = init ? this.lowerForClause(init, scope) : null;
+        const loop: Stmt = { kind: "while", cond: condition, body: { kind: "block", body: inner } };
         return initStmt ? { kind: "block", body: [initStmt, loop] } : loop;
+    }
+
+    /**
+     * `foreach v in arr do body` walks an array by index. It expands to:
+     *
+     *     count := 0;  len := len_array(arr);
+     *     while (count < len) do begin
+     *         key := array_key(arr, count);
+     *         v   := get_array(arr, key);
+     *         body
+     *         LOOP_END
+     *         count += 1;
+     *     end
+     *
+     * Three details are load-bearing for the output rather than cosmetic. The subject is evaluated into
+     * a temporary UNLESS it is already a plain variable, so a call is not re-evaluated per iteration.
+     * The temporaries are allocated in a fixed order - subject, len, count, then the key when the source
+     * named none - because that order fixes both their `tmp.<n>` names and their slot indices. And the
+     * key is fetched separately from the value so the same expansion serves associative arrays, where
+     * the index and the key differ.
+     */
+    private lowerForeach(node: SyntaxNode, scope: Scope): Stmt {
+        const iter = node.childForFieldName("iter");
+        const body = node.childForFieldName("body");
+        if (!iter) throw new LowerError("foreach has no iterable", node);
+
+        // The parenthesised form puts a lone variable in the `key` field, so the value is whichever of
+        // the two is present last.
+        const keyField = node.childForFieldName("key");
+        const valueField = node.childForFieldName("value");
+        const varField = node.childForFieldName("var");
+        const valueName = valueField ?? varField ?? keyField;
+        const keyName = valueField ? keyField : null;
+        if (!valueName) throw new LowerError("foreach has no loop variable", node);
+
+        const declares = node.children.some((c) => c?.type === "variable");
+        const statements: Stmt[] = [];
+
+        // A bare variable is iterated in place; anything else is evaluated once into a temporary.
+        let subject: Expr;
+        if (iter.type === "identifier") {
+            subject = this.reference(iter, scope);
+        } else {
+            subject = this.newTemp(scope);
+            if (subject.kind !== "var") throw new LowerError("temporary is not a variable", node);
+            statements.push({ kind: "assign", target: subject, op: "=", value: this.lowerExpression(iter, scope) });
+        }
+
+        const len = this.newTemp(scope);
+        const count = this.newTemp(scope);
+        if (declares) {
+            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 });
+            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 });
+        }
+        const key = keyName ? this.reference(keyName, scope) : this.newTemp(scope);
+        const value = this.reference(valueName, scope);
+        if (len.kind !== "var" || count.kind !== "var" || key.kind !== "var" || value.kind !== "var") {
+            throw new LowerError("foreach loop variable is not a variable", node);
+        }
+
+        const call = (name: string, args: Expr[]): Expr => {
+            const fn = engineFunction(name, this.game);
+            if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
+            return { kind: "libCall", opcode: fn.opcode, args };
+        };
+
+        statements.push(
+            { kind: "assign", target: count, op: "=", value: { kind: "int", value: 0 } },
+            { kind: "assign", target: len, op: "=", value: call("len_array", [subject]) },
+        );
+
+        let condition: Expr = { kind: "binary", op: "<", left: count, right: len };
+        const guard = node.childForFieldName("while_cond");
+        if (guard) {
+            condition = { kind: "binary", op: "and", left: condition, right: this.lowerExpression(guard, scope) };
+        }
+
+        const inner: Stmt[] = [
+            { kind: "assign", target: key, op: "=", value: call("array_key", [subject, count]) },
+            { kind: "assign", target: value, op: "=", value: call("get_array", [subject, key]) },
+        ];
+        if (body) inner.push(this.lowerBranchNode(body, scope));
+        inner.push({ kind: "loopEnd" }, { kind: "assign", target: count, op: "+=", value: { kind: "int", value: 1 } });
+
+        statements.push({ kind: "while", cond: condition, body: { kind: "block", body: inner } });
+        return { kind: "block", body: statements };
     }
 
     /** The init and update clauses carry their own node types, none of which end in a semicolon. */
@@ -387,9 +471,13 @@ class Lowering {
                 const name = node.childForFieldName("name");
                 const value = node.childForFieldName("value");
                 if (!name || !value) throw new LowerError("malformed for clause", node);
+                const literal = node.type === "for_var_decl" ? this.literalOf(value) : null;
+                if (node.type === "for_var_decl") {
+                    this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 });
+                }
                 // A declaring init follows the local-declaration rule: a literal is folded into the
                 // slot at procedure entry, so no assignment is emitted here for it.
-                if (node.type === "for_var_decl" && this.literalOf(value) !== null) return null;
+                if (literal !== null) return null;
                 const target = this.reference(name, scope);
                 if (target.kind !== "var") throw new LowerError("for target must be a variable", name);
                 return { kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) };
@@ -421,11 +509,12 @@ class Lowering {
         const assignments: Stmt[] = [];
         for (const init of node.namedChildren) {
             if (!init || init.type !== "var_init") continue;
-            const value = init.childForFieldName("value");
-            if (!value || this.literalOf(value) !== null) continue;
             const name = init.childForFieldName("name");
             if (!name) throw new LowerError("var_init has no name", init);
-            const target = this.reference(name, scope);
+            const value = init.childForFieldName("value");
+            const literal = value ? this.literalOf(value) : ({ kind: "int", value: 0 } as const);
+            const target = this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 });
+            if (!value || literal !== null) continue;
             if (target.kind !== "var") throw new LowerError(`'${name.text}' is not a variable`, name);
             assignments.push({ kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) });
         }
