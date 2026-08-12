@@ -103,6 +103,20 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable a;\n variable k;\n variable v;\n foreach k: v in a begin\n  v := k;\n end\nend\n",
     },
     {
+        name: "switch over a variable",
+        source:
+            "procedure start begin\n variable x;\n switch x begin\n  case 1: x := 10;\n" +
+            "  case 2: x := 20;\n  default: x := 30;\n end\nend\n",
+    },
+    {
+        name: "switch over an expression needs a temporary",
+        source: "procedure start begin\n variable x;\n switch (x + 1) begin\n  case 1: x := 10;\n end\nend\n",
+    },
+    {
+        name: "switch with no default",
+        source: "procedure start begin\n variable x;\n switch x begin\n  case 1: x := 10;\n  case 2: x := 20;\n end\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

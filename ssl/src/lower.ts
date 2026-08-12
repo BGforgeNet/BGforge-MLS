@@ -321,6 +321,9 @@ class Lowering {
             case "foreach_stmt":
                 return this.lowerForeach(node, scope);
 
+            case "switch_stmt":
+                return this.lowerSwitch(node, scope);
+
             case "return_stmt": {
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
                 return { kind: "return", value: value ? this.lowerExpression(value, scope) : undefined };
@@ -461,6 +464,63 @@ class Lowering {
 
         statements.push({ kind: "while", cond: condition, body: { kind: "block", body: inner } });
         return { kind: "block", body: statements };
+    }
+
+    /**
+     * `switch` is a nested if/else-if chain over equality comparisons, not a jump table. The subject is
+     * evaluated into a temporary unless it is already a plain variable, so it is tested once per case
+     * without being recomputed.
+     *
+     * There is no fallthrough to model: each case's statements are its own branch, and `default`
+     * becomes the innermost else.
+     */
+    private lowerSwitch(node: SyntaxNode, scope: Scope): Stmt {
+        const value = node.childForFieldName("value");
+        if (!value) throw new LowerError("switch has no subject", node);
+
+        const statements: Stmt[] = [];
+        let subject: Expr;
+        if (value.type === "identifier") {
+            subject = this.reference(value, scope);
+        } else {
+            subject = this.newTemp(scope);
+            if (subject.kind !== "var") throw new LowerError("temporary is not a variable", node);
+            statements.push({ kind: "assign", target: subject, op: "=", value: this.lowerExpression(value, scope) });
+        }
+
+        const cases = node.namedChildren.filter((c): c is SyntaxNode => c?.type === "case_clause");
+        if (cases.length === 0) throw new LowerError("switch statement with no cases", node);
+        const fallback = node.namedChildren.find((c): c is SyntaxNode => c?.type === "default_clause");
+
+        // Built innermost-first so each case's else holds the chain below it.
+        let chain: Stmt | undefined = fallback
+            ? { kind: "block", body: this.lowerClauseBody(fallback, scope) }
+            : undefined;
+        for (let index = cases.length - 1; index >= 0; index--) {
+            const clause = cases[index] as SyntaxNode;
+            const caseValue = clause.childForFieldName("value");
+            if (!caseValue) throw new LowerError("case has no value", clause);
+            const branch: Stmt = {
+                kind: "if",
+                cond: { kind: "binary", op: "==", left: subject, right: this.lowerExpression(caseValue, scope) },
+                thenBranch: { kind: "block", body: this.lowerClauseBody(clause, scope) },
+            };
+            chain = chain ? { ...branch, elseBranch: chain } : branch;
+        }
+
+        statements.push(chain as Stmt);
+        return statements.length === 1 ? (statements[0] as Stmt) : { kind: "block", body: statements };
+    }
+
+    /**
+     * A clause's statements are everything except its `value` field. The comparison is by node id:
+     * each accessor call returns a fresh wrapper object, so identity comparison silently keeps the
+     * value and then tries to lower it as a statement.
+     */
+    private lowerClauseBody(clause: SyntaxNode, scope: Scope): Stmt[] {
+        const valueId = clause.childForFieldName("value")?.id;
+        const body = clause.namedChildren.filter((c): c is SyntaxNode => c !== null && c.id !== valueId);
+        return this.lowerEach(body, scope);
     }
 
     /** The init and update clauses carry their own node types, none of which end in a semicolon. */
