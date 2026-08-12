@@ -144,6 +144,11 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable x;\n x := (x andalso 1) orelse 2;\nend\n",
     },
     {
+        // A bare procedure name calls it; `@name` would yield its index instead.
+        name: "bare procedure name calls it",
+        source: "procedure foo begin\n return 1;\nend\nprocedure start begin\n variable x;\n x := foo;\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

@@ -852,9 +852,14 @@ class Lowering {
         if (global !== undefined) return { kind: "var", scope: "global", index: global, name: node.text };
         const external = this.externals.get(key);
         if (external !== undefined) return { kind: "var", scope: "external", index: 0, name: external };
-        // An engine function with no arguments is written without parentheses.
+        // An engine function with no arguments is written without parentheses. These are lexer
+        // keywords, so they take precedence over a user name that happens to match.
         const engine = engineFunction(key, this.game);
         if (engine) return { kind: "libCall", opcode: engine.opcode, args: [] };
+        // A bare procedure name in expression position CALLS it with no arguments rather than yielding
+        // its index - `@name` is the spelling that yields the index.
+        const procedure = this.procedures.get(key);
+        if (procedure !== undefined) return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
         throw new LowerError(`unknown identifier '${node.text}'`, node);
     }
 }
