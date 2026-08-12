@@ -13,7 +13,18 @@
  * longwords and patched once known, which is why the writer exposes `tell` and `patchLong`.
  */
 
-import { OPCODE_SIZE, Op, PROCTABLE_SIZE } from "./opcodes";
+import {
+    OPCODE_SIZE,
+    Op,
+    PROCTABLE_SIZE,
+    P_CONDITIONAL,
+    P_CRITICAL,
+    P_EXPORT,
+    P_IMPORT,
+    P_INLINE,
+    P_PURE,
+    P_TIMED,
+} from "./opcodes";
 import { EngineOp } from "./opcodes-engine";
 import { NameTable } from "./namelist";
 import { IntWriter } from "./writer";
@@ -31,20 +42,11 @@ import {
     type VariableDecl,
 } from "./ir";
 
-/** Procedure-table type bits. */
-const P_TIMED = 0x01;
-const P_CONDITIONAL = 0x02;
-const P_IMPORT = 0x04;
-const P_EXPORT = 0x08;
-const P_CRITICAL = 0x10;
-const P_PURE = 0x20;
-const P_INLINE = 0x40;
-
 /**
  * A placeholder occupies procedure slot 0 so that no real procedure can sit at table offset zero,
  * which the engine treats as absent. Its name is part of the output, not an internal detail.
  */
-const PLACEHOLDER_NAME = "..............";
+export const PLACEHOLDER_NAME = "..............";
 
 /** Address of the exit instruction inside the startup code, jumped to when `start` returns. */
 const EXIT_ADDRESS = 18;

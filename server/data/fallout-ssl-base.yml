@@ -101,7 +101,7 @@ base_functions:
         Sets up an animation for an object (obj) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.)
 
     - name: art_anim
-      detail: void art_anim(int fid)
+      detail: int art_anim(int fid)
       doc: |-
         Returns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)
 
@@ -111,7 +111,7 @@ base_functions:
         Causes the focused object (self) to attempt to attack an object (who). This is a macro to attack_complex().
 
     - name: attack_complex
-      detail: void attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results
+      detail: void attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results)
       doc: |-
         Causes the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack
 
@@ -185,7 +185,7 @@ base_functions:
         Inflicts damage on a critter (who) of a given amount, killing it if necessary. Use `DMG_*` flags to customize behaviour.
 
     - name: critter_heal
-      detail: void critter_heal(ObjectPtr who, int amount)
+      detail: int critter_heal(ObjectPtr who, int amount)
       doc: |-
         Heals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds
 
@@ -229,7 +229,7 @@ base_functions:
         Removes a particular trait (trait) of a given type (trait_type) from a particular critter (who).
 
     - name: critter_set_flee_state
-      detail: int critter_set_flee_state(ObjectPtr who, bool flee_on
+      detail: int critter_set_flee_state(ObjectPtr who, bool flee_on)
       doc: |-
         Sets the FLEE flag on or off. This controls whether the critter flees during combat.
 
@@ -501,7 +501,7 @@ base_functions:
         Returns the level of the skill (0-17) of the target critter. (0 to 200 for Fallout 1), (0 to 300 for Fallout 2)
 
     - name: has_trait
-      detail: int has_trait(int trait_type, ObjectPtr who, int trait
+      detail: int has_trait(int trait_type, ObjectPtr who, int trait)
       doc: |-
         Returns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.).
 

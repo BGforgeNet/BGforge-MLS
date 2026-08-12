@@ -23,6 +23,19 @@ const O_STRING = 0x1000;
 /** Longwords per procedure-table entry: name, type, time, condition offset, code offset, arg count. */
 export const PROCTABLE_SIZE = 6;
 
+/**
+ * Procedure-table type bits. Shared by the emitter and the reader so the two cannot drift: a bit
+ * written under one name and read under another produces a file that round-trips through itself while
+ * meaning something else to the engine.
+ */
+export const P_TIMED = 0x01;
+export const P_CONDITIONAL = 0x02;
+export const P_IMPORT = 0x04;
+export const P_EXPORT = 0x08;
+export const P_CRITICAL = 0x10;
+export const P_PURE = 0x20;
+export const P_INLINE = 0x40;
+
 /** Every opcode is one big-endian word; offsets patched into the stream skip past it. */
 export const OPCODE_SIZE = 2;
 
