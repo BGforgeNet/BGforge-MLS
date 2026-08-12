@@ -429,6 +429,14 @@ class Lowering {
         const declares = node.children.some((c) => c?.type === "variable");
         const statements: Stmt[] = [];
 
+        // Allocation order is the reference's PARSE order, and it decides both the `tmp.<n>` names and
+        // every local slot index: the loop variables are declared as they are read, before `in` and so
+        // before any temporary exists. Allocating the temporaries first shifts every later slot by one.
+        if (declares) {
+            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 });
+            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 });
+        }
+
         // A bare variable is iterated in place; anything else is evaluated once into a temporary.
         let subject: Expr;
         if (iter.type === "identifier") {
@@ -441,10 +449,6 @@ class Lowering {
 
         const len = this.newTemp(scope);
         const count = this.newTemp(scope);
-        if (declares) {
-            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 });
-            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 });
-        }
         const key = keyName ? this.reference(keyName, scope) : this.newTemp(scope);
         const value = this.reference(valueName, scope);
         if (len.kind !== "var" || count.kind !== "var" || key.kind !== "var" || value.kind !== "var") {
