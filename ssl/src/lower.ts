@@ -570,7 +570,8 @@ class Lowering {
                 };
             }
         }
-        return { kind: "expr", expr: this.lowerExpression(node, scope) };
+        // `for (...; ...; i++)` - the update clause is the other place an increment appears.
+        return this.incrementOf(node, scope) ?? { kind: "expr", expr: this.lowerExpression(node, scope) };
     }
 
     /**
@@ -615,10 +616,35 @@ class Lowering {
         const left = node.childForFieldName("left");
         const right = node.childForFieldName("right");
         if (!left || !right) throw new LowerError("malformed assignment", node);
-        const target = this.lowerExpression(left, scope);
-        if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
         const operator = node.children.find((c) => c && ASSIGN_OPS.has(c.text))?.text ?? "=";
         const op = (operator === ":=" ? "=" : operator) as AssignOp;
+
+        // Assigning into an array or map is a `set_array` call, not a store: the outermost `get_array`
+        // of the access chain becomes a `set_array` with the value appended.
+        if (left.type === "subscript_expr" || left.type === "member_expr") {
+            if (op !== "=") {
+                throw new LowerError(`compound assignment to an element is not lowered yet`, node);
+            }
+            const object = left.childForFieldName("object");
+            const index =
+                left.type === "subscript_expr" ? left.childForFieldName("index") : left.childForFieldName("member");
+            if (!object || !index) throw new LowerError("malformed element assignment", left);
+            const key: Expr =
+                left.type === "subscript_expr"
+                    ? this.lowerExpression(index, scope)
+                    : { kind: "string", value: index.text };
+            const fn = engineFunction("set_array", this.game);
+            if (!fn) throw new LowerError("engine function 'set_array' is unavailable", node);
+            return {
+                kind: "libStmt",
+                opcode: fn.opcode,
+                args: [this.lowerExpression(object, scope), key, this.lowerExpression(right, scope)],
+                ...(fn.popsResult ? { popsResult: true } : {}),
+            };
+        }
+
+        const target = this.lowerExpression(left, scope);
+        if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
         return { kind: "assign", target, op, value: this.lowerExpression(right, scope) };
     }
 
@@ -641,17 +667,8 @@ class Lowering {
      * whose result is discarded; the two compile differently, so the callee decides.
      */
     private lowerExpressionStatement(node: SyntaxNode, scope: Scope): Stmt {
-        // `x++` is compound assignment in disguise, and only valid as a statement.
-        if (node.type === "unary_expr") {
-            const op = node.childForFieldName("op")?.text;
-            if (op === "++" || op === "--") {
-                const operand = node.childForFieldName("expr");
-                if (!operand) throw new LowerError("malformed increment", node);
-                const target = this.lowerExpression(operand, scope);
-                if (target.kind !== "var") throw new LowerError("increment target must be a variable", operand);
-                return { kind: "assign", target, op: op === "++" ? "+=" : "-=", value: { kind: "int", value: 1 } };
-            }
-        }
+        const increment = this.incrementOf(node, scope);
+        if (increment) return increment;
         if (node.type === "call_expr") {
             const callee = node.childForFieldName("func");
             if (callee?.type === "identifier") {
@@ -666,6 +683,21 @@ class Lowering {
             return { kind: "callStmt", target, args };
         }
         return { kind: "expr", expr: this.lowerExpression(node, scope) };
+    }
+
+    /**
+     * `x++` is compound assignment spelled differently, and is a statement rather than an expression -
+     * it appears both on its own and as a `for` update clause, so both paths route through here.
+     */
+    private incrementOf(node: SyntaxNode, scope: Scope): Stmt | null {
+        if (node.type !== "unary_expr") return null;
+        const op = node.childForFieldName("op")?.text;
+        if (op !== "++" && op !== "--") return null;
+        const operand = node.childForFieldName("expr");
+        if (!operand) throw new LowerError("malformed increment", node);
+        const target = this.lowerExpression(operand, scope);
+        if (target.kind !== "var") throw new LowerError("increment target must be a variable", operand);
+        return { kind: "assign", target, op: op === "++" ? "+=" : "-=", value: { kind: "int", value: 1 } };
     }
 
     private callParts(node: SyntaxNode, scope: Scope): { callee: Expr; args: Expr[] } {
