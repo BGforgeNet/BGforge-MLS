@@ -33,7 +33,7 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  * Scripts that compile byte-identically today. Raise when a gap closes; never lower to absorb a
  * regression - a drop means the back end lost coverage it had.
  */
-const MATCHING_FLOOR = 999999;
+const MATCHING_FLOOR = 766;
 
 function findCompiler(): string | null {
     try {

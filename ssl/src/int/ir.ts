@@ -93,6 +93,9 @@ export interface ProcedureDecl {
     exported?: boolean;
     imported?: boolean;
     critical?: boolean;
+    /** Source-level modifiers. They are recorded in the procedure table, not just advisory. */
+    pure?: boolean;
+    inline?: boolean;
     /** Fires at this time when set, which also sets the timed bit in the procedure table. */
     timed?: number;
     /** Guard expression for a conditional procedure, emitted ahead of the body. */

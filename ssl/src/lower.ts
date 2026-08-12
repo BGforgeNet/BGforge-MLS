@@ -101,9 +101,17 @@ class Lowering {
                     const name = this.nameOf(child);
                     if (this.procedures.has(name.toLowerCase())) break;
                     this.procedures.set(name.toLowerCase(), this.procedures.size);
+                    const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
                     this.declarations.push({
                         kind: "procedure",
-                        procedure: { name, args: [], locals: [], body: [] },
+                        procedure: {
+                            name,
+                            args: [],
+                            locals: [],
+                            body: [],
+                            ...(modifier === "pure" ? { pure: true } : {}),
+                            ...(modifier === "inline" ? { inline: true } : {}),
+                        },
                     });
                     break;
                 }
@@ -256,6 +264,9 @@ class Lowering {
         this.currentTarget = null;
 
         if (node.children.some((c) => c?.type === "critical")) target.critical = true;
+        const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
+        if (modifier === "pure") target.pure = true;
+        if (modifier === "inline") target.inline = true;
     }
 
     /** Allocates the next local slot. Its initial value is pushed at procedure entry, in slot order. */

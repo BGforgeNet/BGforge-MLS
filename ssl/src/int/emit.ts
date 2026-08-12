@@ -37,6 +37,8 @@ const P_CONDITIONAL = 0x02;
 const P_IMPORT = 0x04;
 const P_EXPORT = 0x08;
 const P_CRITICAL = 0x10;
+const P_PURE = 0x20;
+const P_INLINE = 0x40;
 
 /**
  * A placeholder occupies procedure slot 0 so that no real procedure can sit at table offset zero,
@@ -282,6 +284,8 @@ class Emitter {
         if (procedure.imported) type |= P_IMPORT;
         if (procedure.exported) type |= P_EXPORT;
         if (procedure.critical) type |= P_CRITICAL;
+        if (procedure.pure) type |= P_PURE;
+        if (procedure.inline) type |= P_INLINE;
         return type;
     }
 

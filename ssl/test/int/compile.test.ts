@@ -163,6 +163,11 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable x;\n x++;\n x--;\nend\n",
     },
     {
+        // `pure` and `inline` are recorded in the procedure table, not just advisory to the reader.
+        name: "procedure modifiers reach the table",
+        source: "pure procedure foo begin end\ninline procedure bar begin end\nprocedure start begin end\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
