@@ -22,6 +22,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { emitInt } from "../../src/int/emit.ts";
+import { EngineOp } from "../../src/int/opcodes-engine.ts";
 import type { Expr, Program, Stmt, VariableDecl } from "../../src/int/ir.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
@@ -264,12 +265,142 @@ const CASES: Case[] = [
             [declare("x")],
         ),
     },
+
+    // `for` is not a loop form of its own: the front end desugars it to an initialiser followed by a while
+    // whose body ends with a loop-end marker and then the increment. `continue` jumps to that marker rather
+    // than to the condition, which is how the increment still runs on a continue.
+    {
+        name: "for loop desugars to while plus a loop-end marker",
+        source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  i := i;\n end\nend\n",
+        program: startProc(
+            [
+                { kind: "assign", target: localVar(0, "i"), op: "=", value: int(0) },
+                {
+                    kind: "while",
+                    cond: { kind: "binary", op: "<", left: localVar(0, "i"), right: int(3) },
+                    body: {
+                        kind: "block",
+                        body: [
+                            {
+                                kind: "block",
+                                body: [{ kind: "assign", target: localVar(0, "i"), op: "=", value: localVar(0, "i") }],
+                            },
+                            { kind: "loopEnd" },
+                            { kind: "assign", target: localVar(0, "i"), op: "+=", value: int(1) },
+                        ],
+                    },
+                },
+            ],
+            [declare("i")],
+        ),
+    },
+    {
+        name: "break inside a while",
+        source: "procedure start begin\n while (1) do begin\n  break;\n end\nend\n",
+        program: startProc([{ kind: "while", cond: int(1), body: { kind: "block", body: [{ kind: "break" }] } }]),
+    },
+    {
+        name: "continue inside a for runs the increment",
+        source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
+        program: startProc(
+            [
+                { kind: "assign", target: localVar(0, "i"), op: "=", value: int(0) },
+                {
+                    kind: "while",
+                    cond: { kind: "binary", op: "<", left: localVar(0, "i"), right: int(3) },
+                    body: {
+                        kind: "block",
+                        body: [
+                            { kind: "block", body: [{ kind: "continue" }] },
+                            { kind: "loopEnd" },
+                            { kind: "assign", target: localVar(0, "i"), op: "+=", value: int(1) },
+                        ],
+                    },
+                },
+            ],
+            [declare("i")],
+        ),
+    },
+    {
+        // Pins the engine opcode table's base offset against real output: a wrong core or library count
+        // would shift every one of the 481 engine opcodes and show up here.
+        name: "engine function call in statement position",
+        source: 'procedure start begin\n display_msg("hi");\nend\n',
+        program: startProc([
+            { kind: "libStmt", opcode: EngineOp.DISPLAY_MSG, args: [{ kind: "string", value: "hi" }] },
+        ]),
+    },
+    {
+        name: "engine function call in expression position",
+        source: "procedure start begin\n variable x;\n x := random(1, 10);\nend\n",
+        program: startProc(
+            [
+                {
+                    kind: "assign",
+                    target: localVar(0, "x"),
+                    op: "=",
+                    value: { kind: "libCall", opcode: EngineOp.RANDOM, args: [int(1), int(10)] },
+                },
+            ],
+            [declare("x")],
+        ),
+    },
+    {
+        name: "exported variable",
+        source: "export variable g := 1;\nprocedure start begin end\n",
+        program: {
+            declarations: [
+                { kind: "external", variable: { name: "g", initial: { kind: "int", value: 1 }, exported: true } },
+                { kind: "procedure", procedure: { name: "start", args: [], locals: [], body: [] } },
+            ],
+        },
+    },
+    {
+        name: "imported variable",
+        source: "import variable g;\nprocedure start begin end\n",
+        program: {
+            declarations: [
+                { kind: "external", variable: declare("g") },
+                { kind: "procedure", procedure: { name: "start", args: [], locals: [], body: [] } },
+            ],
+        },
+    },
+    {
+        name: "exported procedure",
+        source: "export procedure foo;\nprocedure foo begin end\nprocedure start begin end\n",
+        program: {
+            declarations: [
+                { kind: "procedure", procedure: { name: "foo", args: [], locals: [], body: [], exported: true } },
+                { kind: "procedure", procedure: { name: "start", args: [], locals: [], body: [] } },
+            ],
+        },
+    },
+    {
+        name: "critical procedure",
+        source: "critical procedure foo begin end\nprocedure start begin end\n",
+        program: {
+            declarations: [
+                { kind: "procedure", procedure: { name: "foo", args: [], locals: [], body: [], critical: true } },
+                { kind: "procedure", procedure: { name: "start", args: [], locals: [], body: [] } },
+            ],
+        },
+    },
+    {
+        name: "conditional procedure",
+        source: "procedure foo when (1) begin end\nprocedure start begin end\n",
+        program: {
+            declarations: [
+                { kind: "procedure", procedure: { name: "foo", args: [], locals: [], body: [], conditional: int(1) } },
+                { kind: "procedure", procedure: { name: "start", args: [], locals: [], body: [] } },
+            ],
+        },
+    },
 ];
 
 describe.skipIf(compiler === null)("INT emitter matches the reference compiler", () => {
     it("covers every case in the table", () => {
         // Guards against a case table that silently shrinks, which would make the suite pass vacuously.
-        expect(CASES.length).toBeGreaterThanOrEqual(13);
+        expect(CASES.length).toBeGreaterThanOrEqual(23);
     });
 
     for (const testCase of CASES) {

@@ -45,6 +45,21 @@ export class NameTable {
         return dataOffset;
     }
 
+    /**
+     * Offset of an already-interned name. Throws rather than interning, because the tables are
+     * serialized before the code that references them is written: a late intern would grow a table
+     * whose bytes are already in the output, silently shifting every offset past it. Callers in the
+     * write phase use this so that a name missed by the interning pass fails loudly at the point of
+     * use instead of producing a subtly corrupt file.
+     */
+    offsetOf(name: string): number {
+        const offset = this.offsets.get(name);
+        if (offset === undefined) {
+            throw new Error(`name '${name}' was not interned before the table was written`);
+        }
+        return offset;
+    }
+
     /** True when nothing was interned; an empty table is written as the terminator alone. */
     get isEmpty(): boolean {
         return this.records.length === 0;

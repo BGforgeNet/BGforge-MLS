@@ -170,9 +170,6 @@ class Emitter {
                 case "string":
                     this.strings.intern(expr.value);
                     break;
-                case "var":
-                    if (expr.scope === "external") this.strings.intern(expr.name);
-                    break;
                 case "procRef":
                     if (expr.stringify) this.strings.intern(this.procedures[expr.index + 1]?.name ?? "");
                     break;
@@ -234,7 +231,6 @@ class Emitter {
         for (const declaration of this.program.declarations) {
             if (declaration.kind !== "procedure") {
                 value(declaration.variable.initial);
-                if (declaration.kind === "external") this.strings.intern(declaration.variable.name);
                 continue;
             }
             const procedure = declaration.procedure;
@@ -288,7 +284,7 @@ class Emitter {
     private writeProcedureTable(): void {
         this.w.long(this.procedures.length);
         for (const procedure of this.procedures) {
-            this.w.long(this.names.intern(procedure.name));
+            this.w.long(this.names.offsetOf(procedure.name));
             this.w.long(this.procedureType(procedure));
             this.w.long(procedure.timed ?? 0);
             this.w.long(0); // condition offset, patched when the body is written
@@ -309,13 +305,13 @@ class Emitter {
 
         for (const external of this.externals) {
             if (!external.exported) continue;
-            this.w.string(this.strings.intern(external.name));
+            this.w.string(this.names.offsetOf(external.name));
             this.w.op(Op.EXPORT_VAR);
         }
         for (const external of this.externals) {
             if (!external.exported) continue;
             this.writeInitialValue(external);
-            this.w.string(this.strings.intern(external.name));
+            this.w.string(this.names.offsetOf(external.name));
             this.w.op(Op.STORE_EXTERNAL);
         }
         this.procedures.forEach((procedure, index) => {
@@ -343,7 +339,7 @@ class Emitter {
                 this.w.float(initial.value);
                 break;
             case "string":
-                this.w.string(this.strings.intern(initial.value));
+                this.w.string(this.strings.offsetOf(initial.value));
                 break;
         }
     }
@@ -464,6 +460,7 @@ class Emitter {
             case "libStmt":
                 for (const argument of statement.args) this.writeExpression(argument);
                 this.w.op(statement.opcode);
+                if (statement.popsResult) this.w.op(Op.POP);
                 break;
         }
     }
@@ -499,7 +496,7 @@ class Emitter {
                 this.w.op(Op.FETCH_GLOBAL);
                 break;
             case "external":
-                this.w.string(this.strings.intern(target.name));
+                this.w.string(this.names.offsetOf(target.name));
                 this.w.op(Op.FETCH_EXTERNAL);
                 break;
         }
@@ -516,7 +513,7 @@ class Emitter {
                 this.w.op(Op.STORE_GLOBAL);
                 break;
             case "external":
-                this.w.string(this.strings.intern(target.name));
+                this.w.string(this.names.offsetOf(target.name));
                 this.w.op(Op.STORE_EXTERNAL);
                 break;
         }
@@ -569,7 +566,7 @@ class Emitter {
                 break;
 
             case "string":
-                this.w.string(this.strings.intern(expr.value));
+                this.w.string(this.strings.offsetOf(expr.value));
                 break;
 
             case "var":
@@ -577,7 +574,7 @@ class Emitter {
                 break;
 
             case "procRef":
-                if (expr.stringify) this.w.string(this.strings.intern(this.procedures[expr.index + 1]?.name ?? ""));
+                if (expr.stringify) this.w.string(this.strings.offsetOf(this.procedures[expr.index + 1]?.name ?? ""));
                 else this.w.int(expr.index + 1);
                 break;
 
@@ -688,7 +685,7 @@ class Emitter {
             return;
         }
         if (target.kind === "string") {
-            this.w.string(this.strings.intern(target.value));
+            this.w.string(this.strings.offsetOf(target.value));
             this.w.op(Op.LOOKUP_STRING_PROC);
             return;
         }

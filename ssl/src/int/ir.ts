@@ -68,8 +68,11 @@ export type Stmt =
     | { kind: "loopEnd" }
     /** A procedure call in statement position - the result is discarded. */
     | { kind: "callStmt"; target: Expr; args: Expr[]; checkArgCount?: boolean }
-    /** A statement-position engine function. */
-    | { kind: "libStmt"; opcode: number; args: Expr[] };
+    /**
+     * A statement-position engine function. Some engine functions return a value even when called as a
+     * statement; those set `popsResult` so the unused result is dropped rather than left on the stack.
+     */
+    | { kind: "libStmt"; opcode: number; args: Expr[]; popsResult?: boolean };
 
 export interface VariableDecl {
     name: string;
