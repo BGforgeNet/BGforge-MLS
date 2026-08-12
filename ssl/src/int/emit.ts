@@ -14,6 +14,7 @@
  */
 
 import { OPCODE_SIZE, Op, PROCTABLE_SIZE } from "./opcodes";
+import { EngineOp } from "./opcodes-engine";
 import { NameTable } from "./namelist";
 import { IntWriter } from "./writer";
 import {
@@ -58,6 +59,9 @@ const BINARY_OPCODES: Partial<Record<BinaryOp, number>> = {
     ">=": Op.GREATER_EQUAL,
     "<": Op.LESS,
     ">": Op.GREATER,
+    // Integer division and exponentiation are sfall additions, not core instructions.
+    div: EngineOp.TS_DIV,
+    "^": EngineOp.TS_POW,
     bwand: Op.BWAND,
     bwor: Op.BWOR,
     bwxor: Op.BWXOR,

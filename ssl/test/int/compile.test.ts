@@ -149,6 +149,10 @@ const CASES: Case[] = [
         source: "procedure foo begin\n return 1;\nend\nprocedure start begin\n variable x;\n x := foo;\nend\n",
     },
     {
+        name: "integer division and exponentiation",
+        source: "procedure start begin\n variable x;\n x := (7 div 2) + (2 ^ 3);\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
