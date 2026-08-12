@@ -54,6 +54,7 @@ parallel \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
+    "Typecheck ssl" "(cd ssl && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Lint md-links" "pnpm lint:md-links" \
