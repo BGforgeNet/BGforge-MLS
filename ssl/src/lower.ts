@@ -74,6 +74,8 @@ class Lowering {
      * than per procedure, and the dot keeps the name out of the user identifier space.
      */
     private tempCounter = 0;
+    /** Declared parameter defaults per procedure index, used to pad a short call. */
+    private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
     private currentTarget: ProcedureDecl | null = null;
@@ -99,6 +101,7 @@ class Lowering {
                 case "procedure_forward":
                 case "procedure": {
                     const name = this.nameOf(child);
+                    this.recordParameters(child);
                     if (this.procedures.has(name.toLowerCase())) break;
                     this.procedures.set(name.toLowerCase(), this.procedures.size);
                     const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
@@ -123,6 +126,28 @@ class Lowering {
                     break;
             }
         }
+    }
+
+    /**
+     * Parameter defaults are read from whichever declaration states them - a forward declaration and
+     * the definition may each carry some - because a call supplying fewer arguments is padded with
+     * them at the CALL SITE, so they must be known before any body is lowered.
+     */
+    private recordParameters(node: SyntaxNode): void {
+        const params = node.childForFieldName("params");
+        if (!params) return;
+        const key = this.nameOf(node).toLowerCase();
+        const index = this.procedures.get(key) ?? this.procedures.size;
+        const existing = this.paramDefaults.get(index) ?? [];
+        const defaults: (VariableDecl["initial"] | null)[] = [];
+        let position = 0;
+        for (const param of params.namedChildren) {
+            if (!param || param.type !== "param") continue;
+            const declared = param.childForFieldName("default");
+            defaults.push(declared ? this.constantOf(declared) : (existing[position] ?? null));
+            position++;
+        }
+        this.paramDefaults.set(index, defaults);
     }
 
     private collectVariables(node: SyntaxNode, imported: boolean): void {
@@ -173,7 +198,10 @@ class Lowering {
      */
     private constantOf(node: SyntaxNode): VariableDecl["initial"] {
         switch (node.type) {
-            case "paren_expr": {
+            // `param_default` is a wrapper around the actual literal node.
+            case "param_default":
+            case "paren_expr":
+            case "param_default_group": {
                 const inner = node.namedChildren.find((c) => c && c.type !== "comment");
                 if (inner) return this.constantOf(inner);
                 break;
@@ -188,6 +216,7 @@ class Lowering {
                 return { kind: "string", value: unquote(node.text) };
             case "boolean":
                 return { kind: "int", value: node.text.toLowerCase() === "true" ? 1 : 0 };
+            case "param_default_unary":
             case "unary_expr": {
                 const operand = node.childForFieldName("expr");
                 const op = node.childForFieldName("op")?.text;
@@ -667,10 +696,16 @@ class Lowering {
             throw new LowerError("timed calls are not lowered yet", node);
         }
         if (target.type === "call_expr") {
-            const { callee, args } = this.callParts(target, scope);
-            return { kind: "callStmt", target: callee, args };
+            const { callee, args, checkArgCount } = this.callParts(target, scope);
+            return { kind: "callStmt", target: callee, args, ...(checkArgCount ? { checkArgCount } : {}) };
         }
-        return { kind: "callStmt", target: this.procedureRef(target, scope), args: [] };
+        const callee = this.procedureRef(target, scope);
+        return {
+            kind: "callStmt",
+            target: callee,
+            args: [],
+            ...(callee.kind === "procRef" ? {} : { checkArgCount: true }),
+        };
     }
 
     /**
@@ -690,8 +725,8 @@ class Lowering {
                     return engine.popsResult ? { ...statement, popsResult: true } : statement;
                 }
             }
-            const { callee: target, args } = this.callParts(node, scope);
-            return { kind: "callStmt", target, args };
+            const { callee: target, args, checkArgCount } = this.callParts(node, scope);
+            return { kind: "callStmt", target, args, ...(checkArgCount ? { checkArgCount } : {}) };
         }
         return { kind: "expr", expr: this.lowerExpression(node, scope) };
     }
@@ -711,10 +746,23 @@ class Lowering {
         return { kind: "assign", target, op: op === "++" ? "+=" : "-=", value: { kind: "int", value: 1 } };
     }
 
-    private callParts(node: SyntaxNode, scope: Scope): { callee: Expr; args: Expr[] } {
+    private callParts(node: SyntaxNode, scope: Scope): { callee: Expr; args: Expr[]; checkArgCount: boolean } {
         const func = node.childForFieldName("func");
         if (!func) throw new LowerError("call has no callee", node);
-        return { callee: this.procedureRef(func, scope), args: this.argumentsOf(node, scope) };
+        const callee = this.procedureRef(func, scope);
+        const args = this.argumentsOf(node, scope);
+        if (callee.kind !== "procRef") {
+            // The target is only known at run time, so the engine checks the argument count instead.
+            return { callee, args, checkArgCount: true };
+        }
+        // A call may omit trailing arguments that declare a default; the default is supplied here.
+        const defaults = this.paramDefaults.get(callee.index) ?? [];
+        for (let position = args.length; position < defaults.length; position++) {
+            const fallback = defaults[position];
+            if (!fallback) break;
+            args.push(fallback);
+        }
+        return { callee, args, checkArgCount: false };
     }
 
     /**
@@ -855,8 +903,8 @@ class Lowering {
                         };
                     }
                 }
-                const { callee, args } = this.callParts(node, scope);
-                return { kind: "call", target: callee, args };
+                const { callee, args, checkArgCount } = this.callParts(node, scope);
+                return { kind: "call", target: callee, args, ...(checkArgCount ? { checkArgCount } : {}) };
             }
         }
         throw new LowerError(`unsupported expression '${node.type}'`, node);
