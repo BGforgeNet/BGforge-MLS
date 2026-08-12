@@ -158,6 +158,11 @@ const CASES: Case[] = [
         source: "procedure foo(variable a) begin\n if a == 0 then return;\n a := 1;\nend\nprocedure start begin end\n",
     },
     {
+        // Increment and decrement are compound assignment spelled differently.
+        name: "increment and decrement statements",
+        source: "procedure start begin\n variable x;\n x++;\n x--;\nend\n",
+    },
+    {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },

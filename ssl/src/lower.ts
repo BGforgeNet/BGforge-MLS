@@ -641,6 +641,17 @@ class Lowering {
      * whose result is discarded; the two compile differently, so the callee decides.
      */
     private lowerExpressionStatement(node: SyntaxNode, scope: Scope): Stmt {
+        // `x++` is compound assignment in disguise, and only valid as a statement.
+        if (node.type === "unary_expr") {
+            const op = node.childForFieldName("op")?.text;
+            if (op === "++" || op === "--") {
+                const operand = node.childForFieldName("expr");
+                if (!operand) throw new LowerError("malformed increment", node);
+                const target = this.lowerExpression(operand, scope);
+                if (target.kind !== "var") throw new LowerError("increment target must be a variable", operand);
+                return { kind: "assign", target, op: op === "++" ? "+=" : "-=", value: { kind: "int", value: 1 } };
+            }
+        }
         if (node.type === "call_expr") {
             const callee = node.childForFieldName("func");
             if (callee?.type === "identifier") {
