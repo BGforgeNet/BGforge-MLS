@@ -80,6 +80,18 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable a;\n variable b;\n a := (b + 1) * 2 - 3;\nend\n",
     },
     { name: "unary operators", source: "procedure start begin\n variable x;\n x := -(not x);\nend\n" },
+    {
+        name: "for loop",
+        source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  i := i;\n end\nend\n",
+    },
+    {
+        name: "for loop declaring its variable",
+        source: "procedure start begin\n for (variable i := 0; i < 3; i += 1) begin\n  i := i;\n end\nend\n",
+    },
+    {
+        name: "continue inside a for loop",
+        source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
+    },
 ];
 
 describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to matching bytecode", () => {

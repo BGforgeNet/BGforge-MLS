@@ -151,6 +151,11 @@ class Lowering {
      */
     private constantOf(node: SyntaxNode): VariableDecl["initial"] {
         switch (node.type) {
+            case "paren_expr": {
+                const inner = node.namedChildren.find((c) => c && c.type !== "comment");
+                if (inner) return this.constantOf(inner);
+                break;
+            }
             case "number": {
                 const text = node.text;
                 if (text.includes(".")) return { kind: "float", value: Number.parseFloat(text) };
@@ -173,6 +178,26 @@ class Lowering {
             }
         }
         throw new LowerError(`initial value must be a literal, got ${node.type}`, node);
+    }
+
+    /**
+     * The initial value a LOCAL slot is born with. Only a bare literal qualifies, parentheses aside:
+     * anything else - including a negated literal - is left as zero and assigned where the declaration
+     * appears, which is what the reference does. Global scope differs and folds a negation into the
+     * slot, so the two cannot share `constantOf`.
+     */
+    private literalOf(node: SyntaxNode): VariableDecl["initial"] | null {
+        switch (node.type) {
+            case "number":
+            case "string":
+            case "boolean":
+                return this.constantOf(node);
+            case "paren_expr": {
+                const inner = node.namedChildren.find((c) => c && c.type !== "comment");
+                return inner ? this.literalOf(inner) : null;
+            }
+        }
+        return null;
     }
 
     private nameOf(node: SyntaxNode): string {
@@ -218,13 +243,27 @@ class Lowering {
     }
 
     private hoistLocals(node: SyntaxNode, scope: Scope, target: ProcedureDecl): void {
+        // `for (variable i = 0; ...)` declares a local too, but carries name and value directly
+        // rather than wrapping a var_init.
+        if (node.type === "for_var_decl") {
+            const name = this.nameOf(node);
+            if (!scope.slots.has(name.toLowerCase())) {
+                scope.slots.set(name.toLowerCase(), scope.slots.size);
+                const value = node.childForFieldName("value");
+                const literal = value ? this.literalOf(value) : null;
+                target.locals.push({ name, initial: literal ?? { kind: "int", value: 0 } });
+            }
+            return;
+        }
         if (node.type === "variable_decl") {
             for (const init of node.namedChildren) {
                 if (!init || init.type !== "var_init") continue;
                 const name = this.nameOf(init);
                 if (scope.slots.has(name.toLowerCase())) continue;
                 scope.slots.set(name.toLowerCase(), scope.slots.size);
-                target.locals.push(this.variableOf(init));
+                const value = init.childForFieldName("value");
+                const literal = value ? this.literalOf(value) : ({ kind: "int", value: 0 } as const);
+                target.locals.push({ name, initial: literal ?? { kind: "int", value: 0 } });
             }
             return;
         }
@@ -252,13 +291,15 @@ class Lowering {
 
     private lowerStatement(node: SyntaxNode, scope: Scope): Stmt | null {
         switch (node.type) {
-            // Comments emit nothing, and a local declaration is hoisted to procedure entry, so the
-            // declaration statement itself contributes no code wherever it appears.
             case "comment":
             case "line_comment":
             case "empty_statement":
-            case "variable_decl":
                 return null;
+
+            // The slot itself is created at procedure entry, so a declaration emits code only when its
+            // initial value is not a literal the slot could hold directly.
+            case "variable_decl":
+                return this.lowerLocalDeclaration(node, scope);
 
             case "block":
                 return { kind: "block", body: this.lowerStatements(node, scope) };
@@ -278,6 +319,9 @@ class Lowering {
                     cond: this.required(node, "cond", scope),
                     body: this.branch(node, "body", scope),
                 };
+
+            case "for_stmt":
+                return this.lowerFor(node, scope);
 
             case "return_stmt": {
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
@@ -303,6 +347,90 @@ class Lowering {
             }
         }
         throw new LowerError(`unsupported statement '${node.type}'`, node);
+    }
+
+    /**
+     * `for` is not a loop form of its own. It becomes the initialiser followed by a while whose body
+     * ends with a loop-end marker and then the update, which is what makes `continue` run the update
+     * before retesting the condition.
+     *
+     * An absent condition is not "loop forever" by omission - the reference requires the expression, so
+     * a missing one is a source error rather than something to substitute a default for.
+     */
+    private lowerFor(node: SyntaxNode, scope: Scope): Stmt {
+        const init = node.childForFieldName("init");
+        const cond = node.childForFieldName("cond");
+        const update = node.childForFieldName("update");
+        const body = node.childForFieldName("body");
+        if (!cond) throw new LowerError("for loop has no condition", node);
+
+        const inner: Stmt[] = [];
+        if (body) inner.push(this.lowerBranchNode(body, scope));
+        inner.push({ kind: "loopEnd" });
+        const updateStmt = update ? this.lowerForClause(update, scope) : null;
+        if (updateStmt) inner.push(updateStmt);
+
+        const loop: Stmt = {
+            kind: "while",
+            cond: this.lowerExpression(cond, scope),
+            body: { kind: "block", body: inner },
+        };
+        const initStmt = init ? this.lowerForClause(init, scope) : null;
+        return initStmt ? { kind: "block", body: [initStmt, loop] } : loop;
+    }
+
+    /** The init and update clauses carry their own node types, none of which end in a semicolon. */
+    private lowerForClause(node: SyntaxNode, scope: Scope): Stmt | null {
+        switch (node.type) {
+            case "for_var_decl":
+            case "for_init_assign": {
+                const name = node.childForFieldName("name");
+                const value = node.childForFieldName("value");
+                if (!name || !value) throw new LowerError("malformed for clause", node);
+                // A declaring init follows the local-declaration rule: a literal is folded into the
+                // slot at procedure entry, so no assignment is emitted here for it.
+                if (node.type === "for_var_decl" && this.literalOf(value) !== null) return null;
+                const target = this.reference(name, scope);
+                if (target.kind !== "var") throw new LowerError("for target must be a variable", name);
+                return { kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) };
+            }
+            case "for_update_assign": {
+                const left = node.childForFieldName("left");
+                const right = node.childForFieldName("right");
+                if (!left || !right) throw new LowerError("malformed for update", node);
+                const target = this.lowerExpression(left, scope);
+                if (target.kind !== "var") throw new LowerError("for update target must be a variable", left);
+                const operator = node.children.find((c) => c && ASSIGN_OPS.has(c.text))?.text ?? "=";
+                return {
+                    kind: "assign",
+                    target,
+                    op: (operator === ":=" ? "=" : operator) as AssignOp,
+                    value: this.lowerExpression(right, scope),
+                };
+            }
+        }
+        return { kind: "expr", expr: this.lowerExpression(node, scope) };
+    }
+
+    /**
+     * A local declaration emits an assignment only for an initial value the slot could not hold - the
+     * slot itself was already created, with zero, at procedure entry. One declaration can introduce
+     * several variables, so this can yield more than one assignment.
+     */
+    private lowerLocalDeclaration(node: SyntaxNode, scope: Scope): Stmt | null {
+        const assignments: Stmt[] = [];
+        for (const init of node.namedChildren) {
+            if (!init || init.type !== "var_init") continue;
+            const value = init.childForFieldName("value");
+            if (!value || this.literalOf(value) !== null) continue;
+            const name = init.childForFieldName("name");
+            if (!name) throw new LowerError("var_init has no name", init);
+            const target = this.reference(name, scope);
+            if (target.kind !== "var") throw new LowerError(`'${name.text}' is not a variable`, name);
+            assignments.push({ kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) });
+        }
+        if (assignments.length === 0) return null;
+        return assignments.length === 1 ? (assignments[0] as Stmt) : { kind: "block", body: assignments };
     }
 
     private branch(node: SyntaxNode, field: string, scope: Scope): Stmt {
