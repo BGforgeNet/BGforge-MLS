@@ -881,3 +881,54 @@ end
           left: (identifier)
           right: (identifier))
         right: (identifier)))))
+
+================================================================================
+Ternary in a variable initialiser
+================================================================================
+
+procedure foo begin
+    variable r := g if m else h;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        value: (ternary_expr
+          true_value: (identifier)
+          cond: (identifier)
+          false_value: (identifier))))))
+
+================================================================================
+Bare block as a statement, followed by else
+================================================================================
+
+procedure foo begin
+    if (a) then begin
+        begin x := 1; end
+    end else begin
+        y := 2;
+    end
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (if_stmt
+      cond: (paren_expr
+        (identifier))
+      then: (block
+        (block
+          (assignment
+            left: (identifier)
+            right: (number))))
+      else: (block
+        (assignment
+          left: (identifier)
+          right: (number))))))

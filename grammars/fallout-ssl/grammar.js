@@ -28,7 +28,10 @@ export default grammar({
 
     // Conflicts arise from ambiguous parsing situations:
     // - var_init: `variable a = 1` could be parsed with `=` as assignment or initialization
-    conflicts: ($) => [[$.var_init]],
+    // - var_init vs ternary_expr: at `variable a := 1 if c else 2` the `if` could continue the
+    //   initialiser as a ternary or start a new statement, and telling them apart needs lookahead past
+    //   the condition to `else` versus `then`. Both readings are explored and the wrong one dies.
+    conflicts: ($) => [[$.var_init], [$.var_init, $.ternary_expr]],
 
     rules: {
         source_file: ($) => repeat($._top_level),
@@ -269,6 +272,11 @@ export default grammar({
                 $.assignment,
                 $.expression_stmt, // Covers function calls, macro calls, bare identifiers
                 $.empty_statement,
+                // A bare `begin ... end` block is a statement in its own right, not only a loop or
+                // if-branch body. Macros that expand to a block rely on this; without it the `begin`
+                // lexes as a bare identifier and the block's `end` closes the enclosing procedure,
+                // which mis-parses silently rather than erroring.
+                $.block,
             ),
 
         // A stray `;`, most often a second one after a block's `end`. Accepted rather than an error,
@@ -366,9 +374,11 @@ export default grammar({
                 "end",
             ),
 
-        case_clause: ($) => seq("case", field("value", $._expression), ":", choice($.block, repeat($._statement))),
+        // `repeat($._statement)` already covers a single `begin ... end` body now that a block is a
+        // statement; listing block separately would make every braced clause ambiguous.
+        case_clause: ($) => seq("case", field("value", $._expression), ":", repeat($._statement)),
 
-        default_clause: ($) => seq("default", ":", choice($.block, repeat($._statement))),
+        default_clause: ($) => seq("default", ":", repeat($._statement)),
 
         return_stmt: ($) => seq("return", optional($._expression), ";"),
 
@@ -393,6 +403,7 @@ export default grammar({
         // This rule is only needed for top-level since expression_stmt isn't in _top_level.
         macro_call_stmt: ($) =>
             prec.right(
+                1, // Outranks ternary_expr, same reason as expression_stmt.
                 seq(
                     choice(
                         seq(field("name", $.identifier), "(", optional(commaSep($._expression)), ")"),
@@ -412,9 +423,20 @@ export default grammar({
 
         // prec.right makes the optional `;` greedy, so a semicolon following an expression belongs to
         // it rather than starting an empty_statement.
-        expression_stmt: ($) => prec.right(seq($._expression, optional(";"))),
+        //
+        // The 1 outranks ternary_expr, and that is a deliberate divergence from the compiler. Given
+        // `f(a, b)` on one line and `if (...) then ...` on the next, the compiler continues the
+        // expression as a ternary and fails for want of `else`; this grammar reads two statements.
+        // The reason is that a macro invocation may omit its `;` because the expansion supplies the
+        // terminator - real scripts do this (`Create_Car(HEX, ELEV)` followed by an `if`) - and a macro
+        // call is syntactically indistinguishable from a function call, so the two cannot be ranked
+        // apart. Erring the other way would reject valid source, which is worse for an editor grammar
+        // than missing a diagnostic on invalid source; the compiler still reports it.
+        expression_stmt: ($) => prec.right(1, seq($._expression, optional(";"))),
 
-        _stmt_or_block: ($) => choice($._statement, $.block),
+        // Kept as a named alias for readability at loop and if-branch bodies; `block` reaches it
+        // through `_statement`, so listing it again here would make every block ambiguous.
+        _stmt_or_block: ($) => $._statement,
 
         block: ($) => seq(alias(/[Bb]egin/, "begin"), repeat($._statement), alias(/[Ee]nd/, "end")),
 
@@ -441,7 +463,6 @@ export default grammar({
         // Ternary expression: value_if_true if condition else value_if_false
         ternary_expr: ($) =>
             prec.right(
-                -1,
                 seq(
                     field("true_value", $._expression),
                     "if",
