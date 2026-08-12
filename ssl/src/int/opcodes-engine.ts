@@ -632,6 +632,14 @@ export const EngineOp = tableOf(ENGINE_OPCODES, ENGINE_BASE) as Readonly<Record<
 export const OPCODE_LIMIT = ENGINE_BASE + ENGINE_OPCODES.length;
 
 /**
+ * Fallout 1 opcode numbers for the slots the two games disagree on, keyed by the Fallout 1 name. Built
+ * from the override table so the positions are stated exactly once.
+ */
+export const FALLOUT1_OPCODES: Readonly<Record<string, number>> = Object.fromEntries(
+    Object.entries(FALLOUT1_OVERRIDES).map(([index, name]) => [name, ENGINE_BASE + Number(index)]),
+);
+
+/**
  * Name for an opcode value, given the target game. Returns undefined for the core range, which
  * `opcodeName` in `opcodes.ts` covers.
  */
