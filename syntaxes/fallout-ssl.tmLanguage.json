@@ -1799,7 +1799,7 @@
     "operators": {
       "patterns": [
         {
-          "match": "(\\b(?i)(and|or|not|band|bwor|bnot|bwxor|bwand|andalso|orelse)\\b)",
+          "match": "(\\b(?i)(and|or|not|bwor|bwnot|bwxor|bwand|andalso|orelse)\\b)",
           "name": "keyword.control.fallout-ssl"
         },
         {

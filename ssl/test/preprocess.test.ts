@@ -241,8 +241,8 @@ describe("options", () => {
 
 describe("#pragma belongs to the compiler", () => {
     /**
-     * sslc's own lexer reads `#pragma sce` and turns on short-circuit boolean evaluation, so a dropped
-     * pragma silently changes how `and`/`or` compile. gcc -E passes pragmas through; so do we.
+     * `#pragma sce` turns on short-circuit evaluation of boolean operators, so a dropped pragma silently
+     * changes how `and`/`or` compile. gcc -E passes pragmas through; so do we.
      */
     it("passes a pragma through to the output", () => {
         expect(run({ "main.ssl": "#pragma sce\nx := 1;" })).toBe("# pragma sce x := 1 ;");

@@ -1,9 +1,9 @@
 /**
  * C preprocessor for Fallout SSL.
  *
- * SSL is preprocessed by an ordinary C preprocessor before the compiler sees it - sslc embeds mcpp, and the
- * Restoration Project's own build pipes every script through `gcc -E -x c -P` first. So this needs to be *a*
- * conforming preprocessor, not a bug-for-bug copy of any particular one.
+ * SSL is preprocessed by an ordinary C preprocessor before the compiler sees it, and real mod builds do this
+ * with `gcc -E -x c -P`. So this needs to be *a* conforming preprocessor, not a bug-for-bug copy of any
+ * particular one.
  *
  * Supported set is bounded by what the real corpus uses (1599 `.ssl` plus 169 SSL headers): `#include`
  * (literal and computed), `#define` (object-like, function-like and variadic), `#undef`,
@@ -583,9 +583,9 @@ function processFile(file: string, state: State): void {
                 break;
             }
             case "pragma":
-                // A pragma is the COMPILER's, not ours: sslc's lexer reads `#pragma sce` and enables
-                // short-circuit boolean evaluation from it. Dropping one silently changes how `and`/`or`
-                // compile, so pass the line through untouched, as gcc -E does.
+                // A pragma is the COMPILER's, not ours: `#pragma sce` turns on short-circuit evaluation of
+                // boolean operators. Dropping one silently changes how `and`/`or` compile, so pass the
+                // line through untouched, as gcc -E does.
                 if (emitting()) state.out.push(line);
                 break;
             case "":

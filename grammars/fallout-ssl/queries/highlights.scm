@@ -99,10 +99,12 @@
 "or" @keyword.operator
 "orelse" @keyword.operator
 "not" @keyword.operator
-"bnot" @keyword.operator
+"bwnot" @keyword.operator
 "bwand" @keyword.operator
 "bwor" @keyword.operator
 "bwxor" @keyword.operator
+"div" @keyword.operator
+"floor" @keyword.operator
 "in" @keyword.operator
 
 ; ----- Parameters -----

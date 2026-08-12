@@ -15,6 +15,7 @@ export enum SyntaxType {
   ContinueStmt = "continue_stmt",
   DefaultClause = "default_clause",
   Define = "define",
+  EmptyStatement = "empty_statement",
   Endif = "endif",
   ExportDecl = "export_decl",
   ExpressionStmt = "expression_stmt",

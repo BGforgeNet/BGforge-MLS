@@ -190,7 +190,8 @@ export default grammar({
                 alias(/[Ee]nd/, "end"),
             ),
 
-        param_list: ($) => seq("(", optional(commaSep($.param)), ")"),
+        // A trailing comma after the last parameter is accepted, as it is in shipped scripts.
+        param_list: ($) => seq("(", optional(seq(commaSep($.param), optional(","))), ")"),
 
         // SSL parameter defaults are simple values only.
         // Function calls and other compound expressions are not valid here.
@@ -210,7 +211,7 @@ export default grammar({
             prec(
                 11,
                 seq(
-                    field("op", choice(alias(/[Nn][Oo][Tt]/, "not"), alias(/[Bb][Nn][Oo][Tt]/, "bnot"), "-")),
+                    field("op", choice(alias(/[Nn][Oo][Tt]/, "not"), alias(/[Bb][Ww][Nn][Oo][Tt]/, "bwnot"), "-")),
                     field("expr", $.param_default),
                 ),
             ),
@@ -219,7 +220,16 @@ export default grammar({
         // Begin blocks support comma-separated var_inits per line: variable begin a = 0, b = 0; end
         variable_decl: ($) =>
             choice(
-                seq(optional("import"), "variable", commaSep($.var_init), optional(";")),
+                // prec.right for the same greedy-semicolon reason as expression_stmt.
+                //
+                // Known limitation: a BARE ternary initialiser (`variable a := 1 if c else 2`) does not
+                // parse; the declaration reduces at `1` and strands the `if`. Telling a ternary from a
+                // following if-statement needs lookahead past the condition to `else` versus `then`,
+                // and because `;` is optional the two readings are genuinely ambiguous at that point -
+                // ternary_expr sits at -1 precisely so `x := 1` followed by a new `if` statement closes
+                // the statement instead of being swallowed. Parenthesising works and is what the
+                // affected scripts can do; see the corpus allowlist entry.
+                prec.right(seq(optional("import"), "variable", commaSep($.var_init), optional(";"))),
                 seq("variable", "begin", repeat(seq(commaSep($.var_init), ";")), "end"),
             ),
 
@@ -232,12 +242,14 @@ export default grammar({
 
         // Export: export variable name := value; (with optional init and optional semicolon)
         export_decl: ($) =>
-            seq(
-                "export",
-                "variable",
-                field("name", $.identifier),
-                optional(seq(choice(":=", "="), field("value", $._expression))),
-                optional(";"),
+            prec.right(
+                seq(
+                    "export",
+                    "variable",
+                    field("name", $.identifier),
+                    optional(seq(choice(":=", "="), field("value", $._expression))),
+                    optional(";"),
+                ),
             ),
 
         // Statements
@@ -256,7 +268,12 @@ export default grammar({
                 $.call_stmt,
                 $.assignment,
                 $.expression_stmt, // Covers function calls, macro calls, bare identifiers
+                $.empty_statement,
             ),
+
+        // A stray `;`, most often a second one after a block's `end`. Accepted rather than an error,
+        // since it occurs in shipped scripts and carries no effect.
+        empty_statement: ($) => ";",
 
         if_stmt: ($) =>
             prec.right(
@@ -393,7 +410,9 @@ export default grammar({
                 ";",
             ),
 
-        expression_stmt: ($) => seq($._expression, optional(";")),
+        // prec.right makes the optional `;` greedy, so a semicolon following an expression belongs to
+        // it rather than starting an empty_statement.
+        expression_stmt: ($) => prec.right(seq($._expression, optional(";"))),
 
         _stmt_or_block: ($) => choice($._statement, $.block),
 
@@ -467,6 +486,10 @@ export default grammar({
         map_entry: ($) =>
             seq(field("key", choice($.string, $.number, $.identifier)), ":", field("value", $._expression)),
 
+        // Precedence tiers follow the language's own grouping rather than C convention: `+ - bwand bwor
+        // bwxor` all bind at one level, and `* / % div ^` all bind at another. So the bitwise operators
+        // bind exactly as loosely as `+`, and `^` exactly as tightly as `*`. Grouping them the C way
+        // would parse `a bwand b + c` as `a bwand (b + c)` where the language reads `(a bwand b) + c`.
         binary_expr: ($) =>
             choice(
                 ...[
@@ -474,9 +497,6 @@ export default grammar({
                     [alias(/[Oo][Rr][Ee][Ll][Ss][Ee]/, "orelse"), 1], // short-circuit or
                     [alias(/[Aa][Nn][Dd]/, "and"), 2],
                     [alias(/[Aa][Nn][Dd][Aa][Ll][Ss][Oo]/, "andalso"), 2], // short-circuit and
-                    [alias(/[Bb][Ww][Oo][Rr]/, "bwor"), 3],
-                    [alias(/[Bb][Ww][Xx][Oo][Rr]/, "bwxor"), 4],
-                    [alias(/[Bb][Ww][Aa][Nn][Dd]/, "bwand"), 5],
                     ["==", 6],
                     ["!=", 6],
                     [alias(/[Ii][Nn]/, "in"), 6], // membership test: expr in array
@@ -486,21 +506,36 @@ export default grammar({
                     [">=", 7],
                     ["+", 8],
                     ["-", 8],
+                    [alias(/[Bb][Ww][Oo][Rr]/, "bwor"), 8],
+                    [alias(/[Bb][Ww][Xx][Oo][Rr]/, "bwxor"), 8],
+                    [alias(/[Bb][Ww][Aa][Nn][Dd]/, "bwand"), 8],
                     ["*", 9],
                     ["/", 9],
                     ["%", 9],
-                    ["^", 10], // exponentiation
+                    [alias(/[Dd][Ii][Vv]/, "div"), 9], // integer division, distinct from '/'
+                    ["^", 9], // exponentiation
                 ].map(([op, p]) =>
                     prec.left(p, seq(field("left", $._expression), field("op", op), field("right", $._expression))),
                 ),
             ),
 
+        // SSL's prefix operators are `floor`, `not`, `bwnot` and `-`. `floor` matters beyond spelling:
+        // parsed as a call it resolves to a symbol that does not exist, where it is really a built-in
+        // operator. The keyword is `bwnot` - `bnot` was accepted here previously and is not an SSL token.
         unary_expr: ($) =>
             choice(
                 prec(
                     11,
                     seq(
-                        field("op", choice(alias(/[Nn][Oo][Tt]/, "not"), alias(/[Bb][Nn][Oo][Tt]/, "bnot"), "-")),
+                        field(
+                            "op",
+                            choice(
+                                alias(/[Nn][Oo][Tt]/, "not"),
+                                alias(/[Bb][Ww][Nn][Oo][Tt]/, "bwnot"),
+                                alias(/[Ff][Ll][Oo][Oo][Rr]/, "floor"),
+                                "-",
+                            ),
+                        ),
                         field("expr", $._expression),
                     ),
                 ),

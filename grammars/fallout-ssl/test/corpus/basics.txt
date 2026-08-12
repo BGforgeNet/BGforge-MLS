@@ -115,7 +115,8 @@ procedure foo(variable x := random(1, 2));
         default: (param_default
           (identifier)))
       (ERROR
-        (number)
+        (number))
+      (ERROR
         (number)))
     (ERROR)))
 
@@ -819,3 +820,64 @@ end
         (block
           (assignment left: (identifier) right: (number))
           (assignment left: (identifier) right: (number)))))))
+
+================================================================================
+integer division (div)
+================================================================================
+
+procedure foo begin
+    x := a div b;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (binary_expr
+        left: (identifier)
+        right: (identifier)))))
+
+================================================================================
+prefix operators floor and bwnot
+================================================================================
+
+procedure foo begin
+    x := floor a;
+    y := bwnot b;
+    z := not c;
+    w := -d;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))))
+
+================================================================================
+bitwise operators bind at the same level as addition
+================================================================================
+
+procedure foo begin
+    x := a bwand b + c;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (binary_expr
+        left: (binary_expr
+          left: (identifier)
+          right: (identifier))
+        right: (identifier)))))
