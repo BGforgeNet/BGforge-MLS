@@ -633,7 +633,7 @@ class Lowering {
             const { callee, args } = this.callParts(target, scope);
             return { kind: "callStmt", target: callee, args };
         }
-        return { kind: "callStmt", target: this.procedureRef(target), args: [] };
+        return { kind: "callStmt", target: this.procedureRef(target, scope), args: [] };
     }
 
     /**
@@ -660,7 +660,7 @@ class Lowering {
     private callParts(node: SyntaxNode, scope: Scope): { callee: Expr; args: Expr[] } {
         const func = node.childForFieldName("func");
         if (!func) throw new LowerError("call has no callee", node);
-        return { callee: this.procedureRef(func), args: this.argumentsOf(node, scope) };
+        return { callee: this.procedureRef(func, scope), args: this.argumentsOf(node, scope) };
     }
 
     private argumentsOf(node: SyntaxNode, scope: Scope): Expr[] {
@@ -671,11 +671,22 @@ class Lowering {
             .map((c) => this.lowerExpression(c, scope));
     }
 
-    private procedureRef(node: SyntaxNode): Expr {
+    /**
+     * The target of a call. A named procedure is called by index; a VARIABLE holding a procedure is
+     * fetched and resolved at run time, which is how a callback stored in a variable is invoked.
+     */
+    private procedureRef(node: SyntaxNode, scope: Scope): Expr {
         if (node.type !== "identifier") throw new LowerError(`cannot call a '${node.type}'`, node);
-        const index = this.procedures.get(node.text.toLowerCase());
-        if (index === undefined) throw new LowerError(`unknown procedure '${node.text}'`, node);
-        return { kind: "procRef", index };
+        const key = node.text.toLowerCase();
+        const index = this.procedures.get(key);
+        if (index !== undefined) return { kind: "procRef", index };
+        const slot = scope.slots.get(key);
+        if (slot !== undefined) return { kind: "var", scope: "local", index: slot, name: node.text };
+        const global = this.globals.get(key);
+        if (global !== undefined) return { kind: "var", scope: "global", index: global, name: node.text };
+        const external = this.externals.get(key);
+        if (external !== undefined) return { kind: "var", scope: "external", index: 0, name: external };
+        throw new LowerError(`unknown procedure '${node.text}'`, node);
     }
 
     private lowerExpression(node: SyntaxNode, scope: Scope): Expr {

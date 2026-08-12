@@ -21,9 +21,13 @@ export interface EngineFunction {
     popsResult?: boolean;
 }
 
-/** Engine functions available when targeting Fallout 2. */
+/**
+ * Engine functions available when targeting Fallout 2, keyed by LOWERCASED source name. The language
+ * matches these case-insensitively - some are declared in upper case and written in lower case in real
+ * scripts - so callers must lowercase before looking one up.
+ */
 export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
-    REG_ANIM_FUNC: { opcode: EngineOp.REG_ANIM_FUNC },
+    reg_anim_func: { opcode: EngineOp.REG_ANIM_FUNC },
     abs: { opcode: EngineOp.TS_ABS },
     action_being_used: { opcode: EngineOp.ACTION_BEING_USED },
     activate_shader: { opcode: EngineOp.TS_ACTIVATE_SHADER },
@@ -576,7 +580,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     wield_obj_critter: { opcode: EngineOp.WIELD_OBJ_CRITTER },
     wm_area_set_pos: { opcode: EngineOp.WM_AREA_SET_POS },
     world_map: { opcode: EngineOp.WORLD_MAP },
-    write_String: { opcode: EngineOp.TS_WRITE_STRING },
+    write_string: { opcode: EngineOp.TS_WRITE_STRING },
     write_byte: { opcode: EngineOp.TS_WRITE_BYTE },
     write_int: { opcode: EngineOp.TS_WRITE_INT },
     write_short: { opcode: EngineOp.TS_WRITE_SHORT },
