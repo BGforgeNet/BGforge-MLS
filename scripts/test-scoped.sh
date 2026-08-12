@@ -52,7 +52,7 @@ fi
 
 # Suite id -> config/script path used to verify the mapping hasn't gone stale, the command run
 # from the repo root, and the space-separated path prefixes that trigger it.
-suite_ids=(server binary binary-editor client client-unit format image transpilers scripts tssl-plugin td-plugin)
+suite_ids=(server binary binary-editor client client-unit format image ssl transpilers scripts tssl-plugin td-plugin)
 declare -A suite_label=(
     [server]="server unit tests"
     [binary]="binary unit tests"
@@ -61,6 +61,7 @@ declare -A suite_label=(
     ["client-unit"]="client unit tests"
     [format]="format unit tests"
     [image]="image unit tests"
+    [ssl]="ssl unit tests"
     [transpilers]="transpilers unit tests"
     [scripts]="scripts unit tests"
     ["tssl-plugin"]="tssl-plugin unit tests"
@@ -74,6 +75,7 @@ declare -A suite_check=(
     ["client-unit"]="client/vitest.config.ts"
     [format]="format/vitest.config.ts"
     [image]="image/vitest.config.ts"
+    [ssl]="ssl/vitest.config.ts"
     [transpilers]="transpilers/vitest.config.ts"
     [scripts]="scripts/vitest.config.ts"
     ["tssl-plugin"]="plugins/tssl-plugin/vitest.config.ts"
@@ -87,6 +89,7 @@ declare -A suite_cmd=(
     ["client-unit"]="pnpm exec vitest run --config client/vitest.config.ts"
     [format]="pnpm exec vitest run --config format/vitest.config.ts"
     [image]="pnpm exec vitest run --config image/vitest.config.ts"
+    [ssl]="pnpm exec vitest run --config ssl/vitest.config.ts"
     [transpilers]="pnpm exec vitest run --config transpilers/vitest.config.ts"
     [scripts]="pnpm exec vitest run --config scripts/vitest.config.ts"
     ["tssl-plugin"]="pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts"
@@ -100,6 +103,7 @@ declare -A suite_prefixes=(
     ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/"
     [format]="format/ shared/"
     [image]="image/"
+    [ssl]="ssl/ shared/"
     [transpilers]="transpilers/ shared/"
     [scripts]="scripts/ shared/"
     ["tssl-plugin"]="plugins/tssl-plugin/"

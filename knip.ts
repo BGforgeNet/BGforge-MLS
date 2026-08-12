@@ -136,6 +136,11 @@ const config: KnipConfig = {
             // gcc is the differential's reference preprocessor - an environment prerequisite for that
             // suite (which skips without it), not a dependency this package can declare.
             ignoreBinaries: ["gcc"],
+            // The reference SSL compiler is resolved from the server package rather than declared here,
+            // and deliberately so: the codegen differential must run against the compiler the extension
+            // actually ships. A second pin in this package could drift from the server's, leaving the
+            // differential green against a compiler no user has. The test skips when it is absent.
+            ignoreDependencies: ["sslc-emscripten-noderawfs"],
         },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
