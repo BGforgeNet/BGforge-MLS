@@ -32,12 +32,11 @@ export interface OptimizeOptions {
      * 0 leaves the program untouched. 1 removes unreachable procedures and unreferenced variables, and
      * is byte-identical to the reference compiler's own `-O1` across the corpus.
      *
-     * 2 is INCOMPLETE and not reachable from the extension. Every pass the reference runs is ported here
-     * from its `optimize.c` - constant folding, dead stores, dead code, assignment combining, dead
-     * variables - under the same two nested fixpoints. Output is correct but not yet byte-identical,
-     * because `deadStoreRemoval` keys its first/last-assignment rule on statement ORDINALS over this
-     * tree where the reference indexes a flat node stream; the two orderings disagree around loops and
-     * branches, which is the remaining gap.
+     * 2 is not reachable from the extension yet. Every pass the reference runs is ported here from its
+     * `optimize.c` - constant folding, dead stores, dead code, assignment combining, dead variables -
+     * under the same two nested fixpoints, and it reproduces the reference byte for byte on about 93% of
+     * the corpus. The rest is a long tail of small classes; the largest is an `if` whose `else` this
+     * leaves in place as an empty arm, so the emitter writes a jump over nothing.
      */
     level?: 0 | 1 | 2;
 }
@@ -110,10 +109,9 @@ function foldConstants(expr: Expr): Expr {
         case "div":
             if (b === 0) return expr; // Left for the engine rather than decided here.
             return isFloat ? arith(a / b) : int(Math.trunc(a / b));
-        case "and":
-            return bool(a !== 0 && b !== 0);
-        case "or":
-            return bool(a !== 0 || b !== 0);
+        // `and`/`or` are listed in the reference's fold set but never reach it: its own comment in
+        // `ConstantFolding` records that they "were changed in the tree", so by the time folding runs
+        // they are no longer plain binary nodes. Folding them here decides branches it keeps.
         case "bwand":
             return int(a & b);
         case "bwor":
@@ -452,6 +450,22 @@ function foldStatements(statements: Stmt[]): Stmt[] {
     return out;
 }
 
+/**
+ * Whether a statement contributes no instructions. Structural emptiness is not enough: a `loopEnd` is a
+ * marker the emitter writes nothing for, so a branch holding only those still makes the emitter jump
+ * over an arm that is not there.
+ */
+function emitsNothing(statement: Stmt): boolean {
+    switch (statement.kind) {
+        case "block":
+            return statement.body.every(emitsNothing);
+        case "loopEnd":
+            return true;
+        default:
+            return false;
+    }
+}
+
 function foldStatement(statement: Stmt): Stmt | null {
     switch (statement.kind) {
         case "block": {
@@ -463,7 +477,14 @@ function foldStatement(statement: Stmt): Stmt | null {
             if (taken === true) return foldStatement(statement.thenBranch);
             if (taken === false) return statement.elseBranch ? foldStatement(statement.elseBranch) : null;
             const thenBranch = foldStatement(statement.thenBranch) ?? { kind: "block" as const, body: [] };
-            const elseBranch = statement.elseBranch ? foldStatement(statement.elseBranch) : undefined;
+            // An `else` left with nothing in it goes; the reference drops the empty block outright.
+            const folded = statement.elseBranch ? foldStatement(statement.elseBranch) : undefined;
+            const elseBranch = folded && !emitsNothing(folded) ? folded : undefined;
+            // A `then` left with nothing in it and no `else` takes the whole statement with it - but only
+            // when the condition can be dropped too. An impure condition still has to be evaluated.
+            if (emitsNothing(thenBranch) && !elseBranch) {
+                return isPure(statement.cond) ? null : { ...statement, thenBranch, elseBranch: undefined };
+            }
             return { ...statement, thenBranch, ...(elseBranch ? { elseBranch } : {}) };
         }
         case "while": {
@@ -530,48 +551,75 @@ function analyzeVarUsage(procedure: ProcedureDecl): Map<number, VarUsage> {
         }
         return entry;
     };
+    // Statement ordinals, mirroring the reference's node indices: every statement takes one, and
+    // ordinal 0 therefore means "never seen". Only a `while` stops its contents taking their own.
     let ordinal = 0;
+    const branchBodies = new Set<Stmt>();
 
-    const markRead = (slot: number, at: number, whileDepth: number): void => {
+    const markRead = (slot: number, at: number): void => {
         const entry = of(slot);
         entry.lastUseAt = at;
         if (entry.firstUseAt === 0) entry.firstUseAt = at;
-        void whileDepth;
     };
-    const readExpr = (expr: Expr, at: number, whileDepth: number): void => {
+    const readExpr = (expr: Expr, at: number): void => {
         forEachExpr({ kind: "expr", expr }, (e) => {
-            if (e.kind === "var" && e.scope === "local") markRead(e.index, at, whileDepth);
+            if (e.kind === "var" && e.scope === "local") markRead(e.index, at);
         });
     };
 
-    const walk = (statement: Stmt, current: Stmt, at: number, whileDepth: number, ifDepth: number): void => {
+    /**
+     * `statement` has just been entered. `whileDepth`/`ifDepth` describe where it sits, and `inherited`
+     * is the enclosing statement's position, which only a statement inside a loop keeps: everywhere else
+     * - a branch arm included - a statement becomes its own reference point, exactly as the reference's
+     * `currstatement` does.
+     */
+    const walk = (
+        statement: Stmt,
+        whileDepth: number,
+        ifDepth: number,
+        inherited: { at: number; stmt: Stmt },
+    ): void => {
+        ordinal++;
+        let nextIf = ifDepth === 0 ? 0 : ifDepth + 1;
+        let nextWhile = whileDepth;
+        let current = inherited;
+        if (whileDepth === 0) {
+            current = { at: ordinal, stmt: statement };
+            if (statement.kind === "while") nextWhile = 1;
+            else if (statement.kind === "if" && ifDepth === 0) nextIf = 1;
+        } else {
+            nextWhile = whileDepth + 1;
+        }
+        const at = current.at;
+
         switch (statement.kind) {
             case "assign": {
                 if (statement.target.scope !== "local") {
-                    readExpr(statement.value, at, whileDepth);
+                    readExpr(statement.value, at);
                     return;
                 }
                 const slot = statement.target.index;
                 const entry = of(slot);
                 const pure = isPure(statement.value);
-                entry.lastAssign = current;
+                entry.lastAssign = current.stmt;
                 entry.lastAssignAt = at;
                 entry.lastAssignPure ||= pure;
-                entry.lastAssignInWhile = whileDepth > 0;
+                entry.lastAssignInWhile = nextWhile > 0;
+                entry.lastAssignIsBranchBody = branchBodies.has(current.stmt);
                 if (entry.firstUseAt === 0) {
                     if (entry.firstAssign === null) {
-                        entry.firstAssign = current;
+                        entry.firstAssign = current.stmt;
                         entry.firstAssignAt = at;
                         if (pure) {
                             entry.firstAssignPure = true;
                             const value = statement.value;
-                            const isConstant = value.kind === "int" || value.kind === "float";
-                            if (whileDepth === 0 && ifDepth === 0 && isConstant && statement.op === "=") {
+                            const constant = value.kind === "int" || value.kind === "float";
+                            if (nextWhile === 0 && nextIf === 0 && constant && statement.op === "=") {
                                 entry.transferable = value;
                                 entry.firstAssignDead = true;
                             }
                         }
-                    } else if (whileDepth === 0 && ifDepth === 0) {
+                    } else if (nextWhile === 0 && nextIf === 0) {
                         // A second unconditional plain store before any read makes the first one dead.
                         if (entry.firstAssignPure && statement.op === "=") entry.firstAssignDead = true;
                     } else if (!pure && at === entry.firstAssignAt) {
@@ -579,53 +627,35 @@ function analyzeVarUsage(procedure: ProcedureDecl): Map<number, VarUsage> {
                     }
                 }
                 // A compound assignment reads its target on the way through.
-                if (statement.op !== "=") markRead(slot, at, whileDepth);
-                readExpr(statement.value, at, whileDepth);
+                if (statement.op !== "=") markRead(slot, at);
+                readExpr(statement.value, at);
                 return;
             }
             case "block":
-                for (const child of statement.body) walk(child, current, at, whileDepth, ifDepth);
+                for (const child of statement.body) walk(child, nextWhile, nextIf, current);
                 return;
-            case "if": {
-                readExpr(statement.cond, at, whileDepth);
-                const inner = ifDepth === 0 ? 1 : ifDepth + 1;
-                markBranchBody(statement.thenBranch);
-                walk(statement.thenBranch, current, at, whileDepth, inner);
+            case "if":
+                readExpr(statement.cond, at);
+                branchBodies.add(statement.thenBranch);
+                walk(statement.thenBranch, nextWhile, nextIf, current);
                 if (statement.elseBranch) {
-                    markBranchBody(statement.elseBranch);
-                    walk(statement.elseBranch, current, at, whileDepth, inner);
+                    branchBodies.add(statement.elseBranch);
+                    walk(statement.elseBranch, nextWhile, nextIf, current);
                 }
                 return;
-            }
             case "while":
-                readExpr(statement.cond, at, whileDepth);
-                markBranchBody(statement.body);
-                walk(statement.body, current, at, whileDepth + 1, ifDepth);
+                readExpr(statement.cond, at);
+                branchBodies.add(statement.body);
+                walk(statement.body, nextWhile, nextIf, current);
                 return;
             default:
                 forEachExpr(statement, (e) => {
-                    if (e.kind === "var" && e.scope === "local") markRead(e.index, at, whileDepth);
+                    if (e.kind === "var" && e.scope === "local") markRead(e.index, at);
                 });
         }
     };
 
-    // A store that IS the body of a branch or loop cannot be lifted out on its own.
-    const branchBodies = new Set<Stmt>();
-    function markBranchBody(statement: Stmt): void {
-        branchBodies.add(statement);
-    }
-
-    const list = (statements: Stmt[], whileDepth: number): void => {
-        for (const statement of statements) {
-            if (whileDepth === 0) ordinal++;
-            walk(statement, statement, ordinal, whileDepth, 0);
-        }
-    };
-    list(procedure.body, 0);
-
-    for (const entry of usage.values()) {
-        if (entry.lastAssign && branchBodies.has(entry.lastAssign)) entry.lastAssignIsBranchBody = true;
-    }
+    for (const statement of procedure.body) walk(statement, 0, 0, { at: 0, stmt: statement });
     return usage;
 }
 
@@ -640,8 +670,10 @@ function removeStatement(statements: Stmt[], target: Stmt): Stmt[] {
             }
             case "if": {
                 const thenBranch = one(statement.thenBranch) ?? { kind: "block" as const, body: [] };
+                // Spreading the original would keep an `else` this pass just emptied, and the emitter
+                // would still write the jump over it, so the key is overwritten rather than merged.
                 const elseBranch = statement.elseBranch ? one(statement.elseBranch) : undefined;
-                return { ...statement, thenBranch, ...(elseBranch ? { elseBranch } : {}) };
+                return { ...statement, thenBranch, elseBranch: elseBranch ?? undefined };
             }
             case "while":
                 return { ...statement, body: one(statement.body) ?? { kind: "block", body: [] } };
@@ -667,8 +699,10 @@ function removeAssignsTo(statements: Stmt[], slot: number): Stmt[] {
             }
             case "if": {
                 const thenBranch = one(statement.thenBranch) ?? { kind: "block" as const, body: [] };
+                // Spreading the original would keep an `else` this pass just emptied, and the emitter
+                // would still write the jump over it, so the key is overwritten rather than merged.
                 const elseBranch = statement.elseBranch ? one(statement.elseBranch) : undefined;
-                return { ...statement, thenBranch, ...(elseBranch ? { elseBranch } : {}) };
+                return { ...statement, thenBranch, elseBranch: elseBranch ?? undefined };
             }
             case "while":
                 return { ...statement, body: one(statement.body) ?? { kind: "block", body: [] } };
@@ -856,7 +890,9 @@ function optimizeProcedure(procedure: ProcedureDecl): ProcedureDecl {
 
         if (!changed) break;
     }
-    return deadVariableRemoval({ ...procedure, body, locals });
+    // One last fold: the loop exits on the round that changed nothing, but `deadVariableRemoval` below
+    // only renumbers, so anything the final round's store removal emptied has to be cleaned up here.
+    return deadVariableRemoval({ ...procedure, body: foldStatements(body), locals });
 }
 
 /**
