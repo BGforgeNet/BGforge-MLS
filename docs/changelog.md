@@ -11,6 +11,9 @@
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
   without a native binary and without writing a temporary file, at the cost of no optimisation. A script it
   cannot parse is reported as a syntax error at the line it gave up on, and no `.int` is written.
+- A procedure that is declared and never defined is now reported, naming the procedure and the line it was
+  declared on. The `typescript` compiler previously accepted such a script and gave the procedure an empty
+  body, so every call to it did nothing at all.
 - Compiling a script in a directory whose name contains a dot (`fo2.rp`, `mymod.v2`) failed with an opaque
   `ErrnoError undefined undefined` and no output file. The bundled compiler cannot build there at all, so
   this is now reported as such, naming the directory and pointing at the `typescript` compiler, which has

@@ -76,6 +76,8 @@ class Lowering {
     private tempCounter = 0;
     /** Declared parameter defaults per procedure index, used to pad a short call. */
     private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
+    /** Where each procedure slot was first named, so an undefined one can be reported at its declaration. */
+    private readonly declaredAt = new Map<number, SyntaxNode>();
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
     private currentTarget: ProcedureDecl | null = null;
@@ -103,6 +105,7 @@ class Lowering {
                     const name = this.nameOf(child);
                     this.recordParameters(child);
                     if (this.procedures.has(name.toLowerCase())) break;
+                    this.declaredAt.set(this.procedures.size, child);
                     this.procedures.set(name.toLowerCase(), this.procedures.size);
                     const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
                     this.declarations.push({
@@ -260,12 +263,26 @@ class Lowering {
     /** Second pass: fill in each procedure's arguments, locals and body. */
     private lowerBodies(root: SyntaxNode): void {
         const byIndex = this.declarations.filter((d) => d.kind === "procedure");
+        const defined = new Set<number>();
         for (const child of root.namedChildren) {
             if (!child || child.type !== "procedure") continue;
             const index = this.procedures.get(this.nameOf(child).toLowerCase());
             const entry = index === undefined ? undefined : byIndex[index];
             if (entry?.kind !== "procedure") continue;
+            if (index !== undefined) defined.add(index);
             this.lowerProcedure(child, entry.procedure);
+        }
+
+        // A forward declaration allocates its slot with an empty body, so a name never defined would
+        // otherwise emit a procedure that returns immediately - every call to it silently doing nothing.
+        // The language has no way to define one elsewhere: there is no import form for procedures, only
+        // for variables, so within a translation unit a declaration without a definition is always a
+        // defect in the source.
+        for (const [index, node] of this.declaredAt) {
+            if (defined.has(index)) continue;
+            const entry = byIndex[index];
+            const name = entry?.kind === "procedure" ? entry.procedure.name : "?";
+            throw new LowerError(`procedure '${name}' is declared but never defined`, node);
         }
     }
 

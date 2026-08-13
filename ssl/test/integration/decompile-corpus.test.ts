@@ -33,20 +33,29 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  * Scripts whose decompiled source compiles back to the same bytes. Raise when a gap closes; never
  * lower to absorb a regression. The shortfall is string-table ordering and literal folding, both
  * described above - the recovered code itself matches in every case the re-emit gate covers.
+ *
+ * It last moved DOWN by four, which a reprint regression would look identical to: the front end started
+ * rejecting the four declare-but-never-define scripts below, so they left the population rather than
+ * stopped reprinting. Only a shrinking `KNOWN_UNCOMPILABLE` justifies lowering this.
  */
-const REPRINT_FLOOR = 1134;
+const REPRINT_FLOOR = 1130;
 
 /**
- * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. Two are defects in the
- * mod's source (`zccorpse` and both `waypnt` reference undefined symbols); `gl_k_modini` is a gap on our
- * side - timed calls are not lowered yet - and leaves this list when that lands. Deliberately NOT the set
- * the reference rejects: it refuses four others on code generation that we accept, and accepts these.
+ * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. All but one are defects
+ * in the mod's source: `zccorpse` and both `waypnt` reference undefined symbols, and `epa1`, `epa2`,
+ * `hcmale` and `vcconnar` each declare a procedure they never define. `gl_k_modini` is the one gap on our
+ * side - timed calls are not lowered yet - and leaves this list when that lands.
+ *
+ * This is the same set the reference rejects, which is the intended state: a script it refuses to build
+ * is one we must refuse too, or we ship bytecode for source it considers broken. When the lists last
+ * diverged, the four declare-but-never-define scripts compiled here into procedures with empty bodies -
+ * every call to one silently doing nothing at runtime.
  *
  * Pinned by name rather than counted, because this set defines the denominator every gate below is
  * measured against: a script silently leaving it shrinks the comparison while every count still looks
  * healthy. `waypnt` appears twice because two corpus directories each hold a file of that name.
  */
-const KNOWN_UNCOMPILABLE = ["gl_k_modini", "waypnt", "waypnt", "zccorpse"];
+const KNOWN_UNCOMPILABLE = ["epa1", "epa2", "gl_k_modini", "hcmale", "vcconnar", "waypnt", "waypnt", "zccorpse"];
 
 const scripts = listScripts();
 const ready = scripts.length > 0 && fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));

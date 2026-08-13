@@ -326,6 +326,23 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         );
     });
 
+    it("rejects a procedure declared but never defined", () => {
+        // Without this the slot emits an empty body, so every call to it silently returns.
+        expect(refuse("procedure ghost;\nprocedure start begin\n call ghost;\nend\n")).toThrow(
+            /procedure 'ghost' is declared but never defined/,
+        );
+    });
+
+    it("reports an undefined procedure at its declaration", () => {
+        expect(refuse("\n\nprocedure ghost;\nprocedure start begin end\n")).toThrow(/^3:1:/);
+    });
+
+    it("accepts a forward declaration that is defined later", () => {
+        expect(
+            refuse("procedure later;\nprocedure start begin\n call later;\nend\nprocedure later begin end\n"),
+        ).not.toThrow();
+    });
+
     it("reports the line the problem is on", () => {
         expect(refuse("procedure start begin\n\n\n x := nope;\nend\n")).toThrow(/^4:/);
     });
