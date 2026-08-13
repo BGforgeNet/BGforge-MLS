@@ -8,10 +8,11 @@
  * reachability cannot be decided keeps everything it might have reached, and the whole procedure pass
  * bails out when the script can name a procedure the analysis cannot see.
  *
- * Level 2 goes further - constant folding, dead stores, unreachable statements, constant globals - but is
- * not finished; see `OptimizeOptions.level`. Its rules are taken from the reference compiler's own
- * `optimize.c` rather than inferred from its output: three folds guessed from byte diffs turned out to be
- * wrong, one of them deleting branches the reference keeps, and reading the source settled each in a line.
+ * Level 2 goes further; see `OptimizeOptions.level`. Every rule here is transcribed from the reference
+ * compiler's own `optimize.c`, not inferred from its output. That distinction is the whole reason the
+ * level works: folds guessed from byte diffs were wrong in both directions - one of them deleted branches
+ * the reference keeps - and each was settled by a line of its source. Its pass ORDER is load-bearing too,
+ * including where procedure elimination sits inside the outer loop.
  */
 
 import {
@@ -32,11 +33,11 @@ export interface OptimizeOptions {
      * 0 leaves the program untouched. 1 removes unreachable procedures and unreferenced variables, and
      * is byte-identical to the reference compiler's own `-O1` across the corpus.
      *
-     * 2 is not reachable from the extension yet. Every pass the reference runs is ported here from its
-     * `optimize.c` - constant folding, dead stores, dead code, assignment combining, dead variables -
-     * under the same two nested fixpoints, and it reproduces the reference byte for byte on about 93% of
-     * the corpus. The rest is a long tail of small classes; the largest is an `if` whose `else` this
-     * leaves in place as an empty arm, so the emitter writes a jump over nothing.
+     * 2 adds everything the reference does at that level - constant folding, constant propagation of
+     * globals, dead stores, dead code, assignment combining, dead variables, and reclaiming the frame
+     * slot of an unread trailing argument - under the same two nested fixpoints. Both levels are
+     * byte-identical to the reference across the corpus, which the differential in
+     * `test/integration/optimize-corpus.test.ts` checks at each of them.
      */
     level?: 0 | 1 | 2;
 }
@@ -485,7 +486,8 @@ function foldStatement(statement: Stmt): Stmt | null {
             if (emitsNothing(thenBranch) && !elseBranch) {
                 return isPure(statement.cond) ? null : { ...statement, thenBranch, elseBranch: undefined };
             }
-            return { ...statement, thenBranch, ...(elseBranch ? { elseBranch } : {}) };
+            // Overwrite rather than merge: spreading would re-add the `else` just dropped above.
+            return { ...statement, thenBranch, elseBranch: elseBranch ?? undefined };
         }
         case "while": {
             if (constantTruth(statement.cond) === false) return null;
@@ -779,7 +781,10 @@ function combineAssignments(statements: Stmt[]): { body: Stmt[]; changed: boolea
                 statement.kind === "assign" &&
                 statement.op !== "=" &&
                 statement.target.scope === previous.target.scope &&
-                statement.target.index === previous.target.index
+                statement.target.index === previous.target.index &&
+                // Externals all carry index 0 and are told apart by name, so the index alone would fuse
+                // assignments to two different imported variables.
+                statement.target.name === previous.target.name
             ) {
                 const op = statement.op.slice(0, -1) as BinaryOp;
                 if (BINARY_FUSE_OPS.has(op)) {
@@ -838,11 +843,20 @@ function deadVariableRemoval(procedure: ProcedureDecl): ProcedureDecl {
     }
 
     const keep = procedure.locals.map((_local, i) => mentioned.has(base + i));
-    if (keep.every(Boolean)) return procedure;
+
+    // Trailing arguments nothing reads give their slots to the locals. Only trailing ones: the reference
+    // marks every argument BELOW a used one as used too, so the ones it frees are always a suffix, and
+    // that is what stops the remaining arguments being renumbered out from under the caller.
+    const alreadyReclaimed = procedure.reclaimedArgSlots ?? 0;
+    let reclaimable = 0;
+    for (let arg = base - 1; arg >= alreadyReclaimed && !mentioned.has(arg); arg--) reclaimable++;
+    const reclaimed = alreadyReclaimed + reclaimable;
+
+    if (keep.every(Boolean) && reclaimable === 0) return procedure;
 
     const slotMap = new Map<number, number>();
-    for (let arg = 0; arg < base; arg++) slotMap.set(arg, arg);
-    let next = base;
+    for (let arg = 0; arg < base - reclaimable; arg++) slotMap.set(arg, arg);
+    let next = base - reclaimable;
     procedure.locals.forEach((_local, i) => {
         if (keep[i]) slotMap.set(base + i, next++);
     });
@@ -855,6 +869,7 @@ function deadVariableRemoval(procedure: ProcedureDecl): ProcedureDecl {
         ...procedure,
         locals: procedure.locals.filter((_local, i) => keep[i]),
         body: procedure.body.map((statement) => remapWith(statement, renumber)),
+        ...(reclaimed > 0 ? { reclaimedArgSlots: reclaimed } : {}),
     };
 }
 
@@ -918,9 +933,9 @@ function propagateConstantGlobals(program: Program): Program {
         procedure.body.forEach(walk);
     }
 
-    // A global reached through `call` holds a procedure, and substituting its initial value would turn
-    // the call target into an integer the emitter cannot call. Its value comes from somewhere this
-    // analysis cannot see, which is exactly the case the substitution must not guess at.
+    // A global reached through any form of `call` is left alone. Narrowing this to timed calls only -
+    // which is what the reference's own `T_START_EVENT` check appears to say - loses 172 scripts, so the
+    // symbol in call position evidently never reaches its propagation loop in the first place.
     const called = new Set<number>();
     for (const procedure of proceduresOf(program)) {
         const note = (target: Expr): void => {
@@ -931,6 +946,7 @@ function propagateConstantGlobals(program: Program): Program {
         });
         const walk = (stmt: Stmt): void => {
             if (stmt.kind === "callStmt") note(stmt.target);
+            if (stmt.kind === "timedCallStmt") note(stmt.target as Expr);
             if (stmt.kind === "block") stmt.body.forEach(walk);
             if (stmt.kind === "if") {
                 walk(stmt.thenBranch);
@@ -974,34 +990,32 @@ function propagateConstantGlobals(program: Program): Program {
 export function optimize(program: Program, options: OptimizeOptions = {}): Program {
     const level = options.level ?? 0;
     if (level < 1) return program;
+    if (level < 2) return eliminate(program);
 
-    // Level 2 rewrites bodies BEFORE reachability is computed: folding away a constant branch can make a
-    // call unreachable, and that call was the only thing keeping a procedure alive.
-    if (level >= 2) {
-        // Twice, with propagation between: substituting a constant global exposes arithmetic that folds,
-        // which can decide a branch, which can strand more locals. One pass would stop short of what the
-        // reference reaches.
-        const simplify = (input: Program): Program => ({
-            ...input,
-            declarations: input.declarations.map((declaration) =>
-                declaration.kind === "procedure"
-                    ? { kind: "procedure", procedure: optimizeProcedure(declaration.procedure) }
-                    : declaration,
-            ),
-        });
-        // The reference's own outer loop: optimise every body, propagate whatever globals that made
-        // constant, and go round again, because a propagated constant can decide a branch that strands
-        // another procedure. It stops when a full round changes nothing.
-        for (let round = 0; round < 16; round++) {
-            const before = program;
-            program = simplify(program);
-            const propagated = propagateConstantGlobals(program);
-            const moved = propagated !== program;
-            program = propagated;
-            if (!moved && JSON.stringify(program) === JSON.stringify(before)) break;
-        }
+    // The reference's outer loop, in its order. Elimination runs INSIDE it, and that placement is
+    // load-bearing: a global assigned only from a procedure nothing reaches still counts as assigned
+    // until that procedure is gone, and until then it cannot be propagated.
+    const simplify = (input: Program): Program => ({
+        ...input,
+        declarations: input.declarations.map((declaration) =>
+            declaration.kind === "procedure"
+                ? { kind: "procedure", procedure: optimizeProcedure(declaration.procedure) }
+                : declaration,
+        ),
+    });
+    for (let round = 0; round < 16; round++) {
+        const before = JSON.stringify(program);
+        program = propagateConstantGlobals(eliminate(simplify(eliminate(program))));
+        if (JSON.stringify(program) === before) break;
     }
+    return eliminate(program);
+}
 
+/**
+ * Removes procedures nothing can reach and variables nothing references, then renumbers what is left.
+ * This is the whole of `-O1` and the tail of every `-O2` round.
+ */
+function eliminate(program: Program): Program {
     const keepAllProcedures = hasDynamicProcedureLookup(program);
     const reachable = keepAllProcedures ? null : reachableProcedures(program);
 

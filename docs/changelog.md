@@ -11,11 +11,12 @@
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
   without a native binary and without writing a temporary file. A script it cannot parse is reported as a
   syntax error at the line it gave up on, and no `.int` is written.
-- The `typescript` compiler now reads `bgforge.falloutSSL.compileOptions` instead of ignoring it. `-O1` and
-  above drop procedures and variables nothing references, and `-s` compiles `and`/`or` as short-circuit
-  operators - previously both were silently skipped, so `-s` in particular produced different behaviour
-  from the same settings. Levels above `-O1` are honoured as far as `-O1`; the further rewriting the
-  bundled compiler does at `-O2` is not implemented.
+- The `typescript` compiler now reads `bgforge.falloutSSL.compileOptions` instead of ignoring it, and
+  optimises. `-O1` drops procedures and variables nothing references; `-O2` additionally folds constants,
+  removes unreachable code and dead stores, and reclaims unused slots, producing the same bytes as the
+  bundled compiler at both levels. `-s` compiles `and`/`or` as short-circuit operators - previously it was
+  silently skipped, so the same settings produced different behaviour. `-O3` is honoured as `-O2`: the
+  bundled compiler's own source marks that level's extra passes as known to break code.
 - Formatting a procedure no longer drops its modifiers. `pure` and `inline` were being deleted from the
   output, which changes what the script compiles to on a file you only asked to reformat.
 - `critical procedure` is recognised. It marks a procedure the engine runs to completion without

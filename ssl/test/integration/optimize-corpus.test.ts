@@ -1,5 +1,5 @@
 /**
- * The `-O1` twin of the compile differential: same corpus, same oracle, optimisation on both sides.
+ * The optimised twin of the compile differential: same corpus, same oracle, run at both `-O1` and `-O2`.
  *
  * This is the only gate that can hold the optimiser honest. Its passes REMOVE things, so nothing about
  * the unoptimised output constrains them, and a wrong removal produces a script that loads fine and then
@@ -33,11 +33,33 @@ const ORACLE_FLOOR = 1400;
 
 /**
  * Only three, where the unoptimised differential excludes eight. The other five declare a procedure they
- * never define, which is a code-generation error at `-O0` and no error at all here: the procedure is
- * unreferenced, so `-O1` removes it before anything asks for its body. These three reference undefined
- * SYMBOLS, which no amount of dead-code elimination makes go away.
+ * never define, which is a code-generation error at `-O0` and no error at all once optimising: the
+ * procedure is unreferenced, so it is removed before anything asks for its body. These three reference
+ * undefined SYMBOLS, which no amount of dead-code elimination makes go away.
  */
 const KNOWN_REJECTIONS = ["waypnt", "waypnt", "zccorpse"];
+
+/**
+ * One reference invocation, retried once if the child is KILLED rather than exiting.
+ *
+ * The bundled compiler hangs about one spawn in several thousand, on a script it compiles in under a
+ * tenth of a second every other time - `scgond` was killed at the two-minute bound here and takes 90ms
+ * on its own. That is the external flake this retry exists for, and nothing else: a real rejection exits
+ * with a status and is not retried, so the pinned exclusion list below still fails loudly when the
+ * reference genuinely refuses a script.
+ */
+function runReference(compiler: string, cwd: string, stem: string, level: number): void {
+    const args = [compiler, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}.int`];
+    for (let attempt = 0; ; attempt++) {
+        try {
+            execFileSync(process.execPath, args, { cwd, stdio: ["ignore", "pipe", "pipe"], timeout: SPAWN_TIMEOUT_MS });
+            return;
+        } catch (error) {
+            const killed = (error as { signal?: string }).signal !== undefined;
+            if (!killed || attempt > 0) throw error;
+        }
+    }
+}
 
 function findCompiler(): string | null {
     try {
@@ -53,13 +75,13 @@ const compiler = findCompiler();
 const scripts = listScripts();
 const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
 const ready = compiler !== null && wasmPresent && scripts.length > 0;
-const workDir = ready ? fs.mkdtempSync(path.join(os.tmpdir(), "ssl-o1-")) : "";
+const workDir = ready ? fs.mkdtempSync(path.join(os.tmpdir(), "ssl-opt-")) : "";
 
 afterAll(() => {
     if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
 });
 
-describe.skipIf(!ready)("the real corpus optimises to matching bytecode", () => {
+describe.skipIf(!ready).each([1, 2] as const)("the real corpus optimises to matching bytecode at -O%d", (level) => {
     let parser: Parser;
 
     beforeAll(async () => {
@@ -68,7 +90,7 @@ describe.skipIf(!ready)("the real corpus optimises to matching bytecode", () => 
         parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
     });
 
-    it("matches the reference at -O1", () => {
+    it("matches the reference", () => {
         let matching = 0;
         let differing = 0;
         let oracles = 0;
@@ -91,11 +113,7 @@ describe.skipIf(!ready)("the real corpus optimises to matching bytecode", () => 
             let expected: Uint8Array;
             try {
                 fs.writeFileSync(path.join(workDir, `${stem}.ssl`), text);
-                execFileSync(process.execPath, [compiler as string, "-O1", "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
-                    cwd: workDir,
-                    stdio: ["ignore", "pipe", "pipe"],
-                    timeout: SPAWN_TIMEOUT_MS,
-                });
+                runReference(compiler as string, workDir, stem, level);
                 expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
                 oracles++;
             } catch (error) {
@@ -120,7 +138,7 @@ describe.skipIf(!ready)("the real corpus optimises to matching bytecode", () => 
 
             let actual: Uint8Array;
             try {
-                actual = compileText(parser, text, { level: 1 });
+                actual = compileText(parser, text, { level });
             } catch (error) {
                 const message = (error as Error).message.replace(/^\d+:\d+: /, "");
                 const reason = message.startsWith("unknown ") ? message.replaceAll(/'[^']*'/g, "'X'") : message;

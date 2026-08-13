@@ -104,6 +104,13 @@ export interface ProcedureDecl {
      * yielding to other scripts.
      */
     critical?: boolean;
+    /**
+     * Trailing argument slots the optimiser handed to the locals. The caller still pushes every declared
+     * argument, so the table's count is unchanged; the locals that moved into those slots simply skip
+     * their initialiser and inherit whatever the caller left there - which is safe precisely because the
+     * arguments in question are never read.
+     */
+    reclaimedArgSlots?: number;
     /** Source-level modifiers. They are recorded in the procedure table, not just advisory. */
     pure?: boolean;
     inline?: boolean;

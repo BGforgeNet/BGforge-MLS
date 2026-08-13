@@ -401,8 +401,10 @@ class Emitter {
         }
 
         this.w.op(Op.PUSH_BASE);
-        // Arguments arrive on the stack already; only the declared locals are initialised here.
-        for (const local of procedure.locals) this.writeInitialValue(local);
+        // Arguments arrive on the stack already; only the declared locals are initialised here - and not
+        // even all of them, once the optimiser has moved some into argument slots the caller filled.
+        const reclaimed = procedure.reclaimedArgSlots ?? 0;
+        for (const local of procedure.locals.slice(reclaimed)) this.writeInitialValue(local);
 
         this.currentProcedure = procedure;
         for (const statement of procedure.body) this.writeStatement(statement);

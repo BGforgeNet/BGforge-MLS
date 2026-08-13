@@ -161,23 +161,25 @@ function parseCompileOutput(text: string, uri: string) {
  * The subset of `compileOptions` this compiler understands. Both flags change the OUTPUT, so ignoring
  * either would silently build something other than what the user's settings ask for.
  *
- * `-O` selects dead-code elimination, which is all this back end implements: levels 2 and 3 additionally
- * rewrite code in the bundled compiler, so they are honoured as far as level 1 goes rather than refused.
+ * `-O` selects the optimisation level, of which 0, 1 and 2 are implemented. Level 3 is the bundled
+ * compiler's own "don't use" tier - it renames identifiers and reuses variable slots, both of which its
+ * source marks as known to break code - so it is honoured as far as level 2 rather than reproduced.
  * `-s` turns `and`/`or` into short-circuit operators, which is a semantic change, not a size one.
  */
-function optionsFor(compileOptions: string): { level: 0 | 1; shortCircuit: boolean } {
+function optionsFor(compileOptions: string): { level: 0 | 1 | 2; shortCircuit: boolean } {
     const flags = compileOptions.split(/\s+/).filter(Boolean);
     const optimize = flags.findLast((flag) => /^-O\d?$/.test(flag));
     // Bare `-O` means the same as `-O2`; the bundled compiler defaults to `-O1` when none is given.
     const requested = optimize === undefined ? 1 : optimize === "-O" ? 2 : Number(optimize.slice(2));
-    return { level: requested >= 1 ? 1 : 0, shortCircuit: flags.includes("-s") };
+    const level = requested <= 0 ? 0 : requested === 1 ? 1 : 2;
+    return { level, shortCircuit: flags.includes("-s") };
 }
 
 /**
  * Compiles with the extension's own compiler.
  *
  * It needs no child process and no native binary, which is what makes it the path that works where the
- * bundled one cannot run. Its optimiser covers `-O1` only, so it stays opt-in rather than the default.
+ * bundled one cannot run.
  *
  * The tmp file the caller already wrote is reused as the preprocessor's entry point, so relative
  * `#include` paths resolve against the source's own directory exactly as they do for the other
