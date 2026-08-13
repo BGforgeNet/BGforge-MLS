@@ -103,8 +103,13 @@ function buildOpBytes(
 
 // Returns a result reflecting the current session state without any mutation.
 // Used when the adapter returns undefined - e.g. a boundary reorder where moving
-// up at index 0 is not possible. The UI disables controls at boundaries, so this
-// path is defensive rather than user-reachable.
+// up at index 0 is not possible. The UI disables controls at boundaries, so THAT
+// caller is defensive rather than user-reachable.
+//
+// The buildOpBytes catch in structureOp is not: inconsistent on-disk data reaches
+// it, and the user sees their edit do nothing with no explanation. Telling them
+// needs a message field on StructureResult plus host and webview plumbing, which
+// is why it is recorded here rather than silently accepted as fine.
 export function noopResult(session: EditorSession): StructureResult {
     return { changeSet: buildChangeSet(session, session.dirty) };
 }

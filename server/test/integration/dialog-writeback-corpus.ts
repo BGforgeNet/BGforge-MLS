@@ -125,6 +125,7 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
 
     describe.skipIf(files.length === 0)(`${family} write-back: real corpus (${files.length} files)`, () => {
         const dialogs: Parsed[] = [];
+        const unparsed: string[] = [];
 
         // Parse the whole corpus ONCE, sequentially: the tree-sitter families share a single non-concurrency-safe
         // WASM instance (see ParserManager), so a parallel parse would race it. Files the parser rejects are not
@@ -136,10 +137,20 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 try {
                     // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe; sequential by design
                     dialogs.push({ rel: relOf(f), text, model: await parse(text) });
-                } catch {
-                    /* a real file the parser rejects is not this suite's subject */
+                } catch (error) {
+                    unparsed.push(`${relOf(f)}: ${(error as Error).message}`);
                 }
             }
+        });
+
+        /**
+         * Dropping a file the parser rejects is right - it is not this suite's subject - but it may not be
+         * silent. Every assertion below filters over `dialogs`, so a parse regression does not turn this
+         * suite RED, it makes it greener: the inputs that would have failed stop existing. This is the only
+         * check that notices.
+         */
+        it("parses the whole corpus, so no assertion below is measuring a shrunken sample", () => {
+            expect(unparsed, `${unparsed.length} of ${files.length} corpus files failed to parse`).toEqual([]);
         });
 
         it("re-emitting an unedited model is byte-identical for every real dialog (idempotence)", () => {

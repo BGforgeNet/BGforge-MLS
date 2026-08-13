@@ -17,36 +17,20 @@
  */
 
 import { execFileSync } from "node:child_process";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 import { preprocess } from "../../src/preprocess.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 // The sfall headers both gcc and our preprocessor need are linked in by this project's globalSetup.
-const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
+import { CORPUS_SIZE, RP_SCRIPTS, listScripts } from "./corpus.ts";
 
 function hasGcc(): boolean {
     try {
-        execFileSync("gcc", ["--version"], { stdio: "ignore" });
+        execFileSync("gcc", ["--version"], { stdio: "ignore", timeout: SPAWN_TIMEOUT_MS });
         return true;
     } catch {
         return false;
     }
-}
-
-function listScripts(): string[] {
-    if (!fs.existsSync(RP_SCRIPTS)) return [];
-    const out: string[] = [];
-    for (const entry of fs.readdirSync(RP_SCRIPTS)) {
-        if (entry === "template" || entry === "sfall") continue;
-        const dir = path.join(RP_SCRIPTS, entry);
-        if (!fs.statSync(dir).isDirectory()) continue;
-        for (const file of fs.readdirSync(dir)) {
-            if (file.toLowerCase().endsWith(".ssl")) out.push(path.join(dir, file));
-        }
-    }
-    return out.sort();
 }
 
 const TOKEN = /0[xX][0-9a-fA-F]+|\d+\.?\d*|[A-Za-z_]\w*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s]/g;
@@ -71,7 +55,12 @@ describe.skipIf(scripts.length === 0 || !gccAvailable)("preprocessor vs gcc over
                 reference = execFileSync(
                     "gcc",
                     ["-E", "-x", "c", "-P", "-Werror", "-Wfatal-errors", path.basename(script)],
-                    { cwd: path.dirname(script), encoding: "latin1", maxBuffer: 64 * 1024 * 1024 },
+                    {
+                        cwd: path.dirname(script),
+                        encoding: "latin1",
+                        maxBuffer: 64 * 1024 * 1024,
+                        timeout: SPAWN_TIMEOUT_MS,
+                    },
                 );
             } catch {
                 // gcc itself cannot build it (a dependency the corpus does not ship); no oracle either way.
@@ -98,7 +87,10 @@ describe.skipIf(scripts.length === 0 || !gccAvailable)("preprocessor vs gcc over
         }
 
         // A silent collapse in `compared` would let this pass while testing almost nothing, so assert the
-        // denominator too - gcc skipping the whole corpus must fail rather than read as a clean run.
+        // denominator too - gcc skipping the whole corpus must fail rather than read as a clean run. The
+        // corpus size is exact rather than a floor: it shrinks mid-run under `test-external.sh` (see
+        // corpus.ts), and a floor 25 below the real count cannot tell that from a couple of lost files.
+        expect(scripts.length).toBe(CORPUS_SIZE);
         expect(failures, `preprocessor errors:\n${failures.slice(0, 10).join("\n")}`).toEqual([]);
         expect(mismatches, `token mismatches:\n${mismatches.slice(0, 10).join("\n")}`).toEqual([]);
         expect(gccSkipped).toBe(0);

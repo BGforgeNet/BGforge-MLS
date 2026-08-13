@@ -25,8 +25,8 @@ import { decompileToProgram } from "../../src/int/decompile.ts";
 import { printProgram } from "../../src/int/print.ts";
 import { emitInt } from "../../src/int/emit.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { CORPUS_SIZE, listScripts } from "./corpus.ts";
 
-const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
 /**
@@ -36,19 +36,17 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  */
 const REPRINT_FLOOR = 1134;
 
-function listScripts(): string[] {
-    if (!fs.existsSync(RP_SCRIPTS)) return [];
-    const out: string[] = [];
-    for (const entry of fs.readdirSync(RP_SCRIPTS)) {
-        if (entry === "template" || entry === "sfall") continue;
-        const dir = path.join(RP_SCRIPTS, entry);
-        if (!fs.statSync(dir).isDirectory()) continue;
-        for (const file of fs.readdirSync(dir)) {
-            if (file.toLowerCase().endsWith(".ssl")) out.push(path.join(dir, file));
-        }
-    }
-    return out.sort();
-}
+/**
+ * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. Two are defects in the
+ * mod's source (`zccorpse` and both `waypnt` reference undefined symbols); `gl_k_modini` is a gap on our
+ * side - timed calls are not lowered yet - and leaves this list when that lands. Deliberately NOT the set
+ * the reference rejects: it refuses four others on code generation that we accept, and accepts these.
+ *
+ * Pinned by name rather than counted, because this set defines the denominator every gate below is
+ * measured against: a script silently leaving it shrinks the comparison while every count still looks
+ * healthy. `waypnt` appears twice because two corpus directories each hold a file of that name.
+ */
+const KNOWN_UNCOMPILABLE = ["gl_k_modini", "waypnt", "waypnt", "zccorpse"];
 
 const scripts = listScripts();
 const ready = scripts.length > 0 && fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
@@ -66,14 +64,21 @@ describe.skipIf(!ready)("the real corpus decompiles back to the bytes it came fr
         let compiled = 0;
         let reprinted = 0;
         const failures: string[] = [];
+        // Scripts excluded before the decompiler ever runs, and reprints lost to a thrown error rather
+        // than a byte mismatch. Both are legitimate, and both shrink a denominator the gates below are
+        // measured against, so neither may be silent.
+        const uncompilable: string[] = [];
+        const reprintErrors: string[] = [];
 
         for (const script of scripts) {
+            const stem = path.basename(script, path.extname(script));
             let bytes: Uint8Array;
             try {
                 bytes = compileText(parser, preprocess(script));
                 compiled++;
-            } catch {
+            } catch (error) {
                 // The compile differential owns front-end coverage; this only decompiles what compiles.
+                uncompilable.push(`${stem}: ${(error as Error).message}`);
                 continue;
             }
             let recovered;
@@ -88,14 +93,28 @@ describe.skipIf(!ready)("the real corpus decompiles back to the bytes it came fr
             // a decompiler failure - the two gates answer different questions.
             try {
                 if (same(compileText(parser, printProgram(recovered)), bytes)) reprinted++;
-            } catch {
-                // Counted as a miss against the floor.
+            } catch (error) {
+                // A miss against the floor either way, but a THROWN reprint is a different defect from a
+                // byte mismatch and is recorded as such - the floor alone cannot tell them apart.
+                reprintErrors.push(`${stem}: ${(error as Error).message}`);
             }
         }
 
-        // Guard the denominator: with nothing compiled every count below is trivially satisfied.
-        expect(compiled).toBeGreaterThan(1000);
-        expect(failures.slice(0, 10), `${failures.length} of ${compiled} failed to re-emit`).toEqual([]);
-        expect(reprinted, `${reprinted} of ${compiled} reprinted identically`).toBeGreaterThanOrEqual(REPRINT_FLOOR);
+        const summary = [
+            `corpus ${scripts.length}, compiled ${compiled}, reprinted ${reprinted}`,
+            `front end rejected ${uncompilable.length}: ${uncompilable.join(", ") || "none"}`,
+            `reprint threw for ${reprintErrors.length}: ${reprintErrors.slice(0, 5).join(", ") || "none"}`,
+        ].join("\n");
+
+        // Guard the denominator: a corpus shrunk mid-run (see corpus.ts) weakens every gate below while
+        // leaving each count plausible, and with nothing compiled they are all trivially satisfied.
+        expect(scripts.length, summary).toBe(CORPUS_SIZE);
+        expect(compiled, summary).toBeGreaterThan(1000);
+        // Pinned by name, so the denominator cannot shift under the floors without saying so.
+        expect(uncompilable.map((line) => line.split(":")[0]).toSorted(), summary).toEqual(KNOWN_UNCOMPILABLE);
+        expect(failures.slice(0, 10), `${failures.length} of ${compiled} failed to re-emit\n${summary}`).toEqual([]);
+        expect(reprinted, `${reprinted} of ${compiled} reprinted identically\n${summary}`).toBeGreaterThanOrEqual(
+            REPRINT_FLOOR,
+        );
     });
 });

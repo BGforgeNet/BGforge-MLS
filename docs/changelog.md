@@ -9,7 +9,15 @@
   names are not stored in a compiled script, so those are generated; scripts built with optimisation enabled
   may show an instruction listing instead.
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
-  without a native binary and without writing a temporary file, at the cost of no optimisation.
+  without a native binary and without writing a temporary file, at the cost of no optimisation. A script it
+  cannot parse is reported as a syntax error at the line it gave up on, and no `.int` is written.
+- Compiling a script in a directory whose name contains a dot (`fo2.rp`, `mymod.v2`) failed with an opaque
+  `ErrnoError undefined undefined` and no output file. The bundled compiler cannot build there at all, so
+  this is now reported as such, naming the directory and pointing at the `typescript` compiler, which has
+  no such limit.
+- `bgforge.falloutSSL.headersDirectory` is now honoured when the directory's name contains a dot
+  (`fo2.rp`, `headers.v2`). Everything after the last dot was being dropped, so the compiler was pointed at
+  a directory that does not exist and the headers were never found.
 - Several engine function signatures were wrong and are corrected: nine had the wrong number of arguments
   (`give_exp_points`, `explosion`, `gSay_End` and six others), `art_anim` and `critter_heal` were shown as
   returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing

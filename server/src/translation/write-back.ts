@@ -56,7 +56,13 @@ function staleSiblingLanguages(absPath: string): string[] {
             .readdirSync(langParent, { withFileTypes: true })
             .filter((d) => d.isDirectory())
             .map((d) => d.name);
-    } catch {
+    } catch (error) {
+        // A missing parent is the normal flat-layout case documented above. Anything else - an unreadable
+        // or permission-denied directory - would silently suppress the "other languages diverged" warning
+        // on every save, so it is reported rather than folded into "no siblings".
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            conlog(`cannot scan ${langParent} for sibling translations: ${(error as Error).message}`);
+        }
         return [];
     }
     return siblingTraCandidates(absPath, subdirs)

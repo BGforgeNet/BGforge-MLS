@@ -6,6 +6,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import fs from "node:fs";
+import path from "node:path";
 
 const mockShowWarning = vi.fn();
 // A persistent spy, unlike a fresh `vi.fn()` returned from the factory below on
@@ -66,6 +67,33 @@ describe("ssl_compile", () => {
         headersDir: "",
         interactive: false,
     };
+
+    describe("directory whose name contains a dot", () => {
+        it("refuses with an actionable message instead of the wrapper's bare ErrnoError", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const result = await ssl_compile({ ...baseOpts, cwd: "/tmp/mymod.v2" });
+
+            // Never spawned: the wrapper would chdir to /tmp/mymod and die naming neither cause nor path.
+            expect(mockFork).not.toHaveBeenCalled();
+            expect(result.returnCode).toBe(1);
+            expect(result.stderr).toContain("mymod.v2");
+            expect(result.stderr).toContain("typescript");
+        });
+
+        it("compiles normally when the directory has no dot", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, cwd: "/tmp/mymod" });
+            proc.emit("close", 0);
+
+            const result = await promise;
+            expect(result.returnCode).toBe(0);
+            expect(mockFork).toHaveBeenCalled();
+        });
+    });
 
     describe("successful compilation", () => {
         it("resolves with returnCode 0 on success", async () => {
@@ -238,19 +266,29 @@ describe("ssl_compile", () => {
             const proc = createMockProcess();
             mockFork.mockReturnValue(proc);
 
-            const opts = {
-                ...baseOpts,
-                headersDir: "/my/headers/include.h",
-            };
+            const opts = { ...baseOpts, headersDir: "/my/headers" };
 
             const promise = ssl_compile(opts);
             proc.emit("close", 0);
             await promise;
 
             const forkArgs = mockFork.mock.calls[0]![1] as string[];
-            const iFlag = forkArgs.find((s: string) => s.startsWith("-I"));
-            expect(iFlag).toBeDefined();
-            expect(iFlag).toContain("headers");
+            expect(forkArgs).toContain(`-I${path.resolve("/my/headers")}`);
+        });
+
+        it("passes a headers directory whose name contains a dot through intact", async () => {
+            // Reassembling the path from `path.parse` parts drops everything after the final dot as an
+            // extension, so this directory used to reach sslc as `-I/my/headers` - an include path that
+            // does not exist. Dots in directory names are ordinary (`fo2.rp`, `headers.v2`).
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, headersDir: "/my/headers.v2" });
+            proc.emit("close", 0);
+            await promise;
+
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
+            expect(forkArgs).toContain(`-I${path.resolve("/my/headers.v2")}`);
         });
 
         it("splits and trims options string", async () => {

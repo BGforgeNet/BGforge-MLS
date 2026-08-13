@@ -40,6 +40,26 @@ export async function ssl_compile(opts: {
         };
     }
 
+    // The bundled compiler's wrapper derives its working directory as `path.join(parse(cwd).dir,
+    // parse(cwd).name)`, which drops whatever follows the last dot of the final segment as an "extension" -
+    // so it chdirs into a path that does not exist and dies with a bare `ErrnoError undefined undefined`,
+    // naming neither the cause nor the directory. Detected by reproducing that computation rather than by
+    // looking for a dot, so this stays true if the wrapper's own rule changes.
+    //
+    // Reported instead of worked around: the cwd cannot move, because the compiler resolves `#include`
+    // against it and rejects an absolute input path outright.
+    // TODO: drop this whole guard once the TypeScript back end replaces the bundled compiler - it runs
+    // in-process and has no chdir, so the defect cannot reach it.
+    const wrapperCwd = path.parse(opts.cwd);
+    if (path.resolve(path.join(wrapperCwd.dir, wrapperCwd.name)) !== path.resolve(opts.cwd)) {
+        const msg =
+            `The bundled compiler cannot build scripts in a directory whose name contains a dot ` +
+            `("${path.basename(opts.cwd)}"). Rename the directory, or set bgforge.falloutSSL.compiler ` +
+            `to "typescript", which has no such limit.`;
+        conlog(msg);
+        return { returnCode: 1, stdout: "", stderr: msg };
+    }
+
     let cmdArgs = opts.options
         .split(" ")
         .map((s) => s.trim())
@@ -53,9 +73,11 @@ export async function ssl_compile(opts: {
             cmdArgs = cmdArgs.filter((s) => !s.startsWith("-I"));
         }
 
-        const headersDir = path.parse(opts.headersDir);
-
-        cmdArgs.push("-I" + path.join(headersDir.root, headersDir.dir, headersDir.name));
+        // The directory as configured, not reassembled from `path.parse` parts: rebuilding it from
+        // `root + dir + name` drops whatever follows the last dot of the final segment as an "extension",
+        // so a headers directory named `headers.v2` or `fo2.rp` silently became `headers` / `fo2` and the
+        // include path pointed somewhere that does not exist.
+        cmdArgs.push("-I" + path.resolve(opts.headersDir));
     }
 
     cmdArgs.push(opts.inputFileName, "-o", opts.outputFileName);
