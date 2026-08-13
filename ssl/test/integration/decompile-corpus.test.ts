@@ -41,15 +41,14 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const REPRINT_FLOOR = 1130;
 
 /**
- * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. All but one are defects
- * in the mod's source: `zccorpse` and both `waypnt` reference undefined symbols, and `epa1`, `epa2`,
- * `hcmale` and `vcconnar` each declare a procedure they never define. `gl_k_modini` is the one gap on our
- * side - timed calls are not lowered yet - and leaves this list when that lands.
+ * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. Every one is a defect in
+ * the mod's source, not a gap here: `zccorpse` and both `waypnt` reference undefined symbols, and the
+ * rest - `epa1`, `epa2`, `gl_k_modini`, `hcmale`, `vcconnar` - each declare a procedure they never define.
  *
- * This is the same set the reference rejects, which is the intended state: a script it refuses to build
- * is one we must refuse too, or we ship bytecode for source it considers broken. When the lists last
- * diverged, the four declare-but-never-define scripts compiled here into procedures with empty bodies -
- * every call to one silently doing nothing at runtime.
+ * This is the same set the reference rejects, for the same reasons, which is the intended state: a script
+ * it refuses to build is one we must refuse too, or we ship bytecode for source it considers broken. When
+ * the lists last diverged, the declare-but-never-define scripts compiled here into procedures with empty
+ * bodies - every call to one silently doing nothing at runtime.
  *
  * Pinned by name rather than counted, because this set defines the denominator every gate below is
  * measured against: a script silently leaving it shrinks the comparison while every count still looks

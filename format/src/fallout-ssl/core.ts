@@ -288,23 +288,51 @@ function formatChildren(node: SyntaxNode, depth: number): string {
     return parts.join("\n");
 }
 
+/**
+ * Everything ahead of the `procedure` keyword. Rebuilding the header from fields means anything not
+ * named here is dropped from the output - and a dropped modifier changes what the script compiles to,
+ * silently, on a file the user only asked to reformat.
+ */
+function formatProcedureModifiers(node: SyntaxNode): string {
+    const critical = node.childForFieldName("critical") ? "critical " : "";
+    const modifier = node.childForFieldName("modifier");
+    return `${critical}${modifier ? `${modifier.text.toLowerCase()} ` : ""}`;
+}
+
+/** The `in <constant>` or `when <expr>` clause that sits between the parameter list and `begin`. */
+function formatProcedureSchedule(node: SyntaxNode): string {
+    const timed = node.childForFieldName("timed");
+    if (timed) return ` in ${formatNode(timed, 0)}`;
+    const condition = node.childForFieldName("condition");
+    return condition ? ` when ${formatNode(condition, 0)}` : "";
+}
+
 function formatProcedureForward(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
+    const prefix = `${formatProcedureModifiers(node)}procedure ${name}`;
     if (params) {
-        return `procedure ${name}${formatParamList(params)};`;
+        return `${prefix}${formatParamList(params)};`;
     }
-    return `procedure ${name};`;
+    return `${prefix};`;
 }
 
 function formatProcedure(node: SyntaxNode, depth: number): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
 
-    const header = params ? `procedure ${name}${formatParamList(params)} begin` : `procedure ${name} begin`;
+    const signature = `${formatProcedureModifiers(node)}procedure ${name}${params ? formatParamList(params) : ""}`;
+    const header = `${signature}${formatProcedureSchedule(node)} begin`;
 
     const bodyParts: string[] = [];
     const skipTypes: Set<string> = new Set([SyntaxType.Identifier, SyntaxType.ParamList]);
+    // The schedule clause is already in the header. Its operand is an ordinary expression node, so it
+    // is skipped by identity - matching on type would swallow a body statement of the same shape.
+    const scheduleIds = new Set(
+        [node.childForFieldName("timed"), node.childForFieldName("condition")]
+            .filter((n): n is SyntaxNode => n !== null)
+            .map((n) => n.id),
+    );
     const children = node.children;
 
     children.forEach((child, i) => {
@@ -312,6 +340,9 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         const prevChild = children[i - 1]; // undefined at start
 
         if (skipTypes.has(child.type)) return;
+        if (scheduleIds.has(child.id)) return;
+        // The keyword introducing the clause, dropped alongside the operand above.
+        if (scheduleIds.size > 0 && /^(?:in|when)$/i.test(child.text)) return;
         // Skip begin/end/procedure keywords - they may appear as identifiers due to macros
         // (e.g., `else begin` after a macro that expands to if-then-begin-end).
         // Content validation catches any actual semantic changes.

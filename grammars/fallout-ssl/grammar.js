@@ -183,8 +183,13 @@ export default grammar({
         // so it reaches 55 scripts); `inline` is its counterpart in the language's keyword set.
         procedure_modifier: ($) => choice(kw("pure"), kw("inline")),
 
+        // `critical` is a separate field because it combines with the other two rather than replacing
+        // them, and only in this order: `critical pure` is accepted, `pure critical` is not.
+        procedure_critical: ($) => kw("critical"),
+
         procedure_forward: ($) =>
             seq(
+                optional(field("critical", $.procedure_critical)),
                 optional(field("modifier", $.procedure_modifier)),
                 kw("procedure"),
                 field("name", $.identifier),
@@ -193,12 +198,23 @@ export default grammar({
             ),
 
         // Procedure definition: procedure name begin ... end
+        //
+        // `in <constant>` schedules the procedure to fire at that time; `when <expr>` guards it with a
+        // condition the engine re-evaluates. They are mutually exclusive and belong to the definition
+        // only - a forward declaration carrying either is a syntax error.
         procedure: ($) =>
             seq(
+                optional(field("critical", $.procedure_critical)),
                 optional(field("modifier", $.procedure_modifier)),
                 kw("procedure"),
                 field("name", $.identifier),
                 optional(field("params", $.param_list)),
+                optional(
+                    choice(
+                        seq(kw("in"), field("timed", $._expression)),
+                        seq(kw("when"), field("condition", $._expression)),
+                    ),
+                ),
                 kw("begin"),
                 field("body", repeat($._statement)),
                 kw("end"),

@@ -290,16 +290,71 @@ describe("errors carry their location", () => {
     });
 });
 
-describe("unimplemented directives bail loudly", () => {
-    it.each(["error nope", "line 5", "warning hm", "ident x", "sccs x", "assert x", "unassert x"])(
-        "rejects #%s",
-        (directive) => {
-            expect(() => run({ "main.ssl": `#${directive}` })).toThrow(/is not supported/);
-        },
-    );
+/**
+ * `#elif` selects at most one arm, and a dead arm's condition is never evaluated - the guard clause of a
+ * `defined`-style chain depends on that, since its operands may be meaningless once an earlier arm won.
+ */
+describe("#elif", () => {
+    it("takes the elif arm when the leading if is false", () => {
+        expect(run({ "main.ssl": "#if 0\nfirst\n#elif 1\nsecond\n#else\nthird\n#endif" }).trim()).toBe("second");
+    });
 
-    it("rejects #elif", () => {
-        expect(() => run({ "main.ssl": "#if 0\n#elif 1\n#endif" })).toThrow(/#elif is not supported/);
+    it("keeps the first true arm and skips a later true one", () => {
+        expect(run({ "main.ssl": "#if 1\nfirst\n#elif 1\nsecond\n#endif" }).trim()).toBe("first");
+    });
+
+    it("walks a chain to the first true arm", () => {
+        expect(run({ "main.ssl": "#if 0\none\n#elif 0\ntwo\n#elif 1\nthree\n#else\nfour\n#endif" }).trim()).toBe(
+            "three",
+        );
+    });
+
+    it("falls through to else when no arm is true", () => {
+        expect(run({ "main.ssl": "#if 0\none\n#elif 0\ntwo\n#else\nfallback\n#endif" }).trim()).toBe("fallback");
+    });
+
+    it("does not evaluate the condition of an arm that cannot be taken", () => {
+        // `undefined_thing` would not survive evaluation; a taken earlier arm means it is never read.
+        expect(run({ "main.ssl": "#if 1\ntaken\n#elif undefined_thing(\n#endif" }).trim()).toBe("taken");
+    });
+
+    it("stays dead inside a skipped parent", () => {
+        expect(run({ "main.ssl": "#ifdef NOPE\n#if 0\na\n#elif 1\nb\n#endif\n#endif" }).trim()).toBe("");
+    });
+
+    it("rejects an elif with no if", () => {
+        expect(() => run({ "main.ssl": "#elif 1\n" })).toThrow(/#elif without #if/);
+    });
+});
+
+describe("#error and #line", () => {
+    it("stops the build with the author's message", () => {
+        expect(() => run({ "main.ssl": "x := 1;\n\n#error boom" })).toThrow(/main\.ssl:3: #error boom/);
+    });
+
+    it("ignores an error in a branch that is not taken", () => {
+        expect(run({ "main.ssl": "#ifdef NOPE\n#error boom\n#endif\nkept" }).trim()).toBe("kept");
+    });
+
+    it("drops a line directive without disturbing the text", () => {
+        // Honouring it would renumber our diagnostics away from the file the reader can actually open.
+        expect(run({ "main.ssl": "#line 100\nkept" }).trim()).toBe("kept");
+    });
+});
+
+/**
+ * Each of these is rejected by the toolchain's own preprocessor as an unknown directive, so accepting it
+ * here would build a script that then fails to build there. Verified against it rather than assumed.
+ */
+describe("directives the toolchain itself rejects bail loudly", () => {
+    it.each(["warning hm", "ident x", "sccs x", "assert x", "unassert x"])("rejects #%s", (directive) => {
+        expect(() => run({ "main.ssl": `#${directive}` })).toThrow(/is not supported/);
+    });
+
+    it("rejects a GNU named variadic parameter", () => {
+        expect(() => run({ "main.ssl": "#define LOG(fmt, args...) f(fmt)\n" })).toThrow(
+            /named variadic parameters are not supported/,
+        );
     });
 
     it("rejects an unknown directive", () => {
@@ -311,11 +366,7 @@ describe("unimplemented directives bail loudly", () => {
      * difference. A conforming preprocessor may ignore these, but we would rather reject a file we cannot
      * fully model than emit a translation unit that quietly omits something.
      */
-    it.each(["error nope", "line 5", "bogus"])("rejects #%s even inside a skipped branch", (directive) => {
+    it.each(["warning hm", "bogus"])("rejects #%s even inside a skipped branch", (directive) => {
         expect(() => run({ "main.ssl": `#ifdef NOPE\n#${directive}\n#endif` })).toThrow(PreprocessError);
-    });
-
-    it("names the file and line of the offending directive", () => {
-        expect(() => run({ "main.ssl": "x := 1;\n\n#error boom" })).toThrow(/main\.ssl:3: #error is not supported/);
     });
 });

@@ -550,6 +550,8 @@ class Decompiler {
                 return this.duplicate(context);
             case Op.CALL:
                 return this.call();
+            case Op.CALL_AT:
+                return [this.timedCall()];
             case Op.LOOKUP_STRING_PROC:
                 // The value stays as it is; the emitter re-derives this instruction from the target's kind.
                 return null;
@@ -829,6 +831,16 @@ class Decompiler {
         const right = this.popExpr("right operand of a short-circuit operator");
         this.stack.push({ kind: "expr", expr: { kind: "binary", op: isOr ? "orelse" : "andalso", left, right } });
         return null;
+    }
+
+    /**
+     * `CALL_AT` is a statement, not an expression: the scheduler consumes the slot and the delay and
+     * leaves nothing behind, so this yields a statement directly rather than pushing onto the stack.
+     */
+    private timedCall(): Stmt {
+        const slot = this.popRaw("timed call procedure slot").raw;
+        const delay = this.popExpr("timed call delay");
+        return { kind: "timedCallStmt", target: { kind: "procRef", index: slot - 1 }, delay };
     }
 
     private call(): null {

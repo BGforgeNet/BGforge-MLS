@@ -72,6 +72,11 @@ export type Stmt =
     /** A procedure call in statement position - the result is discarded. */
     | { kind: "callStmt"; target: Expr; args: Expr[]; checkArgCount?: boolean }
     /**
+     * `call foo in <delay>`. The engine schedules the procedure rather than entering it, so unlike
+     * `callStmt` this passes no return address and no arguments, and leaves nothing to discard.
+     */
+    | { kind: "timedCallStmt"; target: Extract<Expr, { kind: "procRef" }>; delay: Expr }
+    /**
      * A statement-position engine function. Some engine functions return a value even when called as a
      * statement; those set `popsResult` so the unused result is dropped rather than left on the stack.
      */
@@ -93,9 +98,10 @@ export interface ProcedureDecl {
     exported?: boolean;
     imported?: boolean;
     /**
-     * Set only when reading a compiled script back: the language has no source spelling that marks a
-     * procedure critical, so lowering never produces one and the bit exists here to survive a
-     * decompile-and-re-emit round trip.
+     * `critical procedure foo`. The engine sets its own critical-section flag from this bit when it
+     * calls the procedure, and the body closes the region with `CRITICAL_DONE` at every exit; while the
+     * flag is set the interpreter runs the script past its usual per-slice instruction budget instead of
+     * yielding to other scripts.
      */
     critical?: boolean;
     /** Source-level modifiers. They are recorded in the procedure table, not just advisory. */

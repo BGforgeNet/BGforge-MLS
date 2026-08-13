@@ -234,6 +234,9 @@ class Emitter {
                     value(stmt.target);
                     stmt.args.forEach(value);
                     break;
+                case "timedCallStmt":
+                    value(stmt.delay);
+                    break;
                 case "libStmt":
                     stmt.args.forEach(value);
                     break;
@@ -469,6 +472,14 @@ class Emitter {
             case "callStmt":
                 this.writeCall(statement.target, statement.args, statement.checkArgCount ?? false);
                 this.w.op(Op.POP);
+                break;
+
+            // Delay first, then the procedure slot. `CALL_AT` hands both to the engine's scheduler and
+            // returns nothing, so there is no return address to push and no result to pop.
+            case "timedCallStmt":
+                this.writeExpression(statement.delay);
+                this.w.int(statement.target.index + 1);
+                this.w.op(Op.CALL_AT);
                 break;
 
             case "libStmt":

@@ -10,10 +10,17 @@
  * `#ifdef`/`#ifndef`/`#else`/`#endif`, `#if` with constant expressions, and the `#` and `##` operators.
  * `#pragma` is passed through untouched because it belongs to the compiler, not to us.
  *
- * Anything else - `#elif`, `#error`, `#line`, GNU named-variadic parameters, an unrecognised directive -
- * throws with a file and line, including inside a conditional branch being skipped. None of them occurs in
- * the corpus. The bias is deliberate: a directive we cannot honour must never be dropped quietly, because
- * a loud refusal is fixable by implementing it while a silent one changes the program invisibly.
+ * `#elif` is handled too, and `#error` stops the build with the author's own message. `#line` is accepted
+ * and dropped: our diagnostics are reported against the real file, so renumbering would only move later
+ * errors to lines the reader cannot open.
+ *
+ * Anything left - `#warning`, the obsolete `#assert`/`#unassert`/`#ident`/`#sccs`, GNU named-variadic
+ * parameters, or an unrecognised directive - throws with a file and line, including inside a conditional
+ * branch being skipped. Each was checked against the toolchain's own preprocessor, which rejects them as
+ * unknown; being MORE permissive than it is its own defect, because a script that builds here would then
+ * fail to build there. The bias is deliberate in both directions: a directive we cannot honour must never
+ * be dropped quietly, since a loud refusal is fixable by implementing it while a silent one changes the
+ * program invisibly.
  *
  * Expansion follows Prosser's algorithm: tokens carry hide sets and a replacement is spliced back into the
  * stream before rescanning. Expanding a replacement list in isolation is the tempting shortcut and it is
@@ -458,9 +465,11 @@ function evalCondition(
 
 const DIRECTIVE = /^[ \t]*#[ \t]*([A-Za-z_]\w*)?[ \t]*([\s\S]*)$/;
 const INCLUDE_OPERAND = /^\s*"([^"]+)"|^\s*<([^>]+)>/;
-// `#elif` is handled separately: it affects control flow even in a skipped branch. These are inert when
-// skipped, so they are only refused in a live one, matching how a conforming preprocessor ignores them.
-const UNSUPPORTED = new Set(["error", "line", "warning", "assert", "unassert", "ident", "sccs"]);
+// Directives the toolchain's own preprocessor rejects as unknown, verified against it. Refusing them is
+// what keeps this compiler from accepting scripts that then fail to build there; `#warning` in
+// particular looks harmless enough to wave through, and is not. `#error`, `#line` and `#elif` are
+// accepted there and are handled individually below.
+const UNSUPPORTED = new Set(["warning", "assert", "unassert", "ident", "sccs"]);
 
 interface Conditional {
     active: boolean;
@@ -492,7 +501,10 @@ function parseDefine(rest: string, file: string, line: number): Macro {
     const variadic = declared[declared.length - 1] === "...";
     const params = variadic ? declared.slice(0, -1) : declared;
     if (params.some((p) => p.endsWith("..."))) {
-        // GNU named-variadic (`args...`); absent from the corpus, so refuse rather than guess its semantics.
+        // GNU's named-variadic spelling. Deliberately refused rather than implemented: the toolchain's
+        // own preprocessor rejects it too ("Missing "," or ")" in parameter list"), so accepting it here
+        // would let a script build with this compiler and fail with the other one. Use `...` and
+        // `__VA_ARGS__`, which both accept.
         throw new PreprocessError("named variadic parameters are not supported", file, line);
     }
     return { name, params, body, variadic };
@@ -553,10 +565,21 @@ function processFile(file: string, state: State): void {
                 if (stack.pop() === undefined) throw new PreprocessError("#endif without #if", file, n + 1);
                 break;
             }
-            case "elif":
-                // Unsupported, and unlike the other unsupported directives it alters control flow even
-                // inside a branch being skipped, so refuse regardless of the current conditional state.
-                throw new PreprocessError("#elif is not supported", file, n + 1);
+            case "elif": {
+                const top = stack[stack.length - 1];
+                if (top === undefined) throw new PreprocessError("#elif without #if", file, n + 1);
+                // A group takes at most one branch: once something has been taken this arm is dead and
+                // its condition is never evaluated, which matters because the operands of a dead arm may
+                // be meaningless (the guard clause of a `defined`-style chain relies on exactly that).
+                if (top.taken) {
+                    top.active = false;
+                    break;
+                }
+                const want = top.parentActive && evalCondition(rest, state.expander, state.macros, file, n + 1);
+                top.active = want;
+                top.taken = want;
+                break;
+            }
             case "define": {
                 if (!emitting()) break;
                 const macro = parseDefine(rest, file, n + 1);
@@ -587,6 +610,17 @@ function processFile(file: string, state: State): void {
                 // boolean operators. Dropping one silently changes how `and`/`or` compile, so pass the
                 // line through untouched, as gcc -E does.
                 if (emitting()) state.out.push(line);
+                break;
+            case "error":
+                // The whole point of the directive is to stop the build with the author's own message.
+                // Inert in a dead branch, where its operands are not meant to be read at all.
+                if (emitting()) throw new PreprocessError(`#error ${rest.trim()}`, file, n + 1);
+                break;
+            case "line":
+                // Renumbering only affects diagnostics, and ours are reported against the real file, so
+                // honouring it would move every later error to a line the reader cannot open. Dropped
+                // rather than refused: it changes nothing about the translation unit itself, and the
+                // toolchain's own preprocessor accepts it.
                 break;
             case "":
                 // Null directive: no operands, no effect, nothing to lose by dropping it.

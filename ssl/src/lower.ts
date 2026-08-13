@@ -117,6 +117,7 @@ class Lowering {
                             body: [],
                             ...(modifier === "pure" ? { pure: true } : {}),
                             ...(modifier === "inline" ? { inline: true } : {}),
+                            ...(child.childForFieldName("critical") ? { critical: true } : {}),
                         },
                     });
                     break;
@@ -312,6 +313,22 @@ class Lowering {
         const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
         if (modifier === "pure") target.pure = true;
         if (modifier === "inline") target.inline = true;
+        // A forward declaration and its definition may each carry the modifier; either one sets the bit.
+        if (node.childForFieldName("critical")) target.critical = true;
+
+        // `procedure foo in <n>` fires at a fixed time, so the operand goes in the procedure table and
+        // must be a constant - there is nowhere to evaluate an expression before the script runs.
+        const timed = node.childForFieldName("timed");
+        if (timed) {
+            const value = this.lowerExpression(timed, scope);
+            if (value.kind !== "int") throw new LowerError("a timed procedure's delay must be an integer", timed);
+            target.timed = value.value;
+        }
+
+        // `procedure foo when <expr>` compiles the guard as a separate code block the engine calls to
+        // decide whether to run the body, so it is lowered outside the body's statement list.
+        const condition = node.childForFieldName("condition");
+        if (condition) target.conditional = this.lowerExpression(condition, scope);
     }
 
     /** Allocates the next local slot. Its initial value is pushed at procedure entry, in slot order. */
@@ -678,25 +695,62 @@ class Lowering {
         // Assigning into an array or map is a `set_array` call, not a store: the outermost `get_array`
         // of the access chain becomes a `set_array` with the value appended.
         if (left.type === "subscript_expr" || left.type === "member_expr") {
-            if (op !== "=") {
-                throw new LowerError(`compound assignment to an element is not lowered yet`, node);
-            }
             const object = left.childForFieldName("object");
             const index =
                 left.type === "subscript_expr" ? left.childForFieldName("index") : left.childForFieldName("member");
             if (!object || !index) throw new LowerError("malformed element assignment", left);
-            const key: Expr =
+            let key: Expr =
                 left.type === "subscript_expr"
                     ? this.lowerExpression(index, scope)
                     : { kind: "string", value: index.text };
+            let container = this.lowerExpression(object, scope);
             const fn = engineFunction("set_array", this.game);
             if (!fn) throw new LowerError("engine function 'set_array' is unavailable", node);
-            return {
+            const popsResult = fn.popsResult ? { popsResult: true } : {};
+
+            if (op === "=") {
+                return {
+                    kind: "libStmt",
+                    opcode: fn.opcode,
+                    args: [container, key, this.lowerExpression(right, scope)],
+                    ...popsResult,
+                };
+            }
+
+            // `a[k] += v` is `set_array(a, k, get_array(a, k) + v)`, so the container and the key are
+            // each read twice. Re-emitting a literal or a variable fetch is free and observationally
+            // identical, but any other expression would RUN twice - a call index would fire twice - so
+            // it is evaluated once into a temporary and the temporary is what gets duplicated.
+            const prelude: Stmt[] = [];
+            const evaluateOnce = (expr: Expr): Expr => {
+                if (expr.kind === "int" || expr.kind === "float" || expr.kind === "string" || expr.kind === "var") {
+                    return expr;
+                }
+                const temp = this.newTemp(scope);
+                if (temp.kind !== "var") throw new LowerError("temporary is not a variable", node);
+                prelude.push({ kind: "assign", target: temp, op: "=", value: expr });
+                return temp;
+            };
+            container = evaluateOnce(container);
+            key = evaluateOnce(key);
+
+            const get = engineFunction("get_array", this.game);
+            if (!get) throw new LowerError("engine function 'get_array' is unavailable", node);
+            const binaryOp = op.slice(0, -1) as BinaryOp;
+            if (!BINARY_OPS.has(binaryOp)) throw new LowerError(`unsupported compound assignment '${op}'`, node);
+            const updated: Expr = {
+                kind: "binary",
+                op: binaryOp,
+                left: { kind: "libCall", opcode: get.opcode, args: [container, key] },
+                right: this.lowerExpression(right, scope),
+            };
+            const store: Stmt = {
                 kind: "libStmt",
                 opcode: fn.opcode,
-                args: [this.lowerExpression(object, scope), key, this.lowerExpression(right, scope)],
-                ...(fn.popsResult ? { popsResult: true } : {}),
+                args: [container, key, updated],
+                ...popsResult,
             };
+            return prelude.length > 0 ? { kind: "block", body: [...prelude, store] } : store;
         }
 
         const target = this.lowerExpression(left, scope);
@@ -708,8 +762,16 @@ class Lowering {
     private lowerCallStatement(node: SyntaxNode, scope: Scope): Stmt {
         const target = node.childForFieldName("target");
         if (!target) throw new LowerError("call has no target", node);
-        if (node.childForFieldName("delay")) {
-            throw new LowerError("timed calls are not lowered yet", node);
+        const delay = node.childForFieldName("delay");
+        if (delay) {
+            // The engine schedules the procedure instead of entering it, so a timed call takes no
+            // arguments - `call foo(1) in 5` is a syntax the language accepts but cannot express.
+            if (target.type === "call_expr") {
+                throw new LowerError("a timed call cannot pass arguments", node);
+            }
+            const callee = this.procedureRef(target, scope);
+            if (callee.kind !== "procRef") throw new LowerError(`unknown procedure '${target.text}'`, target);
+            return { kind: "timedCallStmt", target: callee, delay: this.lowerExpression(delay, scope) };
         }
         if (target.type === "call_expr") {
             const { callee, args, checkArgCount } = this.callParts(target, scope);

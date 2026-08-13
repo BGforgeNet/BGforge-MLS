@@ -1,0 +1,36 @@
+/* Procedure modifiers and scheduling clauses.
+   Each of these changes what the script compiles to, so the formatter must preserve them. */
+
+pure procedure helper(variable a) begin
+    return a + 1;
+end
+
+inline procedure small begin
+    display_msg("x");
+end
+
+critical procedure uninterrupted begin
+    display_msg("y");
+end
+
+critical pure procedure both(variable n) begin
+    return n;
+end
+
+critical procedure declared_first;
+
+procedure declared_first begin
+    display_msg("z");
+end
+
+procedure fires_later in 5 begin
+    display_msg("later");
+end
+
+procedure guarded when (global_var == 1) begin
+    display_msg("guarded");
+end
+
+procedure start begin
+    call fires_later in 10;
+end

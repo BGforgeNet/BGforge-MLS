@@ -312,17 +312,22 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         );
     });
 
-    it("rejects compound assignment into an array element", () => {
-        // The reference generates temporaries for this; until that is reproduced, refusing beats
-        // emitting a plausible-looking instruction sequence that is subtly wrong.
-        expect(refuse("procedure start begin\n variable a;\n a[0] += 1;\nend\n")).toThrow(
-            /compound assignment to an element/,
+    it("compiles compound assignment into an array element", () => {
+        expect(refuse("procedure start begin\n variable a;\n a[0] += 1;\nend\n")).not.toThrow();
+    });
+
+    it("rejects a timed call that passes arguments", () => {
+        // The engine schedules the procedure rather than entering it, so there is no frame to put
+        // arguments in; the reference refuses this at code generation for the same reason.
+        expect(refuse("procedure foo(variable a) begin end\nprocedure start begin\n call foo(1) in 5;\nend\n")).toThrow(
+            /timed call cannot pass arguments/,
         );
     });
 
-    it("rejects a timed call", () => {
-        expect(refuse("procedure foo begin end\nprocedure start begin\n call foo in 5;\nend\n")).toThrow(
-            /timed calls are not lowered/,
+    it("rejects a non-constant delay on a timed procedure", () => {
+        // The value lands in the procedure table, which is written before any code runs.
+        expect(refuse("variable g := 2;\nprocedure foo in g begin end\n")).toThrow(
+            /timed procedure's delay must be an integer/,
         );
     });
 
@@ -421,6 +426,90 @@ describe.skipIf(!wasmPresent)("name resolution when a variable shadows a procedu
             kind: "return",
             value: { kind: "var", scope: "local", index: 0, name: "stuff" },
         });
+    });
+});
+
+describe.skipIf(!wasmPresent)("the critical procedure modifier", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** The lowered declaration of the named procedure. */
+    const procedureOf = (source: string, name: string) => {
+        const tree = parser.parse(source);
+        if (!tree) throw new Error("no tree");
+        try {
+            const declaration = lowerProgram(tree).declarations.find(
+                (d) => d.kind === "procedure" && d.procedure.name.toLowerCase() === name,
+            );
+            if (declaration?.kind !== "procedure") throw new Error(`no procedure '${name}'`);
+            return declaration.procedure;
+        } finally {
+            tree.delete();
+        }
+    };
+
+    it("sets the flag from the definition", () => {
+        expect(procedureOf("critical procedure foo begin end\n", "foo").critical).toBe(true);
+    });
+
+    it("combines with another modifier, which must follow it", () => {
+        const procedure = procedureOf("critical pure procedure foo begin end\n", "foo");
+        expect(procedure.critical).toBe(true);
+        expect(procedure.pure).toBe(true);
+    });
+
+    it("sets the flag when only the forward declaration carries it", () => {
+        // The slot is allocated at the declaration, so a definition that omits the modifier must not
+        // clear what the declaration already set.
+        const source = "critical procedure foo;\nprocedure foo begin end\n";
+        expect(procedureOf(source, "foo").critical).toBe(true);
+    });
+
+    it("leaves an unmarked procedure alone", () => {
+        expect(procedureOf("procedure foo begin end\n", "foo").critical).toBeUndefined();
+    });
+
+    it("lowers a timed procedure's delay into the table", () => {
+        expect(procedureOf("procedure foo in 5 begin end\n", "foo").timed).toBe(5);
+    });
+
+    it("lowers a guarded procedure's condition outside the body", () => {
+        const procedure = procedureOf("procedure foo when (1) begin end\n", "foo");
+        expect(procedure.conditional).toEqual({ kind: "int", value: 1 });
+        expect(procedure.body).toEqual([]);
+    });
+
+    it("reads a cheap index twice rather than spending a temporary on it", () => {
+        // A literal or a variable fetch costs nothing to re-emit and cannot observe being read twice.
+        const body = procedureOf("procedure start begin\n variable a;\n a[0] += 1;\nend\n", "start").body;
+        expect(body).toHaveLength(1);
+        expect(body[0]?.kind).toBe("libStmt");
+    });
+
+    it("evaluates a side-effecting index once, into a temporary", () => {
+        // Without the temporary the call would be emitted twice and so would fire twice.
+        const source =
+            "procedure idx begin\n return 1;\nend\nprocedure start begin\n variable a;\n a[idx()] += 1;\nend\n";
+        const procedure = procedureOf(source, "start");
+        const body = procedure.body;
+        expect(body).toHaveLength(1);
+        expect(body[0]?.kind).toBe("block");
+        const block = body[0] as Extract<Stmt, { kind: "block" }>;
+        // One assignment holding the call, then the set_array that reads the temporary twice.
+        expect(block.body.map((s) => s.kind)).toEqual(["assign", "libStmt"]);
+        expect(procedure.locals.map((l) => l.name)).toContain("tmp.0");
+    });
+
+    it("lowers a timed call to its own statement, with no arguments", () => {
+        const source = "procedure foo begin end\nprocedure start begin\n call foo in 10;\nend\n";
+        expect(procedureOf(source, "start").body).toEqual([
+            { kind: "timedCallStmt", target: { kind: "procRef", index: 0 }, delay: { kind: "int", value: 10 } },
+        ]);
     });
 });
 

@@ -739,6 +739,8 @@ describe("printing", () => {
     });
 
     it("notes procedure flags the language cannot spell", () => {
+        // `in` and `when` are mutually exclusive in the grammar, so a procedure carrying both bits can
+        // spell only one of them; the other must survive as a note rather than disappear.
         const text = printProgram({
             declarations: [
                 {
@@ -755,7 +757,27 @@ describe("printing", () => {
                 },
             ],
         });
-        expect(text).toContain("// guard is exported, timed at 5, guarded by 1.");
+        expect(text).toContain("// guard is exported, guarded by 1.");
+        expect(text).toContain("procedure guard in 5 begin");
+    });
+
+    it("spells a guard as syntax when nothing competes with it", () => {
+        const text = printProgram({
+            declarations: [
+                {
+                    kind: "procedure",
+                    procedure: {
+                        name: "guard",
+                        args: [],
+                        locals: [],
+                        body: [],
+                        conditional: { kind: "int", value: 1 },
+                    },
+                },
+            ],
+        });
+        expect(text).toContain("procedure guard when 1 begin");
+        expect(text).not.toContain("guarded by");
     });
 
     it("renders a counted loop as a for when a continue target marks one", () => {

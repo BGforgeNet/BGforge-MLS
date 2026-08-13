@@ -150,6 +150,8 @@ class Printer {
                 return [];
             case "callStmt":
                 return [`${pad}${this.call(statement.target, statement.args)};`];
+            case "timedCallStmt":
+                return [`${pad}call ${this.expression(statement.target)} in ${this.expression(statement.delay)};`];
             case "libStmt":
                 return [
                     `${pad}${this.engineName(statement.opcode)}(${statement.args.map((a) => this.expression(a)).join(", ")});`,
@@ -186,15 +188,28 @@ class Printer {
     }
 
     procedure(procedure: ProcedureDecl): string[] {
-        const modifier = procedure.pure ? "pure " : procedure.inline ? "inline " : "";
+        // `critical` precedes the other two; the reverse order is a syntax error.
+        const modifier =
+            (procedure.critical ? "critical " : "") + (procedure.pure ? "pure " : procedure.inline ? "inline " : "");
         const args = procedure.args.map((name) => `variable ${name}`).join(", ");
         const signature = `${modifier}procedure ${procedure.name}${args ? `(${args})` : ""}`;
+        // A forward declaration is the only form an imported procedure takes, and it carries neither
+        // clause below - both belong to a definition.
         if (procedure.imported) return [`${signature};`];
+
+        // The grammar allows only one of these between the parameter list and `begin`. A compiled
+        // script can still carry both bits, so `in` is printed and the guard falls back to a note.
+        const schedule =
+            procedure.timed !== undefined
+                ? ` in ${procedure.timed}`
+                : procedure.conditional
+                  ? ` when ${this.expression(procedure.conditional)}`
+                  : "";
 
         // A blank line separates the locals from the body, but only when there is both.
         const separator = procedure.locals.length > 0 && procedure.body.length > 0 ? [""] : [];
         return [
-            `${signature} begin`,
+            `${signature}${schedule} begin`,
             ...procedure.locals.map((local) => `${INDENT}${this.local(local)}`),
             ...separator,
             ...this.statements(procedure.body, 1),
@@ -210,8 +225,10 @@ class Printer {
 /**
  * Renders a program as SSL source.
  *
- * Procedure flags the language cannot spell - exported, timed, and guarded procedures - are noted in a
- * comment rather than dropped, so the text does not quietly claim the file holds less than it does.
+ * Procedure flags the language cannot spell - only `exported` now - are noted in a comment rather than
+ * dropped, so the text does not quietly claim the file holds less than it does. `critical`, `in` and
+ * `when` all have a source spelling, so they are printed as syntax and the output recompiles with the
+ * same bits set.
  */
 export function printProgram(program: Program, options: PrintOptions = {}): string {
     const printer = new Printer(program);
@@ -231,9 +248,11 @@ export function printProgram(program: Program, options: PrintOptions = {}): stri
         const procedure = declaration.procedure;
         const notes: string[] = [];
         if (procedure.exported) notes.push("exported");
-        if (procedure.critical) notes.push("critical");
-        if (procedure.timed !== undefined) notes.push(`timed at ${procedure.timed}`);
-        if (procedure.conditional) notes.push(`guarded by ${printer.expression(procedure.conditional)}`);
+        // Only reachable from a compiled script that set both bits - the signature above spelled the
+        // timed one, so the guard would otherwise vanish from the output.
+        if (procedure.timed !== undefined && procedure.conditional) {
+            notes.push(`guarded by ${printer.expression(procedure.conditional)}`);
+        }
         lines.push("");
         if (notes.length > 0) lines.push(`// ${procedure.name} is ${notes.join(", ")}.`);
         lines.push(...printer.procedure(procedure));

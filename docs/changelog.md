@@ -11,6 +11,18 @@
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
   without a native binary and without writing a temporary file, at the cost of no optimisation. A script it
   cannot parse is reported as a syntax error at the line it gave up on, and no `.int` is written.
+- Formatting a procedure no longer drops its modifiers. `pure` and `inline` were being deleted from the
+  output, which changes what the script compiles to on a file you only asked to reformat.
+- `critical procedure` is recognised. It marks a procedure the engine runs to completion without
+  interleaving other scripts, and combines with `pure` or `inline` when written before them. Highlighting,
+  formatting and the `typescript` compiler all handle it.
+- Timed and guarded procedures are recognised: `procedure foo in 5` fires at a set time, and
+  `procedure foo when (cond)` runs only while its condition holds. Scheduling a call with
+  `call foo in 10` works too.
+- Compound assignment into an array or map element - `a[k] += 1`, `a.field *= 2` - compiles. An index with
+  a side effect, such as a call, is evaluated once rather than twice.
+- `#elif` is supported, and `#error` stops the build with the message the author wrote. `#line` is accepted
+  and ignored, so diagnostics keep pointing at the file you can actually open.
 - A procedure that is declared and never defined is now reported, naming the procedure and the line it was
   declared on. The `typescript` compiler previously accepted such a script and gave the procedure an empty
   body, so every call to it did nothing at all.

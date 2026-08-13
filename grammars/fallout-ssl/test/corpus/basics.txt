@@ -979,6 +979,70 @@ end
       target: (identifier))))
 
 ================================================================================
+Critical procedures, alone and combined with another modifier
+================================================================================
+
+critical procedure alone begin
+end
+
+critical pure procedure both(variable a) begin
+    return a;
+end
+
+critical procedure forward_declared;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    critical: (procedure_critical)
+    name: (identifier))
+  (procedure
+    critical: (procedure_critical)
+    modifier: (procedure_modifier)
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)))
+    body: (return_stmt
+      (identifier)))
+  (procedure_forward
+    critical: (procedure_critical)
+    name: (identifier)))
+
+================================================================================
+Timed and guarded procedures
+================================================================================
+
+procedure fires_later in 5 begin
+end
+
+procedure guarded when (g == 1) begin
+end
+
+procedure start begin
+    call fires_later in 10;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    timed: (number))
+  (procedure
+    name: (identifier)
+    condition: (paren_expr
+      (binary_expr
+        left: (identifier)
+        right: (number))))
+  (procedure
+    name: (identifier)
+    body: (call_stmt
+      target: (identifier)
+      delay: (number))))
+
+================================================================================
 Keywords are case-insensitive
 ================================================================================
 
