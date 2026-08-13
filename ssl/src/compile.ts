@@ -40,7 +40,12 @@ export function compileText(parser: Parser, text: string, options: CompileOption
             const what = error.isMissing ? `missing ${error.type}` : "syntax error";
             throw new CompileError(`${row + 1}:${column + 1}: ${what}`);
         }
-        return emitInt(optimize(lowerProgram(tree, options), options), options);
+        return emitInt(optimize(lowerProgram(tree, options), options), {
+            ...options,
+            // The optimiser removes the code that would reach a fall-through epilogue, so the emitter
+            // stops writing one at the level where that removal happens.
+            dropUnreachableEpilogue: (options.level ?? 0) >= 2,
+        });
     } finally {
         tree.delete();
     }

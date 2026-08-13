@@ -99,6 +99,11 @@ export interface EmitOptions {
      * command-line flag both turn it on, and it changes emitted bytes rather than just performance.
      */
     shortCircuit?: boolean;
+    /**
+     * Leave out the implicit `return 0` epilogue of a procedure that returns on every path. Set by the
+     * optimiser at level 2; the epilogue is unreachable either way, so this only changes size.
+     */
+    dropUnreachableEpilogue?: boolean;
 }
 
 interface LoopFrame {
@@ -114,6 +119,7 @@ class Emitter {
     private readonly strings = new NameTable();
     private readonly loops: LoopFrame[] = [];
     private readonly shortCircuit: boolean;
+    private readonly dropUnreachableEpilogue: boolean;
 
     /** Procedures including the slot-0 placeholder; indices in the IR are shifted by one. */
     private readonly procedures: ProcedureDecl[];
@@ -127,6 +133,7 @@ class Emitter {
     constructor(program: Program, options: EmitOptions) {
         this.program = program;
         this.shortCircuit = options.shortCircuit ?? false;
+        this.dropUnreachableEpilogue = options.dropUnreachableEpilogue ?? false;
         const placeholder: ProcedureDecl = { name: PLACEHOLDER_NAME, args: [], locals: [], body: [] };
         this.procedures = [placeholder, ...proceduresOf(program)];
         this.globals = globalsOf(program);
@@ -401,8 +408,15 @@ class Emitter {
         for (const statement of procedure.body) this.writeStatement(statement);
 
         // Every procedure ends with an implicit `return 0`, so falling off the end behaves like an
-        // explicit return rather than running into the next procedure's code.
-        this.writeReturn({ kind: "int", value: 0 });
+        // explicit return rather than running into the next procedure's code. A body that returns on
+        // every path can never reach it, and at `-O2` the reference leaves it out; unoptimised it stays,
+        // because emitting it is what the unoptimised output is.
+        // Only a body whose LAST statement is literally a return, which is what the reference recognises.
+        // An if/else returning on both arms is equally unreachable, and it still emits the epilogue there.
+        const last = procedure.body[procedure.body.length - 1];
+        if (!(this.dropUnreachableEpilogue && last?.kind === "return")) {
+            this.writeReturn({ kind: "int", value: 0 });
+        }
 
         this.w.op(Op.POP_TO_BASE);
         this.w.op(Op.POP_BASE);

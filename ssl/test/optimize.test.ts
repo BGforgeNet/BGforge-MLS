@@ -50,6 +50,14 @@ describe.skipIf(!wasmPresent)("dead-code elimination", () => {
         expect(names(optimized(source)).toSorted()).toEqual(["look_at_p_proc", "start"]);
     });
 
+    it("keeps the Fallout 1 spelling of an entry point", () => {
+        // `desc_p_proc` is Fallout 1's `description_p_proc`. It cannot appear in the Fallout 2 corpus,
+        // so only the reference compiler's protected list says it must survive - deleting it would
+        // silently strip the description handler out of every Fallout 1 script.
+        const source = "procedure desc_p_proc begin end\nprocedure start begin end\n";
+        expect(names(optimized(source)).toSorted()).toEqual(["desc_p_proc", "start"]);
+    });
+
     it("keeps an exported procedure", () => {
         const source = "procedure start begin end\n";
         const program = optimized(source);

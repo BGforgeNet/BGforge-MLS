@@ -161,6 +161,26 @@ export interface UndefinedProcedure {
     column: number;
 }
 
+/**
+ * Whether every path through a statement returns, so anything after it is unreachable. A loop is never
+ * counted: its body may run zero times. Shared by the optimiser, which drops what follows such a
+ * statement, and the emitter, which then has no reason to write the fall-through epilogue.
+ */
+export function alwaysReturns(statement: Stmt): boolean {
+    switch (statement.kind) {
+        case "return":
+            return true;
+        case "block":
+            return statement.body.some(alwaysReturns);
+        case "if":
+            return statement.elseBranch !== undefined
+                ? alwaysReturns(statement.thenBranch) && alwaysReturns(statement.elseBranch)
+                : false;
+        default:
+            return false;
+    }
+}
+
 /** Procedures in declaration order, which is also their procedure-table order. */
 export function proceduresOf(program: Program): ProcedureDecl[] {
     return program.declarations.flatMap((d) => (d.kind === "procedure" ? [d.procedure] : []));
