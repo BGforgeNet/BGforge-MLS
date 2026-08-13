@@ -11,9 +11,10 @@ import type { Parser } from "web-tree-sitter";
 import { findParseError } from "../../shared/parse-errors";
 import { emitInt, type EmitOptions } from "./int/emit";
 import { lowerProgram, type LowerOptions } from "./lower";
+import { optimize, type OptimizeOptions } from "./optimize";
 import { preprocess, type PreprocessOptions } from "./preprocess";
 
-export interface CompileOptions extends LowerOptions, EmitOptions {
+export interface CompileOptions extends LowerOptions, EmitOptions, OptimizeOptions {
     preprocess?: PreprocessOptions;
 }
 
@@ -39,7 +40,7 @@ export function compileText(parser: Parser, text: string, options: CompileOption
             const what = error.isMissing ? `missing ${error.type}` : "syntax error";
             throw new CompileError(`${row + 1}:${column + 1}: ${what}`);
         }
-        return emitInt(lowerProgram(tree, options), options);
+        return emitInt(optimize(lowerProgram(tree, options), options), options);
     } finally {
         tree.delete();
     }

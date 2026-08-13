@@ -60,9 +60,21 @@ export class NameTable {
         return offset;
     }
 
+    /**
+     * Forces the size prefix even with nothing interned. The reference allocates its string space on the
+     * first string it sees and never frees it, so a table that HELD something and was then emptied - by
+     * dead-code elimination, in practice - is written as a zero size plus the terminator, where one that
+     * never existed is the terminator alone. Four bytes apart, and every offset after them shifts.
+     */
+    markAllocated(): void {
+        this.allocated = true;
+    }
+
+    private allocated = false;
+
     /** True when nothing was interned; an empty table is written as the terminator alone. */
     get isEmpty(): boolean {
-        return this.records.length === 0;
+        return this.records.length === 0 && !this.allocated;
     }
 
     /** Total bytes of the records, which is the value of the size longword. */

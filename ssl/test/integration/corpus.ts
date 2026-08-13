@@ -19,6 +19,23 @@ export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restor
 
 export const CORPUS_SIZE = 1525;
 
+/**
+ * Narrows the sweep for DEBUGGING only - `SSL_CORPUS_ONLY=gcskeetr` for one script by stem,
+ * `SSL_CORPUS_LIMIT=250` for the first N. Each of these suites spawns the reference compiler once per
+ * script and takes minutes, which is the wrong loop to iterate a fix against; the subset reproduces in
+ * seconds and the full sweep is the confirmation.
+ *
+ * A narrowed run cannot pass: `CORPUS_SIZE` is asserted by every suite here, so a subset fails on the
+ * population check before reporting a verdict. That is deliberate - the switch is for reading the
+ * report, never for getting to green.
+ */
+function narrow(scripts: string[]): string[] {
+    const only = process.env.SSL_CORPUS_ONLY;
+    if (only) return scripts.filter((s) => path.basename(s, path.extname(s)) === only);
+    const limit = Number(process.env.SSL_CORPUS_LIMIT ?? 0);
+    return limit > 0 ? scripts.slice(0, limit) : scripts;
+}
+
 /** Every corpus script, sorted. `template` holds deliberately malformed inputs; `sfall` is a header symlink. */
 export function listScripts(): string[] {
     if (!fs.existsSync(RP_SCRIPTS)) return [];
@@ -31,5 +48,5 @@ export function listScripts(): string[] {
             if (file.toLowerCase().endsWith(".ssl")) out.push(path.join(dir, file));
         }
     }
-    return out.sort();
+    return narrow(out.sort());
 }

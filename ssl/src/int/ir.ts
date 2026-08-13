@@ -130,12 +130,35 @@ export type Declaration =
 export interface Program {
     declarations: Declaration[];
     /**
+     * Procedures declared and never defined, by slot. Emitting one would produce a procedure with an
+     * empty body that silently returns, so the emitter refuses - but only for the ones that survive to
+     * it. Dead-code elimination drops unreferenced procedures first, and a declaration nothing reaches
+     * is not worth failing a build over; the reference draws the line in exactly the same place, which
+     * is why its `-O0` rejects several corpus scripts that its `-O1` builds.
+     */
+    undefinedProcedures?: UndefinedProcedure[];
+    /**
      * Every string constant in SOURCE ORDER, which fixes the string table's layout. The emitter cannot
      * derive this by walking the tree: the language writes a conditional value-first (`x if c else y`)
      * while the tree stores the condition first, so a structural walk emits those three in the wrong
      * order and shifts every later string offset. The front end records the written order instead.
      */
     stringLiterals?: string[];
+    /**
+     * Whether the string table EXISTS, as distinct from being empty. The reference allocates it on the
+     * first string interned and keeps it thereafter, so a script whose only strings were removed by
+     * optimisation writes a zero-size prefix where one that never had any writes nothing at all. Set by
+     * the optimiser when it empties a non-empty list; otherwise derived from `stringLiterals`.
+     */
+    stringTableAllocated?: boolean;
+}
+
+/** A declared-but-undefined procedure, carrying where it was declared so the refusal can point at it. */
+export interface UndefinedProcedure {
+    index: number;
+    name: string;
+    line: number;
+    column: number;
 }
 
 /** Procedures in declaration order, which is also their procedure-table order. */

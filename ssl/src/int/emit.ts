@@ -175,6 +175,9 @@ class Emitter {
     private internStrings(): void {
         // Seed from the front end's source-order list where it supplied one; the structural walk below
         // then finds everything already interned and only adds what the list could not know about.
+        if (this.program.stringTableAllocated ?? (this.program.stringLiterals?.length ?? 0) > 0) {
+            this.strings.markAllocated();
+        }
         for (const literal of this.program.stringLiterals ?? []) this.strings.intern(literal);
 
         const value = (expr: Expr): void => {
@@ -728,5 +731,14 @@ class Emitter {
 
 /** Compiles a program tree to INT bytecode. */
 export function emitInt(program: Program, options: EmitOptions = {}): Uint8Array {
+    // A procedure with no definition would emit an empty body that silently returns, so it is refused
+    // here rather than earlier: whatever ran before may have removed it as dead, and one nothing can
+    // reach is not worth failing the build over.
+    const missing = program.undefinedProcedures?.[0];
+    if (missing) {
+        throw new EmitError(
+            `${missing.line}:${missing.column}: procedure '${missing.name}' is declared but never defined`,
+        );
+    }
     return new Emitter(program, options).emit();
 }

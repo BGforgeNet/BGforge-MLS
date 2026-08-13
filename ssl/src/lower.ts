@@ -12,7 +12,17 @@
 
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { engineFunction } from "./int/engine-functions";
-import type { AssignOp, BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, VariableDecl } from "./int/ir";
+import type {
+    AssignOp,
+    BinaryOp,
+    Declaration,
+    Expr,
+    ProcedureDecl,
+    Program,
+    Stmt,
+    UndefinedProcedure,
+    VariableDecl,
+} from "./int/ir";
 
 export class LowerError extends Error {
     readonly line: number;
@@ -78,6 +88,7 @@ class Lowering {
     private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
     /** Where each procedure slot was first named, so an undefined one can be reported at its declaration. */
     private readonly declaredAt = new Map<number, SyntaxNode>();
+    private readonly undefinedProcedures: UndefinedProcedure[] = [];
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
     private currentTarget: ProcedureDecl | null = null;
@@ -89,7 +100,11 @@ class Lowering {
     lower(root: SyntaxNode): Program {
         this.collect(root);
         this.lowerBodies(root);
-        return { declarations: this.declarations, stringLiterals: collectStringLiterals(root) };
+        return {
+            declarations: this.declarations,
+            stringLiterals: collectStringLiterals(root),
+            ...(this.undefinedProcedures.length > 0 ? { undefinedProcedures: this.undefinedProcedures } : {}),
+        };
     }
 
     /**
@@ -278,12 +293,17 @@ class Lowering {
         // otherwise emit a procedure that returns immediately - every call to it silently doing nothing.
         // The language has no way to define one elsewhere: there is no import form for procedures, only
         // for variables, so within a translation unit a declaration without a definition is always a
-        // defect in the source.
+        // defect in the source. Recorded rather than thrown here: the emitter is what refuses, and only
+        // for the ones dead-code elimination has not already removed.
         for (const [index, node] of this.declaredAt) {
             if (defined.has(index)) continue;
             const entry = byIndex[index];
-            const name = entry?.kind === "procedure" ? entry.procedure.name : "?";
-            throw new LowerError(`procedure '${name}' is declared but never defined`, node);
+            this.undefinedProcedures.push({
+                index,
+                name: entry?.kind === "procedure" ? entry.procedure.name : "?",
+                line: node.startPosition.row + 1,
+                column: node.startPosition.column + 1,
+            });
         }
     }
 

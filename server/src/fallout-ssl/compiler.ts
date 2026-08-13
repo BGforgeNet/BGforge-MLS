@@ -158,10 +158,26 @@ function parseCompileOutput(text: string, uri: string) {
 }
 
 /**
+ * The subset of `compileOptions` this compiler understands. Both flags change the OUTPUT, so ignoring
+ * either would silently build something other than what the user's settings ask for.
+ *
+ * `-O` selects dead-code elimination, which is all this back end implements: levels 2 and 3 additionally
+ * rewrite code in the bundled compiler, so they are honoured as far as level 1 goes rather than refused.
+ * `-s` turns `and`/`or` into short-circuit operators, which is a semantic change, not a size one.
+ */
+function optionsFor(compileOptions: string): { level: 0 | 1; shortCircuit: boolean } {
+    const flags = compileOptions.split(/\s+/).filter(Boolean);
+    const optimize = flags.findLast((flag) => /^-O\d?$/.test(flag));
+    // Bare `-O` means the same as `-O2`; the bundled compiler defaults to `-O1` when none is given.
+    const requested = optimize === undefined ? 1 : optimize === "-O" ? 2 : Number(optimize.slice(2));
+    return { level: requested >= 1 ? 1 : 0, shortCircuit: flags.includes("-s") };
+}
+
+/**
  * Compiles with the extension's own compiler.
  *
  * It needs no child process and no native binary, which is what makes it the path that works where the
- * bundled one cannot run. It has no optimizer, so it stays opt-in rather than becoming the default.
+ * bundled one cannot run. Its optimiser covers `-O1` only, so it stays opt-in rather than the default.
  *
  * The tmp file the caller already wrote is reused as the preprocessor's entry point, so relative
  * `#include` paths resolve against the source's own directory exactly as they do for the other
@@ -185,7 +201,10 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
     }
     const includeDirs = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
-        const bytes = compileFile(parser, tmpPath, { preprocess: { includeDirs } });
+        const bytes = compileFile(parser, tmpPath, {
+            preprocess: { includeDirs },
+            ...optionsFor(sslSettings.compileOptions),
+        });
         fs.writeFileSync(dstPath, bytes);
         return { errors: [], warnings: [] };
     } catch (error) {
