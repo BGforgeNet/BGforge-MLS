@@ -292,7 +292,6 @@ class Lowering {
         target.body = this.lowerEach(body, scope);
         this.currentTarget = null;
 
-        if (node.children.some((c) => c?.type === "critical")) target.critical = true;
         const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
         if (modifier === "pure") target.pure = true;
         if (modifier === "inline") target.inline = true;
@@ -784,6 +783,9 @@ class Lowering {
             .slice(1)
             .filter((c): c is SyntaxNode => Boolean(c) && c.type !== "comment" && c.type !== "line_comment");
         return args.map((argument, index) => {
+            // A slot declared to take a procedure resolves procedures ahead of variables, the same
+            // precedence `procedureRef` applies to a call target; a variable is used only where no
+            // procedure carries the name.
             if ((procArgs & (1 << index)) !== 0 && argument.type === "identifier") {
                 const procedure = this.procedures.get(argument.text.toLowerCase());
                 if (procedure !== undefined) return { kind: "procRef", index: procedure };
@@ -795,6 +797,10 @@ class Lowering {
     /**
      * The target of a call. A named procedure is called by index; a VARIABLE holding a procedure is
      * fetched and resolved at run time, which is how a callback stored in a variable is invoked.
+     *
+     * Procedures are looked up BEFORE locals, the opposite order to `reference` - a name in call
+     * position means the procedure even when a local shadows it, which is what makes a procedure whose
+     * parameter carries its own name still recurse rather than call its argument.
      */
     private procedureRef(node: SyntaxNode, scope: Scope): Expr {
         if (node.type !== "identifier") throw new LowerError(`cannot call a '${node.type}'`, node);
@@ -990,7 +996,11 @@ class Lowering {
         return { kind: "libCall", opcode: fn.opcode, args };
     }
 
-    /** Resolves a bare identifier: locals shadow globals, which shadow shared variables. */
+    /**
+     * Resolves a bare identifier: locals shadow globals, which shadow shared variables, and a variable
+     * of any scope shadows a procedure of the same name. `procedureRef` deliberately inverts that last
+     * step, so `name(...)` calls the procedure while a bare `name` reads the variable.
+     */
     private reference(node: SyntaxNode, scope: Scope): Expr {
         const key = node.text.toLowerCase();
         const slot = scope.slots.get(key);

@@ -8,6 +8,7 @@
  */
 
 import type { Parser } from "web-tree-sitter";
+import { findParseError } from "../../shared/parse-errors";
 import { emitInt, type EmitOptions } from "./int/emit";
 import { lowerProgram, type LowerOptions } from "./lower";
 import { preprocess, type PreprocessOptions } from "./preprocess";
@@ -28,6 +29,16 @@ export function compileText(parser: Parser, text: string, options: CompileOption
     const tree = parser.parse(text);
     if (tree === null) throw new CompileError("parser returned no tree");
     try {
+        // A tree-sitter parse always succeeds, standing in ERROR and MISSING nodes for whatever did not
+        // fit the grammar. Lowering walks past those without complaint and emits a program built from
+        // the fragments it did understand, so the refusal has to happen here: a script the parser could
+        // not read must not silently produce a compiled file that does something else.
+        const error = findParseError(tree.rootNode);
+        if (error) {
+            const { row, column } = error.startPosition;
+            const what = error.isMissing ? `missing ${error.type}` : "syntax error";
+            throw new CompileError(`${row + 1}:${column + 1}: ${what}`);
+        }
         return emitInt(lowerProgram(tree, options), options);
     } finally {
         tree.delete();

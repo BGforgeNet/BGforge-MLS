@@ -99,6 +99,23 @@ procedure foo(variable a, variable b);
         name: (identifier)))))
 
 ================================================================================
+Names that begin with a keyword stay whole
+================================================================================
+
+procedure begins(variable thenx, variable endif);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_forward
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier))
+      (param
+        name: (identifier)))))
+
+================================================================================
 Procedure params reject call-expression defaults
 ================================================================================
 

@@ -18,7 +18,8 @@ import { EmitError, emitInt } from "../src/int/emit.ts";
 import { NameTable } from "../src/int/namelist.ts";
 import { IntWriter } from "../src/int/writer.ts";
 import { engineFunction } from "../src/int/engine-functions.ts";
-import type { Program } from "../src/int/ir.ts";
+import { lowerProgram } from "../src/lower.ts";
+import type { Program, Stmt } from "../src/int/ir.ts";
 import { REPO_ROOT } from "../../shared/cli/test/repo-root.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
@@ -279,6 +280,20 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
 
     const refuse = (source: string) => () => compileText(parser, source);
 
+    it("refuses source the parser could not read, naming where it gave up", () => {
+        // A name the grammar cannot spell puts ERROR nodes in the tree. Lowering walks past those and
+        // would emit a program assembled from the fragments around them, which is why the refusal is
+        // the behaviour under test - "it compiled" would be the bug.
+        expect(refuse("procedure start begin\n variable &x;\nend\n")).toThrow(CompileError);
+        // The line is the contract - the server turns this prefix into a diagnostic position - while
+        // the column is wherever tree-sitter chose to open the error node.
+        expect(refuse("procedure start begin\n variable &x;\nend\n")).toThrow(/^2:\d+: syntax error$/);
+    });
+
+    it("names a construct the source left unfinished", () => {
+        expect(refuse("procedure start begin\n variable x := 1;\n")).toThrow(/^3:1: missing end$/);
+    });
+
     it("names an unknown identifier", () => {
         expect(refuse("procedure start begin\n variable x;\n x := nope;\nend\n")).toThrow(/unknown identifier 'nope'/);
     });
@@ -313,6 +328,82 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
 
     it("reports the line the problem is on", () => {
         expect(refuse("procedure start begin\n\n\n x := nope;\nend\n")).toThrow(/^4:/);
+    });
+});
+
+/**
+ * A name can belong to a procedure and to a variable at once, and which one a mention means depends on
+ * where it sits. Corpus scripts avoid the collision, so nothing else pins the choice.
+ */
+describe.skipIf(!wasmPresent)("name resolution when a variable shadows a procedure", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** The lowered body of the named procedure. */
+    const bodyOf = (source: string, name: string): Stmt[] => {
+        const tree = parser.parse(source);
+        if (!tree) throw new Error("no tree");
+        try {
+            const declaration = lowerProgram(tree).declarations.find(
+                (d) => d.kind === "procedure" && d.procedure.name.toLowerCase() === name,
+            );
+            if (declaration?.kind !== "procedure") throw new Error(`no procedure '${name}'`);
+            return declaration.procedure.body;
+        } finally {
+            tree.delete();
+        }
+    };
+
+    // `stuff` here is the procedure, its own first parameter, and the value being assigned - the one
+    // spelling has to resolve three different ways in a single statement.
+    const collision = [
+        "procedure stuff(variable stuff, variable n);",
+        "procedure stuff(variable stuff, variable n) begin",
+        "   stuff := stuff(stuff, n);",
+        "end",
+        "",
+    ].join("\n");
+
+    it("calls the procedure, not the parameter, when the name is in call position", () => {
+        const [statement] = bodyOf(collision, "stuff");
+        expect(statement).toEqual({
+            kind: "assign",
+            op: "=",
+            // Assigned into slot 0, the parameter - not into the procedure.
+            target: { kind: "var", scope: "local", index: 0, name: "stuff" },
+            value: {
+                kind: "call",
+                target: { kind: "procRef", index: 0 },
+                args: [
+                    { kind: "var", scope: "local", index: 0, name: "stuff" },
+                    { kind: "var", scope: "local", index: 1, name: "n" },
+                ],
+            },
+        });
+    });
+
+    it("reads the variable, not the procedure, when the name stands alone", () => {
+        // Without the parentheses the same name is a value, so the local wins; were the procedure to
+        // win here it would be silently called instead, since a bare procedure name calls it.
+        const [statement] = bodyOf(
+            [
+                "procedure stuff(variable stuff);",
+                "procedure stuff(variable stuff) begin",
+                "   return stuff;",
+                "end",
+                "",
+            ].join("\n"),
+            "stuff",
+        );
+        expect(statement).toEqual({
+            kind: "return",
+            value: { kind: "var", scope: "local", index: 0, name: "stuff" },
+        });
     });
 });
 

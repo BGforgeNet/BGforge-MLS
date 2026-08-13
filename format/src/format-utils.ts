@@ -3,6 +3,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { findParseError } from "../../shared/parse-errors";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {
@@ -17,18 +18,6 @@ export function stripBom(text: string): string {
 
 /** Function that strips comments from text while respecting string literals. */
 export type CommentStripper = (text: string) => string;
-
-/** Find first ERROR or MISSING node in tree. */
-function findParseError(node: SyntaxNode): SyntaxNode | null {
-    if (node.type === "ERROR" || node.isMissing) {
-        return node;
-    }
-    for (const child of node.children) {
-        const error = findParseError(child);
-        if (error) return error;
-    }
-    return null;
-}
 
 /**
  * Throw if the tree contains any ERROR or MISSING nodes.

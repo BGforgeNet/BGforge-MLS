@@ -92,6 +92,11 @@ export interface ProcedureDecl {
     body: Stmt[];
     exported?: boolean;
     imported?: boolean;
+    /**
+     * Set only when reading a compiled script back: the language has no source spelling that marks a
+     * procedure critical, so lowering never produces one and the bit exists here to survive a
+     * decompile-and-re-emit round trip.
+     */
     critical?: boolean;
     /** Source-level modifiers. They are recorded in the procedure table, not just advisory. */
     pure?: boolean;
