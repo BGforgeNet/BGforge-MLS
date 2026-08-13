@@ -20,10 +20,13 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const DOCS = ["docs/architecture.md", "docs/lsp-api.md"] as const;
 
-const trackedFiles = new Set(execSync("git ls-files", { encoding: "utf8" }).split("\n").filter(Boolean));
+const trackedFiles = new Set(
+    execSync("git ls-files", { encoding: "utf8", timeout: SPAWN_TIMEOUT_MS }).split("\n").filter(Boolean),
+);
 
 // Real repo top-level directories, so only repo-root-anchored path citations are checked.
 const topLevelDirs = new Set([...trackedFiles].map((f) => f.split("/")[0]));
@@ -31,7 +34,10 @@ const topLevelDirs = new Set([...trackedFiles].map((f) => f.split("/")[0]));
 // Every line mentioning "bgforge" across tracked non-doc files - contains each
 // command id / method literal the code actually uses (protocol constants,
 // package.json contributions, source registrations).
-const codeMentions = execSync("git grep -hF bgforge -- ':!docs/'", { encoding: "utf8" });
+const codeMentions = execSync("git grep -hF bgforge -- ':!docs/'", {
+    encoding: "utf8",
+    timeout: SPAWN_TIMEOUT_MS,
+});
 
 const read = (p: string): string => fs.readFileSync(p, "utf8");
 

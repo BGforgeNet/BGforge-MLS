@@ -15,6 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { HELIX_SCOPES, NEOVIM_CAPTURES, ZED_THEME_KEYS } from "./editor-captures.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const NEOVIM_DOC = "https://raw.githubusercontent.com/neovim/neovim/master/runtime/doc/treesitter.txt";
 const HELIX_DOC = "https://raw.githubusercontent.com/helix-editor/helix/master/book/src/themes.md";
@@ -56,7 +57,11 @@ function deriveHelix(doc: string): string[] {
  * `"color":` line - because the published capture table omits keys the shipped themes define.
  */
 function deriveZed(binary: string): string[] {
-    const strings = execFileSync("strings", ["-n", "4", binary], { encoding: "utf-8", maxBuffer: 512 * 1024 * 1024 });
+    const strings = execFileSync("strings", ["-n", "4", binary], {
+        encoding: "utf-8",
+        maxBuffer: 512 * 1024 * 1024,
+        timeout: SPAWN_TIMEOUT_MS,
+    });
     const found = new Set<string>();
     let pending: string | undefined;
     for (const line of strings.split("\n")) {
@@ -97,7 +102,9 @@ async function main(): Promise<void> {
             const tarball = path.join(work, "zed.tar.gz");
             const release = await fetch(ZED_RELEASE);
             fs.writeFileSync(tarball, Buffer.from(await release.arrayBuffer()));
-            execFileSync("tar", ["xzf", tarball, "-C", work, "--no-same-owner", "zed.app/libexec/zed-editor"]);
+            execFileSync("tar", ["xzf", tarball, "-C", work, "--no-same-owner", "zed.app/libexec/zed-editor"], {
+                timeout: SPAWN_TIMEOUT_MS,
+            });
             drifted =
                 report("zed", ZED_THEME_KEYS, deriveZed(path.join(work, "zed.app/libexec/zed-editor"))) || drifted;
         } finally {

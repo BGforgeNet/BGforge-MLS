@@ -11,12 +11,14 @@
 
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 describe("ES_LIB_BLOCKLIST", () => {
     it("matches the current TypeScript lib (run pnpm regen:td-blocklist if this fails)", () => {
         const result = spawnSync("pnpm", ["exec", "tsx", "scripts/utils/src/generate-td-lib-blocklist.ts", "--check"], {
             cwd: process.cwd(),
             encoding: "utf8",
+            timeout: SPAWN_TIMEOUT_MS,
         });
         if (result.status !== 0) {
             const out = `${result.stdout ?? ""}${result.stderr ?? ""}`;

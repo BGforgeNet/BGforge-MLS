@@ -25,6 +25,7 @@ import { emitInt } from "../../src/int/emit.ts";
 import { EngineOp } from "../../src/int/opcodes-engine.ts";
 import type { Expr, Program, Stmt, VariableDecl } from "../../src/int/ir.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 function findCompiler(): string | null {
     try {
@@ -47,6 +48,7 @@ function reference(name: string, source: string): Uint8Array {
     fs.writeFileSync(path.join(workDir, `${name}.ssl`), source);
     execFileSync(process.execPath, [compiler as string, "-O0", "-q", `${name}.ssl`, "-o", `${name}.int`], {
         cwd: workDir,
+        timeout: SPAWN_TIMEOUT_MS,
     });
     return new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.int`)));
 }

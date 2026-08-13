@@ -10,6 +10,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { parse } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 interface RawSnippet {
     prefix?: unknown;
@@ -18,7 +19,9 @@ interface RawSnippet {
 
 function lsFiles(...patterns: string[]): string[] {
     const spec = patterns.map((p) => `'${p}'`).join(" ");
-    return execSync(`git ls-files -- ${spec}`, { encoding: "utf8" }).split("\n").filter(Boolean);
+    return execSync(`git ls-files -- ${spec}`, { encoding: "utf8", timeout: SPAWN_TIMEOUT_MS })
+        .split("\n")
+        .filter(Boolean);
 }
 
 const snippetFiles = lsFiles("snippets/*.json");

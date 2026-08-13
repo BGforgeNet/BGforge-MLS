@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../../src/compile.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -192,6 +193,7 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
         fs.writeFileSync(file, source);
         execFileSync(process.execPath, [compiler as string, "-O0", "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
             cwd: workDir,
+            timeout: SPAWN_TIMEOUT_MS,
         });
         const expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
         const actual = compileFile(parser, file);

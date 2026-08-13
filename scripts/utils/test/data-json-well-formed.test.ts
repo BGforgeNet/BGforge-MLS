@@ -23,10 +23,13 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 function lsFiles(...patterns: string[]): string[] {
     const spec = patterns.map((p) => `'${p}'`).join(" ");
-    return execSync(`git ls-files -- ${spec}`, { encoding: "utf8" }).split("\n").filter(Boolean);
+    return execSync(`git ls-files -- ${spec}`, { encoding: "utf8", timeout: SPAWN_TIMEOUT_MS })
+        .split("\n")
+        .filter(Boolean);
 }
 
 const strictFiles = lsFiles("server/out/*.json", "syntaxes/*.tmLanguage.json", "binary/data/*.json");

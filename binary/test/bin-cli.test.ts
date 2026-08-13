@@ -24,6 +24,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { parserRegistry } from "../src/index";
 import { REPO_ROOT } from "./repo-root";
+import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "binary/out/cli.js");
 const NODE = process.execPath;
@@ -41,6 +42,7 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
     const result = spawnSync(NODE, [CLI, ...args], {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
+        timeout: SPAWN_TIMEOUT_MS,
     });
     return {
         code: result.status ?? 1,

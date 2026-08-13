@@ -12,6 +12,7 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const EXTERNAL_ROOTS = [path.join(REPO_ROOT, "external/fallout"), path.join(REPO_ROOT, "external/infinity-engine")];
@@ -23,7 +24,10 @@ function isGitCheckout(dir: string): boolean {
 }
 
 function isDirty(checkoutDir: string): boolean {
-    const status = execFileSync("git", ["-C", checkoutDir, "status", "--porcelain"], { encoding: "utf-8" });
+    const status = execFileSync("git", ["-C", checkoutDir, "status", "--porcelain"], {
+        encoding: "utf-8",
+        timeout: SPAWN_TIMEOUT_MS,
+    });
     return status.trim().length > 0;
 }
 
@@ -43,5 +47,10 @@ export default function setup(): void {
     if (!dirty) return;
 
     console.log("[binary] external/ fixtures have drifted from HEAD - resetting via scripts/reset-external.sh");
-    execFileSync(path.join(REPO_ROOT, "scripts", "reset-external.sh"), [], { stdio: "inherit" });
+    // Its own bound rather than the shared one: this script clones any missing external repo, so on a cold
+    // checkout it is doing network work measured in minutes, not the seconds every other spawn here takes.
+    execFileSync(path.join(REPO_ROOT, "scripts", "reset-external.sh"), [], {
+        stdio: "inherit",
+        timeout: 15 * 60 * 1000,
+    });
 }

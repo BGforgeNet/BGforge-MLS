@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { generateKshXml } from "../src/generate-ksh.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const SSL_LANG = {
     name: "test-ssl",
@@ -117,7 +118,7 @@ describe("generateKshXml", () => {
         const xmlPath = "tmp/test-ksh.xml";
 
         try {
-            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe" });
+            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe", timeout: SPAWN_TIMEOUT_MS });
 
             for (const lang of [SSL_LANG, BAF_LANG]) {
                 const xml = generateKshXml(lang);
@@ -125,6 +126,7 @@ describe("generateKshXml", () => {
                 try {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
+                        timeout: SPAWN_TIMEOUT_MS,
                     });
                 } catch (error) {
                     const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";
@@ -146,13 +148,14 @@ describe("generateKshXml", () => {
         const xsdPath = "tmp/language.xsd";
 
         try {
-            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe" });
+            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe", timeout: SPAWN_TIMEOUT_MS });
 
             for (const file of staticFiles) {
                 const xmlPath = path.join(staticDir, file);
                 try {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
+                        timeout: SPAWN_TIMEOUT_MS,
                     });
                 } catch (error) {
                     const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";

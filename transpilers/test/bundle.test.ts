@@ -15,6 +15,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { REPO_ROOT } from "./repo-root";
+import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const BUNDLE = path.join(REPO_ROOT, "transpilers/out/index.js");
 const DTS = path.join(REPO_ROOT, "transpilers/out/index.d.ts");
@@ -30,6 +31,7 @@ function runNode(script: string): { code: number; stdout: string; stderr: string
         const stdout = execFileSync(process.execPath, ["--no-warnings", "--input-type=module", "-e", script], {
             encoding: "utf-8",
             stdio: ["pipe", "pipe", "pipe"],
+            timeout: SPAWN_TIMEOUT_MS,
         });
         return { code: 0, stdout, stderr: "" };
     } catch (error: unknown) {
@@ -151,7 +153,10 @@ describe("@bgforge/transpile bundle smoke", () => {
             // node_modules/.bin/tsc is a POSIX shell script and cannot be passed to
             // process.execPath (node) - use the actual JS entrypoint instead.
             const tsc = path.join(REPO_ROOT, "node_modules/typescript/bin/tsc");
-            const result = spawnSync(process.execPath, [tsc, "-p", tsconfig], { encoding: "utf-8" });
+            const result = spawnSync(process.execPath, [tsc, "-p", tsconfig], {
+                encoding: "utf-8",
+                timeout: SPAWN_TIMEOUT_MS,
+            });
             if (result.status !== 0) {
                 throw new Error(`tsc failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
             }

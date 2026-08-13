@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { generateUdlXml } from "../src/generate-udl.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const SSL_LANG = {
     name: "test-ssl",
@@ -114,7 +115,7 @@ describe("generateUdlXml", () => {
 
         try {
             // Download XSD once (xmllint can't fetch HTTPS directly)
-            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe" });
+            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe", timeout: SPAWN_TIMEOUT_MS });
 
             for (const lang of [SSL_LANG, BAF_LANG]) {
                 const xml = generateUdlXml(lang);
@@ -122,6 +123,7 @@ describe("generateUdlXml", () => {
                 try {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
+                        timeout: SPAWN_TIMEOUT_MS,
                     });
                 } catch (error) {
                     const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";
@@ -143,13 +145,14 @@ describe("generateUdlXml", () => {
         const xsdPath = "tmp/userDefineLangs.xsd";
 
         try {
-            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe" });
+            execSync(`curl -sfL -o "${xsdPath}" "${XSD_URL}"`, { stdio: "pipe", timeout: SPAWN_TIMEOUT_MS });
 
             for (const file of staticFiles) {
                 const xmlPath = path.join(staticDir, file);
                 try {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
+                        timeout: SPAWN_TIMEOUT_MS,
                     });
                 } catch (error) {
                     const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";

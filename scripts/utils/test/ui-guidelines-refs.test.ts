@@ -15,6 +15,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const INDEX = "docs/binary-editor-ui-guidelines.md";
 const RENDER_RULES = "client/src/binary-editor/webview/AGENTS.md";
@@ -58,7 +59,10 @@ describe("binary-editor UI-guidelines wiring", () => {
         // otherwise match itself.
         let matches = "";
         try {
-            matches = execSync(`git grep -lF "${OLD_PATH}" -- . ':!${SELF}'`, { encoding: "utf8" });
+            matches = execSync(`git grep -lF "${OLD_PATH}" -- . ':!${SELF}'`, {
+                encoding: "utf8",
+                timeout: SPAWN_TIMEOUT_MS,
+            });
         } catch {
             matches = ""; // exit 1 == no matches
         }
