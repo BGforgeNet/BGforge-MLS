@@ -18,11 +18,13 @@ import {
     alwaysReturns,
     globalsOf,
     proceduresOf,
+    type BinaryOp,
     type Declaration,
     type Expr,
     type ProcedureDecl,
     type Program,
     type Stmt,
+    type VariableDecl,
 } from "./int/ir";
 
 export interface OptimizeOptions {
@@ -30,11 +32,12 @@ export interface OptimizeOptions {
      * 0 leaves the program untouched. 1 removes unreachable procedures and unreferenced variables, and
      * is byte-identical to the reference compiler's own `-O1` across the corpus.
      *
-     * 2 is INCOMPLETE and not reachable from the extension. It folds constants, drops unreachable
-     * statements and dead stores, and propagates constant globals, but the reference additionally runs a
-     * `Combine` pass and iterates the whole set to a fixpoint, neither of which is reproduced here - so
-     * its output is correct but not byte-identical (about 85% of the corpus at the time of writing).
-     * Finishing it is a porting job against the reference's `optimize.c`, not a guessing one.
+     * 2 is INCOMPLETE and not reachable from the extension. Every pass the reference runs is ported here
+     * from its `optimize.c` - constant folding, dead stores, dead code, assignment combining, dead
+     * variables - under the same two nested fixpoints. Output is correct but not yet byte-identical,
+     * because `deadStoreRemoval` keys its first/last-assignment rule on statement ORDINALS over this
+     * tree where the reference indexes a flat node stream; the two orderings disagree around loops and
+     * branches, which is the remaining gap.
      */
     level?: 0 | 1 | 2;
 }
@@ -473,270 +476,166 @@ function foldStatement(statement: Stmt): Stmt | null {
     }
 }
 
-/** Local slots a procedure ever READS, as opposed to merely writing. */
-function readLocals(procedure: ProcedureDecl): Set<number> {
-    const read = new Set<number>();
-    const fromExpr = (expr: Expr): void => {
-        if (expr.kind === "var" && expr.scope === "local") read.add(expr.index);
-    };
-    const walk = (stmt: Stmt): void => {
-        if (stmt.kind === "assign") {
-            // A compound assignment reads its target before writing it; a plain one does not.
-            if (stmt.op !== "=") read.add(stmt.target.index);
-            forEachExpr({ kind: "expr", expr: stmt.value }, fromExpr);
-            return;
-        }
-        if (stmt.kind === "block") {
-            stmt.body.forEach(walk);
-            return;
-        }
-        if (stmt.kind === "if") {
-            forEachExpr({ kind: "expr", expr: stmt.cond }, fromExpr);
-            walk(stmt.thenBranch);
-            if (stmt.elseBranch) walk(stmt.elseBranch);
-            return;
-        }
-        if (stmt.kind === "while") {
-            forEachExpr({ kind: "expr", expr: stmt.cond }, fromExpr);
-            walk(stmt.body);
-            return;
-        }
-        forEachExpr(stmt, fromExpr);
-    };
-    procedure.body.forEach(walk);
-    if (procedure.conditional) forEachExpr({ kind: "expr", expr: procedure.conditional }, fromExpr);
-    return read;
+/**
+ * What one local is used for, in statement order. This mirrors the reference's own bookkeeping rather
+ * than computing general liveness: its dead-store rule looks only at a variable's FIRST and LAST
+ * assignment, so a faithful port has to record the same four positions and the same flags.
+ *
+ * Positions are ordinals of the enclosing statement. A statement inside a `while` does not get its own
+ * ordinal - the whole loop counts as one - which is what lets the reference treat a store in a loop
+ * differently from one in straight-line code.
+ */
+interface VarUsage {
+    firstAssign: Stmt | null;
+    lastAssign: Stmt | null;
+    firstAssignAt: number;
+    lastAssignAt: number;
+    firstUseAt: number;
+    lastUseAt: number;
+    firstAssignPure: boolean;
+    firstAssignDead: boolean;
+    /** The first store is a lone constant, so its value can move into the variable's declaration. */
+    transferable: Expr | null;
+    lastAssignPure: boolean;
+    lastAssignInWhile: boolean;
+    /** The statement directly introduces the store as a branch or loop body, which blocks removal. */
+    lastAssignIsBranchBody: boolean;
 }
 
-/**
- * Removes locals the procedure never reads, along with the stores that fed them, and renumbers the slots
- * that remain. Arguments are never removed - they occupy the leading slots and their count is recorded in
- * the procedure table, so dropping one would change the calling convention.
- *
- * A variable whose every store is pure goes entirely. One with even a single side-effecting store stays,
- * because the store has to keep happening and the value has to land somewhere.
- */
-function pruneLocals(procedure: ProcedureDecl): ProcedureDecl {
-    const base = procedure.args.length;
-    const removed = new Set<number>();
-    let body = procedure.body;
-
-    // Iterated to a fixpoint, because deleting a dead store deletes the reads inside it: `x := x + 1`
-    // on an otherwise-unused `x` looks live on the first pass and is only exposed once its own store is
-    // gone. A single pass would leave exactly the chains the reference collapses.
-    for (;;) {
-        const current: ProcedureDecl = { ...procedure, body };
-        const read = readLocals(current);
-        const impure = new Set<number>();
-        const noteImpure = (stmt: Stmt): void => {
-            if (stmt.kind === "assign" && !isPure(stmt.value)) impure.add(stmt.target.index);
-            if (stmt.kind === "block") stmt.body.forEach(noteImpure);
-            if (stmt.kind === "if") {
-                noteImpure(stmt.thenBranch);
-                if (stmt.elseBranch) noteImpure(stmt.elseBranch);
-            }
-            if (stmt.kind === "while") noteImpure(stmt.body);
-        };
-        body.forEach((statement) => noteImpure(statement));
-
-        const round = new Set<number>();
-        procedure.locals.forEach((_local, i) => {
-            const slot = base + i;
-            if (!removed.has(slot) && !read.has(slot) && !impure.has(slot)) round.add(slot);
-        });
-        if (round.size === 0) break;
-        for (const slot of round) removed.add(slot);
-        body = dropStoresTo(body, round);
-    }
-    if (removed.size === 0) return procedure;
-
-    const slotMap = new Map<number, number>();
-    let next = base;
-    procedure.locals.forEach((_local, i) => {
-        const slot = base + i;
-        if (!removed.has(slot)) slotMap.set(slot, next++);
-    });
-    for (let arg = 0; arg < base; arg++) slotMap.set(arg, arg);
-
-    const rewriteExpr = (expr: Expr): Expr =>
-        expr.kind === "var" && expr.scope === "local"
-            ? { ...expr, index: slotMap.get(expr.index) ?? expr.index }
-            : expr;
-
+function newUsage(): VarUsage {
     return {
-        ...procedure,
-        locals: procedure.locals.filter((_local, i) => !removed.has(base + i)),
-        body: body.map((statement) => remapWith(statement, rewriteExpr)),
+        firstAssign: null,
+        lastAssign: null,
+        firstAssignAt: 0,
+        lastAssignAt: 0,
+        firstUseAt: 0,
+        lastUseAt: 0,
+        firstAssignPure: false,
+        firstAssignDead: false,
+        transferable: null,
+        lastAssignPure: false,
+        lastAssignInWhile: false,
+        lastAssignIsBranchBody: false,
     };
 }
 
-/** Every local slot a procedure has, arguments included. */
-function slotsOf(procedure: ProcedureDecl): Set<number> {
-    const out = new Set<number>();
-    for (let slot = 0; slot < procedure.args.length + procedure.locals.length; slot++) out.add(slot);
-    return out;
-}
-
-/** The local slots an expression reads. */
-function readsOf(expr: Expr): Set<number> {
-    const out = new Set<number>();
-    forEachExpr({ kind: "expr", expr }, (e) => {
-        if (e.kind === "var" && e.scope === "local") out.add(e.index);
-    });
-    return out;
-}
-
-const union = (...sets: ReadonlySet<number>[]): Set<number> => {
-    const out = new Set<number>();
-    for (const set of sets) for (const value of set) out.add(value);
-    return out;
-};
-
-/**
- * Backward liveness, removing stores whose value nothing goes on to read - `x := 1; x := 2;` drops the
- * first, which plain unused-variable analysis cannot see because `x` really is read later.
- *
- * Conservative wherever control flow is not obvious: a loop is iterated to a fixpoint, and `break` or
- * `continue` makes every local live, since where they land is not modelled here. Only a store whose
- * right-hand side is pure can go - anything else has to keep happening for its effects.
- */
-function eliminateDeadStores(procedure: ProcedureDecl, allSlots: ReadonlySet<number>): ProcedureDecl {
-    const list = (statements: Stmt[], liveOut: ReadonlySet<number>): { body: Stmt[]; liveIn: Set<number> } => {
-        const kept: Stmt[] = [];
-        let live = new Set(liveOut);
-        for (let i = statements.length - 1; i >= 0; i--) {
-            const result = one(statements[i] as Stmt, live);
-            live = result.liveIn;
-            if (result.statement !== null) kept.unshift(result.statement);
+/** Statement-ordered usage for every local, following the reference's traversal exactly. */
+function analyzeVarUsage(procedure: ProcedureDecl): Map<number, VarUsage> {
+    const usage = new Map<number, VarUsage>();
+    const of = (slot: number): VarUsage => {
+        let entry = usage.get(slot);
+        if (!entry) {
+            entry = newUsage();
+            usage.set(slot, entry);
         }
-        return { body: kept, liveIn: live };
+        return entry;
+    };
+    let ordinal = 0;
+
+    const markRead = (slot: number, at: number, whileDepth: number): void => {
+        const entry = of(slot);
+        entry.lastUseAt = at;
+        if (entry.firstUseAt === 0) entry.firstUseAt = at;
+        void whileDepth;
+    };
+    const readExpr = (expr: Expr, at: number, whileDepth: number): void => {
+        forEachExpr({ kind: "expr", expr }, (e) => {
+            if (e.kind === "var" && e.scope === "local") markRead(e.index, at, whileDepth);
+        });
     };
 
-    const one = (statement: Stmt, liveOut: ReadonlySet<number>): { statement: Stmt | null; liveIn: Set<number> } => {
+    const walk = (statement: Stmt, current: Stmt, at: number, whileDepth: number, ifDepth: number): void => {
         switch (statement.kind) {
             case "assign": {
-                // Only LOCALS are tracked here. A global or external outlives the procedure, and its
-                // slot numbering is a different space entirely - treating one as a local slot both
-                // misreads liveness and deletes stores that are anything but dead.
                 if (statement.target.scope !== "local") {
-                    return { statement, liveIn: union(liveOut, readsOf(statement.value)) };
+                    readExpr(statement.value, at, whileDepth);
+                    return;
                 }
                 const slot = statement.target.index;
-                if (!liveOut.has(slot) && isPure(statement.value)) return { statement: null, liveIn: new Set(liveOut) };
-                const after = new Set(liveOut);
-                // A plain assignment kills the slot; a compound one reads it first.
-                if (statement.op === "=") after.delete(slot);
-                else after.add(slot);
-                return { statement, liveIn: union(after, readsOf(statement.value)) };
+                const entry = of(slot);
+                const pure = isPure(statement.value);
+                entry.lastAssign = current;
+                entry.lastAssignAt = at;
+                entry.lastAssignPure ||= pure;
+                entry.lastAssignInWhile = whileDepth > 0;
+                if (entry.firstUseAt === 0) {
+                    if (entry.firstAssign === null) {
+                        entry.firstAssign = current;
+                        entry.firstAssignAt = at;
+                        if (pure) {
+                            entry.firstAssignPure = true;
+                            const value = statement.value;
+                            const isConstant = value.kind === "int" || value.kind === "float";
+                            if (whileDepth === 0 && ifDepth === 0 && isConstant && statement.op === "=") {
+                                entry.transferable = value;
+                                entry.firstAssignDead = true;
+                            }
+                        }
+                    } else if (whileDepth === 0 && ifDepth === 0) {
+                        // A second unconditional plain store before any read makes the first one dead.
+                        if (entry.firstAssignPure && statement.op === "=") entry.firstAssignDead = true;
+                    } else if (!pure && at === entry.firstAssignAt) {
+                        entry.firstAssignPure = false;
+                    }
+                }
+                // A compound assignment reads its target on the way through.
+                if (statement.op !== "=") markRead(slot, at, whileDepth);
+                readExpr(statement.value, at, whileDepth);
+                return;
             }
-            case "block": {
-                const { body, liveIn } = list(statement.body, liveOut);
-                return { statement: body.length > 0 ? { ...statement, body } : null, liveIn };
-            }
+            case "block":
+                for (const child of statement.body) walk(child, current, at, whileDepth, ifDepth);
+                return;
             case "if": {
-                const thenSide = one(statement.thenBranch, liveOut);
-                const elseSide = statement.elseBranch ? one(statement.elseBranch, liveOut) : null;
-                const branch: Stmt = {
-                    ...statement,
-                    thenBranch: thenSide.statement ?? { kind: "block", body: [] },
-                    ...(elseSide?.statement ? { elseBranch: elseSide.statement } : {}),
-                };
-                return {
-                    statement: branch,
-                    liveIn: union(readsOf(statement.cond), thenSide.liveIn, elseSide ? elseSide.liveIn : liveOut),
-                };
-            }
-            case "while": {
-                // A loop's body can feed its own next iteration, so liveness is iterated rather than
-                // read off once. The bound is a safety net; the set only grows, so it settles quickly.
-                let live = new Set(liveOut);
-                for (let round = 0; round < 8; round++) {
-                    const bodyLive = one(statement.body, live).liveIn;
-                    const next = union(readsOf(statement.cond), bodyLive, liveOut);
-                    const settled = next.size === live.size;
-                    live = next;
-                    if (settled) break;
+                readExpr(statement.cond, at, whileDepth);
+                const inner = ifDepth === 0 ? 1 : ifDepth + 1;
+                markBranchBody(statement.thenBranch);
+                walk(statement.thenBranch, current, at, whileDepth, inner);
+                if (statement.elseBranch) {
+                    markBranchBody(statement.elseBranch);
+                    walk(statement.elseBranch, current, at, whileDepth, inner);
                 }
-                const body = one(statement.body, live);
-                return {
-                    statement: { ...statement, body: body.statement ?? { kind: "block", body: [] } },
-                    liveIn: live,
-                };
+                return;
             }
-            case "break":
-            case "continue":
-                // The jump target is not modelled, so assume anything could be read after it.
-                return { statement, liveIn: new Set(allSlots) };
-            case "return":
-                // Locals do not outlive the procedure, so nothing is live past a return but its operand.
-                return { statement, liveIn: statement.value ? readsOf(statement.value) : new Set() };
-            default: {
-                const reads = new Set<number>();
+            case "while":
+                readExpr(statement.cond, at, whileDepth);
+                markBranchBody(statement.body);
+                walk(statement.body, current, at, whileDepth + 1, ifDepth);
+                return;
+            default:
                 forEachExpr(statement, (e) => {
-                    if (e.kind === "var" && e.scope === "local") reads.add(e.index);
+                    if (e.kind === "var" && e.scope === "local") markRead(e.index, at, whileDepth);
                 });
-                return { statement, liveIn: union(liveOut, reads) };
-            }
         }
     };
 
-    return { ...procedure, body: list(procedure.body, new Set()).body };
-}
+    // A store that IS the body of a branch or loop cannot be lifted out on its own.
+    const branchBodies = new Set<Stmt>();
+    function markBranchBody(statement: Stmt): void {
+        branchBodies.add(statement);
+    }
 
-/**
- * Drops a store that writes a local the value it already holds. Locals enter the procedure holding their
- * declared initial, so `variable i := 0;` followed by `i := 0` - the shape a lowered `foreach` produces -
- * stores nothing new.
- *
- * Only the straight-line prefix of the body is considered. Past the first branch or loop the value a
- * local holds depends on which way control went, and this analysis does not track that.
- */
-function dropRedundantStores(procedure: ProcedureDecl): ProcedureDecl {
-    const base = procedure.args.length;
-    const known = new Map<number, Expr>();
-    procedure.locals.forEach((local, i) => known.set(base + i, local.initial));
-
-    let tracking = true;
-    const walk = (statements: Stmt[]): Stmt[] => {
-        const out: Stmt[] = [];
+    const list = (statements: Stmt[], whileDepth: number): void => {
         for (const statement of statements) {
-            if (tracking && statement.kind === "assign" && statement.target.scope === "local" && statement.op === "=") {
-                const slot = statement.target.index;
-                const current = known.get(slot);
-                const value = statement.value;
-                const same =
-                    current !== undefined &&
-                    current.kind === value.kind &&
-                    (value.kind === "int" || value.kind === "float" || value.kind === "string") &&
-                    (current as typeof value).value === value.value;
-                if (same) continue;
-                if (value.kind === "int" || value.kind === "float" || value.kind === "string") known.set(slot, value);
-                else known.delete(slot);
-                out.push(statement);
-                continue;
-            }
-            // A block is still straight-line, so what is known survives into it.
-            if (statement.kind === "block") {
-                out.push({ ...statement, body: walk(statement.body) });
-                continue;
-            }
-            // A branch or a loop writes locals under a condition, so nothing stays certain past it.
-            if (statement.kind === "if" || statement.kind === "while") tracking = false;
-            out.push(statement);
+            if (whileDepth === 0) ordinal++;
+            walk(statement, statement, ordinal, whileDepth, 0);
         }
-        return out;
     };
-    return { ...procedure, body: walk(procedure.body) };
+    list(procedure.body, 0);
+
+    for (const entry of usage.values()) {
+        if (entry.lastAssign && branchBodies.has(entry.lastAssign)) entry.lastAssignIsBranchBody = true;
+    }
+    return usage;
 }
 
-/** Removes every assignment writing one of the given local slots, pruning blocks left empty. */
-function dropStoresTo(statements: Stmt[], slots: ReadonlySet<number>): Stmt[] {
+/** Drops a statement wherever it sits in the tree, pruning containers left empty. */
+function removeStatement(statements: Stmt[], target: Stmt): Stmt[] {
     const one = (statement: Stmt): Stmt | null => {
+        if (statement === target) return null;
         switch (statement.kind) {
-            case "assign":
-                return slots.has(statement.target.index) ? null : statement;
             case "block": {
-                const body = dropStoresTo(statement.body, slots);
+                const body = removeStatement(statement.body, target);
                 return body.length > 0 ? { ...statement, body } : null;
             }
             case "if": {
@@ -754,6 +653,210 @@ function dropStoresTo(statements: Stmt[], slots: ReadonlySet<number>): Stmt[] {
         const kept = one(statement);
         return kept === null ? [] : [kept];
     });
+}
+
+/** Drops every assignment to one local inside a loop, which is how the reference eats stores there. */
+function removeAssignsTo(statements: Stmt[], slot: number): Stmt[] {
+    const one = (statement: Stmt): Stmt | null => {
+        switch (statement.kind) {
+            case "assign":
+                return statement.target.scope === "local" && statement.target.index === slot ? null : statement;
+            case "block": {
+                const body = removeAssignsTo(statement.body, slot);
+                return body.length > 0 ? { ...statement, body } : null;
+            }
+            case "if": {
+                const thenBranch = one(statement.thenBranch) ?? { kind: "block" as const, body: [] };
+                const elseBranch = statement.elseBranch ? one(statement.elseBranch) : undefined;
+                return { ...statement, thenBranch, ...(elseBranch ? { elseBranch } : {}) };
+            }
+            case "while":
+                return { ...statement, body: one(statement.body) ?? { kind: "block", body: [] } };
+            default:
+                return statement;
+        }
+    };
+    return statements.flatMap((statement) => {
+        const kept = one(statement);
+        return kept === null ? [] : [kept];
+    });
+}
+
+/**
+ * The reference's dead-store rule, which is a first/last-assignment heuristic rather than liveness.
+ *
+ * Two cases per variable, re-analysed after every removal because eating one store changes the next
+ * analysis: a first store that a later unconditional store overwrites before any read - whose constant
+ * value moves into the variable's declaration when it has one - and a last store that nothing reads
+ * afterwards, provided it is pure and is not itself the body of a branch.
+ */
+function deadStoreRemoval(procedure: ProcedureDecl): { procedure: ProcedureDecl; changed: boolean } {
+    let body = procedure.body;
+    let locals = procedure.locals;
+    let changed = false;
+    for (;;) {
+        const usage = analyzeVarUsage({ ...procedure, body, locals });
+        let acted = false;
+        for (const [slot, entry] of [...usage.entries()].sort((a, b) => a[0] - b[0])) {
+            if (entry.firstAssignDead && entry.firstAssign) {
+                const index = slot - procedure.args.length;
+                const initial = entry.transferable;
+                // The store was a constant, so it becomes the declared initial value instead.
+                if (initial && locals[index] && (initial.kind === "int" || initial.kind === "float")) {
+                    const next = [...locals];
+                    next[index] = { ...(locals[index] as VariableDecl), initial };
+                    locals = next;
+                }
+                body = removeStatement(body, entry.firstAssign);
+                acted = true;
+                break;
+            }
+            if (
+                entry.lastAssign &&
+                entry.lastAssignAt >= entry.lastUseAt &&
+                entry.lastAssignPure &&
+                !entry.lastAssignIsBranchBody &&
+                (!entry.lastAssignInWhile || entry.lastAssignAt > entry.lastUseAt)
+            ) {
+                body = entry.lastAssignInWhile ? removeAssignsTo(body, slot) : removeStatement(body, entry.lastAssign);
+                acted = true;
+                break;
+            }
+        }
+        if (!acted) break;
+        changed = true;
+    }
+    return { procedure: { ...procedure, body, locals }, changed };
+}
+
+/**
+ * `x := A; x += B;` becomes `x := A + B`. Only an immediately preceding plain store to the same variable
+ * qualifies - anything between them could observe the intermediate value.
+ */
+function combineAssignments(statements: Stmt[]): { body: Stmt[]; changed: boolean } {
+    let changed = false;
+    const fuse = (list: Stmt[]): Stmt[] => {
+        const out: Stmt[] = [];
+        for (const statement of list) {
+            const previous = out[out.length - 1];
+            if (
+                previous?.kind === "assign" &&
+                previous.op === "=" &&
+                statement.kind === "assign" &&
+                statement.op !== "=" &&
+                statement.target.scope === previous.target.scope &&
+                statement.target.index === previous.target.index
+            ) {
+                const op = statement.op.slice(0, -1) as BinaryOp;
+                if (BINARY_FUSE_OPS.has(op)) {
+                    out[out.length - 1] = {
+                        ...previous,
+                        value: { kind: "binary", op, left: previous.value, right: statement.value },
+                    };
+                    changed = true;
+                    continue;
+                }
+            }
+            out.push(descend(statement));
+        }
+        return out;
+    };
+    const descend = (statement: Stmt): Stmt => {
+        switch (statement.kind) {
+            case "block":
+                return { ...statement, body: fuse(statement.body) };
+            case "if":
+                return {
+                    ...statement,
+                    thenBranch: descend(statement.thenBranch),
+                    ...(statement.elseBranch ? { elseBranch: descend(statement.elseBranch) } : {}),
+                };
+            case "while":
+                return { ...statement, body: descend(statement.body) };
+            default:
+                return statement;
+        }
+    };
+    return { body: fuse(statements), changed };
+}
+
+const BINARY_FUSE_OPS: ReadonlySet<string> = new Set(["+", "-", "*", "/"]);
+
+/**
+ * Removes locals nothing mentions at all and renumbers the rest. Distinct from the dead-store pass: this
+ * counts every mention, read or write, so it only fires once the stores are already gone.
+ *
+ * Arguments occupy the leading slots and are never dropped - the procedure table records how many there
+ * are, so removing one would change the calling convention.
+ */
+function deadVariableRemoval(procedure: ProcedureDecl): ProcedureDecl {
+    const base = procedure.args.length;
+    const mentioned = new Set<number>();
+    for (const statement of procedure.body) {
+        forEachExpr(statement, (expr) => {
+            if (expr.kind === "var" && expr.scope === "local") mentioned.add(expr.index);
+        });
+    }
+    if (procedure.conditional) {
+        forEachExpr({ kind: "expr", expr: procedure.conditional }, (expr) => {
+            if (expr.kind === "var" && expr.scope === "local") mentioned.add(expr.index);
+        });
+    }
+
+    const keep = procedure.locals.map((_local, i) => mentioned.has(base + i));
+    if (keep.every(Boolean)) return procedure;
+
+    const slotMap = new Map<number, number>();
+    for (let arg = 0; arg < base; arg++) slotMap.set(arg, arg);
+    let next = base;
+    procedure.locals.forEach((_local, i) => {
+        if (keep[i]) slotMap.set(base + i, next++);
+    });
+
+    const renumber = (expr: Expr): Expr =>
+        expr.kind === "var" && expr.scope === "local"
+            ? { ...expr, index: slotMap.get(expr.index) ?? expr.index }
+            : expr;
+    return {
+        ...procedure,
+        locals: procedure.locals.filter((_local, i) => keep[i]),
+        body: procedure.body.map((statement) => remapWith(statement, renumber)),
+    };
+}
+
+/**
+ * One procedure through the reference's own pass order, looped until nothing moves.
+ *
+ * The order matters and is not arbitrary: folding exposes constant conditions, dead-code removal deletes
+ * what those conditions decide, that strands stores, and combining assignments creates new folding
+ * opportunities - so the whole set repeats rather than running once.
+ */
+function optimizeProcedure(procedure: ProcedureDecl): ProcedureDecl {
+    let body = procedure.body;
+    let locals = procedure.locals;
+    for (let round = 0; round < 32; round++) {
+        let changed = false;
+
+        const folded = body.map((statement) => remapWith(statement, foldConstants));
+        if (JSON.stringify(folded) !== JSON.stringify(body)) changed = true;
+        body = folded;
+
+        const stores = deadStoreRemoval({ ...procedure, body, locals });
+        body = stores.procedure.body;
+        locals = stores.procedure.locals;
+        changed ||= stores.changed;
+
+        const reduced = foldStatements(body);
+        if (JSON.stringify(reduced) !== JSON.stringify(body)) changed = true;
+        body = reduced;
+
+        const combined = combineAssignments(body);
+        body = combined.body;
+        changed ||= combined.changed;
+
+        if (!changed) break;
+    }
+    return deadVariableRemoval({ ...procedure, body, locals });
 }
 
 /**
@@ -846,28 +949,21 @@ export function optimize(program: Program, options: OptimizeOptions = {}): Progr
             ...input,
             declarations: input.declarations.map((declaration) =>
                 declaration.kind === "procedure"
-                    ? {
-                          kind: "procedure",
-                          // Constants first: a folded condition is what makes a branch droppable. Then
-                          // dead stores, then the locals those stores were the last use of.
-                          procedure: pruneLocals(
-                              dropRedundantStores(
-                                  eliminateDeadStores(
-                                      {
-                                          ...declaration.procedure,
-                                          body: foldStatements(
-                                              declaration.procedure.body.map((s) => remapWith(s, foldConstants)),
-                                          ),
-                                      },
-                                      slotsOf(declaration.procedure),
-                                  ),
-                              ),
-                          ),
-                      }
+                    ? { kind: "procedure", procedure: optimizeProcedure(declaration.procedure) }
                     : declaration,
             ),
         });
-        program = simplify(propagateConstantGlobals(simplify(program)));
+        // The reference's own outer loop: optimise every body, propagate whatever globals that made
+        // constant, and go round again, because a propagated constant can decide a branch that strands
+        // another procedure. It stops when a full round changes nothing.
+        for (let round = 0; round < 16; round++) {
+            const before = program;
+            program = simplify(program);
+            const propagated = propagateConstantGlobals(program);
+            const moved = propagated !== program;
+            program = propagated;
+            if (!moved && JSON.stringify(program) === JSON.stringify(before)) break;
+        }
     }
 
     const keepAllProcedures = hasDynamicProcedureLookup(program);
