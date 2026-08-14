@@ -631,6 +631,16 @@ describe("decompiling", () => {
         );
     });
 
+    it("recovers a timed call as a statement rather than a value", () => {
+        // The scheduler consumes the slot and the delay and leaves nothing behind, so reading this as
+        // an expression would strand a value on the stack and misread everything after it.
+        roundTrips(
+            program([
+                { kind: "timedCallStmt", target: { kind: "procRef", index: 0 }, delay: { kind: "int", value: 5 } },
+            ]),
+        );
+    });
+
     it("reports an opcode it cannot attribute to any engine function", () => {
         const bytes = emitInt(program([{ kind: "libStmt", opcode: 0x8fff, args: [] }]));
         expect(() => decompileToProgram(bytes)).toThrow(/unknown/);

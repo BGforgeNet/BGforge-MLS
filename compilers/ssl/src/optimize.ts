@@ -842,23 +842,27 @@ function deadVariableRemoval(procedure: ProcedureDecl): ProcedureDecl {
         });
     }
 
-    const keep = procedure.locals.map((_local, i) => mentioned.has(base + i));
+    // Locals do not start at `base` once an earlier round has already handed argument slots away: each
+    // reclaimed slot moved the whole local block down one. Reading `mentioned` at the wrong offset drops
+    // a local the body still reads, and the emitter then writes no initialiser for a live slot.
+    const alreadyReclaimed = procedure.reclaimedArgSlots ?? 0;
+    const localBase = base - alreadyReclaimed;
+    const keep = procedure.locals.map((_local, i) => mentioned.has(localBase + i));
 
     // Trailing arguments nothing reads give their slots to the locals. Only trailing ones: the reference
     // marks every argument BELOW a used one as used too, so the ones it frees are always a suffix, and
     // that is what stops the remaining arguments being renumbered out from under the caller.
-    const alreadyReclaimed = procedure.reclaimedArgSlots ?? 0;
     let reclaimable = 0;
-    for (let arg = base - 1; arg >= alreadyReclaimed && !mentioned.has(arg); arg--) reclaimable++;
+    for (let arg = localBase - 1; arg >= 0 && !mentioned.has(arg); arg--) reclaimable++;
     const reclaimed = alreadyReclaimed + reclaimable;
 
     if (keep.every(Boolean) && reclaimable === 0) return procedure;
 
     const slotMap = new Map<number, number>();
-    for (let arg = 0; arg < base - reclaimable; arg++) slotMap.set(arg, arg);
-    let next = base - reclaimable;
+    for (let arg = 0; arg < localBase - reclaimable; arg++) slotMap.set(arg, arg);
+    let next = localBase - reclaimable;
     procedure.locals.forEach((_local, i) => {
-        if (keep[i]) slotMap.set(base + i, next++);
+        if (keep[i]) slotMap.set(localBase + i, next++);
     });
 
     const renumber = (expr: Expr): Expr =>

@@ -188,15 +188,43 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
     });
 
     it.each(CASES)("$name", ({ name, source }) => {
-        const stem = name.replaceAll(/\W+/g, "_");
-        const file = path.join(workDir, `${stem}.ssl`);
-        fs.writeFileSync(file, source);
-        execFileSync(process.execPath, [compiler as string, "-O0", "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
-            cwd: workDir,
-            timeout: SPAWN_TIMEOUT_MS,
-        });
-        const expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
-        const actual = compileFile(parser, file);
-        expect([...actual], `ref ${expected.length} bytes, ours ${actual.length}`).toEqual([...expected]);
+        compareWithReference(parser, name, source, 0);
+    });
+
+    it.each(OPTIMIZED_CASES)("$name at -O2", ({ name, source }) => {
+        compareWithReference(parser, name, source, 2);
     });
 });
+
+/**
+ * Cases for the optimised differential. The corpus sweep in `test/integration` compares whole real
+ * scripts at every level, but only over the shapes real scripts happen to contain - a hand-written case
+ * is the only way to reach the rest, and it runs here rather than there because it needs no checkout.
+ */
+const OPTIMIZED_CASES: Case[] = [
+    {
+        // A trailing argument nothing reads gives its slot to the first local, and the optimiser's
+        // outer loop then re-reads the local block - at its new offset, not the declared one. Reading
+        // it at the old offset dropped `y` while the body still referenced its slot, and the emitter
+        // wrote one initialiser too few.
+        name: "locals after an argument slot is reclaimed",
+        source:
+            "procedure helper(variable a, variable b);\n" +
+            "procedure helper(variable a, variable b) begin\n" +
+            " variable x := 3;\n variable y := 4;\n return a + x + y;\nend\n" +
+            "procedure start begin\n return helper(1, 2);\nend\n",
+    },
+];
+
+function compareWithReference(parser: Parser, name: string, source: string, level: 0 | 2): void {
+    const stem = `${name.replaceAll(/\W+/g, "_")}_O${level}`;
+    const file = path.join(workDir, `${stem}.ssl`);
+    fs.writeFileSync(file, source);
+    execFileSync(process.execPath, [compiler as string, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
+        cwd: workDir,
+        timeout: SPAWN_TIMEOUT_MS,
+    });
+    const expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
+    const actual = compileFile(parser, file, { level });
+    expect([...actual], `ref ${expected.length} bytes, ours ${actual.length}`).toEqual([...expected]);
+}
