@@ -248,6 +248,7 @@ class Emitter {
                     value(stmt.delay);
                     break;
                 case "libStmt":
+                case "opStmt":
                     stmt.args.forEach(value);
                     break;
             }
@@ -505,6 +506,11 @@ class Emitter {
                 for (const argument of statement.args) this.writeExpression(argument);
                 this.w.op(statement.opcode);
                 if (statement.popsResult) this.w.op(Op.POP);
+                break;
+
+            case "opStmt":
+                for (const argument of statement.args) this.writeExpression(argument);
+                this.w.op(statement.opcode);
                 break;
         }
     }

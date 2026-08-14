@@ -12,6 +12,7 @@
 
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { engineFunction } from "./int/engine-functions";
+import { Op } from "./int/opcodes";
 import type {
     AssignOp,
     BinaryOp,
@@ -65,6 +66,21 @@ const ASSIGN_OPS = new Set<string>(["=", ":=", "+=", "-=", "*=", "/="]);
 
 /** The literal nodes a constant expression may end in. */
 const LITERALS = new Set<string>(["number", "string", "char", "boolean"]);
+
+/** Process-control statements to their core opcode. `noop` is absent: it emits nothing at all. */
+const PROCESS_OPCODES: Record<string, number> = {
+    spawn: Op.SPAWN,
+    callstart: Op.CALLSTART,
+    exec: Op.EXEC,
+    fork: Op.FORK,
+    wait: Op.WAIT,
+    cancel: Op.CANCEL,
+    cancelall: Op.CANCELALL,
+    exit: Op.EXIT,
+    detach: Op.DETACH,
+    startcritical: Op.STARTCRITICAL,
+    endcritical: Op.ENDCRITICAL,
+};
 
 /** Marks a literal built inside another array expression, and the terminator that closes one. */
 const ARRAY_FLAG_EXPR_PUSH = 32;
@@ -460,6 +476,9 @@ class Lowering {
                     value: value ? this.lowerExpression(value, scope) : { kind: "int", value: 0 },
                 };
             }
+
+            case "process_stmt":
+                return this.lowerProcessStatement(node, scope);
 
             case "break_stmt":
                 this.requireLoop(node, "break");
@@ -972,6 +991,41 @@ class Lowering {
         const external = this.externals.get(key);
         if (external !== undefined) return { kind: "var", scope: "external", index: 0, name: external };
         throw new LowerError(`unknown procedure '${node.text}'`, node);
+    }
+
+    /**
+     * The process-control statements. `noop` is the one that emits nothing: it is a statement the
+     * language accepts and the code generator drops, not an opcode.
+     */
+    private lowerProcessStatement(node: SyntaxNode, scope: Scope): Stmt | null {
+        const op = node.childForFieldName("op")?.text.toLowerCase();
+        if (!op) throw new LowerError("malformed process statement", node);
+        if (op === "noop") return null;
+        const opcode = PROCESS_OPCODES[op];
+        if (opcode === undefined) throw new LowerError(`unsupported process statement '${op}'`, node);
+        const argument = node.childForFieldName("arg");
+        if (!argument) {
+            // `cancelall` emits its opcode TWICE in the reference - the statement's own token is written
+            // by the generic path and again by the case that handles it. Running it twice is harmless
+            // (the second call finds no events left), and matching it keeps the output byte-identical.
+            if (op === "cancelall") {
+                return {
+                    kind: "block",
+                    body: [
+                        { kind: "opStmt", opcode, args: [] },
+                        { kind: "opStmt", opcode, args: [] },
+                    ],
+                };
+            }
+            return { kind: "opStmt", opcode, args: [] };
+        }
+        // `cancel` names a procedure; everything else takes a value.
+        if (op === "cancel") {
+            const index = this.procedures.get(argument.text.toLowerCase());
+            if (index === undefined) throw new LowerError(`unknown procedure '${argument.text}'`, argument);
+            return { kind: "opStmt", opcode, args: [{ kind: "procRef", index }] };
+        }
+        return { kind: "opStmt", opcode, args: [this.lowerExpression(argument, scope)] };
     }
 
     /** Lowers a loop's body with the loop counted, so a `break` inside it resolves. */

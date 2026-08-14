@@ -1134,3 +1134,33 @@ end
         name: (identifier)
         size: (number)
         flags: (number)))))
+
+================================================================================
+Process control statements
+================================================================================
+
+procedure foo begin
+    startcritical;
+    spawn("child");
+    wait(50);
+    cancel(bar);
+    cancelall;
+    endcritical;
+    exit;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (process_stmt)
+    body: (process_stmt
+      arg: (string))
+    body: (process_stmt
+      arg: (number))
+    body: (process_stmt
+      arg: (identifier))
+    body: (process_stmt)
+    body: (process_stmt)
+    body: (process_stmt)))

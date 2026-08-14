@@ -80,7 +80,13 @@ export type Stmt =
      * A statement-position engine function. Some engine functions return a value even when called as a
      * statement; those set `popsResult` so the unused result is dropped rather than left on the stack.
      */
-    | { kind: "libStmt"; opcode: number; args: Expr[]; popsResult?: boolean };
+    | { kind: "libStmt"; opcode: number; args: Expr[]; popsResult?: boolean }
+    /**
+     * A CORE opcode written as a statement - the process-control set (`spawn`, `wait`, `cancel`, the
+     * critical-section markers). Emitted like a library call but kept apart from one, because the
+     * opcode space is different and a decompiler reading an engine-function table would misname it.
+     */
+    | { kind: "opStmt"; opcode: number; args: Expr[] };
 
 export interface VariableDecl {
     name: string;

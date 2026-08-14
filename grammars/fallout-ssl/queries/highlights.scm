@@ -87,6 +87,10 @@
 "continue" @keyword.return
 "call" @keyword
 
+; Process control: child scripts, suspension, event cancellation, critical sections. Captured through
+; the statement so the words stay ordinary identifiers everywhere else - a script may `#define WAIT (2)`.
+(process_stmt op: _ @keyword)
+
 ; ----- Ternary -----
 
 (ternary_expr "if" @keyword.conditional.ternary)

@@ -301,6 +301,7 @@ export default grammar({
                 $.break_stmt,
                 $.continue_stmt,
                 $.call_stmt,
+                $.process_stmt,
                 $.assignment,
                 $.expression_stmt, // Covers function calls, macro calls, bare identifiers
                 $.empty_statement,
@@ -413,6 +414,38 @@ export default grammar({
         default_clause: ($) => seq(kw("default"), ":", repeat($._statement)),
 
         return_stmt: ($) => seq(kw("return"), optional($._expression), ";"),
+
+        // Process-control statements: the engine runs child scripts, suspends, cancels pending events and
+        // marks critical sections through these. They are keywords ONLY here, at the start of a statement,
+        // because a script may `#define WAIT (2)` and then use that name in an expression - reserving the
+        // word everywhere would turn such a file into a wall of syntax errors.
+        process_stmt: ($) =>
+            choice(
+                seq(
+                    field(
+                        "op",
+                        choice(
+                            kw("exit"),
+                            kw("detach"),
+                            kw("startcritical"),
+                            kw("endcritical"),
+                            kw("cancelall"),
+                            kw("noop"),
+                        ),
+                    ),
+                    ";",
+                ),
+                seq(
+                    field("op", choice(kw("spawn"), kw("callstart"), kw("exec"), kw("fork"), kw("wait"))),
+                    "(",
+                    field("arg", $._expression),
+                    ")",
+                    ";",
+                ),
+                // `cancel` names the procedure whose pending events are dropped, so its argument is a
+                // name rather than a value.
+                seq(field("op", kw("cancel")), "(", field("arg", $.identifier), ")", ";"),
+            ),
 
         break_stmt: ($) => seq(kw("break"), ";"),
 

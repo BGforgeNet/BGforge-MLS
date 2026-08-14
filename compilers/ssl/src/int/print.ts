@@ -25,8 +25,24 @@ import {
     type Stmt,
     type VariableDecl,
 } from "./ir";
+import { Op } from "./opcodes";
 
 const INDENT = "    ";
+
+/** Source spelling of each process-control opcode, for printing one back as a statement. */
+const PROCESS_NAMES: Record<number, string> = {
+    [Op.SPAWN]: "spawn",
+    [Op.CALLSTART]: "callstart",
+    [Op.EXEC]: "exec",
+    [Op.FORK]: "fork",
+    [Op.WAIT]: "wait",
+    [Op.CANCEL]: "cancel",
+    [Op.CANCELALL]: "cancelall",
+    [Op.EXIT]: "exit",
+    [Op.DETACH]: "detach",
+    [Op.STARTCRITICAL]: "startcritical",
+    [Op.ENDCRITICAL]: "endcritical",
+};
 
 export interface PrintOptions {
     /** Prefixed as a comment, naming what the source was recovered from. */
@@ -156,6 +172,12 @@ class Printer {
                 return [
                     `${pad}${this.engineName(statement.opcode)}(${statement.args.map((a) => this.expression(a)).join(", ")});`,
                 ];
+            case "opStmt": {
+                // The no-argument members are written bare, so printing `exit()` would not compile back.
+                const name = PROCESS_NAMES[statement.opcode] ?? `op_${statement.opcode.toString(16)}`;
+                if (statement.args.length === 0) return [`${pad}${name};`];
+                return [`${pad}${name}(${statement.args.map((a) => this.expression(a)).join(", ")});`];
+            }
         }
     }
 

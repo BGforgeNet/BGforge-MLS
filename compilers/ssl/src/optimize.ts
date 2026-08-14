@@ -246,6 +246,7 @@ function forEachExpr(statement: Stmt, visit: (expr: Expr) => void): void {
                 expression(stmt.delay);
                 break;
             case "libStmt":
+            case "opStmt":
                 stmt.args.forEach(expression);
                 break;
             default:
@@ -414,6 +415,7 @@ function remapWith(statement: Stmt, leaf: (expr: Expr) => Expr): Stmt {
                     delay: expression(stmt.delay),
                 };
             case "libStmt":
+            case "opStmt":
                 return { ...stmt, args: stmt.args.map(expression) };
             default:
                 return stmt;

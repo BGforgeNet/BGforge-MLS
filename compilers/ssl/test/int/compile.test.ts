@@ -173,6 +173,30 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
     {
+        // The process-control statements: child scripts, suspension, event cancellation and critical
+        // sections. `cancelall` emits its opcode twice, which is the reference's own duplication.
+        name: "process control statements",
+        source: [
+            "procedure foo;",
+            "procedure foo begin",
+            "   wait(50);",
+            "   detach;",
+            "end",
+            "procedure start begin",
+            "   startcritical;",
+            '   spawn("child");',
+            '   callstart("other");',
+            '   exec("third");',
+            '   fork("fourth");',
+            "   cancel(foo);",
+            "   cancelall;",
+            "   noop;",
+            "   endcritical;",
+            "   exit;",
+            "end",
+        ].join("\n"),
+    },
+    {
         // An engine function that takes nothing is called without parentheses, which is a statement form
         // of its own rather than a bare value.
         name: "engine call without parentheses",
@@ -238,6 +262,12 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
  * is the only way to reach the rest, and it runs here rather than there because it needs no checkout.
  */
 const OPTIMIZED_CASES: Case[] = [
+    {
+        // `cancel` names a procedure, and that name is the only thing keeping it alive: without counting
+        // the reference, the optimiser removes the procedure and cancels something that is no longer there.
+        name: "cancel keeps the procedure it names",
+        source: "procedure foo;\nprocedure foo begin end\nprocedure start begin\n cancel(foo);\n cancelall;\nend\n",
+    },
     {
         // A trailing argument nothing reads gives its slot to the first local, and the optimiser's
         // outer loop then re-reads the local block - at its new offset, not the declared one. Reading
