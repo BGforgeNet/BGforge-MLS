@@ -24,6 +24,27 @@ but not `pnpm build:ssl`. That is deliberate: **the `ssl` CLI carries its own gr
 `build:grammar` does not refresh**, so a probe run through the CLI after a grammar change reports a
 divergence that no longer exists. Rebuild the CLI before trusting anything driven through it.
 
+## Check a refactor with `pnpm ssl-verdicts`, not the corpus sweep either
+
+```bash
+pnpm ssl-verdicts --save tmp/verdicts.txt    # before you start
+pnpm ssl-verdicts --check tmp/verdicts.txt   # after each change
+```
+
+`ssl-diff` answers "does THIS construct match"; this answers "did anything about the corpus change". It
+sweeps every script at every level through this front end only - no reference process, so it costs about a
+minute rather than sixteen - and records one line per script per level: the emitted bytes' digest, or the
+message it was refused with. `--check` reports every difference grouped by what it means (now refused, now
+accepted, bytes changed, first message changed) and exits non-zero if there are any.
+
+That is the gate for a change that is not supposed to alter behaviour at all: a refactor, an error-reporting
+rework, a lowering cleanup. It cannot tell you whether the compiler is RIGHT - only whether it still does
+what it did before you started, which is the question the reference differential is too slow to answer at
+edit-loop speed. A digest rather than a byte count, because equal-length-but-different is exactly what a
+length would miss.
+
+`SSL_CORPUS_ONLY=<stem>` and `SSL_CORPUS_LIMIT=<n>` narrow it, as they do the test suites.
+
 ## Where a finding goes once you have it
 
 `test/int/compile.test.ts` holds a table of hand-written sources compared against the reference at `-O0`,
