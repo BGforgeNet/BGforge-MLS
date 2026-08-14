@@ -345,6 +345,62 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("variable g := ((-7));\nprocedure start begin\n g := g;\nend\n")).not.toThrow();
     });
 
+    it.each([
+        [
+            "a timed procedure marked pure",
+            "pure procedure foo in 5 begin end\nprocedure start begin end\n",
+            /cannot be 'pure'/,
+        ],
+        [
+            "a conditional procedure marked inline",
+            "variable g;\ninline procedure foo when (g) begin end\nprocedure start begin end\n",
+            /cannot be 'inline'/,
+        ],
+        [
+            "a forward-declared inline procedure",
+            "inline procedure foo;\ninline procedure foo begin end\nprocedure start begin call foo; end\n",
+            /cannot be forward-declared/,
+        ],
+        [
+            "a return inside an inline procedure",
+            "inline procedure foo begin return 1; end\nprocedure start begin call foo; end\n",
+            /an inline procedure cannot return/,
+        ],
+        [
+            "a default before a required parameter",
+            "procedure foo(variable a := 1, variable b) begin end\nprocedure start begin call foo(1, 2); end\n",
+            /cannot precede one without/,
+        ],
+        [
+            "a definition that changes the parameter count",
+            "procedure foo(variable a);\nprocedure foo(variable a, variable b) begin end\nprocedure start begin end\n",
+            /declared with 1 parameters/,
+        ],
+        [
+            "a definition that restates a default",
+            "procedure foo(variable a := 1);\nprocedure foo(variable a := 1) begin end\nprocedure start begin call foo; end\n",
+            /defaults belong to that declaration/,
+        ],
+    ])("rejects %s", (_name, source, message) => {
+        expect(refuse(source)).toThrow(message);
+    });
+
+    it("accepts the header shapes those rules leave legal", () => {
+        // The default on the declaration alone, an undeclared procedure carrying its own, and a
+        // redeclaration that simply matches.
+        expect(
+            refuse(
+                "procedure foo(variable a := 1);\nprocedure foo(variable a) begin end\nprocedure start begin call foo; end\n",
+            ),
+        ).not.toThrow();
+        expect(refuse("procedure foo(variable a := 1) begin end\nprocedure start begin call foo; end\n")).not.toThrow();
+        expect(
+            refuse(
+                "procedure foo(variable a);\nprocedure foo(variable a) begin end\nprocedure start begin call foo(1); end\n",
+            ),
+        ).not.toThrow();
+    });
+
     it("rejects an inline procedure used as a value, but not called", () => {
         // `inline` pastes the body into the caller, so there is nothing to take a value from.
         expect(refuse("inline procedure foo begin end\nprocedure start begin\n variable x := foo;\nend\n")).toThrow(
@@ -634,7 +690,9 @@ describe.skipIf(!wasmPresent)("lowering shapes the corpus does not exercise", ()
             "procedure fwd(variable a, variable b := 2);",
             "pure procedure pure_one begin end",
             "inline procedure inline_one begin end",
-            "procedure fwd(variable a, variable b := 2) begin",
+            // The default is stated by the forward declaration alone - restating it here is refused, the
+            // way the language refuses it, so that one declaration owns what a short call pads with.
+            "procedure fwd(variable a, variable b) begin",
             "   return a + b;",
             "end",
             "procedure callee begin return 1; end",

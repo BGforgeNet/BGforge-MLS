@@ -161,6 +161,8 @@ class Lowering {
                 case "procedure_forward":
                 case "procedure": {
                     const name = this.nameOf(child);
+                    this.checkModifiers(child);
+                    if (this.procedures.has(name.toLowerCase())) this.checkRedeclaration(child, name);
                     this.recordParameters(child);
                     if (this.procedures.has(name.toLowerCase())) break;
                     this.declaredAt.set(this.procedures.size, child);
@@ -192,6 +194,40 @@ class Lowering {
     }
 
     /**
+     * What a second declaration of the same procedure may say. The parameter list must match the first
+     * one's length, and the defaults belong to the FIRST declaration alone - restating them on the
+     * definition is refused rather than merged, so there is only ever one statement of what a call pads.
+     */
+    private checkRedeclaration(node: SyntaxNode, name: string): void {
+        const params = node.childForFieldName("params");
+        if (!params) return;
+        const declared = params.namedChildren.filter((c): c is SyntaxNode => Boolean(c) && c.type === "param");
+        const first = this.paramDefaults.get(this.procedures.get(name.toLowerCase()) ?? -1);
+        if (first && declared.length !== first.length) {
+            throw new LowerError(`'${name}' was declared with ${first.length} parameters`, params);
+        }
+        const withDefault = declared.find((param) => param.childForFieldName("default"));
+        if (withDefault) {
+            throw new LowerError(`'${name}' is already declared; its defaults belong to that declaration`, withDefault);
+        }
+    }
+
+    /**
+     * The modifier combinations the language refuses. `inline` is the awkward one: it pastes a body into
+     * its caller, so there is no procedure left to schedule, to forward-declare, or to return from.
+     */
+    private checkModifiers(node: SyntaxNode): void {
+        const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
+        const scheduled = node.childForFieldName("timed") ?? node.childForFieldName("condition");
+        if (scheduled && (modifier === "pure" || modifier === "inline")) {
+            throw new LowerError(`a timed or conditional procedure cannot be '${modifier}'`, scheduled);
+        }
+        if (modifier === "inline" && node.type === "procedure_forward") {
+            throw new LowerError("an inline procedure cannot be forward-declared", node);
+        }
+    }
+
+    /**
      * Parameter defaults are read from whichever declaration states them - a forward declaration and
      * the definition may each carry some - because a call supplying fewer arguments is padded with
      * them at the CALL SITE, so they must be known before any body is lowered.
@@ -204,9 +240,18 @@ class Lowering {
         const existing = this.paramDefaults.get(index) ?? [];
         const defaults: (VariableDecl["initial"] | null)[] = [];
         let position = 0;
+        // A call may only omit a TRAILING run of arguments, so once a parameter carries a default every
+        // parameter after it must too - otherwise the call site cannot tell which one was left out.
+        let optionalSeen = false;
         for (const param of params.namedChildren) {
             if (!param || param.type !== "param") continue;
             const declared = param.childForFieldName("default");
+            if (declared) optionalSeen = true;
+            // `existing` carries defaults a forward declaration stated; one there covers this position
+            // too. Absent is `undefined` when nothing was declared and `null` when it was left blank.
+            else if (optionalSeen && !existing[position]) {
+                throw new LowerError("a parameter with a default cannot precede one without", param);
+            }
             defaults.push(declared ? this.constantOf(declared) : (existing[position] ?? null));
             position++;
         }
@@ -487,6 +532,11 @@ class Lowering {
                 return this.lowerSwitch(node, scope);
 
             case "return_stmt": {
+                // An inline body is pasted into its caller, so a return in it would return from the
+                // CALLER. The language refuses it rather than picking one of the two meanings.
+                if (this.currentTarget?.inline) {
+                    throw new LowerError("an inline procedure cannot return", node);
+                }
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
                 // A bare `return;` returns zero rather than nothing: the language synthesises the value,
                 // so it compiles to the same value-returning sequence as `return 0`.
