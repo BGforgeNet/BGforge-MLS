@@ -79,11 +79,13 @@ function referenceCompiler(): string {
     }
 }
 
-function runReference(compiler: string, workDir: string, stem: string, level: number): Outcome {
-    const out = path.join(workDir, `${stem}-ref.int`);
+function runReference(compiler: string, entry: string, workDir: string, level: number): Outcome {
+    const out = path.join(workDir, `${path.basename(entry, path.extname(entry))}-ref.int`);
     try {
-        execFileSync(process.execPath, [compiler, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}-ref.int`], {
-            cwd: workDir,
+        execFileSync(process.execPath, [compiler, `-O${level}`, "-q", path.basename(entry), "-o", out], {
+            // The source is compiled WHERE IT LIES, so its relative `#include`s resolve as they do in its
+            // own build; only the output goes to the scratch directory.
+            cwd: path.dirname(entry),
             // It reports diagnostics on stdout, so both streams are captured or the refusal reads as silence.
             stdio: ["ignore", "pipe", "pipe"],
             timeout: SPAWN_TIMEOUT_MS,
@@ -128,13 +130,17 @@ function disassemble(bytes: Uint8Array): string {
 async function main(): Promise<number> {
     const args = parseArgs(process.argv.slice(2));
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "ssl-diff-"));
-    const stem = args.file ? path.basename(args.file, path.extname(args.file)) : "snippet";
-    const entry = path.join(workDir, `${stem}.ssl`);
-    // Both compilers read the same file from the same directory, so a relative `#include` resolves the
-    // same way for each - and for a file argument that means copying it, not compiling it where it lies.
-    fs.writeFileSync(entry, args.source ?? fs.readFileSync(args.file!, "utf8"));
+    // A snippet is written to the scratch directory; a real file is compiled where it lies, so that the
+    // headers it includes by relative path resolve exactly as they do in its own build.
+    let entry: string;
+    if (args.file) {
+        entry = path.resolve(args.file);
+    } else {
+        entry = path.join(workDir, "snippet.ssl");
+        fs.writeFileSync(entry, args.source!);
+    }
 
-    const theirs = runReference(referenceCompiler(), workDir, stem, args.level);
+    const theirs = runReference(referenceCompiler(), entry, workDir, args.level);
     const mine = await ours(entry, args.level);
     const agreed = report(mine, theirs, args.level);
 

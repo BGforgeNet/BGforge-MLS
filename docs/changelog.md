@@ -47,6 +47,10 @@
   the editor no longer marks it as a syntax error.
 - Character constants are recognised: `'A'` is 65, with the escapes `'\n'`, `'\t'` and the octal `'\0101'`.
   They were reported as a syntax error, in the editor as well as by the `typescript` compiler.
+- The `typescript` compiler now refuses the same statements the bundled one does, instead of compiling
+  them: a procedure called without `call` (`foo(1);`), a bare variable or expression as a statement, and a
+  parenthesised operand in a global initialiser (`variable g := -(7);` - write `((-7))`). Each of these
+  built here and failed the moment the script was compiled with the bundled compiler.
 - `variable a[10];` now creates its array. The declaration was accepted and then ignored, so the variable
   held nothing and every read of it came back empty. The two-argument form `variable a[10, 2]`, which sets
   the array's flags, was silently read as a plain declaration followed by an unrelated statement; it now

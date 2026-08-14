@@ -63,6 +63,9 @@ const BINARY_OPS = new Set<string>([
 
 const ASSIGN_OPS = new Set<string>(["=", ":=", "+=", "-=", "*=", "/="]);
 
+/** The literal nodes a constant expression may end in. */
+const LITERALS = new Set<string>(["number", "string", "char", "boolean"]);
+
 /** Marks a literal built inside another array expression, and the terminator that closes one. */
 const ARRAY_FLAG_EXPR_PUSH = 32;
 const ARRAY_FLAG_EXPR_POP = 64;
@@ -251,6 +254,10 @@ class Lowering {
             case "unary_expr": {
                 const operand = node.childForFieldName("expr");
                 const op = node.childForFieldName("op")?.text.toLowerCase();
+                // One operator, applied to a LITERAL. The language reads any parentheses before the
+                // operator, so `((-7))` is a constant expression and `-(7)` is not one at all - and
+                // neither is `- -7`, since what follows the operator must be the constant itself.
+                if (operand && !LITERALS.has(operand.type)) break;
                 if (operand && (op === "-" || op === "not" || op === "bwnot")) {
                     const inner = this.constantOf(operand);
                     // `not` and `bwnot` yield an integer whatever they are given: a float is truncated
@@ -862,10 +869,24 @@ class Lowering {
                     return engine.popsResult ? { ...statement, popsResult: true } : statement;
                 }
             }
-            const { callee: target, args, checkArgCount } = this.callParts(node, scope);
-            return { kind: "callStmt", target, args, ...(checkArgCount ? { checkArgCount } : {}) };
+            // Only an ENGINE function may be called as a bare statement. A procedure needs `call`, which
+            // is a statement of its own - writing it bare is an error in the language, so accepting it
+            // here would compile a script the compiler a user actually builds with refuses.
+            const name = callee?.text ?? "it";
+            throw new LowerError(`'${name}' is not an engine function; write 'call ${name}(...)'`, node);
         }
-        return { kind: "expr", expr: this.lowerExpression(node, scope) };
+        // An engine function that takes nothing is written without parentheses: `refresh_pc_art;`. It is
+        // a call, not a bare value, and real scripts use the form constantly.
+        if (node.type === "identifier") {
+            const engine = engineFunction(node.text.toLowerCase(), this.game);
+            if (engine && (engine.args ?? 0) === 0) {
+                const statement: Stmt = { kind: "libStmt", opcode: engine.opcode, args: [] };
+                return engine.popsResult ? { ...statement, popsResult: true } : statement;
+            }
+        }
+        // Everything else in statement position has to assign. A bare variable or expression is not a
+        // statement, and quietly emitting a fetch-and-discard for it hides a typo rather than reporting it.
+        throw new LowerError("assignment operator expected", node);
     }
 
     /**

@@ -173,6 +173,12 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
     {
+        // An engine function that takes nothing is called without parentheses, which is a statement form
+        // of its own rather than a bare value.
+        name: "engine call without parentheses",
+        source: "procedure start begin\n refresh_pc_art;\n game_ui_disable;\nend\n",
+    },
+    {
         // `variable a[10]` both declares the slot and fills it with a fresh array, so a declaration that
         // looks inert emits code. The flags argument is optional and defaults to 4.
         name: "array declarations create their array",

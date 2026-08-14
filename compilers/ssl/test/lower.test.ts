@@ -314,6 +314,37 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n while (1) do begin\n  if (1) then break;\n end\nend\n")).not.toThrow();
     });
 
+    it("rejects a procedure called as a bare statement", () => {
+        // Only an engine function may be called without `call`. Compiling this would produce a script
+        // the compiler the user actually builds with refuses, which is the worse of the two failures.
+        const source =
+            "procedure foo(variable a);\nprocedure foo(variable a) begin end\nprocedure start begin\n foo(1);\nend\n";
+        expect(refuse(source)).toThrow(/^4:2: 'foo' is not an engine function; write 'call foo\(\.\.\.\)'$/);
+    });
+
+    it("rejects a bare variable as a statement", () => {
+        expect(refuse("variable g;\nprocedure start begin\n g;\nend\n")).toThrow(/^3:2: assignment operator expected$/);
+    });
+
+    it("still accepts the statement forms that are not assignments", () => {
+        // An engine call needs no `call`, one that takes nothing needs no parentheses either, and a lone
+        // literal is the language's no-op. The parenthesis-free form appears in nearly every real script,
+        // so rejecting it as "not an assignment" breaks the whole corpus - it did, once.
+        expect(refuse('procedure start begin\n display_msg("x");\n refresh_pc_art;\n 0;\nend\n')).not.toThrow();
+    });
+
+    it.each(["-(7)", "not (0)", "- -7"])("rejects %s as a global initialiser", (initial) => {
+        // Parentheses are read BEFORE the operator, so the operand of a unary has to be the constant
+        // itself. `((-7))` is the same value written the way the language accepts.
+        expect(refuse(`variable g := ${initial};\nprocedure start begin\n g := g;\nend\n`)).toThrow(
+            /initial value must be a literal/,
+        );
+    });
+
+    it("accepts a negation inside the parentheses", () => {
+        expect(refuse("variable g := ((-7));\nprocedure start begin\n g := g;\nend\n")).not.toThrow();
+    });
+
     it("rejects an array declaration outside a procedure", () => {
         // The creation is a statement, so a global has nowhere to run it. Accepting the declaration
         // would leave the slot holding no array, which is worse than refusing it.
