@@ -320,12 +320,14 @@ export const CAPTURE_MAPPINGS: Record<Editor, Readonly<Record<string, string>>> 
         "keyword.modifier": "keyword.storage.modifier",
         "keyword.type": "keyword.storage.type",
         "keyword.directive.define": "keyword.directive",
+        character: "constant.character",
     },
-    // Zed needs no entries: every first segment we use (keyword, function, constant, variable, ...) is a
-    // key its themes define, so its prefix fallback resolves the specific names on its own. Flattening
-    // them here would be worse than doing nothing - it would discard the specific name for the themes
-    // that DO define it.
-    zed: {},
+    // Zed resolves every other capture we emit on its own: the first segment (keyword, function,
+    // constant, variable, ...) is a key its themes define, so its prefix fallback finds the specific
+    // names. Flattening those here would be worse than doing nothing - it would discard the specific name
+    // for the themes that DO define it. `character` is the exception: Zed has no such root, so it needs
+    // the name Zed and Helix share.
+    zed: { character: "constant.character" },
 };
 
 /** Does `editor` style `capture`, directly or through its prefix fallback? */
