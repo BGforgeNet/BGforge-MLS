@@ -1,31 +1,35 @@
 # Changelog
 
-## Unreleased
+## 3.13.2
 
-### Fixes
+### WeiDU TP2
 
-- TP2 no longer reports false syntax errors on `QUICK_MENU`, on the top-level directives
-  `ASK_EVERY_COMPONENT`, `LOAD`, `MENU_STYLE`, `MODDER`, `SCRIPT_STYLE` and `UNINSTALL_ORDER`, or on the
-  component flags `FORCED_SUBCOMPONENT`, `INSTALL_BY_DEFAULT`, `METADATA` and `NO_LOG_RECORD`. A directive
-  written after `README` or another list-taking directive is no longer swallowed by it.
-- `SUBCOMPONENT`, `GROUP` and `FORCED_SUBCOMPONENT` all accept their optional predicate. `LOAD` and
+- No more false syntax errors on `QUICK_MENU`, on the top-level directives `ASK_EVERY_COMPONENT`, `LOAD`,
+  `MENU_STYLE`, `MODDER`, `SCRIPT_STYLE` and `UNINSTALL_ORDER`, or on the component flags
+  `FORCED_SUBCOMPONENT`, `INSTALL_BY_DEFAULT`, `METADATA` and `NO_LOG_RECORD`. A directive written after
+  `README` or another list-taking directive is no longer swallowed by it.
+- `SUBCOMPONENT`, `GROUP` and `FORCED_SUBCOMPONENT` accept their optional predicate. `LOAD` and
   `MENU_STYLE` are offered in completion and highlighted.
-- TP2 `ACTION_PHP_EACH` and `PATCH_PHP_EACH` accept a quoted loop variable, as WeiDU does:
+- `ACTION_PHP_EACH` and `PATCH_PHP_EACH` accept a quoted loop variable, as WeiDU does:
   `ACTION_PHP_EACH arr AS data => ~~ BEGIN`.
-- The formatter lays out `QUICK_MENU` groups one component per line.
-- More TP2 syntax parses instead of reporting a false error: `COPY_LARGE` with several file pairs,
+- More syntax parses instead of reporting a false error: `COPY_LARGE` with several file pairs,
   `APPEND_COL_OUTER`, `ALTER_TLK_LIST`, `PATCH_BASH_FOR`, `GET_FILE_ARRAY`, `GET_DIRECTORY_ARRAY`,
   `RESOURCE_CONTAINS`, `DECOMPRESS_INTO_FILE`, `COMPRESS_INTO_FILE`, `COMPRESS_INTO_VAR`, the female and
   sound variants of `ACTION_GET_STRREF`, `EVAL` as a standalone patch, `STRING_SET` with male/female text
   and sound references, subtraction written without spaces (`%size%-12`), a string whose whole content is
   `//`, and names that start with a digit (functions, macros, parameters and `TO_UPPER` targets).
-- TP2 accepts WeiDU's older spellings of a dozen keywords - `DEFINE_MACRO_ACTION`, `ACTION_INCLUDE`,
-  `SUB_COMPONENT`, `I_S_I` and the rest - and `SUBCOMPONENT` and `GROUP` now take their optional
-  predicate.
-- The formatter no longer drops comments written on the operands of a multi-line condition, and no longer
-  rewraps such a condition differently each time it is formatted.
-- The formatter no longer writes a stray double space before `BEGIN` on `ACTION_BASH_FOR`, `PATCH_BASH_FOR`
-  and `PHP_EACH` loops.
+- WeiDU's older spellings of a dozen keywords are accepted - `DEFINE_MACRO_ACTION`, `ACTION_INCLUDE`,
+  `SUB_COMPONENT`, `I_S_I` and the rest - while completion and highlighting keep offering the canonical
+  spelling.
+
+### Formatter
+
+- `QUICK_MENU` groups are laid out one component per line.
+- Comments written on the operands of a multi-line condition are no longer dropped, and such a condition is
+  no longer rewrapped differently on each reformat.
+- A comment between the file pairs of a `COPY` header no longer flips the rest of the header into patch
+  layout, which moved content on every reformat.
+- No more stray double space before `BEGIN` on `ACTION_BASH_FOR`, `PATCH_BASH_FOR` and `PHP_EACH` loops.
 
 ## 3.13.1
 
