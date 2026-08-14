@@ -23,6 +23,11 @@
 - Formatting a `foreach` loop no longer drops its `while` guard, and keeps the header the way the source
   wrote it rather than adding parentheses around a loop that had none. The guard is part of the loop's
   bounds test, so losing it changed how many times the loop ran.
+- Keywords written in capitals work throughout. `IMPORT VARIABLE` and the `VARIABLE BEGIN ... END` block
+  were still being read case-sensitively, so a script spelling them that way failed to compile even though
+  the language accepts any casing. Formatting such a script previously refused the whole file, reporting a
+  formatter bug; it now reindents it and leaves every keyword spelled the way it was written.
+- Formatting a `for` loop no longer rewrites `variable i := 0` to `variable i = 0`.
 - `critical procedure` is recognised. It marks a procedure the engine runs to completion without
   interleaving other scripts, and combines with `pure` or `inline` when written before them. Highlighting,
   formatting and the `typescript` compiler all handle it.

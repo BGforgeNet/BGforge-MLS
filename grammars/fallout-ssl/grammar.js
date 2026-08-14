@@ -255,8 +255,8 @@ export default grammar({
                 // ternary_expr sits at -1 precisely so `x := 1` followed by a new `if` statement closes
                 // the statement instead of being swallowed. Parenthesising works and is what the
                 // affected scripts can do; see the corpus allowlist entry.
-                prec.right(seq(optional("import"), kw("variable"), commaSep($.var_init), optional(";"))),
-                seq(kw("variable"), kw("begin"), repeat(seq(commaSep($.var_init), ";")), "end"),
+                prec.right(seq(optional(kw("import")), kw("variable"), commaSep($.var_init), optional(";"))),
+                seq(kw("variable"), kw("begin"), repeat(seq(commaSep($.var_init), ";")), kw("end")),
             ),
 
         var_init: ($) =>

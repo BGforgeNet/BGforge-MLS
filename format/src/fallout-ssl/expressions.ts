@@ -6,6 +6,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, isComment, throwFormatError } from "./core";
+import { keywordText } from "../format-utils";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 /** Format an expression node to a string, with optional column tracking for line-breaking. */
@@ -79,7 +80,9 @@ export function formatExpression(
                     node.startPosition.column + 1,
                 );
             }
-            return `variable ${name.text} = ${formatExpression(value)}`;
+            // Same `:=`-or-`=` choice as the sibling assignment below, and the same need to keep it.
+            const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
+            return `${keywordText(node, "variable")} ${name.text} ${op} ${formatExpression(value)}`;
         }
         case "for_init_assign": {
             const name = node.childForFieldName("name");
@@ -134,9 +137,10 @@ function formatBinaryExpr(node: SyntaxNode, column: number = 0, extraLength: num
     const right = node.childForFieldName("right");
     const op = getBinaryOp(node);
 
-    // For logical/bitwise chains, try compact first then break if too long
+    // For logical/bitwise chains, try compact first then break if too long. Matched case-insensitively,
+    // so a source spelling these operators in capitals gets the same line breaking as a lowercase one.
     const breakableOps = ["or", "and", "bwor", "bwand", "bwxor"];
-    if (breakableOps.includes(op)) {
+    if (breakableOps.includes(op.toLowerCase())) {
         const operands = flattenBinaryChain(node, op);
         // Try compact first - format without column info for length check
         const compactOperands = operands.map((o) => formatExpression(o));
