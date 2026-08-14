@@ -11,7 +11,9 @@ CLI exists so the same compiler can be driven from a build script or checked by 
 
 Compiled output is byte-identical to the reference `sslc` compiler at optimization levels 0, 1 and 2,
 across every script in the Fallout modding corpora this repository tests against. The differential that
-holds it there runs at each level in `test/integration/optimize-corpus.test.ts`.
+holds it there runs at each level in `test/integration/optimize-corpus.test.ts`, and
+`test/integration/switch-differential.test.ts` runs both compilers under the same switches so the
+sameness this table claims is observed rather than read off the reference's source.
 
 ## CLI
 
@@ -56,7 +58,7 @@ Everything below is a deliberate difference, not a gap:
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-b`                | Refused. It removes later keywords - `switch`, `for`, `foreach`, `break`, `continue`, `pure`, `inline`, `tokenize` - from the language so old scripts may use them as names. This compiler's grammar has no mode that can express that. |
 | `-O3`               | Honoured as `-O2`, with a warning. The passes above level 2 rename identifiers and share variable slots, both of which the reference's own source marks as known to break code.                                                         |
-| `-p`                | Ignored: this compiler always preprocesses. The reference only runs mcpp when asked, and otherwise handles `#include` and `#define` in its lexer.                                                                                       |
+| `-p`                | Ignored: this compiler always preprocesses. The reference runs mcpp only when asked, so without `-p` its `-m` and `-I` reach nothing and a `#ifdef` is not evaluated at all - it compiles both arms. `#define` its lexer does handle.   |
 | `-F`                | Ignored: this compiler's preprocessor emits no `#line` directives, so there are no paths in them to lengthen. `-P` output therefore carries no line markers.                                                                            |
 | `-q`, `-n`          | Ignored: this compiler never waits for input and emits no warnings, only errors.                                                                                                                                                        |
 | `-m`                | May be repeated, each defining a macro; the reference keeps only the last. A macro that takes parameters is refused rather than silently mis-defined.                                                                                   |
