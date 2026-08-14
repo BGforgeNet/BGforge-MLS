@@ -11,26 +11,21 @@
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
   without a native binary and without writing a temporary file. A script it cannot parse is reported as a
   syntax error at the line it gave up on, and no `.int` is written.
-- The `typescript` compiler now reads `bgforge.falloutSSL.compileOptions` instead of ignoring it, and
-  optimises. `-O1` drops procedures and variables nothing references; `-O2` additionally folds constants,
-  removes unreachable code and dead stores, and reclaims unused slots, producing the same bytes as the
-  bundled compiler at both levels. `-s` compiles `and`/`or` as short-circuit operators - previously it was
-  silently skipped, so the same settings produced different behaviour. `-O3` is honoured as `-O2`: the
-  bundled compiler's own source marks that level's extra passes as known to break code. `-I` and `-m` in
-  that setting are honoured too, so a header directory or a macro defined there applies to both compilers.
-- Formatting a procedure no longer drops its modifiers. `pure` and `inline` were being deleted from the
-  output, which changes what the script compiles to on a file you only asked to reformat.
-- Formatting a `foreach` loop no longer drops its `while` guard, and keeps the header the way the source
-  wrote it rather than adding parentheses around a loop that had none. The guard is part of the loop's
-  bounds test, so losing it changed how many times the loop ran.
-- Keywords written in capitals work throughout. `IMPORT VARIABLE` and the `VARIABLE BEGIN ... END` block
-  were still being read case-sensitively, so a script spelling them that way failed to compile even though
-  the language accepts any casing. Formatting such a script previously refused the whole file, reporting a
-  formatter bug; it now reindents it and leaves every keyword spelled the way it was written.
+- The `typescript` compiler reads `bgforge.falloutSSL.compileOptions` and optimises. `-O1` drops procedures
+  and variables nothing references; `-O2` additionally folds constants, removes unreachable code and dead
+  stores, and reclaims unused slots, producing the same bytes as the bundled compiler at both levels. `-s`
+  compiles `and`/`or` as short-circuit operators. `-O3` is honoured as `-O2`: the bundled compiler's own
+  source marks that level's extra passes as known to break code. `-I` and `-m` in that setting are honoured
+  too, so a header directory or a macro defined there applies to both compilers.
+- Formatting a `foreach` loop no longer drops its `while` guard. The guard is part of the loop's bounds
+  test, so losing it changed how many times the loop ran.
+- Keywords are read in any casing, as the language itself reads them: `PROCEDURE`, `Procedure` and
+  `procedure` are one word to highlighting, completion and compilation. Formatting keeps whichever spelling
+  the source used.
 - Formatting a `for` loop no longer rewrites `variable i := 0` to `variable i = 0`.
-- `critical procedure` is recognised. It marks a procedure the engine runs to completion without
-  interleaving other scripts, and combines with `pure` or `inline` when written before them. Highlighting,
-  formatting and the `typescript` compiler all handle it.
+- Procedure modifiers are recognised: `pure`, `inline` and `critical`. `critical` marks a procedure the
+  engine runs to completion without interleaving other scripts, and combines with `pure` or `inline` when
+  written before them. Highlighting, formatting and compilation all handle them.
 - Timed and guarded procedures are recognised: `procedure foo in 5` fires at a set time, and
   `procedure foo when (cond)` runs only while its condition holds. Scheduling a call with
   `call foo in 10` works too.
@@ -38,9 +33,8 @@
   a side effect, such as a call, is evaluated once rather than twice.
 - `#elif` is supported, and `#error` stops the build with the message the author wrote. `#line` is accepted
   and ignored, so diagnostics keep pointing at the file you can actually open.
-- A procedure that is declared and never defined is now reported, naming the procedure and the line it was
-  declared on. The `typescript` compiler previously accepted such a script and gave the procedure an empty
-  body, so every call to it did nothing at all.
+- A procedure that is declared and never defined is reported, naming the procedure and the line it was
+  declared on.
 - Compiling a script in a directory whose name contains a dot (`fo2.rp`, `mymod.v2`) failed with an opaque
   `ErrnoError undefined undefined` and no output file. The bundled compiler cannot build there at all, so
   this is now reported as such, naming the directory and pointing at the `typescript` compiler, which has
@@ -48,8 +42,6 @@
 - `bgforge.falloutSSL.headersDirectory` is now honoured when the directory's name contains a dot
   (`fo2.rp`, `headers.v2`). Everything after the last dot was being dropped, so the compiler was pointed at
   a directory that does not exist and the headers were never found.
-- The `typescript` compiler decodes the whole set of string escapes. `\a`, `\b`, `\f` and `\v` were left as
-  the letter itself, so a string using them compiled to different bytes than the bundled compiler produces.
 - Two string literals written next to each other are one string, as the bundled compiler has always read
   them: `"ab" "cd"` is `abcd`, and a long message can be split across lines. Both compilers accept it, and
   the editor no longer marks it as a syntax error.
@@ -65,19 +57,15 @@
   `wait` suspends, `cancel` and `cancelall` drop pending events, `startcritical` and `endcritical` mark a
   critical section, and `exit`, `detach` and `noop` do what they say. They were reported as syntax errors
   in the editor and refused by the `typescript` compiler; the engine has always run them.
-- The `typescript` compiler now refuses the same statements the bundled one does, instead of compiling
-  them: a procedure called without `call` (`foo(1);`), a bare variable or expression as a statement, and a
-  parenthesised operand in a global initialiser (`variable g := -(7);` - write `((-7))`). Each of these
-  built here and failed the moment the script was compiled with the bundled compiler.
-- `variable a[10];` now creates its array. The declaration was accepted and then ignored, so the variable
-  held nothing and every read of it came back empty. The two-argument form `variable a[10, 2]`, which sets
-  the array's flags, was silently read as a plain declaration followed by an unrelated statement; it now
-  parses as one declaration. Declaring an array outside a procedure is reported rather than ignored.
-- A global initialiser accepts `not` and `bwnot`, not only a negation: `variable g := not 0;` compiles
-  instead of being rejected as a non-literal.
-- `break` or `continue` written outside a loop is reported at the statement instead of being compiled.
-  `break` produced a jump to whatever address happened to be on the stack, so the script built and then
-  misbehaved in-game; `continue` was reported without a line, landing the diagnostic on line 1.
+- The `typescript` compiler refuses the same statements the bundled one does: a procedure called without
+  `call` (`foo(1);`), a bare variable or expression as a statement, and a parenthesised operand in a global
+  initialiser (`variable g := -(7);` - write `((-7))`).
+- `variable a[10];` creates its array. The two-argument form `variable a[10, 2]`, which sets the array's
+  flags, was read as a plain declaration followed by an unrelated statement; it now parses as one
+  declaration. Declaring an array outside a procedure is reported.
+- A global initialiser accepts `not` and `bwnot`, not only a negation: `variable g := not 0;` compiles.
+- `break` or `continue` written outside a loop is reported at the statement. The language has no such jump
+  to make there, so a script using one built and then misbehaved in-game.
 - Several engine function signatures were wrong and are corrected: nine had the wrong number of arguments
   (`give_exp_points`, `explosion`, `gSay_End` and six others), `art_anim` and `critter_heal` were shown as
   returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing
