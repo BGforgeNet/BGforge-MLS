@@ -636,11 +636,13 @@ export default grammar({
         // ## in those positions does not occur in real SSL macro bodies.
         token_paste_identifier: ($) => seq($.identifier, repeat1(seq($._token_paste, $.identifier))),
 
+        // A STRING may be the callee: `"node_" + n` is not it, but a literal `"foo"(1)` calls the
+        // procedure named by the string, resolved by the engine at run time.
         call_expr: ($) =>
             prec(
                 12,
                 seq(
-                    field("func", choice($.identifier, $.token_paste_identifier)),
+                    field("func", choice($.identifier, $.token_paste_identifier, $.string)),
                     "(",
                     field("args", optional(commaSep($._expression))),
                     ")",

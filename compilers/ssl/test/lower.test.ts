@@ -345,6 +345,14 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("variable g := ((-7));\nprocedure start begin\n g := g;\nend\n")).not.toThrow();
     });
 
+    it("rejects an inline procedure used as a value, but not called", () => {
+        // `inline` pastes the body into the caller, so there is nothing to take a value from.
+        expect(refuse("inline procedure foo begin end\nprocedure start begin\n variable x := foo;\nend\n")).toThrow(
+            /'foo' is an inline procedure and has no value/,
+        );
+        expect(refuse("inline procedure foo begin end\nprocedure start begin\n call foo;\nend\n")).not.toThrow();
+    });
+
     it.each(["/", "%", "div"])("rejects division by a literal zero with %s", (op) => {
         expect(refuse(`procedure start begin\n variable x;\n x := 7 ${op} 0;\nend\n`)).toThrow(/division by zero/);
     });

@@ -173,6 +173,12 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
     {
+        // The callee may be a string: the engine resolves the name at run time, so the call carries an
+        // argument-count check rather than a resolved procedure slot.
+        name: "a string names the procedure to call",
+        source: 'procedure start begin\n variable x;\n x := "foo"(1);\n x := "bar"();\nend\n',
+    },
+    {
         // The process-control statements: child scripts, suspension, event cancellation and critical
         // sections. `cancelall` emits its opcode twice, which is the reference's own duplication.
         name: "process control statements",

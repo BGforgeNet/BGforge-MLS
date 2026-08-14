@@ -123,6 +123,8 @@ class Lowering {
     private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
     /** Where each procedure slot was first named, so an undefined one can be reported at its declaration. */
     private readonly declaredAt = new Map<number, SyntaxNode>();
+    /** Procedure slots declared `inline`, which may be called but never used as a value. */
+    private readonly inlineProcedures = new Set<number>();
     private readonly undefinedProcedures: UndefinedProcedure[] = [];
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
@@ -164,6 +166,7 @@ class Lowering {
                     this.declaredAt.set(this.procedures.size, child);
                     this.procedures.set(name.toLowerCase(), this.procedures.size);
                     const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
+                    if (modifier === "inline") this.inlineProcedures.add(this.procedures.size - 1);
                     this.declarations.push({
                         kind: "procedure",
                         procedure: {
@@ -996,6 +999,8 @@ class Lowering {
      * parameter carries its own name still recurse rather than call its argument.
      */
     private procedureRef(node: SyntaxNode, scope: Scope): Expr {
+        // `"name"(args)` calls the procedure the STRING names, which the engine resolves at run time.
+        if (node.type === "string") return this.constantOf(node);
         if (node.type !== "identifier") throw new LowerError(`cannot call a '${node.type}'`, node);
         const key = node.text.toLowerCase();
         const index = this.procedures.get(key);
@@ -1260,6 +1265,16 @@ class Lowering {
      * of any scope shadows a procedure of the same name. `procedureRef` deliberately inverts that last
      * step, so `name(...)` calls the procedure while a bare `name` reads the variable.
      */
+    /**
+     * An `inline` procedure is pasted into its caller rather than called, so it has no value to yield and
+     * cannot appear in an expression. Calling one as a statement is what the modifier is for.
+     */
+    private refuseInlineInExpression(index: number, node: SyntaxNode): void {
+        if (this.inlineProcedures.has(index)) {
+            throw new LowerError(`'${node.text}' is an inline procedure and has no value`, node);
+        }
+    }
+
     private reference(node: SyntaxNode, scope: Scope): Expr {
         const key = node.text.toLowerCase();
         const slot = scope.slots.get(key);
@@ -1275,7 +1290,10 @@ class Lowering {
         // A bare procedure name in expression position CALLS it with no arguments rather than yielding
         // its index - `@name` is the spelling that yields the index.
         const procedure = this.procedures.get(key);
-        if (procedure !== undefined) return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
+        if (procedure !== undefined) {
+            this.refuseInlineInExpression(procedure, node);
+            return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
+        }
         throw new LowerError(`unknown identifier '${node.text}'`, node);
     }
 }
