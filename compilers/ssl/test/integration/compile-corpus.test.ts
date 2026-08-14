@@ -17,7 +17,6 @@
  * reason, because an exclusion nobody can see is a comparison that quietly shrank.
  */
 
-import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -27,8 +26,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { CORPUS_SIZE, listScripts } from "./corpus.ts";
+import { CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -106,33 +104,12 @@ describe.skipIf(!ready)("real corpus compiles to matching bytecode", () => {
             let expected: Uint8Array;
             try {
                 fs.writeFileSync(path.join(workDir, `${stem}.ssl`), text);
-                execFileSync(process.execPath, [compiler as string, "-O0", "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
-                    cwd: workDir,
-                    // The reference reports its diagnostics on STDOUT, not stderr, so both are captured -
-                    // discarding either leaves an exclusion that can only be reported as a bare exit code.
-                    stdio: ["ignore", "pipe", "pipe"],
-                    timeout: SPAWN_TIMEOUT_MS,
-                });
+                runReference(compiler as string, workDir, stem, 0);
                 expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
                 oracles++;
             } catch (error) {
-                const { status, signal, stdout, stderr } = error as {
-                    status?: number;
-                    signal?: string;
-                    stdout?: Buffer;
-                    stderr?: Buffer;
-                };
-                const why = signal ? `killed by ${signal}` : `exit ${status ?? "?"}`;
-                // The last [Error] line, or failing that whatever it said last - the banner and the
-                // per-procedure warnings ahead of it are noise at this scale.
-                const said = `${stdout?.toString() ?? ""}${stderr?.toString() ?? ""}`
-                    .split("\n")
-                    .map((line) => line.trim())
-                    .filter(Boolean)
-                    .filter((line) => !line.startsWith("[Warning]") && !line.startsWith("***"));
-                excluded.push(
-                    `${stem} (${why}): ${said.findLast((l) => l.includes("[Error]")) ?? said.at(-1) ?? "silent"}`,
-                );
+                if (!(error instanceof ReferenceRefusedError)) throw error;
+                excluded.push(`${stem} (${error.why}): ${error.reason}`);
                 excludedStems.push(stem);
                 continue;
             }

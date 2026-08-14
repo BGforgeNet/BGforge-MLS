@@ -13,7 +13,6 @@
  * literal left interned by code that no longer exists, which shifts every later string offset.
  */
 
-import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -23,8 +22,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { CORPUS_SIZE, listScripts } from "./corpus.ts";
+import { CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -38,28 +36,6 @@ const ORACLE_FLOOR = 1400;
  * undefined SYMBOLS, which no amount of dead-code elimination makes go away.
  */
 const KNOWN_REJECTIONS = ["waypnt", "waypnt", "zccorpse"];
-
-/**
- * One reference invocation, retried once if the child is KILLED rather than exiting.
- *
- * The bundled compiler hangs about one spawn in several thousand, on a script it compiles in under a
- * tenth of a second every other time - `scgond` was killed at the two-minute bound here and takes 90ms
- * on its own. That is the external flake this retry exists for, and nothing else: a real rejection exits
- * with a status and is not retried, so the pinned exclusion list below still fails loudly when the
- * reference genuinely refuses a script.
- */
-function runReference(compiler: string, cwd: string, stem: string, level: number): void {
-    const args = [compiler, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}.int`];
-    for (let attempt = 0; ; attempt++) {
-        try {
-            execFileSync(process.execPath, args, { cwd, stdio: ["ignore", "pipe", "pipe"], timeout: SPAWN_TIMEOUT_MS });
-            return;
-        } catch (error) {
-            const killed = (error as { signal?: string }).signal !== undefined;
-            if (!killed || attempt > 0) throw error;
-        }
-    }
-}
 
 function findCompiler(): string | null {
     try {
@@ -117,21 +93,8 @@ describe.skipIf(!ready).each([1, 2] as const)("the real corpus optimises to matc
                 expected = new Uint8Array(fs.readFileSync(path.join(workDir, `${stem}.int`)));
                 oracles++;
             } catch (error) {
-                const { status, signal, stdout, stderr } = error as {
-                    status?: number;
-                    signal?: string;
-                    stdout?: Buffer;
-                    stderr?: Buffer;
-                };
-                const why = signal ? `killed by ${signal}` : `exit ${status ?? "?"}`;
-                const said = `${stdout?.toString() ?? ""}${stderr?.toString() ?? ""}`
-                    .split("\n")
-                    .map((line) => line.trim())
-                    .filter(Boolean)
-                    .filter((line) => !line.startsWith("[Warning]") && !line.startsWith("***"));
-                excluded.push(
-                    `${stem} (${why}): ${said.findLast((l) => l.includes("[Error]")) ?? said.at(-1) ?? "silent"}`,
-                );
+                if (!(error instanceof ReferenceRefusedError)) throw error;
+                excluded.push(`${stem} (${error.why}): ${error.reason}`);
                 excludedStems.push(stem);
                 continue;
             }

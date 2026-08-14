@@ -11,9 +11,11 @@
  * run that saw fewer, which is the symptom this exists to catch.
  */
 
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
 
 export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 
@@ -34,6 +36,65 @@ function narrow(scripts: string[]): string[] {
     if (only) return scripts.filter((s) => path.basename(s, path.extname(s)) === only);
     const limit = Number(process.env.SSL_CORPUS_LIMIT ?? 0);
     return limit > 0 ? scripts.slice(0, limit) : scripts;
+}
+
+/**
+ * How many times a KILLED reference invocation is retried before its script is counted as excluded.
+ *
+ * The bundled compiler wedges roughly one spawn in several thousand, on a script it otherwise compiles in
+ * under a tenth of a second - `scgond` and later `dcpengrd` (177 lines) each hit the two-minute bound and
+ * then compiled in milliseconds when run alone. Two, not one: on 2026-08-14 `dcpengrd` hung on the retry
+ * as well, which reddened a sweep whose 1521 other oracles all matched.
+ */
+const KILL_RETRIES = 2;
+
+/** What the reference said when it refused a script, and how it ended. */
+export class ReferenceRefusedError extends Error {
+    readonly why: string;
+    readonly said: readonly string[];
+
+    constructor(why: string, said: readonly string[]) {
+        super(`${why}: ${said.at(-1) ?? "silent"}`);
+        this.name = "ReferenceRefusedError";
+        this.why = why;
+        this.said = said;
+    }
+
+    /** The last real error line, which is the one worth reporting; the banner above it is noise. */
+    get reason(): string {
+        return this.said.findLast((line) => line.includes("[Error]")) ?? this.said.at(-1) ?? "silent";
+    }
+}
+
+/**
+ * One reference invocation against `<stem>.ssl` in `cwd`, retried while the child is KILLED rather than
+ * exiting. A real rejection exits with a status and is never retried, so a pinned exclusion list still
+ * fails loudly when the reference genuinely refuses a script.
+ */
+export function runReference(compiler: string, cwd: string, stem: string, level: number): void {
+    const args = [compiler, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}.int`];
+    for (let attempt = 0; ; attempt++) {
+        try {
+            execFileSync(process.execPath, args, { cwd, stdio: ["ignore", "pipe", "pipe"], timeout: SPAWN_TIMEOUT_MS });
+            return;
+        } catch (error) {
+            const { status, signal, stdout, stderr } = error as {
+                status?: number;
+                signal?: string;
+                stdout?: Buffer;
+                stderr?: Buffer;
+            };
+            if (signal !== undefined && attempt < KILL_RETRIES) continue;
+            // Diagnostics come back on STDOUT, not stderr, so both are read or the refusal reports as a
+            // bare exit code.
+            const said = `${stdout?.toString() ?? ""}${stderr?.toString() ?? ""}`
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .filter((line) => !line.startsWith("[Warning]") && !line.startsWith("***"));
+            throw new ReferenceRefusedError(signal ? `killed by ${signal}` : `exit ${status ?? "?"}`, said);
+        }
+    }
 }
 
 /** Every corpus script, sorted. `template` holds deliberately malformed inputs; `sfall` is a header symlink. */
