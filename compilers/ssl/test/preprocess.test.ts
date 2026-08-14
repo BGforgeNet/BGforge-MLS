@@ -370,3 +370,89 @@ describe("directives the toolchain itself rejects bail loudly", () => {
         expect(() => run({ "main.ssl": `#ifdef NOPE\n#${directive}\n#endif` })).toThrow(PreprocessError);
     });
 });
+
+/**
+ * Every directive problem in one pass, rather than one per build.
+ *
+ * The preprocessor is the one stage where collecting is unambiguously right: its errors are independent
+ * of each other - an unknown directive on line 3 tells you nothing about a missing header on line 20 -
+ * and the compile stops before lowering either way, so a skipped `#include` never gets the chance to
+ * turn into a hundred unknown-name errors downstream.
+ */
+describe("reporting more than one problem", () => {
+    /** The whole list a refused run carries. */
+    function errorsOf(files: Record<string, string>, entry = "main.ssl"): readonly PreprocessError[] {
+        for (const [name, body] of Object.entries(files)) {
+            const target = path.join(dir, name);
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, body);
+        }
+        try {
+            preprocess(path.join(dir, entry));
+        } catch (error) {
+            if (error instanceof PreprocessError) return error.all;
+            throw error;
+        }
+        throw new Error("expected preprocessing to be refused");
+    }
+
+    it("names every bad directive, not just the first", () => {
+        const errors = errorsOf({ "main.ssl": "#bogus\nx := 1;\n#warning hm\n#alsobogus\n" });
+
+        expect(errors.map((e) => e.line)).toEqual([1, 3, 4]);
+        expect(errors.map((e) => e.detail)).toEqual([
+            "unknown directive #bogus",
+            "#warning is not supported",
+            "unknown directive #alsobogus",
+        ]);
+    });
+
+    it("keeps scanning past a header it cannot find", () => {
+        const errors = errorsOf({ "main.ssl": '#include "nope.h"\n#bogus\n' });
+
+        expect(errors.map((e) => e.detail)).toEqual(['cannot find include "nope.h"', "unknown directive #bogus"]);
+    });
+
+    it("reports problems in an included header against the header", () => {
+        const errors = errorsOf({ "main.ssl": '#include "bad.h"\n#bogus\n', "bad.h": "#nonsense\n" });
+
+        expect(errors[0]).toMatchObject({ line: 1, detail: "unknown directive #nonsense" });
+        expect(errors[0]!.file).toMatch(/bad\.h$/);
+        expect(errors[1]!.file).toMatch(/main\.ssl$/);
+    });
+
+    it("takes an unevaluable condition as false and carries on", () => {
+        const errors = errorsOf({ "main.ssl": "#if (1\n#endif\n#bogus\n" });
+
+        expect(errors.map((e) => e.detail)).toEqual(["unbalanced ( in #if", "unknown directive #bogus"]);
+    });
+
+    it("reports an unbalanced conditional at the end of the file", () => {
+        const errors = errorsOf({ "main.ssl": "#endif\n#ifdef A\nx := 1;\n" });
+
+        expect(errors.map((e) => e.detail)).toEqual(["#endif without #if", "unterminated #if"]);
+    });
+
+    it("folds a header's errors when two files include it unguarded", () => {
+        // Otherwise every error in a widely-included header is repeated once per includer, which buries
+        // the one mistake that is actually in the file the user is editing.
+        const errors = errorsOf({
+            "main.ssl": '#include "a.h"\n#include "b.h"\n',
+            "a.h": '#include "bad.h"\n',
+            "b.h": '#include "bad.h"\n',
+            "bad.h": "#nonsense\n",
+        });
+
+        expect(errors).toHaveLength(1);
+    });
+
+    it("keeps the first error's message and position exactly as a single-error run had them", () => {
+        // The language server places the diagnostic from these, and a caller that shows one error still
+        // shows this one, so the aggregate may not change how the first one reads.
+        expect(() => run({ "main.ssl": "x := 1;\n#bogus\n#alsobogus\n" })).toThrow(/main\.ssl:2: unknown directive/);
+        expect(errorsOf({ "main.ssl": "x := 1;\n#bogus\n#alsobogus\n" })[0]).toMatchObject({
+            line: 2,
+            detail: "unknown directive #bogus",
+        });
+    });
+});

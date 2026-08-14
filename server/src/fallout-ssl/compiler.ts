@@ -213,15 +213,15 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
  */
 function toDiagnostics(error: unknown, tmpPath: string) {
     if (error instanceof PreprocessError) {
-        return [
-            {
-                uri: pathToUri(error.file),
-                line: error.line,
-                columnStart: 0,
-                columnEnd: 0,
-                message: error.message,
-            },
-        ];
+        // Each keeps its own file: a header included from this script reports against the header, which
+        // is the file the user has to open to fix it.
+        return error.all.map((one) => ({
+            uri: pathToUri(one.file),
+            line: one.line,
+            columnStart: 0,
+            columnEnd: 0,
+            message: one.message,
+        }));
     }
     if (error instanceof CompileError && error.diagnostics.length > 0) {
         return error.diagnostics.map((diagnostic) => ({

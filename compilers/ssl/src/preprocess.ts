@@ -51,14 +51,35 @@ export interface PreprocessOptions {
 export class PreprocessError extends Error {
     readonly file: string;
     readonly line: number;
+    /** The complaint without the `file:line:` prefix, so an aggregate can be rebuilt from one of these. */
+    readonly detail: string;
+    /**
+     * Every problem the run found, this one first.
+     *
+     * A caller that can only show one error shows this one and behaves exactly as it did before the
+     * preprocessor learned to collect them; one that can show more reads the list. A directive error
+     * usually invalidates the translation unit - a header that could not be found takes every
+     * declaration it carried with it - so these are reported and the compile stops, rather than being
+     * carried into a lowering pass that would report hundreds of unknown names derived from them.
+     */
+    readonly all: readonly PreprocessError[];
 
-    constructor(message: string, file: string, line: number) {
-        super(`${file}:${line}: ${message}`);
+    constructor(detail: string, file: string, line: number, all: readonly PreprocessError[] = []) {
+        super(`${file}:${line}: ${detail}`);
         this.name = "PreprocessError";
         this.file = file;
         this.line = line;
+        this.detail = detail;
+        this.all = all.length > 0 ? all : [this];
     }
 }
+
+/**
+ * How many complaints one run reports before it gives up collecting. A file whose conditionals are badly
+ * unbalanced can produce one per directive for the rest of the file, and past the first screenful they
+ * are all the same mistake seen again.
+ */
+const MAX_ERRORS = 100;
 
 // ---------------------------------------------------------------------------
 // Lexing
@@ -484,6 +505,37 @@ interface State {
     out: string[];
     options: PreprocessOptions;
     depth: number;
+    errors: PreprocessError[];
+}
+
+/**
+ * Records a complaint and says whether to keep going. The same header included twice by two files that
+ * do not guard it repeats every error inside it, so identical complaints are folded.
+ */
+function record(state: State, error: PreprocessError): boolean {
+    const seen = state.errors.some(
+        (other) => other.file === error.file && other.line === error.line && other.detail === error.detail,
+    );
+    if (!seen) state.errors.push(error);
+    return state.errors.length < MAX_ERRORS;
+}
+
+/**
+ * Runs a step that reports by throwing, and folds its refusal into the collected list.
+ *
+ * `evalCondition` and `parseDefine` are recursive-descent parsers that report from deep inside
+ * themselves; threading a collector through them would tangle both to no benefit, since neither has any
+ * useful way to continue past its own error. Catching at the call site keeps the recovery decision -
+ * which arm to take, which definition to drop - where the surrounding context can make it.
+ */
+function attempt<T>(state: State, step: () => T): T | null {
+    try {
+        return step();
+    } catch (error) {
+        if (!(error instanceof PreprocessError)) throw error;
+        record(state, error);
+        return null;
+    }
 }
 
 function parseDefine(rest: string, file: string, line: number): Macro {
@@ -520,7 +572,8 @@ function resolveInclude(rawSpec: string, fromDir: string, options: PreprocessOpt
 
 function processFile(file: string, state: State): void {
     if (state.depth > (state.options.maxIncludeDepth ?? 64)) {
-        throw new PreprocessError("include nesting too deep", file, 0);
+        record(state, new PreprocessError("include nesting too deep", file, 0));
+        return;
     }
     // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
     const lines = stripComments(spliceLines(fs.readFileSync(file, "latin1"))).split(/\r?\n/);
@@ -550,24 +603,36 @@ function processFile(file: string, state: State): void {
             case "if": {
                 const parentActive = emitting();
                 // A nested #if inside a dead branch is never evaluated - its operands may be meaningless.
-                const want = parentActive && evalCondition(rest, state.expander, state.macros, file, n + 1);
+                // A condition that will not evaluate is taken as false, which is the reading that keeps
+                // the rest of the file scannable; the complaint is already recorded either way.
+                const want =
+                    parentActive &&
+                    (attempt(state, () => evalCondition(rest, state.expander, state.macros, file, n + 1)) ?? false);
                 stack.push({ active: want, taken: want, parentActive });
                 break;
             }
             case "else": {
                 const top = stack[stack.length - 1];
-                if (top === undefined) throw new PreprocessError("#else without #if", file, n + 1);
+                if (top === undefined) {
+                    if (!record(state, new PreprocessError("#else without #if", file, n + 1))) return;
+                    break;
+                }
                 top.active = top.parentActive && !top.taken;
                 top.taken = true;
                 break;
             }
             case "endif": {
-                if (stack.pop() === undefined) throw new PreprocessError("#endif without #if", file, n + 1);
+                if (stack.pop() === undefined) {
+                    if (!record(state, new PreprocessError("#endif without #if", file, n + 1))) return;
+                }
                 break;
             }
             case "elif": {
                 const top = stack[stack.length - 1];
-                if (top === undefined) throw new PreprocessError("#elif without #if", file, n + 1);
+                if (top === undefined) {
+                    if (!record(state, new PreprocessError("#elif without #if", file, n + 1))) return;
+                    break;
+                }
                 // A group takes at most one branch: once something has been taken this arm is dead and
                 // its condition is never evaluated, which matters because the operands of a dead arm may
                 // be meaningless (the guard clause of a `defined`-style chain relies on exactly that).
@@ -575,15 +640,19 @@ function processFile(file: string, state: State): void {
                     top.active = false;
                     break;
                 }
-                const want = top.parentActive && evalCondition(rest, state.expander, state.macros, file, n + 1);
+                const want =
+                    top.parentActive &&
+                    (attempt(state, () => evalCondition(rest, state.expander, state.macros, file, n + 1)) ?? false);
                 top.active = want;
                 top.taken = want;
                 break;
             }
             case "define": {
                 if (!emitting()) break;
-                const macro = parseDefine(rest, file, n + 1);
-                state.macros.set(macro.name, macro);
+                // A definition that will not parse is skipped rather than guessed at. Uses of the name go
+                // on to expand to nothing, but the run is already doomed, so nothing downstream sees it.
+                const macro = attempt(state, () => parseDefine(rest, file, n + 1));
+                if (macro) state.macros.set(macro.name, macro);
                 break;
             }
             case "undef": {
@@ -596,10 +665,18 @@ function processFile(file: string, state: State): void {
                 // A computed include names its header through a macro, so expand before matching.
                 let spec = INCLUDE_OPERAND.exec(rest);
                 if (spec === null) spec = INCLUDE_OPERAND.exec(state.expander.expandText(rest));
-                if (spec === null) throw new PreprocessError(`malformed #include: ${rest.trim()}`, file, n + 1);
+                if (spec === null) {
+                    if (!record(state, new PreprocessError(`malformed #include: ${rest.trim()}`, file, n + 1))) return;
+                    break;
+                }
                 const target = spec[1] ?? spec[2] ?? "";
                 const resolved = resolveInclude(target, dir, state.options);
-                if (resolved === null) throw new PreprocessError(`cannot find include "${target}"`, file, n + 1);
+                if (resolved === null) {
+                    // Skipping the header loses every declaration it carried, which would be a disaster if
+                    // the run continued into lowering - it does not, which is why this can be collected.
+                    if (!record(state, new PreprocessError(`cannot find include "${target}"`, file, n + 1))) return;
+                    break;
+                }
                 state.depth++;
                 processFile(resolved, state);
                 state.depth--;
@@ -613,8 +690,9 @@ function processFile(file: string, state: State): void {
                 break;
             case "error":
                 // The whole point of the directive is to stop the build with the author's own message.
-                // Inert in a dead branch, where its operands are not meant to be read at all.
-                if (emitting()) throw new PreprocessError(`#error ${rest.trim()}`, file, n + 1);
+                // Inert in a dead branch, where its operands are not meant to be read at all. Scanning
+                // continues so the rest of the file is still checked, but the build stops all the same.
+                if (emitting() && !record(state, new PreprocessError(`#error ${rest.trim()}`, file, n + 1))) return;
                 break;
             case "line":
                 // Renumbering only affects diagnostics, and ours are reported against the real file, so
@@ -629,12 +707,22 @@ function processFile(file: string, state: State): void {
                 // Deliberately refused even inside a branch being skipped. A conforming preprocessor may
                 // ignore these there, but silence is the wrong default for a directive we cannot honour:
                 // being loud is recoverable by implementing it, being silent is not detectable at all.
-                if (UNSUPPORTED.has(name)) throw new PreprocessError(`#${name} is not supported`, file, n + 1);
-                throw new PreprocessError(`unknown directive #${name}`, file, n + 1);
+                if (
+                    !record(
+                        state,
+                        new PreprocessError(
+                            UNSUPPORTED.has(name) ? `#${name} is not supported` : `unknown directive #${name}`,
+                            file,
+                            n + 1,
+                        ),
+                    )
+                ) {
+                    return;
+                }
         }
     }
 
-    if (stack.length > 0) throw new PreprocessError("unterminated #if", file, lines.length);
+    if (stack.length > 0) record(state, new PreprocessError("unterminated #if", file, lines.length));
 }
 
 /** Preprocess `entry` and return the translation unit, directives removed and macros expanded. */
@@ -643,7 +731,9 @@ export function preprocess(entry: string, options: PreprocessOptions = {}): stri
     for (const [name, body] of Object.entries(options.defines ?? {})) {
         macros.set(name, { name, params: null, body, variadic: false });
     }
-    const state: State = { macros, expander: new Expander(macros), out: [], options, depth: 0 };
+    const state: State = { macros, expander: new Expander(macros), out: [], options, depth: 0, errors: [] };
     processFile(path.resolve(entry), state);
+    const first = state.errors[0];
+    if (first) throw new PreprocessError(first.detail, first.file, first.line, state.errors);
     return state.out.join("\n");
 }
