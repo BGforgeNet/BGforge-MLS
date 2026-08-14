@@ -345,6 +345,19 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("variable g := ((-7));\nprocedure start begin\n g := g;\nend\n")).not.toThrow();
     });
 
+    it.each(["/", "%", "div"])("rejects division by a literal zero with %s", (op) => {
+        expect(refuse(`procedure start begin\n variable x;\n x := 7 ${op} 0;\nend\n`)).toThrow(/division by zero/);
+    });
+
+    it("rejects a chained comparison but not a parenthesised one", () => {
+        const chain = "procedure start begin\n variable a;\n variable b;\n variable c;\n a := b == c == 1;\nend\n";
+        expect(refuse(chain)).toThrow(/comparisons do not chain/);
+        // Parentheses make the inner comparison an operand, which the language does accept.
+        expect(
+            refuse("procedure start begin\n variable a;\n variable b;\n variable c;\n a := (b == c) == 1;\nend\n"),
+        ).not.toThrow();
+    });
+
     it("rejects an array declaration outside a procedure", () => {
         // The creation is a statement, so a global has nowhere to run it. Accepting the declaration
         // would leave the slot holding no array, which is worse than refusing it.

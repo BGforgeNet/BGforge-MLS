@@ -187,8 +187,38 @@ describe.skipIf(!wasmPresent)("level 2 constant folding", () => {
         expect(foldedValue("7 div 2")).toEqual(int(3));
     });
 
-    it("leaves a division by zero for the engine to decide", () => {
-        expect(foldedValue("1 / 0")).toEqual({ kind: "binary", op: "/", left: int(1), right: int(0) });
+    it("leaves a division by zero alone rather than folding it", () => {
+        // Source cannot reach this - the lowering refuses `1 / 0` outright, as the language does - so the
+        // program is built directly. The guard still matters: constant propagation can put a zero into a
+        // divisor the source spelled as a variable, and folding it would divide by zero inside the
+        // compiler rather than reporting anything.
+        const divide: Expr = { kind: "binary", op: "/", left: int(1), right: int(0) };
+        const program: Program = {
+            declarations: [
+                { kind: "global", variable: { name: "g", initial: int(0) } },
+                {
+                    kind: "procedure",
+                    procedure: {
+                        name: "start",
+                        args: [],
+                        locals: [],
+                        body: [
+                            {
+                                kind: "assign",
+                                target: { kind: "var", scope: "global", index: 0, name: "g" },
+                                op: "=",
+                                value: divide,
+                            },
+                        ],
+                    },
+                },
+            ],
+        };
+        const optimised = optimize(program, { level: 2 });
+        const procedure = procedureNamed(optimised);
+        const statement = procedure.body[0];
+        if (statement?.kind !== "assign") throw new Error(`expected an assignment, got ${String(statement?.kind)}`);
+        expect(statement.value).toEqual(divide);
     });
 
     it("makes an arithmetic result float when either operand is, and a comparison integer regardless", () => {

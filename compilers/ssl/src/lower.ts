@@ -67,6 +67,22 @@ const ASSIGN_OPS = new Set<string>(["=", ":=", "+=", "-=", "*=", "/="]);
 /** The literal nodes a constant expression may end in. */
 const LITERALS = new Set<string>(["number", "string", "char", "boolean"]);
 
+/** The comparison operators, which take one comparison rather than a chain of them. */
+const COMPARISONS = new Set<string>(["==", "!=", "<", ">", "<=", ">="]);
+
+/** Whether a node is a literal zero, in any spelling the language writes one. */
+function isZeroLiteral(node: SyntaxNode): boolean {
+    if (node.type === "paren_expr") {
+        const inner = node.namedChildren.find((c) => c && c.type !== "comment");
+        return inner ? isZeroLiteral(inner) : false;
+    }
+    if (node.type === "boolean") return node.text.toLowerCase() === "false";
+    if (node.type !== "number") return false;
+    const text = node.text;
+    const radix = text.startsWith("0x") || text.startsWith("0X") ? 16 : 10;
+    return (text.includes(".") ? Number.parseFloat(text) : Number.parseInt(text, radix)) === 0;
+}
+
 /** Process-control statements to their core opcode. `noop` is absent: it emits nothing at all. */
 const PROCESS_OPCODES: Record<string, number> = {
     spawn: Op.SPAWN,
@@ -1086,6 +1102,22 @@ class Lowering {
                 const op = node.childForFieldName("op")?.text?.toLowerCase();
                 if (!left || !right || !op) throw new LowerError("malformed binary expression", node);
                 if (!BINARY_OPS.has(op)) throw new LowerError(`unsupported operator '${op}'`, node);
+                // A comparison takes one comparison, not a chain: the language reads a single
+                // `<expr> <op> <expr>` and stops, so `a == b == c` is a syntax error there. Parenthesise
+                // to compare a comparison - `(a == b) == c` is a different tree and is accepted.
+                if (COMPARISONS.has(op)) {
+                    for (const side of [left, right]) {
+                        const inner = side.childForFieldName("op")?.text?.toLowerCase();
+                        if (side.type === "binary_expr" && inner && COMPARISONS.has(inner)) {
+                            throw new LowerError("comparisons do not chain; parenthesise one of them", node);
+                        }
+                    }
+                }
+                // Dividing by a literal zero is refused rather than emitted, the same way the language
+                // refuses it: the engine has no defined result for it.
+                if ((op === "/" || op === "%" || op === "div") && isZeroLiteral(right)) {
+                    throw new LowerError("division by zero", right);
+                }
                 return {
                     kind: "binary",
                     op: op as BinaryOp,
