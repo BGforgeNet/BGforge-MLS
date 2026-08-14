@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- TP2 no longer reports false syntax errors on `QUICK_MENU`, on the top-level directives
+  `ASK_EVERY_COMPONENT`, `MODDER`, `SCRIPT_STYLE` and `UNINSTALL_ORDER`, or on the component flags
+  `FORCED_SUBCOMPONENT`, `INSTALL_BY_DEFAULT`, `METADATA` and `NO_LOG_RECORD`. A directive written after
+  `README` or another list-taking directive is no longer swallowed by it.
+- TP2 `ACTION_PHP_EACH` and `PATCH_PHP_EACH` accept a quoted loop variable, as WeiDU does:
+  `ACTION_PHP_EACH arr AS data => ~~ BEGIN`.
+- The formatter lays out `QUICK_MENU` groups one component per line.
+
 ## 3.13.1
 
 ### Binary editor

@@ -105,6 +105,206 @@ LANGUAGE ~English~ ~english~ ~english/setup.tra~
           (tilde_content))))))
 
 ================================================================================
+QUICK_MENU with empty ALWAYS_ASK list
+================================================================================
+
+QUICK_MENU
+	ALWAYS_ASK
+	END
+	@3000 BEGIN
+		1
+	END
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (quick_menu_directive
+    (quick_menu_entry
+      name: (value
+        (tra_ref))
+      component: (value
+        (number)))))
+
+================================================================================
+QUICK_MENU with always-ask components and several menu entries
+================================================================================
+
+QUICK_MENU
+	ALWAYS_ASK
+		5
+	END
+	@3000 BEGIN
+		1
+		2
+	END
+	~Full~ BEGIN
+		3
+	END
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (quick_menu_directive
+    always_ask: (value
+      (number))
+    (quick_menu_entry
+      name: (value
+        (tra_ref))
+      component: (value
+        (number))
+      component: (value
+        (number)))
+    (quick_menu_entry
+      name: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      component: (value
+        (number)))))
+
+================================================================================
+ASK_EVERY_COMPONENT flag
+================================================================================
+
+ASK_EVERY_COMPONENT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ask_every_component_flag))
+
+================================================================================
+A flag following a directive that takes a list is not swallowed by it
+================================================================================
+
+README ~mymod/readme.html~
+ASK_EVERY_COMPONENT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (readme_directive
+    path: (value
+      (string
+        (tilde_string
+          (tilde_content)))))
+  (ask_every_component_flag))
+
+================================================================================
+SCRIPT_STYLE directive
+================================================================================
+
+SCRIPT_STYLE BG2
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (script_style_directive
+    style: (value
+      (variable_ref
+        (identifier)))))
+
+================================================================================
+UNINSTALL_ORDER directive
+================================================================================
+
+UNINSTALL_ORDER ~MOVE~ ~COPY~ ~STRSET~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (uninstall_order_directive
+    op: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    op: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    op: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+MODDER directive with option pairs
+================================================================================
+
+MODDER ~SETUP_DEBUG~ ~ON~ ~ASSERT~ ~FAIL~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (modder_directive
+    option: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    option: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+Component flags without arguments
+================================================================================
+
+BEGIN ~My Component~
+NO_LOG_RECORD
+INSTALL_BY_DEFAULT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (component
+    (component_begin)
+    name: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (no_log_record_flag)
+    (install_by_default_flag)))
+
+================================================================================
+FORCED_SUBCOMPONENT and METADATA component flags
+================================================================================
+
+BEGIN ~My Component~
+FORCED_SUBCOMPONENT ~Group name~
+METADATA ~key=value~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (component
+    (component_begin)
+    name: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (forced_subcomponent_flag
+      name: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (metadata_flag
+      value: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
 Simple component
 ================================================================================
 

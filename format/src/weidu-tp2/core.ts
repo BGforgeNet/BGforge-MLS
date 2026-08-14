@@ -16,6 +16,8 @@ import {
     KW_BEGIN,
     KW_END,
     KW_ALWAYS,
+    KW_QUICK_MENU,
+    KW_ALWAYS_ASK,
     throwFormatError,
     NODE_INLINED_FILE,
     NODE_COMPONENT,
@@ -205,6 +207,86 @@ function formatAlwaysBlock(node: SyntaxNode, ctx: FormatContext): string {
     return lines.join("\n");
 }
 
+/** Format a QUICK_MENU entry: `<label> BEGIN` with one component number per line. */
+function formatQuickMenuEntry(node: SyntaxNode, ctx: FormatContext): string {
+    const indent = ctx.indent;
+    const bodyIndent = ctx.indent.repeat(2);
+    const lines: string[] = [];
+    let label = "";
+    let seenBegin = false;
+    let lastEndRow = -1;
+
+    for (const child of node.children) {
+        if (isKeyword(child, KW_BEGIN)) {
+            lines.push(indent + (label + " " + KW_BEGIN).trim());
+            seenBegin = true;
+            lastEndRow = child.endPosition.row;
+            continue;
+        }
+        if (isKeyword(child, KW_END)) {
+            continue;
+        }
+        if (isComment(child)) {
+            lastEndRow = handleComment(lines, child, seenBegin ? bodyIndent : indent, lastEndRow);
+            continue;
+        }
+        // Before BEGIN the only child is the menu label; after it, the component numbers.
+        if (seenBegin) {
+            lines.push(bodyIndent + normalizeWhitespace(child.text));
+        } else {
+            label = normalizeWhitespace(child.text);
+        }
+        lastEndRow = child.endPosition.row;
+    }
+
+    lines.push(indent + KW_END);
+    return lines.join("\n");
+}
+
+/** Format QUICK_MENU: the ALWAYS_ASK list, then one block per menu entry. */
+function formatQuickMenu(node: SyntaxNode, ctx: FormatContext): string {
+    const lines: string[] = [KW_QUICK_MENU];
+    // The directive has two END keywords - the first closes ALWAYS_ASK, the last closes QUICK_MENU.
+    let inAlwaysAsk = false;
+    let lastEndRow = -1;
+
+    for (const child of node.children) {
+        if (isKeyword(child, KW_QUICK_MENU)) {
+            lastEndRow = child.endPosition.row;
+            continue;
+        }
+        if (isKeyword(child, KW_ALWAYS_ASK)) {
+            lines.push(ctx.indent + KW_ALWAYS_ASK);
+            inAlwaysAsk = true;
+            lastEndRow = child.endPosition.row;
+            continue;
+        }
+        if (isKeyword(child, KW_END)) {
+            if (inAlwaysAsk) {
+                lines.push(ctx.indent + KW_END);
+                inAlwaysAsk = false;
+            }
+            lastEndRow = child.endPosition.row;
+            continue;
+        }
+        if (isComment(child)) {
+            lastEndRow = handleComment(lines, child, ctx.indent, lastEndRow);
+            continue;
+        }
+        if (child.type === SyntaxType.QuickMenuEntry) {
+            pushBlankIfGap(lines, child, lastEndRow);
+            lines.push(formatQuickMenuEntry(child, ctx));
+        } else {
+            // An always-ask component number.
+            lines.push(ctx.indent.repeat(2) + normalizeWhitespace(child.text));
+        }
+        lastEndRow = child.endPosition.row;
+    }
+
+    lines.push(KW_END);
+    return lines.join("\n");
+}
+
 /** Format patch_file (e.g., .tpp includes). */
 function formatPatchFile(node: SyntaxNode, ctx: FormatContext): string {
     const lines: string[] = [];
@@ -369,6 +451,11 @@ function formatNode(node: SyntaxNode, ctx: FormatContext, depth: number): string
     // ALWAYS block
     if (type === NODE_ALWAYS_BLOCK) {
         return formatAlwaysBlock(node, ctx);
+    }
+
+    // QUICK_MENU
+    if (type === SyntaxType.QuickMenuDirective) {
+        return formatQuickMenu(node, ctx);
     }
 
     // Patch file (e.g., .tpp)

@@ -203,20 +203,20 @@ SUPPORT ~emailAddress~           // Alias for AUTHOR
 
 ### TP2 Flags
 
-| Flag                | Syntax                             | Description                             |
-| ------------------- | ---------------------------------- | --------------------------------------- |
-| AUTO_TRA            | `AUTO_TRA ~path~`                  | Auto-load TRA files matching D files    |
-| ALLOW_MISSING       | `ALLOW_MISSING file...`            | Allow missing files (creates empty)     |
-| ASK_EVERY_COMPONENT | `ASK_EVERY_COMPONENT`              | Ask about each component individually   |
-| ALWAYS              | `ALWAYS ... END`                   | Execute before every component          |
-| README              | `README file...`                   | Display readme after language selection |
-| UNINSTALL_ORDER     | `UNINSTALL_ORDER ops...`           | Customize uninstall order               |
-| MODDER              | `MODDER options...`                | Enable debug info                       |
-| VERSION             | `VERSION ~string~`                 | Append to component names in log        |
-| SCRIPT_STYLE        | `SCRIPT_STYLE BG\|IWD1\|IWD2\|PST` | BAF/BCS parsing style                   |
-| NO_IF_EVAL_BUG      | `NO_IF_EVAL_BUG`                   | Fix IF_EVAL bug                         |
-| QUICK_MENU          | `QUICK_MENU ...`                   | Define component groups                 |
-| AUTO_EVAL_STRINGS   | `AUTO_EVAL_STRINGS`                | Auto EVALUATE_BUFFER                    |
+| Flag                | Syntax                                  | Description                             |
+| ------------------- | --------------------------------------- | --------------------------------------- |
+| AUTO_TRA            | `AUTO_TRA ~path~`                       | Auto-load TRA files matching D files    |
+| ALLOW_MISSING       | `ALLOW_MISSING file...`                 | Allow missing files (creates empty)     |
+| ASK_EVERY_COMPONENT | `ASK_EVERY_COMPONENT`                   | Ask about each component individually   |
+| ALWAYS              | `ALWAYS ... END`                        | Execute before every component          |
+| README              | `README file...`                        | Display readme after language selection |
+| UNINSTALL_ORDER     | `UNINSTALL_ORDER ops...`                | Customize uninstall order               |
+| MODDER              | `MODDER options...`                     | Enable debug info                       |
+| VERSION             | `VERSION ~string~`                      | Append to component names in log        |
+| SCRIPT_STYLE        | `SCRIPT_STYLE BG\|IWD1\|IWD2\|PST`      | BAF/BCS parsing style                   |
+| NO_IF_EVAL_BUG      | `NO_IF_EVAL_BUG`                        | Fix IF_EVAL bug                         |
+| QUICK_MENU          | `QUICK_MENU ALWAYS_ASK ... END ... END` | Define component groups                 |
+| AUTO_EVAL_STRINGS   | `AUTO_EVAL_STRINGS`                     | Auto EVALUATE_BUFFER                    |
 
 ### Language
 

@@ -837,3 +837,56 @@ REGISTER_UNINSTALL ~mymod/uninstall.sh~
       (string
         (tilde_string
           (tilde_content))))))
+
+================================================================================
+ACTION_PHP_EACH
+================================================================================
+
+ACTION_PHP_EACH myarray AS key => val BEGIN
+	OUTER_SPRINT myvar ~hello~
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_php_each
+    array: (value
+      (variable_ref
+        (identifier)))
+    key_var: (identifier)
+    value_var: (identifier)
+    (action_outer_sprint
+      var: (value
+        (variable_ref
+          (identifier)))
+      value: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
+ACTION_PHP_EACH with a string value variable
+================================================================================
+
+ACTION_PHP_EACH myarray AS data => ~~ BEGIN
+	OUTER_SPRINT myvar ~hello~
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_php_each
+    array: (value
+      (variable_ref
+        (identifier)))
+    key_var: (identifier)
+    value_var: (string
+      (tilde_string))
+    (action_outer_sprint
+      var: (value
+        (variable_ref
+          (identifier)))
+      value: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))

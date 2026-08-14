@@ -1,0 +1,20 @@
+BACKUP ~quickmenu/backup~
+
+QUICK_MENU
+ALWAYS_ASK
+0
+END
+// Minimal install
+@100 BEGIN
+1 // core
+2
+END
+
+~Everything~ BEGIN
+1
+2
+3
+END
+END
+
+BEGIN ~Core~

@@ -336,3 +336,44 @@ END
               (tilde_string
                 (tilde_content)))))))))
 
+
+================================================================================
+PATCH_PHP_EACH with a string value variable
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+BEGIN
+  PATCH_PHP_EACH myarray AS data => ~~ BEGIN
+    SAY 0x08 ~New Name~
+  END
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_block
+        (patch_php_each
+          array: (value
+            (variable_ref
+              (identifier)))
+          key_var: (identifier)
+          value_var: (string
+            (tilde_string))
+          (patch_say
+            offset: (value
+              (number))
+            text: (value
+              (string
+                (tilde_string
+                  (tilde_content))))))))))

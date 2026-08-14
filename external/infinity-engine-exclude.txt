@@ -202,10 +202,8 @@ BG1NPC/bg1npc/romances/xarom/baf/x#xarom.baf
 BG1NPC/bg1npc/romances/xarom/baf/x#xastre.baf
 BG1NPC/bg1npc/romances/xarom/baf/x#xatire.baf
 
-# BG1NPC malformed TPA files (unbalanced BEGIN/END - a stray extra END; weidu tolerates it, our grammar does not)
+# BG1NPC malformed TPA file (unbalanced BEGIN/END - a stray extra END; weidu tolerates it, our grammar does not)
 BG1NPC/bg1npc/core/tpa/a64_beregost.tpa
-BG1NPC/bg1npc/phase2/tpa/bg1npc_phase2.tpa
-BG1NPC/bg1npc/phase2/tpa/bg1npc_xzarqst.tpa
 
 # BG1NPC malformed D file (weidu rejects it; unresolvable %macro% used as standalone CHAIN content)
 BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d

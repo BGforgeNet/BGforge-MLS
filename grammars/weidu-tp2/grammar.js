@@ -143,9 +143,13 @@ const phpEachLoop =
             kw(...keywords),
             field("array", $.value),
             "AS",
-            field("key_var", $.identifier),
+            // WeiDU takes a string for either loop variable, not just a bare name - ~~ is idiomatic for
+            // "discard this half of the pair". Kept as identifier|string rather than $.value so the
+            // identifier case stays a direct child: the rename/definition providers key on that shape,
+            // and a quoted variable declares no renamable name.
+            field("key_var", choice($.identifier, $.string)),
             "=>",
-            field("value_var", $.identifier),
+            field("value_var", choice($.identifier, $.string)),
             "BEGIN",
             repeat(bodyType($)),
             "END",
@@ -1596,6 +1600,11 @@ export default grammar({
                 $.auto_eval_strings_flag,
                 $.allow_missing_directive,
                 $.auto_tra_directive,
+                $.quick_menu_directive,
+                $.ask_every_component_flag,
+                $.script_style_directive,
+                $.uninstall_order_directive,
+                $.modder_directive,
                 $.language_directive,
                 $.component,
                 $.inlined_file,
@@ -1611,6 +1620,26 @@ export default grammar({
         auto_eval_strings_flag: ($) => "AUTO_EVAL_STRINGS",
         allow_missing_directive: ($) => prec.right(seq("ALLOW_MISSING", repeat1(field("file", $.value)))),
         auto_tra_directive: ($) => seq("AUTO_TRA", field("path", $.value)),
+
+        // QUICK_MENU ALWAYS_ASK <components> END (<label> BEGIN <components> END)* END
+        quick_menu_directive: ($) =>
+            seq(
+                "QUICK_MENU",
+                "ALWAYS_ASK",
+                repeat(field("always_ask", $.value)),
+                "END",
+                repeat($.quick_menu_entry),
+                "END",
+            ),
+
+        quick_menu_entry: ($) => seq(field("name", $.value), "BEGIN", repeat(field("component", $.value)), "END"),
+
+        ask_every_component_flag: ($) => "ASK_EVERY_COMPONENT",
+        script_style_directive: ($) => seq("SCRIPT_STYLE", field("style", $.value)),
+        uninstall_order_directive: ($) => prec.right(seq("UNINSTALL_ORDER", repeat1(field("op", $.value)))),
+        // MODDER takes option/value pairs: MODDER ~SETUP_DEBUG~ ~ON~ ~ASSERT~ ~FAIL~
+        modder_directive: ($) =>
+            prec.right(seq("MODDER", repeat1(seq(field("option", $.value), field("value", $.value))))),
 
         language_directive: ($) =>
             prec.right(
@@ -1637,11 +1666,19 @@ export default grammar({
                 $.require_file_flag,
                 $.forbid_file_flag,
                 $.label_flag,
+                $.forced_subcomponent_flag,
+                $.metadata_flag,
+                $.no_log_record_flag,
+                $.install_by_default_flag,
             ),
 
         designated_flag: ($) => seq("DESIGNATED", field("number", $.number)),
         deprecated_flag: ($) => seq("DEPRECATED", field("message", $.value)),
         subcomponent_flag: ($) => seq("SUBCOMPONENT", field("name", $.value)),
+        forced_subcomponent_flag: ($) => seq("FORCED_SUBCOMPONENT", field("name", $.value)),
+        metadata_flag: ($) => seq("METADATA", field("value", $.value)),
+        no_log_record_flag: ($) => "NO_LOG_RECORD",
+        install_by_default_flag: ($) => "INSTALL_BY_DEFAULT",
         group_flag: ($) => seq("GROUP", field("name", $.value)),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
         require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
