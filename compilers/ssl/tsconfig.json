@@ -9,5 +9,5 @@
             "@bgforge/ssl": ["./src/index.ts"]
         }
     },
-    "include": ["src", "test"]
+    "include": ["src", "test", "scripts"]
 }

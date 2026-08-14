@@ -10,10 +10,9 @@ CLI exists so the same compiler can be driven from a build script or checked by 
 ## Output
 
 Compiled output is byte-identical to the reference `sslc` compiler at optimization levels 0, 1 and 2,
-across every script in the Fallout modding corpora this repository tests against. The differential that
-holds it there runs at each level in `test/integration/optimize-corpus.test.ts`, and
-`test/integration/switch-differential.test.ts` runs both compilers under the same switches so the
-sameness this table claims is observed rather than read off the reference's source.
+across every script in the Fallout modding corpora this repository tests against. The `.int` a script
+compiles to here is the one it would have compiled to there, so an existing build can adopt this compiler
+without reissuing anything it has already shipped.
 
 ## CLI
 
@@ -54,20 +53,20 @@ followed by `-o <path>` - the reference's own grammar. `ssl -O2 a.ssl -o a.int b
 
 Everything below is a deliberate difference, not a gap:
 
-| Switch or behaviour | Difference                                                                                                                                                                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-b`                | Refused. It removes later keywords - `switch`, `for`, `foreach`, `break`, `continue`, `pure`, `inline`, `tokenize` - from the language so old scripts may use them as names. This compiler's grammar has no mode that can express that.                              |
-| `-O3`               | Honoured as `-O2`, with a warning. The passes above level 2 rename identifiers and share variable slots, both of which the reference's own source marks as known to break code.                                                                                      |
-| `-p`                | Ignored: this compiler always preprocesses. The reference runs mcpp only when asked, so without `-p` its `-m` and `-I` reach nothing and a `#ifdef` is not evaluated at all - it compiles both arms. `#define` its lexer does handle.                                |
-| `-F`                | Ignored: this compiler's preprocessor emits no `#line` directives, so there are no paths in them to lengthen. `-P` output therefore carries no line markers.                                                                                                         |
-| `-q`, `-n`          | Ignored: this compiler never waits for input and emits no warnings, only errors. `-n` is what the reference calls "no warnings"; the extension's default options pass it, and above `-O1` the reference's own warnings mostly disappear with the code they describe. |
-| Legacy statements   | `exit`, `detach`, `fork`, `spawn`, `callstart`, `exec`, `wait`, `noop`, `cancel`, `cancelall`, `startcritical` and `endcritical` are not parsed. They come from the language this one grew out of; no script in the Fallout corpora uses any of them.                |
-| Preprocessor errors | The first one stops the compile. The reference's preprocessor reports every error in a file before giving up, while its compiler proper stops at the first, so the two agree except when the failure is in preprocessing.                                            |
-| `-m`                | May be repeated, each defining a macro; the reference keeps only the last. A macro that takes parameters is refused rather than silently mis-defined.                                                                                                                |
-| Missing input       | An error that exits non-zero. The reference warns and still exits 0, which lets a build succeed without having read its input.                                                                                                                                       |
-| Output naming       | The extension is read off the file name, not the whole path, so a directory containing a dot no longer misnames the output. A source already called `.int` compiles to `<name>1.int` rather than losing a character.                                                 |
-| Globs               | Not expanded: arguments are taken literally and glob expansion is left to the shell. The reference expands them itself, for Windows.                                                                                                                                 |
-| `-h`, `--help`      | Prints the usage. The reference has no help switch and silently ignores `--help`.                                                                                                                                                                                    |
+| Switch or behaviour | Difference                                                                                                                                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-b`                | Refused. It removes later keywords - `switch`, `for`, `foreach`, `break`, `continue`, `pure`, `inline`, `tokenize` - from the language so old scripts may use them as names. This compiler's grammar has no mode that can express that.               |
+| `-O3`               | Honoured as `-O2`, with a warning. The passes above level 2 rename identifiers and share variable slots, both of which the reference's own source marks as known to break code.                                                                       |
+| `-p`                | Ignored: this compiler always preprocesses. The reference runs mcpp only when asked, so without `-p` its `-m` and `-I` reach nothing and a `#ifdef` is not evaluated at all - it compiles both arms. `#define` its lexer does handle.                 |
+| `-F`                | Ignored: this compiler's preprocessor emits no `#line` directives, so there are no paths in them to lengthen. `-P` output therefore carries no line markers.                                                                                          |
+| `-q`, `-n`          | Ignored: this compiler never waits for input, and it emits errors only - there are no warnings for `-n` to suppress.                                                                                                                                  |
+| Legacy statements   | `exit`, `detach`, `fork`, `spawn`, `callstart`, `exec`, `wait`, `noop`, `cancel`, `cancelall`, `startcritical` and `endcritical` are not parsed. They come from the language this one grew out of; no script in the Fallout corpora uses any of them. |
+| Preprocessor errors | The first one stops the compile. The reference's preprocessor reports every error in a file before giving up, while its compiler proper stops at the first, so the two agree except when the failure is in preprocessing.                             |
+| `-m`                | May be repeated, each defining a macro; the reference keeps only the last. A macro that takes parameters is refused rather than silently mis-defined.                                                                                                 |
+| Missing input       | An error that exits non-zero. The reference warns and still exits 0, which lets a build succeed without having read its input.                                                                                                                        |
+| Output naming       | The extension is read off the file name, not the whole path, so a directory containing a dot no longer misnames the output. A source already called `.int` compiles to `<name>1.int` rather than losing a character.                                  |
+| Globs               | Not expanded: arguments are taken literally and glob expansion is left to the shell. The reference expands them itself, for Windows.                                                                                                                  |
+| `-h`, `--help`      | Prints the usage. The reference has no help switch and silently ignores `--help`.                                                                                                                                                                     |
 
 ## Library
 

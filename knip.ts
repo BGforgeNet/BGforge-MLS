@@ -132,7 +132,8 @@ const config: KnipConfig = {
         },
         "compilers/ssl": {
             // Both suites, since the gcc differential runs from its own config in the close-out phase.
-            entry: ["test/**/*.test.ts", "test/integration/**/*.test.ts"],
+            // `scripts/ssl-diff.mts` is run by hand through the root `ssl-diff` script, so nothing imports it.
+            entry: ["test/**/*.test.ts", "test/integration/**/*.test.ts", "scripts/ssl-diff.mts"],
             // gcc is the differential's reference preprocessor - an environment prerequisite for that
             // suite (which skips without it), not a dependency this package can declare.
             ignoreBinaries: ["gcc"],

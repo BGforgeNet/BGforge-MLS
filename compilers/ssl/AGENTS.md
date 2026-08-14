@@ -1,0 +1,56 @@
+# Working on the Fallout SSL compiler
+
+Guidance for changing `compilers/ssl`. The package README describes what the compiler is and how to use
+it; this file is about the loop for changing it. `docs/` conventions and the repo-root `AGENTS.md` still
+apply.
+
+## Check one construct with `pnpm ssl-diff`, not the corpus sweep
+
+```bash
+pnpm ssl-diff -e 'procedure start begin variable a[10]; end'
+pnpm ssl-diff script.ssl -O2 --keep
+```
+
+It compiles the source with this compiler and with the bundled reference and byte-compares them, in about
+a second: MATCH, DIFFER (with the first differing offset and a disassembly of each side), BOTH REFUSED, or
+a one-sided refusal. Exit code is 0 only when the two agree.
+
+**A one-sided refusal is a difference.** Several defects here were "we compile what the reference rejects"
+rather than a byte mismatch - an over-permissive front end produces a script that builds in the editor and
+fails in the user's real build, so the probe reports it as loudly as differing bytes.
+
+It compiles through the library SOURCE, so it needs `pnpm build:grammar` (which writes `server/out/*.wasm`)
+but not `pnpm build:ssl`. That is deliberate: **the `ssl` CLI carries its own grammar copy under `out/` that
+`build:grammar` does not refresh**, so a probe run through the CLI after a grammar change reports a
+divergence that no longer exists. Rebuild the CLI before trusting anything driven through it.
+
+## Where a finding goes once you have it
+
+`test/int/compile.test.ts` holds a table of hand-written sources compared against the reference at `-O0`,
+and a second table at `-O2`. It runs in about three seconds inside the normal unit suite, so anything worth
+keeping graduates from the probe into a case there. Refusals belong in `test/lower.test.ts` beside the
+other lowering guards, asserting the message AND its `line:column` prefix - the language server turns that
+prefix into the diagnostic's position, so an error without one lands on line 1.
+
+`test/integration/` sweeps every script in `external/fallout` at each level and takes about sixteen
+minutes. It is the close-out gate, not the edit loop, and it can only tell you about constructs real
+scripts happen to contain.
+
+## The corpus cannot tell you what the language is
+
+Every defect found by reading the reference compiler's own lexer and parser was invisible to a green sweep
+of 1517 scripts: `\v` decoded as the letter `v`, adjacent string literals, character constants, `variable
+a[10]` never creating its array, `break` outside a loop compiling to a jump into whatever was on the stack.
+None of those appear in the corpus, so the differential agreed with us all the way.
+
+So when the question is "what does the language do here", read the reference implementation - it is open
+source, and one read settles what a differential can only guess at. Use the corpus for frequency ("does
+anyone actually write this"), and the probe to confirm what you read.
+
+## Conventions
+
+- The reference compiler is never named in committed files. Describe what it does; do not cite its source
+  files or internal symbols.
+- Its tables are not vendored. A handful of values in tests is fine.
+- Where behaviour differs from it deliberately, the difference goes in the README's differences table.
+  Byte-for-byte sameness is not required, but every difference is understood and written down.
