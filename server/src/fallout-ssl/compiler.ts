@@ -16,6 +16,7 @@ import * as os from "os";
 import * as path from "path";
 import { parseArgs } from "../../../compilers/ssl/src/args";
 import { CompileError, compileFile } from "../../../compilers/ssl/src/compile";
+import { LowerError } from "../../../compilers/ssl/src/lower";
 import { PreprocessError } from "../../../compilers/ssl/src/preprocess";
 import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
@@ -230,6 +231,15 @@ function toDiagnostics(error: unknown, tmpPath: string) {
             columnStart: 0,
             columnEnd: diagnostic.column,
             message: diagnostic.message,
+        }));
+    }
+    if (error instanceof LowerError) {
+        return error.all.map((one) => ({
+            uri: pathToUri(tmpPath),
+            line: one.line,
+            columnStart: 0,
+            columnEnd: one.column,
+            message: one.detail,
         }));
     }
     const message = error instanceof Error ? error.message : String(error);

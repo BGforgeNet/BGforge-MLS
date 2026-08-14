@@ -17,6 +17,9 @@
   compiles `and`/`or` as short-circuit operators. `-O3` is honoured as `-O2`: the bundled compiler's own
   source marks that level's extra passes as known to break code. `-I` and `-m` in that setting are honoured
   too, so a header directory or a macro defined there applies to both compilers.
+- A failed compile reports everything it found wrong, instead of stopping at the first problem. A script
+  with four syntax errors, or a header with three bad directives, is now one compile rather than four. A
+  name that is misspelled and then used twenty times is reported once, at its first use.
 - Formatting a `foreach` loop no longer drops its `while` guard. The guard is part of the loop's bounds
   test, so losing it changed how many times the loop ran.
 - Keywords are read in any casing, as the language itself reads them: `PROCEDURE`, `Procedure` and

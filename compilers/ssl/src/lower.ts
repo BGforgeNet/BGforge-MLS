@@ -27,12 +27,46 @@ import type {
 
 export class LowerError extends Error {
     readonly line: number;
-    constructor(message: string, node: SyntaxNode) {
-        super(`${node.startPosition.row + 1}:${node.startPosition.column + 1}: ${message}`);
+    readonly column: number;
+    /** The complaint without the `line:column:` prefix, so an aggregate can be rebuilt from one of these. */
+    readonly detail: string;
+    /**
+     * Every problem this lowering found, this one first.
+     *
+     * A caller that can only show one error shows this one and reads exactly as it did before lowering
+     * learned to collect them; one that can show more reads the list. Nothing is emitted while the list
+     * is non-empty, so collecting cannot change what a script compiles to - only how much of what is
+     * wrong with it you learn per attempt.
+     */
+    readonly all: readonly LowerError[];
+
+    /**
+     * `at` is normally the node that is wrong. An aggregate passes a bare position instead: it has to
+     * carry the FIRST error's location, and the tree those nodes came from is deleted as soon as the
+     * compile unwinds, so holding one would outlive it.
+     */
+    constructor(detail: string, at: SyntaxNode | { line: number; column: number }, all: readonly LowerError[] = []) {
+        const line = "startPosition" in at ? at.startPosition.row + 1 : at.line;
+        const column = "startPosition" in at ? at.startPosition.column + 1 : at.column;
+        super(`${line}:${column}: ${detail}`);
         this.name = "LowerError";
-        this.line = node.startPosition.row + 1;
+        this.line = line;
+        this.column = column;
+        this.detail = detail;
+        this.all = all.length > 0 ? all : [this];
     }
 }
+
+/** How many complaints one lowering reports before it gives up collecting. */
+const MAX_ERRORS = 100;
+
+/**
+ * What a reported expression lowers to so the walk can continue past it.
+ *
+ * Nothing is emitted while there are diagnostics, so this value never reaches an output file; its only
+ * job is to be a well-formed `Expr` that the rest of lowering can consume without special-casing.
+ */
+const POISON: Expr = { kind: "int", value: 0 };
 
 /** Which game's engine vocabulary to resolve function names against. */
 export interface LowerOptions {
@@ -140,9 +174,40 @@ class Lowering {
         this.game = options.game ?? 2;
     }
 
+    /**
+     * User errors found so far. A site that reports through here returns a stand-in and lets the walk
+     * carry on, so one attempt finds everything wrong with a script rather than its first mistake.
+     *
+     * Only sites established as reachable by a CLEAN parse report this way. The rest still throw: they
+     * fire when the grammar and this file disagree, which is a defect here rather than in the script, and
+     * continuing past one would carry a poison value into code with no reason to expect it.
+     */
+    private readonly diagnostics: LowerError[] = [];
+    /** Unresolved names already reported, so one misspelling used thirty times is one complaint. */
+    private readonly reportedNames = new Set<string>();
+
+    /** Records a user error and yields the stand-in that lets lowering continue. */
+    private report(detail: string, node: SyntaxNode): Expr {
+        const error = new LowerError(detail, node);
+        if (this.diagnostics.length < MAX_ERRORS && !this.diagnostics.some((d) => d.message === error.message)) {
+            this.diagnostics.push(error);
+        }
+        return POISON;
+    }
+
     lower(root: SyntaxNode): Program {
         this.collect(root);
-        this.lowerBodies(root);
+        try {
+            this.lowerBodies(root);
+        } catch (error) {
+            // A site that still throws stops the walk, but it must not discard what was already found:
+            // otherwise converting sites one at a time would make a script report FEWER problems than it
+            // did before, depending on which mistake happened to come first.
+            if (!(error instanceof LowerError) || this.diagnostics.length === 0) throw error;
+            this.diagnostics.push(error);
+        }
+        const first = this.diagnostics[0];
+        if (first) throw new LowerError(first.detail, { line: first.line, column: first.column }, this.diagnostics);
         return {
             declarations: this.declarations,
             stringLiterals: collectStringLiterals(root),
@@ -838,7 +903,7 @@ class Lowering {
         return this.lowerExpression(child, scope);
     }
 
-    private lowerAssignment(node: SyntaxNode, scope: Scope): Stmt {
+    private lowerAssignment(node: SyntaxNode, scope: Scope): Stmt | null {
         const left = node.childForFieldName("left");
         const right = node.childForFieldName("right");
         if (!left || !right) throw new LowerError("malformed assignment", node);
@@ -850,6 +915,10 @@ class Lowering {
         }
 
         const target = this.lowerExpression(left, scope);
+        // An already-reported target must not produce a second complaint: `nope := 1` for an undeclared
+        // `nope` is one mistake, and "assignment target must be a variable" describes the stand-in rather
+        // than anything the author wrote.
+        if (target === POISON) return null;
         if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
         return { kind: "assign", target, op, value: this.lowerExpression(right, scope) };
     }
@@ -972,7 +1041,8 @@ class Lowering {
             // is a statement of its own - writing it bare is an error in the language, so accepting it
             // here would compile a script the compiler a user actually builds with refuses.
             const name = callee?.text ?? "it";
-            throw new LowerError(`'${name}' is not an engine function; write 'call ${name}(...)'`, node);
+            this.report(`'${name}' is not an engine function; write 'call ${name}(...)'`, node);
+            return null;
         }
         // An engine function that takes nothing is written without parentheses: `refresh_pc_art;`. It is
         // a call, not a bare value, and real scripts use the form constantly.
@@ -985,7 +1055,8 @@ class Lowering {
         }
         // Everything else in statement position has to assign. A bare variable or expression is not a
         // statement, and quietly emitting a fetch-and-discard for it hides a typo rather than reporting it.
-        throw new LowerError("assignment operator expected", node);
+        this.report("assignment operator expected", node);
+        return null;
     }
 
     /**
@@ -1076,7 +1147,9 @@ class Lowering {
         if (global !== undefined) return { kind: "var", scope: "global", index: global, name: node.text };
         const external = this.externals.get(key);
         if (external !== undefined) return { kind: "var", scope: "external", index: 0, name: external };
-        throw new LowerError(`unknown procedure '${node.text}'`, node);
+        if (this.reportedNames.has(key)) return POISON;
+        this.reportedNames.add(key);
+        return this.report(`unknown procedure '${node.text}'`, node);
     }
 
     /**
@@ -1108,7 +1181,10 @@ class Lowering {
         // `cancel` names a procedure; everything else takes a value.
         if (op === "cancel") {
             const index = this.procedures.get(argument.text.toLowerCase());
-            if (index === undefined) throw new LowerError(`unknown procedure '${argument.text}'`, argument);
+            if (index === undefined) {
+                this.report(`unknown procedure '${argument.text}'`, argument);
+                return null;
+            }
             return { kind: "opStmt", opcode, args: [{ kind: "procRef", index }] };
         }
         return { kind: "opStmt", opcode, args: [this.lowerExpression(argument, scope)] };
@@ -1125,7 +1201,7 @@ class Lowering {
     }
 
     private requireLoop(node: SyntaxNode, what: string): void {
-        if (this.loopDepth === 0) throw new LowerError(`'${what}' outside a loop`, node);
+        if (this.loopDepth === 0) this.report(`'${what}' outside a loop`, node);
     }
 
     private lowerExpression(node: SyntaxNode, scope: Scope): Expr {
@@ -1151,7 +1227,7 @@ class Lowering {
                 const name = node.namedChildren[0];
                 if (!name) throw new LowerError("malformed procedure reference", node);
                 const index = this.procedures.get(name.text.toLowerCase());
-                if (index === undefined) throw new LowerError(`unknown procedure '${name.text}'`, name);
+                if (index === undefined) return this.report(`unknown procedure '${name.text}'`, name);
                 return { kind: "procRef", index, stringify: true };
             }
 
@@ -1179,14 +1255,14 @@ class Lowering {
                     for (const side of [left, right]) {
                         const inner = side.childForFieldName("op")?.text?.toLowerCase();
                         if (side.type === "binary_expr" && inner && COMPARISONS.has(inner)) {
-                            throw new LowerError("comparisons do not chain; parenthesise one of them", node);
+                            return this.report("comparisons do not chain; parenthesise one of them", node);
                         }
                     }
                 }
                 // Dividing by a literal zero is refused rather than emitted, the same way the language
                 // refuses it: the engine has no defined result for it.
                 if ((op === "/" || op === "%" || op === "div") && isZeroLiteral(right)) {
-                    throw new LowerError("division by zero", right);
+                    return this.report("division by zero", right);
                 }
                 return {
                     kind: "binary",
@@ -1359,7 +1435,11 @@ class Lowering {
             this.refuseInlineInExpression(procedure, node);
             return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
         }
-        throw new LowerError(`unknown identifier '${node.text}'`, node);
+        // Reported once per name rather than once per use: a misspelling used thirty times is one
+        // mistake, and thirty copies of it would bury every other error in the script.
+        if (this.reportedNames.has(key)) return POISON;
+        this.reportedNames.add(key);
+        return this.report(`unknown identifier '${node.text}'`, node);
     }
 }
 

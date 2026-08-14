@@ -18,7 +18,7 @@ import { EmitError, emitInt } from "../src/int/emit.ts";
 import { NameTable } from "../src/int/namelist.ts";
 import { IntWriter } from "../src/int/writer.ts";
 import { engineFunction } from "../src/int/engine-functions.ts";
-import { lowerProgram } from "../src/lower.ts";
+import { LowerError, lowerProgram } from "../src/lower.ts";
 import type { Program, Stmt } from "../src/int/ir.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
@@ -881,5 +881,78 @@ describe.skipIf(!wasmPresent)("character constants", () => {
 
     it("refuses an escape neither table defines", () => {
         expect(() => value("'\\z'")).toThrow(/unknown escape '\\z' in a character constant/);
+    });
+});
+
+/**
+ * Reporting every mistake in a script, rather than the first.
+ *
+ * Only sites reachable by a CLEAN parse report this way - the tree has already been refused if it holds
+ * an ERROR or MISSING node, so a "malformed X" guard firing after that means this file and the grammar
+ * disagree, which is a defect here rather than in the script. Those still throw, so a poison value never
+ * travels into code with no reason to expect one.
+ */
+describe.skipIf(!wasmPresent)("collecting semantic errors", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** The whole list a refused lowering carries. */
+    function errorsOf(source: string): readonly LowerError[] {
+        try {
+            compileText(parser, source);
+        } catch (error) {
+            if (error instanceof LowerError) return error.all;
+            throw error;
+        }
+        throw new Error("expected the compile to be refused");
+    }
+
+    it("names every unresolved identifier, not just the first", () => {
+        const errors = errorsOf("procedure start begin\n a := 1;\n b := 2;\n c := 3;\nend\n");
+
+        expect(errors.map((e) => e.detail)).toEqual([
+            "unknown identifier 'a'",
+            "unknown identifier 'b'",
+            "unknown identifier 'c'",
+        ]);
+    });
+
+    it("reports one misspelling once however many times it is used", () => {
+        // The cascade that makes collecting worse than not collecting, if it is not controlled: thirty
+        // uses of one typo would bury every other mistake in the script.
+        const errors = errorsOf("procedure start begin\n nope := 1;\n nope := 2;\n nope := 3;\nend\n");
+
+        expect(errors).toHaveLength(1);
+        expect(errors[0]!.line).toBe(2);
+    });
+
+    it("collects errors of different kinds in one pass", () => {
+        const errors = errorsOf("procedure start begin\n variable x;\n x := 1 / 0;\n break;\nend\n");
+
+        expect(errors.map((e) => e.detail)).toEqual(["division by zero", "'break' outside a loop"]);
+    });
+
+    it("keeps looking after a statement it had to drop", () => {
+        const errors = errorsOf("procedure start begin\n variable x;\n x;\n y := 1;\nend\n");
+
+        expect(errors.map((e) => e.detail)).toEqual(["assignment operator expected", "unknown identifier 'y'"]);
+    });
+
+    it("keeps the first error's message and position exactly as a single-error compile had them", () => {
+        // The language server places the diagnostic from this prefix, and a caller that shows one error
+        // still shows this one.
+        expect(() => compileText(parser, "procedure start begin\n nope := 1;\n also := 2;\nend\n")).toThrow(
+            /^2:2: unknown identifier 'nope'$/,
+        );
+    });
+
+    it("emits nothing while there is anything to report", () => {
+        // The guarantee that makes collecting safe: a poison value can never reach an output file.
+        expect(() => compileText(parser, "procedure start begin\n nope := 1;\nend\n")).toThrow(LowerError);
     });
 });
