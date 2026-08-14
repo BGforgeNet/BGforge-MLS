@@ -90,6 +90,20 @@ function createControlFlowState(): ControlFlowParseState {
 // Condition formatting (OR/AND splitting)
 // ============================================
 
+/** Every comment written inside a condition, with the row it sits on. */
+function collectComments(node: SyntaxNode): { row: number; column: number; text: string }[] {
+    const found: { row: number; column: number; text: string }[] = [];
+    const walk = (n: SyntaxNode): void => {
+        if (isComment(n)) {
+            found.push({ row: n.startPosition.row, column: n.startPosition.column, text: normalizeComment(n.text) });
+            return;
+        }
+        n.children.forEach((child) => walk(child));
+    };
+    walk(node);
+    return found;
+}
+
 /**
  * Flatten a binary_expr tree with OR/AND into a list of operands.
  * Returns null if the expression doesn't use OR/AND at top level.
@@ -115,14 +129,29 @@ function flattenOrAndExpr(node: SyntaxNode): ConditionOperand[] | null {
         if (leftFlat) {
             result.push(...leftFlat);
         } else {
-            result.push({ operator: null, text: normalizeWhitespace(left.text) });
+            result.push({
+                operator: null,
+                text: normalizeWhitespace(left.text),
+                endRow: left.endPosition.row,
+                endColumn: left.endPosition.column,
+            });
         }
     } else {
-        result.push({ operator: null, text: normalizeWhitespace(left.text) });
+        result.push({
+            operator: null,
+            text: normalizeWhitespace(left.text),
+            endRow: left.endPosition.row,
+            endColumn: left.endPosition.column,
+        });
     }
 
     // Add right side with the operator
-    result.push({ operator: op.text, text: normalizeWhitespace(right.text) });
+    result.push({
+        operator: op.text,
+        text: normalizeWhitespace(right.text),
+        endRow: right.endPosition.row,
+        endColumn: right.endPosition.column,
+    });
 
     return result;
 }
@@ -141,12 +170,18 @@ function formatCondition(
         return [indent + prefix];
     }
 
+    // Comments written between the operands rule out the one-line form: joining would put everything after the
+    // first `//` inside that comment. Splitting unconditionally also makes the output idempotent - the one-line
+    // form's width check cannot see the ` BEGIN` and trailing comment the caller appends afterwards, so a
+    // commented condition would otherwise split on one pass and rejoin on the next.
+    const comments = collectComments(conditionNode);
+
     // Normalize whitespace and strip spaces inside parentheses to match what
     // the split output produces (AST node texts don't have those spaces)
     const condText = normalizeWhitespace(conditionNode.text).replaceAll(/\(\s+/g, "(").replaceAll(/\s+\)/g, ")");
     const fullLine = indent + prefix + " " + condText;
 
-    if (fullLine.length <= lineLimit) {
+    if (comments.length === 0 && fullLine.length <= lineLimit) {
         return [fullLine];
     }
 
@@ -195,18 +230,30 @@ function formatCondition(
         const operands = flattenOrAndExpr(exprNode);
         if (operands && operands.length > 1) {
             const lines: string[] = [];
+            const used = new Set<number>();
             const openParen = hasOuterParens ? "(" : "";
             const closeParen = hasOuterParens ? ")" : "";
             for (let i = 0; i < operands.length; i++) {
                 const op = operands[i];
                 if (!op) continue;
+                let line: string;
                 if (i === 0) {
-                    lines.push(indent + prefix + " " + unaryPrefix + openParen + op.text);
+                    line = indent + prefix + " " + unaryPrefix + openParen + op.text;
                 } else if (i === operands.length - 1) {
-                    lines.push(contIndent + op.operator + " " + op.text + closeParen);
+                    line = contIndent + op.operator + " " + op.text + closeParen;
                 } else {
-                    lines.push(contIndent + op.operator + " " + op.text);
+                    line = contIndent + op.operator + " " + op.text;
                 }
+                // Only comments written after this operand ends: one inside its span is already in op.text.
+                // Each is consumed once so it cannot also attach to an operand sharing the row.
+                for (let c = 0; c < comments.length; c++) {
+                    const cm = comments[c];
+                    if (!cm || used.has(c)) continue;
+                    if (cm.row !== op.endRow || cm.column < (op.endColumn ?? 0)) continue;
+                    line += INLINE_COMMENT_SPACING + cm.text;
+                    used.add(c);
+                }
+                lines.push(line);
             }
             return lines;
         }

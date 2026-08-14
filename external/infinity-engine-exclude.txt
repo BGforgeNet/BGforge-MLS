@@ -223,9 +223,3 @@ EET/EET/lang/pl_PL/map_mods_trans.tra
 EET/EET/lang/ru_RU/map_mods_trans.tra
 EET/EET/lang/zh_CN/map_mods_trans.tra
 
-# Excluded for a formatter bug of ours, not a problem with these files. Condition wrapping measures the line
-# without the trailing comment it later appends, so a commented condition splits on one pass and rejoins on the
-# next; where the comments sit on the OR operands themselves, all but the last are also dropped.
-# Repro: PATCH_IF (a) //c1 OR (b) //c2 OR (c) //c3 BEGIN ... END
-EET/EET/lib/macros.tph
-EET/EET_end/EET_end.tp2

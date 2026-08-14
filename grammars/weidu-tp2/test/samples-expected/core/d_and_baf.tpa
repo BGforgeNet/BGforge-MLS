@@ -2,9 +2,9 @@ PRINT ~Processing dialogs~
 
 COPY_EXISTING_REGEXP GLOB ~^.+\.dlg$~ ~override~
     PATCH_IF SOURCE_SIZE > 0x34
-        AND NOT (~%SOURCE_FILE%~ STR_EQ "wsmith01.dlg")
-        AND NOT (~%SOURCE_FILE%~ STR_EQ "botsmith.dlg")
-        AND NOT (~%SOURCE_FILE%~ STR_EQ "thalan.dlg")
+        AND NOT (~%SOURCE_FILE%~ STR_EQ "wsmith01.dlg")  // never touch Cromwell
+        AND NOT (~%SOURCE_FILE%~ STR_EQ "botsmith.dlg")  // and Cespenar
+        AND NOT (~%SOURCE_FILE%~ STR_EQ "thalan.dlg")  // and Thalantyr
         AND NOT (~%SOURCE_FILE%~ STR_EQ "m#ruad.dlg")  // and Ruad
     BEGIN
         SPRINT res ~%SOURCE_FILE%~
@@ -26,8 +26,8 @@ BUT_ONLY
 
 PRINT ~Processing scripts (this may take a few minutes)~
 COPY_EXISTING_REGEXP GLOB ~^.+\.bcs$~ ~override~
-    PATCH_IF NOT (~%SOURCE_FILE%~ STRING_MATCHES_REGEXP "^dw#.*" == 0)
-        AND NOT (~%SOURCE_FILE%~ STR_EQ "ar0334.bcs")
+    PATCH_IF NOT (~%SOURCE_FILE%~ STRING_MATCHES_REGEXP "^dw#.*" == 0)  // skip long ass SCS scripts
+        AND NOT (~%SOURCE_FILE%~ STR_EQ "ar0334.bcs")  // never touch Cromwell
         AND NOT (~%SOURCE_FILE%~ STR_EQ "botsmith.bcs")  // and Cespenar
     BEGIN
         SPRINT res ~%SOURCE_FILE%~

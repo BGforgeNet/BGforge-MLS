@@ -580,3 +580,44 @@ OUTER_SPRINT x ~//~
       (string
         (tilde_string
           (tilde_content))))))
+
+================================================================================
+SUBCOMPONENT and GROUP with a predicate
+================================================================================
+
+BEGIN ~My Component~
+SUBCOMPONENT ~Sub~ (weidu_external = 1)
+GROUP @2000 (x = 1)
+DESIGNATED 5
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (component
+    (component_begin)
+    name: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (subcomponent_flag
+      name: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      predicate: (value
+        (paren_expr
+          (binary_expr
+            left: (variable_ref
+              (identifier))
+            right: (number)))))
+    (group_flag
+      name: (value
+        (tra_ref))
+      predicate: (value
+        (paren_expr
+          (binary_expr
+            left: (variable_ref
+              (identifier))
+            right: (number)))))
+    (designated_flag
+      number: (number))))

@@ -1179,3 +1179,34 @@ STRING_SET ~73245~ @123456789 USING ~bgt/title.tra~
       (string
         (tilde_string
           (tilde_content))))))
+
+================================================================================
+WeiDU keyword aliases
+================================================================================
+
+ACTION_INCLUDE ~mymod/lib.tpa~
+DEFINE_MACRO_ACTION m BEGIN END
+BEGIN ~My Component~
+SUB_COMPONENT ~Group~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_include
+    file: (value
+      (string
+        (tilde_string
+          (tilde_content)))))
+  (action_define_macro
+    name: (identifier))
+  (component
+    (component_begin)
+    name: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (subcomponent_flag
+      name: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))

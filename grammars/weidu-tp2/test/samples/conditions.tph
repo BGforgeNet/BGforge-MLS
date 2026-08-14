@@ -1,0 +1,7 @@
+COPY ~a~ ~b~
+	PATCH_IF ("%fx_type%" = 187) //Set local variable
+	OR ("%fx_type%" = 265) //Set global variable
+	OR ("%fx_type%" = 309) //Set local variable
+	BEGIN
+		SAY 0x08 ~x~
+	END

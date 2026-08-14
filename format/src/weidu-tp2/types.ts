@@ -205,4 +205,9 @@ export type CollectedItem = AssignmentItem | CommentItem;
 export interface ConditionOperand {
     operator: string | null; // null for first operand, "OR"/"AND" for subsequent
     text: string;
+    /** Comment written on this operand's own line, if any. */
+    comment?: string;
+    /** Where the operand ends, used to match it with a comment written after it. */
+    endRow?: number;
+    endColumn?: number;
 }

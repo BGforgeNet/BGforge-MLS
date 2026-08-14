@@ -111,6 +111,13 @@ interface GrammarCfg {
     textmateAbsenceAllow: Record<string, string>;
 }
 
+/**
+ * Reason shared by every alias below: WeiDU accepts these older spellings (src/aliases.in), so the grammar
+ * parses them rather than reporting a false error - but only the canonical spelling is highlighted and
+ * offered in completion, so the tooling keeps nudging toward one way of writing it.
+ */
+const LEGACY_ALIAS = "legacy WeiDU alias; canonical spelling is the highlighted one";
+
 const GRAMMARS: GrammarCfg[] = [
     {
         id: "fallout-ssl",
@@ -126,7 +133,18 @@ const GRAMMARS: GrammarCfg[] = [
         data: "weidu-tp2-base.yml",
         dataSubsetBlocks: ["keywords", "flag", "component_flag"],
         caseInsensitive: false,
-        textmateAbsenceAllow: {},
+        textmateAbsenceAllow: {
+            DEFINE_FUNCTION_ACTION: LEGACY_ALIAS,
+            DEFINE_FUNCTION_PATCH: LEGACY_ALIAS,
+            DEFINE_MACRO_ACTION: LEGACY_ALIAS,
+            DEFINE_MACRO_PATCH: LEGACY_ALIAS,
+            LAUNCH_FUNCTION_ACTION: LEGACY_ALIAS,
+            LAUNCH_FUNCTION_PATCH: LEGACY_ALIAS,
+            LAUNCH_MACRO_ACTION: LEGACY_ALIAS,
+            LAUNCH_MACRO_PATCH: LEGACY_ALIAS,
+            PATCH_DEFINE_ASSOCIATIVE_ARRAY: LEGACY_ALIAS,
+            SUB_COMPONENT: LEGACY_ALIAS,
+        },
     },
     {
         id: "weidu-baf",

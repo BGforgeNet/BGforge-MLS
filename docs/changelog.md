@@ -17,6 +17,11 @@
   sound variants of `ACTION_GET_STRREF`, `EVAL` as a standalone patch, `STRING_SET` with male/female text
   and sound references, subtraction written without spaces (`%size%-12`), a string whose whole content is
   `//`, and names that start with a digit (functions, macros, parameters and `TO_UPPER` targets).
+- TP2 accepts WeiDU's older spellings of a dozen keywords - `DEFINE_MACRO_ACTION`, `ACTION_INCLUDE`,
+  `SUB_COMPONENT`, `I_S_I` and the rest - and `SUBCOMPONENT` and `GROUP` now take their optional
+  predicate.
+- The formatter no longer drops comments written on the operands of a multi-line condition, and no longer
+  rewraps such a condition differently each time it is formatted.
 
 ## 3.13.1
 

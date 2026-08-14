@@ -1046,14 +1046,17 @@ export default grammar({
         // Functions
         patch_launch_function: ($) =>
             seq(
-                choice("LAUNCH_PATCH_FUNCTION", "LPF"),
+                choice("LAUNCH_PATCH_FUNCTION", "LAUNCH_FUNCTION_PATCH", "LPF"),
                 field("name", choice($.identifier, $.var_name_numeric, $.string)),
                 repeat($._func_call_param),
                 "END",
             ),
 
         patch_launch_macro: ($) =>
-            seq(choice("LAUNCH_PATCH_MACRO", "LPM"), field("name", choice($.identifier, $.var_name_numeric, $.string))),
+            seq(
+                choice("LAUNCH_PATCH_MACRO", "LAUNCH_MACRO_PATCH", "LPM"),
+                field("name", choice($.identifier, $.var_name_numeric, $.string)),
+            ),
 
         patch_replace_bcs_block: ($) =>
             prec.right(
@@ -1067,7 +1070,9 @@ export default grammar({
 
         // Arrays
         patch_define_array: ($) => seq("DEFINE_ARRAY", field("name", $.value), "BEGIN", repeat($.value), "END"),
-        patch_define_associative_array: defineAssocArray("DEFINE_ASSOCIATIVE_ARRAY"),
+        patch_define_associative_array: defineAssocArray(
+            kw("DEFINE_ASSOCIATIVE_ARRAY", "PATCH_DEFINE_ASSOCIATIVE_ARRAY"),
+        ),
         patch_clear_array: clearArray("CLEAR_ARRAY"),
 
         patch_sort_array_indices: ($) =>
@@ -1322,7 +1327,7 @@ export default grammar({
                     choice(
                         seq("IF", field("if_resource", $.value)),
                         seq("UNLESS", field("unless_resource", $.value)),
-                        seq("IF_SIZE_IS", field("size", $.value)),
+                        seq(kw("IF_SIZE_IS", "I_S_I"), field("size", $.value)),
                         "IF_EXISTS",
                         "BUT_ONLY",
                         "BUT_ONLY_IF_IT_CHANGES",
@@ -1481,15 +1486,21 @@ export default grammar({
         action_outer_inner_patch_save: outerPatchSaveAction("OUTER_INNER_PATCH_SAVE"),
 
         // Includes
-        action_include: ($) => prec.right(seq("INCLUDE", repeat1(field("file", $.value)))),
+        action_include: ($) => prec.right(seq(kw("INCLUDE", "ACTION_INCLUDE"), repeat1(field("file", $.value)))),
         action_reinclude: ($) =>
             prec.right(seq(choice("REINCLUDE", "ACTION_REINCLUDE"), repeat1(field("file", $.value)))),
 
         // Functions/macros definitions (using helpers)
-        action_define_macro: defineMacro("DEFINE_ACTION_MACRO", ($) => $._action),
-        action_define_patch_macro: defineMacro("DEFINE_PATCH_MACRO", ($) => $._patch),
-        action_define_function: defineFunction("DEFINE_ACTION_FUNCTION", ($) => $._action),
-        action_define_patch_function: defineFunction("DEFINE_PATCH_FUNCTION", ($) => $._patch),
+        action_define_macro: defineMacro(kw("DEFINE_ACTION_MACRO", "DEFINE_MACRO_ACTION"), ($) => $._action),
+        action_define_patch_macro: defineMacro(kw("DEFINE_PATCH_MACRO", "DEFINE_MACRO_PATCH"), ($) => $._patch),
+        action_define_function: defineFunction(
+            kw("DEFINE_ACTION_FUNCTION", "DEFINE_FUNCTION_ACTION"),
+            ($) => $._action,
+        ),
+        action_define_patch_function: defineFunction(
+            kw("DEFINE_PATCH_FUNCTION", "DEFINE_FUNCTION_PATCH"),
+            ($) => $._patch,
+        ),
         // Dimorphic: an action-list body (per WeiDU syntax), launchable via BOTH LAF and LPF.
         action_define_dimorphic_function: defineFunction("DEFINE_DIMORPHIC_FUNCTION", ($) => $._action),
 
@@ -1507,13 +1518,13 @@ export default grammar({
         // Function/macro calls
         action_launch_macro: ($) =>
             seq(
-                choice("LAUNCH_ACTION_MACRO", "LAM"),
+                choice("LAUNCH_ACTION_MACRO", "LAUNCH_MACRO_ACTION", "LAM"),
                 field("name", choice($.identifier, $.var_name_numeric, $.string)),
             ),
 
         action_launch_function: ($) =>
             seq(
-                choice("LAUNCH_ACTION_FUNCTION", "LAF"),
+                choice("LAUNCH_ACTION_FUNCTION", "LAUNCH_FUNCTION_ACTION", "LAF"),
                 field("name", choice($.identifier, $.var_name_numeric, $.string)),
                 repeat($._func_call_param),
                 "END",
@@ -1764,12 +1775,14 @@ export default grammar({
 
         designated_flag: ($) => seq("DESIGNATED", field("number", $.number)),
         deprecated_flag: ($) => seq("DEPRECATED", field("message", $.value)),
-        subcomponent_flag: ($) => seq("SUBCOMPONENT", field("name", $.value)),
+        // WeiDU takes an optional predicate after the label on both of these: SUBCOMPONENT/GROUP e1:Lse e2:Patch_Exp
+        subcomponent_flag: ($) =>
+            seq(kw("SUBCOMPONENT", "SUB_COMPONENT"), field("name", $.value), optional(field("predicate", $.value))),
         forced_subcomponent_flag: ($) => seq("FORCED_SUBCOMPONENT", field("name", $.value)),
         metadata_flag: ($) => seq("METADATA", field("value", $.value)),
         no_log_record_flag: ($) => "NO_LOG_RECORD",
         install_by_default_flag: ($) => "INSTALL_BY_DEFAULT",
-        group_flag: ($) => seq("GROUP", field("name", $.value)),
+        group_flag: ($) => seq("GROUP", field("name", $.value), optional(field("predicate", $.value))),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
         require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
         require_component_flag: ($) =>
