@@ -44,11 +44,19 @@ grammar_build_wasm() {
 
     # Refresh only the bundle dirs that already ship this grammar, so the diagnostics-only grammars keep
     # build-grammar.sh's policy of going to server/out and not format/out without restating the list here.
+    #
+    # test-all.sh runs the grammar job in PARALLEL with the suites that format via the @bgforge/format CLI,
+    # and those load their parser out of these same dirs. A plain `cp` truncates the destination before
+    # writing it, so a concurrent reader gets a partial file and WebAssembly.instantiate fails on a torn
+    # module. Skip when the bytes already match (the usual case), and otherwise stage beside the target and
+    # rename - a same-filesystem rename is atomic, so a reader sees either the whole old file or the whole
+    # new one.
     local name
     name=$(basename "$wasm")
     for out in "$ROOT_DIR/format/out" "$ROOT_DIR/server/out"; do
-        if [[ -f "$out/$name" ]]; then
-            cp "$wasm" "$out/$name"
+        if [[ -f "$out/$name" ]] && ! cmp -s "$wasm" "$out/$name"; then
+            cp "$wasm" "$out/$name.tmp.$$"
+            mv -f "$out/$name.tmp.$$" "$out/$name"
             echo "wasm: refreshed $out/$name"
         fi
     done
