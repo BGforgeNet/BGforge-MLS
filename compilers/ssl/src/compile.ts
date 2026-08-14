@@ -8,7 +8,7 @@
  */
 
 import type { Parser } from "web-tree-sitter";
-import { findParseError } from "../../../shared/parse-errors";
+import { collectParseErrors } from "../../../shared/parse-errors";
 import { emitInt, type EmitOptions } from "./int/emit";
 import type { Program } from "./int/ir";
 import { lowerProgram, type LowerOptions } from "./lower";
@@ -19,10 +19,28 @@ export interface CompileOptions extends LowerOptions, EmitOptions, OptimizeOptio
     preprocess?: PreprocessOptions;
 }
 
+/** One located complaint, so a caller can place it without parsing the message back apart. */
+export interface CompileDiagnostic {
+    line: number;
+    column: number;
+    message: string;
+}
+
 export class CompileError extends Error {
-    constructor(message: string) {
-        super(message);
+    /**
+     * Every problem this compile found, not just the one the message names.
+     *
+     * `message` stays the FIRST of them, formatted exactly as it always was, so a caller that only knows
+     * how to show one error keeps working unchanged - including the language server's `line:column:`
+     * parsing. A caller that can show more reads this instead.
+     */
+    readonly diagnostics: readonly CompileDiagnostic[];
+
+    constructor(diagnostics: CompileDiagnostic[]) {
+        const first = diagnostics[0];
+        super(first ? `${first.line}:${first.column}: ${first.message}` : "compilation failed");
         this.name = "CompileError";
+        this.diagnostics = diagnostics;
     }
 }
 
@@ -34,17 +52,24 @@ export class CompileError extends Error {
  */
 export function buildProgram(parser: Parser, text: string, options: CompileOptions = {}): Program {
     const tree = parser.parse(text);
-    if (tree === null) throw new CompileError("parser returned no tree");
+    if (tree === null) throw new CompileError([{ line: 1, column: 1, message: "parser returned no tree" }]);
     try {
         // A tree-sitter parse always succeeds, standing in ERROR and MISSING nodes for whatever did not
         // fit the grammar. Lowering walks past those without complaint and emits a program built from
         // the fragments it did understand, so the refusal has to happen here: a script the parser could
         // not read must not silently produce a compiled file that does something else.
-        const error = findParseError(tree.rootNode);
-        if (error) {
-            const { row, column } = error.startPosition;
-            const what = error.isMissing ? `missing ${error.type}` : "syntax error";
-            throw new CompileError(`${row + 1}:${column + 1}: ${what}`);
+        //
+        // Every one of them is reported rather than only the first: they are already all in hand, and a
+        // script with four syntax errors otherwise costs four compile-and-read cycles to clean up.
+        const errors = collectParseErrors(tree.rootNode);
+        if (errors.length > 0) {
+            throw new CompileError(
+                errors.map((error) => ({
+                    line: error.startPosition.row + 1,
+                    column: error.startPosition.column + 1,
+                    message: error.isMissing ? `missing ${error.type}` : "syntax error",
+                })),
+            );
         }
         return optimize(lowerProgram(tree, options), options);
     } finally {

@@ -15,7 +15,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { parseArgs } from "../../../compilers/ssl/src/args";
-import { compileFile } from "../../../compilers/ssl/src/compile";
+import { CompileError, compileFile } from "../../../compilers/ssl/src/compile";
 import { PreprocessError } from "../../../compilers/ssl/src/preprocess";
 import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
@@ -199,34 +199,50 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
         fs.writeFileSync(dstPath, bytes);
         return { errors: [], warnings: [] };
     } catch (error) {
-        return { errors: [toDiagnostic(error, tmpPath)], warnings: [] };
+        return { errors: toDiagnostics(error, tmpPath), warnings: [] };
     }
 }
 
 /**
- * Turns a compiler error into a diagnostic, reading the `line:column:` prefix the front end puts on
- * the ones it can locate. A preprocessor error names its own file, which may be an included header
- * rather than the script being compiled.
+ * Turns a compiler error into diagnostics, reading the `line:column:` prefix the front end puts on the
+ * ones it can locate. A preprocessor error names its own file, which may be an included header rather
+ * than the script being compiled.
+ *
+ * A `CompileError` carries every problem the compile found, so all of them are shown at once; anything
+ * else is a single refusal and reports as one.
  */
-function toDiagnostic(error: unknown, tmpPath: string) {
+function toDiagnostics(error: unknown, tmpPath: string) {
     if (error instanceof PreprocessError) {
-        return {
-            uri: pathToUri(error.file),
-            line: error.line,
+        return [
+            {
+                uri: pathToUri(error.file),
+                line: error.line,
+                columnStart: 0,
+                columnEnd: 0,
+                message: error.message,
+            },
+        ];
+    }
+    if (error instanceof CompileError && error.diagnostics.length > 0) {
+        return error.diagnostics.map((diagnostic) => ({
+            uri: pathToUri(tmpPath),
+            line: diagnostic.line,
             columnStart: 0,
-            columnEnd: 0,
-            message: error.message,
-        };
+            columnEnd: diagnostic.column,
+            message: diagnostic.message,
+        }));
     }
     const message = error instanceof Error ? error.message : String(error);
     const located = /^(\d+):(\d+): (.*)$/s.exec(message);
-    return {
-        uri: pathToUri(tmpPath),
-        line: located ? Number(located[1]) : 1,
-        columnStart: 0,
-        columnEnd: located ? Number(located[2]) : 0,
-        message: located ? located[3]! : message,
-    };
+    return [
+        {
+            uri: pathToUri(tmpPath),
+            line: located ? Number(located[1]) : 1,
+            columnStart: 0,
+            columnEnd: located ? Number(located[2]) : 0,
+            message: located ? located[3]! : message,
+        },
+    ];
 }
 
 function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {

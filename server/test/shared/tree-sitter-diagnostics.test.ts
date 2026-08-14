@@ -8,7 +8,7 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
 import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
-import { collectParseErrors } from "../../src/shared/tree-sitter-diagnostics";
+import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 beforeAll(async () => {
     await initParser();
@@ -16,14 +16,14 @@ beforeAll(async () => {
 
 const SYNTAX_SOURCE = "BGforge MLS (syntax)";
 
-describe("collectParseErrors", () => {
+describe("collectParseDiagnostics", () => {
     it("returns no diagnostics for a clean parse", () => {
         const text = `procedure foo begin
     variable x;
 end
 `;
         const tree = parseWithCache(text)!;
-        expect(collectParseErrors(tree.rootNode)).toEqual([]);
+        expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
     });
 
     it("reports parse errors for malformed input", () => {
@@ -33,7 +33,7 @@ end
 end
 `;
         const tree = parseWithCache(text)!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
 
         expect(diagnostics.length).toBeGreaterThan(0);
         for (const d of diagnostics) {
@@ -59,7 +59,7 @@ end
 end
 `;
         const tree = parseWithCache(text)!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         const errorDiag = diagnostics.find(
             (d) => typeof d.message === "string" && d.message.startsWith("Syntax error"),
         );

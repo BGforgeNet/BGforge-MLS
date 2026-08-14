@@ -12,7 +12,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
 import * as msg from "../../../shared/parsers/fallout-msg";
 import * as tra from "../../../shared/parsers/weidu-tra";
-import { collectParseErrors } from "../../src/shared/tree-sitter-diagnostics";
+import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 const SYNTAX_SOURCE = "BGforge MLS (syntax)";
 
@@ -24,12 +24,12 @@ beforeAll(async () => {
 describe("fallout-msg parse errors", () => {
     it("returns no diagnostics for well-formed entries", () => {
         const tree = msg.parseWithCache("{100}{}{Hello there}\n{200}{snd}{Bye}")!;
-        expect(collectParseErrors(tree.rootNode)).toEqual([]);
+        expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
     });
 
     it("flags a malformed entry (non-numeric id)", () => {
         const tree = msg.parseWithCache("{abc}{}{text}")!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0]!.severity).toBe(DiagnosticSeverity.Error);
         expect(diagnostics[0]!.source).toBe(SYNTAX_SOURCE);
@@ -37,14 +37,14 @@ describe("fallout-msg parse errors", () => {
 
     it("flags an unterminated entry (missing closing brace)", () => {
         const tree = msg.parseWithCache("{200}{}{Bye")!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("missing '"))).toBe(true);
     });
 
     it("accepts #, //, and /* */ marked comments without diagnostics", () => {
         for (const src of ["# a header note\n{100}{}{x}", "// a note\n{100}{}{x}", "/* a note */\n{100}{}{x}"]) {
             const tree = msg.parseWithCache(src)!;
-            expect(collectParseErrors(tree.rootNode)).toEqual([]);
+            expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
         }
     });
 
@@ -52,7 +52,7 @@ describe("fallout-msg parse errors", () => {
         // A non-entry line must be a marked comment (#, //, /* */); markerless
         // free text is a likely typo, not a comment, so it is flagged.
         const tree = msg.parseWithCache("{100}{}{ok}\nthis is a markerless loose line")!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0]!.severity).toBe(DiagnosticSeverity.Error);
         expect(diagnostics[0]!.source).toBe(SYNTAX_SOURCE);
@@ -62,12 +62,12 @@ describe("fallout-msg parse errors", () => {
 describe("weidu-tra parse errors", () => {
     it("returns no diagnostics for well-formed entries", () => {
         const tree = tra.parseWithCache("@1 = ~Hello~\n@2 = ~Bye~ [SND]")!;
-        expect(collectParseErrors(tree.rootNode)).toEqual([]);
+        expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
     });
 
     it("flags an entry missing the '=' separator", () => {
         const tree = tra.parseWithCache("@1 ~Hello~")!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0]!.severity).toBe(DiagnosticSeverity.Error);
         expect(diagnostics[0]!.source).toBe(SYNTAX_SOURCE);
@@ -75,7 +75,7 @@ describe("weidu-tra parse errors", () => {
 
     it("flags a non-entry garbage line", () => {
         const tree = tra.parseWithCache("@1 = ~ok~\nqqq zzz nonsense")!;
-        const diagnostics = collectParseErrors(tree.rootNode);
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("Syntax error"))).toBe(
             true,
         );

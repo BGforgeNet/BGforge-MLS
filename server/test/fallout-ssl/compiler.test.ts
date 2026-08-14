@@ -77,9 +77,15 @@ vi.mock("../../src/sslc/ssl_compiler", () => ({
 }));
 
 const mockCompileFile = vi.fn();
-vi.mock("../../../compilers/ssl/src/compile", () => ({
-    compileFile: (...args: unknown[]) => mockCompileFile(...args),
-}));
+// Only the compile call is stubbed. `CompileError` stays the real class, because the code under test
+// narrows on it with `instanceof` to decide whether it has one error to report or several.
+vi.mock("../../../compilers/ssl/src/compile", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../../compilers/ssl/src/compile")>();
+    return {
+        ...actual,
+        compileFile: (...args: unknown[]) => mockCompileFile(...args),
+    };
+});
 
 const mockGetParser = vi.fn();
 vi.mock("../../../shared/parsers/fallout-ssl", () => ({
@@ -87,6 +93,7 @@ vi.mock("../../../shared/parsers/fallout-ssl", () => ({
 }));
 
 import { compile, TMP_SSL_NAME, _resetCompilerCache } from "../../src/fallout-ssl/compiler";
+import { CompileError } from "../../../compilers/ssl/src/compile";
 import type { SSLsettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
@@ -415,6 +422,24 @@ describe("fallout-ssl compiler", () => {
             expect(mockWriteFileSync).not.toHaveBeenCalled();
             expect(mockShowError).toHaveBeenCalledWith("Failed to compile test.ssl!");
             expect(mockShowInfo).not.toHaveBeenCalled();
+        });
+
+        it("shows every syntax error at once, each at its own line", async () => {
+            // The point of collecting them: a script with three mistakes is one compile, not three.
+            mockCompileFile.mockImplementation(() => {
+                throw new CompileError([
+                    { line: 2, column: 10, message: "syntax error" },
+                    { line: 3, column: 10, message: "syntax error" },
+                    { line: 4, column: 1, message: "missing end" },
+                ]);
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), tsSettings, true, "code");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.errors.map((e: { line: number }) => e.line)).toEqual([2, 3, 4]);
+            expect(parseResult.errors.at(-1).message).toBe("missing end");
+            expect(mockWriteFileSync).not.toHaveBeenCalled();
         });
 
         it("defers to an external compiler when one is configured", async () => {

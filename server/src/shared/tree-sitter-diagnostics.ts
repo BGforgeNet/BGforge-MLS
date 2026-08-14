@@ -16,6 +16,7 @@
 
 import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { collectParseErrors } from "../../../shared/parse-errors";
 
 /** Diagnostic source label - distinct from the compiler's "BGforge MLS" so hovers say which engine flagged it. */
 const DIAG_SOURCE = "BGforge MLS (syntax)";
@@ -24,30 +25,13 @@ const DIAG_SOURCE = "BGforge MLS (syntax)";
 const MAX_TOKEN_LEN = 32;
 
 /**
- * Walk a parse tree and return a diagnostic for each ERROR / MISSING node.
- * Clean subtrees are pruned via `hasError`, so the walk cost is proportional to
- * the broken regions, not the whole file.
+ * A diagnostic for each ERROR / MISSING node. The walk itself is shared with the compiler, which needs
+ * the same nodes with different wording; only the phrasing and the LSP range are this file's business.
  */
-export function collectParseErrors(rootNode: SyntaxNode): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-    walk(rootNode, diagnostics);
-    return diagnostics;
-}
-
-function walk(node: SyntaxNode, out: Diagnostic[]): void {
-    for (const child of node.children) {
-        if (child.isError) {
-            out.push(makeDiagnostic(child, errorMessage(child)));
-            // Don't recurse: an ERROR node's descendants are recovery debris, and
-            // reporting them too would bury the real problem in duplicate squiggles.
-        } else if (child.isMissing) {
-            out.push(makeDiagnostic(child, `missing '${child.type}'`));
-        } else if (child.hasError) {
-            // Clean node, but an error lives deeper - descend to find it.
-            walk(child, out);
-        }
-        // else: fully clean subtree - skip.
-    }
+export function collectParseDiagnostics(rootNode: SyntaxNode): Diagnostic[] {
+    return collectParseErrors(rootNode).map((node) =>
+        makeDiagnostic(node, node.isMissing ? `missing '${node.type}'` : errorMessage(node)),
+    );
 }
 
 /** "Syntax error near '<token>'", or bare "Syntax error" when no token text is recoverable. */
