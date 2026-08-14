@@ -165,7 +165,9 @@ class Printer {
                 // Only meaningful inside the counted loop that `loop` reassembles around it.
                 return [];
             case "callStmt":
-                return [`${pad}${this.call(statement.target, statement.args)};`];
+                // In statement position the language requires the `call` keyword; only an engine function
+                // may be invoked bare. Printing the expression form emits source the front end refuses.
+                return [`${pad}call ${this.call(statement.target, statement.args)};`];
             case "timedCallStmt":
                 return [`${pad}call ${this.expression(statement.target)} in ${this.expression(statement.delay)};`];
             case "libStmt":
