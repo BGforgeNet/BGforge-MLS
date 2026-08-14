@@ -115,6 +115,7 @@
 ; ----- Literals -----
 
 (string) @string
+(char) @character
 (number) @number
 (boolean) @constant.builtin
 

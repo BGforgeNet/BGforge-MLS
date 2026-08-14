@@ -1068,3 +1068,45 @@ END
       then: (block
         (return_stmt
           (boolean))))))
+
+================================================================================
+Adjacent string literals are one string
+================================================================================
+
+procedure foo begin
+    x = "ab" "cd";
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (string))))
+
+================================================================================
+Character constant
+================================================================================
+
+procedure foo begin
+    x = 'A';
+    y = '\n';
+    z = '\0101';
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (char))
+    body: (assignment
+      left: (identifier)
+      right: (char))
+    body: (assignment
+      left: (identifier)
+      right: (char))))

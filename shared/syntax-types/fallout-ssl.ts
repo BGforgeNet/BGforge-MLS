@@ -58,6 +58,7 @@ export enum SyntaxType {
   VarInit = "var_init",
   VariableDecl = "variable_decl",
   WhileStmt = "while_stmt",
+  Char = "char",
   Comment = "comment",
   Identifier = "identifier",
   LineComment = "line_comment",

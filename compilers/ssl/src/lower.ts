@@ -91,6 +91,12 @@ class Lowering {
     private readonly undefinedProcedures: UndefinedProcedure[] = [];
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
+    /**
+     * Enclosing loops. `break` emits a bare jump that consumes the exit address a loop left on the stack,
+     * so outside one it jumps somewhere arbitrary rather than failing - the reference rejects it, and
+     * accepting it silently would ship a script that misbehaves in-game.
+     */
+    private loopDepth = 0;
     private currentTarget: ProcedureDecl | null = null;
 
     constructor(options: LowerOptions) {
@@ -233,6 +239,8 @@ class Lowering {
             }
             case "string":
                 return { kind: "string", value: unquote(node.text) };
+            case "char":
+                return { kind: "int", value: charConstant(node) };
             case "boolean":
                 return { kind: "int", value: node.text.toLowerCase() === "true" ? 1 : 0 };
             case "param_default_unary":
@@ -260,6 +268,7 @@ class Lowering {
         switch (node.type) {
             case "number":
             case "string":
+            case "char":
             case "boolean":
                 return this.constantOf(node);
             case "paren_expr": {
@@ -409,18 +418,16 @@ class Lowering {
                 return result;
             }
 
-            case "while_stmt":
-                return {
-                    kind: "while",
-                    cond: this.required(node, "cond", scope),
-                    body: this.branch(node, "body", scope),
-                };
+            case "while_stmt": {
+                const cond = this.required(node, "cond", scope);
+                return { kind: "while", cond, body: this.inLoop(() => this.branch(node, "body", scope)) };
+            }
 
             case "for_stmt":
-                return this.lowerFor(node, scope);
+                return this.inLoop(() => this.lowerFor(node, scope));
 
             case "foreach_stmt":
-                return this.lowerForeach(node, scope);
+                return this.inLoop(() => this.lowerForeach(node, scope));
 
             case "switch_stmt":
                 return this.lowerSwitch(node, scope);
@@ -436,9 +443,11 @@ class Lowering {
             }
 
             case "break_stmt":
+                this.requireLoop(node, "break");
                 return { kind: "break" };
 
             case "continue_stmt":
+                this.requireLoop(node, "continue");
                 return { kind: "continue" };
 
             case "assignment":
@@ -915,10 +924,25 @@ class Lowering {
         throw new LowerError(`unknown procedure '${node.text}'`, node);
     }
 
+    /** Lowers a loop's body with the loop counted, so a `break` inside it resolves. */
+    private inLoop<T>(lower: () => T): T {
+        this.loopDepth++;
+        try {
+            return lower();
+        } finally {
+            this.loopDepth--;
+        }
+    }
+
+    private requireLoop(node: SyntaxNode, what: string): void {
+        if (this.loopDepth === 0) throw new LowerError(`'${what}' outside a loop`, node);
+    }
+
     private lowerExpression(node: SyntaxNode, scope: Scope): Expr {
         switch (node.type) {
             case "number":
             case "string":
+            case "char":
             case "boolean":
                 return this.constantOf(node);
 
@@ -1161,8 +1185,30 @@ const ESCAPES: Record<string, string> = {
     v: "\t",
 };
 
+/** Decodes one string literal, or several written adjacently - the grammar hands those over as one node. */
 function unquote(text: string): string {
-    return text.slice(1, -1).replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
+    let out = "";
+    for (const [segment] of text.matchAll(/"([^"\\]|\\.)*"/g)) {
+        out += segment.slice(1, -1).replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
+    }
+    return out;
+}
+
+/**
+ * A character constant's integer value. The escape set is narrower than a string's: the octal form is
+ * accepted here and nowhere else, and an escape outside both sets is an error rather than the character
+ * itself, which is the reference compiler's split.
+ */
+function charConstant(node: SyntaxNode): number {
+    const body = node.text.slice(1, -1);
+    if (!body.startsWith("\\")) return body.codePointAt(0) ?? 0;
+    // `\0` then two or three octal digits. The leading zero is a marker rather than a digit, but it does
+    // not change the value either way, so the whole run is parsed base 8.
+    const octal = /^\\0[0-7]{2,3}$/.exec(body);
+    if (octal) return Number.parseInt(body.slice(1), 8);
+    const escaped = ESCAPES[body.slice(1)];
+    if (escaped === undefined) throw new LowerError(`unknown escape '${body}' in a character constant`, node);
+    return escaped.codePointAt(0) ?? 0;
 }
 
 /** Lowers a parsed SSL tree to the emitter's IR. */

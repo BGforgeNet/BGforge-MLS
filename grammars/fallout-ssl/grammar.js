@@ -482,6 +482,7 @@ export default grammar({
                 $.number,
                 $.boolean,
                 $.string,
+                $.char,
             ),
 
         // Ternary expression: value_if_true if condition else value_if_false
@@ -618,7 +619,14 @@ export default grammar({
 
         boolean: ($) => choice(kw("true", 1), kw("false", 1)),
 
-        string: ($) => /"([^"\\]|\\.)*"/,
+        // Adjacent literals are one string: `"ab" "cd"` is `abcd`, as in C. Only whitespace may separate
+        // them - a comment between two literals ends the first one and starts a fresh expression.
+        string: ($) => token(seq(/"([^"\\]|\\.)*"/, repeat(seq(/[ \t\r\n\v]*/, /"([^"\\]|\\.)*"/)))),
+
+        // A character constant is an integer: `'A'` is 65. The escapes are the string table's, plus a
+        // two- or three-digit octal form; anything else is rejected while lowering, where the message
+        // can name the character.
+        char: ($) => token(seq("'", choice(/[^'\\]/, /\\[^'\\0]/, /\\0[0-7]{2,3}/), "'")),
 
         comment: ($) => token(seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/")),
 

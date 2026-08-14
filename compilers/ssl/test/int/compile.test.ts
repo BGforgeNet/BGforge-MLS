@@ -173,6 +173,17 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
     {
+        // Two literals written next to each other are one string, as in C.
+        name: "adjacent string literals concatenate",
+        source: 'procedure start begin\n variable s := "ab" "cd"\n   "ef";\nend\n',
+    },
+    {
+        // A character constant is an integer. The octal form spells its leading zero as a marker: `\0`
+        // then two or three digits, so `\0101` is 65 and `\101` is not a character constant at all.
+        name: "character constants are integers",
+        source: "procedure start begin\n variable a := 'A';\n variable b := '\\n';\n variable c := '\\0101';\nend\n",
+    },
+    {
         // The escape table decides string-table BYTES, so the reference is the only oracle for it that
         // cannot be satisfied by agreeing with our own reading. `\v` in particular yields a horizontal
         // tab, which no corpus script spells and this compiler got wrong until it was compared here.

@@ -302,6 +302,18 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n call nope;\nend\n")).toThrow(/unknown procedure 'nope'/);
     });
 
+    it.each(["break", "continue"])("rejects %s outside a loop, at the statement", (what) => {
+        // `break` compiled silently before this guard: it emits a bare jump consuming the exit address a
+        // loop leaves on the stack, so outside one it jumped into whatever happened to be there.
+        expect(refuse(`procedure start begin\n ${what};\nend\n`)).toThrow(
+            new RegExp(`^2:2: '${what}' outside a loop$`),
+        );
+    });
+
+    it("accepts break in a loop nested inside a conditional", () => {
+        expect(refuse("procedure start begin\n while (1) do begin\n  if (1) then break;\n end\nend\n")).not.toThrow();
+    });
+
     it("rejects a non-literal global initialiser", () => {
         expect(refuse("variable g := random(1, 2);\nprocedure start begin end\n")).toThrow(/must be a literal/);
     });
@@ -688,5 +700,54 @@ describe.skipIf(!wasmPresent)("string escapes", () => {
         ["\\0", "0"],
     ])("decodes %j", (escape, expected) => {
         expect(decode(`"x${escape}y"`)).toBe(`x${expected}y`);
+    });
+
+    it("joins literals written next to each other", () => {
+        expect(decode('"ab" "cd"')).toBe("abcd");
+        // Whitespace between them includes a line break: a long message is written across lines.
+        expect(decode('"ab"\n   "cd"\t"ef"')).toBe("abcdef");
+    });
+});
+
+describe.skipIf(!wasmPresent)("character constants", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** The integer a character constant lowers to. */
+    const value = (literal: string): number => {
+        const tree = parser.parse(`procedure start begin\n variable c := ${literal};\nend\n`);
+        if (!tree) throw new Error("no tree");
+        try {
+            const declaration = lowerProgram(tree).declarations.find((d) => d.kind === "procedure");
+            if (declaration?.kind !== "procedure") throw new Error("no procedure");
+            const initial = declaration.procedure.locals[0]?.initial;
+            if (initial?.kind !== "int") throw new Error(`local is ${initial?.kind ?? "absent"}, not an int`);
+            return initial.value;
+        } finally {
+            tree.delete();
+        }
+    };
+
+    it.each([
+        ["'A'", 65],
+        ["' '", 32],
+        ["'\\n'", 10],
+        ["'\\t'", 9],
+        // `\v` is a tab here too, the same way it is inside a string.
+        ["'\\v'", 9],
+        // `\0` marks the octal form; the two or three digits after it carry the value.
+        ["'\\012'", 10],
+        ["'\\0101'", 65],
+    ])("%s is %d", (literal, expected) => {
+        expect(value(literal)).toBe(expected);
+    });
+
+    it("refuses an escape neither table defines", () => {
+        expect(() => value("'\\z'")).toThrow(/unknown escape '\\z' in a character constant/);
     });
 });

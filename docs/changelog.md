@@ -42,6 +42,14 @@
   a directory that does not exist and the headers were never found.
 - The `typescript` compiler decodes the whole set of string escapes. `\a`, `\b`, `\f` and `\v` were left as
   the letter itself, so a string using them compiled to different bytes than the bundled compiler produces.
+- Two string literals written next to each other are one string, as the bundled compiler has always read
+  them: `"ab" "cd"` is `abcd`, and a long message can be split across lines. Both compilers accept it, and
+  the editor no longer marks it as a syntax error.
+- Character constants are recognised: `'A'` is 65, with the escapes `'\n'`, `'\t'` and the octal `'\0101'`.
+  They were reported as a syntax error, in the editor as well as by the `typescript` compiler.
+- `break` or `continue` written outside a loop is reported at the statement instead of being compiled.
+  `break` produced a jump to whatever address happened to be on the stack, so the script built and then
+  misbehaved in-game; `continue` was reported without a line, landing the diagnostic on line 1.
 - Several engine function signatures were wrong and are corrected: nine had the wrong number of arguments
   (`give_exp_points`, `explosion`, `gSay_End` and six others), `art_anim` and `critter_heal` were shown as
   returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing
