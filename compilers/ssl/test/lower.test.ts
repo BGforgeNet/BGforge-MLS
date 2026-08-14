@@ -419,6 +419,14 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse(`procedure start begin\n variable x;\n x := 7 ${op} 0;\nend\n`)).toThrow(/division by zero/);
     });
 
+    it("sees a zero divisor through parentheses and a false", () => {
+        // The language's own check looks at the constant the divisor emits, which parentheses do not
+        // change; `false` is the same zero written another way.
+        expect(refuse("procedure start begin\n variable x;\n x := 7 / (0);\nend\n")).toThrow(/division by zero/);
+        expect(refuse("procedure start begin\n variable x;\n x := 7 / false;\nend\n")).toThrow(/division by zero/);
+        expect(refuse("procedure start begin\n variable x;\n x := 7 / (2);\nend\n")).not.toThrow();
+    });
+
     it("rejects a chained comparison but not a parenthesised one", () => {
         const chain = "procedure start begin\n variable a;\n variable b;\n variable c;\n a := b == c == 1;\nend\n";
         expect(refuse(chain)).toThrow(/comparisons do not chain/);

@@ -771,6 +771,31 @@ describe("printing", () => {
         expect(text).toContain("procedure guard in 5 begin");
     });
 
+    it("writes a process-control statement the way the source spells it", () => {
+        // With no argument the word stands alone - printing `exit()` would not compile back - and with
+        // one it takes parentheses like a call.
+        const text = printProgram({
+            declarations: [
+                {
+                    kind: "procedure",
+                    procedure: {
+                        name: "start",
+                        args: [],
+                        locals: [],
+                        body: [
+                            { kind: "opStmt", opcode: Op.STARTCRITICAL, args: [] },
+                            { kind: "opStmt", opcode: Op.WAIT, args: [{ kind: "int", value: 50 }] },
+                            { kind: "opStmt", opcode: Op.EXIT, args: [] },
+                        ],
+                    },
+                },
+            ],
+        });
+        expect(text).toContain("startcritical;");
+        expect(text).toContain("wait(50);");
+        expect(text).toContain("exit;");
+    });
+
     it("spells a guard as syntax when nothing competes with it", () => {
         const text = printProgram({
             declarations: [
