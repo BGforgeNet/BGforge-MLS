@@ -401,6 +401,12 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         ).not.toThrow();
     });
 
+    it("rejects the prefix increment the language does not have", () => {
+        // `x++` is a statement; `++x` is not a second spelling of it, in a statement or an expression.
+        expect(refuse("procedure start begin\n variable x;\n ++x;\nend\n")).toThrow(/syntax error/);
+        expect(refuse("procedure start begin\n variable x;\n x++;\nend\n")).not.toThrow();
+    });
+
     it("rejects an inline procedure used as a value, but not called", () => {
         // `inline` pastes the body into the caller, so there is nothing to take a value from.
         expect(refuse("inline procedure foo begin end\nprocedure start begin\n variable x := foo;\nend\n")).toThrow(

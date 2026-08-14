@@ -845,9 +845,24 @@ class Lowering {
         const operator = node.children.find((c) => c && ASSIGN_OPS.has(c.text))?.text ?? "=";
         const op = (operator === ":=" ? "=" : operator) as AssignOp;
 
-        // Assigning into an array or map is a `set_array` call, not a store: the outermost `get_array`
-        // of the access chain becomes a `set_array` with the value appended.
         if (left.type === "subscript_expr" || left.type === "member_expr") {
+            return this.elementAssignment(left, op, () => this.lowerExpression(right, scope), scope);
+        }
+
+        const target = this.lowerExpression(left, scope);
+        if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
+        return { kind: "assign", target, op, value: this.lowerExpression(right, scope) };
+    }
+
+    /**
+     * Assigning into an array or map is a `set_array` call, not a store: the outermost `get_array` of
+     * the access chain becomes a `set_array` with the value appended. `a[k]++` steps an element through
+     * here too, which is why the value arrives as a thunk - it is produced at the point the reference
+     * produces it, after any temporaries the index needed have been allocated.
+     */
+    private elementAssignment(left: SyntaxNode, op: AssignOp, value: () => Expr, scope: Scope): Stmt {
+        {
+            const node = left;
             const object = left.childForFieldName("object");
             const index =
                 left.type === "subscript_expr" ? left.childForFieldName("index") : left.childForFieldName("member");
@@ -865,7 +880,7 @@ class Lowering {
                 return {
                     kind: "libStmt",
                     opcode: fn.opcode,
-                    args: [container, key, this.lowerExpression(right, scope)],
+                    args: [container, key, value()],
                     ...popsResult,
                 };
             }
@@ -895,7 +910,7 @@ class Lowering {
                 kind: "binary",
                 op: binaryOp,
                 left: { kind: "libCall", opcode: get.opcode, args: [container, key] },
-                right: this.lowerExpression(right, scope),
+                right: value(),
             };
             const store: Stmt = {
                 kind: "libStmt",
@@ -905,10 +920,6 @@ class Lowering {
             };
             return prelude.length > 0 ? { kind: "block", body: [...prelude, store] } : store;
         }
-
-        const target = this.lowerExpression(left, scope);
-        if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
-        return { kind: "assign", target, op, value: this.lowerExpression(right, scope) };
     }
 
     /** `call foo(...)` invokes a procedure and discards its result. */
@@ -987,9 +998,13 @@ class Lowering {
         if (op !== "++" && op !== "--") return null;
         const operand = node.childForFieldName("expr");
         if (!operand) throw new LowerError("malformed increment", node);
+        const step: AssignOp = op === "++" ? "+=" : "-=";
+        if (operand.type === "subscript_expr" || operand.type === "member_expr") {
+            return this.elementAssignment(operand, step, () => ({ kind: "int", value: 1 }), scope);
+        }
         const target = this.lowerExpression(operand, scope);
         if (target.kind !== "var") throw new LowerError("increment target must be a variable", operand);
-        return { kind: "assign", target, op: op === "++" ? "+=" : "-=", value: { kind: "int", value: 1 } };
+        return { kind: "assign", target, op: step, value: { kind: "int", value: 1 } };
     }
 
     private callParts(node: SyntaxNode, scope: Scope): { callee: Expr; args: Expr[]; checkArgCount: boolean } {

@@ -31,7 +31,9 @@ export default grammar({
     // - var_init vs ternary_expr: at `variable a := 1 if c else 2` the `if` could continue the
     //   initialiser as a ternary or start a new statement, and telling them apart needs lookahead past
     //   the condition to `else` versus `then`. Both readings are explored and the wrong one dies.
-    conflicts: ($) => [[$.var_init], [$.var_init, $.ternary_expr]],
+    // - _foreach_head vs ternary_expr: same shape as var_init's - at `foreach v in a if c else b` the
+    //   `if` could continue the iterable as a ternary or (with a `while` guard absent) end the head.
+    conflicts: ($) => [[$.var_init], [$.var_init, $.ternary_expr], [$._foreach_head, $.ternary_expr]],
 
     rules: {
         source_file: ($) => repeat($._top_level),
@@ -362,38 +364,28 @@ export default grammar({
         // - foreach k: v in expr body
         // - foreach (var in expr) body  or  foreach (k: v in expr) body
         // The parenthesized form can have optional "while condition" before closing paren.
+        // The parentheses are optional and change nothing inside them: `variable`, the `key: value` pair
+        // and the trailing `while` guard are available with or without them.
         foreach_stmt: ($) =>
             seq(
                 kw("foreach"),
-                choice(
-                    // foreach k: v in expr body (no parens, key:value)
-                    seq(
-                        field("key", $.identifier),
-                        ":",
-                        field("value", $.identifier),
-                        kw("in"),
-                        field("iter", $._expression),
-                        field("body", $._stmt_or_block),
-                    ),
-                    // foreach var in expr body (no parens, single var)
-                    seq(
-                        field("var", $.identifier),
-                        kw("in"),
-                        field("iter", $._expression),
-                        field("body", $._stmt_or_block),
-                    ),
-                    // foreach (var in expr) body or foreach (k: v in expr while cond) body
-                    seq(
-                        "(",
-                        optional(kw("variable")),
-                        field("key", $.identifier),
-                        optional(seq(":", field("value", $.identifier))),
-                        kw("in"),
-                        field("iter", $._expression),
-                        optional(seq(kw("while"), field("while_cond", $._expression))),
-                        ")",
-                        field("body", $._stmt_or_block),
-                    ),
+                choice($._foreach_head, seq("(", $._foreach_head, ")")),
+                field("body", $._stmt_or_block),
+            ),
+
+        // A lone loop variable lands in `key`; with `k: v` the second one is the value. The `while`
+        // guard is ANDed into the loop's own bounds test rather than being a separate loop.
+        // Right-associative so a `while` after the iterable is taken as the guard rather than as the
+        // start of a while-loop body, which is the greedy reading the language's own parser takes.
+        _foreach_head: ($) =>
+            prec.right(
+                seq(
+                    optional(kw("variable")),
+                    field("key", $.identifier),
+                    optional(seq(":", field("value", $.identifier))),
+                    kw("in"),
+                    field("iter", $._expression),
+                    optional(seq(kw("while"), field("while_cond", $._expression))),
                 ),
             ),
 
@@ -622,10 +614,19 @@ export default grammar({
                     11,
                     seq(field("op", choice(kw("not"), kw("bwnot"), kw("floor"), "-")), field("expr", $._expression)),
                 ),
-                // Pre-increment/decrement
-                prec(11, seq(field("op", choice("++", "--")), field("expr", $.identifier))),
-                // Post-increment/decrement
-                prec(11, seq(field("expr", $.identifier), field("op", choice("++", "--")))),
+                // Post-increment/decrement only: the language has no PREFIX form, in a statement or
+                // anywhere else, so `++x` is a syntax error rather than a second spelling of `x++`. An
+                // array element may be stepped as well - `a[1]++` is `a[1] += 1`, down to which
+                // temporaries the index needs. The target list is spelled out rather than shared with
+                // `assignment`: a rule of its own adds a reduction step that collides with the
+                // macro-body assignment twin.
+                prec(
+                    11,
+                    seq(
+                        field("expr", choice($.identifier, $.subscript_expr, $.member_expr)),
+                        field("op", choice("++", "--")),
+                    ),
+                ),
             ),
 
         // ## token-pasting: animate_##type##_to_tile (valid inside #define bodies only;

@@ -47,6 +47,12 @@
   the editor no longer marks it as a syntax error.
 - Character constants are recognised: `'A'` is 65, with the escapes `'\n'`, `'\t'` and the octal `'\0101'`.
   They were reported as a syntax error, in the editor as well as by the `typescript` compiler.
+- `foreach` accepts its `while` guard in every spelling, not only the parenthesised one:
+  `foreach v in arr while (cond)` checks the condition before each iteration.
+- An array element can be stepped: `a[1]++`, `a.field--` and `a[i + 1]++` compile the way `a[1] += 1`
+  already did, evaluating a complex index once.
+- `++x` is reported as a syntax error. The language has no prefix increment - only `x++` - so a script
+  using it never compiled with the bundled compiler.
 - The process-control statements compile: `spawn`, `callstart`, `exec` and `fork` start a child script,
   `wait` suspends, `cancel` and `cancelall` drop pending events, `startcritical` and `endcritical` mark a
   critical section, and `exit`, `detach` and `noop` do what they say. They were reported as syntax errors

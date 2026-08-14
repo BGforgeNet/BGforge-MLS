@@ -159,9 +159,10 @@ const CASES: Case[] = [
         source: "procedure foo(variable a) begin\n if a == 0 then return;\n a := 1;\nend\nprocedure start begin end\n",
     },
     {
-        // Increment and decrement are compound assignment spelled differently.
+        // Increment and decrement are compound assignment spelled differently, and an array element
+        // steps the same way - down to the temporary a complex index needs.
         name: "increment and decrement statements",
-        source: "procedure start begin\n variable x;\n x++;\n x--;\nend\n",
+        source: "procedure start begin\n variable x;\n variable a;\n x++;\n x--;\n a[1]++;\n a[x + 1]--;\n a.b++;\nend\n",
     },
     {
         // `pure` and `inline` are recorded in the procedure table, not just advisory to the reader.
@@ -171,6 +172,20 @@ const CASES: Case[] = [
     {
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
+    },
+    {
+        // The guard is ANDed into the loop's bounds test, so it is checked before every iteration
+        // rather than being a second loop. Parentheses around the head change nothing.
+        name: "foreach with a while guard",
+        source: [
+            "procedure start begin",
+            "   variable a;",
+            "   variable i;",
+            "   foreach variable v in a while (i < 3) begin i += 1; end",
+            // `variable` appears once for the head, not once per name.
+            "   foreach (variable k: w in a while (i < 5)) begin i += 1; end",
+            "end",
+        ].join("\n"),
     },
     {
         // The callee may be a string: the engine resolves the name at run time, so the call carries an
