@@ -32,10 +32,11 @@ pnpm ssl-verdicts --check tmp/verdicts.txt   # after each change
 ```
 
 `ssl-diff` answers "does THIS construct match"; this answers "did anything about the corpus change". It
-sweeps every script at every level through this front end only - no reference process, so it costs about a
-minute rather than sixteen - and records one line per script per level: the emitted bytes' digest, or the
-message it was refused with. `--check` reports every difference grouped by what it means (now refused, now
-accepted, bytes changed, first message changed) and exits non-zero if there are any.
+sweeps every script at every level through this front end only - no reference process, so it takes about
+three minutes rather than sixteen, and about one with `--levels 0` while you are still iterating - and
+records one line per script per level: the emitted bytes' digest, or the message it was refused with.
+`--check` reports every difference grouped by what it means (now refused, now accepted, bytes changed,
+first message changed) and exits non-zero if there are any.
 
 That is the gate for a change that is not supposed to alter behaviour at all: a refactor, an error-reporting
 rework, a lowering cleanup. It cannot tell you whether the compiler is RIGHT - only whether it still does

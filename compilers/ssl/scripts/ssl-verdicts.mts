@@ -26,6 +26,7 @@ import * as path from "node:path";
 import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../src/compile.ts";
 import { preprocess } from "../src/preprocess.ts";
+import { narrow, scriptsUnder } from "../test/integration/corpus-files.ts";
 
 // Anchored to this file rather than to cwd. The repo's shared `repo-root` helper reads `__dirname`, which
 // an ES module does not have, so it cannot be imported here - `ssl-diff.mts` computes its own for the
@@ -64,29 +65,14 @@ function parseArgs(argv: string[]) {
     return { mode, file, levels };
 }
 
-/**
- * Every corpus script, sorted, with the same two exclusions the test suites apply: `template` holds
- * deliberately malformed inputs, and `sfall` is a symlink to headers.
- */
+/** The same population the test suites sweep, narrowed by the same switches. */
 function listScripts(): string[] {
-    if (!fs.existsSync(RP_SCRIPTS)) {
+    const scripts = narrow(scriptsUnder(RP_SCRIPTS));
+    if (scripts.length === 0) {
         console.error(`No corpus at ${path.relative(REPO_ROOT, RP_SCRIPTS)} - run pnpm test:external first.`);
         process.exit(2);
     }
-    const out: string[] = [];
-    for (const entry of fs.readdirSync(RP_SCRIPTS)) {
-        if (entry === "template" || entry === "sfall") continue;
-        const dir = path.join(RP_SCRIPTS, entry);
-        if (!fs.statSync(dir).isDirectory()) continue;
-        for (const file of fs.readdirSync(dir)) {
-            if (file.toLowerCase().endsWith(".ssl")) out.push(path.join(dir, file));
-        }
-    }
-    out.sort();
-    const only = process.env.SSL_CORPUS_ONLY;
-    if (only) return out.filter((s) => path.basename(s, path.extname(s)) === only);
-    const limit = Number(process.env.SSL_CORPUS_LIMIT ?? 0);
-    return limit > 0 ? out.slice(0, limit) : out;
+    return scripts;
 }
 
 /**
