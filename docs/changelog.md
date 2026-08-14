@@ -40,6 +40,8 @@
 - `bgforge.falloutSSL.headersDirectory` is now honoured when the directory's name contains a dot
   (`fo2.rp`, `headers.v2`). Everything after the last dot was being dropped, so the compiler was pointed at
   a directory that does not exist and the headers were never found.
+- The `typescript` compiler decodes the whole set of string escapes. `\a`, `\b`, `\f` and `\v` were left as
+  the letter itself, so a string using them compiled to different bytes than the bundled compiler produces.
 - Several engine function signatures were wrong and are corrected: nine had the wrong number of arguments
   (`give_exp_points`, `explosion`, `gSay_End` and six others), `art_anim` and `critter_heal` were shown as
   returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing

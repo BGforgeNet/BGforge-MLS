@@ -639,3 +639,54 @@ describe.skipIf(!wasmPresent)("lowering shapes the corpus does not exercise", ()
         expect(compiles("procedure start begin\n while (1) do begin\n  break;\n end\nend\n")).toBeGreaterThan(0);
     });
 });
+
+/**
+ * The whole escape table, not the rows the corpus happens to use.
+ *
+ * The corpus reaches `\n` and little else, so a differential over it cannot tell a correct table from a
+ * partial one - `\v` was decoded as the letter `v` for as long as this compiler has existed, and 1517
+ * matching scripts said nothing about it. Every row here is the reference compiler's own mapping.
+ */
+describe.skipIf(!wasmPresent)("string escapes", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** The decoded value of a string literal, read off the local it initialises. */
+    const decode = (literal: string): string => {
+        const tree = parser.parse(`procedure start begin\n variable s := ${literal};\nend\n`);
+        if (!tree) throw new Error("no tree");
+        try {
+            const declaration = lowerProgram(tree).declarations.find((d) => d.kind === "procedure");
+            if (declaration?.kind !== "procedure") throw new Error("no procedure");
+            const initial = declaration.procedure.locals[0]?.initial;
+            if (initial?.kind !== "string") throw new Error(`local is ${initial?.kind ?? "absent"}, not a string`);
+            return initial.value;
+        } finally {
+            tree.delete();
+        }
+    };
+
+    it.each([
+        ["\\a", "\u0007"],
+        ["\\b", "\b"],
+        ["\\f", "\f"],
+        ["\\n", "\n"],
+        ["\\r", "\r"],
+        ["\\t", "\t"],
+        // A vertical tab is what the escape spells and NOT what it produces: the reference maps it to a
+        // horizontal tab, so a script's compiled bytes carry 0x09.
+        ["\\v", "\t"],
+        ["\\\\", "\\"],
+        ['\\"', '"'],
+        // An escape the table does not list keeps its own character.
+        ["\\z", "z"],
+        ["\\0", "0"],
+    ])("decodes %j", (escape, expected) => {
+        expect(decode(`"x${escape}y"`)).toBe(`x${expected}y`);
+    });
+});

@@ -172,6 +172,13 @@ const CASES: Case[] = [
         name: "continue inside a for loop",
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
+    {
+        // The escape table decides string-table BYTES, so the reference is the only oracle for it that
+        // cannot be satisfied by agreeing with our own reading. `\v` in particular yields a horizontal
+        // tab, which no corpus script spells and this compiler got wrong until it was compared here.
+        name: "string escapes reach the string table",
+        source: 'procedure start begin\n variable s := "a\\ab\\bc\\fd\\ne\\rf\\tg\\vh\\\\i\\"j\\zk";\nend\n',
+    },
 ];
 
 describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to matching bytecode", () => {

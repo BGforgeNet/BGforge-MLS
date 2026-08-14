@@ -1147,12 +1147,22 @@ function collectStringLiterals(root: SyntaxNode): string[] {
     return out;
 }
 
+/**
+ * The reference compiler's escape table. `\v` yields a TAB there, not a vertical tab, and anything not
+ * listed keeps its own character - both are that compiler's behaviour, so both are reproduced here.
+ */
+const ESCAPES: Record<string, string> = {
+    a: "\u0007",
+    b: "\b",
+    f: "\f",
+    n: "\n",
+    r: "\r",
+    t: "\t",
+    v: "\t",
+};
+
 function unquote(text: string): string {
-    return text
-        .slice(1, -1)
-        .replaceAll(/\\(.)/g, (_, char: string) =>
-            char === "n" ? "\n" : char === "t" ? "\t" : char === "r" ? "\r" : char,
-        );
+    return text.slice(1, -1).replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
 }
 
 /** Lowers a parsed SSL tree to the emitter's IR. */
