@@ -146,32 +146,22 @@ export function formatForStmt(node: SyntaxNode, depth: number): string {
 
 export function formatForeachStmt(node: SyntaxNode, depth: number): string {
     const ctx = getCtx();
-    const varNode = node.childForFieldName("var");
     const keyNode = node.childForFieldName("key");
     const valueNode = node.childForFieldName("value");
     const hasVariable = node.children.some((c) => c.text === "variable");
     const hasParens = node.children.some((c) => c.text === "(");
     const iter = node.childForFieldName("iter");
+    const guard = node.childForFieldName("while_cond");
     const body = node.childForFieldName("body");
 
-    let header: string;
-    const varPrefix = hasVariable ? "variable " : "";
-    if (keyNode && valueNode) {
-        // foreach k: v in expr (with or without parens)
-        if (hasParens) {
-            header = `foreach (${varPrefix}${keyNode.text}: ${valueNode.text} in ${formatExpression(iter)})`;
-        } else {
-            header = `foreach ${keyNode.text}: ${valueNode.text} in ${formatExpression(iter)}`;
-        }
-    } else if (keyNode) {
-        // foreach (var in expr) - parenthesized single var form
-        header = `foreach (${varPrefix}${keyNode.text} in ${formatExpression(iter)})`;
-    } else if (varNode) {
-        // foreach var in expr - no parens
-        header = `foreach ${varNode.text} in ${formatExpression(iter)}`;
-    } else {
-        header = `foreach in ${formatExpression(iter)}`;
-    }
+    // The parentheses, the `variable` keyword, the `key: value` pair and the `while` guard are each
+    // independently optional, so one head assembled from parts is the only shape that cannot drop
+    // whichever combination a branch per form would have missed.
+    const loopVar = keyNode && valueNode ? `${keyNode.text}: ${valueNode.text}` : (keyNode?.text ?? "");
+    const binding = loopVar ? `${hasVariable ? "variable " : ""}${loopVar} ` : "";
+    const guardText = guard ? ` while ${formatExpression(guard)}` : "";
+    const head = `${binding}in ${formatExpression(iter)}${guardText}`;
+    const header = hasParens ? `foreach (${head})` : `foreach ${head}`;
 
     if (body?.type === SyntaxType.Block) {
         return header + " " + formatBlock(body, depth);

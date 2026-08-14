@@ -20,6 +20,9 @@
   that setting are honoured too, so a header directory or a macro defined there applies to both compilers.
 - Formatting a procedure no longer drops its modifiers. `pure` and `inline` were being deleted from the
   output, which changes what the script compiles to on a file you only asked to reformat.
+- Formatting a `foreach` loop no longer drops its `while` guard, and keeps the header the way the source
+  wrote it rather than adding parentheses around a loop that had none. The guard is part of the loop's
+  bounds test, so losing it changed how many times the loop ran.
 - `critical procedure` is recognised. It marks a procedure the engine runs to completion without
   interleaving other scripts, and combines with `pure` or `inline` when written before them. Highlighting,
   formatting and the `typescript` compiler all handle it.
