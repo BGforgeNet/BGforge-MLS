@@ -47,6 +47,12 @@
   the editor no longer marks it as a syntax error.
 - Character constants are recognised: `'A'` is 65, with the escapes `'\n'`, `'\t'` and the octal `'\0101'`.
   They were reported as a syntax error, in the editor as well as by the `typescript` compiler.
+- `variable a[10];` now creates its array. The declaration was accepted and then ignored, so the variable
+  held nothing and every read of it came back empty. The two-argument form `variable a[10, 2]`, which sets
+  the array's flags, was silently read as a plain declaration followed by an unrelated statement; it now
+  parses as one declaration. Declaring an array outside a procedure is reported rather than ignored.
+- A global initialiser accepts `not` and `bwnot`, not only a negation: `variable g := not 0;` compiles
+  instead of being rejected as a non-literal.
 - `break` or `continue` written outside a loop is reported at the statement instead of being compiled.
   `break` produced a jump to whatever address happened to be on the stack, so the script built and then
   misbehaved in-game; `continue` was reported without a line, landing the diagnostic on line 1.

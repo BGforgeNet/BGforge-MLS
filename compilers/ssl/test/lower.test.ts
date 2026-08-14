@@ -314,6 +314,14 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n while (1) do begin\n  if (1) then break;\n end\nend\n")).not.toThrow();
     });
 
+    it("rejects an array declaration outside a procedure", () => {
+        // The creation is a statement, so a global has nowhere to run it. Accepting the declaration
+        // would leave the slot holding no array, which is worse than refusing it.
+        expect(refuse("variable g[5];\nprocedure start begin\n g[0] := 1;\nend\n")).toThrow(
+            /^1:12: array declarations are only allowed on a local variable$/,
+        );
+    });
+
     it("rejects a non-literal global initialiser", () => {
         expect(refuse("variable g := random(1, 2);\nprocedure start begin end\n")).toThrow(/must be a literal/);
     });

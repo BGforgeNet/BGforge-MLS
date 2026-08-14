@@ -1110,3 +1110,27 @@ end
     body: (assignment
       left: (identifier)
       right: (char))))
+
+================================================================================
+Array declaration with size and flags
+================================================================================
+
+procedure foo begin
+    variable a[10];
+    variable b[4, 2];
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        size: (number)))
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        size: (number)
+        flags: (number)))))

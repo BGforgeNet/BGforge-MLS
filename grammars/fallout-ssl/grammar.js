@@ -260,7 +260,18 @@ export default grammar({
         var_init: ($) =>
             seq(
                 field("name", choice($.identifier, $.token_paste_identifier)),
-                optional(seq("[", field("size", $._expression), "]")), // static array: variable a[10]
+                // Static array: `variable a[10]`, or `variable a[10, 2]` where the second constant is the
+                // array's flags. Without the flags form the comma ends the declaration and the rest
+                // parses as a separate array-literal statement, which is a silent misparse, not an error.
+                // The bracket run is dynamically preferred: `variable b[4, 2];` also parses as a bare
+                // declaration followed by the array literal `[4, 2]` as its own statement, and without a
+                // preference tree-sitter picks that reading in some states and this one in others.
+                optional(
+                    prec.dynamic(
+                        1,
+                        seq("[", field("size", $._expression), optional(seq(",", field("flags", $._expression))), "]"),
+                    ),
+                ),
                 optional(seq(choice(":=", "="), field("value", $._expression))),
             ),
 

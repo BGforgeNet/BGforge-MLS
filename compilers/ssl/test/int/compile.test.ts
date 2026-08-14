@@ -173,6 +173,18 @@ const CASES: Case[] = [
         source: "procedure start begin\n variable i;\n for (i := 0; i < 3; i += 1) begin\n  continue;\n end\nend\n",
     },
     {
+        // `variable a[10]` both declares the slot and fills it with a fresh array, so a declaration that
+        // looks inert emits code. The flags argument is optional and defaults to 4.
+        name: "array declarations create their array",
+        source: "procedure start begin\n variable a[10];\n variable b[4, 2];\n a[0] := b[1];\nend\n",
+    },
+    {
+        // A global initialiser is a constant expression, not just a literal: one unary operator folds
+        // into the slot, and `not`/`bwnot` make it an integer whatever they were given.
+        name: "unary operators fold into a global initialiser",
+        source: "variable g := not 0;\nvariable h := bwnot 5;\nvariable i := ((-7));\nprocedure start begin\n g := g + h + i;\nend\n",
+    },
+    {
         // Two literals written next to each other are one string, as in C.
         name: "adjacent string literals concatenate",
         source: 'procedure start begin\n variable s := "ab" "cd"\n   "ef";\nend\n',

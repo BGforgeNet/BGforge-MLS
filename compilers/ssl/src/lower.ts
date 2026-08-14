@@ -213,6 +213,10 @@ class Lowering {
 
     private variableOf(init: SyntaxNode): VariableDecl {
         const name = this.nameOf(init);
+        const size = init.childForFieldName("size");
+        // Only a local may be declared as an array: the creation is a statement, and a global's
+        // declaration has no procedure to run it in. Accepting it would give the slot no array at all.
+        if (size) throw new LowerError("array declarations are only allowed on a local variable", size);
         const value = init.childForFieldName("value");
         return { name, initial: value ? this.constantOf(value) : { kind: "int", value: 0 } };
     }
@@ -246,11 +250,19 @@ class Lowering {
             case "param_default_unary":
             case "unary_expr": {
                 const operand = node.childForFieldName("expr");
-                const op = node.childForFieldName("op")?.text;
-                if (op === "-" && operand) {
+                const op = node.childForFieldName("op")?.text.toLowerCase();
+                if (operand && (op === "-" || op === "not" || op === "bwnot")) {
                     const inner = this.constantOf(operand);
-                    if (inner.kind === "int") return { kind: "int", value: -inner.value };
-                    if (inner.kind === "float") return { kind: "float", value: -inner.value };
+                    // `not` and `bwnot` yield an integer whatever they are given: a float is truncated
+                    // first, which is what the reference does with the same three operators here.
+                    if (inner.kind === "int" || inner.kind === "float") {
+                        const truncated = Math.trunc(inner.value);
+                        if (op === "not") return { kind: "int", value: truncated === 0 ? 1 : 0 };
+                        if (op === "bwnot") return { kind: "int", value: ~truncated };
+                        return inner.kind === "int"
+                            ? { kind: "int", value: -inner.value }
+                            : { kind: "float", value: -inner.value };
+                    }
                 }
                 break;
             }
@@ -688,8 +700,25 @@ class Lowering {
             const name = init.childForFieldName("name");
             if (!name) throw new LowerError("var_init has no name", init);
             const value = init.childForFieldName("value");
+            const size = init.childForFieldName("size");
             const literal = value ? this.literalOf(value) : ({ kind: "int", value: 0 } as const);
             const target = this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 });
+            // `variable a[10]` declares a slot AND fills it: the declaration carries an assignment of a
+            // fresh temp array. Flags default to 4 - the value the language uses when they are left out.
+            if (size) {
+                if (target.kind !== "var") throw new LowerError(`'${name.text}' is not a variable`, name);
+                const flags = init.childForFieldName("flags");
+                assignments.push({
+                    kind: "assign",
+                    target,
+                    op: "=",
+                    value: this.engineCall(init, "temp_array", [
+                        this.lowerExpression(size, scope),
+                        flags ? this.lowerExpression(flags, scope) : { kind: "int", value: 4 },
+                    ]),
+                });
+                continue;
+            }
             if (!value || literal !== null) continue;
             if (target.kind !== "var") throw new LowerError(`'${name.text}' is not a variable`, name);
             assignments.push({ kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) });
