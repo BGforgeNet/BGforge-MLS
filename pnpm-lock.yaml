@@ -236,6 +236,19 @@ importers:
         specifier: ^13.0.6
         version: 13.0.6
 
+  compilers/ssl:
+    dependencies:
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.26.10
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.4(oxc-resolver@11.21.3)(tsx@4.23.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+
   format:
     dependencies:
       cac:
@@ -374,12 +387,6 @@ importers:
       sslc-emscripten-noderawfs:
         specifier: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
         version: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
-
-  ssl:
-    devDependencies:
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
 
   transpilers:
     dependencies:

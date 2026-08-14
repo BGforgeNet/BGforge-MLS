@@ -84,7 +84,7 @@ vi.mock("vscode", () => ({
 }));
 
 import { COMMAND_DECOMPILE_INT, INT_SCHEME, registerIntViewer, render, sourcePath } from "../src/int-viewer/register";
-import { emitInt } from "../../ssl/src/int/emit";
+import { emitInt } from "../../compilers/ssl/src/int/emit";
 
 function compiled(): string {
     const bytes = emitInt({

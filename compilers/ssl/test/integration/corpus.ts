@@ -13,7 +13,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 
 export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 

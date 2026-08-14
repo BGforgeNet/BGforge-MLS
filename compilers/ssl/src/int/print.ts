@@ -233,12 +233,16 @@ class Printer {
 export function printProgram(program: Program, options: PrintOptions = {}): string {
     const printer = new Printer(program);
     const lines: string[] = [];
-    if (options.origin) lines.push(`// Decompiled from ${options.origin}.`);
-    lines.push(
-        "// Local and argument names are not stored in a compiled script; the ones below are generated.",
-        "// Constants, macros and comments were resolved away before compilation and cannot be recovered.",
-        "",
-    );
+    // Both caveats are about what a compiled file no longer holds, so they belong to a program that was
+    // read back out of one. A program printed on its way to being compiled still has its real names.
+    if (options.origin) {
+        lines.push(
+            `// Decompiled from ${options.origin}.`,
+            "// Local and argument names are not stored in a compiled script; the ones below are generated.",
+            "// Constants, macros and comments were resolved away before compilation and cannot be recovered.",
+            "",
+        );
+    }
 
     for (const declaration of program.declarations) {
         if (declaration.kind !== "procedure") {

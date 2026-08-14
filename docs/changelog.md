@@ -16,7 +16,8 @@
   removes unreachable code and dead stores, and reclaims unused slots, producing the same bytes as the
   bundled compiler at both levels. `-s` compiles `and`/`or` as short-circuit operators - previously it was
   silently skipped, so the same settings produced different behaviour. `-O3` is honoured as `-O2`: the
-  bundled compiler's own source marks that level's extra passes as known to break code.
+  bundled compiler's own source marks that level's extra passes as known to break code. `-I` and `-m` in
+  that setting are honoured too, so a header directory or a macro defined there applies to both compilers.
 - Formatting a procedure no longer drops its modifiers. `pure` and `inline` were being deleted from the
   output, which changes what the script compiles to on a file you only asked to reformat.
 - `critical procedure` is recognised. It marks a procedure the engine runs to completion without

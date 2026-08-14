@@ -56,6 +56,7 @@ transpilers/
 # form fails closed - a newly added file under them cannot silently ship.)
 binary/
 binary-editor/
+compilers/
 format/
 image/
 shared/

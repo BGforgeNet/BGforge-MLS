@@ -13,10 +13,10 @@
 
 import * as fs from "fs";
 import * as vscode from "vscode";
-import { decompileToProgram } from "../../../ssl/src/int/decompile";
-import { printProgram } from "../../../ssl/src/int/print";
-import { formatDisassembly } from "../../../ssl/src/int/disasm";
-import { readInt } from "../../../ssl/src/int/read";
+import { decompileToProgram } from "../../../compilers/ssl/src/int/decompile";
+import { printProgram } from "../../../compilers/ssl/src/int/print";
+import { formatDisassembly } from "../../../compilers/ssl/src/int/disasm";
+import { readInt } from "../../../compilers/ssl/src/int/read";
 import { conlog } from "../logging";
 
 export const INT_SCHEME = "bgforge-int";

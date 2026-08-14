@@ -24,7 +24,7 @@ import { preprocess } from "../../src/preprocess.ts";
 import { decompileToProgram } from "../../src/int/decompile.ts";
 import { printProgram } from "../../src/int/print.ts";
 import { emitInt } from "../../src/int/emit.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { CORPUS_SIZE, listScripts } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");

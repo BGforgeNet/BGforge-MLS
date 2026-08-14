@@ -14,7 +14,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { lowerProgram } from "../src/lower.ts";
 import { optimize } from "../src/optimize.ts";
 import { externalsOf, globalsOf, proceduresOf, type Program } from "../src/int/ir.ts";
-import { REPO_ROOT } from "../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));

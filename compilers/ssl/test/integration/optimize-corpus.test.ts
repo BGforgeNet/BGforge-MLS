@@ -22,8 +22,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
 import { CORPUS_SIZE, listScripts } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");

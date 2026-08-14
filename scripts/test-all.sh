@@ -48,7 +48,7 @@ step "Phase 3 + Extended: All remaining tests"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
-    "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.ts) && pnpm exec vitest run --config ssl/vitest.integration.config.ts && pnpm test:transpile-external && pnpm test:cli:external" \
+    "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.ts) && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && pnpm test:transpile-external && pnpm test:cli:external" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars"
 
 timing_summary "All tests passed (full suite)"

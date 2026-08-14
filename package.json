@@ -29,7 +29,7 @@
     "scripts": {
         "vscode:prepublish": "./scripts/prepublish.sh",
         "prepare": "lefthook install",
-        "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary",
+        "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary && pnpm build:ssl",
         "build:dev": "./scripts/build-dev.sh",
         "dev:web": "./scripts/dev-web.sh",
         "build:all": "pnpm build:grammar && pnpm build && pnpm build:editors",
@@ -42,6 +42,7 @@
         "build:format": "pnpm --filter @bgforge/format build",
         "build:transpile": "pnpm --filter @bgforge/transpile build",
         "build:binary": "pnpm --filter @bgforge/binary build",
+        "build:ssl": "pnpm --filter @bgforge/ssl build",
         "build:grammar": "bash ./scripts/build-grammar.sh",
         "build:editors": "./scripts/build-editors.sh",
         "build:base:client": "./scripts/build-base-client.sh",
@@ -70,6 +71,7 @@
         "package:grammars": "./scripts/package-grammars.sh && ./scripts/verify-grammar-bundle.sh",
         "format": "node --no-warnings format/out/cli.js",
         "binary": "node binary/out/cli.js",
+        "ssl": "node compilers/ssl/out/cli.js",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
@@ -725,8 +727,8 @@
                         "typescript"
                     ],
                     "enumDescriptions": [
-                        "The compiler shipped with the extension. Optimizes, and is what the compileOptions setting applies to.",
-                        "The extension's own compiler, written in TypeScript. Needs no native binary and no temporary file on disk, but does not optimize yet, so its output is larger and slower."
+                        "The compiler shipped with the extension. Runs as a native binary through a temporary file on disk.",
+                        "The extension's own compiler, written in TypeScript. Needs no native binary and no temporary file on disk, and produces the same bytes as the bundled one at optimization levels 0 to 2."
                     ],
                     "default": "bundled",
                     "description": "Which compiler to use when no external compilePath is set."

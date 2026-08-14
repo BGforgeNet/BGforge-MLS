@@ -18,8 +18,8 @@ import * as path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../../src/compile.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 

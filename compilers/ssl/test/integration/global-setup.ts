@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 
 const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 const SFALL_HEADERS = path.join(REPO_ROOT, "external/fallout/sfall/artifacts/scripting/headers");

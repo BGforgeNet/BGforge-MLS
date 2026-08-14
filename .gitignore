@@ -28,6 +28,7 @@ transpilers/out
 format/out
 binary/out
 image/out
+compilers/ssl/out
 
 plugins/*/out
 

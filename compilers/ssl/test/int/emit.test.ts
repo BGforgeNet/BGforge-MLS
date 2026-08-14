@@ -24,8 +24,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { emitInt } from "../../src/int/emit.ts";
 import { EngineOp } from "../../src/int/opcodes-engine.ts";
 import type { Expr, Program, Stmt, VariableDecl } from "../../src/int/ir.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
 
 function findCompiler(): string | null {
     try {

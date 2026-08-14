@@ -54,7 +54,7 @@ parallel \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
-    "Typecheck ssl" "(cd ssl && pnpm exec tsc --noEmit)" \
+    "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Lint md-links" "pnpm lint:md-links" \
@@ -86,7 +86,7 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
         "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage ssl" "pnpm exec vitest run --config ssl/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
@@ -106,7 +106,7 @@ else
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
         "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
         "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
-        "Unit ssl" "pnpm exec vitest run --config ssl/vitest.config.ts --maxWorkers=1" \
+        "Unit ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
         "Unit shared" "pnpm exec vitest run --config shared/vitest.config.ts --maxWorkers=1"
 fi
 
@@ -115,7 +115,8 @@ step "Phase 2: Building Server + CLIs"
 parallel \
     "Server bundle" "$SCRIPT_DIR/build-base-server.sh" \
     "Format CLI" "pnpm --filter @bgforge/format build" \
-    "Binary CLI" "pnpm --filter @bgforge/binary build"
+    "Binary CLI" "pnpm --filter @bgforge/binary build" \
+    "SSL CLI" "pnpm --filter @bgforge/ssl build"
 
 # Support early exit for test-all.sh (runs its own Phase 3 with extended tests interleaved)
 if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then

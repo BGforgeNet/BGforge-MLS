@@ -20,7 +20,7 @@ import { IntWriter } from "../src/int/writer.ts";
 import { engineFunction } from "../src/int/engine-functions.ts";
 import { lowerProgram } from "../src/lower.ts";
 import type { Program, Stmt } from "../src/int/ir.ts";
-import { REPO_ROOT } from "../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));

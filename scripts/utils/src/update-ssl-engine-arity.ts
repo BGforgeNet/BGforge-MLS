@@ -1,5 +1,5 @@
 /**
- * Fills in the argument count of every engine function in ssl/src/int/engine-functions.ts from the
+ * Fills in the argument count of every engine function in compilers/ssl/src/int/engine-functions.ts from the
  * signatures in server/data/fallout-ssl-*.yml.
  *
  * The opcode numbers in that file come from the engine's own dispatch order, which says nothing about
@@ -20,7 +20,7 @@ import { loadData } from "./generate-data.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const YAML_SOURCES = ["server/data/fallout-ssl-base.yml", "server/data/fallout-ssl-sfall.yml"];
-const TARGET = "ssl/src/int/engine-functions.ts";
+const TARGET = "compilers/ssl/src/int/engine-functions.ts";
 
 /** Matches one table entry, capturing its name, its opcode expression and any trailing fields. */
 const ENTRY = /^(\s+)([a-z_0-9]+): \{ opcode: ([^,}]+?)(, args: \d+)?(, returns: \w+)?(, [^}]*)? \},$/;

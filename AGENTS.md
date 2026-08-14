@@ -64,6 +64,7 @@ binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
+compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "typescript" compiler
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
 editors/                 # Hand-written editor syntax inputs, merged with generated output by build-editors.sh
 syntaxes/                # TextMate grammars (YAML source + JSON compiled)
@@ -86,12 +87,13 @@ external/                # Third-party mod sources (test fixtures, not project c
 ## Commands
 
 ```bash
-pnpm build             # Default repo-wide build: client (+ webviews + TS plugins) + server + test bundles + transpile + format + binary CLIs
+pnpm build             # Default repo-wide build: client (+ webviews + TS plugins) + server + test bundles + transpile + format + binary + ssl CLIs
 pnpm build:all         # Full build: build + grammars + editor bundles + transpile
 pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, tests)
 pnpm build:grammar     # Build tree-sitter grammars to WASM
 pnpm build:transpile   # Build transpile library + CLI (tsdown, produces out/index.js + out/cli.js)
 pnpm build:format      # Build format library + CLI (tsdown, produces out/index.js + out/cli.js)
+pnpm build:ssl         # Build SSL compiler library + ssl CLI (tsdown, produces out/index.js + out/cli.js)
 pnpm test              # Dev-loop suite: typecheck, lint, knip, unit tests (no coverage), transpiler samples, CLI, smoke
 pnpm test:all          # Close-out gate: test + coverage thresholds + external corpus + integration + grammars + transpile-external. For cross-subsystem / shared-infra close-out; scope to the affected package otherwise (see Important Rules).
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
@@ -197,6 +199,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
 | Image library           | `image/README.md`                                                                                                          |
+| SSL compiler + CLI      | `compilers/ssl/README.md` (CLI ships as `ssl` bin in the private `@bgforge/ssl`)                                           |
 | Data files              | `server/data/README.md`                                                                                                    |
 | Data pipeline           | `docs/data-pipeline.md`                                                                                                    |
 | Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |

@@ -1,0 +1,56 @@
+{
+    "name": "@bgforge/ssl",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Fallout SSL compiler: preprocessor, parser, optimizer and INT back end, with the ssl CLI.",
+    "keywords": [
+        "compiler",
+        "fallout",
+        "int",
+        "modding",
+        "ssl"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN ../../LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "compilers/ssl"
+    },
+    "bin": {
+        "ssl": "out/cli.js"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsdown && chmod +x out/cli.js",
+        "test": "vitest run --config vitest.config.ts",
+        "test:integration": "vitest run --config vitest.integration.config.ts"
+    },
+    "dependencies": {
+        "web-tree-sitter": "catalog:"
+    },
+    "devDependencies": {
+        "tsdown": "catalog:",
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

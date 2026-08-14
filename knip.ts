@@ -130,7 +130,7 @@ const config: KnipConfig = {
         image: {
             entry: ["test/**/*.test.ts"],
         },
-        ssl: {
+        "compilers/ssl": {
             // Both suites, since the gcc differential runs from its own config in the close-out phase.
             entry: ["test/**/*.test.ts", "test/integration/**/*.test.ts"],
             // gcc is the differential's reference preprocessor - an environment prerequisite for that

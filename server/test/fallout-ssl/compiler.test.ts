@@ -77,7 +77,7 @@ vi.mock("../../src/sslc/ssl_compiler", () => ({
 }));
 
 const mockCompileFile = vi.fn();
-vi.mock("../../../ssl/src/compile", () => ({
+vi.mock("../../../compilers/ssl/src/compile", () => ({
     compileFile: (...args: unknown[]) => mockCompileFile(...args),
 }));
 
@@ -383,9 +383,26 @@ describe("fallout-ssl compiler", () => {
 
             expect(mockBuiltinCompiler).not.toHaveBeenCalled();
             expect(mockCompileFile).toHaveBeenCalledWith({}, `/project/${TMP_SSL_NAME}`, {
-                preprocess: { includeDirs: ["/headers"] },
+                preprocess: { includeDirs: ["/headers"], defines: {} },
+                level: 1,
+                shortCircuit: false,
             });
             expect(mockWriteFileSync).toHaveBeenCalledWith("/output/test.int", new Uint8Array([1, 2, 3]));
+        });
+
+        it("passes the compileOptions setting through, since it is a command line for this compiler too", async () => {
+            await compile(
+                normalizeUri("file:///project/test.ssl"),
+                { ...tsSettings, compileOptions: "-O2 -s -Iextra -mDEBUG=1" },
+                true,
+                "code",
+            );
+
+            expect(mockCompileFile).toHaveBeenCalledWith({}, `/project/${TMP_SSL_NAME}`, {
+                preprocess: { includeDirs: ["/headers", "extra"], defines: { DEBUG: "1" } },
+                level: 2,
+                shortCircuit: true,
+            });
         });
 
         it("reports a located compile error at the line it names", async () => {

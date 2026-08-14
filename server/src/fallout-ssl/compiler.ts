@@ -14,8 +14,9 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { compileFile } from "../../../ssl/src/compile";
-import { PreprocessError } from "../../../ssl/src/preprocess";
+import { parseArgs } from "../../../compilers/ssl/src/args";
+import { compileFile } from "../../../compilers/ssl/src/compile";
+import { PreprocessError } from "../../../compilers/ssl/src/preprocess";
 import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
     addFallbackDiagnostic,
@@ -158,24 +159,6 @@ function parseCompileOutput(text: string, uri: string) {
 }
 
 /**
- * The subset of `compileOptions` this compiler understands. Both flags change the OUTPUT, so ignoring
- * either would silently build something other than what the user's settings ask for.
- *
- * `-O` selects the optimisation level, of which 0, 1 and 2 are implemented. Level 3 is the bundled
- * compiler's own "don't use" tier - it renames identifiers and reuses variable slots, both of which its
- * source marks as known to break code - so it is honoured as far as level 2 rather than reproduced.
- * `-s` turns `and`/`or` into short-circuit operators, which is a semantic change, not a size one.
- */
-function optionsFor(compileOptions: string): { level: 0 | 1 | 2; shortCircuit: boolean } {
-    const flags = compileOptions.split(/\s+/).filter(Boolean);
-    const optimize = flags.findLast((flag) => /^-O\d?$/.test(flag));
-    // Bare `-O` means the same as `-O2`; the bundled compiler defaults to `-O1` when none is given.
-    const requested = optimize === undefined ? 1 : optimize === "-O" ? 2 : Number(optimize.slice(2));
-    const level = requested <= 0 ? 0 : requested === 1 ? 1 : 2;
-    return { level, shortCircuit: flags.includes("-s") };
-}
-
-/**
  * Compiles with the extension's own compiler.
  *
  * It needs no child process and no native binary, which is what makes it the path that works where the
@@ -201,11 +184,17 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
             warnings: [],
         };
     }
-    const includeDirs = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
+    // `compileOptions` is a command line for whichever compiler is selected, so it is read here with the
+    // same parser the standalone CLI uses rather than a second, narrower reading of the same string. The
+    // switches it cannot honour are reported to the user by the CLI; here they are simply not applied,
+    // since a settings string is not a place to fail a compile.
+    const args = parseArgs(sslSettings.compileOptions.split(/\s+/).filter(Boolean));
+    const headers = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
         const bytes = compileFile(parser, tmpPath, {
-            preprocess: { includeDirs },
-            ...optionsFor(sslSettings.compileOptions),
+            preprocess: { includeDirs: [...headers, ...args.includeDirs], defines: args.defines },
+            level: args.level,
+            shortCircuit: args.shortCircuit,
         });
         fs.writeFileSync(dstPath, bytes);
         return { errors: [], warnings: [] };

@@ -8,8 +8,9 @@
  */
 
 import type { Parser } from "web-tree-sitter";
-import { findParseError } from "../../shared/parse-errors";
+import { findParseError } from "../../../shared/parse-errors";
 import { emitInt, type EmitOptions } from "./int/emit";
+import type { Program } from "./int/ir";
 import { lowerProgram, type LowerOptions } from "./lower";
 import { optimize, type OptimizeOptions } from "./optimize";
 import { preprocess, type PreprocessOptions } from "./preprocess";
@@ -25,8 +26,13 @@ export class CompileError extends Error {
     }
 }
 
-/** Compiles already-preprocessed source text. */
-export function compileText(parser: Parser, text: string, options: CompileOptions = {}): Uint8Array {
+/**
+ * Parses and optimises already-preprocessed source text, stopping before emission.
+ *
+ * Separate from `compileText` for the callers that want the program itself: the CLI prints it for `-D`,
+ * and a test can assert on it without decoding bytes.
+ */
+export function buildProgram(parser: Parser, text: string, options: CompileOptions = {}): Program {
     const tree = parser.parse(text);
     if (tree === null) throw new CompileError("parser returned no tree");
     try {
@@ -40,15 +46,25 @@ export function compileText(parser: Parser, text: string, options: CompileOption
             const what = error.isMissing ? `missing ${error.type}` : "syntax error";
             throw new CompileError(`${row + 1}:${column + 1}: ${what}`);
         }
-        return emitInt(optimize(lowerProgram(tree, options), options), {
-            ...options,
-            // The optimiser removes the code that would reach a fall-through epilogue, so the emitter
-            // stops writing one at the level where that removal happens.
-            dropUnreachableEpilogue: (options.level ?? 0) >= 2,
-        });
+        return optimize(lowerProgram(tree, options), options);
     } finally {
         tree.delete();
     }
+}
+
+/** Emits INT bytecode for a program `buildProgram` produced under the same options. */
+export function emitProgram(program: Program, options: CompileOptions = {}): Uint8Array {
+    return emitInt(program, {
+        ...options,
+        // The optimiser removes the code that would reach a fall-through epilogue, so the emitter stops
+        // writing one at the level where that removal happens.
+        dropUnreachableEpilogue: (options.level ?? 0) >= 2,
+    });
+}
+
+/** Compiles already-preprocessed source text. */
+export function compileText(parser: Parser, text: string, options: CompileOptions = {}): Uint8Array {
+    return emitProgram(buildProgram(parser, text, options), options);
 }
 
 /** Compiles a source file, running the preprocessor first. */

@@ -1,10 +1,10 @@
 {
-    "extends": "../tsconfig.base.json",
+    "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "lib": ["es2023"],
         "allowImportingTsExtensions": true,
         "noEmit": true,
-        "tsBuildInfoFile": "../tmp/ssl-lib.tsbuildinfo",
+        "tsBuildInfoFile": "../../tmp/ssl-lib.tsbuildinfo",
         "paths": {
             "@bgforge/ssl": ["./src/index.ts"]
         }
