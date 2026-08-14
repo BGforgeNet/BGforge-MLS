@@ -377,3 +377,245 @@ END
               (string
                 (tilde_string
                   (tilde_content))))))))))
+
+================================================================================
+PATCH_BASH_FOR
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  PATCH_BASH_FOR ~override~ ~^.+$~ BEGIN
+    SAY 0x08 ~New Name~
+  END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_bash_for
+        (directory_file_regexp
+          directory: (value
+            (string
+              (tilde_string
+                (tilde_content))))
+          pattern: (value
+            (string
+              (tilde_string
+                (tilde_content)))))
+        (patch_say
+          offset: (value
+            (number))
+          text: (value
+            (string
+              (tilde_string
+                (tilde_content)))))))))
+
+================================================================================
+EVAL as a standalone patch
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  REPLACE_TEXTUALLY ~x~ ~~
+  EVAL
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_replace_textually
+        regexp: (value
+          (string
+            (tilde_string
+              (tilde_content))))
+        replacement: (value
+          (string
+            (tilde_string))))
+      (patch_evaluate_buffer))))
+
+================================================================================
+LPF with a function name starting with a digit
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  LPF 2DA_MISSING_COLS INT_VAR cols = 5 END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_launch_function
+        name: (var_name_numeric)
+        (int_var_call
+          (int_var_call_item
+            (identifier)
+            (value
+              (number))))))))
+
+================================================================================
+DECOMPRESS_INTO_FILE and COMPRESS_INTO_FILE
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  DECOMPRESS_INTO_FILE 8 12 16 4 20
+  COMPRESS_INTO_FILE 0 8 9 0 8
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_decompress_into_file
+        start: (value
+          (number))
+        length: (value
+          (number))
+        uncompressed_length: (value
+          (number))
+        overwrite_from: (value
+          (number))
+        overwrite_to: (value
+          (number)))
+      (patch_compress_into_file
+        start: (value
+          (number))
+        length: (value
+          (number))
+        level: (value
+          (number))
+        overwrite_from: (value
+          (number))
+        overwrite_to: (value
+          (number))))))
+
+================================================================================
+COMPRESS_INTO_VAR
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  COMPRESS_INTO_VAR 0 8 9 myvar
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_compress_into_var
+        start: (value
+          (number))
+        length: (value
+          (number))
+        level: (value
+          (number))
+        var: (identifier)))))
+
+================================================================================
+Function call parameter name starting with a digit
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  LPF f STR_VAR 2da_links_array = "x" END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_launch_function
+        name: (identifier)
+        (str_var_call
+          (str_var_call_item
+            (var_name_numeric)
+            (value
+              (string
+                (double_string
+                  (double_content))))))))))
+
+================================================================================
+Subtraction without surrounding spaces
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  DECOMPRESS_REPLACE_FILE 12 %size%-12 ln
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_decompress_replace_file
+        offset: (value
+          (number))
+        compressed_size: (value
+          (binary_expr
+            left: (string
+              (percent_string
+                (percent_content)))
+            right: (number)))
+        uncompressed_size: (value
+          (variable_ref
+            (identifier)))))))

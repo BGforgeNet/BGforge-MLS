@@ -157,7 +157,20 @@ function parseCopyAction(node: SyntaxNode): CopyActionParts {
     let inPatchArea = false;
     let lastHeaderRow = -1;
 
-    for (const child of node.children) {
+    // A COPY/COPY_LARGE header is a list of file pairs, and mods comment individual pairs out in the middle of
+    // it. Such a comment sits on its own row, so without this index it would fall through to the patch branch
+    // below and flip the header into patch mode part-way, moving content on every reformat.
+    const children = node.children;
+    let lastFilePairIdx = -1;
+    for (let i = children.length - 1; i >= 0; i--) {
+        const c = children[i];
+        if (c && isFilePairType(c.type)) {
+            lastFilePairIdx = i;
+            break;
+        }
+    }
+
+    for (const [childIdx, child] of children.entries()) {
         // File pairs
         if (isFilePairType(child.type)) {
             parts.filePairs.push(normalizeWhitespace(child.text));
@@ -184,8 +197,14 @@ function parseCopyAction(node: SyntaxNode): CopyActionParts {
             continue;
         }
 
-        // Inline comment on the header line
-        if (isComment(child) && !inPatchArea && lastHeaderRow >= 0 && child.startPosition.row === lastHeaderRow) {
+        // Header-area comment: on the same row as the last header item, or on its own row with more file pairs
+        // still to come. Either way it belongs to the header, attached to the pair it follows.
+        if (
+            isComment(child) &&
+            !inPatchArea &&
+            lastHeaderRow >= 0 &&
+            (child.startPosition.row === lastHeaderRow || childIdx < lastFilePairIdx)
+        ) {
             if (parts.filePairs.length > 0) {
                 // Attach to the specific file pair it's on
                 const idx = parts.filePairs.length - 1;

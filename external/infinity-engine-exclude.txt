@@ -208,3 +208,24 @@ BG1NPC/bg1npc/core/tpa/a64_beregost.tpa
 # BG1NPC malformed D file (weidu rejects it; unresolvable %macro% used as standalone CHAIN content)
 BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d
 
+# EET vendors two of the BG1NPC template BAFs excluded above, with the same %variable% placeholders
+EET/EET/compat/bg1npc/baf/x#brdwi.baf
+EET/EET/compat/bg1npc/baf/x#niemain.baf
+
+# EET data files that use the .tra extension but are not WeiDU translation files: their entries are named
+# (@BG0400 = "..."), while a WeiDU tra reference is an integer, so weidu rejects these too
+EET/EET/lang/cs_CZ/map_mods_trans.tra
+EET/EET/lang/de_DE/map_mods_trans.tra
+EET/EET/lang/en_US/map_mods_trans.tra
+EET/EET/lang/es_ES/map_mods_trans.tra
+EET/EET/lang/fr_FR/map_mods_trans.tra
+EET/EET/lang/pl_PL/map_mods_trans.tra
+EET/EET/lang/ru_RU/map_mods_trans.tra
+EET/EET/lang/zh_CN/map_mods_trans.tra
+
+# Excluded for a formatter bug of ours, not a problem with these files. Condition wrapping measures the line
+# without the trailing comment it later appends, so a commented condition splits on one pass and rejoins on the
+# next; where the comments sit on the OR operands themselves, all but the last are also dropped.
+# Repro: PATCH_IF (a) //c1 OR (b) //c2 OR (c) //c3 BEGIN ... END
+EET/EET/lib/macros.tph
+EET/EET_end/EET_end.tp2

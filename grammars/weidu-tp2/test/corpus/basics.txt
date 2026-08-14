@@ -539,3 +539,44 @@ COPY_EXISTING ~a.cre~ ~override~
     (patches
       (patch_remove_cre_items))))
 
+
+================================================================================
+RESOURCE_CONTAINS expression
+================================================================================
+
+ACTION_IF (RESOURCE_CONTAINS ~4300.ini~ ~can_lie_down=0~) BEGIN
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_if
+    condition: (value
+      (paren_expr
+        (resource_contains_expr
+          resource: (value
+            (string
+              (tilde_string
+                (tilde_content))))
+          regexp: (value
+            (string
+              (tilde_string
+                (tilde_content)))))))))
+
+================================================================================
+Tilde string whose entire content is a comment marker
+================================================================================
+
+OUTER_SPRINT x ~//~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_outer_sprint
+    var: (value
+      (variable_ref
+        (identifier)))
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content))))))

@@ -890,3 +890,292 @@ END
         (string
           (tilde_string
             (tilde_content)))))))
+
+================================================================================
+COPY_LARGE with several file pairs
+================================================================================
+
+COPY_LARGE + ~a.are~ ~b.are~
+	~c.are~ ~d.are~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy_large
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
+APPEND_OUTER with a no-backup modifier
+================================================================================
+
+APPEND_OUTER + ~mymod/out.tra~ ~text~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_append_outer
+    file: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    text: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+ACTION_TO_UPPER on a variable whose name starts with a digit
+================================================================================
+
+ACTION_TO_UPPER 25join
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_to_upper
+    var: (var_name_numeric)))
+
+================================================================================
+DEFINE_ACTION_FUNCTION whose name starts with a digit
+================================================================================
+
+DEFINE_ACTION_FUNCTION 2DA_MISSING_COLS
+BEGIN
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_define_function
+    name: (var_name_numeric)))
+
+================================================================================
+ACTION_GET_STRREF into a quoted variable
+================================================================================
+
+ACTION_GET_STRREF col2 "strref"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_get_strref
+    strref: (value
+      (variable_ref
+        (identifier)))
+    var: (string
+      (double_string
+        (double_content)))))
+
+================================================================================
+APPEND_OUTER with an UNLESS clause
+================================================================================
+
+APPEND_OUTER ~out.2da~ ~text~ UNLESS ~^text~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_append_outer
+    file: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    text: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (when
+      unless_resource: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
+GET_DIRECTORY_ARRAY and GET_FILE_ARRAY
+================================================================================
+
+GET_DIRECTORY_ARRAY myarray ~%USER_DIRECTORY%/save~ ~~
+GET_FILE_ARRAY other ~override~ ~^.*\.itm$~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_get_directory_array
+    name: (value
+      (variable_ref
+        (identifier)))
+    directory: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    regexp: (value
+      (string
+        (tilde_string))))
+  (action_get_file_array
+    name: (value
+      (variable_ref
+        (identifier)))
+    directory: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    regexp: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+Function parameter names starting with a digit
+================================================================================
+
+DEFINE_ACTION_FUNCTION f
+	STR_VAR
+	2da = ~~
+BEGIN
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_define_function
+    name: (identifier)
+    (str_var_decl
+      (var_name_numeric)
+      (value
+        (string
+          (tilde_string))))))
+
+================================================================================
+APPEND_COL_OUTER
+================================================================================
+
+APPEND_COL_OUTER + ~out.2da~ ~text~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_append_col_outer
+    file: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    text: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+ACTION_GET_STRREF female and sound variants
+================================================================================
+
+ACTION_GET_STRREF_F i female
+ACTION_GET_STRREF_S i male_sound
+ACTION_GET_STRREF_FS i female_sound
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_get_strref
+    strref: (value
+      (variable_ref
+        (identifier)))
+    var: (identifier))
+  (action_get_strref
+    strref: (value
+      (variable_ref
+        (identifier)))
+    var: (identifier))
+  (action_get_strref
+    strref: (value
+      (variable_ref
+        (identifier)))
+    var: (identifier)))
+
+================================================================================
+ALTER_TLK_LIST
+================================================================================
+
+ALTER_TLK_LIST BEGIN MATCH2 END BEGIN REPLACE_TEXTUALLY ~^~ ~BG1 ~ END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_alter_tlk_list
+    (value
+      (variable_ref
+        (identifier)))
+    (patch_replace_textually
+      regexp: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      replacement: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
+STRING_SET_EVALUATE with male/female strings and sound refs
+================================================================================
+
+STRING_SET_EVALUATE i ~%male%~ [%male_sound%] ~%female%~ [%female_sound%]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_string_set
+    strref: (value
+      (variable_ref
+        (identifier)))
+    male: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (sound_ref
+      sound: (variable_ref
+        (identifier)))
+    female: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (sound_ref
+      sound: (variable_ref
+        (identifier)))))
+
+================================================================================
+STRING_SET with a USING tra file
+================================================================================
+
+STRING_SET ~73245~ @123456789 USING ~bgt/title.tra~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_string_set
+    strref: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    male: (value
+      (tra_ref))
+    tra: (value
+      (string
+        (tilde_string
+          (tilde_content))))))

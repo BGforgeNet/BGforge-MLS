@@ -52,8 +52,13 @@ function parseAssignment(node: SyntaxNode): { name: string; value: string } | nu
     if (!nameNode && node.type.endsWith("_call_item")) {
         const children = node.children;
         const first = children[0];
-        // First child is identifier or string (the name)
-        if (first && (first.type === SyntaxType.Identifier || first.type === SyntaxType.String)) {
+        // First child is the name: an identifier, a quoted string, or a digit-leading name (STR_VAR 2da = ~~).
+        if (
+            first &&
+            (first.type === SyntaxType.Identifier ||
+                first.type === SyntaxType.String ||
+                first.type === SyntaxType.VarNameNumeric)
+        ) {
             nameNode = first;
             // If there's an "=" token, value is the third child
             const second = children[1];
@@ -124,7 +129,8 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
         } else if (
             child.type === SyntaxType.VariableRef ||
             child.type === SyntaxType.Identifier ||
-            child.type === SyntaxType.String
+            child.type === SyntaxType.String ||
+            child.type === SyntaxType.VarNameNumeric
         ) {
             // Check if next child is "=" token indicating an assignment
             const nextChild = children[i + 1];
@@ -318,7 +324,11 @@ export function formatFunctionDef(
             } else if (child.text.startsWith("DEFINE_")) {
                 defLine = child.text;
                 lastDefRow = child.endPosition.row;
-            } else if (child.type === SyntaxType.Identifier || child.type === SyntaxType.String) {
+            } else if (
+                child.type === SyntaxType.Identifier ||
+                child.type === SyntaxType.String ||
+                child.type === SyntaxType.VarNameNumeric
+            ) {
                 defLine = defLine ? defLine + " " + child.text : child.text;
                 lastDefRow = child.endPosition.row;
             }

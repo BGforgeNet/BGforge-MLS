@@ -76,6 +76,7 @@ export const FOR_EACH_TYPES = [
     "action_for_each",
     "action_php_each",
     "action_bash_for",
+    "patch_bash_for",
     "patch_for_each",
     "patch_php_each",
 ] as const;
@@ -112,6 +113,7 @@ export const CONTROL_FLOW_TYPES = [
     "patch_for",
     "patch_while",
     "patch_with_scope",
+    "action_alter_tlk_list",
     // Array definitions with BEGIN...END body
     "action_define_array",
     "action_define_associative_array",

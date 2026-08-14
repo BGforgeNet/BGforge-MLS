@@ -126,7 +126,11 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
             child.type === SyntaxType.RequireComponentFlag ||
             child.type === SyntaxType.ForbidComponentFlag ||
             child.type === SyntaxType.RequireFileFlag ||
-            child.type === SyntaxType.ForbidFileFlag
+            child.type === SyntaxType.ForbidFileFlag ||
+            child.type === SyntaxType.ForcedSubcomponentFlag ||
+            child.type === SyntaxType.MetadataFlag ||
+            child.type === SyntaxType.NoLogRecordFlag ||
+            child.type === SyntaxType.InstallByDefaultFlag
         ) {
             if (beginLine) {
                 lines.push(beginLine);

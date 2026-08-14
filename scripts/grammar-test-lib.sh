@@ -25,6 +25,21 @@ grammar_generate() {
     generate_grammar_cached "$GRAMMAR_DIR" "$TS"
 }
 
+# The format steps below run samples through the @bgforge/format CLI, whose build copies the WASM out of this
+# grammar dir. Without this rebuild the gate would generate a fresh parser.c and then format with whatever
+# WASM the last `pnpm build:grammar` left behind - comparing formatter output against a different parser than
+# the one under test, which can fail on a correct change or pass on a broken one.
+grammar_build_wasm() {
+    step "$GRAMMAR_NAME: Building WASM"
+    local wasm
+    wasm=$(find . -maxdepth 1 -name '*.wasm' -print -quit)
+    if [[ -n "$wasm" && "$wasm" -nt src/parser.c ]]; then
+        echo "wasm: cached (newer than src/parser.c)"
+        return 0
+    fi
+    "$TS" build --wasm
+}
+
 grammar_lint() {
     step "$GRAMMAR_NAME: Running Oxlint"
     "$OXLINT" grammar.js

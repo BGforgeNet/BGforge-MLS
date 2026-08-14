@@ -11,6 +11,12 @@
 - TP2 `ACTION_PHP_EACH` and `PATCH_PHP_EACH` accept a quoted loop variable, as WeiDU does:
   `ACTION_PHP_EACH arr AS data => ~~ BEGIN`.
 - The formatter lays out `QUICK_MENU` groups one component per line.
+- More TP2 syntax parses instead of reporting a false error: `COPY_LARGE` with several file pairs,
+  `APPEND_COL_OUTER`, `ALTER_TLK_LIST`, `PATCH_BASH_FOR`, `GET_FILE_ARRAY`, `GET_DIRECTORY_ARRAY`,
+  `RESOURCE_CONTAINS`, `DECOMPRESS_INTO_FILE`, `COMPRESS_INTO_FILE`, `COMPRESS_INTO_VAR`, the female and
+  sound variants of `ACTION_GET_STRREF`, `EVAL` as a standalone patch, `STRING_SET` with male/female text
+  and sound references, subtraction written without spaces (`%size%-12`), a string whose whole content is
+  `//`, and names that start with a digit (functions, macros, parameters and `TO_UPPER` targets).
 
 ## 3.13.1
 
