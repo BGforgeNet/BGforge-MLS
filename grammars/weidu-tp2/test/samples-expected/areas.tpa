@@ -8,7 +8,7 @@ DEFINE_PATCH_FUNCTION ALTER_AREA_REGION_MATCH
         match_script = "-1"
 BEGIN
     GET_OFFSET_ARRAY regions ARE_V10_REGIONS
-    PHP_EACH regions AS int => r_off  BEGIN
+    PHP_EACH regions AS int => r_off BEGIN
         READ_ASCII (r_off + ARE_REGION_script) script
         PATCH_IF ~%script%~ STR_EQ ~%match_script%~ BEGIN
             PATCH_IF trapped != "-1" BEGIN
@@ -84,7 +84,7 @@ BEGIN
     i = 0
     x_total = 0
     y_total = 0
-    PHP_EACH vertices AS int => v_off  BEGIN
+    PHP_EACH vertices AS int => v_off BEGIN
         READ_SHORT v_off x
         READ_SHORT (v_off + 2) y
         x_total+=x
@@ -101,9 +101,9 @@ DEFINE_PATCH_FUNCTION REPLACE_AREA_ITEM_MATCH
         new_item   = ~~
 BEGIN
     GET_OFFSET_ARRAY cont_offs ARE_V10_CONTAINERS
-    PHP_EACH cont_offs AS int => coff  BEGIN
+    PHP_EACH cont_offs AS int => coff BEGIN
         GET_OFFSET_ARRAY2 item_offs coff ARE_V10_ITEMS
-        PHP_EACH item_offs AS int => ioff  BEGIN
+        PHP_EACH item_offs AS int => ioff BEGIN
             READ_ASCII ioff name (8) NULL
             PATCH_IF ~%name%~ STR_EQ ~%match_item%~ BEGIN
                 WRITE_ASCII ioff ~%new_item%~ #8
@@ -122,9 +122,9 @@ BEGIN
     COPY_EXISTING ~%area%.are~ ~override~
         present = 0
         GET_OFFSET_ARRAY cont_offs ARE_V10_CONTAINERS
-        PHP_EACH cont_offs AS int => c_off  BEGIN
+        PHP_EACH cont_offs AS int => c_off BEGIN
             GET_OFFSET_ARRAY2 item_offs c_off ARE_V10_ITEMS
-            PHP_EACH item_offs AS int => i_off  BEGIN
+            PHP_EACH item_offs AS int => i_off BEGIN
                 READ_ASCII i_off item_name
                 PATCH_IF ~%item%~ STR_EQ ~%item_name%~ BEGIN
                     present = 1

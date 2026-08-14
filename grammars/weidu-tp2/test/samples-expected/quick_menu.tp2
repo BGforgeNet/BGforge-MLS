@@ -1,4 +1,5 @@
 BACKUP ~quickmenu/backup~
+AUTHOR ~someone@example.com~
 
 QUICK_MENU
     ALWAYS_ASK

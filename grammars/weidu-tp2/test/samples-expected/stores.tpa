@@ -4,7 +4,7 @@ DEFINE_PATCH_FUNCTION REPLACE_STORE_ITEM_MATCH
         new_item   = ~~
 BEGIN
     GET_OFFSET_ARRAY item_offs STO_V10_ITEMS_SOLD
-    PHP_EACH item_offs AS int => ioff  BEGIN
+    PHP_EACH item_offs AS int => ioff BEGIN
         READ_ASCII ioff name (8) NULL
         PATCH_IF ~%name%~ STR_EQ ~%match_item%~ BEGIN
             WRITE_ASCII ioff ~%new_item%~ #8
@@ -22,7 +22,7 @@ BEGIN
     COPY_EXISTING ~%store%.sto~ ~override~
         present = 0
         GET_OFFSET_ARRAY item_offs STO_V10_ITEMS_SOLD
-        PHP_EACH item_offs AS int => i_off  BEGIN
+        PHP_EACH item_offs AS int => i_off BEGIN
             READ_ASCII i_off item_name
             PATCH_IF ~%item%~ STR_EQ ~%item_name%~ BEGIN
                 present = 1

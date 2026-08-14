@@ -17,7 +17,7 @@ rules:
       # provenance attestation against the trusted builder's published tag, so a
       # SHA pin would make the resulting attestation unverifiable. Documented
       # in-line at the `uses:` line itself (build.yml, provenance job).
-      - build.yml:263
+      - build.yml:268
   cache-poisoning:
     ignore:
       # actions/setup-node's `cache: pnpm` restores the pnpm store from the
@@ -40,4 +40,4 @@ rules:
       # `files:` glob input, `fail_on_unmatched_files`, templated `name:`) without
       # a hand-rolled script. Keeping the action is a readability tradeoff, not
       # an oversight.
-      - build.yml:201
+      - build.yml:206

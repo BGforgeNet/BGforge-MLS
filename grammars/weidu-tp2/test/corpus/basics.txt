@@ -207,6 +207,36 @@ SCRIPT_STYLE BG2
         (identifier)))))
 
 ================================================================================
+MENU_STYLE directive
+================================================================================
+
+MENU_STYLE ~ansi~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (menu_style_directive
+    style: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
+LOAD directive
+================================================================================
+
+LOAD ~other.tp2~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (load_directive
+    file: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
 UNINSTALL_ORDER directive
 ================================================================================
 
@@ -300,6 +330,32 @@ METADATA ~key=value~
             (tilde_content)))))
     (metadata_flag
       value: (value
+        (string
+          (tilde_string
+            (tilde_content)))))))
+
+================================================================================
+FORCED_SUBCOMPONENT with the optional predicate
+================================================================================
+
+BEGIN ~My Component~
+FORCED_SUBCOMPONENT ~Group name~ ~predicate~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (component
+    (component_begin)
+    name: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    (forced_subcomponent_flag
+      name: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      predicate: (value
         (string
           (tilde_string
             (tilde_content)))))))

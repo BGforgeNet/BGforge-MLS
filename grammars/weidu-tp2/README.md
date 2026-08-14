@@ -217,6 +217,8 @@ SUPPORT ~emailAddress~           // Alias for AUTHOR
 | NO_IF_EVAL_BUG      | `NO_IF_EVAL_BUG`                        | Fix IF_EVAL bug                         |
 | QUICK_MENU          | `QUICK_MENU ALWAYS_ASK ... END ... END` | Define component groups                 |
 | AUTO_EVAL_STRINGS   | `AUTO_EVAL_STRINGS`                     | Auto EVALUATE_BUFFER                    |
+| LOAD                | `LOAD file...`                          | Load standard-library macros            |
+| MENU_STYLE          | `MENU_STYLE style`                      | Installer menu style                    |
 
 ### Language
 

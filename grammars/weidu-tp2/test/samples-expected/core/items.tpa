@@ -55,7 +55,7 @@ ACTION_IF GAME_INCLUDES ~bg2~ BEGIN
 END
 
 // filter compat, skip items and sources that aren't present in current selection (strict/expanded)
-ACTION_PHP_EACH item_source_compat AS i_s => should_be_present  BEGIN
+ACTION_PHP_EACH item_source_compat AS i_s => should_be_present BEGIN
     OUTER_SPRINT item $i_s(0)
     OUTER_SPRINT source $i_s(1)
     // strict items
@@ -72,7 +72,7 @@ END
 INCLUDE ~%MOD_FOLDER%/core/cre_replacement.tpa~
 
 // check if item is present in all sources
-ACTION_PHP_EACH item_source AS i_s => should_be_present  BEGIN
+ACTION_PHP_EACH item_source AS i_s => should_be_present BEGIN
     OUTER_SPRINT item $i_s(0)
     OUTER_SPRINT source $i_s(1)
     OUTER_SET skip = 0
@@ -102,13 +102,13 @@ ACTION_PHP_EACH item_source AS i_s => should_be_present  BEGIN
 END
 
 // init custom regex for each source
-ACTION_PHP_EACH csources AS csource => int  BEGIN  // this is already filtered: only sources with present items
+ACTION_PHP_EACH csources AS csource => int BEGIN  // this is already filtered: only sources with present items
     OUTER_SPRINT $custom_regex_no_eol(~%csource%~) ~~
 END
 
 // build a regex of all items, skip those that are not found in ALL canon sources
 OUTER_SPRINT common_regex_no_eol ~~
-ACTION_PHP_EACH item_present AS item => present  BEGIN
+ACTION_PHP_EACH item_present AS item => present BEGIN
     ACTION_IF present == 1 BEGIN
         // common regex
         ACTION_IF ~%common_regex%~ STR_EQ ~~ BEGIN  // empty, initialize
@@ -117,7 +117,7 @@ ACTION_PHP_EACH item_present AS item => present  BEGIN
             OUTER_SPRINT common_regex_no_eol ~%common_regex%\|%item%~  // append
         END
         // custom regex for each source
-        ACTION_PHP_EACH csources AS csource => int  BEGIN
+        ACTION_PHP_EACH csources AS csource => int BEGIN
             ACTION_IF NOT VARIABLE_IS_SET $item_source(~%item%~ ~%csource%~) OR $item_source(~%item%~ ~%csource%~) != 1  // may be changed in compat section
             BEGIN
                 OUTER_SPRINT tmp $custom_regex_no_eol(~%csource%~)
@@ -132,6 +132,6 @@ ACTION_PHP_EACH item_present AS item => present  BEGIN
 END
 
 OUTER_SPRINT common_regex ~^\(%common_regex_no_eol%\)$~
-ACTION_PHP_EACH custom_regex_no_eol AS csource => cregex  BEGIN
+ACTION_PHP_EACH custom_regex_no_eol AS csource => cregex BEGIN
     OUTER_SPRINT $custom_regex(~%csource%~) ~^\(%cregex%\)$~
 END

@@ -1163,10 +1163,22 @@
             "value": "```weidu-tp2-tooltip\nAPPEND optNoBackup filename newText when list [ KEEP_CRLF ]\n```\nFlag for file-append actions; when absent, double newlines in the appended file are collapsed."
         }
     },
+    "LOAD": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nLOAD String list\n```\nLoads macros from WeiDU's standard library. Library macros must be initialized with LOAD before use."
+        }
+    },
     "MANAGED": {
         "contents": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nADD_JOURNAL [ EXISTING ] [ MANAGED ] [ TITLE ( text ) ] reference list\n```\nFlag for the ADD_JOURNAL action (EE games only)."
+        }
+    },
+    "MENU_STYLE": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nMENU_STYLE style\n```\nTakes a single style argument. Not covered in the WeiDU readme; WeiDU accepts it as a top-level directive."
         }
     },
     "MODDER": {

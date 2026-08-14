@@ -181,9 +181,9 @@ COPY ~%comp_dir%/spl/wm_bld1.spl~ ~override/wm_bld1.spl~
     SAY 0x1cd6 @10101
     SAY 0x2036 @10101
     GET_OFFSET_ARRAY ab_array SPL_V10_HEADERS
-    PHP_EACH ab_array AS int => ab_off  BEGIN
+    PHP_EACH ab_array AS int => ab_off BEGIN
         GET_OFFSET_ARRAY2 fx_array ab_off SPL_V10_HEAD_EFFECTS
-        PHP_EACH fx_array AS int => fx_off  BEGIN
+        PHP_EACH fx_array AS int => fx_off BEGIN
             READ_SHORT fx_off fx_opcode
             PATCH_IF fx_opcode = OPCODE_hp_damage BEGIN
                 WRITE_BYTE (fx_off + FX_power) 10
@@ -198,9 +198,9 @@ COPY ~%comp_dir%/spl/wm_miss.spl~ ~override/wm_miss.spl~  // Wizard Spell: Rhial
     SAY UNIDENTIFIED_DESC @20602
     // random missiles secondary spell must be instant
     GET_OFFSET_ARRAY ab_array SPL_V10_HEADERS
-    PHP_EACH ab_array AS int => ab_off  BEGIN
+    PHP_EACH ab_array AS int => ab_off BEGIN
         GET_OFFSET_ARRAY2 fx_array ab_off SPL_V10_HEAD_EFFECTS
-        PHP_EACH fx_array AS int => fx_off  BEGIN
+        PHP_EACH fx_array AS int => fx_off BEGIN
             WRITE_LONG (fx_off + FX_parameter2) CASTING_TYPE_instant
         END
     END
@@ -470,9 +470,9 @@ COPY_EXISTING ~itemdial.2da~ ~override/itemdial.2da~
 
 COPY_EXISTING_REGEXP GLOB ~^wm_.+\.spl$~ ~override~
     GET_OFFSET_ARRAY ab_array SPL_V10_HEADERS
-    PHP_EACH ab_array AS int => ab_off  BEGIN
+    PHP_EACH ab_array AS int => ab_off BEGIN
         GET_OFFSET_ARRAY2 fx_array ab_off SPL_V10_HEAD_EFFECTS
-        PHP_EACH fx_array AS int => fx_off  BEGIN
+        PHP_EACH fx_array AS int => fx_off BEGIN
             READ_BYTE (fx_off + FX_probability1) fx_prob1
             PATCH_IF fx_prob1 == 100 BEGIN
                 WRITE_BYTE (fx_off + FX_probability1) 99

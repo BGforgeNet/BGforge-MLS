@@ -4,7 +4,7 @@ INCLUDE ~%MOD_FOLDER%/gen/wipe.tpa~
 
 // are
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/are~
-ACTION_BASH_FOR ~override~ ~.+\.are$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.are$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/main.tpp~
     BUT_ONLY
@@ -14,7 +14,7 @@ END
 ACTION_CLEAR_ARRAY tutu_convert_itm
 INCLUDE ~%MOD_FOLDER%/lib/tutu_convert_itm.tph~
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/cre~
-ACTION_BASH_FOR ~override~ ~.+\.cre$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.cre$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         SET existence_fix = 0
         PATCH_INCLUDE ~%comp_dir%/init_fix.tpp~
@@ -25,7 +25,7 @@ ACTION_BASH_FOR ~override~ ~.+\.cre$~  BEGIN
     BUT_ONLY
 END
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/cre/gen_fix~
-ACTION_BASH_FOR ~override~ ~.+\.cre$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.cre$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/add_missing_animation.tpp~
         PATCH_INCLUDE ~%comp_dir%/remove_missing_scripts.tpp~
@@ -41,7 +41,7 @@ END
 
 // itm
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/itm/init_fix~
-ACTION_BASH_FOR ~override~ ~.+\.itm$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.itm$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/bg2fixpack.tpp~
         PATCH_INCLUDE ~%comp_dir%/trim.tpp~
@@ -49,7 +49,7 @@ ACTION_BASH_FOR ~override~ ~.+\.itm$~  BEGIN
     BUT_ONLY
 END
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/itm/gen_fix~
-ACTION_BASH_FOR ~override~ ~.+\.itm$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.itm$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/main.tpp~
     BUT_ONLY
@@ -58,7 +58,7 @@ OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/itm~
 INCLUDE ~%comp_dir%/fix_enchantment_define.tpa~
 INCLUDE ~%comp_dir%/gen_check_define.tpa~
 INCLUDE ~%comp_dir%/remove_invalid_effects_define.tpa~
-ACTION_BASH_FOR ~override~ ~.+\.itm$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.itm$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/add_missing_immunity.tpp~
         PATCH_INCLUDE ~%comp_dir%/assign_portrait_icon.tpp~
@@ -71,13 +71,13 @@ END
 
 // spl
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/spl~
-ACTION_BASH_FOR ~override~ ~.+\.spl$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.spl$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%comp_dir%/structure.tpp~
     BUT_ONLY
 END
 OUTER_TEXT_SPRINT comp_dir ~%MOD_FOLDER%/spl/gen_fix~
-ACTION_BASH_FOR ~override~ ~.+\.spl$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.spl$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_IF NOT ENGINE_IS ~bgee bg2ee eet iwdee pstee~ BEGIN
             PATCH_INCLUDE ~%comp_dir%/innate_to_level_1.tpp~  // bcs re-compilation skipped
@@ -89,7 +89,7 @@ ACTION_BASH_FOR ~override~ ~.+\.spl$~  BEGIN
 END
 
 // sto
-ACTION_BASH_FOR ~override~ ~.+\.sto$~  BEGIN
+ACTION_BASH_FOR ~override~ ~.+\.sto$~ BEGIN
     COPY ~%BASH_FOR_FILESPEC%~ ~override~
         PATCH_INCLUDE ~%MOD_FOLDER%/sto/gen_fix.tpp~
     BUT_ONLY

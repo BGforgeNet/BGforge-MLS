@@ -7,7 +7,7 @@ COPY - ~%MOD_FOLDER%/less_magical/matches.2da~ ~%MOD_FOLDER%-inlined/matches.2da
     END
 
 COPY_EXISTING_REGEXP GLOB ~^.+\.sto$~ ~override~
-    PHP_EACH item_list AS item => replacement  BEGIN
+    PHP_EACH item_list AS item => replacement BEGIN
         PATCH_IF ~%replacement%~ STR_EQ ~none~ OR NOT FILE_EXISTS_IN_GAME ~%replacement%.itm~  // if replacement doesn't exist, the original is probably a bogus entry
         BEGIN
             LPF DELETE_STORE_ITEM
@@ -25,7 +25,7 @@ COPY_EXISTING_REGEXP GLOB ~^.+\.sto$~ ~override~
 BUT_ONLY
 
 COPY_EXISTING_REGEXP GLOB ~^.+\.are$~ ~override~
-    PHP_EACH item_list AS item => replacement  BEGIN
+    PHP_EACH item_list AS item => replacement BEGIN
         PATCH_IF ~%replacement%~ STR_EQ ~none~ OR NOT FILE_EXISTS_IN_GAME ~%replacement%.itm~  // if replacement doesn't exist, the original is probably a bogus entry
         BEGIN
             LPF DELETE_AREA_ITEM

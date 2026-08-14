@@ -8,7 +8,7 @@ COPY_EXISTING_REGEXP GLOB ~^.+\.cre$~ ~override~
     END ELSE BEGIN
         SPRINT regex ~%common_regex%~
     END
-    PATCH_PHP_EACH replacement AS old_item => new_item  BEGIN
+    PATCH_PHP_EACH replacement AS old_item => new_item BEGIN
         PATCH_IF NOT (VARIABLE_IS_SET $item_source(~%old_item%~ ~%res%~) AND $item_source(~%old_item%~ ~%res%~) == 1) BEGIN
             PATCH_IF ~%res%~ STR_EQ ~BDANGATH.cre~ BEGIN
                 PATCH_PRINT ~bdanganth: res=%res%, old_item=%old_item%, new_item=%new_item%~

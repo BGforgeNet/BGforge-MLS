@@ -80,7 +80,9 @@ repository:
       - match: \b(AUTO_TRA)\b
       - match: \b(EXISTING)\b
       - match: \b(KEEP_CRLF)\b
+      - match: \b(LOAD)\b
       - match: \b(MANAGED)\b
+      - match: \b(MENU_STYLE)\b
       - match: \b(MODDER)\b
       - match: \b(NO_IF_EVAL_BUG)\b
       - match: \b(NULL)\b

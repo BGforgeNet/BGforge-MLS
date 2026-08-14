@@ -201,6 +201,8 @@
             "BG1NPC/bg1npc/romances/xarom/baf/x#xatire.baf",
             "BGT-WeiDU/bgt/base/baf/aram00.baf",
             "BGT-WeiDU/bgt/modify/baf/a6bio.baf",
+            "EET/EET/compat/bg1npc/baf/x#brdwi.baf",
+            "EET/EET/compat/bg1npc/baf/x#niemain.baf",
             "bg2-tweaks-and-tricks/tnt/components/easy_traps/baf/detection.baf",
             "bg2-tweaks-and-tricks/tnt/components/easy_traps/baf/displaystring.baf",
             "bg2-tweaks-and-tricks/tnt/components/easy_traps/baf/intuition.baf",
@@ -231,7 +233,15 @@
             "BGT-WeiDU/bgt/worldmap/russian/worldmap.tra",
             "BGT-WeiDU/bgt/worldmap/schinese/worldmap.tra",
             "BGT-WeiDU/bgt/worldmap/spanish/worldmap.tra",
-            "BGT-WeiDU/bgt/worldmap/tchinese/worldmap.tra"
+            "BGT-WeiDU/bgt/worldmap/tchinese/worldmap.tra",
+            "EET/EET/lang/cs_CZ/map_mods_trans.tra",
+            "EET/EET/lang/de_DE/map_mods_trans.tra",
+            "EET/EET/lang/en_US/map_mods_trans.tra",
+            "EET/EET/lang/es_ES/map_mods_trans.tra",
+            "EET/EET/lang/fr_FR/map_mods_trans.tra",
+            "EET/EET/lang/pl_PL/map_mods_trans.tra",
+            "EET/EET/lang/ru_RU/map_mods_trans.tra",
+            "EET/EET/lang/zh_CN/map_mods_trans.tra"
         ]
     }
 }

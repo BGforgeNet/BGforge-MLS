@@ -1,0 +1,19 @@
+// ALTER_TLK_LIST and PATCH_BASH_FOR both reached the formatter through a shared type list rather than a
+// rule of their own, so this sample pins the layout each one actually produces.
+
+ALTER_TLK_LIST BEGIN
+    ~^Gorion$~
+END
+BEGIN
+    REPLACE_TEXTUALLY ~^~ ~BG1 ~
+END
+
+COPY ~items~ ~override~
+    PATCH_BASH_FOR ~items~ ~^.*\.itm$~ BEGIN
+        PATCH_PRINT ~%BASH_FOR_FILE%~
+    END
+
+GET_FILE_ARRAY files ~override~ ~^.*\.2da$~
+GET_DIRECTORY_ARRAY dirs ~.~ ~^lang$~
+
+APPEND_COL_OUTER ~kitlist.2da~ ~extra~

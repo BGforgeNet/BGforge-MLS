@@ -5,9 +5,11 @@
 ### Fixes
 
 - TP2 no longer reports false syntax errors on `QUICK_MENU`, on the top-level directives
-  `ASK_EVERY_COMPONENT`, `MODDER`, `SCRIPT_STYLE` and `UNINSTALL_ORDER`, or on the component flags
-  `FORCED_SUBCOMPONENT`, `INSTALL_BY_DEFAULT`, `METADATA` and `NO_LOG_RECORD`. A directive written after
-  `README` or another list-taking directive is no longer swallowed by it.
+  `ASK_EVERY_COMPONENT`, `LOAD`, `MENU_STYLE`, `MODDER`, `SCRIPT_STYLE` and `UNINSTALL_ORDER`, or on the
+  component flags `FORCED_SUBCOMPONENT`, `INSTALL_BY_DEFAULT`, `METADATA` and `NO_LOG_RECORD`. A directive
+  written after `README` or another list-taking directive is no longer swallowed by it.
+- `SUBCOMPONENT`, `GROUP` and `FORCED_SUBCOMPONENT` all accept their optional predicate. `LOAD` and
+  `MENU_STYLE` are offered in completion and highlighted.
 - TP2 `ACTION_PHP_EACH` and `PATCH_PHP_EACH` accept a quoted loop variable, as WeiDU does:
   `ACTION_PHP_EACH arr AS data => ~~ BEGIN`.
 - The formatter lays out `QUICK_MENU` groups one component per line.
@@ -22,6 +24,8 @@
   predicate.
 - The formatter no longer drops comments written on the operands of a multi-line condition, and no longer
   rewraps such a condition differently each time it is formatted.
+- The formatter no longer writes a stray double space before `BEGIN` on `ACTION_BASH_FOR`, `PATCH_BASH_FOR`
+  and `PHP_EACH` loops.
 
 ## 3.13.1
 

@@ -1,8 +1,17 @@
 BACKUP ~flags/backup~
+AUTHOR ~someone@example.com~
 
 ASK_EVERY_COMPONENT
 SCRIPT_STYLE BG2
+MENU_STYLE ~ansi~
+LOAD ~shared.tp2~
 UNINSTALL_ORDER  ~MOVE~   ~COPY~
 MODDER ~SETUP_DEBUG~ ~ON~
 
 BEGIN ~Core~
+SUBCOMPONENT ~Choices~ ~pred~
+FORCED_SUBCOMPONENT ~Choices~ ~pred~
+GROUP ~Tweaks~
+METADATA ~key=value~
+NO_LOG_RECORD
+INSTALL_BY_DEFAULT

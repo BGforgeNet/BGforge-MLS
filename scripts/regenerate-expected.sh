@@ -24,5 +24,9 @@ esac
 # shellcheck source=scripts/grammar-test-lib.sh
 source "$(dirname "$0")/grammar-test-lib.sh"
 
+# Same parser-freshness requirement as the gate in test-grammar.sh, and it matters more here: a stale parser
+# makes the gate report a wrong verdict, but makes this script write wrong bytes into committed expected output.
+grammar_generate
+grammar_build_wasm
 grammar_build_format
 grammar_regenerate_expected

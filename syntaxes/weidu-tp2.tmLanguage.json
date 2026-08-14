@@ -194,7 +194,15 @@
           "name": "keyword.other.weidu-tp2"
         },
         {
+          "match": "\\b(LOAD)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
           "match": "\\b(MANAGED)\\b",
+          "name": "keyword.other.weidu-tp2"
+        },
+        {
+          "match": "\\b(MENU_STYLE)\\b",
           "name": "keyword.other.weidu-tp2"
         },
         {

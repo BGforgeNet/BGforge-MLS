@@ -25,19 +25,33 @@ grammar_generate() {
     generate_grammar_cached "$GRAMMAR_DIR" "$TS"
 }
 
-# The format steps below run samples through the @bgforge/format CLI, whose build copies the WASM out of this
-# grammar dir. Without this rebuild the gate would generate a fresh parser.c and then format with whatever
-# WASM the last `pnpm build:grammar` left behind - comparing formatter output against a different parser than
-# the one under test, which can fail on a correct change or pass on a broken one.
+# The format steps below run samples through the @bgforge/format CLI, which loads its parser from its own
+# bundle dir (parser-factory resolves the WASM against __dirname). `pnpm build:format` bundles only JS, so
+# building the WASM here is not enough - it has to be copied where the consumers read it, which is otherwise
+# only done by `pnpm build:grammar`. Without both steps the gate generates a fresh parser.c and then formats
+# with whatever WASM the last full build left behind, comparing formatter output against a different parser
+# than the one under test - which can fail on a correct change or pass on a broken one.
 grammar_build_wasm() {
     step "$GRAMMAR_NAME: Building WASM"
     local wasm
     wasm=$(find . -maxdepth 1 -name '*.wasm' -print -quit)
     if [[ -n "$wasm" && "$wasm" -nt src/parser.c ]]; then
         echo "wasm: cached (newer than src/parser.c)"
-        return 0
+    else
+        "$TS" build --wasm
+        wasm=$(find . -maxdepth 1 -name '*.wasm' -print -quit)
     fi
-    "$TS" build --wasm
+
+    # Refresh only the bundle dirs that already ship this grammar, so the diagnostics-only grammars keep
+    # build-grammar.sh's policy of going to server/out and not format/out without restating the list here.
+    local name
+    name=$(basename "$wasm")
+    for out in "$ROOT_DIR/format/out" "$ROOT_DIR/server/out"; do
+        if [[ -f "$out/$name" ]]; then
+            cp "$wasm" "$out/$name"
+            echo "wasm: refreshed $out/$name"
+        fi
+    done
 }
 
 grammar_lint() {

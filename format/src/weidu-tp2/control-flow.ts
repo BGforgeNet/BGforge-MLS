@@ -249,7 +249,7 @@ function formatCondition(
                 for (let c = 0; c < comments.length; c++) {
                     const cm = comments[c];
                     if (!cm || used.has(c)) continue;
-                    if (cm.row !== op.endRow || cm.column < (op.endColumn ?? 0)) continue;
+                    if (cm.row !== op.endRow || cm.column < op.endColumn) continue;
                     line += INLINE_COMMENT_SPACING + cm.text;
                     used.add(c);
                 }

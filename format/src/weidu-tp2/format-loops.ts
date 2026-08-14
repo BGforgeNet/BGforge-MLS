@@ -166,7 +166,10 @@ export function formatForEach(
         }
         headerLines.push(indent + KW_BEGIN);
     } else {
-        const fullHeader = headerParts.join(" ") + " " + itemsAfterIN.join(" ");
+        // One join over both groups, not two joined with a separator: the loops that have no IN clause
+        // (BASH_FOR, PHP_EACH) leave itemsAfterIN empty, and a separator added unconditionally then lands
+        // as a stray double space before BEGIN.
+        const fullHeader = [...headerParts, ...itemsAfterIN].join(" ");
         headerLines.push(indent + fullHeader + " " + KW_BEGIN);
     }
 

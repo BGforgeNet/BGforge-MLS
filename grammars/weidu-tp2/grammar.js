@@ -588,7 +588,7 @@ export default grammar({
         file_contains_expr: ($) =>
             prec.right(3, seq("FILE_CONTAINS", field("file", $.value), field("regexp", $.value))),
 
-        // WeiDU: RESOURCE_CONTAINS e1:Patch_String_Right e2:Patch_String_Right
+        // Takes a resource name and a regexp, both evaluated as patch strings.
         resource_contains_expr: ($) =>
             prec.right(3, seq("RESOURCE_CONTAINS", field("resource", $.value), field("regexp", $.value))),
 
@@ -1555,10 +1555,11 @@ export default grammar({
         action_clear_array: clearArray("ACTION_CLEAR_ARRAY"),
 
         // String/tra operations
-        // WeiDU's Pe_Lse_List allows several strref/string pairs per statement, but a pair's string may
-        // itself be a male/female tlk string, and the two readings are ambiguous for the same input. No mod
-        // in the sample set or the external corpus writes the multi-pair form, so one entry is modelled here
-        // and the male/female form - which EET and others do write - parses unambiguously.
+        // WeiDU allows several strref/string pairs per statement, but a pair's string may itself be a
+        // male/female tlk string, and the two readings are ambiguous for the same input. One entry is
+        // modelled here so the male/female form - which EET and others do write - parses unambiguously;
+        // the multi-pair form is consequently REJECTED, not merely unmodelled. Nothing in the sample set or
+        // the external corpus writes it (0 of 324 STRING_SET uses), so the trade favours the common form.
         action_string_set: ($) =>
             prec.right(
                 seq(
@@ -1704,6 +1705,8 @@ export default grammar({
                 $.quick_menu_directive,
                 $.ask_every_component_flag,
                 $.script_style_directive,
+                $.menu_style_directive,
+                $.load_directive,
                 $.uninstall_order_directive,
                 $.modder_directive,
                 $.language_directive,
@@ -1737,6 +1740,10 @@ export default grammar({
 
         ask_every_component_flag: ($) => "ASK_EVERY_COMPONENT",
         script_style_directive: ($) => seq("SCRIPT_STYLE", field("style", $.value)),
+        // MENU_STYLE takes exactly one style argument; a second is a parse error in WeiDU.
+        menu_style_directive: ($) => seq("MENU_STYLE", field("style", $.value)),
+        // LOAD takes a list, like the other list-taking directives above.
+        load_directive: ($) => prec.right(seq("LOAD", repeat1(field("file", $.value)))),
         uninstall_order_directive: ($) => prec.right(seq("UNINSTALL_ORDER", repeat1(field("op", $.value)))),
         // MODDER takes option/value pairs: MODDER ~SETUP_DEBUG~ ~ON~ ~ASSERT~ ~FAIL~
         modder_directive: ($) =>
@@ -1775,10 +1782,12 @@ export default grammar({
 
         designated_flag: ($) => seq("DESIGNATED", field("number", $.number)),
         deprecated_flag: ($) => seq("DEPRECATED", field("message", $.value)),
-        // WeiDU takes an optional predicate after the label on both of these: SUBCOMPONENT/GROUP e1:Lse e2:Patch_Exp
+        // All three of these take an optional predicate expression after the label, which WeiDU evaluates to
+        // decide whether the component is offered.
         subcomponent_flag: ($) =>
             seq(kw("SUBCOMPONENT", "SUB_COMPONENT"), field("name", $.value), optional(field("predicate", $.value))),
-        forced_subcomponent_flag: ($) => seq("FORCED_SUBCOMPONENT", field("name", $.value)),
+        forced_subcomponent_flag: ($) =>
+            seq("FORCED_SUBCOMPONENT", field("name", $.value), optional(field("predicate", $.value))),
         metadata_flag: ($) => seq("METADATA", field("value", $.value)),
         no_log_record_flag: ($) => "NO_LOG_RECORD",
         install_by_default_flag: ($) => "INSTALL_BY_DEFAULT",
