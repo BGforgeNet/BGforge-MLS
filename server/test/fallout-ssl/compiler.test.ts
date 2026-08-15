@@ -71,30 +71,19 @@ vi.mock("../../src/user-messages", () => ({
     showErrorWithActions: (...args: unknown[]) => mockShowErrorWithActions(...args),
 }));
 
-const mockBuiltinCompiler = vi.fn();
+const mockWasmCompiler = vi.fn();
 vi.mock("../../src/sslc/ssl_compiler", () => ({
-    ssl_compile: (...args: unknown[]) => mockBuiltinCompiler(...args),
+    ssl_compile: (...args: unknown[]) => mockWasmCompiler(...args),
 }));
 
-// Only the two calls are stubbed. `CompileError` and `PreprocessError` stay the real classes, because
-// the code under test narrows on them with `instanceof` to decide how many errors it has to report.
-const mockCompileText = vi.fn();
-vi.mock("../../../compilers/ssl/src/compile", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../../../compilers/ssl/src/compile")>();
-    return {
-        ...actual,
-        compileText: (...args: unknown[]) => mockCompileText(...args),
-    };
-});
-
-const mockPreprocessText = vi.fn();
-vi.mock("../../../compilers/ssl/src/preprocess", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../../../compilers/ssl/src/preprocess")>();
-    return {
-        ...actual,
-        preprocessText: (...args: unknown[]) => mockPreprocessText(...args),
-    };
-});
+// The compile itself runs on a worker thread, so what is stubbed here is the request that crosses to
+// it. Everything the worker reports is already plain data, which is what these tests hand back.
+const mockCompileOnWorker = vi.fn();
+const mockStopCompileWorker = vi.fn();
+vi.mock("../../src/fallout-ssl/compile-worker-client", () => ({
+    compileOnWorker: (...args: unknown[]) => mockCompileOnWorker(...args),
+    stopCompileWorker: (...args: unknown[]) => mockStopCompileWorker(...args),
+}));
 
 const mockGetParser = vi.fn();
 vi.mock("../../../shared/parsers/fallout-ssl", () => ({
@@ -102,8 +91,6 @@ vi.mock("../../../shared/parsers/fallout-ssl", () => ({
 }));
 
 import { compile, TMP_SSL_NAME, _resetCompilerCache } from "../../src/fallout-ssl/compiler";
-import { CompileError } from "../../../compilers/ssl/src/compile";
-import { LowerError } from "../../../compilers/ssl/src/lower";
 import type { SSLsettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
@@ -113,9 +100,8 @@ describe("fallout-ssl compiler", () => {
         _resetCompilerCache();
         mockWriteFile.mockResolvedValue(undefined);
         mockUnlink.mockResolvedValue(undefined);
-        mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
-        mockPreprocessText.mockReturnValue("preprocessed");
-        mockCompileText.mockReturnValue(new Uint8Array([1, 2, 3]));
+        mockWasmCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
+        mockCompileOnWorker.mockResolvedValue([]);
         mockGetParser.mockReturnValue({});
         mockSendRequest.mockResolvedValue(true);
         setMockDocument("line one\nline two\nline three\n");
@@ -170,7 +156,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("cleans up tmp file after a successful WebAssembly compile", async () => {
-            mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
+            mockWasmCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
@@ -186,7 +172,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("cleans up tmp file even when the WebAssembly compiler throws", async () => {
-            mockBuiltinCompiler.mockRejectedValue(new Error("WASM crash"));
+            mockWasmCompiler.mockRejectedValue(new Error("WASM crash"));
 
             await expect(
                 compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code"),
@@ -256,7 +242,7 @@ describe("fallout-ssl compiler", () => {
                 compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code"),
             ).rejects.toThrow("ENOSPC");
 
-            expect(mockBuiltinCompiler).not.toHaveBeenCalled();
+            expect(mockWasmCompiler).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
         });
 
@@ -278,7 +264,7 @@ describe("fallout-ssl compiler", () => {
 
             await compile(normalizeUri("file:///project/test.ssl"), settings, true, "code");
 
-            expect(mockBuiltinCompiler).toHaveBeenCalledWith(
+            expect(mockWasmCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
                     interactive: true,
                     inputFileName: TMP_SSL_NAME,
@@ -294,7 +280,7 @@ describe("fallout-ssl compiler", () => {
 
             await compile(normalizeUri("file:///project/test.ssl"), settings, false, "code");
 
-            expect(mockBuiltinCompiler).toHaveBeenCalledWith(
+            expect(mockWasmCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
                     outputFileName: expect.stringMatching(/bgforge-mls\/tmp-[0-9a-f]{8}-test\.int$/),
                 }),
@@ -306,7 +292,7 @@ describe("fallout-ssl compiler", () => {
 
             await compile(normalizeUri("file:///project/test.ssl"), settings, true, "code");
 
-            expect(mockBuiltinCompiler).toHaveBeenCalledWith(
+            expect(mockWasmCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
                     outputFileName: "/output/test.int",
                 }),
@@ -314,7 +300,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("shows success message on returnCode 0 in interactive mode", async () => {
-            mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
+            mockWasmCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, true, "code");
 
@@ -322,7 +308,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("shows error message on non-zero returnCode in interactive mode", async () => {
-            mockBuiltinCompiler.mockResolvedValue({ stdout: "error output", returnCode: 1 });
+            mockWasmCompiler.mockResolvedValue({ stdout: "error output", returnCode: 1 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, true, "code");
 
@@ -330,7 +316,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("sends diagnostics after compilation", async () => {
-            mockBuiltinCompiler.mockResolvedValue({ stdout: "compiler output", returnCode: 0 });
+            mockWasmCompiler.mockResolvedValue({ stdout: "compiler output", returnCode: 0 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
@@ -344,7 +330,7 @@ describe("fallout-ssl compiler", () => {
         it("parses warnings from compiler output and sends them as diagnostics", async () => {
             // Warning format: [Warning] <file.ssl>:line:col: message
             const warningOutput = "[Warning] <test.ssl>:5:10: Unused variable x";
-            mockBuiltinCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
+            mockWasmCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
@@ -361,7 +347,7 @@ describe("fallout-ssl compiler", () => {
             // Warning on line 2 (1-based); LSP line 1 is "abcdefghij" (10 chars).
             setMockDocument("first line\nabcdefghij\n");
             const warningOutput = "[Warning] <test.ssl>:2:3: Unused variable";
-            mockBuiltinCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
+            mockWasmCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
@@ -377,7 +363,7 @@ describe("fallout-ssl compiler", () => {
         it("parses error output and includes file/line/col in diagnostics", async () => {
             // Error format: [Error] <file.ssl>:line:col: message
             const errorOutput = "[Error] <test.ssl>:3:8: Expecting top-level statement";
-            mockBuiltinCompiler.mockResolvedValue({ stdout: errorOutput, returnCode: 1 });
+            mockWasmCompiler.mockResolvedValue({ stdout: errorOutput, returnCode: 1 });
 
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
@@ -393,21 +379,24 @@ describe("fallout-ssl compiler", () => {
         });
     });
 
-    describe("TypeScript compiler", () => {
+    describe("the extension's own compiler", () => {
         const ownSettings: SSLsettings = { ...baseSettings, compiler: "built-in" };
 
         it("compiles the document itself, writing no file beside the user's source", async () => {
             await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
 
-            expect(mockBuiltinCompiler).not.toHaveBeenCalled();
+            expect(mockWasmCompiler).not.toHaveBeenCalled();
             // The buffer's own text and path, not a copy's: the path is what a quoted `#include`
             // resolves against, so it has to be the real one even though nothing reads it.
-            expect(mockPreprocessText).toHaveBeenCalledWith("code", "/project/test.ssl", {
+            expect(mockCompileOnWorker).toHaveBeenCalledWith({
+                text: "code",
+                filepath: "/project/test.ssl",
+                dstPath: "/output/test.int",
                 includeDirs: ["/headers"],
                 defines: {},
+                level: 1,
+                shortCircuit: false,
             });
-            expect(mockCompileText).toHaveBeenCalledWith({}, "preprocessed", { level: 1, shortCircuit: false });
-            expect(mockWriteFileSync).toHaveBeenCalledWith("/output/test.int", new Uint8Array([1, 2, 3]));
             expect(mockWriteFile).not.toHaveBeenCalled();
         });
 
@@ -419,54 +408,35 @@ describe("fallout-ssl compiler", () => {
                 "code",
             );
 
-            expect(mockPreprocessText).toHaveBeenCalledWith("code", "/project/test.ssl", {
-                includeDirs: ["/headers", "extra"],
-                defines: { DEBUG: "1" },
-            });
-            expect(mockCompileText).toHaveBeenCalledWith({}, "preprocessed", { level: 2, shortCircuit: true });
+            expect(mockCompileOnWorker).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    includeDirs: ["/headers", "extra"],
+                    defines: { DEBUG: "1" },
+                    level: 2,
+                    shortCircuit: true,
+                }),
+            );
         });
 
-        it("reports a located compile error at the line it names", async () => {
-            mockCompileText.mockImplementation(() => {
-                throw new Error("2:7: unknown identifier 'foo'");
-            });
-
-            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
-
-            expect(mockWriteFileSync).not.toHaveBeenCalled();
-            expect(mockShowError).toHaveBeenCalledWith("Failed to compile test.ssl!");
-            expect(mockShowInfo).not.toHaveBeenCalled();
-        });
-
-        it("shows every syntax error at once, each at its own line", async () => {
+        it("shows every error the compile found, each at its own line", async () => {
             // The point of collecting them: a script with three mistakes is one compile, not three.
-            mockCompileText.mockImplementation(() => {
-                throw new CompileError([
-                    { line: 2, column: 10, message: "syntax error" },
-                    { line: 3, column: 10, message: "syntax error" },
-                    { line: 4, column: 1, message: "missing end" },
-                ]);
-            });
-
-            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
-
-            const parseResult = mockSendParseResult.mock.calls[0]![0];
-            expect(parseResult.errors.map((e: { line: number }) => e.line)).toEqual([2, 3, 4]);
-            expect(parseResult.errors.at(-1).message).toBe("missing end");
-            expect(mockWriteFileSync).not.toHaveBeenCalled();
-        });
-
-        it("shows every semantic error at once, without the line:column prefix the editor supplies", async () => {
-            // A lowering that found several mistakes carries them all; the position becomes the
-            // diagnostic's range, so repeating it in the message text would show up twice in the editor.
-            const found = [
-                new LowerError("unknown identifier 'a'", { line: 2, column: 2 }),
-                new LowerError("division by zero", { line: 3, column: 8 }),
-                new LowerError("'break' outside a loop", { line: 4, column: 2 }),
-            ];
-            mockCompileText.mockImplementation(() => {
-                throw new LowerError(found[0]!.detail, { line: 2, column: 2 }, found);
-            });
+            mockCompileOnWorker.mockResolvedValue([
+                {
+                    uri: "file:///project/test.ssl",
+                    line: 2,
+                    columnStart: 0,
+                    columnEnd: 2,
+                    message: "unknown identifier 'a'",
+                },
+                { uri: "file:///project/test.ssl", line: 3, columnStart: 0, columnEnd: 8, message: "division by zero" },
+                {
+                    uri: "file:///project/test.ssl",
+                    line: 4,
+                    columnStart: 0,
+                    columnEnd: 2,
+                    message: "'break' outside a loop",
+                },
+            ]);
 
             await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
 
@@ -476,7 +446,25 @@ describe("fallout-ssl compiler", () => {
                 [3, "division by zero"],
                 [4, "'break' outside a loop"],
             ]);
-            expect(mockWriteFileSync).not.toHaveBeenCalled();
+            expect(mockShowError).toHaveBeenCalledWith("Failed to compile test.ssl!");
+        });
+
+        it("reports a compiler that could not run at all against the top of the file", async () => {
+            // Not a fault in the script, so there is no line in it to blame.
+            mockCompileOnWorker.mockRejectedValue(new Error("The SSL compiler stopped unexpectedly (exit 1)."));
+
+            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.errors).toEqual([
+                {
+                    uri: "file:///project/test.ssl",
+                    line: 1,
+                    columnStart: 0,
+                    columnEnd: 0,
+                    message: "The SSL compiler stopped unexpectedly (exit 1).",
+                },
+            ]);
         });
 
         it("defers to an external compiler when one is configured", async () => {
@@ -489,7 +477,7 @@ describe("fallout-ssl compiler", () => {
                 "code",
             );
 
-            expect(mockCompileText).not.toHaveBeenCalled();
+            expect(mockCompileOnWorker).not.toHaveBeenCalled();
         });
     });
 
@@ -632,7 +620,7 @@ describe("fallout-ssl compiler", () => {
                 { title: "Switch", id: "switch" },
                 { title: "Cancel", id: "cancel" },
             );
-            expect(mockBuiltinCompiler).toHaveBeenCalled();
+            expect(mockWasmCompiler).toHaveBeenCalled();
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("bgforge.falloutSSL.compilePath"));
             expect(mockSendRequest).not.toHaveBeenCalled();
         });
@@ -650,7 +638,7 @@ describe("fallout-ssl compiler", () => {
             await compile(normalizeUri("file:///project/b.ssl"), externalSettings, true, "code");
 
             expect(mockShowErrorWithActions).toHaveBeenCalledTimes(1);
-            expect(mockBuiltinCompiler).toHaveBeenCalledTimes(2);
+            expect(mockWasmCompiler).toHaveBeenCalledTimes(2);
         });
 
         it("falls back without prompting during non-interactive validation", async () => {
@@ -664,7 +652,7 @@ describe("fallout-ssl compiler", () => {
             await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
 
             expect(mockShowErrorWithActions).not.toHaveBeenCalled();
-            expect(mockBuiltinCompiler).toHaveBeenCalled();
+            expect(mockWasmCompiler).toHaveBeenCalled();
         });
 
         it("returns early when external compiler check fails and user declines", async () => {
@@ -678,7 +666,7 @@ describe("fallout-ssl compiler", () => {
 
             await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
-            expect(mockBuiltinCompiler).not.toHaveBeenCalled();
+            expect(mockWasmCompiler).not.toHaveBeenCalled();
             // Should not attempt external compile either (only the --version check)
             expect(mockExecFile).toHaveBeenCalledTimes(1);
             // Should not send any diagnostics
@@ -696,7 +684,7 @@ describe("fallout-ssl compiler", () => {
 
             await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
-            expect(mockBuiltinCompiler).not.toHaveBeenCalled();
+            expect(mockWasmCompiler).not.toHaveBeenCalled();
             expect(mockExecFile).toHaveBeenCalledTimes(1);
             expect(mockSendParseResult).not.toHaveBeenCalled();
         });
@@ -733,7 +721,7 @@ describe("fallout-ssl compiler", () => {
             // The first compile's signal gets aborted by the second; we mock that scenario
             // by having the compiler resolve but checking signal.aborted in the path.
             // Since AbortController interaction is internal, we test via two overlapping calls.
-            mockBuiltinCompiler.mockImplementation(async (_opts: { signal: AbortSignal }) => {
+            mockWasmCompiler.mockImplementation(async (_opts: { signal: AbortSignal }) => {
                 // Yield so the second compile can abort this one
                 await new Promise<void>((resolve) => {
                     setTimeout(resolve, 0);

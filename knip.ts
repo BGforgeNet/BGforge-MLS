@@ -50,7 +50,14 @@ const config: KnipConfig = {
             // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
             // The "redundant entry" hint for lsp-probe.mts is spurious: removing that entry
             // flips the file to an unused-files error.
-            entry: ["vitest.mutation.config.ts", "test/**/*.test.ts", "scripts/lsp-probe.mts"],
+            // compile-worker.ts is a second bundle entry, started by path from
+            // compile-worker-client.ts rather than imported, so nothing references it in source.
+            entry: [
+                "vitest.mutation.config.ts",
+                "test/**/*.test.ts",
+                "scripts/lsp-probe.mts",
+                "src/fallout-ssl/compile-worker.ts",
+            ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",

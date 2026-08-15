@@ -17,6 +17,15 @@ esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js \
     "$imu_define" \
     "$@"
 
+# The SSL compile worker is a second entry point, not part of the server bundle: a worker thread is
+# started from its own file, and it must sit beside server.js because that is where it is looked up.
+# No shebang - it is loaded by the Worker constructor, never executed directly.
+esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out/compile-worker.js \
+    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --banner:js="$imu_banner" \
+    "$imu_define" \
+    "$@"
+
 # Copy tree-sitter WASM files
 copy_wasm_to server/out
 

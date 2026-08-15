@@ -8,13 +8,14 @@
   for a `.int`, opens it as SSL source with the usual highlighting, outline and search. Local and argument
   names are not stored in a compiled script, so those are generated; scripts built with optimisation enabled
   may show an instruction listing instead.
-- A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `typescript` compiles
-  without a native binary and without writing a temporary file. A script it cannot parse is reported as a
-  syntax error at the line it gave up on, and no `.int` is written.
-- The `typescript` compiler reads `bgforge.falloutSSL.compileOptions` and optimises. `-O1` drops procedures
+- A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `built-in` compiles
+  the text in the editor - including edits not yet saved - without starting a process or writing a
+  temporary file beside the script. A script it cannot parse is reported as a syntax error at the line it
+  gave up on, and no `.int` is written.
+- The `built-in` compiler reads `bgforge.falloutSSL.compileOptions` and optimises. `-O1` drops procedures
   and variables nothing references; `-O2` additionally folds constants, removes unreachable code and dead
-  stores, and reclaims unused slots, producing the same bytes as the bundled compiler at both levels. `-s`
-  compiles `and`/`or` as short-circuit operators. `-O3` is honoured as `-O2`: the bundled compiler's own
+  stores, and reclaims unused slots, producing the same bytes as the WebAssembly compiler at both levels. `-s`
+  compiles `and`/`or` as short-circuit operators. `-O3` is honoured as `-O2`: the WebAssembly compiler's own
   source marks that level's extra passes as known to break code. `-I` and `-m` in that setting are honoured
   too, so a header directory or a macro defined there applies to both compilers.
 - A failed compile reports everything it found wrong, instead of stopping at the first problem. A script
@@ -39,28 +40,28 @@
 - A procedure that is declared and never defined is reported, naming the procedure and the line it was
   declared on.
 - Compiling a script in a directory whose name contains a dot (`fo2.rp`, `mymod.v2`) failed with an opaque
-  `ErrnoError undefined undefined` and no output file. The bundled compiler cannot build there at all, so
-  this is now reported as such, naming the directory and pointing at the `typescript` compiler, which has
+  `ErrnoError undefined undefined` and no output file. The WebAssembly compiler cannot build there at all, so
+  this is now reported as such, naming the directory and pointing at the `built-in` compiler, which has
   no such limit.
 - `bgforge.falloutSSL.headersDirectory` is now honoured when the directory's name contains a dot
   (`fo2.rp`, `headers.v2`). Everything after the last dot was being dropped, so the compiler was pointed at
   a directory that does not exist and the headers were never found.
-- Two string literals written next to each other are one string, as the bundled compiler has always read
+- Two string literals written next to each other are one string, as the WebAssembly compiler has always read
   them: `"ab" "cd"` is `abcd`, and a long message can be split across lines. Both compilers accept it, and
   the editor no longer marks it as a syntax error.
 - Character constants are recognised: `'A'` is 65, with the escapes `'\n'`, `'\t'` and the octal `'\0101'`.
-  They were reported as a syntax error, in the editor as well as by the `typescript` compiler.
+  They were reported as a syntax error, in the editor as well as by the `built-in` compiler.
 - `foreach` accepts its `while` guard in every spelling, not only the parenthesised one:
   `foreach v in arr while (cond)` checks the condition before each iteration.
 - An array element can be stepped: `a[1]++`, `a.field--` and `a[i + 1]++` compile the way `a[1] += 1`
   already did, evaluating a complex index once.
 - `++x` is reported as a syntax error. The language has no prefix increment - only `x++` - so a script
-  using it never compiled with the bundled compiler.
+  using it never compiled with the WebAssembly compiler.
 - The process-control statements compile: `spawn`, `callstart`, `exec` and `fork` start a child script,
   `wait` suspends, `cancel` and `cancelall` drop pending events, `startcritical` and `endcritical` mark a
   critical section, and `exit`, `detach` and `noop` do what they say. They were reported as syntax errors
-  in the editor and refused by the `typescript` compiler; the engine has always run them.
-- The `typescript` compiler refuses the same statements the bundled one does: a procedure called without
+  in the editor and refused by the `built-in` compiler; the engine has always run them.
+- The `built-in` compiler refuses the same statements the bundled one does: a procedure called without
   `call` (`foo(1);`), a bare variable or expression as a statement, and a parenthesised operand in a global
   initialiser (`variable g := -(7);` - write `((-7))`).
 - `variable a[10];` creates its array. The two-argument form `variable a[10, 2]`, which sets the array's

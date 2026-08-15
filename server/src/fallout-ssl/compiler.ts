@@ -2,26 +2,22 @@
  * Fallout SSL compilation utilities.
  * Handles compilation via an external sslc, the WebAssembly one, or the extension's own.
  *
- * The bundled and external compilers are programs that take a file name, so the document - which may
- * hold unsaved edits - is written to a temporary file (.tmp.ssl) beside the source, where relative
+ * The WebAssembly and external compilers are programs that take a file name, so the document - which
+ * may hold unsaved edits - is written to a temporary file (.tmp.ssl) beside the source, where relative
  * #include paths resolve as they would for the real thing. The tmp file name is exported as
  * TMP_SSL_NAME and must be kept in sync with the files.watcherExclude entry in package.json's
  * configurationDefaults (see "Cross-reference: tmp file watcher exclusion" there).
  *
- * The extension's own compiler is a library rather than a program: it takes the text directly and
- * writes nothing beside the user's source.
+ * The extension's own compiler is a library, so it takes the text directly and writes nothing beside
+ * the user's source - but it runs on a worker thread all the same, because it is the only back end
+ * whose work would otherwise land on the server's own thread. See compile-worker.ts.
  */
 
 import * as cp from "child_process";
 import * as crypto from "crypto";
-import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { parseArgs } from "../../../compilers/ssl/src/args";
-import { CompileError, compileText } from "../../../compilers/ssl/src/compile";
-import { LowerError } from "../../../compilers/ssl/src/lower";
-import { PreprocessError, preprocessText } from "../../../compilers/ssl/src/preprocess";
-import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
     addFallbackDiagnostic,
     errorMessage,
@@ -34,6 +30,7 @@ import { tmpDir } from "../path-utils";
 import { pathToUri, uriToPath } from "../uri-utils";
 import { needsShell, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, withCompileLifecycle, writeTmpSource } from "../core/compile-with-tmp-file";
+import { compileOnWorker, stopCompileWorker } from "./compile-worker-client";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
@@ -163,29 +160,14 @@ function parseCompileOutput(text: string, uri: string) {
 }
 
 /**
- * Compiles with the extension's own compiler.
+ * Compiles with the extension's own compiler, on the worker thread that runs it.
  *
- * It needs no child process and no native binary, which is what makes it the path that works where the
- * bundled one cannot run - and it reads the document from memory, so nothing is written beside the
- * user's source. `filepath` is the buffer's own path: it is never read, but relative `#include` paths
- * resolve against its directory and errors are attributed to it, so both behave as they would on disk.
+ * Unlike both other back ends it is not a separate program, so it needs neither an installed binary
+ * nor a child process, and it reads the document from memory rather than through a copy on disk.
+ * `filepath` is the buffer's own path: it is never read, but relative `#include` paths resolve against
+ * its directory and errors are attributed to it, so both behave as they would on disk.
  */
-function compileWithTypeScript(text: string, filepath: string, dstPath: string, sslSettings: SSLsettings) {
-    const parser = getSSLParser();
-    if (!parser) {
-        return {
-            errors: [
-                {
-                    uri: pathToUri(filepath),
-                    line: 1,
-                    columnStart: 0,
-                    columnEnd: 0,
-                    message: "The SSL grammar is not loaded yet; retry in a moment.",
-                },
-            ],
-            warnings: [],
-        };
-    }
+async function compileWithOwnCompiler(text: string, filepath: string, dstPath: string, sslSettings: SSLsettings) {
     // `compileOptions` is a command line for whichever compiler is selected, so it is read here with the
     // same parser the standalone CLI uses rather than a second, narrower reading of the same string. The
     // switches it cannot honour are reported to the user by the CLI; here they are simply not applied,
@@ -193,67 +175,25 @@ function compileWithTypeScript(text: string, filepath: string, dstPath: string, 
     const args = parseArgs(sslSettings.compileOptions.split(/\s+/).filter(Boolean));
     const headers = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
-        const source = preprocessText(text, filepath, {
+        const errors = await compileOnWorker({
+            text,
+            filepath,
+            dstPath,
             includeDirs: [...headers, ...args.includeDirs],
             defines: args.defines,
+            level: args.level,
+            shortCircuit: args.shortCircuit,
         });
-        const bytes = compileText(parser, source, { level: args.level, shortCircuit: args.shortCircuit });
-        fs.writeFileSync(dstPath, bytes);
-        return { errors: [], warnings: [] };
+        return { errors, warnings: [] };
     } catch (error) {
-        return { errors: toDiagnostics(error, filepath), warnings: [] };
+        // The worker itself failed - it died, or could not be started. That is not a fault in the
+        // script, so it is reported at the top of the file rather than pinned to a line in it.
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+            errors: [{ uri: pathToUri(filepath), line: 1, columnStart: 0, columnEnd: 0, message }],
+            warnings: [],
+        };
     }
-}
-
-/**
- * Turns a compiler error into diagnostics, reading the `line:column:` prefix the front end puts on the
- * ones it can locate. A preprocessor error names its own file, which may be an included header rather
- * than the script being compiled.
- *
- * A `CompileError` carries every problem the compile found, so all of them are shown at once; anything
- * else is a single refusal and reports as one.
- */
-function toDiagnostics(error: unknown, sourcePath: string) {
-    if (error instanceof PreprocessError) {
-        // Each keeps its own file: a header included from this script reports against the header, which
-        // is the file the user has to open to fix it.
-        return error.all.map((one) => ({
-            uri: pathToUri(one.file),
-            line: one.line,
-            columnStart: 0,
-            columnEnd: 0,
-            message: one.message,
-        }));
-    }
-    if (error instanceof CompileError && error.diagnostics.length > 0) {
-        return error.diagnostics.map((diagnostic) => ({
-            uri: pathToUri(sourcePath),
-            line: diagnostic.line,
-            columnStart: 0,
-            columnEnd: diagnostic.column,
-            message: diagnostic.message,
-        }));
-    }
-    if (error instanceof LowerError) {
-        return error.all.map((one) => ({
-            uri: pathToUri(sourcePath),
-            line: one.line,
-            columnStart: 0,
-            columnEnd: one.column,
-            message: one.detail,
-        }));
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    const located = /^(\d+):(\d+): (.*)$/s.exec(message);
-    return [
-        {
-            uri: pathToUri(sourcePath),
-            line: located ? Number(located[1]) : 1,
-            columnStart: 0,
-            columnEnd: located ? Number(located[2]) : 0,
-            message: located ? located[3]! : message,
-        },
-    ];
 }
 
 function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {
@@ -280,6 +220,9 @@ const activeCompiles = new Map<NormalizedUri, AbortController>();
 /** Abort every in-flight Fallout SSL compilation. Called from server shutdown. */
 export function abortInFlightSSLCompiles(): void {
     abortAllCompiles(activeCompiles);
+    // The compile worker holds a loaded grammar and would otherwise outlive the transport it reports
+    // through. Nothing awaits this: shutdown is not held up for a result no one will read.
+    void stopCompileWorker();
 }
 
 /**
@@ -405,7 +348,7 @@ export async function compile(
             // The extension's own compiler is a library: it takes the document's text directly, so
             // nothing is written beside the user's source.
             if (useOwnCompiler && sslSettings.compiler === "built-in") {
-                const result = compileWithTypeScript(text, filepath, dstPath, sslSettings);
+                const result = await compileWithOwnCompiler(text, filepath, dstPath, sslSettings);
                 if (signal.aborted) {
                     return;
                 }
