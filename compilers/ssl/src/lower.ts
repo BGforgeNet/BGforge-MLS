@@ -525,9 +525,9 @@ class Lowering {
         // A forward declaration and its definition may each carry the modifier; either one sets the bit.
         if (node.childForFieldName("critical")) target.critical = true;
 
-        // `procedure foo in <n>` fires at a fixed time, so the operand goes in the procedure table and
-        // must be a constant - there is nowhere to evaluate an expression before the script runs.
-        // The reference emits a number for a non-integer rather than refusing; diverging is deliberate.
+        // `procedure foo in <n>` fires at a fixed time, so the operand goes in the procedure table and must
+        // be a constant. The engine reads that field as an unsigned deadline, so a non-integer fires at once -
+        // refusing where the reference does not is deliberate.
         const timed = node.childForFieldName("timed");
         if (timed) {
             const value = this.lowerExpression(timed, scope);
