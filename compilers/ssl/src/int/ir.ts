@@ -53,10 +53,16 @@ export type Expr =
     | { kind: "unary"; op: UnaryOp; operand: Expr }
     | { kind: "binary"; op: BinaryOp; left: Expr; right: Expr }
     | { kind: "ternary"; cond: Expr; whenTrue: Expr; whenFalse: Expr }
-    /** A user procedure call in expression position; its result stays on the stack. */
-    | { kind: "call"; target: Expr; args: Expr[]; checkArgCount?: boolean }
-    /** An engine function, dispatched by opcode number rather than by address. */
-    | { kind: "libCall"; opcode: number; args: Expr[] };
+    /**
+     * A user procedure call in expression position; its result stays on the stack.
+     *
+     * `pure` marks a call the optimiser may drop when nothing reads its result - the callee was declared
+     * `pure`, which is the author promising it has no side effects. Whether a name is pure is a
+     * program-level fact, so it is resolved here rather than looked up again by every consumer.
+     */
+    | { kind: "call"; target: Expr; args: Expr[]; checkArgCount?: boolean; pure?: boolean }
+    /** An engine function, dispatched by opcode number rather than by address. `pure` as for `call`. */
+    | { kind: "libCall"; opcode: number; args: Expr[]; pure?: boolean };
 
 export type Stmt =
     | { kind: "block"; body: Stmt[] }
@@ -150,6 +156,13 @@ export interface Program {
      * is why its `-O0` rejects several corpus scripts that its `-O1` builds.
      */
     undefinedProcedures?: UndefinedProcedure[];
+    /**
+     * Set by a `#pragma sce` anywhere in the source, which turns on short-circuit evaluation for every
+     * `and` and `or` in the program - the switch that asks for it on the command line applies the same
+     * way. A pragma the compiler drops silently changes what the operators do, so it is carried here
+     * rather than left to the caller's options.
+     */
+    shortCircuit?: boolean;
     /**
      * Every string constant in SOURCE ORDER, which fixes the string table's layout. The emitter cannot
      * derive this by walking the tree: the language writes a conditional value-first (`x if c else y`)

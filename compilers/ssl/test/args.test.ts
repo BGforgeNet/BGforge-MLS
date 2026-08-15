@@ -55,9 +55,13 @@ describe("parseArgs", () => {
         expect(args.inputs).toEqual([{ file: "a.ssl" }]);
     });
 
-    it("refuses -b, naming what it would change", () => {
+    it("refuses -b, naming what it would change and that the reference can do it", () => {
         const args = parseArgs(["-b", "a.ssl"]);
-        expect(args.notices).toEqual([{ fatal: true, message: expect.stringContaining("backward compatibility") }]);
+        // `unsupported` is what separates "this compiler cannot" from "that argument is malformed": a
+        // caller able to offer the reference compiler reads it to name the switch in its own remedy.
+        expect(args.notices).toEqual([
+            { fatal: true, unsupported: "-b", message: expect.stringContaining("backward compatibility") },
+        ]);
     });
 
     it("sets the flags that reach the compiler", () => {

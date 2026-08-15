@@ -253,6 +253,35 @@ const CASES: Case[] = [
         name: "string escapes reach the string table",
         source: 'procedure start begin\n variable s := "a\\ab\\bc\\fd\\ne\\rf\\tg\\vh\\\\i\\"j\\zk";\nend\n',
     },
+    {
+        // The pragma turns short-circuit evaluation on for the whole program, so it is placed AFTER the
+        // operators it governs: a compiler that acted on it where it sits would agree on any other
+        // placement. Without it these bytes are the plain form, which is what made the miss silent.
+        name: "a trailing #pragma sce short-circuits the whole program",
+        source:
+            "procedure start begin\n variable a;\n variable b;\n variable c;\n" +
+            " if (a and b) then c := 1;\n if (a or b) then c := 2;\nend\n#pragma sce\n",
+    },
+    {
+        // A pragma sits in statement position as readily as at the top, and an unknown one is carried
+        // through the parse and dropped rather than refused.
+        name: "an unknown pragma inside a procedure is ignored",
+        source: "procedure start begin\n variable a;\n#pragma somethingelse\n a := 1;\nend\n",
+    },
+    {
+        // Every keyword here appears zero times in the 1525-script corpus, so the differential that
+        // sweeps it cannot say whether any of them is right. They are grouped into one case because
+        // what is being pinned is that the grammar reaches them at all.
+        name: "keywords no corpus script uses",
+        source:
+            "pure procedure helper begin\n return 1;\nend\n" +
+            "inline procedure inl begin\n end\n" +
+            "procedure start begin\n variable a := 5;\n variable b;\n" +
+            " noop;\n detach;\n startcritical;\n endcritical;\n" +
+            " spawn(1);\n callstart(2);\n exec(3);\n fork(4);\n wait(50);\n" +
+            " b := a andalso 1;\n b := a orelse 1;\n b := a div 2;\n b := bwnot a;\n" +
+            " call inl;\n b := helper();\nend\n",
+    },
 ];
 
 describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to matching bytecode", () => {
@@ -301,13 +330,38 @@ const OPTIMIZED_CASES: Case[] = [
             " variable x := 3;\n variable y := 4;\n return a + x + y;\nend\n" +
             "procedure start begin\n return helper(1, 2);\nend\n",
     },
+    {
+        // `pure` exists to let this store go: nothing reads `x`, and the modifier is the author promising
+        // the call does nothing else. Treating every call as impure kept it, which no corpus script could
+        // reveal - not one of the 1525 declares a pure procedure.
+        name: "a dead store fed by a pure procedure goes",
+        source: "pure procedure helper begin\n return 1;\nend\nprocedure start begin\n variable x;\n x := helper();\nend\n",
+    },
+    {
+        // The same for the engine functions that only compute. All five are here rather than one: they
+        // are recognised by looking their names up in the engine table, so a name that stopped resolving
+        // would silently drop out of the set and cost nothing but this comparison.
+        name: "a dead store fed by a pure engine function goes",
+        source:
+            'procedure start begin\n variable s := "5";\n variable a;\n variable x;\n' +
+            // `modified_ini` takes no arguments, so it is written without parentheses.
+            " x := atoi(s);\n x := atof(s);\n x := len_array(a);\n x := get_tile_fid(1);\n x := modified_ini;\nend\n",
+    },
+    {
+        // The callee being pure does not excuse the arguments: `random` still has to run.
+        name: "a pure call with an impure argument stays",
+        source: 'procedure start begin\n variable x;\n x := atoi("5" + random(1, 2));\nend\n',
+    },
 ];
 
 function compareWithReference(parser: Parser, name: string, source: string, level: 0 | 2): void {
     const stem = `${name.replaceAll(/\W+/g, "_")}_O${level}`;
     const file = path.join(workDir, `${stem}.ssl`);
     fs.writeFileSync(file, source);
-    execFileSync(process.execPath, [compiler as string, `-O${level}`, "-q", `${stem}.ssl`, "-o", `${stem}.int`], {
+    // These sources go to the reference RAW, so it needs `-p` to preprocess them at all - without it a
+    // case carrying a directive would compare our expansion against a source whose directives were dropped.
+    const args = [compiler as string, `-O${level}`, "-q", "-p", `${stem}.ssl`, "-o", `${stem}.int`];
+    execFileSync(process.execPath, args, {
         cwd: workDir,
         timeout: SPAWN_TIMEOUT_MS,
     });

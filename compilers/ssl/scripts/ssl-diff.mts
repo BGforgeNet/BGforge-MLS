@@ -82,7 +82,9 @@ function referenceCompiler(): string {
 function runReference(compiler: string, entry: string, workDir: string, level: number): Outcome {
     const out = path.join(workDir, `${path.basename(entry, path.extname(entry))}-ref.int`);
     try {
-        execFileSync(process.execPath, [compiler, `-O${level}`, "-q", path.basename(entry), "-o", out], {
+        // `-p` is what makes the reference preprocess at all; without it every directive line is discarded
+        // unread, so a probe of anything involving a macro compares our expansion against no expansion.
+        execFileSync(process.execPath, [compiler, `-O${level}`, "-q", "-p", path.basename(entry), "-o", out], {
             // The source is compiled WHERE IT LIES, so its relative `#include`s resolve as they do in its
             // own build; only the output goes to the scratch directory.
             cwd: path.dirname(entry),

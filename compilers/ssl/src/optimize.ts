@@ -43,15 +43,16 @@ export interface OptimizeOptions {
 }
 
 /**
- * Whether an expression can be dropped without losing anything but its value. A call of either kind can
- * do arbitrary work, so a store fed by one stays even when the variable it writes is dead - which is
- * what the reference does too.
+ * Whether an expression can be dropped without losing anything but its value. A call can do arbitrary
+ * work, so a store fed by one stays even when the variable it writes is dead - unless it was marked pure
+ * when it was lowered, which is a `pure` procedure or one of the few engine functions that only compute.
+ * Its arguments still have to qualify: a pure callee does not make an impure argument disappear.
  */
 function isPure(expr: Expr): boolean {
     switch (expr.kind) {
         case "call":
         case "libCall":
-            return false;
+            return expr.pure === true && expr.args.every(isPure);
         case "unary":
             return isPure(expr.operand);
         case "binary":

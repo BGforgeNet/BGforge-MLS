@@ -418,6 +418,36 @@ describe("fallout-ssl compiler", () => {
             );
         });
 
+        it("refuses a switch it cannot honour instead of compiling without it", async () => {
+            // `-b` decides which words are keywords, so dropping it would build the script against a
+            // different language and fail somewhere inside it rather than at the setting responsible.
+            await compile(
+                normalizeUri("file:///project/test.ssl"),
+                { ...ownSettings, compileOptions: "-b -O2" },
+                true,
+                "code",
+            );
+
+            expect(mockCompileOnWorker).not.toHaveBeenCalled();
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        expect.objectContaining({
+                            line: 1,
+                            // The remedy comes first, and the assertion pins that: the Problems panel
+                            // truncates the row, so a remedy at the end of the explanation is not read.
+                            // The other compiler is the reference itself, which does support -b.
+                            message: expect.stringMatching(
+                                /^bgforge\.falloutSSL\.compileOptions: remove -b, or set bgforge\.falloutSSL\.compiler to "wasm", which supports it\. .*backward compatibility/s,
+                            ),
+                        }),
+                    ],
+                }),
+                expect.anything(),
+                expect.anything(),
+            );
+        });
+
         it("shows every error the compile found, each at its own line", async () => {
             // The point of collecting them: a script with three mistakes is one compile, not three.
             mockCompileOnWorker.mockResolvedValue([

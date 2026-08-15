@@ -169,10 +169,32 @@ function parseCompileOutput(text: string, uri: string) {
  */
 async function compileWithOwnCompiler(text: string, filepath: string, dstPath: string, sslSettings: SSLsettings) {
     // `compileOptions` is a command line for whichever compiler is selected, so it is read here with the
-    // same parser the standalone CLI uses rather than a second, narrower reading of the same string. The
-    // switches it cannot honour are reported to the user by the CLI; here they are simply not applied,
-    // since a settings string is not a place to fail a compile.
+    // same parser the standalone CLI uses rather than a second, narrower reading of the same string.
     const args = parseArgs(sslSettings.compileOptions.split(/\s+/).filter(Boolean));
+    // A switch this compiler cannot honour is refused rather than dropped. `-b` decides which words are
+    // keywords, so compiling without it builds the script against a different language than the settings
+    // asked for - and it would fail somewhere in the script rather than at the setting that caused it.
+    const unsupported = args.notices.filter((notice) => notice.fatal);
+    if (unsupported.length > 0) {
+        return {
+            errors: unsupported.map((notice) => ({
+                uri: pathToUri(filepath),
+                line: 1,
+                columnStart: 0,
+                columnEnd: 0,
+                // The remedy leads, because the Problems panel truncates a row to its first few words and
+                // what to do is the part worth seeing there. The other compiler is the reference itself
+                // and takes this setting verbatim, so a switch only this one lacks has somewhere to go; a
+                // malformed argument names none and gets no such offer, changing compiler not being a fix.
+                message:
+                    (notice.unsupported
+                        ? `bgforge.falloutSSL.compileOptions: remove ${notice.unsupported}, or set ` +
+                          `bgforge.falloutSSL.compiler to "wasm", which supports it. `
+                        : "bgforge.falloutSSL.compileOptions: ") + notice.message,
+            })),
+            warnings: [],
+        };
+    }
     const headers = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
         const errors = await compileOnWorker({

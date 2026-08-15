@@ -20,8 +20,14 @@ export interface SslInput {
 
 /** Something on the command line this compiler could not honour, phrased for the user. */
 export interface ArgNotice {
-    /** A switch that changes the output. The CLI refuses to compile; the server ignores it. */
+    /** A switch that changes the output. Both the CLI and the language server refuse to compile. */
     fatal: boolean;
+    /**
+     * A switch this compiler cannot implement though the reference can, named so that a caller able to
+     * offer the other compiler can say so. Absent when the argument is simply malformed, which no choice
+     * of compiler fixes.
+     */
+    unsupported?: string;
     message: string;
 }
 
@@ -118,6 +124,7 @@ export function parseArgs(argv: readonly string[]): SslArgs {
             case "b":
                 notices.push({
                     fatal: true,
+                    unsupported: "-b",
                     message:
                         "-b (backward compatibility) is not supported: it removes later keywords - switch, for, " +
                         "foreach, break, continue, pure, inline, tokenize - from the language so that old scripts " +

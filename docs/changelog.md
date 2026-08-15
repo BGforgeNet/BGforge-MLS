@@ -16,8 +16,11 @@
   and variables nothing references; `-O2` additionally folds constants, removes unreachable code and dead
   stores, and reclaims unused slots, producing the same bytes as the WebAssembly compiler at both levels. `-s`
   compiles `and`/`or` as short-circuit operators. `-O3` is honoured as `-O2`: the WebAssembly compiler's own
-  source marks that level's extra passes as known to break code. `-I` and `-m` in that setting are honoured
-  too, so a header directory or a macro defined there applies to both compilers.
+  source marks that level's extra passes as known to break code. A `#pragma sce` anywhere in the source asks
+  for the same short-circuit evaluation as `-s`. `-I` and `-m` in that setting are honoured
+  too, so a header directory or a macro defined there applies to both compilers. `-b` is reported as an
+  error rather than ignored: it decides which words are keywords, so compiling without it would build the
+  script against a different language than the setting asked for.
 - A failed compile reports everything it found wrong, instead of stopping at the first problem. A script
   with four syntax errors, or a header with three bad directives, is now one compile rather than four. A
   name that is misspelled and then used twenty times is reported once, at its first use.

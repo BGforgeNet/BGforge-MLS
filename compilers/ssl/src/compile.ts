@@ -81,6 +81,9 @@ export function buildProgram(parser: Parser, text: string, options: CompileOptio
 export function emitProgram(program: Program, options: CompileOptions = {}): Uint8Array {
     return emitInt(program, {
         ...options,
+        // A `#pragma sce` in the source asks for short-circuit evaluation as the command-line switch does,
+        // so either turns it on.
+        shortCircuit: options.shortCircuit === true || program.shortCircuit === true,
         // The optimiser removes the code that would reach a fall-through epilogue, so the emitter stops
         // writing one at the level where that removal happens.
         dropUnreachableEpilogue: (options.level ?? 0) >= 2,

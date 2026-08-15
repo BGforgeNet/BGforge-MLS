@@ -448,10 +448,35 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("variable g := random(1, 2);\nprocedure start begin end\n")).toThrow(/must be a literal/);
     });
 
-    it("rejects assigning to something that is not a variable", () => {
-        expect(refuse("procedure foo begin end\nprocedure start begin\n foo := 1;\nend\n")).toThrow(
-            /assignment target must be a variable/,
-        );
+    /**
+     * The reference accepts every one of these: it resolves the procedure's name to a number that is no
+     * variable slot and stores into the local frame at that offset, which the frame does not reach. The
+     * engine indexes its value stack there, so the write lands past the end or on an unrelated live value.
+     * Refusing is the difference; nothing in the corpus writes to a procedure's name.
+     */
+    it.each([
+        [
+            "assignment",
+            "procedure foo begin end\nprocedure start begin\n foo := 1;\nend\n",
+            /^3:2: assignment target must be a variable$/,
+        ],
+        [
+            "increment",
+            "procedure foo begin end\nprocedure start begin\n foo++;\nend\n",
+            /^3:2: increment target must be a variable$/,
+        ],
+        [
+            "a for target",
+            "procedure p begin end\nprocedure start begin\n for (p := 0; 1; p := 1) begin end\nend\n",
+            /^3:7: for target must be a variable$/,
+        ],
+        [
+            "a foreach variable",
+            "procedure p begin end\nvariable arr;\nprocedure start begin\n foreach p in arr begin end\nend\n",
+            /^4:2: foreach loop variable is not a variable$/,
+        ],
+    ])("rejects a procedure's name as %s target", (_what, source, message) => {
+        expect(refuse(source)).toThrow(message);
     });
 
     it("compiles compound assignment into an array element", () => {
@@ -466,10 +491,37 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         );
     });
 
-    it("rejects a non-constant delay on a timed procedure", () => {
+    /**
+     * `pure` promises the procedure has no side effects, which is what lets a call whose result nothing
+     * reads be dropped. `call` discards the result, so it asks for exactly the effects that were promised
+     * away - the reference refuses all three spellings, and this compiler accepted them until it was asked.
+     */
+    it.each([
+        ["bare", "call helper;", /^5:9: 'helper' is a pure procedure; use its value instead of 'call'$/],
+        ["with parentheses", "call helper();", /^5:9: 'helper\(\)' is a pure procedure/],
+        ["timed", "call helper in 5;", /^5:9: 'helper' is a pure procedure/],
+    ])("rejects a %s call of a pure procedure", (_form, statement, message) => {
+        const source = `pure procedure helper begin\n   return 1;\nend\nprocedure start begin\n   ${statement}\nend\n`;
+        expect(refuse(source)).toThrow(message);
+    });
+
+    it("accepts a pure procedure used for its value, which is what the modifier is for", () => {
+        expect(
+            refuse(
+                "pure procedure helper begin\n return 1;\nend\nprocedure start begin\n variable x := helper();\nend\n",
+            ),
+        ).not.toThrow();
+    });
+
+    it("rejects a delay that is not an integer on a timed procedure", () => {
         // The value lands in the procedure table, which is written before any code runs.
         expect(refuse("variable g := 2;\nprocedure foo in g begin end\n")).toThrow(
-            /timed procedure's delay must be an integer/,
+            /^2:18: a timed procedure's delay must be an integer$/,
+        );
+        // A float is constant and still refused: the field is read as an unsigned deadline, so its bit
+        // pattern is a deadline in the past rather than the delay that was written. The reference emits it.
+        expect(refuse("procedure foo in 1.5 begin end\n")).toThrow(
+            /^1:18: a timed procedure's delay must be an integer$/,
         );
     });
 

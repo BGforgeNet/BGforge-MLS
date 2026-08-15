@@ -46,7 +46,8 @@ afterAll(() => {
 /** Compiles a snippet with the reference and returns its bytes. */
 function reference(name: string, source: string): Uint8Array {
     fs.writeFileSync(path.join(workDir, `${name}.ssl`), source);
-    execFileSync(process.execPath, [compiler as string, "-O0", "-q", `${name}.ssl`, "-o", `${name}.int`], {
+    // `-p` or the reference reads the snippet without preprocessing it; see `compareWithReference`.
+    execFileSync(process.execPath, [compiler as string, "-O0", "-q", "-p", `${name}.ssl`, "-o", `${name}.int`], {
         cwd: workDir,
         timeout: SPAWN_TIMEOUT_MS,
     });

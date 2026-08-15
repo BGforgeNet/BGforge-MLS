@@ -140,6 +140,23 @@ const PROCESS_OPCODES: Record<string, number> = {
     endcritical: Op.ENDCRITICAL,
 };
 
+/**
+ * The engine functions the optimiser may drop the call to when nothing reads the result.
+ *
+ * Five of them, which is what the reference treats as side-effect-free; everything else is assumed to do
+ * something. Held as opcodes because that is what a lowered call carries.
+ */
+const PURE_LIB_OPCODES: ReadonlySet<number> = new Set(
+    ["len_array", "atoi", "atof", "get_tile_fid", "modified_ini"]
+        .map((name) => engineFunction(name)?.opcode)
+        .filter((opcode): opcode is number => opcode !== undefined),
+);
+
+/** Builds an engine call, marking the few whose result is all they produce. */
+function libCall(opcode: number, args: Expr[]): Expr {
+    return { kind: "libCall", opcode, args, ...(PURE_LIB_OPCODES.has(opcode) ? { pure: true } : {}) };
+}
+
 /** Marks a literal built inside another array expression, and the terminator that closes one. */
 const ARRAY_FLAG_EXPR_PUSH = 32;
 const ARRAY_FLAG_EXPR_POP = 64;
@@ -167,6 +184,8 @@ class Lowering {
     private readonly declaredAt = new Map<number, SyntaxNode>();
     /** Procedure slots declared `inline`, which may be called but never used as a value. */
     private readonly inlineProcedures = new Set<number>();
+    /** Procedures declared `pure`, whose calls the optimiser may drop when nothing reads the result. */
+    private readonly pureProcedures = new Set<number>();
     private readonly undefinedProcedures: UndefinedProcedure[] = [];
     /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
     private arrayNesting = 0;
@@ -219,6 +238,7 @@ class Lowering {
         return {
             declarations: this.declarations,
             stringLiterals: collectStringLiterals(root),
+            ...(hasShortCircuitPragma(root) ? { shortCircuit: true } : {}),
             ...(this.undefinedProcedures.length > 0 ? { undefinedProcedures: this.undefinedProcedures } : {}),
         };
     }
@@ -242,6 +262,7 @@ class Lowering {
                     this.procedures.set(name.toLowerCase(), this.procedures.size);
                     const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
                     if (modifier === "inline") this.inlineProcedures.add(this.procedures.size - 1);
+                    if (modifier === "pure") this.pureProcedures.add(this.procedures.size - 1);
                     this.declarations.push({
                         kind: "procedure",
                         procedure: {
@@ -651,6 +672,11 @@ class Lowering {
                 if (!inner) return null;
                 return this.lowerExpressionStatement(inner, scope);
             }
+
+            // The only directive that survives preprocessing is `#pragma`, which is read off the whole
+            // tree rather than from where it sits, and emits nothing here.
+            case "preprocessor":
+                return null;
         }
         throw new LowerError(`unsupported statement '${node.type}'`, node);
     }
@@ -951,6 +977,8 @@ class Lowering {
         // `nope` is one mistake, and "assignment target must be a variable" describes the stand-in rather
         // than anything the author wrote.
         if (target === POISON) return null;
+        // A procedure's name reaches here, and the reference accepts it: it stores into the local frame at
+        // an offset the frame does not reach, so the engine's write lands on whatever else is on its stack.
         if (target.kind !== "var") {
             this.report("assignment target must be a variable", left);
             return null;
@@ -1043,14 +1071,17 @@ class Lowering {
                 if (callee !== POISON) this.report(`unknown procedure '${target.text}'`, target);
                 return null;
             }
+            if (this.refusePureCallStatement(callee, target)) return null;
             return { kind: "timedCallStmt", target: callee, delay: this.lowerExpression(delay, scope) };
         }
         if (target.type === "call_expr") {
             const { callee, args, checkArgCount } = this.callParts(target, scope);
+            if (this.refusePureCallStatement(callee, target)) return null;
             return { kind: "callStmt", target: callee, args, ...(checkArgCount ? { checkArgCount } : {}) };
         }
         const callee = this.procedureRef(target, scope);
         if (callee.kind !== "procRef") return { kind: "callStmt", target: callee, args: [], checkArgCount: true };
+        if (this.refusePureCallStatement(callee, target)) return null;
         return { kind: "callStmt", target: callee, args: this.padWithDefaults(callee.index, []) };
     }
 
@@ -1366,15 +1397,17 @@ class Lowering {
                 if (func?.type === "identifier") {
                     const engine = engineFunction(func.text.toLowerCase(), this.game);
                     if (engine) {
-                        return {
-                            kind: "libCall",
-                            opcode: engine.opcode,
-                            args: this.argumentsOf(node, scope, engine.procArgs),
-                        };
+                        return libCall(engine.opcode, this.argumentsOf(node, scope, engine.procArgs));
                     }
                 }
                 const { callee, args, checkArgCount } = this.callParts(node, scope);
-                return { kind: "call", target: callee, args, ...(checkArgCount ? { checkArgCount } : {}) };
+                return {
+                    kind: "call",
+                    target: callee,
+                    args,
+                    ...(checkArgCount ? { checkArgCount } : {}),
+                    ...(this.callsPureProcedure(callee) ? { pure: true } : {}),
+                };
             }
         }
         throw new LowerError(`unsupported expression '${node.type}'`, node);
@@ -1446,7 +1479,23 @@ class Lowering {
     private engineCall(node: SyntaxNode, name: string, args: Expr[]): Expr {
         const fn = engineFunction(name, this.game);
         if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
-        return { kind: "libCall", opcode: fn.opcode, args };
+        return libCall(fn.opcode, args);
+    }
+
+    /** Whether a lowered call target names a procedure declared `pure`. */
+    private callsPureProcedure(callee: Expr): boolean {
+        return callee.kind === "procRef" && this.pureProcedures.has(callee.index);
+    }
+
+    /**
+     * A `pure` procedure is a function: it promises to have no side effects, which is what lets the
+     * optimiser drop a call whose result nothing reads. `call` discards the result, so calling one that
+     * way asks for exactly the effects it promised not to have - the language refuses it.
+     */
+    private refusePureCallStatement(callee: Expr, node: SyntaxNode): boolean {
+        if (!this.callsPureProcedure(callee)) return false;
+        this.report(`'${node.text}' is a pure procedure; use its value instead of 'call'`, node);
+        return true;
     }
 
     /**
@@ -1474,7 +1523,7 @@ class Lowering {
         // An engine function with no arguments is written without parentheses. These are lexer
         // keywords, so they take precedence over a user name that happens to match.
         const engine = engineFunction(key, this.game);
-        if (engine) return { kind: "libCall", opcode: engine.opcode, args: [] };
+        if (engine) return libCall(engine.opcode, []);
         // A bare procedure name in expression position CALLS it with no arguments rather than yielding
         // its index - `@name` is the spelling that yields the index.
         const procedure = this.procedures.get(key);
@@ -1484,6 +1533,7 @@ class Lowering {
                     kind: "call",
                     target: { kind: "procRef", index: procedure },
                     args: [],
+                    ...(this.pureProcedures.has(procedure) ? { pure: true } : {}),
                 }
             );
         }
@@ -1493,6 +1543,21 @@ class Lowering {
         this.reportedNames.add(key);
         return this.report(`unknown identifier '${node.text}'`, node);
     }
+}
+
+/**
+ * Whether a `#pragma sce` appears anywhere in the source.
+ *
+ * The preprocessor passes a pragma through untouched because it is the compiler's to read, and this is
+ * where it gets read. Position does not matter: it turns the operators on for the whole program, not
+ * from the line down.
+ */
+function hasShortCircuitPragma(root: SyntaxNode): boolean {
+    const visit = (node: SyntaxNode): boolean => {
+        if (node.type === "other_preprocessor" && /^#\s*pragma\s+sce\b/i.test(node.text)) return true;
+        return node.namedChildren.some((child) => Boolean(child) && visit(child));
+    };
+    return visit(root);
 }
 
 /**
