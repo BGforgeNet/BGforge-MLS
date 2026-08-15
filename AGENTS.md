@@ -65,7 +65,7 @@ binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
-compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "typescript" compiler
+compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "built-in" compiler
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
 editors/                 # Hand-written editor syntax inputs, merged with generated output by build-editors.sh
 syntaxes/                # TextMate grammars (YAML source + JSON compiled)

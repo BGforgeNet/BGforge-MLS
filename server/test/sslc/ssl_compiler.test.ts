@@ -1,5 +1,5 @@
 /**
- * Unit tests for sslc/ssl_compiler.ts - built-in SSL compiler using WASM.
+ * Unit tests for sslc/ssl_compiler.ts - the reference sslc built to WebAssembly.
  * Tests fork-based compilation with mock child processes.
  */
 
@@ -79,7 +79,7 @@ describe("ssl_compile", () => {
             expect(mockFork).not.toHaveBeenCalled();
             expect(result.returnCode).toBe(1);
             expect(result.stderr).toContain("mymod.v2");
-            expect(result.stderr).toContain("typescript");
+            expect(result.stderr).toContain("built-in");
         });
 
         it("compiles normally when the directory has no dot", async () => {
@@ -164,7 +164,7 @@ describe("ssl_compile", () => {
             await promise;
 
             expect(mockConsoleLog).toHaveBeenCalledTimes(1);
-            expect(mockConsoleLog.mock.calls[0]?.[0]).toEqual(expect.stringContaining("Built-in compiler:"));
+            expect(mockConsoleLog.mock.calls[0]?.[0]).toEqual(expect.stringContaining("WebAssembly compiler:"));
         });
     });
 
@@ -389,7 +389,7 @@ describe("ssl_compile", () => {
             const result = await ssl_compile(baseOpts);
 
             expect(result.returnCode).toBe(1);
-            expect(result.stderr).toContain("Built-in SSL compiler not available");
+            expect(result.stderr).toContain("The WebAssembly compiler is not available");
             expect(mockFork).not.toHaveBeenCalled();
         });
 

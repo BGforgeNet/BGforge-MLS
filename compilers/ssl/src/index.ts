@@ -2,7 +2,7 @@ export { parseArgs, type ArgNotice, type SslArgs, type SslInput } from "./args";
 export { buildProgram, compileFile, compileText, emitProgram, CompileError, type CompileOptions } from "./compile";
 export { lowerProgram, LowerError, type LowerOptions } from "./lower";
 export { optimize, type OptimizeOptions } from "./optimize";
-export { preprocess, PreprocessError, type Macro, type PreprocessOptions } from "./preprocess";
+export { preprocess, preprocessText, PreprocessError, type Macro, type PreprocessOptions } from "./preprocess";
 export { decompileToProgram, DecompileError } from "./int/decompile";
 export { formatDisassembly, decodeCode, type Instruction } from "./int/disasm";
 export { emitInt, EmitError, type EmitOptions } from "./int/emit";

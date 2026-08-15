@@ -15,14 +15,14 @@ All settings are under the `bgforge` namespace.
 
 ## Fallout SSL
 
-| Setting                                | Default                 | Description                                                                                                            |
-| -------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `bgforge.falloutSSL.compilePath`       | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use built-in.           |
-| `bgforge.falloutSSL.compileOptions`    | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                                         |
-| `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                        |
-| `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                             |
-| `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output. |
-| `bgforge.falloutSSL.compiler`          | `bundled`               | Which compiler runs when no `compilePath` is set. `typescript` needs no native binary but does not optimize.           |
+| Setting                                | Default                 | Description                                                                                                                                                                                                                                                                             |
+| -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.falloutSSL.compilePath`       | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use whichever compiler `bgforge.falloutSSL.compiler` selects.                                                                                                                            |
+| `bgforge.falloutSSL.compileOptions`    | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                                                                                                                                                                                                          |
+| `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                                                                                                                                                                                         |
+| `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                                                                                                                                                                                              |
+| `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output.                                                                                                                                                                  |
+| `bgforge.falloutSSL.compiler`          | `wasm`                  | Which compiler runs when no `compilePath` is set. `wasm` is the reference sslc built to WebAssembly, run in a separate process through a temporary file; `built-in` is the extension's own, which compiles the editor's text directly and matches the other's output at `-O0` to `-O2`. |
 
 ## WeiDU
 

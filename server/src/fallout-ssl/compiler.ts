@@ -1,12 +1,15 @@
 /**
  * Fallout SSL compilation utilities.
- * Handles compilation via external compile.exe or built-in WASM compiler.
+ * Handles compilation via an external sslc, the WebAssembly one, or the extension's own.
  *
- * Writes a temporary file (.tmp.ssl) in the same directory as the source file
- * so the compiler can resolve relative #include paths. The tmp file name is
- * exported as TMP_SSL_NAME and must be kept in sync with the files.watcherExclude
- * entry in package.json's configurationDefaults (see "Cross-reference: tmp file
- * watcher exclusion" there).
+ * The bundled and external compilers are programs that take a file name, so the document - which may
+ * hold unsaved edits - is written to a temporary file (.tmp.ssl) beside the source, where relative
+ * #include paths resolve as they would for the real thing. The tmp file name is exported as
+ * TMP_SSL_NAME and must be kept in sync with the files.watcherExclude entry in package.json's
+ * configurationDefaults (see "Cross-reference: tmp file watcher exclusion" there).
+ *
+ * The extension's own compiler is a library rather than a program: it takes the text directly and
+ * writes nothing beside the user's source.
  */
 
 import * as cp from "child_process";
@@ -15,9 +18,9 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { parseArgs } from "../../../compilers/ssl/src/args";
-import { CompileError, compileFile } from "../../../compilers/ssl/src/compile";
+import { CompileError, compileText } from "../../../compilers/ssl/src/compile";
 import { LowerError } from "../../../compilers/ssl/src/lower";
-import { PreprocessError } from "../../../compilers/ssl/src/preprocess";
+import { PreprocessError, preprocessText } from "../../../compilers/ssl/src/preprocess";
 import { getParser as getSSLParser } from "../../../shared/parsers/fallout-ssl";
 import {
     addFallbackDiagnostic,
@@ -30,12 +33,12 @@ import { conlog } from "../logger";
 import { tmpDir } from "../path-utils";
 import { pathToUri, uriToPath } from "../uri-utils";
 import { needsShell, parseCommandPath, runProcess } from "../process-runner";
-import { abortAllCompiles, compileWithTmpFile } from "../core/compile-with-tmp-file";
+import { abortAllCompiles, withCompileLifecycle, writeTmpSource } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
 import type { SSLsettings } from "../settings";
-import { ssl_compile as ssl_builtin_compiler } from "../sslc/ssl_compiler";
+import { ssl_compile as ssl_wasm_compiler } from "../sslc/ssl_compiler";
 
 const sslExt = ".ssl";
 
@@ -163,19 +166,17 @@ function parseCompileOutput(text: string, uri: string) {
  * Compiles with the extension's own compiler.
  *
  * It needs no child process and no native binary, which is what makes it the path that works where the
- * bundled one cannot run.
- *
- * The tmp file the caller already wrote is reused as the preprocessor's entry point, so relative
- * `#include` paths resolve against the source's own directory exactly as they do for the other
- * compilers.
+ * bundled one cannot run - and it reads the document from memory, so nothing is written beside the
+ * user's source. `filepath` is the buffer's own path: it is never read, but relative `#include` paths
+ * resolve against its directory and errors are attributed to it, so both behave as they would on disk.
  */
-function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SSLsettings) {
+function compileWithTypeScript(text: string, filepath: string, dstPath: string, sslSettings: SSLsettings) {
     const parser = getSSLParser();
     if (!parser) {
         return {
             errors: [
                 {
-                    uri: pathToUri(tmpPath),
+                    uri: pathToUri(filepath),
                     line: 1,
                     columnStart: 0,
                     columnEnd: 0,
@@ -192,15 +193,15 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
     const args = parseArgs(sslSettings.compileOptions.split(/\s+/).filter(Boolean));
     const headers = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
-        const bytes = compileFile(parser, tmpPath, {
-            preprocess: { includeDirs: [...headers, ...args.includeDirs], defines: args.defines },
-            level: args.level,
-            shortCircuit: args.shortCircuit,
+        const source = preprocessText(text, filepath, {
+            includeDirs: [...headers, ...args.includeDirs],
+            defines: args.defines,
         });
+        const bytes = compileText(parser, source, { level: args.level, shortCircuit: args.shortCircuit });
         fs.writeFileSync(dstPath, bytes);
         return { errors: [], warnings: [] };
     } catch (error) {
-        return { errors: toDiagnostics(error, tmpPath), warnings: [] };
+        return { errors: toDiagnostics(error, filepath), warnings: [] };
     }
 }
 
@@ -212,7 +213,7 @@ function compileWithTypeScript(tmpPath: string, dstPath: string, sslSettings: SS
  * A `CompileError` carries every problem the compile found, so all of them are shown at once; anything
  * else is a single refusal and reports as one.
  */
-function toDiagnostics(error: unknown, tmpPath: string) {
+function toDiagnostics(error: unknown, sourcePath: string) {
     if (error instanceof PreprocessError) {
         // Each keeps its own file: a header included from this script reports against the header, which
         // is the file the user has to open to fix it.
@@ -226,7 +227,7 @@ function toDiagnostics(error: unknown, tmpPath: string) {
     }
     if (error instanceof CompileError && error.diagnostics.length > 0) {
         return error.diagnostics.map((diagnostic) => ({
-            uri: pathToUri(tmpPath),
+            uri: pathToUri(sourcePath),
             line: diagnostic.line,
             columnStart: 0,
             columnEnd: diagnostic.column,
@@ -235,7 +236,7 @@ function toDiagnostics(error: unknown, tmpPath: string) {
     }
     if (error instanceof LowerError) {
         return error.all.map((one) => ({
-            uri: pathToUri(tmpPath),
+            uri: pathToUri(sourcePath),
             line: one.line,
             columnStart: 0,
             columnEnd: one.column,
@@ -246,7 +247,7 @@ function toDiagnostics(error: unknown, tmpPath: string) {
     const located = /^(\d+):(\d+): (.*)$/s.exec(message);
     return [
         {
-            uri: pathToUri(tmpPath),
+            uri: pathToUri(sourcePath),
             line: located ? Number(located[1]) : 1,
             columnStart: 0,
             columnEnd: located ? Number(located[2]) : 0,
@@ -267,7 +268,7 @@ const compilerPathCache: { path: string | null } = { path: null };
 /**
  * External compiler paths the user has opted out of for the lifetime of the
  * server. Once the user picks "Switch" on the version-check error dialog, we
- * stop re-prompting for that path on subsequent compiles and use the built-in
+ * stop re-prompting for that path on subsequent compiles and use one of the
  * compiler directly. The user makes the decision permanent by clearing
  * `bgforge.falloutSSL.compilePath` in their settings.
  */
@@ -364,31 +365,36 @@ export async function compile(
     // Fire-and-forget call sites (server.ts onDidSave/onDidChangeContent) use
     // `void compile(...).catch(...)` to log and swallow rejections. Awaited
     // call sites (e.g. TSSL transpile chain) catch and report them explicitly.
-    // compileWithTmpFile guarantees tmp file cleanup in both cases.
-    await compileWithTmpFile({
+    // The lifecycle guarantees cleanup in both cases.
+    //
+    // Registering the run comes FIRST, before the external-compiler check: that check is a subprocess
+    // and may put a dialog in front of the user, so deciding the back end ahead of it would let two
+    // compiles of the same document register in the order their checks happened to finish rather than
+    // the order they started, and an older one could then abort the newer and report stale diagnostics.
+    await withCompileLifecycle({
         uri,
-        tmpPath,
-        text,
         activeCompiles,
-        // Throwaway validation output only exists when we didn't write to the real output dir.
-        extraCleanupPaths: shouldWriteOutput ? undefined : [dstPath],
+        // The tmp source is only created on the branch below that needs it; removing a path that was
+        // never written is a no-op. Throwaway validation output only exists when we didn't write to
+        // the real output dir.
+        cleanupPaths: shouldWriteOutput ? [tmpPath] : [tmpPath, dstPath],
         run: async (signal) => {
-            let useBuiltInCompiler = !sslSettings.compilePath || disabledExternalPaths.has(sslSettings.compilePath);
+            let useOwnCompiler = !sslSettings.compilePath || disabledExternalPaths.has(sslSettings.compilePath);
 
-            if (!useBuiltInCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
+            if (!useOwnCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
                 if (!interactive) {
-                    useBuiltInCompiler = true;
+                    useOwnCompiler = true;
                 } else {
                     const response = await showErrorWithActions(
-                        `Failed to run '${sslSettings.compilePath}'! Switch to built-in compiler?`,
+                        `Failed to run '${sslSettings.compilePath}'! Switch to the extension's own compiler?`,
                         { title: "Switch", id: "switch" },
                         { title: "Cancel", id: "cancel" },
                     );
                     if (response?.id === "switch") {
-                        useBuiltInCompiler = true;
+                        useOwnCompiler = true;
                         disabledExternalPaths.add(sslSettings.compilePath);
                         showInfo(
-                            "Using built-in compiler. To make this permanent, clear the bgforge.falloutSSL.compilePath setting.",
+                            "Using the extension's own compiler. To make this permanent, clear the bgforge.falloutSSL.compilePath setting.",
                         );
                     } else {
                         return;
@@ -396,18 +402,25 @@ export async function compile(
                 }
             }
 
-            if (useBuiltInCompiler && sslSettings.compiler === "typescript") {
-                const result = compileWithTypeScript(tmpPath, dstPath, sslSettings);
+            // The extension's own compiler is a library: it takes the document's text directly, so
+            // nothing is written beside the user's source.
+            if (useOwnCompiler && sslSettings.compiler === "built-in") {
+                const result = compileWithTypeScript(text, filepath, dstPath, sslSettings);
                 if (signal.aborted) {
                     return;
                 }
                 reportCompileResult(result, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
-                sendParseResult(result, uri, tmpUri);
+                // This compiler names the source by its own path rather than a tmp copy's, so that is
+                // what maps back to the open document; an error in an included header keeps its file.
+                sendParseResult(result, uri, pathToUri(filepath));
                 return;
             }
 
-            if (useBuiltInCompiler) {
-                const { stdout, returnCode } = await ssl_builtin_compiler({
+            // Everything below is a program that takes a file name, so the document goes to disk first.
+            await writeTmpSource(tmpPath, text);
+
+            if (useOwnCompiler) {
+                const { stdout, returnCode } = await ssl_wasm_compiler({
                     interactive,
                     cwd: cwdTo,
                     inputFileName: TMP_SSL_NAME,

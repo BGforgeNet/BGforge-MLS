@@ -576,7 +576,16 @@ function processFile(file: string, state: State): void {
         return;
     }
     // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
-    const lines = stripComments(spliceLines(fs.readFileSync(file, "latin1"))).split(/\r?\n/);
+    processSource(fs.readFileSync(file, "latin1"), file, state);
+}
+
+/**
+ * One translation unit's text, however it was obtained. `file` is not read - it says where a quoted
+ * `#include` looks and which file an error names, so a buffer that has never been saved can be
+ * preprocessed under the path it would occupy.
+ */
+function processSource(text: string, file: string, state: State): void {
+    const lines = stripComments(spliceLines(text)).split(/\r?\n/);
     const dir = path.dirname(file);
     const stack: Conditional[] = [];
     const emitting = (): boolean => stack.every((s) => s.active);
@@ -727,12 +736,25 @@ function processFile(file: string, state: State): void {
 
 /** Preprocess `entry` and return the translation unit, directives removed and macros expanded. */
 export function preprocess(entry: string, options: PreprocessOptions = {}): string {
+    return runPreprocessor(options, (state) => processFile(path.resolve(entry), state));
+}
+
+/**
+ * Preprocesses source held in memory as if it were the file at `entry`, which is never read. An editor
+ * compiles the buffer the user is looking at rather than what was last saved, so this is what lets it
+ * do that without first writing a copy next to their source.
+ */
+export function preprocessText(text: string, entry: string, options: PreprocessOptions = {}): string {
+    return runPreprocessor(options, (state) => processSource(text, path.resolve(entry), state));
+}
+
+function runPreprocessor(options: PreprocessOptions, walk: (state: State) => void): string {
     const macros = new Map<string, Macro>();
     for (const [name, body] of Object.entries(options.defines ?? {})) {
         macros.set(name, { name, params: null, body, variadic: false });
     }
     const state: State = { macros, expander: new Expander(macros), out: [], options, depth: 0, errors: [] };
-    processFile(path.resolve(entry), state);
+    walk(state);
     const first = state.errors[0];
     if (first) throw new PreprocessError(first.detail, first.file, first.line, state.errors);
     return state.out.join("\n");

@@ -16,7 +16,7 @@ export interface SSLsettings {
     headersDirectory: string;
     compileOnValidate: boolean;
     /** Which compiler runs when no external `compilePath` is configured. */
-    compiler: "bundled" | "typescript";
+    compiler: "wasm" | "built-in";
 }
 
 export interface WeiDUsettings {
@@ -48,7 +48,7 @@ export const defaultSettings: MLSsettings = {
         outputDirectory: "",
         headersDirectory: "",
         compileOnValidate: true,
-        compiler: "bundled",
+        compiler: "wasm",
     },
     weidu: { path: "weidu", gamePath: "" },
     validate: "saveAndType",

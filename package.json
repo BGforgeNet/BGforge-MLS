@@ -700,7 +700,7 @@
                 "bgforge.falloutSSL.compilePath": {
                     "type": "string",
                     "default": "",
-                    "description": "Path to sslc compiler. Drop compile.exe/sslc into system PATH and enter filename or specify full path.\nLeave empty to use the built-in compiler."
+                    "description": "Path to sslc compiler. Drop compile.exe/sslc into system PATH and enter filename or specify full path.\nLeave empty to use one of the compilers shipped with the extension, chosen by bgforge.falloutSSL.compiler."
                 },
                 "bgforge.falloutSSL.compileOptions": {
                     "type": "string",
@@ -725,14 +725,14 @@
                 "bgforge.falloutSSL.compiler": {
                     "type": "string",
                     "enum": [
-                        "bundled",
-                        "typescript"
+                        "wasm",
+                        "built-in"
                     ],
                     "enumDescriptions": [
-                        "The compiler shipped with the extension. Runs as a native binary through a temporary file on disk.",
-                        "The extension's own compiler, written in TypeScript. Needs no native binary and no temporary file on disk, and produces the same bytes as the bundled one at optimization levels 0 to 2."
+                        "The reference sslc compiler, built to WebAssembly and shipped with the extension. Each compile runs in a separate process and reads the script through a temporary file on disk.",
+                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and produces the same bytes as the WebAssembly one at optimization levels 0 to 2."
                     ],
-                    "default": "bundled",
+                    "default": "wasm",
                     "description": "Which compiler to use when no external compilePath is set."
                 },
                 "bgforge.weidu.path": {

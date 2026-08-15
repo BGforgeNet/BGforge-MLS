@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { preprocess, PreprocessError } from "../src/preprocess.ts";
+import { preprocess, preprocessText, PreprocessError } from "../src/preprocess.ts";
 
 let dir: string;
 
@@ -454,5 +454,43 @@ describe("reporting more than one problem", () => {
             line: 2,
             detail: "unknown directive #bogus",
         });
+    });
+});
+
+/**
+ * `preprocessText` is what an editor compiles a buffer with: the file it names may hold older text, or
+ * may not exist at all, so the path is used for resolution and attribution but never read.
+ */
+describe("preprocessing text that is not on disk", () => {
+    /** Write `files` into the sandbox, then preprocess `text` as if it were `dir/main.ssl`. */
+    function runText(text: string, files: Record<string, string> = {}, options = {}): string {
+        for (const [name, body] of Object.entries(files)) {
+            const target = path.join(dir, name);
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, body);
+        }
+        const out = preprocessText(text, path.join(dir, "main.ssl"), options);
+        return (out.match(/"(?:[^"\\]|\\.)*"|[A-Za-z_]\w*|\d+|:=|[^\s]/g) ?? []).join(" ");
+    }
+
+    it("expands macros in text with no file behind it", () => {
+        expect(runText("#define N 3\nx := N;")).toBe("x := 3 ;");
+    });
+
+    it("resolves a quoted include against the directory the text claims to be in", () => {
+        expect(runText('#include "inc/h.h"\nx := N;', { "inc/h.h": "#define N 9\n" })).toBe("x := 9 ;");
+    });
+
+    it("compiles the text given rather than the file of the same name on disk", () => {
+        // The case the editor is in constantly: the buffer has moved on from what was last saved.
+        expect(runText("x := 2;", { "main.ssl": "x := 1;" })).toBe("x := 2 ;");
+    });
+
+    it("attributes an error in the text to the path it was given", () => {
+        expect(() => runText("x := 1;\n#bogus\n")).toThrow(/main\.ssl:2: unknown directive/);
+    });
+
+    it("still reports an error inside an include against the header", () => {
+        expect(() => runText('#include "inc/h.h"\n', { "inc/h.h": "#bogus\n" })).toThrow(/h\.h:1: unknown directive/);
     });
 });
