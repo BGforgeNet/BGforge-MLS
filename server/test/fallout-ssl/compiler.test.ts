@@ -94,6 +94,7 @@ vi.mock("../../../shared/parsers/fallout-ssl", () => ({
 
 import { compile, TMP_SSL_NAME, _resetCompilerCache } from "../../src/fallout-ssl/compiler";
 import { CompileError } from "../../../compilers/ssl/src/compile";
+import { LowerError } from "../../../compilers/ssl/src/lower";
 import type { SSLsettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
@@ -439,6 +440,29 @@ describe("fallout-ssl compiler", () => {
             const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors.map((e: { line: number }) => e.line)).toEqual([2, 3, 4]);
             expect(parseResult.errors.at(-1).message).toBe("missing end");
+            expect(mockWriteFileSync).not.toHaveBeenCalled();
+        });
+
+        it("shows every semantic error at once, without the line:column prefix the editor supplies", async () => {
+            // A lowering that found several mistakes carries them all; the position becomes the
+            // diagnostic's range, so repeating it in the message text would show up twice in the editor.
+            const found = [
+                new LowerError("unknown identifier 'a'", { line: 2, column: 2 }),
+                new LowerError("division by zero", { line: 3, column: 8 }),
+                new LowerError("'break' outside a loop", { line: 4, column: 2 }),
+            ];
+            mockCompileFile.mockImplementation(() => {
+                throw new LowerError(found[0]!.detail, { line: 2, column: 2 }, found);
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), tsSettings, true, "code");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.errors.map((e: { line: number; message: string }) => [e.line, e.message])).toEqual([
+                [2, "unknown identifier 'a'"],
+                [3, "division by zero"],
+                [4, "'break' outside a loop"],
+            ]);
             expect(mockWriteFileSync).not.toHaveBeenCalled();
         });
 

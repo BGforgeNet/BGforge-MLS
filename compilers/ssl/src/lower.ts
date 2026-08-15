@@ -5,9 +5,11 @@
  * name table is built in that order and its offsets are baked into the output. The second lowers each
  * procedure body against a scope built from that collection.
  *
- * Anything the lowering does not yet handle throws `LowerError` rather than emitting something
- * approximate: a wrong instruction produces a script that misbehaves in-game, where a thrown error is a
- * gap someone can close.
+ * Anything the lowering does not handle is refused rather than approximated: a wrong instruction
+ * produces a script that misbehaves in-game, where a reported error is a gap someone can close. A
+ * mistake in the SOURCE is collected and the walk continues, so one attempt finds all of them; a
+ * disagreement between the grammar and this file throws, because there is no stand-in that would let
+ * the walk carry on meaningfully.
  */
 
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
@@ -67,6 +69,12 @@ const MAX_ERRORS = 100;
  * job is to be a well-formed `Expr` that the rest of lowering can consume without special-casing.
  */
 const POISON: Expr = { kind: "int", value: 0 };
+
+/**
+ * The statement form of the same stand-in. An empty block emits nothing, so a reported statement leaves
+ * no trace in the walk beyond having been counted.
+ */
+const POISON_STMT: Stmt = { kind: "block", body: [] };
 
 /** Which game's engine vocabulary to resolve function names against. */
 export interface LowerOptions {
@@ -196,8 +204,8 @@ class Lowering {
     }
 
     lower(root: SyntaxNode): Program {
-        this.collect(root);
         try {
+            this.collect(root);
             this.lowerBodies(root);
         } catch (error) {
             // A site that still throws stops the walk, but it must not discard what was already found:
@@ -269,11 +277,11 @@ class Lowering {
         const declared = params.namedChildren.filter((c): c is SyntaxNode => Boolean(c) && c.type === "param");
         const first = this.paramDefaults.get(this.procedures.get(name.toLowerCase()) ?? -1);
         if (first && declared.length !== first.length) {
-            throw new LowerError(`'${name}' was declared with ${first.length} parameters`, params);
+            this.report(`'${name}' was declared with ${first.length} parameters`, params);
         }
         const withDefault = declared.find((param) => param.childForFieldName("default"));
         if (withDefault) {
-            throw new LowerError(`'${name}' is already declared; its defaults belong to that declaration`, withDefault);
+            this.report(`'${name}' is already declared; its defaults belong to that declaration`, withDefault);
         }
     }
 
@@ -285,10 +293,10 @@ class Lowering {
         const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
         const scheduled = node.childForFieldName("timed") ?? node.childForFieldName("condition");
         if (scheduled && (modifier === "pure" || modifier === "inline")) {
-            throw new LowerError(`a timed or conditional procedure cannot be '${modifier}'`, scheduled);
+            this.report(`a timed or conditional procedure cannot be '${modifier}'`, scheduled);
         }
         if (modifier === "inline" && node.type === "procedure_forward") {
-            throw new LowerError("an inline procedure cannot be forward-declared", node);
+            this.report("an inline procedure cannot be forward-declared", node);
         }
     }
 
@@ -315,7 +323,7 @@ class Lowering {
             // `existing` carries defaults a forward declaration stated; one there covers this position
             // too. Absent is `undefined` when nothing was declared and `null` when it was left blank.
             else if (optionalSeen && !existing[position]) {
-                throw new LowerError("a parameter with a default cannot precede one without", param);
+                this.report("a parameter with a default cannot precede one without", param);
             }
             defaults.push(declared ? this.constantOf(declared) : (existing[position] ?? null));
             position++;
@@ -364,7 +372,7 @@ class Lowering {
         const size = init.childForFieldName("size");
         // Only a local may be declared as an array: the creation is a statement, and a global's
         // declaration has no procedure to run it in. Accepting it would give the slot no array at all.
-        if (size) throw new LowerError("array declarations are only allowed on a local variable", size);
+        if (size) this.report("array declarations are only allowed on a local variable", size);
         const value = init.childForFieldName("value");
         return { name, initial: value ? this.constantOf(value) : { kind: "int", value: 0 } };
     }
@@ -391,8 +399,15 @@ class Lowering {
             }
             case "string":
                 return { kind: "string", value: unquote(node.text) };
-            case "char":
-                return { kind: "int", value: charConstant(node) };
+            case "char": {
+                const value = charConstant(node);
+                // The grammar accepts any single escape; only the ones in the table have a value.
+                if (value === null) {
+                    this.report(`unknown escape '${node.text.slice(1, -1)}' in a character constant`, node);
+                    return { kind: "int", value: 0 };
+                }
+                return { kind: "int", value };
+            }
             case "boolean":
                 return { kind: "int", value: node.text.toLowerCase() === "true" ? 1 : 0 };
             case "param_default_unary":
@@ -419,7 +434,8 @@ class Lowering {
                 break;
             }
         }
-        throw new LowerError(`initial value must be a literal, got ${node.type}`, node);
+        this.report(`initial value must be a literal, got ${node.type}`, node);
+        return { kind: "int", value: 0 };
     }
 
     /**
@@ -514,8 +530,8 @@ class Lowering {
         const timed = node.childForFieldName("timed");
         if (timed) {
             const value = this.lowerExpression(timed, scope);
-            if (value.kind !== "int") throw new LowerError("a timed procedure's delay must be an integer", timed);
-            target.timed = value.value;
+            if (value.kind === "int") target.timed = value.value;
+            else this.report("a timed procedure's delay must be an integer", timed);
         }
 
         // `procedure foo when <expr>` compiles the guard as a separate code block the engine calls to
@@ -600,7 +616,8 @@ class Lowering {
                 // An inline body is pasted into its caller, so a return in it would return from the
                 // CALLER. The language refuses it rather than picking one of the two meanings.
                 if (this.currentTarget?.inline) {
-                    throw new LowerError("an inline procedure cannot return", node);
+                    this.report("an inline procedure cannot return", node);
+                    return null;
                 }
                 const value = node.namedChildren.find((c) => c && c.type !== "comment" && c.type !== "line_comment");
                 // A bare `return;` returns zero rather than nothing: the language synthesises the value,
@@ -650,12 +667,11 @@ class Lowering {
         const cond = node.childForFieldName("cond");
         const update = node.childForFieldName("update");
         const body = node.childForFieldName("body");
-        if (!cond) throw new LowerError("for loop has no condition", node);
 
         // Lowering order is the reference's PARSE order - init, condition, update, then body - because
         // slots are allocated as they are encountered, so a different order here renumbers them.
         const initStmt = init ? this.lowerForClause(init, scope) : null;
-        const condition = this.lowerExpression(cond, scope);
+        const condition = cond ? this.lowerExpression(cond, scope) : this.report("for loop has no condition", node);
         const updateStmt = update ? this.lowerForClause(update, scope) : null;
 
         const inner: Stmt[] = [];
@@ -725,8 +741,15 @@ class Lowering {
         const count = this.newTemp(scope);
         const key = keyName ? this.reference(keyName, scope) : this.newTemp(scope);
         const value = this.reference(valueName, scope);
-        if (len.kind !== "var" || count.kind !== "var" || key.kind !== "var" || value.kind !== "var") {
-            throw new LowerError("foreach loop variable is not a variable", node);
+        // A loop the source did not declare names existing variables, so either name can be something
+        // else entirely; the temporaries above are variables by construction.
+        if (key.kind !== "var" || value.kind !== "var") {
+            const offender = key.kind === "var" ? value : key;
+            if (offender !== POISON) this.report("foreach loop variable is not a variable", node);
+            return { kind: "block", body: statements };
+        }
+        if (len.kind !== "var" || count.kind !== "var") {
+            throw new LowerError("temporary is not a variable", node);
         }
 
         const call = (name: string, args: Expr[]): Expr => this.engineCall(node, name, args);
@@ -776,7 +799,9 @@ class Lowering {
         }
 
         const cases = node.namedChildren.filter((c): c is SyntaxNode => c?.type === "case_clause");
-        if (cases.length === 0) throw new LowerError("switch statement with no cases", node);
+        // A lone `default` does not qualify: the language wants at least one case, so the whole
+        // statement is refused rather than reduced to its fallback.
+        if (cases.length === 0) this.report("switch statement with no cases", node);
         const fallback = node.namedChildren.find((c): c is SyntaxNode => c?.type === "default_clause");
 
         // Built innermost-first so each case's else holds the chain below it.
@@ -795,7 +820,7 @@ class Lowering {
             chain = chain ? { ...branch, elseBranch: chain } : branch;
         }
 
-        statements.push(chain as Stmt);
+        if (chain) statements.push(chain);
         return statements.length === 1 ? (statements[0] as Stmt) : { kind: "block", body: statements };
     }
 
@@ -826,7 +851,10 @@ class Lowering {
                 // slot at procedure entry, so no assignment is emitted here for it.
                 if (literal !== null) return null;
                 const target = this.reference(name, scope);
-                if (target.kind !== "var") throw new LowerError("for target must be a variable", name);
+                if (target.kind !== "var") {
+                    if (target !== POISON) this.report("for target must be a variable", name);
+                    return null;
+                }
                 return { kind: "assign", target, op: "=", value: this.lowerExpression(value, scope) };
             }
             case "for_update_assign": {
@@ -834,7 +862,10 @@ class Lowering {
                 const right = node.childForFieldName("right");
                 if (!left || !right) throw new LowerError("malformed for update", node);
                 const target = this.lowerExpression(left, scope);
-                if (target.kind !== "var") throw new LowerError("for update target must be a variable", left);
+                if (target.kind !== "var") {
+                    if (target !== POISON) this.report("for update target must be a variable", left);
+                    return null;
+                }
                 const operator = node.children.find((c) => c && ASSIGN_OPS.has(c.text))?.text ?? "=";
                 return {
                     kind: "assign",
@@ -919,7 +950,10 @@ class Lowering {
         // `nope` is one mistake, and "assignment target must be a variable" describes the stand-in rather
         // than anything the author wrote.
         if (target === POISON) return null;
-        if (target.kind !== "var") throw new LowerError("assignment target must be a variable", left);
+        if (target.kind !== "var") {
+            this.report("assignment target must be a variable", left);
+            return null;
+        }
         return { kind: "assign", target, op, value: this.lowerExpression(right, scope) };
     }
 
@@ -992,7 +1026,7 @@ class Lowering {
     }
 
     /** `call foo(...)` invokes a procedure and discards its result. */
-    private lowerCallStatement(node: SyntaxNode, scope: Scope): Stmt {
+    private lowerCallStatement(node: SyntaxNode, scope: Scope): Stmt | null {
         const target = node.childForFieldName("target");
         if (!target) throw new LowerError("call has no target", node);
         const delay = node.childForFieldName("delay");
@@ -1000,10 +1034,14 @@ class Lowering {
             // The engine schedules the procedure instead of entering it, so a timed call takes no
             // arguments - `call foo(1) in 5` is a syntax the language accepts but cannot express.
             if (target.type === "call_expr") {
-                throw new LowerError("a timed call cannot pass arguments", node);
+                this.report("a timed call cannot pass arguments", node);
+                return null;
             }
             const callee = this.procedureRef(target, scope);
-            if (callee.kind !== "procRef") throw new LowerError(`unknown procedure '${target.text}'`, target);
+            if (callee.kind !== "procRef") {
+                if (callee !== POISON) this.report(`unknown procedure '${target.text}'`, target);
+                return null;
+            }
             return { kind: "timedCallStmt", target: callee, delay: this.lowerExpression(delay, scope) };
         }
         if (target.type === "call_expr") {
@@ -1074,7 +1112,12 @@ class Lowering {
             return this.elementAssignment(operand, step, () => ({ kind: "int", value: 1 }), scope);
         }
         const target = this.lowerExpression(operand, scope);
-        if (target.kind !== "var") throw new LowerError("increment target must be a variable", operand);
+        // A reported statement still has to be one: `null` here means "not an increment at all", and the
+        // two callers below would each go on to lower the operand a second time.
+        if (target.kind !== "var") {
+            if (target !== POISON) this.report("increment target must be a variable", operand);
+            return POISON_STMT;
+        }
         return { kind: "assign", target, op: step, value: { kind: "int", value: 1 } };
     }
 
@@ -1239,7 +1282,9 @@ class Lowering {
                 if (op === "not" || op === "bwnot" || op === "floor") {
                     return { kind: "unary", op, operand: this.lowerExpression(operand, scope) };
                 }
-                throw new LowerError(`unsupported unary operator '${op}'`, node);
+                // `++` and `--` reach here from EXPRESSION position (`a := b++`), where the language has
+                // no such form - as a statement they were taken by `incrementOf` before this point.
+                return this.report(`unsupported unary operator '${op}'`, node);
             }
 
             case "binary_expr": {
@@ -1247,7 +1292,9 @@ class Lowering {
                 const right = node.childForFieldName("right");
                 const op = node.childForFieldName("op")?.text?.toLowerCase();
                 if (!left || !right || !op) throw new LowerError("malformed binary expression", node);
-                if (!BINARY_OPS.has(op)) throw new LowerError(`unsupported operator '${op}'`, node);
+                // The grammar carries one operator this does not: `in` tests array membership, which the
+                // language's own parser has no production for either.
+                if (!BINARY_OPS.has(op)) return this.report(`unsupported operator '${op}'`, node);
                 // A comparison takes one comparison, not a chain: the language reads a single
                 // `<expr> <op> <expr>` and stops, so `a == b == c` is a syntax error there. Parenthesise
                 // to compare a comparison - `(a == b) == c` is a different tree and is accepted.
@@ -1402,20 +1449,19 @@ class Lowering {
     }
 
     /**
+     * An `inline` procedure is pasted into its caller rather than called, so it has no value to yield and
+     * cannot appear in an expression. Calling one as a statement is what the modifier is for.
+     */
+    private refuseInlineInExpression(index: number, node: SyntaxNode): Expr | null {
+        if (!this.inlineProcedures.has(index)) return null;
+        return this.report(`'${node.text}' is an inline procedure and has no value`, node);
+    }
+
+    /**
      * Resolves a bare identifier: locals shadow globals, which shadow shared variables, and a variable
      * of any scope shadows a procedure of the same name. `procedureRef` deliberately inverts that last
      * step, so `name(...)` calls the procedure while a bare `name` reads the variable.
      */
-    /**
-     * An `inline` procedure is pasted into its caller rather than called, so it has no value to yield and
-     * cannot appear in an expression. Calling one as a statement is what the modifier is for.
-     */
-    private refuseInlineInExpression(index: number, node: SyntaxNode): void {
-        if (this.inlineProcedures.has(index)) {
-            throw new LowerError(`'${node.text}' is an inline procedure and has no value`, node);
-        }
-    }
-
     private reference(node: SyntaxNode, scope: Scope): Expr {
         const key = node.text.toLowerCase();
         const slot = scope.slots.get(key);
@@ -1432,8 +1478,13 @@ class Lowering {
         // its index - `@name` is the spelling that yields the index.
         const procedure = this.procedures.get(key);
         if (procedure !== undefined) {
-            this.refuseInlineInExpression(procedure, node);
-            return { kind: "call", target: { kind: "procRef", index: procedure }, args: [] };
+            return (
+                this.refuseInlineInExpression(procedure, node) ?? {
+                    kind: "call",
+                    target: { kind: "procRef", index: procedure },
+                    args: [],
+                }
+            );
         }
         // Reported once per name rather than once per use: a misspelling used thirty times is one
         // mistake, and thirty copies of it would bury every other error in the script.
@@ -1494,11 +1545,11 @@ function unquote(text: string): string {
 }
 
 /**
- * A character constant's integer value. The escape set is narrower than a string's: the octal form is
- * accepted here and nowhere else, and an escape outside both sets is an error rather than the character
- * itself, which is the reference compiler's split.
+ * A character constant's integer value, or `null` for an escape outside the table - narrower than a
+ * string's, where an unlisted escape keeps its own character. The octal form is accepted here and
+ * nowhere else. The caller reports, since it holds the diagnostic sink.
  */
-function charConstant(node: SyntaxNode): number {
+function charConstant(node: SyntaxNode): number | null {
     const body = node.text.slice(1, -1);
     if (!body.startsWith("\\")) return body.codePointAt(0) ?? 0;
     // `\0` then two or three octal digits. The leading zero is a marker rather than a digit, but it does
@@ -1506,7 +1557,7 @@ function charConstant(node: SyntaxNode): number {
     const octal = /^\\0[0-7]{2,3}$/.exec(body);
     if (octal) return Number.parseInt(body.slice(1), 8);
     const escaped = ESCAPES[body.slice(1)];
-    if (escaped === undefined) throw new LowerError(`unknown escape '${body}' in a character constant`, node);
+    if (escaped === undefined) return null;
     return escaped.codePointAt(0) ?? 0;
 }
 

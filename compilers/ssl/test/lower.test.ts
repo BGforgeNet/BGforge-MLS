@@ -3,8 +3,8 @@
  *
  * That differential proves the happy path exhaustively - every script the reference can build compiles
  * byte-identically - but by construction it only exercises code real scripts reach. What it never
- * touches is the refusal behaviour: the lowering is written to throw rather than emit something
- * approximate, and an unexercised throw is a promise nobody has checked. These tests hold the compiler
+ * touches is the refusal behaviour: the lowering is written to refuse rather than emit something
+ * approximate, and an unexercised refusal is a promise nobody has checked. These tests hold the compiler
  * to that promise, and cover the emitter and writer edges real scripts happen not to hit.
  */
 
@@ -954,5 +954,67 @@ describe.skipIf(!wasmPresent)("collecting semantic errors", () => {
     it("emits nothing while there is anything to report", () => {
         // The guarantee that makes collecting safe: a poison value can never reach an output file.
         expect(() => compileText(parser, "procedure start begin\n nope := 1;\nend\n")).toThrow(LowerError);
+    });
+
+    it("collects a declaration-pass error alongside the body errors that follow it", () => {
+        // The two passes are separate walks, and a mistake in the first used to stop the second running.
+        const errors = errorsOf("variable g[10];\nprocedure start begin\n nope := 1;\nend\n");
+
+        expect(errors.map((e) => e.detail)).toEqual([
+            "array declarations are only allowed on a local variable",
+            "unknown identifier 'nope'",
+        ]);
+    });
+
+    it("reports each construct the language has no form for and keeps walking", () => {
+        const errors = errorsOf(
+            [
+                "procedure start begin",
+                " variable a;",
+                " variable b;",
+                " a := b++;", // the step operators are statements, not expressions
+                " a := a in b;", // membership: the grammar has the operator, the language does not
+                " a := '\\q';", // an escape outside the character table
+                " switch a begin end",
+                " nope := 1;",
+                "end",
+                "",
+            ].join("\n"),
+        );
+
+        expect(errors.map((e) => e.detail)).toEqual([
+            "unsupported unary operator '++'",
+            "unsupported operator 'in'",
+            "unknown escape '\\q' in a character constant",
+            "switch statement with no cases",
+            "unknown identifier 'nope'",
+        ]);
+    });
+
+    it("keeps walking into a loop the language will not accept", () => {
+        const errors = errorsOf(
+            "procedure start begin\n variable i;\n for (i := 0; ; i++) begin\n  nope := 1;\n end\nend\n",
+        );
+
+        expect(errors.map((e) => e.detail)).toEqual(["for loop has no condition", "unknown identifier 'nope'"]);
+    });
+
+    it("reports an inline procedure used as a value without stopping there", () => {
+        const errors = errorsOf(
+            "inline procedure f begin end\nprocedure start begin\n variable a;\n a := f;\n nope := 1;\nend\n",
+        );
+
+        expect(errors.map((e) => e.detail)).toEqual([
+            "'f' is an inline procedure and has no value",
+            "unknown identifier 'nope'",
+        ]);
+    });
+
+    it("does not add a second complaint about a name it has already reported", () => {
+        // Every site that checks its target is a variable sees the stand-in an unresolved name lowers
+        // to. Complaining about that is complaining about this file's own substitution.
+        const errors = errorsOf("procedure start begin\n rand++;\n for (gone := 0; 1; ) begin end\nend\n");
+
+        expect(errors.map((e) => e.detail)).toEqual(["unknown identifier 'rand'", "unknown identifier 'gone'"]);
     });
 });
