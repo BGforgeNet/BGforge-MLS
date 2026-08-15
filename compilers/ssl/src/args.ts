@@ -39,6 +39,8 @@ export interface SslArgs {
     preprocessOnly: boolean;
     /** `-l`: suppress the banner. */
     noLogo: boolean;
+    /** `-n`: suppress warnings, leaving only what stops the compile. */
+    noWarnings: boolean;
     /** `-d`: report each stage as it runs. */
     debug: boolean;
     /** `-D`: print the optimised program as source before emitting it. */
@@ -78,6 +80,7 @@ export function parseArgs(argv: readonly string[]): SslArgs {
     let shortCircuit = false;
     let preprocessOnly = false;
     let noLogo = false;
+    let noWarnings = false;
     let debug = false;
     let dumpTree = false;
     let help = false;
@@ -95,9 +98,11 @@ export function parseArgs(argv: readonly string[]): SslArgs {
             case "w":
             case "-":
                 break;
-            // Accepted and ignored here: warnings and the input wait have no counterpart, this compiler
-            // always preprocesses, and `-F` governs `#line` directives that its preprocessor never emits.
             case "n":
+                noWarnings = true;
+                break;
+            // Accepted and ignored here: the input wait has no counterpart, this compiler always
+            // preprocesses, and `-F` governs `#line` directives that its preprocessor never emits.
             case "q":
             case "p":
             case "F":
@@ -170,6 +175,7 @@ export function parseArgs(argv: readonly string[]): SslArgs {
         shortCircuit,
         preprocessOnly,
         noLogo,
+        noWarnings,
         debug,
         dumpTree,
         help,

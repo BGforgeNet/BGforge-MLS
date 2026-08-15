@@ -65,14 +65,21 @@ describe("parseArgs", () => {
     });
 
     it("sets the flags that reach the compiler", () => {
-        const args = parseArgs(["-s", "-P", "-l", "-d", "-D", "a.ssl"]);
+        const args = parseArgs(["-s", "-P", "-l", "-d", "-D", "-n", "a.ssl"]);
         expect(args).toMatchObject({
             shortCircuit: true,
             preprocessOnly: true,
             noLogo: true,
             debug: true,
             dumpTree: true,
+            noWarnings: true,
         });
+    });
+
+    it("leaves warnings on when -n is absent", () => {
+        // `-n` was accepted and ignored while this compiler had no warnings to suppress; it means
+        // something now, so the default has to be the one that still reports them.
+        expect(parseArgs(["a.ssl"]).noWarnings).toBe(false);
     });
 
     describe("macros", () => {

@@ -101,7 +101,7 @@ describe("fallout-ssl compiler", () => {
         mockWriteFile.mockResolvedValue(undefined);
         mockUnlink.mockResolvedValue(undefined);
         mockWasmCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
-        mockCompileOnWorker.mockResolvedValue([]);
+        mockCompileOnWorker.mockResolvedValue({ errors: [], warnings: [] });
         mockGetParser.mockReturnValue({});
         mockSendRequest.mockResolvedValue(true);
         setMockDocument("line one\nline two\nline three\n");
@@ -396,6 +396,7 @@ describe("fallout-ssl compiler", () => {
                 defines: {},
                 level: 1,
                 shortCircuit: false,
+                noWarnings: false,
             });
             expect(mockWriteFile).not.toHaveBeenCalled();
         });
@@ -414,8 +415,22 @@ describe("fallout-ssl compiler", () => {
                     defines: { DEBUG: "1" },
                     level: 2,
                     shortCircuit: true,
+                    noWarnings: false,
                 }),
             );
+        });
+
+        it("passes -n on, so warnings are suppressed here as they are on the command line", async () => {
+            // The shipped default for this setting contains `-n`, so a switch honoured by one front end
+            // and dropped by the other is the difference between warnings off and warnings on.
+            await compile(
+                normalizeUri("file:///project/test.ssl"),
+                { ...ownSettings, compileOptions: "-O2 -n" },
+                true,
+                "code",
+            );
+
+            expect(mockCompileOnWorker).toHaveBeenCalledWith(expect.objectContaining({ noWarnings: true }));
         });
 
         it("refuses a switch it cannot honour instead of compiling without it", async () => {
@@ -450,23 +465,32 @@ describe("fallout-ssl compiler", () => {
 
         it("shows every error the compile found, each at its own line", async () => {
             // The point of collecting them: a script with three mistakes is one compile, not three.
-            mockCompileOnWorker.mockResolvedValue([
-                {
-                    uri: "file:///project/test.ssl",
-                    line: 2,
-                    columnStart: 0,
-                    columnEnd: 2,
-                    message: "unknown identifier 'a'",
-                },
-                { uri: "file:///project/test.ssl", line: 3, columnStart: 0, columnEnd: 8, message: "division by zero" },
-                {
-                    uri: "file:///project/test.ssl",
-                    line: 4,
-                    columnStart: 0,
-                    columnEnd: 2,
-                    message: "'break' outside a loop",
-                },
-            ]);
+            mockCompileOnWorker.mockResolvedValue({
+                errors: [
+                    {
+                        uri: "file:///project/test.ssl",
+                        line: 2,
+                        columnStart: 0,
+                        columnEnd: 2,
+                        message: "unknown identifier 'a'",
+                    },
+                    {
+                        uri: "file:///project/test.ssl",
+                        line: 3,
+                        columnStart: 0,
+                        columnEnd: 8,
+                        message: "division by zero",
+                    },
+                    {
+                        uri: "file:///project/test.ssl",
+                        line: 4,
+                        columnStart: 0,
+                        columnEnd: 2,
+                        message: "'break' outside a loop",
+                    },
+                ],
+                warnings: [],
+            });
 
             await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
 
@@ -477,6 +501,31 @@ describe("fallout-ssl compiler", () => {
                 [4, "'break' outside a loop"],
             ]);
             expect(mockShowError).toHaveBeenCalledWith("Failed to compile test.ssl!");
+        });
+
+        it("shows warnings from a compile that SUCCEEDED, which is what separates them from errors", async () => {
+            mockCompileOnWorker.mockResolvedValue({
+                errors: [],
+                warnings: [
+                    {
+                        uri: "file:///project/test.ssl",
+                        line: 2,
+                        columnStart: 15,
+                        columnEnd: 15,
+                        message: "unknown escape '\\p' in a string; it stands for 'p'",
+                    },
+                ],
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "code");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.warnings).toHaveLength(1);
+            expect(parseResult.errors).toEqual([]);
+            // A warning is not a failure: the `.int` was written, so saying "Failed to compile" would
+            // contradict the file on disk. The warning is still shown, as a diagnostic.
+            expect(mockShowError).not.toHaveBeenCalled();
+            expect(mockShowInfo).toHaveBeenCalledWith("Compiled test.ssl.");
         });
 
         it("reports a compiler that could not run at all against the top of the file", async () => {

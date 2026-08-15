@@ -79,6 +79,14 @@ const POISON_STMT: Stmt = { kind: "block", body: [] };
 /** Which game's engine vocabulary to resolve function names against. */
 export interface LowerOptions {
     game?: 1 | 2;
+    /**
+     * Called for each warning as it is found: something worth telling the author that does not stop the
+     * compile, so it cannot travel out with the error that never happened. Absent means nobody is
+     * listening, and the checks that only exist to produce warnings are skipped.
+     *
+     * Structurally a `CompileDiagnostic`, spelled inline because the type belongs to the layer above.
+     */
+    onWarning?: (warning: { line: number; column: number; message: string }) => void;
 }
 
 const BINARY_OPS = new Set<string>([
@@ -197,8 +205,24 @@ class Lowering {
     private loopDepth = 0;
     private currentTarget: ProcedureDecl | null = null;
 
+    private readonly onWarning: LowerOptions["onWarning"];
+
     constructor(options: LowerOptions) {
         this.game = options.game ?? 2;
+        this.onWarning = options.onWarning;
+    }
+
+    /**
+     * Records something the author should see that is not a reason to stop.
+     *
+     * Deliberately not deduplicated the way `report` is: a repeated warning is a repeated occurrence with
+     * its own position, and one line per occurrence is what makes it navigable.
+     */
+    private warn(detail: string, at: SyntaxNode | { line: number; column: number }): void {
+        if (!this.onWarning) return;
+        const position =
+            "startPosition" in at ? { line: at.startPosition.row + 1, column: at.startPosition.column + 1 } : at;
+        this.onWarning({ ...position, message: detail });
     }
 
     /**
@@ -235,9 +259,22 @@ class Lowering {
         }
         const first = this.diagnostics[0];
         if (first) throw new LowerError(first.detail, { line: first.line, column: first.column }, this.diagnostics);
+        // Only worth saying once the script is otherwise sound, and only to someone listening: the engine
+        // enters a script at `start`, so one without it compiles to something nothing will ever run.
+        if (this.onWarning && !this.procedures.has("start")) {
+            this.warn("no 'start' procedure: the engine has no entry point into this script", {
+                line: 1,
+                column: 1,
+            });
+        }
         return {
             declarations: this.declarations,
-            stringLiterals: collectStringLiterals(root),
+            // The sink is passed on only when there is one, so the escape scan is skipped rather than run
+            // and discarded - which is what makes `-n` cheaper and not merely quieter.
+            stringLiterals: collectStringLiterals(
+                root,
+                this.onWarning ? (message, node) => this.warn(message, node) : undefined,
+            ),
             ...(hasShortCircuitPragma(root) ? { shortCircuit: true } : {}),
             ...(this.undefinedProcedures.length > 0 ? { undefinedProcedures: this.undefinedProcedures } : {}),
         };
@@ -360,7 +397,12 @@ class Lowering {
                 this.externals.set(name.toLowerCase(), name);
                 this.declarations.push({ kind: "external", variable: this.variableOf(init) });
             } else {
-                if (this.globals.has(name.toLowerCase())) continue;
+                if (this.globals.has(name.toLowerCase())) {
+                    // The second declaration is dropped and the first one's slot keeps its value, so the
+                    // initialiser written here never runs - which is worth saying rather than obeying.
+                    this.warn(`'${name}' is already declared; this declaration is ignored`, init);
+                    continue;
+                }
                 this.globals.set(name.toLowerCase(), this.globals.size);
                 this.declarations.push({ kind: "global", variable: this.variableOf(init) });
             }
@@ -562,13 +604,24 @@ class Lowering {
         if (condition) target.conditional = this.lowerExpression(condition, scope);
     }
 
-    /** Allocates the next local slot. Its initial value is pushed at procedure entry, in slot order. */
-    private declareLocal(scope: Scope, name: string, initial: VariableDecl["initial"]): Expr {
+    /**
+     * Allocates the next local slot. Its initial value is pushed at procedure entry, in slot order.
+     *
+     * `at` marks a declaration the AUTHOR wrote, which is the only kind that can be a redeclaration worth
+     * warning about; the temporaries this class allocates reuse the mechanism with names of their own
+     * making and must never trip it.
+     */
+    private declareLocal(scope: Scope, name: string, initial: VariableDecl["initial"], at?: SyntaxNode): Expr {
         const target = this.currentTarget;
         if (!target) throw new Error("local declared outside a procedure");
         const key = name.toLowerCase();
         const existing = scope.slots.get(key);
-        if (existing !== undefined) return { kind: "var", scope: "local", index: existing, name };
+        if (existing !== undefined) {
+            // The slot already exists and keeps whatever it holds, so this declaration's initial value is
+            // never assigned - the same shape as a repeated global, one scope down.
+            if (at) this.warn(`'${name}' is already declared in this procedure; this declaration is ignored`, at);
+            return { kind: "var", scope: "local", index: existing, name };
+        }
         const index = scope.slots.size;
         scope.slots.set(key, index);
         target.locals.push({ name, initial });
@@ -750,8 +803,8 @@ class Lowering {
         // every local slot index: the loop variables are declared as they are read, before `in` and so
         // before any temporary exists. Allocating the temporaries first shifts every later slot by one.
         if (declares) {
-            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 });
-            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 });
+            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 }, keyName);
+            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 }, valueName);
         }
 
         // A bare variable is iterated in place; anything else is evaluated once into a temporary.
@@ -872,7 +925,7 @@ class Lowering {
                 if (!name || !value) throw new LowerError("malformed for clause", node);
                 const literal = node.type === "for_var_decl" ? this.literalOf(value) : null;
                 if (node.type === "for_var_decl") {
-                    this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 });
+                    this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 }, name);
                 }
                 // A declaring init follows the local-declaration rule: a literal is folded into the
                 // slot at procedure entry, so no assignment is emitted here for it.
@@ -920,7 +973,7 @@ class Lowering {
             const value = init.childForFieldName("value");
             const size = init.childForFieldName("size");
             const literal = value ? this.literalOf(value) : ({ kind: "int", value: 0 } as const);
-            const target = this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 });
+            const target = this.declareLocal(scope, name.text, literal ?? { kind: "int", value: 0 }, name);
             // `variable a[10]` declares a slot AND fills it: the declaration carries an assignment of a
             // fresh temp array. Flags default to 4 - the value the language uses when they are left out.
             if (size) {
@@ -1567,11 +1620,23 @@ function hasShortCircuitPragma(root: SyntaxNode): boolean {
  *
  * A field access contributes its member name, which becomes a string constant even though the source
  * never quotes it.
+ *
+ * `onWarning` rides along because this is already the one walk that visits every string exactly once, and
+ * an unknown escape is worth reporting per occurrence rather than per distinct string.
  */
-function collectStringLiterals(root: SyntaxNode): string[] {
+function collectStringLiterals(root: SyntaxNode, onWarning?: (message: string, node: SyntaxNode) => void): string[] {
     const out: string[] = [];
     const visit = (node: SyntaxNode): void => {
-        if (node.type === "string") out.push(unquote(node.text));
+        if (node.type === "string") {
+            if (onWarning) {
+                for (const escape of unknownEscapes(node.text)) {
+                    // The character is kept as itself, which is what the reference does - so this is a
+                    // likely typo (a Windows path's `\p`), not a change in what the string holds.
+                    onWarning(`unknown escape '\\${escape}' in a string; it stands for '${escape}'`, node);
+                }
+            }
+            out.push(unquote(node.text));
+        }
         // `@Name` interns the procedure's name, though the source never quotes it.
         if (node.type === "proc_ref" && node.namedChildren[0]) out.push(node.namedChildren[0].text);
         for (const child of node.namedChildren) {
@@ -1601,11 +1666,36 @@ const ESCAPES: Record<string, string> = {
     v: "\t",
 };
 
+/** One quoted run; several may sit adjacently, and the grammar hands those over as a single node. */
+const STRING_SEGMENT = /"([^"\\]|\\.)*"/g;
+
+/**
+ * Escapes that mean themselves rather than being unrecognised. `\\` and `"` decode to their own
+ * character through the table's fallback, so they are spelled out here instead of silently qualifying.
+ */
+const SELF_ESCAPES = new Set(["\\", '"']);
+
 /** Decodes one string literal, or several written adjacently - the grammar hands those over as one node. */
 function unquote(text: string): string {
     let out = "";
-    for (const [segment] of text.matchAll(/"([^"\\]|\\.)*"/g)) {
+    for (const [segment] of text.matchAll(STRING_SEGMENT)) {
         out += segment.slice(1, -1).replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
+    }
+    return out;
+}
+
+/**
+ * The escapes in a string that no table entry covers, in source order, one per occurrence.
+ *
+ * Scans exactly what `unquote` decodes, so the two cannot disagree about what an escape is - a warning
+ * about a character the decoder never treated as escaped would be worse than none.
+ */
+function unknownEscapes(text: string): string[] {
+    const out: string[] = [];
+    for (const [segment] of text.matchAll(STRING_SEGMENT)) {
+        for (const [, char] of segment.slice(1, -1).matchAll(/\\(.)/g)) {
+            if (char !== undefined && ESCAPES[char] === undefined && !SELF_ESCAPES.has(char)) out.push(char);
+        }
     }
     return out;
 }

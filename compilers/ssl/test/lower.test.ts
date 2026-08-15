@@ -1070,3 +1070,76 @@ describe.skipIf(!wasmPresent)("collecting semantic errors", () => {
         expect(errors.map((e) => e.detail)).toEqual(["unknown identifier 'rand'", "unknown identifier 'gone'"]);
     });
 });
+
+/**
+ * Warnings: what the compiler says about a script it nonetheless compiled.
+ *
+ * The corpus cannot validate these the way it validates the emitted bytes - a warning changes no output,
+ * so a green differential says nothing about whether one fires when it should. What it CAN say is whether
+ * they fire when they should not, and across 1526 real scripts these produce four warnings, all true. A
+ * check that cried wolf on valid code would be worse than no check, so each one here is pinned both ways:
+ * it fires on the case it is for, and the clean script stays silent.
+ */
+describe.skipIf(!wasmPresent)("compile warnings", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** Every warning a successful compile produced, formatted as the CLI shows them. */
+    function warningsOf(source: string): string[] {
+        const out: string[] = [];
+        compileText(parser, source, { onWarning: (w) => out.push(`${w.line}:${w.column}: ${w.message}`) });
+        return out;
+    }
+
+    it("warns about an escape no table entry covers, per occurrence", () => {
+        // `"C:\path\to"` is the case worth catching: `\t` IS an escape, so the string silently holds a
+        // tab, while `\p` merely loses its backslash. Only the unrecognised one is worth a word.
+        expect(warningsOf('procedure start begin\n variable s := "C:\\path\\to";\nend\n')).toEqual([
+            "2:16: unknown escape '\\p' in a string; it stands for 'p'",
+        ]);
+    });
+
+    it("says nothing about the escapes the table does cover", () => {
+        expect(warningsOf('procedure start begin\n variable s := "a\\nb\\tc\\\\d\\"e";\nend\n')).toEqual([]);
+    });
+
+    it("warns that a repeated declaration is ignored rather than applied", () => {
+        // Both compilers keep the FIRST declaration and drop this one, so the initialiser written here
+        // never runs - which is exactly the surprise worth naming.
+        expect(warningsOf("variable g := 1;\nvariable g := 2;\nprocedure start begin end\n")).toEqual([
+            "2:10: 'g' is already declared; this declaration is ignored",
+        ]);
+        expect(warningsOf("procedure start begin\n variable x;\n variable x;\nend\n")).toEqual([
+            "3:11: 'x' is already declared in this procedure; this declaration is ignored",
+        ]);
+    });
+
+    it("does not mistake the temporaries it allocates for redeclarations", () => {
+        // `foreach` allocates several temporaries through the same path a declaration takes; naming them
+        // would make the warning fire on code that declares nothing twice.
+        expect(warningsOf("variable arr;\nprocedure start begin\n foreach variable v in arr begin end\nend\n")).toEqual(
+            [],
+        );
+    });
+
+    it("warns when nothing can enter the script", () => {
+        expect(warningsOf("procedure helper begin end\n")).toEqual([
+            "1:1: no 'start' procedure: the engine has no entry point into this script",
+        ]);
+    });
+
+    it("emits the same bytes whether or not anyone is listening for warnings", () => {
+        // The sink must not reach code generation: `-n` is meant to change what is said about a compile,
+        // never what it produces.
+        const source = 'procedure helper begin\n variable s := "C:\\path";\n variable s;\nend\n';
+        const quiet = compileText(parser, source);
+        const loud = compileText(parser, source, { onWarning: () => {} });
+
+        expect([...quiet]).toEqual([...loud]);
+    });
+});

@@ -61,6 +61,7 @@ const REQUEST = {
     defines: {},
     level: 1 as const,
     shortCircuit: false,
+    noWarnings: false,
 };
 
 /** The worker the client is currently talking to. */
@@ -74,9 +75,18 @@ describe("compile worker client", () => {
 
     it("answers a compile with what the worker reported", async () => {
         const pending = compileOnWorker({ ...REQUEST });
-        current().emit("message", { id: current().posted[0]!.id, errors: [{ line: 3, message: "boom" }] });
+        current().emit("message", {
+            id: current().posted[0]!.id,
+            errors: [{ line: 3, message: "boom" }],
+            // Carried separately from the errors because a warning accompanies a compile that SUCCEEDED
+            // just as readily as one that failed.
+            warnings: [{ line: 9, message: "unknown escape" }],
+        });
 
-        await expect(pending).resolves.toEqual([{ line: 3, message: "boom" }]);
+        await expect(pending).resolves.toEqual({
+            errors: [{ line: 3, message: "boom" }],
+            warnings: [{ line: 9, message: "unknown escape" }],
+        });
     });
 
     it("keeps one worker across compiles rather than starting one per request", async () => {
@@ -84,7 +94,7 @@ describe("compile worker client", () => {
         const first = compileOnWorker({ ...REQUEST });
         const second = compileOnWorker({ ...REQUEST });
         const posted = [...current().posted];
-        for (const message of posted) current().emit("message", { id: message.id, errors: [] });
+        for (const message of posted) current().emit("message", { id: message.id, errors: [], warnings: [] });
         await Promise.all([first, second]);
 
         expect(FakeWorker.instances).toHaveLength(1);
@@ -111,9 +121,9 @@ describe("compile worker client", () => {
         await expect(dead).rejects.toThrow();
 
         const retry = compileOnWorker({ ...REQUEST });
-        current().emit("message", { id: current().posted[0]!.id, errors: [] });
+        current().emit("message", { id: current().posted[0]!.id, errors: [], warnings: [] });
 
-        await expect(retry).resolves.toEqual([]);
+        await expect(retry).resolves.toEqual({ errors: [], warnings: [] });
         expect(FakeWorker.instances).toHaveLength(2);
     });
 

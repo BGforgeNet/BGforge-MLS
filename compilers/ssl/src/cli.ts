@@ -95,7 +95,18 @@ function preprocessOne(file: string, args: SslArgs): string {
 }
 
 function compileOne(file: string, args: SslArgs): Uint8Array {
-    const options = { level: args.level, shortCircuit: args.shortCircuit };
+    const options = {
+        level: args.level,
+        shortCircuit: args.shortCircuit,
+        // `-n` leaves the sink off entirely rather than filtering afterwards, so the checks that exist
+        // only to fill it do not run at all.
+        ...(args.noWarnings
+            ? {}
+            : {
+                  onWarning: (warning: { line: number; column: number; message: string }) =>
+                      console.error(`Warning: ${file}:${warning.line}:${warning.column}: ${warning.message}`),
+              }),
+    };
     const program = buildProgram(getParser(), preprocessOne(file, args), options);
     if (args.dumpTree) console.log(printProgram(program));
     return emitProgram(program, options);

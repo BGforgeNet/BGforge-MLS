@@ -197,7 +197,7 @@ async function compileWithOwnCompiler(text: string, filepath: string, dstPath: s
     }
     const headers = sslSettings.headersDirectory ? [sslSettings.headersDirectory] : [];
     try {
-        const errors = await compileOnWorker({
+        return await compileOnWorker({
             text,
             filepath,
             dstPath,
@@ -205,8 +205,8 @@ async function compileWithOwnCompiler(text: string, filepath: string, dstPath: s
             defines: args.defines,
             level: args.level,
             shortCircuit: args.shortCircuit,
+            noWarnings: args.noWarnings,
         });
-        return { errors, warnings: [] };
     } catch (error) {
         // The worker itself failed - it died, or could not be started. That is not a fault in the
         // script, so it is reported at the top of the file rather than pinned to a line in it.

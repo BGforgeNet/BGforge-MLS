@@ -14,8 +14,14 @@ import type { CompileRequest, CompileResponse, Diagnostic } from "./compile-work
 /** Sits beside the server bundle; both are emitted into `server/out` by the same build. */
 const WORKER_PATH = path.join(__dirname, "compile-worker.js");
 
+/** What one compile produced: what stops it, and what is only worth mentioning. */
+export interface CompileOutcome {
+    errors: Diagnostic[];
+    warnings: Diagnostic[];
+}
+
 interface Pending {
-    resolve: (errors: Diagnostic[]) => void;
+    resolve: (outcome: CompileOutcome) => void;
     reject: (error: Error) => void;
 }
 
@@ -33,7 +39,7 @@ function getWorker(): Worker {
 
     const instance = new Worker(WORKER_PATH);
     instance.on("message", (response: CompileResponse) => {
-        pending.get(response.id)?.resolve(response.errors);
+        pending.get(response.id)?.resolve({ errors: response.errors, warnings: response.warnings });
         pending.delete(response.id);
     });
     // A worker that dies takes every request in flight with it. They are rejected rather than left
@@ -56,9 +62,9 @@ function getWorker(): Worker {
 }
 
 /** Compiles on the worker thread and resolves with whatever the editor should show. */
-export function compileOnWorker(request: Omit<CompileRequest, "id">): Promise<Diagnostic[]> {
+export function compileOnWorker(request: Omit<CompileRequest, "id">): Promise<CompileOutcome> {
     const id = nextId++;
-    return new Promise<Diagnostic[]>((resolve, reject) => {
+    return new Promise<CompileOutcome>((resolve, reject) => {
         pending.set(id, { resolve, reject });
         try {
             // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a Worker's postMessage takes no origin; the rule is about window.postMessage.

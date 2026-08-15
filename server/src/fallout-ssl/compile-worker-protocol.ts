@@ -27,9 +27,16 @@ export interface CompileRequest {
     defines: Record<string, string>;
     level: 0 | 1 | 2;
     shortCircuit: boolean;
+    /** `-n`: skip the checks that only produce warnings, rather than filtering them afterwards. */
+    noWarnings: boolean;
 }
 
 export interface CompileResponse {
     id: number;
     errors: Diagnostic[];
+    /**
+     * Reported alongside a SUCCESSFUL compile as much as a failed one, which is what separates them from
+     * errors: they travel with the result rather than with the exception that never happened.
+     */
+    warnings: Diagnostic[];
 }

@@ -24,6 +24,11 @@
 - A failed compile reports everything it found wrong, instead of stopping at the first problem. A script
   with four syntax errors, or a header with three bad directives, is now one compile rather than four. A
   name that is misspelled and then used twenty times is reported once, at its first use.
+- The `built-in` compiler warns about three things that compile but rarely mean what they say: an escape
+  no table entry covers, where `"C:\path"` quietly loses its backslash; a variable declared twice, where
+  the second declaration and its initial value are ignored; and a script with no `start` procedure, which
+  the engine has no way into. They are controlled by `-n` in `bgforge.falloutSSL.compileOptions`, which
+  that setting's default includes - so removing it from there is what turns them on.
 - Formatting a `foreach` loop no longer drops its `while` guard. The guard is part of the loop's bounds
   test, so losing it changed how many times the loop ran.
 - Keywords are read in any casing, as the language itself reads them: `PROCEDURE`, `Procedure` and
@@ -134,6 +139,9 @@
 
 ### Fixes
 
+- A compile that produced only warnings is no longer announced as "Failed to compile". It wrote its output
+  file, so reporting a failure contradicted what was on disk; the warnings themselves are unchanged and
+  still listed. Applies to Fallout SSL and WeiDU alike.
 - An Infinity Engine `.pro` opened as a plain file now says it is an IE projectile instead of reporting an
   unknown object type.
 - Fallout SSL name matching now spans files: a procedure declared in a header is found from a script that
