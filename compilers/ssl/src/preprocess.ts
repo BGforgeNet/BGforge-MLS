@@ -150,6 +150,9 @@ function stringifyToks(toks: readonly Tok[]): string {
 class Expander {
     private readonly macros: Map<string, Macro>;
 
+    /** Set while the last expansion ended inside an argument list that never closed. */
+    private unclosedCall = false;
+
     constructor(macros: Map<string, Macro>) {
         this.macros = macros;
     }
@@ -288,6 +291,10 @@ class Expander {
             }
             const call = this.readArgs(work, open);
             if (call === null) {
+                // The list opened and never closed, so the rest of it is on a line not read yet. Said
+                // rather than assumed: to the caller this is indistinguishable from a name that simply
+                // is not a call, and only one of the two is worth fetching more input for.
+                this.unclosedCall = true;
                 out.push(tok);
                 i++;
                 continue;
@@ -306,7 +313,17 @@ class Expander {
     }
 
     expandText(text: string): string {
-        return spell(this.expand(tokenize(text)));
+        return this.expandChunk(text).text;
+    }
+
+    /**
+     * Expand `text`, also reporting whether it ended inside an argument list still waiting for its
+     * closing parenthesis. A caller feeding the source a line at a time uses that to fetch the next one.
+     */
+    expandChunk(text: string): { text: string; unclosedCall: boolean } {
+        this.unclosedCall = false;
+        const expanded = spell(this.expand(tokenize(text)));
+        return { text: expanded, unclosedCall: this.unclosedCall };
     }
 }
 
@@ -580,6 +597,40 @@ function processFile(file: string, state: State): void {
 }
 
 /**
+ * How many lines an argument list may be drawn across before it is taken to be unterminated rather than
+ * long. A real one spans two or three; the bound is what stops an unclosed parenthesis - which is most of
+ * the time an editor buffer mid-keystroke - walking to the end of the file, since each line drawn in
+ * re-expands everything gathered so far.
+ */
+const MAX_CALL_LINES = 32;
+
+/**
+ * Expands the line at `n`, drawing in the lines after it while a function-like macro's argument list is
+ * still open - the list ends at its closing parenthesis, which may be several lines down, and a header's
+ * debug macro taking a long concatenated string routinely puts it there.
+ *
+ * Whatever it consumes it gives back as blank lines, so nothing below a split call moves: errors are
+ * reported against these coordinates, and a swallowed newline would put every later one off by a line.
+ *
+ * @returns the last line index consumed, which the caller's loop continues from.
+ */
+function expandFrom(state: State, lines: readonly string[], n: number): number {
+    let text = lines[n] ?? "";
+    let last = n;
+    let result = state.expander.expandChunk(text);
+    while (result.unclosedCall && last + 1 < lines.length && last - n < MAX_CALL_LINES) {
+        last++;
+        text += `\n${lines[last] ?? ""}`;
+        result = state.expander.expandChunk(text);
+    }
+    state.out.push(result.text);
+    // Only the newlines the expansion swallowed need replacing; any it left in place already count.
+    const kept = result.text.split("\n").length - 1;
+    for (let i = kept; i < last - n; i++) state.out.push("");
+    return last;
+}
+
+/**
  * One translation unit's text, however it was obtained. `file` is not read - it says where a quoted
  * `#include` looks and which file an error names, so a buffer that has never been saved can be
  * preprocessed under the path it would occupy.
@@ -594,7 +645,7 @@ function processSource(text: string, file: string, state: State): void {
         const line = lines[n] ?? "";
         const directive = /^[ \t]*#/.test(line) ? DIRECTIVE.exec(line) : null;
         if (directive === null) {
-            if (emitting()) state.out.push(state.expander.expandText(line));
+            if (emitting()) n = expandFrom(state, lines, n);
             continue;
         }
         const name = directive[1] ?? "";

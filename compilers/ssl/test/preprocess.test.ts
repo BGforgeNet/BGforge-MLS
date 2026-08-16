@@ -74,6 +74,46 @@ describe("function-like macros", () => {
         const src = "#define box_mstr(x) (message_str(17,x))\n#define my_mstr box_mstr\ny := my_mstr(195);";
         expect(run({ "main.ssl": src })).toBe("y := ( message_str ( 17 , 195 ) ) ;");
     });
+
+    /**
+     * An argument list may span lines: the collection runs to the closing parenthesis, wherever it falls.
+     * Headers rely on it for the long concatenated strings a debug macro takes, and without it the name is
+     * left alone and surfaces much later as "not an engine function" - naming a macro that no longer looks
+     * like one, at a line nowhere near the definition.
+     */
+    it("collects an argument list that spans several lines", () => {
+        const src = '#define NOTE(m) debug_msg(m)\nNOTE("a"\n + "b");';
+        expect(run({ "main.ssl": src })).toBe('debug_msg ( "a" + "b" ) ;');
+    });
+
+    /**
+     * The limit on how far a list is drawn exists to stop an unclosed parenthesis - an editor buffer
+     * mid-keystroke, most of the time - walking to the end of the file, so it has to sit far above any
+     * list a person would actually write. Ten lines is already unusual and must still expand.
+     */
+    it("collects a list far longer than anything a script writes", () => {
+        const parts = Array.from({ length: 10 }, (_, i) => ` + "${i}"`).join("\n");
+        expect(run({ "main.ssl": `#define NOTE(m) debug_msg(m)\nNOTE("a"\n${parts});` })).toBe(
+            `debug_msg ( "a" ${Array.from({ length: 10 }, (_, i) => `+ "${i}"`).join(" ")} ) ;`,
+        );
+    });
+
+    /**
+     * Splitting a call across lines must not move the lines after it. Compile errors are reported in
+     * preprocessed coordinates, so a swallowed newline puts every later diagnostic one line off - and the
+     * two sources here differ in nothing else, which is what makes the comparison the whole assertion.
+     */
+    it("leaves what follows a split call on the line it started on", () => {
+        const markerLine = (call: string) => {
+            fs.writeFileSync(path.join(dir, "main.ssl"), `#define NOTE(m) debug_msg(m)\n${call}\nmarker;\n`);
+            return preprocess(path.join(dir, "main.ssl"))
+                .split("\n")
+                .findIndex((line) => line.includes("marker"));
+        };
+        // Both calls occupy two source lines, so `marker` starts from the same place in each; the split
+        // one must not pull it up by swallowing the newline inside its argument list.
+        expect(markerLine('NOTE("a"\n + "b");')).toBe(markerLine('NOTE("a" + "b");\n'));
+    });
 });
 
 describe("# and ## operators", () => {
