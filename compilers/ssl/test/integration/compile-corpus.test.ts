@@ -26,7 +26,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
+import { BROKEN_STEMS, CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -38,18 +38,6 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  * bad day and reads as our regression. Raise this only if the corpus itself grows.
  */
 const ORACLE_FLOOR = 1400;
-
-/**
- * Corpus scripts the reference genuinely cannot build - each one a real defect in the mod's source, e.g.
- * `hcmale` declares `Node002` and never defines it, `zccorpse` references an undefined `SCRIPT_ZCCORPSE`.
- * They are pinned by name rather than merely counted so that an UNEXPECTED rejection fails loudly with its
- * reason attached: a child that dies for an environmental cause (a resource limit under a loaded runner,
- * say) is otherwise indistinguishable from these, and silently costs the comparison an input.
- *
- * `waypnt` appears twice on purpose - two different corpus directories each hold a file of that name, and
- * the comparison keys its scratch files by basename, so both are separate entries that both fail.
- */
-const KNOWN_REJECTIONS = ["epa1", "epa2", "gl_k_modini", "hcmale", "vcconnar", "waypnt", "waypnt", "zccorpse"];
 
 function findCompiler(): string | null {
     try {
@@ -150,8 +138,9 @@ describe.skipIf(!ready)("real corpus compiles to matching bytecode", () => {
         expect(scripts.length, summary).toBe(CORPUS_SIZE);
         expect(oracles, summary).toBeGreaterThan(ORACLE_FLOOR);
         // Pinned by name: an exclusion outside this set means a script stopped building for a reason
-        // nobody has looked at, which silently removes it from the comparison.
-        expect(excludedStems.toSorted(), summary).toEqual(KNOWN_REJECTIONS);
+        // nobody has looked at, which silently removes it from the comparison. A child that died for an
+        // environmental cause lands here too, which is why `runReference` retries a killed one first.
+        expect(excludedStems.toSorted(), summary).toEqual(BROKEN_STEMS);
         // The gate is over what this back end controls - every oracle it was given, it reproduces. An
         // absolute count of matches would instead track the reference's own per-run success rate.
         expect(differing, summary).toBe(0);

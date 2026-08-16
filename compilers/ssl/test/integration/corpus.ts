@@ -22,6 +22,53 @@ export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restor
 export const CORPUS_SIZE = 1525;
 
 /**
+ * Corpus scripts that do not compile, and what is wrong with each. Every one is a defect in the mod's own
+ * source, in one of two shapes: a procedure declared and never defined, or a reference to a symbol that
+ * does not exist.
+ *
+ * Both sweeps exclude them, and both pin this same list - the compile differential because the REFERENCE
+ * refuses them, the decompile sweep because THIS front end does. That the two sets are identical is the
+ * intended state and the reason they share one constant: a script the reference will not build is one we
+ * must not build either, or we ship bytecode for source it considers broken. When the lists last diverged,
+ * the declare-but-never-define scripts compiled here into procedures with empty bodies - every call to one
+ * silently doing nothing at runtime.
+ *
+ * Pinned by name rather than counted, because this set is the denominator every gate is measured against:
+ * a script leaving it silently shrinks the comparison while every count still looks healthy. `waypnt`
+ * appears twice because two corpus directories each hold a file of that name, and both are broken.
+ */
+export const BROKEN_SCRIPTS: readonly {
+    readonly stem: string;
+    /**
+     * Which defect, because it decides whether OPTIMISING makes the script build. An undefined procedure
+     * is a code-generation error only while the procedure survives: it is unreferenced, so `-O1` removes
+     * it before anything asks for its body and the script then compiles. An undefined symbol is read by
+     * live code, and no amount of dead-code elimination makes it go away.
+     */
+    readonly defect: "undefined-procedure" | "undefined-symbol";
+    readonly reason: string;
+}[] = [
+    { stem: "epa1", defect: "undefined-procedure", reason: "declares doRepostion, never defines it" },
+    { stem: "epa2", defect: "undefined-procedure", reason: "declares doRepostion, never defines it" },
+    { stem: "gl_k_modini", defect: "undefined-procedure", reason: "declares force_settings, never defines it" },
+    { stem: "hcmale", defect: "undefined-procedure", reason: "declares Node002, never defines it" },
+    { stem: "vcconnar", defect: "undefined-procedure", reason: "declares Node040, never defines it" },
+    { stem: "waypnt", defect: "undefined-symbol", reason: "reads self_tile, which is not defined" },
+    { stem: "waypnt", defect: "undefined-symbol", reason: "reads self_tile, which is not defined" },
+    { stem: "zccorpse", defect: "undefined-symbol", reason: "reads SCRIPT_ZCCORPSE, which is not defined" },
+];
+
+/** Just the names, sorted - the shape a sweep's own exclusion list is compared against. */
+export const BROKEN_STEMS: readonly string[] = BROKEN_SCRIPTS.map((script) => script.stem).toSorted();
+
+/** The subset still broken once optimising, which is what the `-O1`/`-O2` sweep excludes. */
+export const BROKEN_WHEN_OPTIMISED: readonly string[] = BROKEN_SCRIPTS.filter(
+    (script) => script.defect === "undefined-symbol",
+)
+    .map((script) => script.stem)
+    .toSorted();
+
+/**
  * How many times a KILLED reference invocation is retried before its script is counted as excluded.
  *
  * The bundled compiler wedges roughly one spawn in several thousand, on a script it otherwise compiles in

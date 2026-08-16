@@ -29,7 +29,7 @@ import { printProgram } from "../../src/int/print.ts";
 import { emitInt } from "../../src/int/emit.ts";
 import { preserveStringOrder } from "../../src/int/string-order.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { CORPUS_SIZE, listScripts } from "./corpus.ts";
+import { BROKEN_STEMS, CORPUS_SIZE, listScripts } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -39,26 +39,10 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  * the recovered code itself matches in every case the re-emit gate covers.
  *
  * It last moved DOWN by four, which a reprint regression would look identical to: the front end started
- * rejecting the four declare-but-never-define scripts below, so they left the population rather than
- * stopped reprinting. Only a shrinking `KNOWN_UNCOMPILABLE` justifies lowering this.
+ * rejecting four of the declare-but-never-define scripts in `BROKEN_SCRIPTS`, so they left the population
+ * rather than stopped reprinting. Only a shrinking `BROKEN_SCRIPTS` justifies lowering this.
  */
 const REPRINT_FLOOR = 1263;
-
-/**
- * Corpus scripts the FRONT END cannot build, so the decompiler never sees them. Every one is a defect in
- * the mod's source, not a gap here: `zccorpse` and both `waypnt` reference undefined symbols, and the
- * rest - `epa1`, `epa2`, `gl_k_modini`, `hcmale`, `vcconnar` - each declare a procedure they never define.
- *
- * This is the same set the reference rejects, for the same reasons, which is the intended state: a script
- * it refuses to build is one we must refuse too, or we ship bytecode for source it considers broken. When
- * the lists last diverged, the declare-but-never-define scripts compiled here into procedures with empty
- * bodies - every call to one silently doing nothing at runtime.
- *
- * Pinned by name rather than counted, because this set defines the denominator every gate below is
- * measured against: a script silently leaving it shrinks the comparison while every count still looks
- * healthy. `waypnt` appears twice because two corpus directories each hold a file of that name.
- */
-const KNOWN_UNCOMPILABLE = ["epa1", "epa2", "gl_k_modini", "hcmale", "vcconnar", "waypnt", "waypnt", "zccorpse"];
 
 const scripts = listScripts();
 const ready = scripts.length > 0 && fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
@@ -136,7 +120,7 @@ describe.skipIf(!ready)("the real corpus decompiles back to the bytes it came fr
         expect(scripts.length, summary).toBe(CORPUS_SIZE);
         expect(compiled, summary).toBeGreaterThan(1000);
         // Pinned by name, so the denominator cannot shift under the floors without saying so.
-        expect(uncompilable.map((line) => line.split(":")[0]).toSorted(), summary).toEqual(KNOWN_UNCOMPILABLE);
+        expect(uncompilable.map((line) => line.split(":")[0]).toSorted(), summary).toEqual(BROKEN_STEMS);
         expect(failures.slice(0, 10), `${failures.length} of ${compiled} failed to re-emit\n${summary}`).toEqual([]);
         expect(reprinted, `${reprinted} of ${compiled} reprinted identically\n${summary}`).toBeGreaterThanOrEqual(
             REPRINT_FLOOR,

@@ -22,20 +22,12 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
+import { BROKEN_WHEN_OPTIMISED, CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "./corpus.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
 /** Same sanity floor as the unoptimised differential, and the same reasoning behind it. */
 const ORACLE_FLOOR = 1400;
-
-/**
- * Only three, where the unoptimised differential excludes eight. The other five declare a procedure they
- * never define, which is a code-generation error at `-O0` and no error at all once optimising: the
- * procedure is unreferenced, so it is removed before anything asks for its body. These three reference
- * undefined SYMBOLS, which no amount of dead-code elimination makes go away.
- */
-const KNOWN_REJECTIONS = ["waypnt", "waypnt", "zccorpse"];
 
 function findCompiler(): string | null {
     try {
@@ -132,7 +124,7 @@ describe.skipIf(!ready).each([1, 2] as const)("the real corpus optimises to matc
 
         expect(scripts.length, summary).toBe(CORPUS_SIZE);
         expect(oracles, summary).toBeGreaterThan(ORACLE_FLOOR);
-        expect(excludedStems.toSorted(), summary).toEqual(KNOWN_REJECTIONS);
+        expect(excludedStems.toSorted(), summary).toEqual(BROKEN_WHEN_OPTIMISED);
         expect(differing, summary).toBe(0);
         expect(errors, summary).toBe(0);
     });
