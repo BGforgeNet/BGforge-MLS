@@ -28,6 +28,11 @@ export interface ArgNotice {
      * of compiler fixes.
      */
     unsupported?: string;
+    /**
+     * A switch that was accepted and did nothing, which is neither a warning nor an error - the command
+     * line is valid and the output is what it would have been. Callers show it more quietly than the rest.
+     */
+    noop?: true;
     message: string;
 }
 
@@ -41,10 +46,14 @@ export interface SslArgs {
     noLogo: boolean;
     /** `-n`: suppress warnings, leaving only what stops the compile. */
     noWarnings: boolean;
-    /** `-d`: report each stage as it runs. */
+    /** `-d`: report each output's path, size and elapsed time as it is written. */
     debug: boolean;
     /** `-D`: print the optimised program as source before emitting it. */
     dumpTree: boolean;
+    /** `-x`: read a compiled script and write its source, rather than compiling one. */
+    decompile: boolean;
+    /** `-X`: read a compiled script and write its instruction listing. */
+    listing: boolean;
     /** `--help` or `-h`, which the reference has no equivalent for. */
     help: boolean;
     defines: Record<string, string>;
@@ -61,6 +70,20 @@ const DEFAULT_LEVEL = 1;
 
 /** Highest level this compiler implements. */
 const MAX_LEVEL = 2;
+
+/**
+ * Switches this compiler accepts and has no work to do for, and why there is nothing to do. Accepting
+ * them is what lets a build script written for the reference run here unchanged; saying so is what stops
+ * its author believing the switch bought them something.
+ */
+const NO_OP_SWITCHES: Record<string, string> = {
+    q: "this compiler never waits for input",
+    p: "this compiler always preprocesses",
+    F: "this compiler's preprocessor emits no #line directives",
+    // The one switch here that is inert in the REFERENCE as well: it parses to the same do-nothing arm
+    // as a bare `--`, and its own usage text does not list it.
+    w: "it has no effect in the reference either",
+};
 
 /**
  * `atoi`, which is what the reference reads the digits of `-O<n>` with: leading digits win, anything
@@ -84,6 +107,11 @@ export function parseArgs(argv: readonly string[]): SslArgs {
     let debug = false;
     let dumpTree = false;
     let help = false;
+    let decompile = false;
+    let listing = false;
+    // Whether an -O was WRITTEN, which the resolved level cannot answer: it defaults to 1, so a conflict
+    // decided by the level would fire on every command line that never mentioned one.
+    let levelGiven = false;
 
     const queue = [...argv];
     for (let arg = queue[0]; arg !== undefined && arg.startsWith("-"); arg = queue[0]) {
@@ -92,21 +120,35 @@ export function parseArgs(argv: readonly string[]): SslArgs {
             help = true;
             continue;
         }
+        // Long forms are read here rather than in the switch below, which dispatches on the second
+        // CHARACTER and so sees every `--switch` as the reference's ignored `--`.
+        if (arg === "--decompile") {
+            decompile = true;
+            continue;
+        }
+        if (arg === "--listing") {
+            listing = true;
+            continue;
+        }
         const rest = arg.slice(2);
         switch (arg[1]) {
-            // Accepted and ignored by the reference too.
-            case "w":
+            // A bare `--`, and anything else starting with one that the long forms above did not claim.
             case "-":
                 break;
             case "n":
                 noWarnings = true;
                 break;
-            // Accepted and ignored here: the input wait has no counterpart, this compiler always
-            // preprocesses, and `-F` governs `#line` directives that its preprocessor never emits.
+            case "w":
             case "q":
             case "p":
-            case "F":
+            case "F": {
+                notices.push({
+                    fatal: false,
+                    noop: true,
+                    message: `${arg} does nothing here: ${NO_OP_SWITCHES[arg[1]]}.`,
+                });
                 break;
+            }
             case "l":
                 noLogo = true;
                 break;
@@ -122,9 +164,16 @@ export function parseArgs(argv: readonly string[]): SslArgs {
             case "P":
                 preprocessOnly = true;
                 break;
+            case "x":
+                decompile = true;
+                break;
+            case "X":
+                listing = true;
+                break;
             case "O":
                 // A bare `-O` is the reference's shorthand for full optimisation.
                 requested = rest === "" ? MAX_LEVEL : atoi(rest);
+                levelGiven = true;
                 break;
             case "b":
                 notices.push({
@@ -144,6 +193,35 @@ export function parseArgs(argv: readonly string[]): SslArgs {
                 break;
             default:
                 notices.push({ fatal: false, message: `Unknown option ${arg}` });
+        }
+    }
+
+    if (decompile && listing) {
+        notices.push({
+            fatal: true,
+            message: "-x and -X ask for different renderings of the same file; pass one or the other.",
+        });
+    }
+
+    const mode = decompile ? "decompiling" : listing ? "listing" : "";
+    if (mode !== "") {
+        // Refused rather than ignored: each of these changes what a COMPILE produces, so accepting one
+        // silently would leave someone believing it had shaped output that was never compiled at all.
+        const compileOnly = [
+            levelGiven && "-O",
+            includeDirs.length > 0 && "-I",
+            Object.keys(defines).length > 0 && "-m",
+            shortCircuit && "-s",
+            preprocessOnly && "-P",
+            dumpTree && "-D",
+        ].filter((switchName) => switchName !== false);
+        if (compileOnly.length > 0) {
+            notices.push({
+                fatal: true,
+                message:
+                    `${compileOnly.join(", ")} ${compileOnly.length > 1 ? "shape" : "shapes"} a compile, ` +
+                    `which ${mode} does not do.`,
+            });
         }
     }
 
@@ -178,6 +256,8 @@ export function parseArgs(argv: readonly string[]): SslArgs {
         noWarnings,
         debug,
         dumpTree,
+        decompile,
+        listing,
         help,
         defines,
         includeDirs,

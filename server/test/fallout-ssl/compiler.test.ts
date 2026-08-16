@@ -433,6 +433,30 @@ describe("fallout-ssl compiler", () => {
             expect(mockCompileOnWorker).toHaveBeenCalledWith(expect.objectContaining({ noWarnings: true }));
         });
 
+        it.each(["-x", "-X"])("refuses %s, which asks this setting for something it cannot mean", async (flag) => {
+            // The setting is a command line for COMPILING the buffer. Reading a compiled file is a thing
+            // the CLI does and this path cannot, so honouring the switch is impossible and ignoring it
+            // would silently compile while the author believes they asked for something else.
+            //
+            // The switch stands alone deliberately: paired with one that shapes a compile it is already
+            // refused while parsing, so only this shape reaches the gap.
+            await compile(
+                normalizeUri("file:///project/test.ssl"),
+                { ...ownSettings, compileOptions: flag },
+                true,
+                "code",
+            );
+
+            expect(mockCompileOnWorker).not.toHaveBeenCalled();
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [expect.objectContaining({ message: expect.stringContaining(flag) })],
+                }),
+                expect.anything(),
+                expect.anything(),
+            );
+        });
+
         it("refuses a switch it cannot honour instead of compiling without it", async () => {
             // `-b` decides which words are keywords, so dropping it would build the script against a
             // different language and fail somewhere inside it rather than at the setting responsible.

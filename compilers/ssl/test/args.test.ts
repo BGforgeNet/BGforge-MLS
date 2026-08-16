@@ -43,9 +43,11 @@ describe("parseArgs", () => {
         expect(parseArgs(["-O2", "-O0", "a.ssl"]).level).toBe(0);
     });
 
-    it("collects switches that change nothing here without complaint", () => {
+    it("keeps reading a command line whose switches change nothing", () => {
         const args = parseArgs(["-q", "-n", "-p", "-F", "-w", "--", "a.ssl"]);
-        expect(args.notices).toEqual([]);
+        // Four of the six do nothing and say so. `-n` suppresses warnings, and `--` is the reference's
+        // own ignored argument rather than a switch anyone passed for an effect.
+        expect(args.notices.map((notice) => notice.noop)).toEqual([true, true, true, true]);
         expect(args.inputs).toEqual([{ file: "a.ssl" }]);
     });
 
@@ -144,6 +146,55 @@ describe("parseArgs", () => {
 
         it("returns no inputs for a switches-only command line", () => {
             expect(parseArgs(["-O2", "-s"]).inputs).toEqual([]);
+        });
+    });
+
+    describe("switches that do nothing here", () => {
+        // Accepted so a build script written for the reference keeps working, but silence would leave the
+        // author believing the switch bought them something. The note says otherwise once per run.
+        it.each(["-q", "-p", "-F", "-w"])("notes that %s is a no-op", (flag) => {
+            const args = parseArgs([flag, "a.ssl"]);
+            expect(args.notices).toEqual([{ fatal: false, noop: true, message: expect.stringContaining(flag) }]);
+        });
+
+        it("says nothing about switches that do work", () => {
+            expect(parseArgs(["-n", "-l", "-d", "a.ssl"]).notices).toEqual([]);
+        });
+    });
+
+    describe("decompiling", () => {
+        it.each(["-x", "--decompile"])("reads %s as decompile mode", (flag) => {
+            const args = parseArgs([flag, "a.int"]);
+            expect(args.decompile).toBe(true);
+            expect(args.inputs).toEqual([{ file: "a.int" }]);
+        });
+
+        it.each(["-X", "--listing"])("reads %s as listing mode", (flag) => {
+            const args = parseArgs([flag, "a.int"]);
+            expect(args.listing).toBe(true);
+            expect(args.decompile).toBe(false);
+        });
+
+        it("refuses both modes at once, which ask for different output from one file", () => {
+            const args = parseArgs(["-x", "-X", "a.int"]);
+            expect(args.notices).toEqual([
+                expect.objectContaining({ fatal: true, message: expect.stringContaining("-x and -X") }),
+            ]);
+        });
+
+        // Every one of these shapes the compile that is not happening. Ignoring them would let someone
+        // believe `-O2` optimised a decompile, so the whole command line is refused instead.
+        it.each(["-O2", "-Ifoo", "-mA", "-s", "-P", "-D"])("refuses %s alongside -x", (flag) => {
+            const args = parseArgs([flag, "-x", "a.int"]);
+            expect(args.notices).toEqual([
+                expect.objectContaining({ fatal: true, message: expect.stringContaining("decompiling") }),
+            ]);
+        });
+
+        it("refuses nothing when -x stands alone", () => {
+            // The level defaults to 1 with no -O written, so a conflict decided by the resolved level
+            // rather than by the switch having been typed would refuse every decompile there is.
+            expect(parseArgs(["-x", "a.int"]).notices).toEqual([]);
         });
     });
 

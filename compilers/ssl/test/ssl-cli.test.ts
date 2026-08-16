@@ -53,6 +53,73 @@ describe("ssl CLI", () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
+    describe("decompiling", () => {
+        /** Compiles HELLO and returns the path of the .int it produced. */
+        function compiled(stem: string): string {
+            const target = path.join(tmpDir, `${stem}.int`);
+            const { code } = run(source(`${stem}-src.ssl`, HELLO), "-o", target);
+            expect(code).toBe(0);
+            return target;
+        }
+
+        it("writes source beside the compiled script it read", () => {
+            const { code } = run("-x", compiled("built"));
+            expect(code).toBe(0);
+            expect(fs.readFileSync(path.join(tmpDir, "built.ssl"), "utf-8")).toContain("procedure start begin");
+        });
+
+        it("recovers source that compiles back to the bytes it came from", () => {
+            const target = compiled("round");
+            const before = fs.readFileSync(target);
+            expect(run("-x", target).code).toBe(0);
+
+            const again = path.join(tmpDir, "again.int");
+            expect(run(path.join(tmpDir, "round.ssl"), "-o", again).code).toBe(0);
+            expect(fs.readFileSync(again)).toEqual(before);
+        });
+
+        it("counts what came back under -d, which a byte size cannot show", () => {
+            // A decompile always produces plausible-looking source, so its size says nothing about
+            // whether the whole file returned. The counts are what a thin recovery shows up in.
+            const { stdout } = run("-l", "-d", "-x", compiled("counted"));
+            expect(stdout).toContain("1 procedure, 1 string");
+        });
+
+        it("writes an instruction listing for -X", () => {
+            const { code } = run("-X", compiled("dis"));
+            expect(code).toBe(0);
+            const listing = fs.readFileSync(path.join(tmpDir, "dis.lst"), "utf-8");
+            expect(listing).toContain("; globals section at");
+            expect(listing).toContain("start:");
+        });
+
+        it("still lists a file too damaged to decompile, which is what a listing is for", () => {
+            // Truncating leaves a header and a code section that stops mid-instruction: the decompiler
+            // cannot structure it, and the listing is the honest floor that still says what is in there.
+            const target = compiled("torn");
+            const whole = fs.readFileSync(target);
+            fs.writeFileSync(target, whole.subarray(0, -8));
+
+            expect(run("-x", target).code).toBe(1);
+            expect(run("-X", target).code).toBe(0);
+            expect(fs.readFileSync(path.join(tmpDir, "torn.lst"), "utf-8")).toContain("; globals section at");
+        });
+    });
+
+    describe("switches that do nothing", () => {
+        it("says so, more quietly than a warning", () => {
+            const { code, stderr } = run("-q", source("noop.ssl", HELLO));
+            expect(code).toBe(0);
+            expect(stderr).toContain("Note: -q does nothing here");
+        });
+
+        it("stays silent under -n, which is what a build script that cannot drop the switch has", () => {
+            const { code, stderr } = run("-q", "-n", source("quiet.ssl", HELLO));
+            expect(code).toBe(0);
+            expect(stderr).not.toContain("does nothing here");
+        });
+    });
+
     describe("smoke", () => {
         // The bundle ships as its own artefact and cannot carry a coverage gate - subprocess runs are
         // invisible to in-process instrumentation. These stand in for it: a broken shebang, a missing

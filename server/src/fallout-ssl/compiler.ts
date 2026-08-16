@@ -174,7 +174,18 @@ async function compileWithOwnCompiler(text: string, filepath: string, dstPath: s
     // A switch this compiler cannot honour is refused rather than dropped. `-b` decides which words are
     // keywords, so compiling without it builds the script against a different language than the settings
     // asked for - and it would fail somewhere in the script rather than at the setting that caused it.
-    const unsupported = args.notices.filter((notice) => notice.fatal);
+    // `-x` and `-X` read a compiled file, and this path compiles the buffer in memory with nothing to
+    // read - so the switch is refused rather than dropped, and carries no `unsupported` remedy because
+    // the other compiler cannot do it either.
+    const reading = args.decompile ? "-x" : args.listing ? "-X" : "";
+    const notices =
+        reading === ""
+            ? args.notices
+            : [
+                  ...args.notices,
+                  { fatal: true, message: `${reading} reads a compiled script, which this setting cannot do.` },
+              ];
+    const unsupported = notices.filter((notice) => notice.fatal);
     if (unsupported.length > 0) {
         return {
             errors: unsupported.map((notice) => ({
