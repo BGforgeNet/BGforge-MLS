@@ -236,6 +236,16 @@ const CASES: Case[] = [
         source: "variable g := not 0;\nvariable h := bwnot 5;\nvariable i := ((-7));\nprocedure start begin\n g := g + h + i;\nend\n",
     },
     {
+        // A parameter default is the same constant expression a global initialiser is, and the negated
+        // form is how a script spells an "unset" sentinel. The parentheses may wrap the whole constant
+        // but not the operand - `-(7)` is refused, which `lower.test.ts` pins alongside this.
+        name: "a negated parameter default reaches the call",
+        source:
+            "procedure p(variable a = -1, variable b = ((-7)));\n" +
+            'procedure p(variable a, variable b) begin\n display_msg("x");\nend\n' +
+            "procedure start begin\n call p;\nend\n",
+    },
+    {
         // Two literals written next to each other are one string, as in C.
         name: "adjacent string literals concatenate",
         source: 'procedure start begin\n variable s := "ab" "cd"\n   "ef";\nend\n',
@@ -294,7 +304,7 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
     });
 
     it("covers every case in the table", () => {
-        expect(CASES.length).toBeGreaterThanOrEqual(27);
+        expect(CASES.length).toBeGreaterThanOrEqual(28);
     });
 
     it.each(CASES)("$name", ({ name, source }) => {

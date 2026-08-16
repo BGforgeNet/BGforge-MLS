@@ -120,6 +120,18 @@ const LITERALS = new Set<string>(["number", "string", "char", "boolean"]);
 /** The comparison operators, which take one comparison rather than a chain of them. */
 const COMPARISONS = new Set<string>(["==", "!=", "<", ">", "<=", ">="]);
 
+/**
+ * Peels the `param_default` wrapper a parameter default's operand carries. The node stands for the
+ * grammar's choice of what may follow the operator and spells nothing in the source, so leaving it in
+ * place hides the literal behind it. A `param_default_group` is a real pair of parentheses and stays,
+ * which is what keeps `-(7)` refused while `((-7))` is not. Everything else passes through, so a global
+ * initialiser's operand - which has no wrapper - reaches the same check unchanged.
+ */
+function unwrapParamDefault(node: SyntaxNode | null): SyntaxNode | null {
+    if (node?.type !== "param_default") return node;
+    return node.namedChildren.find((child) => child && child.type !== "comment") ?? null;
+}
+
 /** Whether a node is a literal zero, in any spelling the language writes one. */
 function isZeroLiteral(node: SyntaxNode): boolean {
     if (node.type === "paren_expr") {
@@ -475,7 +487,7 @@ class Lowering {
                 return { kind: "int", value: node.text.toLowerCase() === "true" ? 1 : 0 };
             case "param_default_unary":
             case "unary_expr": {
-                const operand = node.childForFieldName("expr");
+                const operand = unwrapParamDefault(node.childForFieldName("expr"));
                 const op = node.childForFieldName("op")?.text.toLowerCase();
                 // One operator, applied to a LITERAL. The language reads any parentheses before the
                 // operator, so `((-7))` is a constant expression and `-(7)` is not one at all - and

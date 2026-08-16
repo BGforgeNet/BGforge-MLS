@@ -314,6 +314,19 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n call nope;\nend\n")).toThrow(/unknown procedure 'nope'/);
     });
 
+    it("takes a negated parameter default, but not one whose operand is parenthesised", () => {
+        // The operator must be followed by the constant itself. Parentheses around the WHOLE default are
+        // read before the operator and fold away, so `((-7))` is a constant expression while `-(7)` is
+        // not, and neither is `- -7`. That boundary is the reference's, and it is why the wrapper peel
+        // in `constantOf` stops at a group node instead of unwrapping everything it finds.
+        const declare = (value: string) =>
+            `procedure p(variable a = ${value});\nprocedure p(variable a) begin end\nprocedure start begin\n call p;\nend\n`;
+        expect(refuse(declare("-1"))).not.toThrow();
+        expect(refuse(declare("((-7))"))).not.toThrow();
+        expect(refuse(declare("-(7)"))).toThrow(/^1:26: initial value must be a literal, got param_default_unary$/);
+        expect(refuse(declare("- -7"))).toThrow(/^1:26: initial value must be a literal, got param_default_unary$/);
+    });
+
     it.each(["break", "continue"])("rejects %s outside a loop, at the statement", (what) => {
         // `break` compiled silently before this guard: it emits a bare jump consuming the exit address a
         // loop leaves on the stack, so outside one it jumped into whatever happened to be there.
