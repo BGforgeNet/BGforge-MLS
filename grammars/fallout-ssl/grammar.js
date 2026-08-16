@@ -565,8 +565,10 @@ export default grammar({
         // sfall map literal: {"key": value, ...}
         map_expr: ($) => seq("{", optional(commaSep($.map_entry)), "}"),
 
-        map_entry: ($) =>
-            seq(field("key", choice($.string, $.number, $.identifier)), ":", field("value", $._expression)),
+        // The key is a whole expression, not a literal. Most scripts spell one as a string or a bare
+        // name, but a PID constant expands to `(16777313)` - so a map keyed by one arrives here
+        // parenthesised, and a key list of string/number/identifier rejects source that compiles.
+        map_entry: ($) => seq(field("key", $._expression), ":", field("value", $._expression)),
 
         // Precedence tiers follow the language's own grouping rather than C convention: `+ - bwand bwor
         // bwxor` all bind at one level, and `* / % div ^` all bind at another. So the bitwise operators

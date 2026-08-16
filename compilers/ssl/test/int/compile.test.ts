@@ -131,6 +131,15 @@ const CASES: Case[] = [
         source: 'procedure start begin\n variable m;\n m := {"a": 1, "b": 2};\nend\n',
     },
     {
+        // A map key is a whole expression, not a literal. Real scripts reach this through the
+        // preprocessor rather than by writing it out: a PID constant defines as `(16777313)`, so every
+        // map keyed by one arrives here parenthesised.
+        name: "map keys are expressions",
+        source:
+            "procedure start begin\n variable m;\n variable k;\n" +
+            ' m := { (1): "a", 2 + 3: "b", -4: "c", k: "d", random(1, 2): "e" };\nend\n',
+    },
+    {
         // A nested literal is flagged and terminated so the engine's expression stack unwinds.
         name: "nested array literal",
         source: "procedure start begin\n variable a;\n a := [1, [2, 3]];\nend\n",
@@ -304,7 +313,7 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
     });
 
     it("covers every case in the table", () => {
-        expect(CASES.length).toBeGreaterThanOrEqual(28);
+        expect(CASES.length).toBeGreaterThanOrEqual(29);
     });
 
     it.each(CASES)("$name", ({ name, source }) => {

@@ -628,6 +628,32 @@ end
           value: (number))))))
 
 ================================================================================
+Map literal keyed by an expression
+================================================================================
+
+procedure foo begin
+    x = {(1): "a", 2 + 3: "b"};
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (map_expr
+        (map_entry
+          key: (paren_expr
+            (number))
+          value: (string))
+        (map_entry
+          key: (binary_expr
+            left: (number)
+            right: (number))
+          value: (string))))))
+
+================================================================================
 Procedure reference
 ================================================================================
 
