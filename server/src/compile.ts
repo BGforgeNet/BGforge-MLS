@@ -33,6 +33,15 @@ export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
  * @returns void
  */
 export async function compile(uri: string, langId: string, interactive = false, text: string) {
+    // Every compiler here works through a file on disk, and a URI outside `file:` names none - so there
+    // is nowhere to read includes from or write output to. A decompiled script is the case that reaches
+    // this: the language client attaches to its own scheme for completion and hover, which puts it on
+    // the same save/keystroke validation path as any source file. Silent because that path runs
+    // constantly and the editor compiles these back through its own save instead.
+    if (!uri.startsWith("file://")) {
+        conlog(`Not compiling ${uri}: not a file on disk`, "debug");
+        return;
+    }
     const settings = await getDocumentSettings(uri);
     if (!isDirectory(tmpDir)) {
         fs.mkdirSync(tmpDir);

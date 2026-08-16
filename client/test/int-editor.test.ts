@@ -51,6 +51,7 @@ const h = vi.hoisted(() => {
         languages: [] as string[],
         shownIn: [] as (number | undefined)[],
         errors: [] as string[],
+        info: [] as string[],
         editor: {
             provider: undefined as
                 | {
@@ -116,10 +117,12 @@ vi.mock("vscode", () => ({
             return Promise.resolve({});
         },
         showErrorMessage: (message: string) => h.errors.push(message),
+        showInformationMessage: (message: string) => h.info.push(message),
     },
 }));
 
-import { LISTING_MARKER, render, sourcePath, viewUri } from "../src/int-editor/document";
+import { INT_SCHEME, LISTING_MARKER, render, sourcePath, viewUri } from "../src/int-editor/document";
+import { routeCompile } from "../src/int-editor/compile-command";
 import { IntFileSystemProvider } from "../src/int-editor/filesystem";
 import { registerIntEditor } from "../src/int-editor/register";
 import { emitInt } from "../../compilers/ssl/src/int/emit";
@@ -285,6 +288,80 @@ describe("the compiled-script filesystem", () => {
         // Not a comparison against the original bytes: the point is that an unreadable previous file is
         // not an error, only the absence of an ordering to preserve.
         expect(render(file)).toContain("procedure start begin");
+    });
+});
+
+describe("compiling from the editor command", () => {
+    /** A document plus the record of whether it was saved, which is how the .int gets written. */
+    const fake = (scheme: string, { dirty = true, writes = true } = {}) => {
+        const saved: true[] = [];
+        const document = {
+            uri: new h.FakeUri(scheme, "/mods/a.int.ssl"),
+            isDirty: dirty,
+            save: () => {
+                saved.push(true);
+                return Promise.resolve(writes);
+            },
+        };
+        return { document, saved };
+    };
+    const run = async (document: unknown) => {
+        h.info.length = 0;
+        const sent: true[] = [];
+        await routeCompile(document as never, () => {
+            sent.push(true);
+            return Promise.resolve();
+        });
+        return sent;
+    };
+
+    // Each case asserts the path NOT taken as well: a router that did both would satisfy either
+    // assertion alone, and doing both means compiling the same text twice down two different paths.
+    it("compiles a decompiled script by saving it, which writes the .int in place", async () => {
+        const { document, saved } = fake(INT_SCHEME);
+
+        const sent = await run(document);
+
+        expect(saved).toEqual([true]);
+        expect(sent).toEqual([]);
+    });
+
+    it("says what it wrote, because a silent command is indistinguishable from a broken one", async () => {
+        const { document } = fake(INT_SCHEME);
+
+        await run(document);
+
+        expect(h.info).toEqual(["Compiled a.int"]);
+    });
+
+    // The command reports the state either way rather than quietly doing nothing, which is what an
+    // unedited document looked like before: the bytes on disk already match, and that is worth saying.
+    it("reports an unedited script as already current, and does not rewrite it", async () => {
+        const { document, saved } = fake(INT_SCHEME, { dirty: false });
+
+        await run(document);
+
+        expect(saved).toEqual([]);
+        expect(h.info).toEqual(["a.int is already up to date"]);
+    });
+
+    it("claims nothing when the save was refused, leaving the refusal as the only message", async () => {
+        const { document, saved } = fake(INT_SCHEME, { writes: false });
+
+        await run(document);
+
+        expect(saved).toEqual([true]);
+        expect(h.info).toEqual([]);
+    });
+
+    it("sends an ordinary source file to the language server", async () => {
+        const { document, saved } = fake("file");
+
+        const sent = await run(document);
+
+        expect(sent).toEqual([true]);
+        expect(saved).toEqual([]);
+        expect(h.info).toEqual([]);
     });
 });
 

@@ -107,6 +107,28 @@ describe("compile dispatcher", () => {
         mockWriteFile.mockResolvedValue(undefined);
     });
 
+    // A decompiled script is served on its own scheme so it can be edited as source, and the language
+    // client attaches to it for completion and hover. Compiling one has nowhere to put the output - the
+    // URI names no file - and the editor writes it back through its own save instead.
+    describe("documents that are not files on disk", () => {
+        it("does not compile them, whatever language they claim", async () => {
+            mockRegistryHas.mockReturnValue(true);
+            mockRegistryCompile.mockResolvedValue(true);
+
+            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+
+            expect(mockRegistryCompile).not.toHaveBeenCalled();
+        });
+
+        it("stays silent about it on the automatic path, which runs on every save and keystroke", async () => {
+            mockRegistryHas.mockReturnValue(true);
+
+            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+
+            expect(mockShowInfo).not.toHaveBeenCalled();
+        });
+    });
+
     describe("provider routing", () => {
         it("routes to registry provider when available and it handles it", async () => {
             mockRegistryHas.mockReturnValue(true);
