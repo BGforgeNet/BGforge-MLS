@@ -65,7 +65,15 @@ function parseArgs(argv: string[]) {
     return { mode, file, levels };
 }
 
-/** The same population the test suites sweep, narrowed by the same switches. */
+/**
+ * The Restoration Project alone, narrowed by the same switches the suites use.
+ *
+ * Deliberately NARROWER than the suites, which also sweep FO2tweaks and Party_Orders: those only
+ * preprocess once their dependencies' headers are linked into their trees, which the suites' `globalSetup`
+ * does and this cannot reach - it lives in a module that resolves paths through `__dirname`, and this is an
+ * ES module. Sweeping them from here would report all 28 as refused and bury a real change in the noise.
+ * What this answers - "did anything about my own front end move" - is served by the 1500 either way.
+ */
 function listScripts(): string[] {
     const scripts = narrow(scriptsUnder(RP_SCRIPTS));
     if (scripts.length === 0) {

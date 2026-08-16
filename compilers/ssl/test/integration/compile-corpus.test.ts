@@ -32,12 +32,12 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
 /**
  * How many oracles the run must obtain before its verdict means anything. This is a sanity floor on the
- * comparison's population, deliberately well below the ~1517 the reference builds today: it exists to catch a
+ * comparison's population, deliberately well below the ~1544 the reference builds today: it exists to catch a
  * collapsed corpus or a broken reference, not to track their success rate. The gate itself is `differing === 0`
  * - the property this back end controls - because an absolute count of matches falls when the reference has a
  * bad day and reads as our regression. Raise this only if the corpus itself grows.
  */
-const ORACLE_FLOOR = 1400;
+const ORACLE_FLOOR = 1425;
 
 function findCompiler(): string | null {
     try {

@@ -38,11 +38,14 @@ const WASM_DIR = path.join(REPO_ROOT, "server/out");
  * closes; never lower to absorb a regression. The shortfall is string-table ordering, described above -
  * the recovered code itself matches in every case the re-emit gate covers.
  *
- * It last moved DOWN by four, which a reprint regression would look identical to: the front end started
- * rejecting four of the declare-but-never-define scripts in `BROKEN_SCRIPTS`, so they left the population
- * rather than stopped reprinting. Only a shrinking `BROKEN_SCRIPTS` justifies lowering this.
+ * It moves with the POPULATION as well as with the code, so it is raised whenever the corpus grows -
+ * otherwise the slack left behind hides exactly as many regressions as the corpus gained. It last moved up
+ * by 26, from the other pinned mods joining. Before that it moved DOWN by four, which a reprint regression
+ * would look identical to: the front end started rejecting four of the declare-but-never-define scripts in
+ * `BROKEN_SCRIPTS`, so they left the population rather than stopped reprinting. Only a shrinking
+ * `BROKEN_SCRIPTS` justifies lowering this.
  */
-const REPRINT_FLOOR = 1263;
+const REPRINT_FLOOR = 1289;
 
 const scripts = listScripts();
 const ready = scripts.length > 0 && fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));

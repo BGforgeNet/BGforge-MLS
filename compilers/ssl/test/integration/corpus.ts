@@ -1,5 +1,6 @@
 /**
- * The Restoration Project script corpus, shared by the suites that sweep it.
+ * The script corpus the differential sweeps - the Restoration Project plus the other pinned mods - shared
+ * by the suites that read it.
  *
  * The size is pinned because the corpus is not stable while the test suite runs: `scripts/test-external.sh`
  * deletes every path in `external/fallout-exclude.txt` for the duration of its own run and restores them
@@ -15,11 +16,25 @@ import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { narrow, scriptsUnder } from "./corpus-files.ts";
+import { narrow, scriptsIn, scriptsUnder } from "./corpus-files.ts";
 
 export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 
-export const CORPUS_SIZE = 1525;
+const FALLOUT = path.join(REPO_ROOT, "external/fallout");
+
+/**
+ * The other pinned mods' scripts. Twenty-eight against RP's fifteen hundred, and worth more than that
+ * ratio suggests: a corpus of one mod is a corpus of one house style, and three defects found by first
+ * compiling these - a negated parameter default, a map keyed by a PID constant, an argument list split
+ * across lines - are ordinary code that no RP script happens to contain. Neither preprocesses until the
+ * headers they borrow from each other are linked into place, which `global-setup.ts` does.
+ *
+ * `source_test` under FO2tweaks is left out: the mod's own build compiles `source` alone, so those are
+ * scratch files rather than something it ships.
+ */
+const OTHER_SCRIPTS = [path.join(FALLOUT, "FO2tweaks/source"), path.join(FALLOUT, "Fallout2_Party_Orders/source")];
+
+export const CORPUS_SIZE = 1553;
 
 /**
  * Corpus scripts that do not compile, and what is wrong with each. Every one is a defect in the mod's own
@@ -51,6 +66,7 @@ export const BROKEN_SCRIPTS: readonly {
     { stem: "epa1", defect: "undefined-procedure", reason: "declares doRepostion, never defines it" },
     { stem: "epa2", defect: "undefined-procedure", reason: "declares doRepostion, never defines it" },
     { stem: "gl_k_modini", defect: "undefined-procedure", reason: "declares force_settings, never defines it" },
+    { stem: "gl_p_party_orders", defect: "undefined-procedure", reason: "declares loot_n_drop, never defines it" },
     { stem: "hcmale", defect: "undefined-procedure", reason: "declares Node002, never defines it" },
     { stem: "vcconnar", defect: "undefined-procedure", reason: "declares Node040, never defines it" },
     { stem: "waypnt", defect: "undefined-symbol", reason: "reads self_tile, which is not defined" },
@@ -129,5 +145,5 @@ export function runReference(compiler: string, cwd: string, stem: string, level:
 
 /** Every corpus script, sorted, narrowed by the debugging switches. */
 export function listScripts(): string[] {
-    return narrow(scriptsUnder(RP_SCRIPTS));
+    return narrow([...scriptsUnder(RP_SCRIPTS), ...OTHER_SCRIPTS.flatMap((dir) => scriptsIn(dir))]);
 }

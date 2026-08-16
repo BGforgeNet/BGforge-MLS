@@ -30,6 +30,16 @@ export function scriptsUnder(root: string): string[] {
     return out.sort();
 }
 
+/** Every `.ssl` directly in `dir`, sorted - the layout a mod that keeps its scripts in one folder uses. */
+export function scriptsIn(dir: string): string[] {
+    if (!fs.existsSync(dir)) return [];
+    return fs
+        .readdirSync(dir)
+        .filter((file) => file.toLowerCase().endsWith(".ssl"))
+        .map((file) => path.join(dir, file))
+        .sort();
+}
+
 /**
  * Narrows the sweep for DEBUGGING only - `SSL_CORPUS_ONLY=gcskeetr` for one script by stem,
  * `SSL_CORPUS_LIMIT=250` for the first N. The suites that spawn the reference compiler once per script

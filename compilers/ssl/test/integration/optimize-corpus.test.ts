@@ -27,7 +27,7 @@ import { BROKEN_WHEN_OPTIMISED, CORPUS_SIZE, ReferenceRefusedError, listScripts,
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
 /** Same sanity floor as the unoptimised differential, and the same reasoning behind it. */
-const ORACLE_FLOOR = 1400;
+const ORACLE_FLOOR = 1425;
 
 function findCompiler(): string | null {
     try {
