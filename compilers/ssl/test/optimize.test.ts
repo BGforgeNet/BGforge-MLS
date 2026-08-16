@@ -175,6 +175,43 @@ function foldedValue(expression: string): Expr {
 
 const int = (value: number): Extract<Expr, { kind: "int" }> => ({ kind: "int", value });
 
+/** The variables an expression reads, in the order it reads them. */
+function varsRead(expr: Expr): string[] {
+    switch (expr.kind) {
+        case "var":
+            return [expr.name];
+        case "unary":
+            return varsRead(expr.operand);
+        case "binary":
+            return [...varsRead(expr.left), ...varsRead(expr.right)];
+        default:
+            return [];
+    }
+}
+
+/** The surviving assignment to `target`, or a failure naming what was looked for. */
+function assignmentTo(body: Stmt[], target: string): Extract<Stmt, { kind: "assign" }> {
+    const found = body.find((statement) => statement.kind === "assign" && statement.target.name === target);
+    if (found?.kind !== "assign") throw new Error(`no assignment to ${target} survived optimisation`);
+    return found;
+}
+
+describe.skipIf(!wasmPresent)("level 2 copy propagation", () => {
+    /**
+     * Folding `a = c` into the statement after it must carry `c` across, not leave the sum reading the
+     * slot being written - which nothing has stored to yet. This is the one construct where matching the
+     * reference byte for byte at this level would mean reproducing a wrong answer, so the differential
+     * cannot pin it and this does; the README's differences table carries the reasoning.
+     */
+    it("folds a copy forward without losing the value copied", () => {
+        const body = bodyOf(
+            'procedure start begin\n variable a, b, c;\n a = c;\n a += b;\n display_msg(a + "");\nend\n',
+        );
+
+        expect(varsRead(assignmentTo(body, "a").value)).toEqual(["c", "b"]);
+    });
+});
+
 describe.skipIf(!wasmPresent)("level 2 constant folding", () => {
     it("folds the arithmetic operators bottom-up", () => {
         expect(foldedValue("2 + 3 * 4")).toEqual(int(14));
