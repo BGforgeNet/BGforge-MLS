@@ -8,3 +8,5 @@ export { formatDisassembly, decodeCode, type Instruction } from "./int/disasm";
 export { emitInt, EmitError, type EmitOptions } from "./int/emit";
 export { printProgram, type PrintOptions } from "./int/print";
 export { readInt, IntReadError, type IntFile, type IntProcedureEntry } from "./int/read";
+export { preserveStringOrder } from "./int/string-order";
+export { problemsOf, type CompilerProblem } from "./problems";

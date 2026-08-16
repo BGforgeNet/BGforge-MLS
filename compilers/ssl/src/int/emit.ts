@@ -511,6 +511,11 @@ class Emitter {
             case "opStmt":
                 for (const argument of statement.args) this.writeExpression(argument);
                 this.w.op(statement.opcode);
+                // One `cancelall` writes its opcode twice, which is what the reference emits and what the
+                // engine tolerates - the second call finds no events left. Doubling it here rather than
+                // in lowering keeps one IR statement per written statement, so the decompiler can hand
+                // the pair back as the single statement it came from.
+                if (statement.opcode === Op.CANCELALL) this.w.op(statement.opcode);
                 break;
         }
     }

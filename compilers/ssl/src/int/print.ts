@@ -58,6 +58,20 @@ function number(value: number): string {
     return Number.isInteger(value) ? `${value}.0` : `${value}`;
 }
 
+/**
+ * Integers print in whichever spelling reads back as the SAME constant.
+ *
+ * `-1` is not that spelling for a negative one: it parses as a negation applied to `1`, and a negation
+ * is folded only where an initial value is required to be constant - so in an expression it compiles to
+ * a push and a NEGATE where the constant was one push. The unsigned hex form folds everywhere, and it
+ * is also the more faithful rendering: a negative constant can only reach an expression from a literal
+ * that overflowed into the sign bit, which is how such a value is written in the first place.
+ */
+function integer(value: number): string {
+    // The operand is 32 bits wide, so adding 2^32 to a negative one is the value the file holds.
+    return value < 0 ? `0x${(value + 0x1_0000_0000).toString(16).toUpperCase()}` : `${value}`;
+}
+
 class Printer {
     private readonly procedures: ProcedureDecl[];
 
@@ -83,7 +97,7 @@ class Printer {
     expression(expr: Expr): string {
         switch (expr.kind) {
             case "int":
-                return `${expr.value}`;
+                return integer(expr.value);
             case "float":
                 return number(expr.value);
             case "string":
@@ -204,10 +218,20 @@ class Printer {
         ];
     }
 
+    /**
+     * A global's initial value is the one place a negation IS folded back into a constant, so it keeps
+     * the signed spelling that `integer` avoids everywhere else - `-1` rather than `0xFFFFFFFF`. Locals
+     * are not that place: an initial value there must be a bare literal, and a negated one leaves the
+     * slot at zero with an assignment where the declaration stood.
+     */
+    private initial(value: VariableDecl["initial"]): string {
+        return value.kind === "int" && value.value < 0 ? `${value.value}` : this.expression(value);
+    }
+
     variable(declaration: Declaration & { kind: "global" | "external" }): string {
         const variable = declaration.variable;
-        if (declaration.kind === "global") return `variable ${variable.name} := ${this.expression(variable.initial)};`;
-        if (variable.exported) return `export variable ${variable.name} := ${this.expression(variable.initial)};`;
+        if (declaration.kind === "global") return `variable ${variable.name} := ${this.initial(variable.initial)};`;
+        if (variable.exported) return `export variable ${variable.name} := ${this.initial(variable.initial)};`;
         return `import variable ${variable.name};`;
     }
 

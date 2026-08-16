@@ -32,9 +32,31 @@ const PUSH_SIZE = OPCODE_SIZE + 4;
 /** Together these close a branch or a loop: `push.int <target>` then `JMP`. */
 const JUMP_SIZE = PUSH_SIZE + OPCODE_SIZE;
 
+/**
+ * How many values each process-control opcode takes off the stack.
+ *
+ * Read from the interpreter's own handlers rather than inferred from what compiled scripts happen to
+ * contain: the six that name a script or a delay pop one value, and the rest pop none. A wrong entry
+ * would not fail here - it would silently absorb the preceding expression into the statement, or strand
+ * one that belonged to it, so each is listed rather than guessed at from a neighbour.
+ */
+const PROCESS_ARITY = new Map<number, number>([
+    [Op.CRITICAL_START, 0],
+    [Op.CRITICAL_DONE, 0],
+    [Op.CANCELALL, 0],
+    [Op.EXIT, 0],
+    [Op.DETACH, 0],
+    [Op.CALLSTART, 1],
+    [Op.SPAWN, 1],
+    [Op.FORK, 1],
+    [Op.EXEC, 1],
+    [Op.WAIT, 1],
+    [Op.CANCEL, 1],
+]);
+
 export class DecompileError extends Error {
-    constructor(message: string) {
-        super(message);
+    constructor(message: string, options?: ErrorOptions) {
+        super(message, options);
         this.name = "DecompileError";
     }
 }
@@ -418,10 +440,19 @@ class Decompiler {
 
         // Whatever is still pending once the body is parsed was never consumed, and an unconsumed push
         // in a procedure prologue is a local variable's slot.
-        declaration.locals = this.stack.map((value, index) => ({
-            name: localName(entry.argCount + index),
-            initial: asInitial(this.toExpr(value), `local ${index}`),
-        }));
+        try {
+            declaration.locals = this.stack.map((value, index) => ({
+                name: localName(entry.argCount + index),
+                initial: asInitial(this.toExpr(value), `local ${index}`),
+            }));
+        } catch (error) {
+            if (!(error instanceof DecompileError)) throw error;
+            // A non-constant slot usually means the body parse consumed one value too few rather than
+            // that the slot holds an expression, and what the OTHER pending values are is what tells
+            // the two apart. Gathered only now, once there is a failure to explain.
+            const pending = this.stack.map((value) => describe(this.toExpr(value))).join(", ");
+            throw new DecompileError(`${error.message}; ${this.stack.length} pending (${pending})`, { cause: error });
+        }
         this.stack = [];
         return declaration;
     }
@@ -567,9 +598,22 @@ class Decompiler {
             case Op.NOOP:
                 return null;
 
-            default:
+            default: {
+                const arity = PROCESS_ARITY.get(opcode);
+                if (arity !== undefined) return [this.processStatement(opcode, arity)];
                 return this.engineCall(instruction);
+            }
         }
+    }
+
+    /**
+     * A process-control opcode standing as a statement. One `cancelall` writes its opcode TWICE, so the
+     * second is consumed here and the pair comes back as the single statement it was written as.
+     */
+    private processStatement(opcode: number, arity: number): Stmt {
+        const args = arity === 0 ? [] : [this.popExpr(`argument of opcode 0x${opcode.toString(16)}`)];
+        if (opcode === Op.CANCELALL && this.code[this.at]?.opcode === Op.CANCELALL) this.at++;
+        return { kind: "opStmt", opcode, args };
     }
 
     private fetch(scope: "local" | "global" | "external", context: Context): null {

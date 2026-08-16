@@ -20,7 +20,7 @@ import {
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerImageEditor } from "./image-editor/register";
-import { registerIntViewer } from "./int-viewer/register";
+import { registerIntEditor } from "./int-editor/register";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
 
@@ -69,7 +69,7 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context),
-        registerIntViewer(),
+        registerIntEditor(context),
     );
 
     // If the extension is launched in debug mode then the debug server options are used

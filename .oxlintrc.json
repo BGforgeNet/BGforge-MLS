@@ -278,9 +278,9 @@
             }
         },
         {
-            // The IE resource viewer follows the same VS Code editor idioms: `_onDidX` EventEmitters, and
+            // The filesystem providers follow the same VS Code editor idioms: `_onDidX` EventEmitters, and
             // `vscode.FileSystemError.FileNotFound(...)` factory calls (uppercase names called without `new`).
-            "files": ["client/src/ie-resources/**/*.ts"],
+            "files": ["client/src/ie-resources/**/*.ts", "client/src/int-editor/**/*.ts"],
             "rules": {
                 "no-underscore-dangle": "off",
                 "new-cap": "off"

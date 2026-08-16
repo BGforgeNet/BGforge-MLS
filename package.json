@@ -431,27 +431,9 @@
                 "command": "bgforge.ieResources.closeGame",
                 "title": "BGforge: Close IE Game",
                 "icon": "$(close)"
-            },
-            {
-                "command": "bgforge.decompileInt",
-                "title": "BGforge: Decompile Fallout Script",
-                "icon": "$(file-code)"
             }
         ],
         "menus": {
-            "explorer/context": [
-                {
-                    "command": "bgforge.decompileInt",
-                    "when": "resourceExtname == .int",
-                    "group": "navigation"
-                }
-            ],
-            "commandPalette": [
-                {
-                    "command": "bgforge.decompileInt",
-                    "when": "resourceExtname == .int"
-                }
-            ],
             "view/title": [
                 {
                     "command": "bgforge.ieResources.openGame",
@@ -495,6 +477,16 @@
             }
         ],
         "customEditors": [
+            {
+                "viewType": "bgforge.intEditor",
+                "displayName": "Fallout Script (decompiled)",
+                "selector": [
+                    {
+                        "filenamePattern": "*.int"
+                    }
+                ],
+                "priority": "default"
+            },
             {
                 "viewType": "bgforge.binaryEditor",
                 "displayName": "BGforge Binary Editor",
@@ -803,7 +795,9 @@
     "activationEvents": [
         "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
+        "onCustomEditor:bgforge.intEditor",
         "onFileSystem:bgforge-ie-resource",
+        "onFileSystem:bgforge-int",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",

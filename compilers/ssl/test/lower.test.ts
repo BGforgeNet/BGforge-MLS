@@ -298,6 +298,18 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n variable x;\n x := nope;\nend\n")).toThrow(/unknown identifier 'nope'/);
     });
 
+    it("refuses an engine call with the wrong number of arguments, in either direction", () => {
+        // The opcode pops a fixed count whatever was pushed, so a miscounted call unbalances the stack
+        // for everything after it - the compiled script is unreadable, not merely wrong at that line.
+        expect(refuse("procedure start begin\n display_msg();\nend\n")).toThrow(
+            /^2:2: 'display_msg' takes 1 argument, not 0$/,
+        );
+        expect(refuse('procedure start begin\n display_msg("a", "b");\nend\n')).toThrow(
+            /'display_msg' takes 1 argument, not 2/,
+        );
+        expect(refuse('procedure start begin\n display_msg("a");\nend\n')).not.toThrow();
+    });
+
     it("names an unknown call target", () => {
         expect(refuse("procedure start begin\n call nope;\nend\n")).toThrow(/unknown procedure 'nope'/);
     });

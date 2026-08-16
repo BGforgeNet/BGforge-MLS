@@ -4,14 +4,19 @@
 
 ### Fallout SSL
 
-- Compiled `.int` scripts can be read. "BGforge: Decompile Fallout Script", on the explorer's context menu
-  for a `.int`, opens it as SSL source with the usual highlighting, outline and search. Local and argument
-  names are not stored in a compiled script, so those are generated; scripts built with optimisation enabled
-  may show an instruction listing instead.
+- Compiled `.int` scripts open as editable SSL. Opening one from the explorer shows its decompiled source
+  with the usual highlighting, outline and search - no command to run - and saving compiles it back over
+  the `.int` in place. Saving a script you have not edited reproduces it byte for byte. Local and argument
+  names are not stored in a compiled script, so those are generated, and constants, macros and comments
+  were resolved away before it was compiled. A script that cannot be structured back into source opens as
+  a commented instruction listing instead, and that cannot be saved.
 - A second compiler is available through `bgforge.falloutSSL.compiler`. Setting it to `built-in` compiles
   the text in the editor - including edits not yet saved - without starting a process or writing a
   temporary file beside the script. A script it cannot parse is reported as a syntax error at the line it
-  gave up on, and no `.int` is written.
+  gave up on, and no `.int` is written. An engine function called with the wrong number of arguments is
+  refused for the same reason the other compiler refuses it: the opcode takes a fixed number of values off
+  the stack whatever the call pushed, so a miscounted call leaves everything after it reading the wrong
+  values.
 - The `built-in` compiler reads `bgforge.falloutSSL.compileOptions` and optimises. `-O1` drops procedures
   and variables nothing references; `-O2` additionally folds constants, removes unreachable code and dead
   stores, and reclaims unused slots, producing the same bytes as the WebAssembly compiler at both levels. `-s`
@@ -29,6 +34,9 @@
   the second declaration and its initial value are ignored; and a script with no `start` procedure, which
   the engine has no way into. They are controlled by `-n` in `bgforge.falloutSSL.compileOptions`, which
   that setting's default includes - so removing it from there is what turns them on.
+- `set_shader_mode` is documented with the shader it applies to: `set_shader_mode(int ID, int mode)`.
+  Hover and completion previously showed it taking the mode alone, which is one argument short of what
+  the engine reads.
 - Formatting a `foreach` loop no longer drops its `while` guard. The guard is part of the loop's bounds
   test, so losing it changed how many times the loop ran.
 - Keywords are read in any casing, as the language itself reads them: `PROCEDURE`, `Procedure` and

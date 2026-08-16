@@ -406,9 +406,9 @@ sfall_functions:
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
     - name: set_shader_mode
-      detail: void set_shader_mode(int mode)
+      detail: void set_shader_mode(int ID, int mode)
       doc: |-
-        Tells sfall when to use a shader. The parameter is a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.
+        Tells sfall when to use a shader. `mode` is a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
     - name: set_shader_texture
       detail: void set_shader_texture(int ID, string param, int texID)

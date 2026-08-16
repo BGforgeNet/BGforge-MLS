@@ -653,6 +653,37 @@ describe("decompiling", () => {
     });
 });
 
+describe("process-control statements", () => {
+    // These are CORE opcodes rather than engine functions, so nothing in the engine table describes
+    // them and the count each takes off the stack is the decompiler's own knowledge. A wrong one does
+    // not fail - it absorbs the preceding expression or strands one - so each is round-tripped.
+    it("recovers the ones that take nothing", () => {
+        for (const opcode of [Op.EXIT, Op.DETACH, Op.CRITICAL_START, Op.CRITICAL_DONE]) {
+            roundTrips(program([{ kind: "opStmt", opcode, args: [] }]));
+        }
+    });
+
+    it("recovers the ones that take a value", () => {
+        for (const opcode of [Op.SPAWN, Op.CALLSTART, Op.EXEC, Op.FORK]) {
+            roundTrips(program([{ kind: "opStmt", opcode, args: [{ kind: "string", value: "other" }] }]));
+        }
+        for (const opcode of [Op.WAIT, Op.CANCEL]) {
+            roundTrips(program([{ kind: "opStmt", opcode, args: [{ kind: "int", value: 5 }] }]));
+        }
+    });
+
+    it("reads the two opcodes one cancelall writes back as the one statement they were", () => {
+        const input = program([{ kind: "opStmt", opcode: Op.CANCELALL, args: [] }]);
+        const bytes = emitInt(input);
+        const recovered = decompileToProgram(bytes);
+
+        // The pair is what the engine is given, and one statement is what the source said.
+        const body = recovered.declarations.find((one) => one.kind === "procedure")?.procedure.body;
+        expect(body).toEqual([{ kind: "opStmt", opcode: Op.CANCELALL, args: [] }]);
+        expect(emitInt(recovered)).toEqual(bytes);
+    });
+});
+
 describe("refusals", () => {
     it("rejects a file whose entry point does not follow the string space", () => {
         const bytes = emitInt(program([]));
@@ -685,6 +716,27 @@ describe("refusals", () => {
         }
         expect(blanked).toBe(true);
         expect(() => decompileToProgram(bytes)).toThrow(/values on the stack: local 'var_1'/);
+    });
+
+    it("names every pending value when a local's initial one is not constant", () => {
+        // A call that pushes MORE than its opcode pops leaves the surplus behind, and the decompiler
+        // reads whatever is still pending at the end of a procedure as its local slots. The report has
+        // to name all of them: one slot holding an expression says nothing about where the count went
+        // wrong, and the others are what distinguish a bad slot from a body parse that stopped short.
+        const bytes = emitInt(
+            program([
+                {
+                    kind: "libStmt",
+                    opcode: EngineOp.DISPLAY_MSG,
+                    args: [
+                        { kind: "var", scope: "global", index: 0, name: "mood" },
+                        { kind: "string", value: "spoken" },
+                    ],
+                },
+            ]),
+        );
+        // The name is the slot's, not the one written above: an undeclared global has none in the file.
+        expect(() => decompileToProgram(bytes)).toThrow(/not a constant: global 'global_0'; 1 pending \(global/);
     });
 
     it("refuses a duplicate that guards neither a call nor a short-circuit", () => {

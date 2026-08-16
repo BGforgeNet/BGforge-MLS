@@ -13,7 +13,7 @@
  */
 
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
-import { engineFunction } from "./int/engine-functions";
+import { engineFunction, type EngineFunction } from "./int/engine-functions";
 import { Op } from "./int/opcodes";
 import type {
     AssignOp,
@@ -1156,6 +1156,7 @@ class Lowering {
                 const engine = engineFunction(callee.text.toLowerCase(), this.game);
                 if (engine) {
                     const args = this.argumentsOf(node, scope, engine.procArgs);
+                    this.checkEngineArity(callee.text, engine, args, node);
                     const statement: Stmt = { kind: "libStmt", opcode: engine.opcode, args };
                     return engine.popsResult ? { ...statement, popsResult: true } : statement;
                 }
@@ -1291,21 +1292,8 @@ class Lowering {
         const opcode = PROCESS_OPCODES[op];
         if (opcode === undefined) throw new LowerError(`unsupported process statement '${op}'`, node);
         const argument = node.childForFieldName("arg");
-        if (!argument) {
-            // `cancelall` emits its opcode TWICE in the reference - the statement's own token is written
-            // by the generic path and again by the case that handles it. Running it twice is harmless
-            // (the second call finds no events left), and matching it keeps the output byte-identical.
-            if (op === "cancelall") {
-                return {
-                    kind: "block",
-                    body: [
-                        { kind: "opStmt", opcode, args: [] },
-                        { kind: "opStmt", opcode, args: [] },
-                    ],
-                };
-            }
-            return { kind: "opStmt", opcode, args: [] };
-        }
+        // `cancelall` writes its opcode twice; the emitter owns that, so one statement stays one node.
+        if (!argument) return { kind: "opStmt", opcode, args: [] };
         // `cancel` names a procedure; everything else takes a value.
         if (op === "cancel") {
             const index = this.procedures.get(argument.text.toLowerCase());
@@ -1450,7 +1438,9 @@ class Lowering {
                 if (func?.type === "identifier") {
                     const engine = engineFunction(func.text.toLowerCase(), this.game);
                     if (engine) {
-                        return libCall(engine.opcode, this.argumentsOf(node, scope, engine.procArgs));
+                        const args = this.argumentsOf(node, scope, engine.procArgs);
+                        this.checkEngineArity(func.text, engine, args, node);
+                        return libCall(engine.opcode, args);
                     }
                 }
                 const { callee, args, checkArgCount } = this.callParts(node, scope);
@@ -1527,6 +1517,22 @@ class Lowering {
         } finally {
             this.arrayNesting--;
         }
+    }
+
+    /**
+     * An engine function takes exactly the arguments its signature declares. The reference reads that
+     * count while parsing the call and refuses any other number, so accepting one would emit a script
+     * it will not build - and one the engine mis-runs, because the opcode pops a fixed number of values
+     * whatever was pushed, so a short call takes whatever was underneath it and the stack never
+     * rebalances. A compiled script written from such a source cannot even be read back.
+     *
+     * The few functions with no recorded count are not checked: the signature data does not describe
+     * them, and refusing a call over a count that was never established is the same mistake inverted.
+     */
+    private checkEngineArity(name: string, engine: EngineFunction, args: Expr[], node: SyntaxNode): void {
+        if (engine.args === undefined || args.length === engine.args) return;
+        const expected = `${engine.args} argument${engine.args === 1 ? "" : "s"}`;
+        this.report(`'${name}' takes ${expected}, not ${args.length}`, node);
     }
 
     private engineCall(node: SyntaxNode, name: string, args: Expr[]): Expr {

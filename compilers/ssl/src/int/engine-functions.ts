@@ -511,7 +511,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     set_sfall_return: { opcode: EngineOp.TS_SET_SFALL_RETURN, args: 1 },
     set_shader_float: { opcode: EngineOp.TS_SET_SHADER_FLOAT, args: 3 },
     set_shader_int: { opcode: EngineOp.TS_SET_SHADER_INT, args: 3 },
-    set_shader_mode: { opcode: EngineOp.TS_SET_SHADER_MODE, args: 1 },
+    set_shader_mode: { opcode: EngineOp.TS_SET_SHADER_MODE, args: 2 },
     set_shader_texture: { opcode: EngineOp.TS_SET_SHADER_TEXTURE, args: 3 },
     set_shader_vector: { opcode: EngineOp.TS_SET_SHADER_VECTOR, args: 6 },
     set_skill_max: { opcode: EngineOp.TS_SET_SKILL_MAX, args: 1 },

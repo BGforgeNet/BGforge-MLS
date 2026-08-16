@@ -79,4 +79,8 @@ import { compileFile, preprocess, readInt } from "@bgforge/ssl";
 `compileFile` and `compileText` take a `web-tree-sitter` parser the caller owns, because loading the
 grammar is asynchronous and every caller already has one. `buildProgram` and `emitProgram` are the same
 pipeline split at the point where the optimized program exists, for callers that want to inspect it.
-`readInt`, `formatDisassembly` and `decompileToProgram` read compiled files back.
+`readInt`, `formatDisassembly` and `decompileToProgram` read compiled files back, and `printProgram`
+renders a recovered program as source. To compile that source back over the file it came from, pass the
+original program's `stringLiterals` through `preserveStringOrder` into the rebuilt one before emitting:
+a string's table position follows the order the source mentions it, so without that the bytes shift
+even where the text did not change.
