@@ -104,6 +104,29 @@ describe("decompiling", () => {
         roundTrips(program([{ kind: "assign", target: local(0), op: "=", value: { kind: "int", value: 3 } }]));
     });
 
+    /**
+     * An engine function whose result is assigned has to be recorded as returning one, or the decompiler
+     * reads the call as a statement and the value it pushed is never accounted for. Nothing catches that
+     * on the way in - the compiler takes the source's word for where a call may appear - so the entry can
+     * be wrong for years and only a decompile notices, as a stack depth that has gone negative.
+     */
+    it("recovers an engine call whose result is assigned", () => {
+        roundTrips(
+            program([
+                {
+                    kind: "assign",
+                    target: local(0),
+                    op: "=",
+                    value: {
+                        kind: "libCall",
+                        opcode: LibOp.TOKENIZE,
+                        args: [local(1), { kind: "int", value: 0 }, { kind: "int", value: 37 }],
+                    },
+                },
+            ]),
+        );
+    });
+
     it("recovers arithmetic and comparison", () => {
         for (const op of ["+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">="] as const) {
             roundTrips(

@@ -594,7 +594,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     tile_num_in_direction: { opcode: EngineOp.TILE_NUM_IN_DIRECTION, args: 3, returns: true },
     tile_under_cursor: { opcode: EngineOp.TS_TILE_UNDER_CURSOR, args: 0, returns: true },
     toggle_active_hand: { opcode: EngineOp.TS_TOGGLE_ACTIVE_HAND, args: 0 },
-    tokenize: { opcode: LibOp.TOKENIZE, args: 3 },
+    tokenize: { opcode: LibOp.TOKENIZE, args: 3, returns: true },
     typeof: { opcode: EngineOp.TS_TYPEOF, args: 1, returns: true },
     use_obj: { opcode: EngineOp.USE_OBJ, args: 1 },
     use_obj_on_obj: { opcode: EngineOp.USE_OBJ_ON_OBJ, args: 2, returns: true },
