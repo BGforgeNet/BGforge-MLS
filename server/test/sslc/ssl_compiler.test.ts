@@ -68,30 +68,26 @@ describe("ssl_compile", () => {
         interactive: false,
     };
 
+    // A dotted directory used to be refused here rather than compiled, because the compiler package's own
+    // command-line wrapper chdirs somewhere that does not exist for one. The extension now forks its own
+    // wrapper instead, so there is nothing to refuse - that the compile really does work in such a
+    // directory is asserted against a real compile in dotted-directory.test.ts, which a mocked fork
+    // cannot show.
     describe("directory whose name contains a dot", () => {
-        it("refuses with an actionable message instead of the wrapper's bare ErrnoError", async () => {
+        it("is forked like any other", async () => {
             const proc = createMockProcess();
             mockFork.mockReturnValue(proc);
 
-            const result = await ssl_compile({ ...baseOpts, cwd: "/tmp/mymod.v2" });
-
-            // Never spawned: the wrapper would chdir to /tmp/mymod and die naming neither cause nor path.
-            expect(mockFork).not.toHaveBeenCalled();
-            expect(result.returnCode).toBe(1);
-            expect(result.stderr).toContain("mymod.v2");
-            expect(result.stderr).toContain("built-in");
-        });
-
-        it("compiles normally when the directory has no dot", async () => {
-            const proc = createMockProcess();
-            mockFork.mockReturnValue(proc);
-
-            const promise = ssl_compile({ ...baseOpts, cwd: "/tmp/mymod" });
+            const promise = ssl_compile({ ...baseOpts, cwd: "/tmp/mymod.v2" });
             proc.emit("close", 0);
 
             const result = await promise;
             expect(result.returnCode).toBe(0);
-            expect(mockFork).toHaveBeenCalled();
+            expect(mockFork).toHaveBeenCalledWith(
+                expect.stringContaining("sslc-wrapper.mjs"),
+                expect.anything(),
+                expect.objectContaining({ cwd: "/tmp/mymod.v2" }),
+            );
         });
     });
 

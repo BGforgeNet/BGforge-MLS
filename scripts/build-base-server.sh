@@ -26,6 +26,11 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
     "$imu_define" \
     "$@"
 
+# The WebAssembly compiler's wrapper. Copied rather than bundled: it is forked as a file, and the module
+# it loads is resolved from server/node_modules at run time. It must sit beside server.js, which is where
+# ssl_compiler.ts looks for it - the same relative path that finds it next to the source.
+cp server/src/sslc/sslc-wrapper.mjs server/out/
+
 # Copy tree-sitter WASM files
 copy_wasm_to server/out
 

@@ -52,11 +52,14 @@ const config: KnipConfig = {
             // flips the file to an unused-files error.
             // compile-worker.ts is a second bundle entry, started by path from
             // compile-worker-client.ts rather than imported, so nothing references it in source.
+            // sslc-wrapper.mjs is the same shape one step further out: the build copies it beside the
+            // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
             entry: [
                 "vitest.mutation.config.ts",
                 "test/**/*.test.ts",
                 "scripts/lsp-probe.mts",
                 "src/fallout-ssl/compile-worker.ts",
+                "src/sslc/sslc-wrapper.mjs",
             ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [

@@ -9,10 +9,24 @@ import { conlog } from "../logger";
 import { showWarning } from "../user-messages";
 import { fork } from "child_process";
 
-const COMPILER_MODULE = path.join(__dirname, "../node_modules/sslc-emscripten-noderawfs/compiler.mjs");
+/**
+ * Our own wrapper rather than the package's - see sslc-wrapper.mjs for what its one differs in. The build
+ * copies it beside the server bundle, so this relative path holds both there and here in the source tree.
+ */
+const COMPILER_MODULE = path.join(__dirname, "sslc-wrapper.mjs");
+
+/**
+ * Where the compiler package is installed, as seen from the bundle (`server/out`) and from this file in
+ * the source tree. Both are checked because tests import this module from source while the shipped server
+ * is one flat bundle, and the answer decides whether the compiler can run at all.
+ */
+const PACKAGE_DIRS = [
+    path.join(__dirname, "../node_modules/sslc-emscripten-noderawfs"),
+    path.join(__dirname, "../../node_modules/sslc-emscripten-noderawfs"),
+];
 
 export function isSslcAvailable(): boolean {
-    return fs.existsSync(COMPILER_MODULE);
+    return fs.existsSync(COMPILER_MODULE) && PACKAGE_DIRS.some((dir) => fs.existsSync(dir));
 }
 
 export async function ssl_compile(opts: {
@@ -38,26 +52,6 @@ export async function ssl_compile(opts: {
             stdout: "",
             stderr: msg,
         };
-    }
-
-    // The WebAssembly compiler's wrapper derives its working directory as `path.join(parse(cwd).dir,
-    // parse(cwd).name)`, which drops whatever follows the last dot of the final segment as an "extension" -
-    // so it chdirs into a path that does not exist and dies with a bare `ErrnoError undefined undefined`,
-    // naming neither the cause nor the directory. Detected by reproducing that computation rather than by
-    // looking for a dot, so this stays true if the wrapper's own rule changes.
-    //
-    // Reported instead of worked around: the cwd cannot move, because the compiler resolves `#include`
-    // against it and rejects an absolute input path outright.
-    // TODO: drop this whole guard once the built-in back end replaces this one - it runs
-    // in-process and has no chdir, so the defect cannot reach it.
-    const wrapperCwd = path.parse(opts.cwd);
-    if (path.resolve(path.join(wrapperCwd.dir, wrapperCwd.name)) !== path.resolve(opts.cwd)) {
-        const msg =
-            `The WebAssembly compiler cannot build scripts in a directory whose name contains a dot ` +
-            `("${path.basename(opts.cwd)}"). Rename the directory, or set bgforge.falloutSSL.compiler ` +
-            `to "built-in", which has no such limit.`;
-        conlog(msg);
-        return { returnCode: 1, stdout: "", stderr: msg };
     }
 
     let cmdArgs = opts.options
