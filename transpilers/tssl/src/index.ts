@@ -29,6 +29,7 @@ import { exportSSL } from "./emit";
 import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
 import { transformEnums } from "../../common/enum-transform";
 import { TranspileError } from "../../common/transpile-error";
+import type { SourcePosition } from "../../common/line-map";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 
 /** Marker to identify start of user code in esbuild output */
@@ -52,7 +53,13 @@ export function createBatchState(): TranspileBatchState {
     };
 }
 
-const tssl = createTranspiler<string, TranspileBatchState | undefined>({
+/** Generated SSL, plus where each of its lines came from in the files the author wrote. */
+export interface TSSLResult {
+    output: string;
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
+}
+
+const tssl = createTranspiler<TSSLResult, TranspileBatchState | undefined>({
     sourceExtension: EXT_TSSL,
     targetExtension: ".ssl",
     name: "TSSL",
@@ -129,18 +136,26 @@ const tssl = createTranspiler<string, TranspileBatchState | undefined>({
             );
             conlog(`Found ${ctx.inlineFunctions.size} inline functions`);
 
-            return exportSSL(sourceFile, path.parse(filePath).base, mainFileData, ctx, traTag);
+            const emitted = exportSSL(sourceFile, path.parse(filePath).base, mainFileData, ctx, traTag);
+            // The emitter reports bundled lines; the bundler says which file and line each of those was.
+            // Composing them is what turns a position in the generated file into one the author can open.
+            return {
+                output: emitted.text,
+                sourceMap: emitted.origins.map((line) => (line === undefined ? undefined : bundleResult.origins[line])),
+            };
         } catch (error) {
             throw TranspileError.remap(error, bundleResult.origins);
         }
     },
 
-    getOutput: (result) => result,
+    getOutput: (result) => result.output,
 });
 
 export interface TSSLCompileResult {
     sslPath: string;
     events: readonly TranspilerEvent[];
+    /** For each line of the generated SSL, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
 /**
@@ -150,17 +165,19 @@ export interface TSSLCompileResult {
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
     // No batch state on the LSP compile path - TSSL CLI directory mode is the only batch consumer.
     // eslint-disable-next-line unicorn/no-useless-undefined -- the third arg is a non-optional rest tuple element typed `TranspileBatchState | undefined`; omitting fails the typecheck
-    const { outPath, events } = await tssl.compile(uri, text, undefined);
-    return { sslPath: outPath, events };
+    const { outPath, events, result } = await tssl.compile(uri, text, undefined);
+    return { sslPath: outPath, events, sourceMap: result.sourceMap };
 }
 
 /**
  * Transpile TSSL to SSL, returning the output string without writing to disk.
- * Used by the CLI where the caller controls file I/O.
+ * Used by the CLI where the caller controls file I/O. The source map is not returned here: the CLI writes
+ * a file and reports the compiler's own output, with no editor to place a diagnostic in.
  * @param batch Optional shared state for batch processing (pass createBatchState() result)
  */
 export async function transpile(filePath: string, text: string, batch?: TranspileBatchState): Promise<string> {
-    return tssl.transpile(filePath, text, batch);
+    const result = await tssl.transpile(filePath, text, batch);
+    return result.output;
 }
 
 /**

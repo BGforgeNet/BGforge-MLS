@@ -18,7 +18,8 @@ describe("TBAF Transpiler", () => {
         const sourceFile = project.createSourceFile("test.tbaf", code);
         const ir = transformer.transform(sourceFile);
         applyBAFFixups(ir);
-        return emitBAF(ir);
+        // These assert the emitted text; the per-line provenance alongside it has its own suite.
+        return emitBAF(ir).text;
     }
 
     /** Transpile with enum pre-transform (simulates what bundle() does) */

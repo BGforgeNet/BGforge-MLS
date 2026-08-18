@@ -7,6 +7,8 @@
 // Direct `export ... from` form so the bundler doesn't flag an unused local import.
 export { SyntaxKind } from "ts-morph";
 
+import type { TrackedChunk } from "../../common/tracked-text";
+
 /** Inline function metadata: maps function name to its expansion */
 export interface InlineFunc {
     targetFunc: string; // Function being called, e.g., "sfall_func2" or "reg_anim_func"
@@ -65,12 +67,19 @@ export interface MainFileData {
     includes: string[];
 }
 
+/**
+ * One source file's contributions, kept apart so bundled and main code can be emitted in separate blocks.
+ *
+ * Each entry carries the bundled line the statement behind it started on, because the emitter regroups
+ * them into buckets and the output order is not the input order - after that, nothing can recover which
+ * statement produced which line.
+ */
 export interface SourceSection {
     source: string;
-    defines: string[];
-    variables: string[];
-    declarations: string[];
-    procedures: string[];
+    defines: TrackedChunk[];
+    variables: TrackedChunk[];
+    declarations: TrackedChunk[];
+    procedures: TrackedChunk[];
 }
 
 // Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean

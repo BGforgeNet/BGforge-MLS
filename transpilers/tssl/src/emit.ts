@@ -15,6 +15,7 @@ import {
 import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
 import { findUsedInlineFunctions, generateInlineMacros } from "./inline-functions";
 import { makeGeneratedHeader } from "../../common/transpiler-utils";
+import { TrackedText, joinTracked, type TrackedChunk, type EmittedText } from "../../common/tracked-text";
 
 /**
  * Export typescript code as SSL string.
@@ -31,19 +32,20 @@ export function exportSSL(
     mainFileData: MainFileData,
     ctx: TsslContext,
     traTag?: string,
-): string {
+): EmittedText {
     conlog(`Starting conversion of: ${sourceName}`);
 
     const header = makeGeneratedHeader(sourceName, traTag);
     const { sections } = processInput(sourceFile, mainFileData, ctx);
-    let output = header;
+    const out = new TrackedText();
+    out.add(header);
 
     // Includes first to avoid redefinition warnings
     if (mainFileData.includes.length > 0) {
         for (const inc of mainFileData.includes) {
-            output += `#include "${inc}"\n`;
+            out.add(`#include "${inc}"\n`);
         }
-        output += "\n";
+        out.add("\n");
     }
 
     // Separate bundled vs main sections
@@ -53,12 +55,12 @@ export function exportSSL(
     const bundledSections = sections.filter((s) => !s.source.includes(mainFileMarker));
 
     // Collect all defines, declarations, variables, procedures
-    const allDefines: string[] = [];
-    const allDeclarations: string[] = [];
-    const bundledVariables: string[] = [];
-    const bundledProcedures: string[] = [];
-    const mainVariables: string[] = [];
-    const mainProcedures: string[] = [];
+    const allDefines: TrackedChunk[] = [];
+    const allDeclarations: TrackedChunk[] = [];
+    const bundledVariables: TrackedChunk[] = [];
+    const bundledProcedures: TrackedChunk[] = [];
+    const mainVariables: TrackedChunk[] = [];
+    const mainProcedures: TrackedChunk[] = [];
 
     for (const s of bundledSections) {
         allDefines.push(...s.defines);
@@ -76,42 +78,55 @@ export function exportSSL(
     // Add inline function macros to defines (only for functions actually used)
     const usedInlineFuncs = findUsedInlineFunctions(sourceFile, ctx.inlineFunctions);
     const inlineMacros = generateInlineMacros(ctx.inlineFunctions, usedInlineFuncs, ctx.enumNames);
-    allDefines.push(...inlineMacros);
+    // Macros are synthesised from a function's whole body rather than emitted from one statement, so
+    // there is no single line to name; they get none rather than the nearest plausible one.
+    allDefines.push(...inlineMacros.map((text) => ({ text })));
 
     // Output main file constants, tree-shaking unused enum members.
     // Enum-generated constants (EnumName_Member) are only emitted if referenced
     // in the bundled code or inline macros. Non-enum constants pass through unconditionally.
     if (mainFileData.constants.size > 0) {
-        const referencedIds = collectReferencedIdentifiers(sourceFile, allDefines);
+        const referencedIds = collectReferencedIdentifiers(
+            sourceFile,
+            allDefines.map((d) => d.text),
+        );
         for (const [name, value] of mainFileData.constants) {
             if (isEnumConstant(name, ctx.enumNames) && !referencedIds.has(name)) {
                 continue;
             }
-            output += `#define ${name} ${value}\n`;
+            // These come from the main file's own constant table rather than a statement in the bundle,
+            // so no bundled line applies to them.
+            out.add(`#define ${name} ${value}\n`);
         }
-        output += "\n";
+        out.add("\n");
+    }
+
+    /** Emit a bucket's chunks one per line, keeping each one's origin. */
+    function addBucket(chunks: TrackedChunk[], trailer: string): void {
+        if (chunks.length === 0) return;
+        out.addAll(joinTracked(chunks, "\n"));
+        out.add(trailer);
     }
 
     // Output in order: defines, declarations, bundled code, main code
-    if (allDefines.length > 0) output += allDefines.join("\n") + "\n\n";
-    if (allDeclarations.length > 0) output += allDeclarations.join("\n") + "\n";
+    addBucket(allDefines, "\n\n");
+    addBucket(allDeclarations, "\n");
     if (bundledVariables.length > 0 || bundledProcedures.length > 0) {
-        output += "\n/* ===== bundled ===== */\n";
-        if (bundledVariables.length > 0) output += bundledVariables.join("\n") + "\n";
-        if (bundledProcedures.length > 0) output += bundledProcedures.join("\n") + "\n";
-        output += "/* ===== end bundled ===== */\n";
+        out.add("\n/* ===== bundled ===== */\n");
+        addBucket(bundledVariables, "\n");
+        addBucket(bundledProcedures, "\n");
+        out.add("/* ===== end bundled ===== */\n");
     }
     if (mainVariables.length > 0 || mainProcedures.length > 0) {
-        output += "\n/* ===== main body ===== */\n";
-        if (mainVariables.length > 0) output += mainVariables.join("\n") + "\n";
-        if (mainProcedures.length > 0) output += mainProcedures.join("\n") + "\n";
-        output += "/* ===== end main body ===== */\n";
+        out.add("\n/* ===== main body ===== */\n");
+        addBucket(mainVariables, "\n");
+        addBucket(mainProcedures, "\n");
+        out.add("/* ===== end main body ===== */\n");
     }
 
-    // Replace sfall_typeof with typeof (TS keyword conflict workaround)
-    output = output.replaceAll(/\bsfall_typeof\b/g, "typeof");
-
-    return output;
+    // Replace sfall_typeof with typeof (TS keyword conflict workaround). A same-line substitution, so it
+    // cannot move a line and the origins collected above still line up.
+    return { text: out.text.replaceAll(/\bsfall_typeof\b/g, "typeof"), origins: out.origins };
 }
 
 /**
@@ -121,6 +136,11 @@ export function exportSSL(
  * @param ctx Transpilation context
  * @returns sections grouped by source file
  */
+/** ts-morph counts lines from 1; everything downstream of the bundler counts from 0. */
+function originOf(stmt: { getStartLineNumber(): number }): number {
+    return stmt.getStartLineNumber() - 1;
+}
+
 function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslContext): { sections: SourceSection[] } {
     const sections: SourceSection[] = [];
     let currentSection: SourceSection | null = null;
@@ -190,9 +210,12 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
                     keywordKind === SyntaxKind.ConstKeyword ||
                     (keywordKind === SyntaxKind.VarKeyword && !isMainFileLetVar)
                 ) {
-                    section.defines.push(`#define ${name} ${initText}`);
+                    section.defines.push({ text: `#define ${name} ${initText}`, line: originOf(stmt) });
                 } else if (keywordKind === SyntaxKind.LetKeyword || keywordKind === SyntaxKind.VarKeyword) {
-                    section.variables.push(`variable ${name}${initText ? ` = ${initText}` : ""};`);
+                    section.variables.push({
+                        text: `variable ${name}${initText ? ` = ${initText}` : ""};`,
+                        line: originOf(stmt),
+                    });
                 }
             }
         } else if (stmt.getKind() === SyntaxKind.FunctionDeclaration) {
@@ -223,12 +246,15 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
                 .join(", ");
             const body = func.getBody() ? processFunctionBody(func.getBody()!, "    ", ctx) : "";
 
-            section.declarations.push(`procedure ${name}(${paramsWithDefaults});`);
+            section.declarations.push({ text: `procedure ${name}(${paramsWithDefaults});`, line: originOf(stmt) });
 
             // Include JSDoc as SSL comment if available
             const jsDoc = name ? ctx.functionJsDocs.get(name) : undefined;
             const procCode = `procedure ${name}(${params}) begin\n${body ? body + "\n" : ""}end`;
-            section.procedures.push(jsDoc ? `${jsDoc}\n${procCode}` : procCode);
+            section.procedures.push({
+                text: jsDoc ? `${jsDoc}\n${procCode}` : procCode,
+                line: originOf(stmt),
+            });
         }
     }
     return { sections };

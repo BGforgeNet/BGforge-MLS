@@ -19,7 +19,8 @@ describe("TD Transpiler", () => {
     }
 
     function transpile(code: string): string {
-        return emitD(parseIR(code));
+        // These assert the emitted text; the per-line provenance alongside it has its own suite.
+        return emitD(parseIR(code)).text;
     }
 
     /** Transpile with enum pre-transform (simulates what bundle() does) */
