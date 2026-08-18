@@ -12,6 +12,7 @@ import * as fs from "fs";
 import type * as esbuild from "esbuild-wasm";
 import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
+import { lineCount } from "./line-map";
 
 /** Result of transforming enums in source text */
 interface EnumTransformResult {
@@ -199,9 +200,22 @@ export function expandEnumPropertyAccess(
     code: string,
     enumNames: ReadonlySet<string>,
     externalEnumNames: ReadonlySet<string> = new Set(),
+    /**
+     * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
+     * returned so existing call sites keep their `string` return; only a caller tracing a position back
+     * through the bundle asks for it.
+     */
+    survivors?: number[],
 ): string {
+    /** Every line unchanged, for the paths that rewrite nothing or nothing line-bearing. */
+    const reportIdentity = (text: string) => {
+        if (survivors === undefined) return;
+        for (let line = 0; line < lineCount(text); line++) survivors.push(line);
+    };
+
     // Fast path: nothing to expand
     if (enumNames.size === 0 && externalEnumNames.size === 0) {
+        reportIdentity(code);
         return code;
     }
 
@@ -226,6 +240,14 @@ export function expandEnumPropertyAccess(
     }
 
     const expandedInfos: EnumInfo[] = [];
+    // What each rewritten statement did to the line count. Recorded during the loop below because it
+    // walks statements in REVERSE, so a statement's line numbers are still its original ones when it is
+    // reached - every edit so far was made after it.
+    const edits: Array<{ startLine: number; inputSpan: number; outputSpan: number }> = [];
+    const spanOf = (stmt: { getStartLineNumber(): number; getEndLineNumber(): number }) => ({
+        startLine: stmt.getStartLineNumber() - 1,
+        inputSpan: stmt.getEndLineNumber() - stmt.getStartLineNumber() + 1,
+    });
 
     // Second pass: find compat object declarations and replace with only referenced members
     const stmts = sourceFile.getStatements();
@@ -259,6 +281,7 @@ export function expandEnumPropertyAccess(
 
         // No members referenced - remove the compat object entirely
         if (!usedMembers || usedMembers.size === 0) {
+            edits.push({ ...spanOf(varStmt), outputSpan: 0 });
             varStmt.remove();
             continue;
         }
@@ -285,6 +308,8 @@ export function expandEnumPropertyAccess(
 
         // Replace var statement with individual declarations for referenced members only
         const lines = members.map((m) => `var ${name}_${m.name} = ${m.value};`);
+        // No members left to write still leaves the statement's line behind, empty, rather than closing it.
+        edits.push({ ...spanOf(varStmt), outputSpan: Math.max(1, lines.length) });
         varStmt.replaceWithText(lines.join("\n"));
     }
 
@@ -298,6 +323,20 @@ export function expandEnumPropertyAccess(
     // property accesses that need to become bare Member identifiers.
     if (externalEnumNames.size > 0) {
         stripExternalEnumPrefixes(sourceFile, externalEnumNames);
+    }
+
+    // Both passes above rewrite a property access into an identifier in place, so only the statement
+    // rewrites recorded above moved any line. Walking the input in order, a line no edit covers keeps its
+    // index and a rewritten one contributes its replacement's lines, all pointing back at where it began.
+    if (survivors !== undefined) {
+        edits.sort((a, b) => a.startLine - b.startLine);
+        let next = 0;
+        for (const edit of edits) {
+            for (let line = next; line < edit.startLine; line++) survivors.push(line);
+            for (let i = 0; i < edit.outputSpan; i++) survivors.push(edit.startLine);
+            next = edit.startLine + edit.inputSpan;
+        }
+        for (let line = next; line < lineCount(code); line++) survivors.push(line);
     }
 
     return sourceFile.getFullText();

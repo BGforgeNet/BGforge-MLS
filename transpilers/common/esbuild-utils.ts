@@ -15,6 +15,7 @@ import {
     enumTransformPlugin,
 } from "./enum-transform";
 import { ensureNodeOnPath } from "./node-runtime";
+import { lineCount, composeLineMaps } from "./line-map";
 
 let esbuildInitialized = false;
 
@@ -90,6 +91,8 @@ interface BundleResult {
     readonly externalEnumNames: ReadonlySet<string>;
     /** Input files from metafile (only when metafile: true was requested) */
     readonly inputFiles: readonly string[];
+    /** For each line of `code`, the 0-based line of esbuild's own output it came from. */
+    readonly lineMap: readonly number[];
 }
 
 /**
@@ -178,11 +181,18 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     }
 
     // Strip ESM module boilerplate from esbuild output
-    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, config.originalConstants);
+    const afterCleanup: number[] = [];
+    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, config.originalConstants, afterCleanup);
 
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
-    const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames);
+    const afterExpand: number[] = [];
+    const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames, afterExpand);
+
+    // Both passes only ever moved lines relative to what esbuild emitted, so composing them lands on a
+    // line of that output. Getting from there to the author's own file needs esbuild's source map, which
+    // is not requested yet - until it is, this answers "where in the bundle", not "where in the source".
+    const lineMap = composeLineMaps(afterCleanup, afterExpand);
 
     // Extract input files from metafile if requested.
     // Only .ts files, not .d.ts.
@@ -194,7 +204,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
                   .map((f) => path.resolve(resolveDir, f))
             : [];
 
-    return { code, allEnumNames, externalEnumNames, inputFiles };
+    return { code, allEnumNames, externalEnumNames, inputFiles, lineMap };
 }
 
 /**
@@ -219,11 +229,27 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
  * @param originalConstants Original constant names and values from source file (for restoring renamed vars)
  * @returns Cleaned code
  */
-export function cleanupEsbuildOutput(code: string, marker: string, originalConstants?: Map<string, string>): string {
+export function cleanupEsbuildOutput(
+    code: string,
+    marker: string,
+    originalConstants?: Map<string, string>,
+    /**
+     * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
+     * returned so the ~40 existing call sites keep their `string` return; only a caller tracing a position
+     * back through the bundle asks for it.
+     */
+    survivors?: number[],
+): string {
     // Step 1: Strip everything before marker
     const markerIndex = code.indexOf(marker);
+    // Lines the prefix strip consumes. Every later line index is stated relative to the ORIGINAL input,
+    // so this offset is added back at the end rather than tracked through each step.
+    let droppedAhead = 0;
     if (markerIndex !== -1) {
-        code = code.substring(markerIndex + marker.length).trimStart();
+        const afterMarker = code.substring(markerIndex + marker.length);
+        const lead = afterMarker.length - afterMarker.trimStart().length;
+        droppedAhead = lineCount(code.substring(0, markerIndex + marker.length + lead));
+        code = afterMarker.trimStart();
     }
 
     // Step 2: Extract import aliases via regex
@@ -300,7 +326,25 @@ export function cleanupEsbuildOutput(code: string, marker: string, originalConst
     }
 
     // Step 5: Remove import declarations (single-line and multi-line)
-    code = code.replaceAll(/^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm, "");
+    const importDecl = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm;
+    // The ranges are read off the same matches the removal uses, before it runs: deriving them from the
+    // result instead would have to re-identify lines by content, which step 6's renaming then breaks.
+    const removed = new Set<number>();
+    if (survivors !== undefined) {
+        for (const match of code.matchAll(importDecl)) {
+            const from = lineCount(code.substring(0, match.index));
+            // A match that swallowed its newline vacates exactly the lines it spans. One at end-of-input
+            // has no newline to swallow and leaves an empty last line, which collapses into the trailing
+            // newline every other line already ends with - so it vacates one line more.
+            const span = match[0].endsWith("\n") ? lineCount(match[0]) : lineCount(match[0]) + 1;
+            for (let line = from; line < from + span; line++) removed.add(line);
+        }
+        const total = lineCount(code);
+        for (let line = 0; line < total; line++) {
+            if (!removed.has(line)) survivors.push(droppedAhead + line);
+        }
+    }
+    code = code.replaceAll(importDecl, "");
 
     // Step 6: Rename identifiers (string-aware, skips string literals and comments)
     if (aliasMap.size > 0) {
