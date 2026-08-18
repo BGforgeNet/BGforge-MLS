@@ -14,6 +14,34 @@
 /** A line's origin is a 0-based line of the emitter's own input, or absent where the chunk carried none. */
 export type LineOrigin = number | undefined;
 
+/** Emitted text, and the input line each of its lines came from. */
+export interface EmittedText {
+    text: string;
+    origins: readonly LineOrigin[];
+}
+
+/** One already-emitted piece of output, and where it came from. */
+export interface TrackedChunk {
+    text: string;
+    line?: number;
+}
+
+/**
+ * Join chunks with a separator, attributing every line a chunk produced to that chunk.
+ *
+ * For emitters that build their output bottom-up as plain strings and assemble it with `join`: the
+ * assembly points are where provenance is still known, so tracking there keeps the leaves untouched. The
+ * granularity is therefore the chunk - every line of one names the same source line.
+ */
+export function joinTracked(chunks: readonly TrackedChunk[], separator: string): EmittedText {
+    const out = new TrackedText();
+    chunks.forEach((chunk, index) => {
+        if (index > 0) out.add(separator, chunk.line);
+        out.add(chunk.text, chunk.line);
+    });
+    return { text: out.text, origins: out.origins };
+}
+
 export class TrackedText {
     private readonly chunks: string[] = [];
     private readonly lineOrigins: LineOrigin[] = [];
@@ -35,6 +63,21 @@ export class TrackedText {
         for (let i = 0; i < started; i++) this.lineOrigins.push(origin);
 
         this.lineOpen = !text.endsWith("\n");
+    }
+
+    /**
+     * Append text that already carries its own per-line origins, keeping them.
+     *
+     * For an emitter that assembles bottom-up: an inner piece has already worked out where each of its
+     * lines came from, and re-deriving that at the outer level would throw the answer away. Where a line
+     * is still open, the piece's first line joins it and keeps the origin that line already has.
+     */
+    addAll(emitted: EmittedText): void {
+        if (emitted.text === "") return;
+        this.chunks.push(emitted.text);
+        const origins = this.lineOpen ? emitted.origins.slice(1) : emitted.origins;
+        this.lineOrigins.push(...origins);
+        this.lineOpen = !emitted.text.endsWith("\n");
     }
 
     /** The assembled text. */

@@ -6,7 +6,7 @@
  * per-line answer, so a diagnostic against the generated file can be traced back.
  */
 import { describe, it, expect } from "vitest";
-import { TrackedText } from "../common/tracked-text";
+import { TrackedText, joinTracked } from "../common/tracked-text";
 
 describe("TrackedText", () => {
     it("gives back exactly the text that was added", () => {
@@ -65,6 +65,41 @@ describe("TrackedText", () => {
         out.add("", 5);
         out.add("a\n", 8);
         expect(out.origins).toEqual([8]);
+    });
+
+    it("joins chunks and keeps each one's origin for the lines it produced", () => {
+        const joined = joinTracked(
+            [
+                { text: "IF ~~ one\nEND", line: 3 },
+                { text: "IF ~~ two\nEND", line: 9 },
+            ],
+            "\n\n",
+        );
+        expect(joined.text).toBe("IF ~~ one\nEND\n\nIF ~~ two\nEND");
+        // The separator's blank line belongs to the chunk it precedes, not the one it follows.
+        expect(joined.origins).toEqual([3, 3, 9, 9, 9]);
+    });
+
+    it("joins a single chunk without emitting a separator", () => {
+        const joined = joinTracked([{ text: "only\n", line: 2 }], "\n\n");
+        expect(joined.text).toBe("only\n");
+        expect(joined.origins).toEqual([2]);
+    });
+
+    it("keeps the origins of a piece that already worked out its own", () => {
+        const out = new TrackedText();
+        out.add("/* generated */\n");
+        out.addAll({ text: "IF ~~ one\nEND\n", origins: [3, 5] });
+        expect(out.text).toBe("/* generated */\nIF ~~ one\nEND\n");
+        expect(out.origins).toEqual([undefined, 3, 5]);
+    });
+
+    it("merges a piece's first line into a line already open, keeping that line's origin", () => {
+        const out = new TrackedText();
+        out.add("SAY ", 2);
+        out.addAll({ text: "~hello~\nEND\n", origins: [7, 8] });
+        expect(out.text).toBe("SAY ~hello~\nEND\n");
+        expect(out.origins).toEqual([2, 8]);
     });
 
     it("reports one origin per line of the text it produced", () => {

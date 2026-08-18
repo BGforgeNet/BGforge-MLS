@@ -17,6 +17,8 @@ import { EXT_TD } from "../../common/extensions";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
 import { TranspileError } from "../../common/transpile-error";
+import type { SourcePosition } from "../../common/line-map";
+import type { LineOrigin } from "../../common/tracked-text";
 import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
@@ -26,12 +28,23 @@ export type { TDWarning } from "./types";
 interface TDTranspileResult {
     output: string;
     warnings: TDWarning[];
+    /** For each line of the generated D, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
+}
+
+/** What the emitter produces before its bundled lines are resolved to files. */
+interface EmittedD {
+    output: string;
+    warnings: TDWarning[];
+    origins: readonly LineOrigin[];
 }
 
 interface TDCompileResult {
     dPath: string;
     warnings: TDWarning[];
     events: readonly TranspilerEvent[];
+    /** For each line of the generated D, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
 const td = createTranspiler<TDTranspileResult>({
@@ -46,7 +59,14 @@ const td = createTranspiler<TDTranspileResult>({
         // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
         // against the file it came from on the way out.
         try {
-            return parseBundled(bundled, text, filePath, traTag);
+            const emitted = parseBundled(bundled, text, filePath, traTag);
+            // The emitter reports bundled lines; the bundler says which file and line each of those was.
+            // Composing them is what turns a position in the generated file into one the author can open.
+            return {
+                output: emitted.output,
+                warnings: emitted.warnings,
+                sourceMap: emitted.origins.map((line) => (line === undefined ? undefined : origins[line])),
+            };
         } catch (error) {
             throw TranspileError.remap(error, origins);
         }
@@ -56,7 +76,7 @@ const td = createTranspiler<TDTranspileResult>({
 });
 
 /** Parse the bundled text to IR, collect warnings, and emit D. */
-function parseBundled(bundled: string, text: string, filePath: string, traTag: string | undefined): TDTranspileResult {
+function parseBundled(bundled: string, text: string, filePath: string, traTag: string | undefined): EmittedD {
     // 2. Parse bundled code.
     // Uses a per-compile Project rather than the module-scoped shared one
     // in transpilers/common/shared-project.ts. The bundled source and the
@@ -78,9 +98,9 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
     const warnings = mergeWarnings(ir.warnings ?? [], orphanWarnings);
 
     // 5. Emit D text
-    const output = emitD(ir);
+    const emitted = emitD(ir);
 
-    return { output, warnings };
+    return { output: emitted.text, warnings, origins: emitted.origins };
 }
 
 /**
@@ -89,7 +109,7 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
  */
 export async function compile(uri: string, text: string): Promise<TDCompileResult> {
     const { outPath, result, events } = await td.compile(uri, text);
-    return { dPath: outPath, warnings: result.warnings, events };
+    return { dPath: outPath, warnings: result.warnings, events, sourceMap: result.sourceMap };
 }
 
 /**

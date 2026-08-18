@@ -29,16 +29,43 @@ import {
     TDPatchOp,
 } from "./types";
 
+import { TrackedText, joinTracked, type EmittedText } from "../../common/tracked-text";
+
 const INDENT = "    ";
 
 /**
  * Emit a complete TD script as D code.
  */
-export function emitD(script: TDScript): string {
+export function emitD(script: TDScript): EmittedText {
     const filename = path.basename(script.sourceFile);
-    const header = makeGeneratedHeader(filename, script.traTag, true);
-    const body = script.constructs.map(emitConstruct).join("\n\n");
-    return header + body + "\n";
+    const out = new TrackedText();
+    out.add(makeGeneratedHeader(filename, script.traTag, true));
+    script.constructs.forEach((construct, index) => {
+        if (index > 0) out.add("\n\n");
+        out.addAll(emitConstructTracked(construct));
+    });
+    out.add("\n");
+    return { text: out.text, origins: out.origins };
+}
+
+/**
+ * Emit a construct, keeping per-state provenance where the construct has states.
+ *
+ * Only BEGIN and APPEND are resolved per state; the rest are attributed as a whole, because their IR
+ * carries no line to attribute them to. That is a granularity limit, not a correctness one - a line either
+ * names the state it came from or names nothing.
+ */
+function emitConstructTracked(construct: TDConstruct): EmittedText {
+    switch (construct.type) {
+        case TDConstructType.Begin:
+            return emitBeginTracked(construct);
+        case TDConstructType.Append:
+            return emitAppendTracked(construct);
+        default: {
+            const text = emitConstruct(construct);
+            return { text, origins: Array.from({ length: text.split("\n").length }) };
+        }
+    }
 }
 
 /**
@@ -75,18 +102,40 @@ function emitConstruct(construct: TDConstruct): string {
 // =============================================================================
 
 function emitBegin(begin: TDBegin): string {
+    return emitBeginTracked(begin).text;
+}
+
+function emitBeginTracked(begin: TDBegin): EmittedText {
     const nonPausing = begin.nonPausing ? " 1" : "";
-    const header = `BEGIN ${begin.filename}${nonPausing}\n`;
-    const states = begin.states.map(emitState).join("\n\n");
-    return header + "\n" + states;
+    const out = new TrackedText();
+    out.add(`BEGIN ${begin.filename}${nonPausing}\n`);
+    out.add("\n");
+    out.addAll(
+        joinTracked(
+            begin.states.map((s) => ({ text: emitState(s), line: s.line })),
+            "\n\n",
+        ),
+    );
+    return { text: out.text, origins: out.origins };
 }
 
 function emitAppend(append: TDAppend): string {
+    return emitAppendTracked(append).text;
+}
+
+function emitAppendTracked(append: TDAppend): EmittedText {
     const keyword = append.early ? "APPEND_EARLY" : "APPEND";
     const ifExists = append.ifFileExists ? "IF_FILE_EXISTS " : "";
-    const header = `${keyword} ${ifExists}${append.filename}\n`;
-    const states = append.states.map((s) => indentBlock(emitState(s))).join("\n\n");
-    return header + states + "\nEND";
+    const out = new TrackedText();
+    out.add(`${keyword} ${ifExists}${append.filename}\n`);
+    out.addAll(
+        joinTracked(
+            append.states.map((s) => ({ text: indentBlock(emitState(s)), line: s.line })),
+            "\n\n",
+        ),
+    );
+    out.add("\nEND");
+    return { text: out.text, origins: out.origins };
 }
 
 /**

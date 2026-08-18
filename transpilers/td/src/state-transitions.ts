@@ -95,6 +95,8 @@ function transformFunctionToState(
         trigger: entryTrigger,
         say: [],
         transitions: [],
+        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
+        line: func.getStartLineNumber() - 1,
     };
 
     // Track the "pending" reply transition across statements so that
