@@ -1,0 +1,49 @@
+/**
+ * Emitted text that remembers where each of its lines came from.
+ *
+ * An emitter assembles its output from chunks that do not line up with lines: one chunk can carry several
+ * lines, and several chunks can land on one. Tracking provenance per chunk and resolving to lines at the
+ * end is what lets a diagnostic reported against the generated file be traced back to the source - the
+ * emitter is the only place that still knows the correspondence, since nothing downstream can recover it.
+ *
+ * A line belongs to the chunk that STARTED it. Emitters build a line piecewise - a keyword, then its
+ * arguments - and the opening chunk is the one that says what the line is; crediting the closing chunk
+ * instead would name whatever happened to terminate it.
+ */
+
+/** A line's origin is a 0-based line of the emitter's own input, or absent where the chunk carried none. */
+export type LineOrigin = number | undefined;
+
+export class TrackedText {
+    private readonly chunks: string[] = [];
+    private readonly lineOrigins: LineOrigin[] = [];
+    /** Whether the text so far ends mid-line, in which case the next chunk joins the line already open. */
+    private lineOpen = false;
+
+    /** Append text, attributing every line it opens to `origin`. */
+    add(text: string, origin?: number): void {
+        if (text === "") return;
+        this.chunks.push(text);
+
+        // Count the lines this chunk STARTS, which is what needs an origin recorded. Its segments are one
+        // per line it touches; the first continues a line already open, and a trailing empty segment is
+        // the tail of a chunk ending in a newline, which starts nothing.
+        const segments = text.split("\n");
+        let started = segments.length;
+        if (this.lineOpen) started--;
+        if (segments[segments.length - 1] === "") started--;
+        for (let i = 0; i < started; i++) this.lineOrigins.push(origin);
+
+        this.lineOpen = !text.endsWith("\n");
+    }
+
+    /** The assembled text. */
+    get text(): string {
+        return this.chunks.join("");
+    }
+
+    /** For each line of `text`, the input line it came from. */
+    get origins(): readonly LineOrigin[] {
+        return this.lineOrigins;
+    }
+}

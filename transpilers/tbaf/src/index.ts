@@ -11,11 +11,18 @@ import { applyHelperFixups } from "../../common/transpiler-utils";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
 import { TranspileError } from "../../common/transpile-error";
-import { emitBAF } from "./emit";
+import type { SourcePosition } from "../../common/line-map";
+import { emitBAF, type EmittedBAF } from "./emit";
 import { type BAFScript, isOrGroup } from "./ir";
 import { TBAFTransformer } from "./transform";
 
-const tbaf = createTranspiler<string>({
+/** Generated BAF, plus where each of its lines came from in the files the author wrote. */
+export interface TBAFResult {
+    output: string;
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
+}
+
+const tbaf = createTranspiler<TBAFResult>({
     sourceExtension: EXT_TBAF,
     targetExtension: ".baf",
     name: "TBAF",
@@ -27,17 +34,23 @@ const tbaf = createTranspiler<string>({
         // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
         // against the file it came from on the way out.
         try {
-            return transformBundled(bundled, filePath, traTag);
+            const emitted = transformBundled(bundled, filePath, traTag);
+            // The emitter reports bundled lines; the bundler says which file and line each of those was.
+            // Composing them is what turns a position in the generated file into one the author can open.
+            return {
+                output: emitted.text,
+                sourceMap: emitted.origins.map((line) => (line === undefined ? undefined : origins[line])),
+            };
         } catch (error) {
             throw TranspileError.remap(error, origins);
         }
     },
 
-    getOutput: (result) => result,
+    getOutput: (result) => result.output,
 });
 
 /** Parse the bundled text, transform it to IR, and emit BAF. */
-function transformBundled(bundled: string, filePath: string, traTag: string | undefined): string {
+function transformBundled(bundled: string, filePath: string, traTag: string | undefined): EmittedBAF {
     // 2. Parse bundled code.
     // Uses a per-compile Project rather than the module-scoped shared one
     // in transpilers/common/shared-project.ts. The shared pattern fits
@@ -64,6 +77,8 @@ function transformBundled(bundled: string, filePath: string, traTag: string | un
 export interface TBAFCompileResult {
     bafPath: string;
     events: readonly TranspilerEvent[];
+    /** For each line of the generated BAF, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
 /**
@@ -71,16 +86,18 @@ export interface TBAFCompileResult {
  * Used by the LSP compile handler.
  */
 export async function compile(uri: string, text: string): Promise<TBAFCompileResult> {
-    const { outPath, events } = await tbaf.compile(uri, text);
-    return { bafPath: outPath, events };
+    const { outPath, events, result } = await tbaf.compile(uri, text);
+    return { bafPath: outPath, events, sourceMap: result.sourceMap };
 }
 
 /**
  * Transpile TBAF to BAF, returning the output string without writing to disk.
- * Used by the CLI where the caller controls file I/O.
+ * Used by the CLI where the caller controls file I/O. The source map is not returned here: the CLI writes
+ * a file and reports the compiler's own output, with no editor to place a diagnostic in.
  */
 export async function transpile(filePath: string, text: string): Promise<string> {
-    return tbaf.transpile(filePath, text);
+    const result = await tbaf.transpile(filePath, text);
+    return result.output;
 }
 
 /**
