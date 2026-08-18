@@ -62,11 +62,16 @@ const mockTssl = vi.fn();
 const mockTbaf = vi.fn();
 const mockTd = vi.fn();
 const mockOutputPathFor = vi.fn();
+// The real TranspileError, not a stand-in: compile.ts narrows on `instanceof` to read the location,
+// so a mock class would silently take the no-location path and the position assertions would pass
+// against a fallback rather than against the error's own line.
+const { TranspileError } = await vi.hoisted(async () => await import("../../transpilers/common/transpile-error"));
 vi.mock("../../transpilers/src/index", () => ({
     tssl: (...args: unknown[]) => mockTssl(...args),
     tbaf: (...args: unknown[]) => mockTbaf(...args),
     td: (...args: unknown[]) => mockTd(...args),
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
+    TranspileError,
 }));
 
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
@@ -81,8 +86,10 @@ vi.mock("../src/logger", () => ({
     conlog: vi.fn(),
 }));
 
+const mockSendParseResult = vi.fn();
 vi.mock("../src/diagnostics", () => ({
     errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    sendParseResult: (...args: unknown[]) => mockSendParseResult(...args),
 }));
 
 vi.mock("../src/path-utils", () => ({
@@ -287,6 +294,84 @@ describe("compile dispatcher", () => {
             await compile("file:///test.tssl", "typescript", true, "bad tssl");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TSSL: TSSL error"));
+        });
+    });
+
+    // A failing transpile used to reach the user only as a popup, and only when they had asked for the
+    // compile - so saving a file with an unsupported construct in it reported nothing at all. These go to
+    // the Problems panel instead, on the source the author is editing rather than the generated output.
+    describe("transpile failures reach the editor", () => {
+        it("reports a TSSL failure on the save path, which showed nothing before", async () => {
+            mockTssl.mockRejectedValue(new TranspileError("try/catch is not supported in SSL", { line: 12 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                {
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 12,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "try/catch is not supported in SSL",
+                        },
+                    ],
+                    warnings: [],
+                },
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        it.each([
+            ["tbaf", () => mockTbaf],
+            ["td", () => mockTd],
+        ])("reports a %s failure the same way - one error type, three languages", async (ext, transpiler) => {
+            transpiler().mockRejectedValue(new TranspileError("bad", { line: 7, column: 3 }));
+
+            await compile(`file:///test.${ext}`, "typescript", false, "bad source");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                {
+                    errors: [{ uri: `file:///test.${ext}`, line: 7, columnStart: 3, columnEnd: 3, message: "bad" }],
+                    warnings: [],
+                },
+                `file:///test.${ext}`,
+                `file:///test.${ext}`,
+            );
+        });
+
+        it("anchors an error carrying no location at line 1 rather than guessing one", async () => {
+            mockTssl.mockRejectedValue(new Error("no location on this one"));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 1,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "no location on this one",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {
+            mockTssl.mockResolvedValue("ssl output");
+            mockOutputPathFor.mockReturnValue("/output/test.ssl");
+            mockRegistryCompile.mockResolvedValue(true);
+
+            await compile("file:///test.tssl", "typescript", false, "tssl content");
+
+            expect(mockSendDiagnostics).toHaveBeenCalledWith({ uri: "file:///test.tssl", diagnostics: [] });
         });
     });
 

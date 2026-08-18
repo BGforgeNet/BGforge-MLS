@@ -91,6 +91,13 @@
   returning nothing, and `attack_complex`, `critter_set_flee_state` and `has_trait` were missing the closing
   parenthesis of their parameter list. Hover and signature help show all of these.
 
+### Transpilers
+
+- A TSSL, TBAF or TD file the transpiler cannot handle is reported in the Problems panel, on the file being
+  edited rather than on the generated output. It is reported on save as well as on an explicit compile:
+  previously the failure appeared only as a popup and only when the compile had been asked for, so saving a
+  file with an unsupported construct in it reported nothing at all.
+
 ## 3.13.2
 
 ### WeiDU TP2

@@ -13,6 +13,10 @@ import { transpile as tdImpl, type TDWarning } from "../td/src/index";
 
 export { createBatchState, type TranspileBatchState } from "../tssl/src/index";
 
+// Public because a failure's source location is part of what a caller gets back: a consumer placing
+// diagnostics needs to narrow to this to read the location, and every transpiler throws it.
+export { TranspileError } from "../common/transpile-error";
+
 export const tssl = tsslImpl;
 export const tbaf = tbafImpl;
 export const td = tdImpl;

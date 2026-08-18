@@ -5,7 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { errorMessage } from "./diagnostics";
+import { errorMessage, sendParseResult } from "./diagnostics";
 import { clearCompilerDiagnostics } from "./diagnostic-store";
 import { conlog } from "./logger";
 import { isDirectory, tmpDir } from "./path-utils";
@@ -19,9 +19,28 @@ import { getDocumentSettings } from "./settings-service";
 // handler owns the file write and the user-facing message, keeping the library a
 // pure source->string transformation. Imported by relative path so esbuild
 // bundles it into the server rather than treating it as an external npm dependency.
-import { tssl, tbaf, td, outputPathFor } from "../../transpilers/src/index";
+import { tssl, tbaf, td, outputPathFor, TranspileError } from "../../transpilers/src/index";
 import * as weidu from "./weidu-compile";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
+
+/**
+ * Reports a failed transpile as a diagnostic on the source being edited; the popup stays for the compile
+ * the user asked for, since this path also runs on save and on keystroke where only a diagnostic belongs.
+ *
+ * An error's own line is a position in the BUNDLE the transpiler parsed, not in the file on screen, so
+ * one is used only where it is carried and line 1 is the floor - a wrong line is worse than no line.
+ */
+function reportTranspileFailure(error: unknown, uri: string, language: string, interactive: boolean): void {
+    const message = errorMessage(error);
+    const located = error instanceof TranspileError ? error.location : {};
+    const column = located.column ?? 0;
+    sendParseResult(
+        { errors: [{ uri, line: located.line ?? 1, columnStart: column, columnEnd: column, message }], warnings: [] },
+        uri,
+        uri,
+    );
+    if (interactive) showError(`${language}: ${message}`);
+}
 
 /**
  * Copies files to tmpdir and parses it there, then send diagnostic to the real file.
@@ -81,10 +100,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                     await weidu.compile(dUri, settings.weidu, interactive, output);
                 }
             } catch (error) {
-                const msg = errorMessage(error);
-                if (interactive) {
-                    showError(`TD: ${msg}`);
-                }
+                reportTranspileFailure(error, uri, "TD", interactive);
             }
             return;
         }
@@ -105,14 +121,14 @@ export async function compile(uri: string, langId: string, interactive = false, 
                     await weidu.compile(bafUri, settings.weidu, interactive, output);
                 }
             } catch (error) {
-                const msg = errorMessage(error);
-                if (interactive) {
-                    showError(`TBAF: ${msg}`);
-                }
+                reportTranspileFailure(error, uri, "TBAF", interactive);
             }
             return;
         }
         if (uri.toLowerCase().endsWith(EXT_TSSL)) {
+            // Two files carry diagnostics on this path - the source here, and the generated .ssl below -
+            // so both are cleared, or a fixed error stays on screen until something republishes the file.
+            clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
                 const output = await tssl(filePath, text);
@@ -127,10 +143,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 clearCompilerDiagnostics(sslUri);
                 await registry.compile(LANG_FALLOUT_SSL, sslUri, output, interactive);
             } catch (error) {
-                const msg = errorMessage(error);
-                if (interactive) {
-                    showError(`TSSL: ${msg}`);
-                }
+                reportTranspileFailure(error, uri, "TSSL", interactive);
             }
         }
         return;
