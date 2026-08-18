@@ -218,9 +218,17 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // line of that output; the source map then says which file and line that came from.
     const lineMap = composeLineMaps(afterCleanup, afterExpand);
     const origins = resolveOrigins(lineMap, mapFile?.text, resolveDir, {
+        // What esbuild will call the entry in its map. `sourcefile` is a label, not a path, so it is
+        // resolved the way the map's other sources are - otherwise a relative one never compares equal
+        // and the entry is mistaken for an import.
+        alias: path.resolve(resolveDir, config.sourcefile ?? realPath),
+        // What to report it as: the path the caller passed in. The label above stands in for it where a
+        // transpiler hands esbuild a name its own loader understands, and the resolved form names the
+        // same file under a path the caller never used - which a consumer comparing the two reads as a
+        // different file entirely.
+        file: filePath,
         // esbuild reads the entry as `marker + "\n" + source`, so every line it reports for that file
         // sits one lower in the file the author actually has open. Other sources are read as-is.
-        path: config.sourcefile ?? realPath,
         shift: lineCount(marker + "\n"),
         lineMap: entryLineMap,
     });
@@ -249,7 +257,7 @@ function resolveOrigins(
     lineMap: readonly number[],
     mapText: string | undefined,
     resolveDir: string,
-    entry: { path: string; shift: number; lineMap: readonly number[] },
+    entry: { alias: string; file: string; shift: number; lineMap: readonly number[] },
 ): Array<SourcePosition | undefined> {
     const unmapped: Array<SourcePosition | undefined> = lineMap.map(() => void 0);
     if (mapText === undefined) return unmapped;
@@ -263,15 +271,16 @@ function resolveOrigins(
         if (origin === undefined) return;
         const source = sources[origin.source];
         if (source === undefined) return;
-        const file = path.resolve(resolveDir, source);
+        const resolved = path.resolve(resolveDir, source);
+        if (resolved !== entry.alias) return { file: resolved, line: origin.line };
         // Only the entry was rewritten before esbuild read it: strip the marker it was given, then take
         // the line back through the enum flattening. Every other source reached esbuild untouched.
         const beforeMarker = origin.line - entry.shift;
-        const line = file === entry.path ? (entry.lineMap[beforeMarker] ?? beforeMarker) : origin.line;
+        const line = entry.lineMap[beforeMarker] ?? beforeMarker;
         // A prepended line can push an early mapping above the file's own first line; that names nothing
         // the author can open, so it is dropped rather than clamped onto an unrelated line.
         if (line < 0) return;
-        return { file, line };
+        return { file: entry.file, line };
     }
 
     return lineMap.map((outputLine) => originAt(outputLine));

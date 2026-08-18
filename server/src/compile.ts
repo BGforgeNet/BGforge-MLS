@@ -27,15 +27,20 @@ export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
  * Reports a failed transpile as a diagnostic on the source being edited; the popup stays for the compile
  * the user asked for, since this path also runs on save and on keystroke where only a diagnostic belongs.
  *
- * An error's own line is a position in the BUNDLE the transpiler parsed, not in the file on screen, so
- * one is used only where it is carried and line 1 is the floor - a wrong line is worse than no line.
+ * A transpiler bundles the file's imports, so a failure can belong to a file the author never opened. Its
+ * line means nothing against the one on screen, so that case says where in the message and falls back to
+ * line 1 - the diagnostic stays on the file this compile was asked for, which is the only one a later
+ * clean compile clears. String equality is enough to tell the two apart: a transpiler reports the entry
+ * under the path it was handed, which is the one derived from this URI.
  */
 function reportTranspileFailure(error: unknown, uri: string, language: string, interactive: boolean): void {
-    const message = errorMessage(error);
     const located = error instanceof TranspileError ? error.location : {};
-    const column = located.column ?? 0;
+    const elsewhere = located.file !== undefined && located.file !== uriToPath(uri);
+    const message = elsewhere ? `${located.file}:${located.line ?? 1}: ${errorMessage(error)}` : errorMessage(error);
+    const line = elsewhere ? 1 : (located.line ?? 1);
+    const column = elsewhere ? 0 : (located.column ?? 0);
     sendParseResult(
-        { errors: [{ uri, line: located.line ?? 1, columnStart: column, columnEnd: column, message }], warnings: [] },
+        { errors: [{ uri, line, columnStart: column, columnEnd: column, message }], warnings: [] },
         uri,
         uri,
     );

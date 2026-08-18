@@ -364,6 +364,52 @@ describe("compile dispatcher", () => {
             );
         });
 
+        it("keeps the line when the failure is in the file being edited", async () => {
+            mockTssl.mockRejectedValue(new TranspileError("bad construct", { file: "/test.tssl", line: 12 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 12,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "bad construct",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        // A transpiler bundles the file's imports, so a failure can belong to a file the author never
+        // opened. Its line means nothing against the one on screen, so the diagnostic says where instead.
+        it("names the other file rather than putting its line on the one being edited", async () => {
+            mockTssl.mockRejectedValue(new TranspileError("bad construct", { file: "/lib/folib.ts", line: 42 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 1,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "/lib/folib.ts:42: bad construct",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
         it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {
             mockTssl.mockResolvedValue("ssl output");
             mockOutputPathFor.mockReturnValue("/output/test.ssl");

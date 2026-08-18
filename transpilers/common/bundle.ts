@@ -19,9 +19,16 @@ import type * as esbuild from "esbuild-wasm";
 import { bundleWithEsbuild } from "./esbuild-utils";
 import { transformEnums, collectDeclareEnums } from "./enum-transform";
 import { hasImports } from "./transpiler-utils";
+import { lineCount, type SourcePosition } from "./line-map";
 
 /** Marker to identify start of user code in esbuild output */
 const TBAF_CODE_MARKER = "/* __TBAF_CODE_START__ */";
+
+/** Bundled text, plus the file and 0-based line each of its lines came from. */
+export interface BundledSource {
+    readonly code: string;
+    readonly origins: ReadonlyArray<SourcePosition | undefined>;
+}
 
 /**
  * Bundle a TBAF file and its imports into a single TypeScript string.
@@ -31,19 +38,23 @@ const TBAF_CODE_MARKER = "/* __TBAF_CODE_START__ */";
  *
  * @param filePath Absolute path to the .tbaf/.td file
  * @param sourceText Content of the source file
- * @returns Bundled TypeScript code, or original text if no imports
+ * @returns Bundled TypeScript code (or the original text if no imports), with line provenance
  */
-export async function bundle(filePath: string, sourceText: string): Promise<string> {
+export async function bundle(filePath: string, sourceText: string): Promise<BundledSource> {
     // Transform local enums even for files without imports.
     // Note: esbuild bundling is skipped for files without imports to avoid
     // tree-shaking block-scoped functions and number folding issues.
     if (!hasImports(sourceText)) {
-        const { code, enumNames } = transformEnums(sourceText);
-        if (enumNames.size > 0) {
-            // Enum transformation was applied - return transformed code
-            return code;
-        }
-        return sourceText;
+        // Nothing was bundled, so every line still belongs to this file - but flattening an enum drops
+        // lines, and without the map the ones below it would be reported where the enum used to end.
+        const lineMap: number[] = [];
+        const { code, enumNames } = transformEnums(sourceText, lineMap);
+        const transformed = enumNames.size > 0;
+        const lines = transformed ? lineMap : Array.from({ length: lineCount(sourceText) }, (_, i) => i);
+        return {
+            code: transformed ? code : sourceText,
+            origins: lines.map((line) => ({ file: filePath, line })),
+        };
     }
 
     // Shared mutable sets for enum accumulation across plugins.
@@ -64,7 +75,7 @@ export async function bundle(filePath: string, sourceText: string): Promise<stri
         extraPlugins: [tbafResolverPlugin(sharedEnumNames), tsExtensionResolverPlugin(sharedExternalEnumNames)],
     });
 
-    return result.code;
+    return { code: result.code, origins: result.origins };
 }
 
 /**

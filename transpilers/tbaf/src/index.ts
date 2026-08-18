@@ -10,6 +10,7 @@ import { EXT_TBAF } from "../../common/extensions";
 import { applyHelperFixups } from "../../common/transpiler-utils";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
+import { TranspileError } from "../../common/transpile-error";
 import { emitBAF } from "./emit";
 import { type BAFScript, isOrGroup } from "./ir";
 import { TBAFTransformer } from "./transform";
@@ -21,33 +22,44 @@ const tbaf = createTranspiler<string>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const bundled = await bundle(filePath, text);
+        const { code: bundled, origins } = await bundle(filePath, text);
 
-        // 2. Parse bundled code.
-        // Uses a per-compile Project rather than the module-scoped shared one
-        // in transpilers/common/shared-project.ts. The shared pattern fits
-        // short-lived source files whose AST is consumed synchronously within
-        // a single call (as in parseExpressionFromText). Here the bundled
-        // source flows through the full transform -> emit pipeline, and a
-        // concurrent transpile would overwrite the virtual file mid-walk.
-        // Fresh-Project construction at this granularity (one per compile) is
-        // a small fraction of total compile time.
-        const project = new Project({ useInMemoryFileSystem: true });
-        const sourceFile = project.createSourceFile("bundled.ts", bundled);
-
-        // 3. Transform AST to IR
-        const transformer = new TBAFTransformer();
-        const ir = { ...transformer.transform(sourceFile), sourceFile: filePath, traTag };
-
-        // 4. Apply BAF-specific fixups to IR
-        applyBAFFixups(ir);
-
-        // 5. Emit BAF text
-        return emitBAF(ir);
+        // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
+        // against the file it came from on the way out.
+        try {
+            return transformBundled(bundled, filePath, traTag);
+        } catch (error) {
+            throw TranspileError.remap(error, origins);
+        }
     },
 
     getOutput: (result) => result,
 });
+
+/** Parse the bundled text, transform it to IR, and emit BAF. */
+function transformBundled(bundled: string, filePath: string, traTag: string | undefined): string {
+    // 2. Parse bundled code.
+    // Uses a per-compile Project rather than the module-scoped shared one
+    // in transpilers/common/shared-project.ts. The shared pattern fits
+    // short-lived source files whose AST is consumed synchronously within
+    // a single call (as in parseExpressionFromText). Here the bundled
+    // source flows through the full transform -> emit pipeline, and a
+    // concurrent transpile would overwrite the virtual file mid-walk.
+    // Fresh-Project construction at this granularity (one per compile) is
+    // a small fraction of total compile time.
+    const project = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = project.createSourceFile("bundled.ts", bundled);
+
+    // 3. Transform AST to IR
+    const transformer = new TBAFTransformer();
+    const ir = { ...transformer.transform(sourceFile), sourceFile: filePath, traTag };
+
+    // 4. Apply BAF-specific fixups to IR
+    applyBAFFixups(ir);
+
+    // 5. Emit BAF text
+    return emitBAF(ir);
+}
 
 export interface TBAFCompileResult {
     bafPath: string;

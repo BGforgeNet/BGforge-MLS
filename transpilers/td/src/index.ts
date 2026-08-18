@@ -16,6 +16,7 @@ import { Node, Project, SyntaxKind } from "ts-morph";
 import { EXT_TD } from "../../common/extensions";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
+import { TranspileError } from "../../common/transpile-error";
 import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
@@ -40,36 +41,47 @@ const td = createTranspiler<TDTranspileResult>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const bundled = await bundle(filePath, text);
+        const { code: bundled, origins } = await bundle(filePath, text);
 
-        // 2. Parse bundled code.
-        // Uses a per-compile Project rather than the module-scoped shared one
-        // in transpilers/common/shared-project.ts. The bundled source and the
-        // original source (for orphan detection below) both live through the
-        // whole transpile; a concurrent transpile would overwrite their
-        // virtual files mid-walk. Fresh-Project construction at per-compile
-        // granularity is a small fraction of total compile time.
-        const project = new Project({ useInMemoryFileSystem: true });
-        const sourceFile = project.createSourceFile("bundled.ts", bundled);
-
-        // 3. Parse AST to IR, using original file path for the header comment
-        const ir = { ...parse(sourceFile), sourceFile: filePath, traTag };
-
-        // 4. Detect orphans from original source (pre-bundling).
-        // The parser's own orphan detection runs on bundled code, which may be
-        // missing tree-shaken functions. This pass catches those.
-        // Skip when bundling didn't change the source (no imports = no tree-shaking).
-        const orphanWarnings = bundled === text ? [] : detectOrphansFromOriginal(text, ir);
-        const warnings = mergeWarnings(ir.warnings ?? [], orphanWarnings);
-
-        // 5. Emit D text
-        const output = emitD(ir);
-
-        return { output, warnings };
+        // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
+        // against the file it came from on the way out.
+        try {
+            return parseBundled(bundled, text, filePath, traTag);
+        } catch (error) {
+            throw TranspileError.remap(error, origins);
+        }
     },
 
     getOutput: (result) => result.output,
 });
+
+/** Parse the bundled text to IR, collect warnings, and emit D. */
+function parseBundled(bundled: string, text: string, filePath: string, traTag: string | undefined): TDTranspileResult {
+    // 2. Parse bundled code.
+    // Uses a per-compile Project rather than the module-scoped shared one
+    // in transpilers/common/shared-project.ts. The bundled source and the
+    // original source (for orphan detection below) both live through the
+    // whole transpile; a concurrent transpile would overwrite their
+    // virtual files mid-walk. Fresh-Project construction at per-compile
+    // granularity is a small fraction of total compile time.
+    const project = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = project.createSourceFile("bundled.ts", bundled);
+
+    // 3. Parse AST to IR, using original file path for the header comment
+    const ir = { ...parse(sourceFile), sourceFile: filePath, traTag };
+
+    // 4. Detect orphans from original source (pre-bundling).
+    // The parser's own orphan detection runs on bundled code, which may be
+    // missing tree-shaken functions. This pass catches those.
+    // Skip when bundling didn't change the source (no imports = no tree-shaking).
+    const orphanWarnings = bundled === text ? [] : detectOrphansFromOriginal(text, ir);
+    const warnings = mergeWarnings(ir.warnings ?? [], orphanWarnings);
+
+    // 5. Emit D text
+    const output = emitD(ir);
+
+    return { output, warnings };
+}
 
 /**
  * Compile a TD file to D, writing the output to disk.

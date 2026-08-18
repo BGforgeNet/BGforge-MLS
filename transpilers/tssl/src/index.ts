@@ -28,6 +28,7 @@ import { exportSSL } from "./emit";
 // Inlined by esbuild at bundle time.
 import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
 import { transformEnums } from "../../common/enum-transform";
+import { TranspileError } from "../../common/transpile-error";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 
 /** Marker to identify start of user code in esbuild output */
@@ -113,19 +114,25 @@ const tssl = createTranspiler<string, TranspileBatchState | undefined>({
         // All enum names (main file + imported files) for inline function expansion
         ctx.enumNames = bundleResult.allEnumNames;
 
-        // Create source file in memory from cleaned bundled code
-        const sourceFile = project.createSourceFile("bundled.ts", bundleResult.code, { overwrite: true });
+        // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
+        // against the file it came from on the way out.
+        try {
+            // Create source file in memory from cleaned bundled code
+            const sourceFile = project.createSourceFile("bundled.ts", bundleResult.code, { overwrite: true });
 
-        // Extract inline functions from files that were actually bundled.
-        // In batch mode, the cache avoids re-parsing shared imports (e.g., folib).
-        ctx.inlineFunctions = extractInlineFunctionsFromFiles(
-            project,
-            bundleResult.inputFiles,
-            batch?.inlineFunctionCache,
-        );
-        conlog(`Found ${ctx.inlineFunctions.size} inline functions`);
+            // Extract inline functions from files that were actually bundled.
+            // In batch mode, the cache avoids re-parsing shared imports (e.g., folib).
+            ctx.inlineFunctions = extractInlineFunctionsFromFiles(
+                project,
+                bundleResult.inputFiles,
+                batch?.inlineFunctionCache,
+            );
+            conlog(`Found ${ctx.inlineFunctions.size} inline functions`);
 
-        return exportSSL(sourceFile, path.parse(filePath).base, mainFileData, ctx, traTag);
+            return exportSSL(sourceFile, path.parse(filePath).base, mainFileData, ctx, traTag);
+        } catch (error) {
+            throw TranspileError.remap(error, bundleResult.origins);
+        }
     },
 
     getOutput: (result) => result,
