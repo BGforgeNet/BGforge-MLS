@@ -13,6 +13,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../src/compile.ts";
 import { problemsOf } from "../src/problems.ts";
+import { preprocessText } from "../src/preprocess.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
@@ -71,6 +72,33 @@ describe.skipIf(!wasmPresent)("problemsOf, over a real compile", () => {
         for (const problem of problems) {
             expect(problem.line).toBeGreaterThan(0);
         }
+    });
+});
+
+// The preprocessor runs before the parser and refuses on its own, so its problems never travel with a
+// compile. They are the only shape carrying a file of their own: a directive error belongs to the file the
+// directive is in, which is often a header the reader never opened.
+describe("problemsOf, over a preprocessor refusal", () => {
+    function problemsFrom(source: string) {
+        try {
+            preprocessText(source, "/virtual/probe.ssl");
+        } catch (error) {
+            return problemsOf(error);
+        }
+        throw new Error("expected the preprocessor to refuse");
+    }
+
+    it("names the file each problem belongs to", () => {
+        const problems = problemsFrom("#endif\n\nprocedure start begin end\n");
+        expect(problems).toHaveLength(1);
+        expect(problems[0]?.file).toBe("/virtual/probe.ssl");
+        expect(problems[0]?.line).toBe(1);
+    });
+
+    it("reports every directive problem, not just the first", () => {
+        const problems = problemsFrom("#endif\n#else\n#endif\n\nprocedure start begin end\n");
+        expect(problems.length).toBeGreaterThan(1);
+        expect(problems.map((p) => p.line)).toEqual([1, 2, 3]);
     });
 });
 
