@@ -15,7 +15,8 @@ import {
     enumTransformPlugin,
 } from "./enum-transform";
 import { ensureNodeOnPath } from "./node-runtime";
-import { lineCount, composeLineMaps } from "./line-map";
+import { lineCount, composeLineMaps, type SourcePosition } from "./line-map";
+import { decodeMappings } from "./source-map";
 
 let esbuildInitialized = false;
 
@@ -49,7 +50,15 @@ interface BundleConfig {
      * (caller already transformed it and needs the result for other purposes).
      * sourceText should already be enum-transformed in this case.
      */
-    readonly preTransformed?: { readonly enumNames: ReadonlySet<string> };
+    readonly preTransformed?: {
+        readonly enumNames: ReadonlySet<string>;
+        /**
+         * Where each line of the transformed text stood in the file the author has open. Without it the
+         * lines below an enum are reported one place off per line the flattening removed, so a caller
+         * that transforms ahead of this one collects it from `transformEnums` and passes it through.
+         */
+        readonly lineMap?: readonly number[];
+    };
     /** Marker string prepended to source for stripping esbuild runtime helpers */
     readonly marker: string;
     /** esbuild target (e.g., "esnext", "es2022") */
@@ -91,8 +100,8 @@ interface BundleResult {
     readonly externalEnumNames: ReadonlySet<string>;
     /** Input files from metafile (only when metafile: true was requested) */
     readonly inputFiles: readonly string[];
-    /** For each line of `code`, the 0-based line of esbuild's own output it came from. */
-    readonly lineMap: readonly number[];
+    /** For each line of `code`, the file and 0-based line it came from; absent where the map has none. */
+    readonly origins: ReadonlyArray<SourcePosition | undefined>;
 }
 
 /**
@@ -116,9 +125,14 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // Pre-transform: convert enums to flat consts before esbuild sees them.
     // If caller already transformed (and needs the result for other purposes),
     // skip redundant work via preTransformed.
+    // Where each line of the entry stood before its enums were flattened. A caller that already did that
+    // work passes its own map along with the transformed text; without one the lines below an enum in the
+    // entry would be reported one place off for every line the flattening removed.
+    const entryLineMap: number[] = [];
     const { code: enumTransformed, enumNames } = config.preTransformed
         ? { code: sourceText, enumNames: config.preTransformed.enumNames }
-        : transformEnums(sourceText);
+        : transformEnums(sourceText, entryLineMap);
+    if (config.preTransformed?.lineMap !== undefined) entryLineMap.push(...config.preTransformed.lineMap);
 
     // Accumulate enum names from imported files during bundling.
     // Mutated via closure in the enum-transform plugin.
@@ -155,6 +169,14 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
         absWorkingDir: resolveDir,
         bundle: true,
         write: false,
+        // Asked for so a position in the bundle can be traced back to the file the author wrote. It is
+        // never written to disk - `write: false` hands it back alongside the code, and only the mappings
+        // are read. "external" rather than true: the inline form appends a `sourceMappingURL` comment to
+        // the code, which would then be one more line for the parser downstream to read.
+        sourcemap: "external",
+        // Named only because an external map is refused without an output path. `write: false` means
+        // nothing reaches disk under this name; it exists so the map arrives as its own output file.
+        outfile: path.join(resolveDir, "bundle.js"),
         metafile: metafile ?? false,
         format: "esm",
         treeShaking: true,
@@ -175,10 +197,13 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     });
 
     // write: false guarantees outputFiles exists, but array might be empty
-    const outputFile = result.outputFiles[0];
+    // Selected by extension rather than by index: asking for a source map adds a second output file, so
+    // the first is no longer reliably the code.
+    const outputFile = result.outputFiles.find((file) => !file.path.endsWith(".map"));
     if (outputFile === undefined) {
         throw new Error("esbuild produced no output");
     }
+    const mapFile = result.outputFiles.find((file) => file.path.endsWith(".map"));
 
     // Strip ESM module boilerplate from esbuild output
     const afterCleanup: number[] = [];
@@ -190,9 +215,15 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames, afterExpand);
 
     // Both passes only ever moved lines relative to what esbuild emitted, so composing them lands on a
-    // line of that output. Getting from there to the author's own file needs esbuild's source map, which
-    // is not requested yet - until it is, this answers "where in the bundle", not "where in the source".
+    // line of that output; the source map then says which file and line that came from.
     const lineMap = composeLineMaps(afterCleanup, afterExpand);
+    const origins = resolveOrigins(lineMap, mapFile?.text, resolveDir, {
+        // esbuild reads the entry as `marker + "\n" + source`, so every line it reports for that file
+        // sits one lower in the file the author actually has open. Other sources are read as-is.
+        path: config.sourcefile ?? realPath,
+        shift: lineCount(marker + "\n"),
+        lineMap: entryLineMap,
+    });
 
     // Extract input files from metafile if requested.
     // Only .ts files, not .d.ts.
@@ -204,7 +235,46 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
                   .map((f) => path.resolve(resolveDir, f))
             : [];
 
-    return { code, allEnumNames, externalEnumNames, inputFiles, lineMap };
+    return { code, allEnumNames, externalEnumNames, inputFiles, origins };
+}
+
+/**
+ * Turns each bundled line into the file and line it came from, given the esbuild output line it sits on.
+ *
+ * A line with no mapping stays undefined rather than borrowing its neighbour's: an approximate origin is
+ * indistinguishable from a real one once it reaches an error message, and a missing one at least says so.
+ * The map's `sources` are relative to the directory esbuild worked in, so they are resolved against it.
+ */
+function resolveOrigins(
+    lineMap: readonly number[],
+    mapText: string | undefined,
+    resolveDir: string,
+    entry: { path: string; shift: number; lineMap: readonly number[] },
+): Array<SourcePosition | undefined> {
+    const unmapped: Array<SourcePosition | undefined> = lineMap.map(() => void 0);
+    if (mapText === undefined) return unmapped;
+
+    const parsed = JSON.parse(mapText) as { sources?: string[]; mappings?: string };
+    const sources = parsed.sources ?? [];
+    const perOutputLine = decodeMappings(parsed.mappings ?? "");
+
+    function originAt(outputLine: number): SourcePosition | undefined {
+        const origin = perOutputLine[outputLine];
+        if (origin === undefined) return;
+        const source = sources[origin.source];
+        if (source === undefined) return;
+        const file = path.resolve(resolveDir, source);
+        // Only the entry was rewritten before esbuild read it: strip the marker it was given, then take
+        // the line back through the enum flattening. Every other source reached esbuild untouched.
+        const beforeMarker = origin.line - entry.shift;
+        const line = file === entry.path ? (entry.lineMap[beforeMarker] ?? beforeMarker) : origin.line;
+        // A prepended line can push an early mapping above the file's own first line; that names nothing
+        // the author can open, so it is dropped rather than clamped onto an unrelated line.
+        if (line < 0) return;
+        return { file, line };
+    }
+
+    return lineMap.map((outputLine) => originAt(outputLine));
 }
 
 /**

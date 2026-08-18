@@ -59,7 +59,10 @@ const tssl = createTranspiler<string, TranspileBatchState | undefined>({
     async transpileCore(filePath, text, traTag, batch) {
         // Pre-transform enums for extracting constants/let vars.
         // Pass enumNames to the shared bundler to skip redundant re-transformation.
-        const { code: enumTransformedText, enumNames } = transformEnums(text);
+        // The line map goes with it: doing this here rather than in the bundler is what would otherwise
+        // hide the lines an enum's flattening removed from everything downstream.
+        const enumLineMap: number[] = [];
+        const { code: enumTransformedText, enumNames } = transformEnums(text, enumLineMap);
 
         // Reuse project from batch state, or create a fresh one (LSP / single-file mode)
         const project = batch?.project ?? new Project();
@@ -98,7 +101,7 @@ const tssl = createTranspiler<string, TranspileBatchState | undefined>({
         const bundleResult = await bundleWithEsbuild({
             filePath,
             sourceText: enumTransformedText,
-            preTransformed: { enumNames },
+            preTransformed: { enumNames, lineMap: enumLineMap },
             marker: TSSL_CODE_MARKER,
             target: "es2022",
             sourcefile: path.basename(filePath).replace(".tssl", ".ts"),

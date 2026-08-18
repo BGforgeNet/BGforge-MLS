@@ -12,7 +12,7 @@ import * as fs from "fs";
 import type * as esbuild from "esbuild-wasm";
 import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
-import { lineCount } from "./line-map";
+import { lineCount, survivorsFromEdits, type LineEdit } from "./line-map";
 
 /** Result of transforming enums in source text */
 interface EnumTransformResult {
@@ -33,9 +33,16 @@ interface EnumTransformResult {
  * @param sourceText TypeScript source text
  * @returns Transformed code and set of enum names
  */
-export function transformEnums(sourceText: string): EnumTransformResult {
+export function transformEnums(sourceText: string, survivors?: number[]): EnumTransformResult {
+    /** Every line unchanged, for the paths that rewrite nothing. */
+    const reportIdentity = () => {
+        if (survivors === undefined) return;
+        for (let line = 0; line < lineCount(sourceText); line++) survivors.push(line);
+    };
+
     // Fast path: no enums in source
     if (!sourceText.includes("enum ")) {
+        reportIdentity();
         return { code: sourceText, enumNames: new Set() };
     }
 
@@ -46,6 +53,7 @@ export function transformEnums(sourceText: string): EnumTransformResult {
 
     // Fast path: enum keyword found in text but no actual enum declarations
     if (enumDecls.length === 0) {
+        reportIdentity();
         return { code: sourceText, enumNames: new Set() };
     }
 
@@ -53,7 +61,10 @@ export function transformEnums(sourceText: string): EnumTransformResult {
     const enumInfos = collectEnumInfo(enumDecls);
 
     // Replace enum declarations with flat consts (in reverse to preserve positions)
-    replaceEnumDeclarations(enumDecls, enumInfos);
+    const edits: LineEdit[] = [];
+    replaceEnumDeclarations(enumDecls, enumInfos, edits);
+    // The property-access rewrite below stays on one line, so these are the only lines that moved.
+    if (survivors !== undefined) survivors.push(...survivorsFromEdits(edits, lineCount(sourceText)));
 
     // After replaceEnumDeclarations, individual enum nodes are stale but the
     // sourceFile itself remains valid. getDescendantsOfKind re-walks the current tree.
@@ -111,7 +122,12 @@ function collectEnumInfo(enumDecls: readonly EnumDeclaration[]): readonly EnumIn
  * Replace each enum declaration with flat const declarations and a compat object.
  * Processes in reverse order to preserve source positions.
  */
-function replaceEnumDeclarations(enumDecls: readonly EnumDeclaration[], enumInfos: readonly EnumInfo[]): void {
+function replaceEnumDeclarations(
+    enumDecls: readonly EnumDeclaration[],
+    enumInfos: readonly EnumInfo[],
+    /** Filled, when passed, with what each rewrite did to the line count. */
+    edits?: LineEdit[],
+): void {
     // Build a map from enum name to info for lookup
     const infoByName = new Map(enumInfos.map((e) => [e.name, e]));
 
@@ -141,6 +157,13 @@ function replaceEnumDeclarations(enumDecls: readonly EnumDeclaration[], enumInfo
             lines.push(`${exportPrefix}const ${info.name} = {} as const;`);
         }
 
+        // Recorded before the rewrite and while walking in reverse, so these are still the declaration's
+        // original line numbers - every edit so far was made below it.
+        edits?.push({
+            startLine: enumDecl.getStartLineNumber() - 1,
+            inputSpan: enumDecl.getEndLineNumber() - enumDecl.getStartLineNumber() + 1,
+            outputSpan: lines.length,
+        });
         enumDecl.replaceWithText(lines.join("\n"));
     }
 }
@@ -326,18 +349,8 @@ export function expandEnumPropertyAccess(
     }
 
     // Both passes above rewrite a property access into an identifier in place, so only the statement
-    // rewrites recorded above moved any line. Walking the input in order, a line no edit covers keeps its
-    // index and a rewritten one contributes its replacement's lines, all pointing back at where it began.
-    if (survivors !== undefined) {
-        edits.sort((a, b) => a.startLine - b.startLine);
-        let next = 0;
-        for (const edit of edits) {
-            for (let line = next; line < edit.startLine; line++) survivors.push(line);
-            for (let i = 0; i < edit.outputSpan; i++) survivors.push(edit.startLine);
-            next = edit.startLine + edit.inputSpan;
-        }
-        for (let line = next; line < lineCount(code); line++) survivors.push(line);
-    }
+    // rewrites recorded above moved any line.
+    if (survivors !== undefined) survivors.push(...survivorsFromEdits(edits, lineCount(code)));
 
     return sourceFile.getFullText();
 }
