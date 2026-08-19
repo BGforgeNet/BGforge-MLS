@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Dev-loop test suite: static analysis, unit tests (no coverage), builds,
-# smoke + sample + CLI tests. The close-out gate (coverage thresholds, external
-# corpus, integration, grammars) is test-all.sh, which drives this script with
-# TEST_COVERAGE=1 / TEST_STOP_AFTER_BUILD=1.
+# Dev-loop test suite: static analysis, unit tests (no coverage), builds, smoke + sample + CLI tests,
+# grammars, and the SSL corpus canary - every category the gate covers, at dev-loop depth, so none can
+# break silently until close-out. The close-out gate (coverage thresholds, external corpus, integration,
+# the full sweeps) is test-all.sh, which drives this script with TEST_COVERAGE=1 /
+# TEST_STOP_AFTER_BUILD=1.
 # Uses parallel execution for independent stages to minimize wall time.
 # Each parallel job logs to tmp/test-logs/ - silent on success, full output on failure.
 set -eu -o pipefail
@@ -125,13 +126,17 @@ if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
 fi
 
 # --- Phase 3: Tests that need builds (all in parallel) ---
-# The external-corpus + integration chain lives in test-all.sh only: it is the
-# multi-minute tail of the suite and belongs to the close-out gate, not the
-# dev loop. bin-cli tests that read external/ are gated behind
-# RUN_EXTERNAL_CLI_TESTS and skip cleanly here.
-step "Phase 3: Smoke + Samples + CLI"
+# Every category the close-out gate covers is represented here at dev-loop depth: grammars whole (as
+# quick as the samples job beside them), the SSL corpus as its 24-script canary, which states its own
+# denominator so a green here cannot read as a swept corpus. Close-out keeps the format/idempotency
+# sweep - it MUTATES external/, hence the reset trap in test-external.sh, so it cannot share this
+# block - plus the full corpus sweeps and transpile-external. bin-cli tests that read external/ are
+# gated behind RUN_EXTERNAL_CLI_TESTS and skip cleanly here.
+step "Phase 3: Smoke + Samples + CLI + Grammars + Corpus canary"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
-    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli"
+    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
+    "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars" \
+    "Corpus canary" "pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
 
 timing_summary "All tests passed"
