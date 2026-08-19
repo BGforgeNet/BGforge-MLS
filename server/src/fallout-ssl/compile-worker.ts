@@ -12,11 +12,10 @@
 
 import * as fs from "fs";
 import { parentPort } from "worker_threads";
-import { compilePreprocessed } from "../../../compilers/ssl/src/compile";
-import { preprocessTextWithOrigins } from "../../../compilers/ssl/src/preprocess";
+import { compileSource } from "../../../compilers/ssl/src/compile";
 import { getParser as getSSLParser, initParser as initSSLParser } from "../../../shared/parsers/fallout-ssl";
 import { pathToUri } from "../uri-utils";
-import { toDiagnostics } from "./compile-diagnostics";
+import { problemDiagnostics } from "./compile-diagnostics";
 import type { CompileRequest, CompileResponse, Diagnostic } from "./compile-worker-protocol";
 
 function compile(request: CompileRequest): { errors: Diagnostic[]; warnings: Diagnostic[] } {
@@ -35,39 +34,39 @@ function compile(request: CompileRequest): { errors: Diagnostic[]; warnings: Dia
             warnings: [],
         };
     }
-    const uri = pathToUri(request.filepath);
-    const warnings: Diagnostic[] = [];
-    // A warning knows where it is but not how wide: the compiler reports a position, so the range is the
-    // single column it names, which is what the errors from the same source do.
-    const onWarning = (warning: { file?: string; line: number; column: number; message: string }) =>
-        warnings.push({
-            // A warning arrives in source coordinates; one restated against an included header names it.
-            uri: warning.file === undefined ? uri : pathToUri(warning.file),
-            line: warning.line,
-            columnStart: warning.column - 1,
-            columnEnd: warning.column - 1,
-            message: warning.message,
-        });
-    try {
-        // `filepath` is never read: it fixes where a quoted `#include` looks and which file an error
-        // names, so an unsaved buffer compiles exactly as the saved file would.
-        const source = preprocessTextWithOrigins(request.text, request.filepath, {
-            includeDirs: request.includeDirs,
-            defines: request.defines,
-        });
-        const bytes = compilePreprocessed(parser, source, request.filepath, {
-            level: request.level,
-            shortCircuit: request.shortCircuit,
-            ...(request.noWarnings ? {} : { onWarning }),
-        });
-        // Written here rather than posted back: the bytes are the only large payload in the exchange,
-        // and the server's thread has no use for them.
-        fs.writeFileSync(request.dstPath, bytes);
-        return { errors: [], warnings };
-    } catch (error) {
-        // Whatever was found before the failure still stands, so the warnings go back with the errors.
-        return { errors: toDiagnostics(error, request.filepath), warnings };
+    // `filepath` is never read: it fixes where a quoted `#include` looks and which file an error names,
+    // so an unsaved buffer compiles exactly as the saved file would. The compiler reports by value and in
+    // source coordinates; nothing here catches or flattens a refusal.
+    const result = compileSource(parser, request.text, request.filepath, {
+        preprocess: { includeDirs: request.includeDirs, defines: request.defines },
+        level: request.level,
+        shortCircuit: request.shortCircuit,
+        noWarnings: request.noWarnings,
+    });
+    const problems = [...result.problems];
+    if (result.bytes) {
+        try {
+            // Written here rather than posted back: the bytes are the only large payload in the exchange,
+            // and the server's thread has no use for them.
+            fs.writeFileSync(request.dstPath, result.bytes);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            problems.push({ line: 1, column: 0, message });
+        }
     }
+    // Whatever was found before a failure still stands, so the warnings go back with the errors.
+    return {
+        errors: problemDiagnostics(problems, request.filepath),
+        // A warning knows where it is but not how wide: its range is the single (0-based) column it
+        // names, where an error underlines from the line start - the convention each has always had.
+        warnings: result.warnings.map((warning) => ({
+            uri: pathToUri(warning.file ?? request.filepath),
+            line: warning.line,
+            columnStart: Math.max(0, warning.column - 1),
+            columnEnd: Math.max(0, warning.column - 1),
+            message: warning.message,
+        })),
+    };
 }
 
 const ready = initSSLParser();

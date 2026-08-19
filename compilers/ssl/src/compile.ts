@@ -15,8 +15,13 @@ import { EmitError, emitInt, type EmitOptions } from "./int/emit";
 import type { Program } from "./int/ir";
 import { LowerError, lowerProgram, type LowerOptions } from "./lower";
 import { optimize, type OptimizeOptions } from "./optimize";
-import { preprocessWithOrigins, type PreprocessedSource, type PreprocessOptions } from "./preprocess";
-import { problemsOf } from "./problems";
+import {
+    preprocessTextWithOrigins,
+    preprocessWithOrigins,
+    type PreprocessedSource,
+    type PreprocessOptions,
+} from "./preprocess";
+import { problemsOf, type CompilerProblem } from "./problems";
 
 export { CompileError, type CompileDiagnostic } from "./compile-error";
 
@@ -78,6 +83,58 @@ export function compileText(parser: Parser, text: string, options: CompileOption
 /** Compiles a source file, running the preprocessor first. Diagnostics arrive in source coordinates. */
 export function compileFile(parser: Parser, file: string, options: CompileOptions = {}): Uint8Array {
     return compilePreprocessed(parser, preprocessWithOrigins(file, options.preprocess), file, options);
+}
+
+export interface CompileSourceOptions extends CompileOptions {
+    /**
+     * Skip the warning checks entirely, as the CLI's `-n` does - cheaper than filtering afterwards,
+     * because the checks that only exist to produce warnings never run.
+     */
+    noWarnings?: boolean;
+}
+
+/** What a document compile came to: the bytes, or the problems that stopped them - never a throw. */
+export interface CompileResult {
+    /** Present exactly when the compile succeeded, i.e. `problems` is empty. */
+    bytes?: Uint8Array;
+    /** Everything that stopped the compile, in source coordinates, most important first. */
+    problems: CompilerProblem[];
+    /** Found along the way and worth saying either way - a warning accompanies a success as readily. */
+    warnings: CompilerProblem[];
+}
+
+/**
+ * Compiles in-memory text as if it were the file at `entry`, which is never read, and reports by VALUE.
+ *
+ * This is the whole compile as one call for a consumer that shows diagnostics - the language server's
+ * worker foremost. Every refusal shape the pipeline can throw is flattened through `problemsOf` here,
+ * because a consumer doing its own catch has to know all of them and one that misses a shape silently
+ * degrades. Anything unlocatable lands at the top of the file rather than escaping: to the consumer a
+ * crashed compile and a refused one both mean "no output, and here is why".
+ */
+export function compileSource(
+    parser: Parser,
+    text: string,
+    entry: string,
+    options: CompileSourceOptions = {},
+): CompileResult {
+    const warnings: CompilerProblem[] = [];
+    const sink = options.onWarning;
+    const collect: CompileOptions = {
+        ...options,
+        onWarning: options.noWarnings
+            ? undefined
+            : (warning) => {
+                  warnings.push(warning);
+                  sink?.(warning);
+              },
+    };
+    try {
+        const source = preprocessTextWithOrigins(text, entry, options.preprocess);
+        return { bytes: compilePreprocessed(parser, source, entry, collect), problems: [], warnings };
+    } catch (error) {
+        return { problems: problemsOf(error), warnings };
+    }
 }
 
 /**

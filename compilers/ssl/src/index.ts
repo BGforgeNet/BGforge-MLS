@@ -3,6 +3,7 @@ export {
     buildProgram,
     compileFile,
     compilePreprocessed,
+    compileSource,
     compileText,
     emitProgram,
     toSourceError,
@@ -10,6 +11,7 @@ export {
     CompileError,
     type CompileDiagnostic,
     type CompileOptions,
+    type CompileResult,
 } from "./compile";
 export { lowerProgram, LowerError, type LowerOptions } from "./lower";
 export { optimize, type OptimizeOptions } from "./optimize";
