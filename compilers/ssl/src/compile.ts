@@ -7,41 +7,21 @@
  * already own a parser they should reuse.
  */
 
+import * as path from "node:path";
 import type { Parser } from "web-tree-sitter";
 import { collectParseErrors } from "../../../shared/parse-errors";
-import { emitInt, type EmitOptions } from "./int/emit";
+import { CompileError } from "./compile-error";
+import { EmitError, emitInt, type EmitOptions } from "./int/emit";
 import type { Program } from "./int/ir";
-import { lowerProgram, type LowerOptions } from "./lower";
+import { LowerError, lowerProgram, type LowerOptions } from "./lower";
 import { optimize, type OptimizeOptions } from "./optimize";
-import { preprocess, type PreprocessOptions } from "./preprocess";
+import { preprocessWithOrigins, type PreprocessedSource, type PreprocessOptions } from "./preprocess";
+import { problemsOf } from "./problems";
+
+export { CompileError, type CompileDiagnostic } from "./compile-error";
 
 export interface CompileOptions extends LowerOptions, EmitOptions, OptimizeOptions {
     preprocess?: PreprocessOptions;
-}
-
-/** One located complaint, so a caller can place it without parsing the message back apart. */
-export interface CompileDiagnostic {
-    line: number;
-    column: number;
-    message: string;
-}
-
-export class CompileError extends Error {
-    /**
-     * Every problem this compile found, not just the one the message names.
-     *
-     * `message` stays the FIRST of them, formatted exactly as it always was, so a caller that only knows
-     * how to show one error keeps working unchanged - including the language server's `line:column:`
-     * parsing. A caller that can show more reads this instead.
-     */
-    readonly diagnostics: readonly CompileDiagnostic[];
-
-    constructor(diagnostics: CompileDiagnostic[]) {
-        const first = diagnostics[0];
-        super(first ? `${first.line}:${first.column}: ${first.message}` : "compilation failed");
-        this.name = "CompileError";
-        this.diagnostics = diagnostics;
-    }
 }
 
 /**
@@ -95,7 +75,62 @@ export function compileText(parser: Parser, text: string, options: CompileOption
     return emitProgram(buildProgram(parser, text, options), options);
 }
 
-/** Compiles a source file, running the preprocessor first. */
+/** Compiles a source file, running the preprocessor first. Diagnostics arrive in source coordinates. */
 export function compileFile(parser: Parser, file: string, options: CompileOptions = {}): Uint8Array {
-    return compileText(parser, preprocess(file, options.preprocess), options);
+    return compilePreprocessed(parser, preprocessWithOrigins(file, options.preprocess), file, options);
+}
+
+/**
+ * Compiles already-preprocessed source that still knows where its lines came from, restating every
+ * diagnostic and warning in SOURCE coordinates. `compileText` positions them in the preprocessed text,
+ * where directives have vanished and includes have spliced whole files in, so its lines are not the
+ * author's; this layer owns the mapping because it is handed the origins the preprocessor recorded.
+ */
+export function compilePreprocessed(
+    parser: Parser,
+    source: PreprocessedSource,
+    entry: string,
+    options: CompileOptions = {},
+): Uint8Array {
+    try {
+        return compileText(parser, source.text, toSourceOptions(options, source, entry));
+    } catch (error) {
+        throw toSourceError(error, source, entry);
+    }
+}
+
+/**
+ * The file and line an output line came from, with the file left out when it is the entry itself -
+ * matching the `CompileDiagnostic` convention that an absent file means the script being compiled.
+ */
+function relocate(source: PreprocessedSource, entry: string, line: number): { file?: string; line: number } {
+    const origin = source.origins[line - 1];
+    if (!origin) return { line };
+    return origin.file === path.resolve(entry) ? { line: origin.line } : { file: origin.file, line: origin.line };
+}
+
+/** Wraps a warning sink so warnings arrive in source coordinates, as `compilePreprocessed` promises. */
+export function toSourceOptions(options: CompileOptions, source: PreprocessedSource, entry: string): CompileOptions {
+    const sink = options.onWarning;
+    if (!sink) return options;
+    return { ...options, onWarning: (warning) => sink({ ...warning, ...relocate(source, entry, warning.line) }) };
+}
+
+/**
+ * Restates an error `buildProgram`/`emitProgram` threw over this source in source coordinates.
+ *
+ * Only the compiler's own refusal shapes are touched - anything else is not positioned in the
+ * preprocessed text and rewriting it would dress an internal crash up as a compile diagnostic. Exported
+ * beside `toSourceOptions` for the caller that needs the program in between (the CLI's `-D` dump), which
+ * `compilePreprocessed` cannot hand over.
+ */
+export function toSourceError(error: unknown, source: PreprocessedSource, entry: string): unknown {
+    if (!(error instanceof CompileError || error instanceof LowerError || error instanceof EmitError)) return error;
+    return new CompileError(
+        problemsOf(error).map((problem) => ({
+            column: problem.column,
+            message: problem.message,
+            ...relocate(source, entry, problem.line),
+        })),
+    );
 }

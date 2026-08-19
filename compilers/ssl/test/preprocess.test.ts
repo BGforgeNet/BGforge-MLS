@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { preprocess, preprocessText, PreprocessError } from "../src/preprocess.ts";
+import { preprocess, preprocessText, preprocessWithOrigins, PreprocessError } from "../src/preprocess.ts";
 
 let dir: string;
 
@@ -532,5 +532,67 @@ describe("preprocessing text that is not on disk", () => {
 
     it("still reports an error inside an include against the header", () => {
         expect(() => runText('#include "inc/h.h"\n', { "inc/h.h": "#bogus\n" })).toThrow(/h\.h:1: unknown directive/);
+    });
+});
+
+/**
+ * Per-line origins: which file and line each line of the preprocessed output came from.
+ *
+ * The compiler positions its diagnostics in the PREPROCESSED text, and directives vanish from it while
+ * includes splice whole files into it - so without this map, every error below the first directive is
+ * reported on a line the author never wrote. The map is what lets the file layer put them back.
+ */
+describe("line origins", () => {
+    function preprocessed(files: Record<string, string>, entry = "main.ssl") {
+        for (const [name, body] of Object.entries(files)) {
+            const target = path.join(dir, name);
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, body);
+        }
+        return { result: preprocessWithOrigins(path.join(dir, entry)), path: (name: string) => path.join(dir, name) };
+    }
+
+    it("keeps one origin per output line", () => {
+        const { result } = preprocessed({ "main.ssl": "#define X 9\nx := X;\n/* a\nb */ y := 2;\n" });
+        expect(result.origins.length).toBe(result.text.split("\n").length);
+    });
+
+    it("matches the text the string-returning form produces, byte for byte", () => {
+        const source = '#define X 9\n#include "h.h"\nx := X;\n';
+        const { result, path: at } = preprocessed({ "main.ssl": source, "h.h": "variable hv := N;\n#define N 3\n" });
+        expect(result.text).toBe(preprocess(at("main.ssl")));
+    });
+
+    it("names the source line a directive pushed out of place", () => {
+        // Lines 1-2 vanish with their directives, so `x := 9;` is output line 1 - and its origin must
+        // say it was written on line 3.
+        const { result, path: at } = preprocessed({ "main.ssl": "#define X 9\n#define Y 8\nx := X;\ny := Y;\n" });
+        expect(result.origins[0]).toEqual({ file: at("main.ssl"), line: 3 });
+        expect(result.origins[1]).toEqual({ file: at("main.ssl"), line: 4 });
+    });
+
+    it("attributes an included file's lines to that file", () => {
+        const { result, path: at } = preprocessed({
+            "main.ssl": '#include "hdr.h"\nx := 1;\n',
+            "hdr.h": "variable hv := 3;\n",
+        });
+        expect(result.origins[0]).toEqual({ file: at("hdr.h"), line: 1 });
+        // The header contributed two output lines (its content and its trailing line), so the entry's
+        // own line 2 sits at output line 3.
+        expect(result.origins[2]).toEqual({ file: at("main.ssl"), line: 2 });
+    });
+
+    it("keeps origins straight past a skipped conditional branch", () => {
+        const { result, path: at } = preprocessed({ "main.ssl": "#ifdef NOPE\nskipped\n#endif\nafter := 1;\n" });
+        expect(result.origins[0]).toEqual({ file: at("main.ssl"), line: 4 });
+    });
+
+    it("attributes the blank filler of a multi-line call to the lines it consumed", () => {
+        const { result, path: at } = preprocessed({
+            "main.ssl": "#define M(a,b) a + b\nx := M(1,\n2);\nnext := 3;\n",
+        });
+        expect(result.origins[0]).toEqual({ file: at("main.ssl"), line: 2 });
+        expect(result.origins[1]).toEqual({ file: at("main.ssl"), line: 3 });
+        expect(result.origins[2]).toEqual({ file: at("main.ssl"), line: 4 });
     });
 });

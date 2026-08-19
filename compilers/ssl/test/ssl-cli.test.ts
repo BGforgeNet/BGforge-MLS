@@ -249,6 +249,23 @@ describe("ssl CLI", () => {
             expect(fs.existsSync(path.join(tmpDir, "broken.int"))).toBe(false);
         });
 
+        it("reports an error below directives on the line the author wrote", () => {
+            // The compiler positions errors in the preprocessed text, where the two defines have
+            // vanished - unmapped, this would say line 2.
+            const file = source("drift.ssl", "#define X 9\n#define Y 8\nprocedure start begin\n bogus := 1;\nend\n");
+            const { code, stderr } = run(file);
+            expect(code).toBe(1);
+            expect(stderr).toContain("drift.ssl:4:2: unknown identifier 'bogus'");
+        });
+
+        it("blames an included header's own line for an error inside it", () => {
+            source("bad-hdr.h", "variable ok := 1;\nvariable bad[10];\n");
+            const file = source("includes.ssl", '#include "bad-hdr.h"\nprocedure start begin end\n');
+            const { code, stderr } = run(file);
+            expect(code).toBe(1);
+            expect(stderr).toMatch(/bad-hdr\.h:2:\d+: array declarations are only allowed on a local variable/);
+        });
+
         it("counts the failures across several inputs", () => {
             const good = source("good.ssl", HELLO);
             const { code, stderr } = run(good, path.join(tmpDir, "absent.ssl"));

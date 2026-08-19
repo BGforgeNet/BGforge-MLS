@@ -11,12 +11,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs, type SslArgs, type SslInput } from "./args";
-import { buildProgram, emitProgram, CompileError } from "./compile";
+import { buildProgram, emitProgram, toSourceError, toSourceOptions, CompileError } from "./compile";
 import { decompileToProgram } from "./int/decompile";
 import { formatDisassembly } from "./int/disasm";
 import { printProgram } from "./int/print";
 import { readInt } from "./int/read";
-import { preprocess, PreprocessError } from "./preprocess";
+import { preprocess, preprocessWithOrigins, PreprocessError } from "./preprocess";
 import { initParser, getParser } from "../../../shared/parsers/fallout-ssl";
 
 const USAGE = `Usage: ssl {switches} filename [-o outputname] [filename [..]]
@@ -149,21 +149,35 @@ function decompileOne(file: string): Rendered {
 }
 
 function compileOne(file: string, args: SslArgs): Uint8Array {
-    const options = {
-        level: args.level,
-        shortCircuit: args.shortCircuit,
-        // `-n` leaves the sink off entirely rather than filtering afterwards, so the checks that exist
-        // only to fill it do not run at all.
-        ...(args.noWarnings
-            ? {}
-            : {
-                  onWarning: (warning: { line: number; column: number; message: string }) =>
-                      console.error(`Warning: ${file}:${warning.line}:${warning.column}: ${warning.message}`),
-              }),
-    };
-    const program = buildProgram(getParser(), preprocessOne(file, args), options);
-    if (args.dumpTree) console.log(printProgram(program));
-    return emitProgram(program, options);
+    const source = preprocessWithOrigins(file, { includeDirs: args.includeDirs, defines: args.defines });
+    // Warnings and errors alike are restated in SOURCE coordinates - the compiler positions them in the
+    // preprocessed text, whose lines are not the author's once a directive has vanished from it.
+    const options = toSourceOptions(
+        {
+            level: args.level,
+            shortCircuit: args.shortCircuit,
+            // `-n` leaves the sink off entirely rather than filtering afterwards, so the checks that exist
+            // only to fill it do not run at all.
+            ...(args.noWarnings
+                ? {}
+                : {
+                      onWarning: (warning: { file?: string; line: number; column: number; message: string }) =>
+                          console.error(
+                              `Warning: ${warning.file ?? file}:${warning.line}:${warning.column}: ${warning.message}`,
+                          ),
+                  }),
+        },
+        source,
+        file,
+    );
+    try {
+        // Not `compilePreprocessed`, which cannot hand the program over for `-D` in between.
+        const program = buildProgram(getParser(), source.text, options);
+        if (args.dumpTree) console.log(printProgram(program));
+        return emitProgram(program, options);
+    } catch (error) {
+        throw toSourceError(error, source, file);
+    }
 }
 
 /** What an output is called when no `-o` said, before the name it would collide with is considered. */
@@ -189,7 +203,8 @@ function defaultOutput(file: string, suffix: string): string {
 /** One line naming the file and, where the error knows it, the position inside it. */
 function describe(error: unknown, file: string): string {
     if (error instanceof PreprocessError) return `Error: ${error.message}`;
-    if (error instanceof CompileError) return `Error: ${file}:${error.message}`;
+    // A diagnostic naming its own file sits in an included header; the message's line belongs to it.
+    if (error instanceof CompileError) return `Error: ${error.diagnostics[0]?.file ?? file}:${error.message}`;
     return `Error: ${file}: ${error instanceof Error ? error.message : String(error)}`;
 }
 

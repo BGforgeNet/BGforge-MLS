@@ -48,6 +48,26 @@ export interface PreprocessOptions {
     maxIncludeDepth?: number;
 }
 
+/** Where one line of preprocessed output came from: a file, and a 1-based line in it. */
+export interface LineOrigin {
+    file: string;
+    line: number;
+}
+
+/**
+ * Preprocessed text, and the source line each of its lines came from.
+ *
+ * The compiler positions its diagnostics in this text, where directives have vanished and includes have
+ * spliced whole files in - so line numbers here are not the author's. `origins` holds one entry per line
+ * of `text`, and is what lets the layer that ran the preprocessor restate a diagnostic against the file
+ * and line the author actually wrote. Columns are not mapped: a line that was not macro-expanded keeps
+ * its columns, and one that was has no column mapping worth inventing.
+ */
+export interface PreprocessedSource {
+    text: string;
+    origins: readonly LineOrigin[];
+}
+
 export class PreprocessError extends Error {
     readonly file: string;
     readonly line: number;
@@ -520,6 +540,8 @@ interface State {
     macros: Map<string, Macro>;
     expander: Expander;
     out: string[];
+    /** One entry per line of the joined output; every push to `out` records its lines' origins here. */
+    origins: LineOrigin[];
     options: PreprocessOptions;
     depth: number;
     errors: PreprocessError[];
@@ -614,7 +636,7 @@ const MAX_CALL_LINES = 32;
  *
  * @returns the last line index consumed, which the caller's loop continues from.
  */
-function expandFrom(state: State, lines: readonly string[], n: number): number {
+function expandFrom(state: State, lines: readonly string[], n: number, file: string): number {
     let text = lines[n] ?? "";
     let last = n;
     let result = state.expander.expandChunk(text);
@@ -627,6 +649,9 @@ function expandFrom(state: State, lines: readonly string[], n: number): number {
     // Only the newlines the expansion swallowed need replacing; any it left in place already count.
     const kept = result.text.split("\n").length - 1;
     for (let i = kept; i < last - n; i++) state.out.push("");
+    // Output and input lines correspond one-to-one across the whole consumption - the expansion's own
+    // lines first, then the fillers - so each output line names the input line at its own offset.
+    for (let line = n; line <= last; line++) state.origins.push({ file, line: line + 1 });
     return last;
 }
 
@@ -645,7 +670,7 @@ function processSource(text: string, file: string, state: State): void {
         const line = lines[n] ?? "";
         const directive = /^[ \t]*#/.test(line) ? DIRECTIVE.exec(line) : null;
         if (directive === null) {
-            if (emitting()) n = expandFrom(state, lines, n);
+            if (emitting()) n = expandFrom(state, lines, n, file);
             continue;
         }
         const name = directive[1] ?? "";
@@ -746,7 +771,10 @@ function processSource(text: string, file: string, state: State): void {
                 // A pragma is the COMPILER's, not ours: `#pragma sce` turns on short-circuit evaluation of
                 // boolean operators. Dropping one silently changes how `and`/`or` compile, so pass the
                 // line through untouched, as gcc -E does.
-                if (emitting()) state.out.push(line);
+                if (emitting()) {
+                    state.out.push(line);
+                    state.origins.push({ file, line: n + 1 });
+                }
                 break;
             case "error":
                 // The whole point of the directive is to stop the build with the author's own message.
@@ -787,6 +815,11 @@ function processSource(text: string, file: string, state: State): void {
 
 /** Preprocess `entry` and return the translation unit, directives removed and macros expanded. */
 export function preprocess(entry: string, options: PreprocessOptions = {}): string {
+    return preprocessWithOrigins(entry, options).text;
+}
+
+/** As `preprocess`, also reporting which file and line each output line came from. */
+export function preprocessWithOrigins(entry: string, options: PreprocessOptions = {}): PreprocessedSource {
     return runPreprocessor(options, (state) => processFile(path.resolve(entry), state));
 }
 
@@ -796,17 +829,34 @@ export function preprocess(entry: string, options: PreprocessOptions = {}): stri
  * do that without first writing a copy next to their source.
  */
 export function preprocessText(text: string, entry: string, options: PreprocessOptions = {}): string {
+    return preprocessTextWithOrigins(text, entry, options).text;
+}
+
+/** As `preprocessText`, also reporting which file and line each output line came from. */
+export function preprocessTextWithOrigins(
+    text: string,
+    entry: string,
+    options: PreprocessOptions = {},
+): PreprocessedSource {
     return runPreprocessor(options, (state) => processSource(text, path.resolve(entry), state));
 }
 
-function runPreprocessor(options: PreprocessOptions, walk: (state: State) => void): string {
+function runPreprocessor(options: PreprocessOptions, walk: (state: State) => void): PreprocessedSource {
     const macros = new Map<string, Macro>();
     for (const [name, body] of Object.entries(options.defines ?? {})) {
         macros.set(name, { name, params: null, body, variadic: false });
     }
-    const state: State = { macros, expander: new Expander(macros), out: [], options, depth: 0, errors: [] };
+    const state: State = {
+        macros,
+        expander: new Expander(macros),
+        out: [],
+        origins: [],
+        options,
+        depth: 0,
+        errors: [],
+    };
     walk(state);
     const first = state.errors[0];
     if (first) throw new PreprocessError(first.detail, first.file, first.line, state.errors);
-    return state.out.join("\n");
+    return { text: state.out.join("\n"), origins: state.origins };
 }

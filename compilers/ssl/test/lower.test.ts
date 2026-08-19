@@ -1168,3 +1168,89 @@ describe.skipIf(!wasmPresent)("compile warnings", () => {
         expect([...quiet]).toEqual([...loud]);
     });
 });
+
+/**
+ * Diagnostics from a file compile arrive in SOURCE coordinates, not preprocessed ones.
+ *
+ * The compiler positions parse, lowering and emit errors in the preprocessed text, where directives have
+ * vanished and includes have spliced whole files in - so without mapping, an error below the first
+ * directive names a line the author never wrote, off by hundreds once a real header is included. The
+ * file layer owns the mapping because it is the layer that ran the preprocessor.
+ */
+describe.skipIf(!wasmPresent)("file compiles report source coordinates", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    /** Writes `files`, compiles `entry`, and hands back whatever the compile threw or produced. */
+    function compileDir(files: Record<string, string>, options = {}, entry = "main.ssl") {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ssl-pos-"));
+        try {
+            for (const [name, body] of Object.entries(files)) {
+                fs.writeFileSync(path.join(dir, name), body);
+            }
+            try {
+                return {
+                    bytes: compileFile(parser, path.join(dir, entry), options),
+                    at: (n: string) => path.join(dir, n),
+                };
+            } catch (error) {
+                return { error, at: (n: string) => path.join(dir, n) };
+            }
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    }
+
+    it("reports an error below vanished directive lines on the line the author wrote", () => {
+        const { error } = compileDir({
+            "main.ssl": "#define X 9\n#define Y 8\nprocedure start begin\n bogus_name := 1;\nend\n",
+        });
+        expect(error).toBeInstanceOf(CompileError);
+        const first = (error as CompileError).diagnostics[0];
+        expect(first).toMatchObject({ line: 4, column: 2 });
+        expect(first?.message).toMatch(/unknown identifier 'bogus_name'/);
+        // The entry file's own diagnostics carry no file, as problemsOf's contract has it.
+        expect(first?.file).toBeUndefined();
+        expect((error as CompileError).message).toMatch(/^4:2: /);
+    });
+
+    it("attributes an error inside an included header to the header, at its own line", () => {
+        const { error, at } = compileDir({
+            "main.ssl": '#include "hdr.h"\nprocedure start begin end\n',
+            "hdr.h": "variable ok := 1;\nvariable bad[10];\n",
+        });
+        expect(error).toBeInstanceOf(CompileError);
+        const first = (error as CompileError).diagnostics[0];
+        expect(first?.message).toMatch(/array declarations are only allowed on a local variable/);
+        expect(first?.file).toBe(at("hdr.h"));
+        expect(first?.line).toBe(2);
+    });
+
+    it("maps an emit-time refusal the same way", () => {
+        // A declared-but-undefined procedure is refused by the EMITTER, so this is the path that proves
+        // the mapping covers errors thrown after lowering, not just lowering's own.
+        const { error } = compileDir({
+            "main.ssl": "#define PAD 1\nprocedure ghost;\nprocedure start begin end\n",
+        });
+        expect(error).toBeInstanceOf(CompileError);
+        const first = (error as CompileError).diagnostics[0];
+        expect(first?.message).toMatch(/'ghost' is declared but never defined/);
+        expect(first?.line).toBe(2);
+    });
+
+    it("reports warnings on the source line too", () => {
+        const warnings: { file?: string; line: number; column: number; message: string }[] = [];
+        const { bytes } = compileDir(
+            { "main.ssl": "#define PAD 1\nvariable g := 1;\nvariable g := 2;\nprocedure start begin end\n" },
+            { onWarning: (w: { file?: string; line: number; column: number; message: string }) => warnings.push(w) },
+        );
+        expect(bytes?.length).toBeGreaterThan(0);
+        expect(warnings).toMatchObject([{ line: 3, column: 10 }]);
+        expect(warnings[0]?.file).toBeUndefined();
+    });
+});

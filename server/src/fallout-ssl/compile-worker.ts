@@ -12,8 +12,8 @@
 
 import * as fs from "fs";
 import { parentPort } from "worker_threads";
-import { compileText } from "../../../compilers/ssl/src/compile";
-import { preprocessText } from "../../../compilers/ssl/src/preprocess";
+import { compilePreprocessed } from "../../../compilers/ssl/src/compile";
+import { preprocessTextWithOrigins } from "../../../compilers/ssl/src/preprocess";
 import { getParser as getSSLParser, initParser as initSSLParser } from "../../../shared/parsers/fallout-ssl";
 import { pathToUri } from "../uri-utils";
 import { toDiagnostics } from "./compile-diagnostics";
@@ -39,9 +39,10 @@ function compile(request: CompileRequest): { errors: Diagnostic[]; warnings: Dia
     const warnings: Diagnostic[] = [];
     // A warning knows where it is but not how wide: the compiler reports a position, so the range is the
     // single column it names, which is what the errors from the same source do.
-    const onWarning = (warning: { line: number; column: number; message: string }) =>
+    const onWarning = (warning: { file?: string; line: number; column: number; message: string }) =>
         warnings.push({
-            uri,
+            // A warning arrives in source coordinates; one restated against an included header names it.
+            uri: warning.file === undefined ? uri : pathToUri(warning.file),
             line: warning.line,
             columnStart: warning.column - 1,
             columnEnd: warning.column - 1,
@@ -50,11 +51,11 @@ function compile(request: CompileRequest): { errors: Diagnostic[]; warnings: Dia
     try {
         // `filepath` is never read: it fixes where a quoted `#include` looks and which file an error
         // names, so an unsaved buffer compiles exactly as the saved file would.
-        const source = preprocessText(request.text, request.filepath, {
+        const source = preprocessTextWithOrigins(request.text, request.filepath, {
             includeDirs: request.includeDirs,
             defines: request.defines,
         });
-        const bytes = compileText(parser, source, {
+        const bytes = compilePreprocessed(parser, source, request.filepath, {
             level: request.level,
             shortCircuit: request.shortCircuit,
             ...(request.noWarnings ? {} : { onWarning }),

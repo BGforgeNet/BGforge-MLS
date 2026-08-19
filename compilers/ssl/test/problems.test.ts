@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
-import { compileText } from "../src/compile.ts";
+import { CompileError, compileText } from "../src/compile.ts";
 import { problemsOf } from "../src/problems.ts";
 import { preprocessText } from "../src/preprocess.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
@@ -99,6 +99,22 @@ describe("problemsOf, over a preprocessor refusal", () => {
         const problems = problemsFrom("#endif\n#else\n#endif\n\nprocedure start begin end\n");
         expect(problems.length).toBeGreaterThan(1);
         expect(problems.map((p) => p.line)).toEqual([1, 2, 3]);
+    });
+});
+
+// The file layer restates a diagnostic found in an included header with the header's path, so the
+// aggregate is the second shape whose problems can carry a file - and dropping it here would send the
+// reader to a line of the wrong file.
+describe("problemsOf, over an aggregate whose diagnostics name a file", () => {
+    it("passes each diagnostic's file through", () => {
+        const error = new CompileError([
+            { file: "/virtual/hdr.h", line: 2, column: 1, message: "in the header" },
+            { line: 5, column: 3, message: "in the script" },
+        ]);
+        expect(problemsOf(error)).toEqual([
+            { file: "/virtual/hdr.h", line: 2, column: 1, message: "in the header" },
+            { line: 5, column: 3, message: "in the script" },
+        ]);
     });
 });
 

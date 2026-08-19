@@ -11,7 +11,7 @@
  * exactly what happened when the editor knew `CompileError` and lowering threw its own error instead.
  */
 
-import { CompileError } from "./compile";
+import { CompileError } from "./compile-error";
 import { LowerError } from "./lower";
 import { PreprocessError } from "./preprocess";
 
@@ -33,7 +33,12 @@ export function problemsOf(error: unknown): CompilerProblem[] {
         return error.all.map((one) => ({ file: one.file, line: one.line, column: 0, message: one.message }));
     }
     if (error instanceof CompileError && error.diagnostics.length > 0) {
-        return error.diagnostics.map((one) => ({ line: one.line, column: one.column, message: one.message }));
+        return error.diagnostics.map((one) => ({
+            ...(one.file === undefined ? {} : { file: one.file }),
+            line: one.line,
+            column: one.column,
+            message: one.message,
+        }));
     }
     if (error instanceof LowerError) {
         return error.all.map((one) => ({ line: one.line, column: one.column, message: one.detail }));

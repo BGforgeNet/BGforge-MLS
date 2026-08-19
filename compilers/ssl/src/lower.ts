@@ -85,8 +85,10 @@ export interface LowerOptions {
      * listening, and the checks that only exist to produce warnings are skipped.
      *
      * Structurally a `CompileDiagnostic`, spelled inline because the type belongs to the layer above.
+     * Lowering itself never sets `file`; the field exists so the file layer can restate a warning found
+     * in an included header against the header, through the same sink.
      */
-    onWarning?: (warning: { line: number; column: number; message: string }) => void;
+    onWarning?: (warning: { file?: string; line: number; column: number; message: string }) => void;
 }
 
 const BINARY_OPS = new Set<string>([

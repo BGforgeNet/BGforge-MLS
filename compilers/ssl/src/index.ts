@@ -1,8 +1,29 @@
 export { parseArgs, type ArgNotice, type SslArgs, type SslInput } from "./args";
-export { buildProgram, compileFile, compileText, emitProgram, CompileError, type CompileOptions } from "./compile";
+export {
+    buildProgram,
+    compileFile,
+    compilePreprocessed,
+    compileText,
+    emitProgram,
+    toSourceError,
+    toSourceOptions,
+    CompileError,
+    type CompileDiagnostic,
+    type CompileOptions,
+} from "./compile";
 export { lowerProgram, LowerError, type LowerOptions } from "./lower";
 export { optimize, type OptimizeOptions } from "./optimize";
-export { preprocess, preprocessText, PreprocessError, type Macro, type PreprocessOptions } from "./preprocess";
+export {
+    preprocess,
+    preprocessText,
+    preprocessTextWithOrigins,
+    preprocessWithOrigins,
+    PreprocessError,
+    type LineOrigin,
+    type Macro,
+    type PreprocessedSource,
+    type PreprocessOptions,
+} from "./preprocess";
 export { decompileToProgram, DecompileError } from "./int/decompile";
 export { formatDisassembly, decodeCode, type Instruction } from "./int/disasm";
 export { emitInt, EmitError, type EmitOptions } from "./int/emit";
