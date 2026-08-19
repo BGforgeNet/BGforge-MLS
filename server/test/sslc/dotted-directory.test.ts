@@ -57,8 +57,33 @@ describe.skipIf(!isSslcAvailable())("the WebAssembly compiler's working director
         expect(fs.existsSync(outputFileName)).toBe(true);
     });
 
-    // No include-resolution case here on purpose. The working directory cannot simply move somewhere
-    // without a dot, because `#include` resolves against it - but that constraint resists a test: the
-    // compiler accepts a missing include silently, and a header whose contents the script actually uses
-    // hangs it (see the wrapper's note; the hang predates this file and is not about the directory).
+    // Why the working directory cannot simply be moved somewhere without a dot: `#include` resolves
+    // against it. The header is load-bearing - without it the script does not build - so this fails if the
+    // compile ever stops happening where the source lives.
+    it("resolves an include against a working directory whose name contains a dot", async () => {
+        const dir = path.join(tmpDir, "headers.v2");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "answer.h"), "#define ANSWER (42)\n", "utf-8");
+        fs.writeFileSync(
+            path.join(dir, "test.ssl"),
+            '#include "answer.h"\nprocedure start begin\n  variable x := ANSWER;\nend\n',
+            "utf-8",
+        );
+        const outputFileName = path.join(dir, "test.int");
+
+        const { returnCode, stdout } = await ssl_compile({
+            cwd: dir,
+            inputFileName: "test.ssl",
+            // The include is only expanded when the preprocessor runs, which `-p` is what asks for.
+            options: "-q -p -l",
+            outputFileName,
+            headersDir: "",
+            interactive: false,
+            timeoutMs: 30000,
+        });
+
+        expect(stdout).not.toContain("Can't open include file");
+        expect(returnCode).toBe(0);
+        expect(fs.existsSync(outputFileName)).toBe(true);
+    });
 });

@@ -96,6 +96,12 @@ export async function ssl_compile(opts: {
         return { returnCode: 1, stdout: "", stderr: msg };
     }
 
+    // After reporting errors the compiler waits for a keypress unless `-q` is among the options, and a
+    // forked child's stdin is a pipe this process holds open - so that read has no EOF to find and the
+    // compile ends only when the timeout kills it. Closing the pipe makes the wait end immediately,
+    // whatever the user has left in their compile options.
+    p.stdin?.end();
+
     const stdout: string[] = [];
     const stderr: string[] = [];
     p.stdout?.on("data", (data) => {
@@ -126,10 +132,14 @@ export async function ssl_compile(opts: {
 
         // Kill on wall-clock timeout; resolve with an error result.
         const timer = setTimeout(() => {
+            // Kill and settle before reporting. This is the bound that turns a compile which stopped
+            // making progress into a returned failure, so it cannot be left depending on the logger being
+            // reachable - a throw here would leave the child running and the promise unresolved, which is
+            // the hang it exists to end.
             const msg = `WebAssembly compiler timed out after ${timeoutMs}ms`;
-            conlog(msg);
             if (!p.killed) p.kill();
             settle({ returnCode: 1, stdout: stdout.join(""), stderr: msg });
+            conlog(msg);
         }, timeoutMs);
 
         // Handle fork failures (e.g., ENOENT when compiler module is missing).
