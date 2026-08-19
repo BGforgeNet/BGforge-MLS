@@ -30,6 +30,7 @@ import { tmpDir } from "../path-utils";
 import { pathToUri, uriToPath } from "../uri-utils";
 import { needsShell, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, withCompileLifecycle, writeTmpSource } from "../core/compile-with-tmp-file";
+import { withDirectoryGate } from "../core/directory-gate";
 import { compileOnWorker, stopCompileWorker } from "./compile-worker-client";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
@@ -392,56 +393,74 @@ export async function compile(
                 return;
             }
 
-            // Everything below is a program that takes a file name, so the document goes to disk first.
-            await writeTmpSource(tmpPath, text);
-
-            if (useOwnCompiler) {
-                const { stdout, returnCode } = await ssl_wasm_compiler({
-                    interactive,
-                    cwd: cwdTo,
-                    inputFileName: TMP_SSL_NAME,
-                    outputFileName: dstPath,
-                    options: sslSettings.compileOptions,
-                    headersDir: sslSettings.headersDirectory,
-                    signal,
-                    debug,
-                });
+            // Everything below hands a file name to a program that runs in the document's own directory,
+            // where our copy of the source and the compiler's own scratch file - whose name we do not
+            // control - both take a name that is the same for every compile there. They queue by
+            // directory because the clash is between neighbouring files, not between two compiles of one
+            // document, which the abort above already covers.
+            await withDirectoryGate(cwdTo, async () => {
+                // Waiting for the directory takes time, and a newer compile of this document may have
+                // displaced this one meanwhile - typing fires one per keystroke. Checking on entry keeps
+                // a burst of edits from spawning a compiler for every version the user has moved past.
                 if (signal.aborted) {
                     return;
                 }
-                if (returnCode === 0) {
-                    if (interactive) {
-                        showInfo(`Compiled ${baseName}.`);
+
+                await writeTmpSource(tmpPath, text);
+
+                if (useOwnCompiler) {
+                    const { stdout, returnCode } = await ssl_wasm_compiler({
+                        interactive,
+                        cwd: cwdTo,
+                        inputFileName: TMP_SSL_NAME,
+                        outputFileName: dstPath,
+                        options: sslSettings.compileOptions,
+                        headersDir: sslSettings.headersDirectory,
+                        signal,
+                        debug,
+                    });
+                    if (signal.aborted) {
+                        return;
                     }
-                } else {
-                    if (interactive) {
-                        showError(`Failed to compile ${baseName}!`);
+                    if (returnCode === 0) {
+                        if (interactive) {
+                            showInfo(`Compiled ${baseName}.`);
+                        }
+                    } else {
+                        if (interactive) {
+                            showError(`Failed to compile ${baseName}!`);
+                        }
                     }
+                    sendDiagnostics(uri, stdout, tmpUri);
+                    return;
                 }
-                sendDiagnostics(uri, stdout, tmpUri);
-                return;
-            }
 
-            const { err, stdout } = await runExternalCompiler(
-                sslSettings.compilePath,
-                compileOptions,
-                cwdTo,
-                dstPath,
-                signal,
-            );
+                const { err, stdout } = await runExternalCompiler(
+                    sslSettings.compilePath,
+                    compileOptions,
+                    cwdTo,
+                    dstPath,
+                    signal,
+                );
 
-            if (signal.aborted) {
-                return;
-            }
+                if (signal.aborted) {
+                    return;
+                }
 
-            let parseResult = parseCompileOutput(stdout, uri);
+                let parseResult = parseCompileOutput(stdout, uri);
 
-            if (err && parseResult.errors.length === 0) {
-                parseResult = addFallbackDiagnostic(parseResult, err, pathToUri(filepath), stdout);
-            }
+                if (err && parseResult.errors.length === 0) {
+                    parseResult = addFallbackDiagnostic(parseResult, err, pathToUri(filepath), stdout);
+                }
 
-            reportCompileResult(parseResult, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
-            sendParseResult(parseResult, uri, tmpUri);
+                reportCompileResult(
+                    parseResult,
+                    interactive,
+                    `Compiled ${baseName}.`,
+                    `Failed to compile ${baseName}!`,
+                );
+                sendParseResult(parseResult, uri, tmpUri);
+            });
         },
     });
 }
