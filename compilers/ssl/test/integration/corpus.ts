@@ -87,10 +87,13 @@ export const BROKEN_WHEN_OPTIMISED: readonly string[] = BROKEN_SCRIPTS.filter(
 /**
  * How many times a KILLED reference invocation is retried before its script is counted as excluded.
  *
- * The bundled compiler wedges roughly one spawn in several thousand, on a script it otherwise compiles in
- * under a tenth of a second - `scgond` and later `dcpengrd` (177 lines) each hit the two-minute bound and
- * then compiled in milliseconds when run alone. Two, not one: on 2026-08-14 `dcpengrd` hung on the retry
- * as well, which reddened a sweep whose 1521 other oracles all matched.
+ * Roughly one spawn in several thousand never exits, and the compile is not what stops. By the time it
+ * wedges the compile has finished: the working directory has been restored and every byte of the output
+ * has reached this process. What is left is the runtime failing to leave - the main thread and a worker
+ * each parked on a futex, consuming no CPU at all until the bound kills it. Nothing about the script
+ * decides it, which is why one that wedges compiles in milliseconds on the next attempt, and why retrying
+ * is the right shape of workaround rather than a guess. Two retries, not one: on 2026-08-14 `dcpengrd`
+ * wedged on the retry as well, reddening a sweep whose 1521 other oracles all matched.
  */
 const KILL_RETRIES = 2;
 
