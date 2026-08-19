@@ -19,7 +19,8 @@ import { getDocumentSettings } from "./settings-service";
 // handler owns the file write and the user-facing message, keeping the library a
 // pure source->string transformation. Imported by relative path so esbuild
 // bundles it into the server rather than treating it as an external npm dependency.
-import { tssl, tbaf, td, outputPathFor, TranspileError } from "../../transpilers/src/index";
+import { tbafWithSourceMap, td, tsslWithSourceMap, outputPathFor, TranspileError } from "../../transpilers/src/index";
+import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
 
@@ -86,7 +87,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const { output, warnings } = await td(filePath, text);
+                const { output, warnings, sourceMap } = await td(filePath, text);
                 const dPath = outputPathFor(filePath);
                 await fs.promises.writeFile(dPath, output, "utf-8");
                 const dName = path.basename(dPath);
@@ -103,6 +104,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const dUri = pathToUri(dPath);
                     await weidu.compile(dUri, settings.weidu, interactive, output);
+                    relocateGeneratedDiagnostics(dUri, sourceMap);
                 }
             } catch (error) {
                 reportTranspileFailure(error, uri, "TD", interactive);
@@ -113,7 +115,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const output = await tbaf(filePath, text);
+                const { output, sourceMap } = await tbafWithSourceMap(filePath, text);
                 const bafPath = outputPathFor(filePath);
                 await fs.promises.writeFile(bafPath, output, "utf-8");
                 const bafName = path.basename(bafPath);
@@ -124,6 +126,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const bafUri = pathToUri(bafPath);
                     await weidu.compile(bafUri, settings.weidu, interactive, output);
+                    relocateGeneratedDiagnostics(bafUri, sourceMap);
                 }
             } catch (error) {
                 reportTranspileFailure(error, uri, "TBAF", interactive);
@@ -136,7 +139,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const output = await tssl(filePath, text);
+                const { output, sourceMap } = await tsslWithSourceMap(filePath, text);
                 const sslPath = outputPathFor(filePath);
                 await fs.promises.writeFile(sslPath, output, "utf-8");
                 const sslName = path.basename(sslPath);
@@ -147,6 +150,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 const sslUri = pathToUri(sslPath);
                 clearCompilerDiagnostics(sslUri);
                 await registry.compile(LANG_FALLOUT_SSL, sslUri, output, interactive);
+                relocateGeneratedDiagnostics(sslUri, sourceMap);
             } catch (error) {
                 reportTranspileFailure(error, uri, "TSSL", interactive);
             }

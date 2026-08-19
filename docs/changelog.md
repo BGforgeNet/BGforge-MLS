@@ -56,9 +56,13 @@
 - A procedure that is declared and never defined is reported, naming the procedure and the line it was
   declared on.
 - Compiling a script in a directory whose name contains a dot (`fo2.rp`, `mymod.v2`) failed with an opaque
-  `ErrnoError undefined undefined` and no output file. The WebAssembly compiler cannot build there at all, so
-  this is now reported as such, naming the directory and pointing at the `built-in` compiler, which has
-  no such limit.
+  `ErrnoError undefined undefined` and no output file. Everything after the last dot was read as a file
+  extension and dropped, so the compile ran in a directory that does not exist. Both compilers build there
+  now.
+- Two scripts in the same folder no longer interfere when they compile at the same time. Both compiles
+  wrote the same intermediate files beside the source, so one could read a file the other was still
+  writing - reporting a syntax error in a header that was never touched, or failing outright. Compiles in
+  one folder now wait for each other; different folders still compile in parallel.
 - `bgforge.falloutSSL.headersDirectory` is now honoured when the directory's name contains a dot
   (`fo2.rp`, `headers.v2`). Everything after the last dot was being dropped, so the compiler was pointed at
   a directory that does not exist and the headers were never found.
@@ -97,6 +101,11 @@
   edited rather than on the generated output. It is reported on save as well as on an explicit compile:
   previously the failure appeared only as a popup and only when the compile had been asked for, so saving a
   file with an unsupported construct in it reported nothing at all.
+- An error from the compiler that reads the generated `.ssl`, `.baf` or `.d` is now shown on the line of
+  the `.tssl`, `.tbaf` or `.td` it was written on - including when that line came from an imported file.
+  These errors used to land in the generated file, which the author never edits and often does not have
+  open, at a line number matching nothing in their source. A line the transpiler produced on its own, with
+  no source line behind it, keeps its error on the generated file rather than being given a misleading one.
 
 ## 3.13.2
 

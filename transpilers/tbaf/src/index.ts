@@ -101,6 +101,14 @@ export async function transpile(filePath: string, text: string): Promise<string>
 }
 
 /**
+ * As `transpile`, keeping the record of where each generated line came from.
+ * Used by the LSP compile handler, which places the BAF compiler's errors back on the author's lines.
+ */
+export async function transpileWithSourceMap(filePath: string, text: string): Promise<TBAFResult> {
+    return tbaf.transpile(filePath, text);
+}
+
+/**
  * Apply BAF-specific fixups to the IR.
  * Handles LOCALS/GLOBAL quoting, $obj(), $tra(), point notation replacements.
  */

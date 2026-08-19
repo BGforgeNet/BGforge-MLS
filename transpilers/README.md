@@ -43,6 +43,19 @@ const dResult = await td("dialog.td", sourceText);
 
 The named exports are direct re-exports of each transpiler's underlying function - no wrapping. Pass any extra arguments the underlying function accepts (e.g. TSSL's optional `batchState` for cross-file inline-function caching).
 
+### Map generated lines back to the source
+
+`tsslWithSourceMap` and `tbafWithSourceMap` transpile exactly as above and additionally return `sourceMap`: for each 0-based line of the generated file, the absolute path and 0-based line the author wrote it on, or `undefined` for a line the transpiler emitted on its own. `td` already returns a result object, so it carries `sourceMap` without a separate entry point.
+
+```ts
+import { tsslWithSourceMap } from "@bgforge/transpile";
+
+const { output, sourceMap } = await tsslWithSourceMap("script.tssl", sourceText);
+const origin = sourceMap[12]; // { file: "/mod/script.tssl", line: 4 } | undefined
+```
+
+This is what lets a caller move an error reported against the generated file onto the line the author can act on - the SSL and WeiDU compilers only ever see the generated output.
+
 ### Errors
 
 ```ts

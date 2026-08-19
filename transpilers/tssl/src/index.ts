@@ -181,6 +181,18 @@ export async function transpile(filePath: string, text: string, batch?: Transpil
 }
 
 /**
+ * As `transpile`, keeping the record of where each generated line came from.
+ * Used by the LSP compile handler, which places the SSL compiler's errors back on the author's lines.
+ */
+export async function transpileWithSourceMap(
+    filePath: string,
+    text: string,
+    batch?: TranspileBatchState,
+): Promise<TSSLResult> {
+    return tssl.transpile(filePath, text, batch);
+}
+
+/**
  * Extract #include directives from magic comments.
  * Looks for lines like: // #include "path/to/header.h"
  * @param sourceText The original TypeScript source text

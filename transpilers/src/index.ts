@@ -21,6 +21,19 @@ export const tssl = tsslImpl;
 export const tbaf = tbafImpl;
 export const td = tdImpl;
 
+/**
+ * Transpile, and also report where in the author's files each generated line came from.
+ *
+ * The compiler that reads the generated file positions its errors in it, so a consumer showing those
+ * errors in an editor needs this to put them where the author can act on them. TD has no sibling here
+ * because its `td` already returns a result object - it carries warnings - and the map rides along on it.
+ */
+export { transpileWithSourceMap as tsslWithSourceMap } from "../tssl/src/index";
+export { transpileWithSourceMap as tbafWithSourceMap } from "../tbaf/src/index";
+
+/** Where a generated line came from: an absolute path, and a 0-based line in it. */
+export type { SourcePosition } from "../common/line-map";
+
 // The warnings array is narrowed to Pick<TDWarning, "line" | "message"> rather than
 // exposing TDWarning directly. This keeps the public API surface minimal while
 // remaining structurally tied to TDWarning: a rename of the line/message fields

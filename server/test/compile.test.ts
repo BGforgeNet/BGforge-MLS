@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 
 const mockShowInfo = vi.fn();
 const mockShowError = vi.fn();
@@ -67,8 +68,10 @@ const mockOutputPathFor = vi.fn();
 // against a fallback rather than against the error's own line.
 const { TranspileError } = await vi.hoisted(async () => await import("../../transpilers/common/transpile-error"));
 vi.mock("../../transpilers/src/index", () => ({
-    tssl: (...args: unknown[]) => mockTssl(...args),
-    tbaf: (...args: unknown[]) => mockTbaf(...args),
+    // The handler takes the map-carrying entry points, so those are what the mocks stand in for. TD has
+    // only one: its transpile already returns a result object, and the map rides along on it.
+    tsslWithSourceMap: (...args: unknown[]) => mockTssl(...args),
+    tbafWithSourceMap: (...args: unknown[]) => mockTbaf(...args),
     td: (...args: unknown[]) => mockTd(...args),
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
     TranspileError,
@@ -104,6 +107,7 @@ vi.mock("../src/uri-utils", () => ({
 
 import { conlog } from "../src/logger";
 import { LANG_FALLOUT_SSL } from "../src/core/languages";
+import { setDiagnostics } from "../src/diagnostic-store";
 import { compile } from "../src/compile";
 
 describe("compile dispatcher", () => {
@@ -226,7 +230,7 @@ describe("compile dispatcher", () => {
         });
 
         it("routes .tbaf files to the TBAF transpiler and writes the output", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
@@ -236,7 +240,7 @@ describe("compile dispatcher", () => {
         });
 
         it("clears diagnostics before TBAF transpile", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
@@ -253,7 +257,7 @@ describe("compile dispatcher", () => {
         });
 
         it("does not fall through to unknown-language after successful TBAF transpile", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", true, "tbaf content");
@@ -271,7 +275,7 @@ describe("compile dispatcher", () => {
         });
 
         it("routes .tssl files to the TSSL transpiler and chains SSL compilation", async () => {
-            mockTssl.mockResolvedValue("ssl output");
+            mockTssl.mockResolvedValue({ output: "ssl output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.ssl");
             // The registry handles the chained SSL compilation
             mockRegistryCompile.mockResolvedValue(true);
@@ -294,6 +298,92 @@ describe("compile dispatcher", () => {
             await compile("file:///test.tssl", "typescript", true, "bad tssl");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TSSL: TSSL error"));
+        });
+    });
+
+    /**
+     * Only the second step of a transpiled build reports compiler errors, and it reports them against the
+     * generated file. The author edits the source, so an error left on the generated line is one they
+     * cannot act on - in a file they may not even have open.
+     */
+    describe("compiler errors from the generated file", () => {
+        /** What the chained compiler would have published for the generated file. */
+        function errorOnGeneratedLine(line: number, message: string): Diagnostic {
+            return {
+                severity: DiagnosticSeverity.Error,
+                range: { start: { line, character: 0 }, end: { line, character: 6 } },
+                message,
+                source: "BGforge MLS",
+            };
+        }
+
+        /** The diagnostics most recently published for `uri`, which is what the editor is showing. */
+        function showingOn(uri: string) {
+            const calls = mockSendDiagnostics.mock.calls.filter((call) => call[0].uri === uri);
+            return calls.at(-1)?.[0].diagnostics ?? [];
+        }
+
+        it("moves a chained SSL error onto the TSSL line it came from", async () => {
+            mockTssl.mockResolvedValue({
+                output: "ssl output",
+                sourceMap: [undefined, { file: "/test.tssl", line: 4 }],
+            });
+            mockOutputPathFor.mockReturnValue("/output/test.ssl");
+            mockRegistryCompile.mockImplementation((_lang: string, sslUri: string) => {
+                setDiagnostics(sslUri, "compiler", [errorOnGeneratedLine(1, "unknown identifier 'nope'")]);
+                return true;
+            });
+
+            await compile("file:///test.tssl", "typescript", false, "tssl content");
+
+            expect(showingOn("file:///test.tssl")).toEqual([
+                expect.objectContaining({
+                    message: "unknown identifier 'nope'",
+                    range: { start: { line: 4, character: 0 }, end: { line: 4, character: 0 } },
+                }),
+            ]);
+            expect(showingOn("file:///output/test.ssl")).toEqual([]);
+        });
+
+        it("moves a chained BAF error onto the TBAF line it came from", async () => {
+            mockTbaf.mockResolvedValue({
+                output: "baf output",
+                sourceMap: [{ file: "/test.tbaf", line: 7 }],
+            });
+            mockOutputPathFor.mockReturnValue("/output/test.baf");
+            mockWeiduCompile.mockImplementation((bafUri: string) => {
+                setDiagnostics(bafUri, "compiler", [errorOnGeneratedLine(0, "unknown action")]);
+            });
+
+            await compile("file:///test.tbaf", "typescript", false, "tbaf content");
+
+            expect(showingOn("file:///test.tbaf")).toEqual([
+                expect.objectContaining({
+                    message: "unknown action",
+                    range: { start: { line: 7, character: 0 }, end: { line: 7, character: 0 } },
+                }),
+            ]);
+        });
+
+        it("moves a chained D error onto the TD line it came from", async () => {
+            mockTd.mockResolvedValue({
+                output: "d output",
+                warnings: [],
+                sourceMap: [{ file: "/test.td", line: 2 }],
+            });
+            mockOutputPathFor.mockReturnValue("/output/test.d");
+            mockWeiduCompile.mockImplementation((dUri: string) => {
+                setDiagnostics(dUri, "compiler", [errorOnGeneratedLine(0, "unknown trigger")]);
+            });
+
+            await compile("file:///test.td", "typescript", false, "td content");
+
+            expect(showingOn("file:///test.td")).toEqual([
+                expect.objectContaining({
+                    message: "unknown trigger",
+                    range: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } },
+                }),
+            ]);
         });
     });
 
@@ -411,7 +501,7 @@ describe("compile dispatcher", () => {
         });
 
         it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {
-            mockTssl.mockResolvedValue("ssl output");
+            mockTssl.mockResolvedValue({ output: "ssl output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.ssl");
             mockRegistryCompile.mockResolvedValue(true);
 

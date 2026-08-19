@@ -63,6 +63,16 @@ export function setDiagnostics(rawUri: string, source: DiagnosticSource, diagnos
     publish(uri);
 }
 
+/**
+ * What one source currently holds for a URI, empty when it holds nothing.
+ *
+ * Read back rather than remembered by the producer because a compile's diagnostics are assembled across
+ * several calls before anything can act on the whole set.
+ */
+export function getDiagnostics(rawUri: string, source: DiagnosticSource): readonly Diagnostic[] {
+    return store.get(normalizeUri(rawUri))?.get(source) ?? [];
+}
+
 /** Clear the compiler source's diagnostics for a URI (tree-sitter bucket untouched). */
 export function clearCompilerDiagnostics(uri: string): void {
     setDiagnostics(uri, "compiler", []);
