@@ -27,11 +27,30 @@ close-out is depth, not a category, so a broken category surfaces at edit time r
 
 - **Grammars** (`pnpm test:grammars`) -- run WHOLE by both. No shallower form exists that would be worth having.
 - **Server integration** (`server/test/integration/`) -- run WHOLE by both. A subset was measured and rejected:
-  the per-file test time is lopsided (one file is half of it), but wall time is not, so dropping the heaviest
-  file bought 2.8s of 68.6s. There is no cheap slice of this suite to take.
+  the per-file test time is lopsided (one file is over half of it), but wall time is not, because the suite's
+  15 files already run in parallel and its floor is whichever single file is slowest. Dropping the heaviest
+  bought 2.8s of 68.6s when that was measured. There is no cheap slice of this suite to take -- shortening it
+  means making an individual sweep cheaper, not running fewer of them.
 - **SSL corpus** -- `pnpm test` runs the canary (`compilers/ssl/test/integration/corpus-smoke.test.ts`): the
   oracle pins plus a 24-script sample, seconds rather than minutes. It reports its own denominator, because a
   green sample must not read as a swept corpus. `pnpm test:all` runs the full compile/decompile/optimise sweeps.
+
+### Runner settings that were measured and rejected
+
+Recorded so they are not re-tried. All measured on a 10-core box against the whole unit-suite set; the
+scheduler is not the bottleneck here, total CPU work is, so changes that only reshuffle work paid nothing.
+
+- **One vitest process aggregating every project** (the root `vitest.config.ts` shape) instead of the eleven
+  separate runs `test.sh` starts -- 79.9s against 81.8s. A global worker pool does no better than the
+  per-suite `--maxWorkers` caps, so the extra coupling buys nothing.
+- **`pool: "threads"`** instead of the default `forks` -- 93.5s against 92.2s. Cheaper imports, dearer tests.
+- **`--maxWorkers` 6 / 10 / 14** -- 104.9s / 94.3s / 99.0s against 92.2s for the default. The default is
+  already at the optimum; pinning it only makes the config wrong on a differently-sized machine.
+- **`deps.optimizer.ssr`** on the server suite -- 25.3s against 23.1s.
+
+What DID pay, for contrast: cutting the work itself (memoizing the spec-derived name/table lookups in
+`binary/src`), and `isolate: false` on the two suites whose per-file import cost dominates their test time
+(see `binary-editor/vitest.config.ts` for the constraint that puts on new tests there).
 
 ### Excluded from `pnpm test`
 

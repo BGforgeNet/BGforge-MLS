@@ -37,7 +37,13 @@ export function coverageConfig({
 }: CoverageConfigOptions): CoverageV8Options {
     return {
         provider: "v8",
-        reporter: ["text", "html", "lcov"],
+        // `text` is the console table the gate is read from; `lcovonly` is the machine-readable form editors
+        // and external tools consume. The browsable html report was dropped because nothing in the repo or CI
+        // reads it and it wrote ~950 files (~7MB) per full run - the wall-clock saving is under a second per
+        // package, so the reason is the output, not the time. It must be `lcovonly`, not `lcov`: istanbul's
+        // `lcov` is an alias for `lcovonly` PLUS `html`, so naming that here would keep emitting the report
+        // this line exists to drop.
+        reporter: ["text", "lcovonly"],
         ...(reportsDirectory !== undefined ? { reportsDirectory } : {}),
         // Maintainer-recommended workaround for the .tmp/coverage-N.json
         // ENOENT race under parallel coverage runs (vitest-dev/vitest

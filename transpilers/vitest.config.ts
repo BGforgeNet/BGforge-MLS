@@ -15,6 +15,9 @@ export default defineConfig({
         // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
         // guards against hangs, not slowness.
         testTimeout: 60000,
+        // See binary-editor/vitest.config.ts for the rationale and the constraint it puts on new tests:
+        // reusing the worker's module registry across files, measured 11.5s -> 9.9s here.
+        isolate: false,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
         // and the test/td + test/tbaf fixture-driven integration suites in
