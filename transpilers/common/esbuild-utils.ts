@@ -44,21 +44,6 @@ interface BundleConfig {
     readonly filePath: string;
     /** Source text content */
     readonly sourceText: string;
-    /**
-     * Pre-computed enum names from the source text.
-     * When provided, skips the internal transformEnums() call on sourceText
-     * (caller already transformed it and needs the result for other purposes).
-     * sourceText should already be enum-transformed in this case.
-     */
-    readonly preTransformed?: {
-        readonly enumNames: ReadonlySet<string>;
-        /**
-         * Where each line of the transformed text stood in the file the author has open. Without it the
-         * lines below an enum are reported one place off per line the flattening removed, so a caller
-         * that transforms ahead of this one collects it from `transformEnums` and passes it through.
-         */
-        readonly lineMap?: readonly number[];
-    };
     /** Marker string prepended to source for stripping esbuild runtime helpers */
     readonly marker: string;
     /** esbuild target (e.g., "esnext", "es2022") */
@@ -75,8 +60,6 @@ interface BundleConfig {
      * sharedEnumNames/sharedExternalEnumNames so all plugins share state.
      */
     readonly extraPlugins?: esbuild.Plugin[];
-    /** Original constants for restoring esbuild-renamed identifiers in cleanup */
-    readonly originalConstants?: Map<string, string>;
     /**
      * Mutable set for extra plugins to add enum names into.
      * Merged with the main file's enum names before bundling.
@@ -123,16 +106,10 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     const { filePath, sourceText, marker, target, metafile } = config;
 
     // Pre-transform: convert enums to flat consts before esbuild sees them.
-    // If caller already transformed (and needs the result for other purposes),
-    // skip redundant work via preTransformed.
-    // Where each line of the entry stood before its enums were flattened. A caller that already did that
-    // work passes its own map along with the transformed text; without one the lines below an enum in the
-    // entry would be reported one place off for every line the flattening removed.
+    // Where each line of the entry stood before its enums were flattened: without the map, the lines
+    // below an enum would be reported one place off for every line the flattening removed.
     const entryLineMap: number[] = [];
-    const { code: enumTransformed, enumNames } = config.preTransformed
-        ? { code: sourceText, enumNames: config.preTransformed.enumNames }
-        : transformEnums(sourceText, entryLineMap);
-    if (config.preTransformed?.lineMap !== undefined) entryLineMap.push(...config.preTransformed.lineMap);
+    const { code: enumTransformed, enumNames } = transformEnums(sourceText, entryLineMap);
 
     // Accumulate enum names from imported files during bundling.
     // Mutated via closure in the enum-transform plugin.
@@ -207,7 +184,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
 
     // Strip ESM module boilerplate from esbuild output
     const afterCleanup: number[] = [];
-    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, config.originalConstants, afterCleanup);
+    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, afterCleanup);
 
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
@@ -294,27 +271,22 @@ function resolveOrigins(
  * 1. Strips everything before the marker (runtime helpers like __defProp, __name)
  * 2. Builds alias map from import statements (regex)
  * 3. Detects collision patterns (name2 -> name22)
- * 4. Uses original constants to restore esbuild-renamed identifiers
+ * 4. Removes import declarations
  * 5. Renames identifiers back to originals (string-aware, skips string literals)
- * 6. Removes import declarations
  *
  * Uses regex + string-aware tokenization instead of a full TypeScript AST parser.
- * esbuild output is predictable (no regex literals, no exotic syntax), making
- * this safe. Verified against the ts-morph implementation on all three transpiler
- * outputs (TSSL, TBAF, TD) - produces identical results.
+ * esbuild output is predictable (no regex literals, no exotic syntax), making this safe.
  *
  * @param code Bundled code from esbuild
  * @param marker Marker string to find start of user code
- * @param originalConstants Original constant names and values from source file (for restoring renamed vars)
  * @returns Cleaned code
  */
 export function cleanupEsbuildOutput(
     code: string,
     marker: string,
-    originalConstants?: Map<string, string>,
     /**
      * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
-     * returned so the ~40 existing call sites keep their `string` return; only a caller tracing a position
+     * returned so the existing call sites keep their `string` return; only a caller tracing a position
      * back through the bundle asks for it.
      */
     survivors?: number[],
@@ -368,46 +340,10 @@ export function cleanupEsbuildOutput(
         }
     }
 
-    // Step 4: Detect and fix esbuild's variable renaming due to name collisions.
-    //
-    // Problem: When TSSL defines a constant that also exists in folib imports,
-    // esbuild renames the local constant by appending a single digit to avoid collision.
-    // Example: `const DIK_F4 = 62` in TSSL + `DIK_F4` exported from folib
-    //          -> esbuild outputs `var DIK_F42 = 62` (appended '2')
-    //
-    // Solution: Use the original constants extracted from the TSSL source file
-    // (passed via originalConstants parameter) to identify and reverse these renames.
-    //
-    // Algorithm:
-    // 1. Find all var declarations in bundled code via regex: name -> value
-    // 2. For each var ending in a digit, strip the last char to get candidate original name
-    // 3. If originalConstants has that name with the SAME value, it's a rename -> restore it
-    //
-    // Why this is robust:
-    // - Requires BOTH name pattern match AND exact value equality
-    // - Not just regex pattern matching - uses actual constant values from source
-    // - False positive scenario: original has `FOO=5` and `FOO2=5` (same value)
-    //   This is rare and would require user to define two constants with same value
-    //   where one name is the other plus a digit - unlikely in practice
-    if (originalConstants !== undefined && originalConstants.size > 0) {
-        const varDeclRegex = /^var\s+(\w+)\s*=\s*(.+?)\s*;$/gm;
-        let varMatch;
-        while ((varMatch = varDeclRegex.exec(code)) !== null) {
-            // Groups 1 and 2 are guaranteed by the regex pattern
-            const bundledName = varMatch[1]!;
-            const bundledValue = varMatch[2]!;
-            if (!/\d$/.test(bundledName)) continue;
-            const baseName = bundledName.slice(0, -1);
-            if (originalConstants.get(baseName) === bundledValue && !aliasMap.has(bundledName)) {
-                aliasMap.set(bundledName, baseName);
-            }
-        }
-    }
-
-    // Step 5: Remove import declarations (single-line and multi-line)
+    // Step 4: Remove import declarations (single-line and multi-line)
     const importDecl = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm;
     // The ranges are read off the same matches the removal uses, before it runs: deriving them from the
-    // result instead would have to re-identify lines by content, which step 6's renaming then breaks.
+    // result instead would have to re-identify lines by content, which step 5's renaming then breaks.
     const removed = new Set<number>();
     if (survivors !== undefined) {
         for (const match of code.matchAll(importDecl)) {
@@ -425,7 +361,7 @@ export function cleanupEsbuildOutput(
     }
     code = code.replaceAll(importDecl, "");
 
-    // Step 6: Rename identifiers (string-aware, skips string literals and comments)
+    // Step 5: Rename identifiers (string-aware, skips string literals and comments)
     if (aliasMap.size > 0) {
         // Sort by length (longest first) to avoid partial replacements
         const sorted = [...aliasMap.entries()].sort((a, b) => b[0].length - a[0].length);

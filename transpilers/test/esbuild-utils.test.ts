@@ -44,20 +44,6 @@ describe("cleanupEsbuildOutput", () => {
         expect(cleaned).toContain("See(Player1);");
     });
 
-    it("restores an esbuild-renamed constant that collides with an original constant value", () => {
-        const code = `${MARKER}\nvar DIK_F42 = 62;\nAttack(DIK_F42);\n`;
-        const originalConstants = new Map([["DIK_F4", "62"]]);
-        const cleaned = cleanupEsbuildOutput(code, MARKER, originalConstants);
-        expect(cleaned).toContain("var DIK_F4 = 62;");
-        expect(cleaned).toContain("Attack(DIK_F4);");
-    });
-
-    it("leaves a renamed variable alone when its value does not match the original constant", () => {
-        const code = `${MARKER}\nvar DIK_F42 = 99;\n`;
-        const originalConstants = new Map([["DIK_F4", "62"]]);
-        expect(cleanupEsbuildOutput(code, MARKER, originalConstants)).toContain("var DIK_F42 = 99;");
-    });
-
     // The cleanup drops lines - the bundler's prelude ahead of the marker, and every import declaration -
     // so a position in its output names a different line than the same code had on the way in. Reporting
     // which input line each surviving line came from is what lets an error found later be traced back.
@@ -65,7 +51,7 @@ describe("cleanupEsbuildOutput", () => {
         it("reports the input line each surviving line came from", () => {
             const code = `var __defProp = 1;\n${MARKER}\nconst x = 1;\nconst y = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, undefined, survivors);
+            cleanupEsbuildOutput(code, MARKER, survivors);
             // Input lines 0 and 1 are the prelude and the marker; the two survivors are lines 2 and 3.
             expect(survivors).toEqual([2, 3]);
         });
@@ -73,21 +59,21 @@ describe("cleanupEsbuildOutput", () => {
         it("accounts for a removed import declaration between surviving lines", () => {
             const code = `${MARKER}\nconst a = 1;\nimport { See } from "folib";\nconst b = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, undefined, survivors);
+            cleanupEsbuildOutput(code, MARKER, survivors);
             expect(survivors).toEqual([1, 3]);
         });
 
         it("accounts for an import declaration spanning several lines", () => {
             const code = `${MARKER}\nimport {\n  See,\n  Attack\n} from "folib";\nconst b = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, undefined, survivors);
+            cleanupEsbuildOutput(code, MARKER, survivors);
             expect(survivors).toEqual([5]);
         });
 
         it("maps every line to itself when there is nothing to strip", () => {
             const code = "const x = 1;\nconst y = 2;\n";
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, undefined, survivors);
+            cleanupEsbuildOutput(code, MARKER, survivors);
             expect(survivors).toEqual([0, 1]);
         });
     });
