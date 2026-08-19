@@ -173,12 +173,6 @@ const config: KnipConfig = {
         // spawned as a child process by the --jobs fan-out tests, never imported
         "shared/cli/test/fixtures/**",
     ],
-    ignoreBinaries: [
-        // The WeiDU parser, spawned by the grammar differential suite as the authority on legal TP2
-        // syntax. Not a package dependency: it is an external toolchain binary the suite skips without,
-        // provisioned in CI by .github/scripts/install-weidu.sh.
-        "weidu",
-    ],
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",

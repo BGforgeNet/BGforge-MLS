@@ -99,10 +99,11 @@ jobs:
       - name: Build tree-sitter grammar
         run: pnpm build:grammar
 
-      # The grammar differential suite skips without a WeiDU binary, so without this step it would
-      # pass by never running. See .github/scripts/install-weidu.sh.
+      # The grammar differential suite skips without a WeiDU binary, so without a binary it would pass
+      # by never running. The test scripts call this too, so CI and a local run resolve the same pinned
+      # WeiDU; here it also lands on PATH for the steps below. See scripts/ensure-weidu.sh.
       - name: Install WeiDU
-        run: ./.github/scripts/install-weidu.sh
+        run: ./scripts/ensure-weidu.sh
 
       - name: Test
         run: pnpm test:all

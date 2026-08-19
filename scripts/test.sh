@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Dev-loop test suite: static analysis, unit tests (no coverage), builds, smoke + sample + CLI tests,
-# grammars, and the SSL corpus canary - every category the gate covers, at dev-loop depth, so none can
-# break silently until close-out. The close-out gate (coverage thresholds, external corpus, integration,
-# the full sweeps) is test-all.sh, which drives this script with TEST_COVERAGE=1 /
-# TEST_STOP_AFTER_BUILD=1.
+# grammars, server integration, and the SSL corpus canary - every category the gate covers, at dev-loop
+# depth, so none can break silently until close-out. The close-out gate (coverage thresholds, the
+# external-corpus format sweep, the full SSL corpus sweeps, transpile-external) is test-all.sh, which
+# drives this script with TEST_COVERAGE=1 / TEST_STOP_AFTER_BUILD=1.
 # Uses parallel execution for independent stages to minimize wall time.
 # Each parallel job logs to tmp/test-logs/ - silent on success, full output on failure.
 set -eu -o pipefail
@@ -125,18 +125,27 @@ if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
     exit 0
 fi
 
+# The differential inside the integration suite uses the real WeiDU as its authority and SKIPS without
+# one, so resolve it here rather than letting the suite quietly drop itself. Cached after the first run.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
+
 # --- Phase 3: Tests that need builds (all in parallel) ---
-# Every category the close-out gate covers is represented here at dev-loop depth: grammars whole (as
-# quick as the samples job beside them), the SSL corpus as its 24-script canary, which states its own
-# denominator so a green here cannot read as a swept corpus. Close-out keeps the format/idempotency
-# sweep - it MUTATES external/, hence the reset trap in test-external.sh, so it cannot share this
-# block - plus the full corpus sweeps and transpile-external. bin-cli tests that read external/ are
-# gated behind RUN_EXTERNAL_CLI_TESTS and skip cleanly here.
-step "Phase 3: Smoke + Samples + CLI + Grammars + Corpus canary"
+# Every category the close-out gate covers is represented here at dev-loop depth: grammars whole, server
+# integration whole, and the SSL corpus as its 24-script canary, which states its own denominator so a
+# green here cannot read as a swept corpus. Close-out keeps the full corpus sweeps and
+# transpile-external, plus the format/idempotency sweep.
+#
+# Every job in this block READS external/ and none writes it, which is what lets them run together - the
+# format sweep MUTATES those trees (hence the reset trap in test-external.sh) and stays in test-all.sh
+# for that reason, and bin-cli tests that read external/ are gated behind RUN_EXTERNAL_CLI_TESTS and skip
+# cleanly here. Adding a job that writes there, or setting that variable, breaks both sides at once.
+step "Phase 3: Smoke + Samples + CLI + Grammars + Integration + Corpus canary"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars" \
+    "Server integration" "(cd server && pnpm exec vitest run --config vitest.integration.config.ts)" \
     "Corpus canary" "pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
 
 timing_summary "All tests passed"
