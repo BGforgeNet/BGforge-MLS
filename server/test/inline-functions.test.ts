@@ -1,14 +1,14 @@
 /**
- * Unit tests for inline function extraction, macro generation,
- * and enum constant tree-shaking helpers.
+ * Unit tests for inline function extraction and macro generation.
  */
 
 import { describe, expect, it } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
 import { Project } from "ts-morph";
-import { generateInlineMacros, extractInlineFunctionsFromFiles } from "../../transpilers/tssl/src/inline-functions";
-import { isEnumConstant, collectReferencedIdentifiers } from "../../transpilers/tssl/src/emit";
+import {
+    extractInlineFunctions,
+    generateInlineMacros,
+    type InlineFunctionCache,
+} from "../../transpilers/tssl/src/inline-functions";
 import type { InlineFunc } from "../../transpilers/tssl/src/types";
 
 describe("generateInlineMacros", () => {
@@ -170,158 +170,48 @@ describe("generateInlineMacros", () => {
     });
 });
 
-describe("isEnumConstant", () => {
-    const enumNames = new Set(["STAT", "SKILL"]);
-
-    it("returns true for enum-generated constant", () => {
-        expect(isEnumConstant("STAT_ch", enumNames)).toBe(true);
-        expect(isEnumConstant("SKILL_lockpick", enumNames)).toBe(true);
-    });
-
-    it("returns false for non-enum constant", () => {
-        expect(isEnumConstant("MAX_HP", enumNames)).toBe(false);
-        expect(isEnumConstant("SCRIPT_REALNAME", enumNames)).toBe(false);
-    });
-
-    it("returns false for name without underscore", () => {
-        expect(isEnumConstant("STAT", enumNames)).toBe(false);
-        expect(isEnumConstant("foo", enumNames)).toBe(false);
-    });
-
-    it("returns false with empty enum names", () => {
-        expect(isEnumConstant("STAT_ch", new Set())).toBe(false);
-    });
-
-    it("handles enum names with underscores", () => {
-        const names = new Set(["DAMAGE_TYPE"]);
-        expect(isEnumConstant("DAMAGE_TYPE_Fire", names)).toBe(true);
-        expect(isEnumConstant("DAMAGE_TYPE_Laser", names)).toBe(true);
-        // Prefix "DAMAGE" alone is not an enum name
-        expect(isEnumConstant("DAMAGE_resist", names)).toBe(false);
-    });
-});
-
-describe("collectReferencedIdentifiers", () => {
-    function makeSourceFile(code: string) {
+describe("extractInlineFunctions", () => {
+    function sourceFrom(code: string) {
         const project = new Project({ useInMemoryFileSystem: true });
-        return project.createSourceFile("test.ts", code);
+        return project.createSourceFile("/lib.ts", code);
     }
 
-    it("collects identifiers from source file", () => {
-        const sf = makeSourceFile("const x = foo(bar);");
-        const ids = collectReferencedIdentifiers(sf, []);
-        expect(ids.has("foo")).toBe(true);
-        expect(ids.has("bar")).toBe(true);
-        expect(ids.has("x")).toBe(true);
+    it("extracts an @inline function's target call and parameters", () => {
+        const source = sourceFrom(
+            [
+                "/**",
+                " * Logs a message to debug.log.",
+                " * @param msg log message",
+                " * @inline",
+                " */",
+                "export function ndebug(msg: string): void {",
+                '    debug_msg(SCRIPT_REALNAME + ": " + msg);',
+                "}",
+                "",
+            ].join("\n"),
+        );
+        const result = extractInlineFunctions(source);
+        expect(result.has("ndebug")).toBe(true);
+        const inline = result.get("ndebug")!;
+        expect(inline.targetFunc).toBe("debug_msg");
+        expect(inline.params).toEqual(["msg"]);
     });
 
-    it("collects identifiers from define strings", () => {
-        const sf = makeSourceFile("");
-        const defines = ["#define dude_ch get_critter_stat(dude_obj, STAT_ch)"];
-        const ids = collectReferencedIdentifiers(sf, defines);
-        expect(ids.has("STAT_ch")).toBe(true);
-        expect(ids.has("dude_obj")).toBe(true);
+    it("leaves a tagged function whose body is not a single call to be a procedure", () => {
+        // folib relies on this: map_first_run is tagged @inline but returns a comparison, and has
+        // always shipped as a real procedure.
+        const source = sourceFrom(
+            "/** @inline */\nexport function map_first_run(): boolean {\n    return metarule(46, 0) != 0;\n}\n",
+        );
+        expect(extractInlineFunctions(source).size).toBe(0);
     });
 
-    it("collects from both source file and defines", () => {
-        const sf = makeSourceFile("const x = STAT_ch + 1;");
-        const defines = ["#define fn target(SKILL_lockpick)"];
-        const ids = collectReferencedIdentifiers(sf, defines);
-        expect(ids.has("STAT_ch")).toBe(true);
-        expect(ids.has("SKILL_lockpick")).toBe(true);
-    });
-
-    it("returns empty set for empty inputs", () => {
-        const sf = makeSourceFile("");
-        const ids = collectReferencedIdentifiers(sf, []);
-        expect(ids.size).toBe(0);
-    });
-
-    it("does not include identifiers not present in either source", () => {
-        const sf = makeSourceFile("const x = 1;");
-        const ids = collectReferencedIdentifiers(sf, []);
-        expect(ids.has("STAT_ch")).toBe(false);
-        expect(ids.has("foo")).toBe(false);
-    });
-});
-
-describe("extractInlineFunctionsFromFiles", () => {
-    const tmpDir = path.resolve("tmp/server-test-inline");
-
-    function writeTmpFile(name: string, content: string): string {
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-        const filePath = path.join(tmpDir, name);
-        fs.writeFileSync(filePath, content, "utf-8");
-        return filePath;
-    }
-
-    function cleanTmpDir() {
-        if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true });
-    }
-
-    it("extracts @inline function from file given absolute path", () => {
-        try {
-            const filePath = writeTmpFile(
-                "utils.ts",
-                `
-/**
- * Logs a message to debug.log.
- * @param msg log message
- * @inline
- */
-export function ndebug(msg: string): void {
-    debug_msg(SCRIPT_REALNAME + ": " + msg);
-}
-`,
-            );
-            const project = new Project();
-            const result = extractInlineFunctionsFromFiles(project, [filePath]);
-            expect(result.has("ndebug")).toBe(true);
-            const inline = result.get("ndebug")!;
-            expect(inline.targetFunc).toBe("debug_msg");
-            expect(inline.params).toEqual(["msg"]);
-        } finally {
-            cleanTmpDir();
-        }
-    });
-
-    it("skips files that do not exist", () => {
-        const project = new Project();
-        const result = extractInlineFunctionsFromFiles(project, ["/nonexistent/file.ts"]);
-        expect(result.size).toBe(0);
-    });
-
-    it("skips relative paths that cannot be resolved from cwd", () => {
-        try {
-            // Simulate the bug: esbuild metafile returns paths relative to absWorkingDir,
-            // which differs from process.cwd(). The relative path won't resolve.
-            const filePath = writeTmpFile(
-                "lib.ts",
-                `
-/** @inline */
-export function foo(): void { bar(); }
-`,
-            );
-            const project = new Project();
-            // Use a path relative to tmpDir, not cwd - this simulates the absWorkingDir mismatch
-            const relativePath = path.relative(tmpDir, filePath);
-
-            // From cwd, this relative path doesn't resolve to the actual file
-            // (unless cwd happens to equal tmpDir)
-            const fromCwd = path.resolve(process.cwd(), relativePath);
-            const existsFromCwd = fs.existsSync(fromCwd);
-
-            if (!existsFromCwd) {
-                // This is the bug scenario: relative path doesn't work from cwd
-                const result = extractInlineFunctionsFromFiles(project, [relativePath]);
-                expect(result.size).toBe(0);
-            }
-
-            // But absolute path always works
-            const result = extractInlineFunctionsFromFiles(project, [filePath]);
-            expect(result.has("foo")).toBe(true);
-        } finally {
-            cleanTmpDir();
-        }
+    it("answers from the cache without re-walking a file already seen", () => {
+        const cache: InlineFunctionCache = new Map();
+        const source = sourceFrom("/** @inline */\nexport function f(): void {\n    g();\n}\n");
+        const first = extractInlineFunctions(source, cache);
+        expect(first.has("f")).toBe(true);
+        // The cached entry is returned as-is, so the same map instance comes back.
+        expect(extractInlineFunctions(source, cache)).toBe(first);
     });
 });

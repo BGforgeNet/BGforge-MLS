@@ -33,19 +33,16 @@ async function emit(src: string): Promise<string> {
 }
 
 describe("operator mappings", () => {
-    // Operands are call expressions, not literals: esbuild's bundle pass runs before operator
-    // conversion and constant-folds literal-only expressions ((1 && 2) || 3 arrives as just 2).
-
-    it("converts logical && / || to and / or", async () => {
+    it("converts logical && / || to and / or, keeping the author's parentheses", async () => {
         const out = await emit(
             `function start() {\n    let x = (global_var(1) && global_var(2)) || global_var(3);\n}\n`,
         );
-        expect(out).toContain("global_var(1) and global_var(2) or global_var(3)");
+        expect(out).toContain("(global_var(1) and global_var(2)) or global_var(3)");
     });
 
     it("converts bitwise & / | / ^ to bwand / bwor / bxor", async () => {
         const out = await emit(`function start() {\n    let x = (global_var(1) & 2) | (global_var(2) ^ 5);\n}\n`);
-        expect(out).toContain("global_var(1) bwand 2 bwor global_var(2) bxor 5");
+        expect(out).toContain("(global_var(1) bwand 2) bwor (global_var(2) bxor 5)");
     });
 
     it("converts ! to not and ~ to bnot", async () => {

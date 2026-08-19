@@ -3,8 +3,7 @@
  * Handles @inline-tagged functions: extraction from source, usage detection, and macro output.
  */
 
-import * as fs from "fs";
-import type { Project, SourceFile, Node } from "ts-morph";
+import type { SourceFile, Node } from "ts-morph";
 import { SyntaxKind, type InlineFunc, type InlineArg, type TsslContext } from "./types";
 import { convertOperatorsAST } from "./convert-operators";
 
@@ -12,36 +11,16 @@ import { convertOperatorsAST } from "./convert-operators";
 export type InlineFunctionCache = Map<string, Map<string, InlineFunc>>;
 
 /**
- * Extract functions marked with @inline JSDoc tag from bundled source files.
- * Uses the list of input files from esbuild's metafile.
- * When a cache is provided, avoids re-parsing files already seen (e.g., folib
- * is imported by every TSSL file but only needs to be parsed once).
- * @param project ts-morph Project instance to reuse
- * @param inputFiles List of input file paths from esbuild metafile
- * @param cache Optional cache to avoid re-parsing shared imports across files
+ * Extract functions marked with the @inline JSDoc tag from one source file, through the cache when the
+ * file was already seen - folib is imported by every TSSL file and only needs the walk once per batch.
  */
-export function extractInlineFunctionsFromFiles(
-    project: Project,
-    inputFiles: readonly string[],
-    cache?: InlineFunctionCache,
-): Map<string, InlineFunc> {
+export function extractInlineFunctions(source: SourceFile, cache?: InlineFunctionCache): Map<string, InlineFunc> {
+    const filePath = source.getFilePath();
+    const cached = cache?.get(filePath);
+    if (cached) return cached;
     const result = new Map<string, InlineFunc>();
-
-    for (const filePath of inputFiles) {
-        const cached = cache?.get(filePath);
-        if (cached) {
-            for (const [k, v] of cached) result.set(k, v);
-            continue;
-        }
-        if (!fs.existsSync(filePath)) continue;
-        // Reuse already-parsed source file if present in the project (batch mode)
-        const source = project.getSourceFile(filePath) ?? project.addSourceFileAtPath(filePath);
-        const fileResult = new Map<string, InlineFunc>();
-        extractInlineFunctionsFromSource(source, fileResult);
-        if (cache) cache.set(filePath, fileResult);
-        for (const [k, v] of fileResult) result.set(k, v);
-    }
-
+    extractInlineFunctionsFromSource(source, result);
+    cache?.set(filePath, result);
     return result;
 }
 
@@ -157,29 +136,7 @@ function expandEnumAccess(value: string, enumNames: ReadonlySet<string>): string
 }
 
 /**
- * Find all inline functions that are actually used in the source file.
- */
-export function findUsedInlineFunctions(source: SourceFile, inlineFuncs: Map<string, InlineFunc>): Set<string> {
-    const used = new Set<string>();
-
-    function visit(node: Node) {
-        if (node.getKind() === SyntaxKind.CallExpression) {
-            const call = node.asKindOrThrow(SyntaxKind.CallExpression);
-            const fnName = call.getExpression().getText();
-            if (inlineFuncs.has(fnName)) {
-                used.add(fnName);
-            }
-        }
-        node.forEachChild(visit);
-    }
-
-    source.forEachChild(visit);
-    return used;
-}
-
-/**
  * Extract JSDoc comments from a single source file for all functions.
- * This must be done before bundling since esbuild strips JSDoc.
  */
 export function extractJsDocs(sourceFile: SourceFile, ctx: TsslContext): void {
     sourceFile.getFunctions().forEach((func) => {

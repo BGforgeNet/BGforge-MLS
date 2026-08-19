@@ -9,21 +9,24 @@
  * A line belongs to the chunk that STARTED it. Emitters build a line piecewise - a keyword, then its
  * arguments - and the opening chunk is the one that says what the line is; crediting the closing chunk
  * instead would name whatever happened to terminate it.
+ *
+ * The origin is whatever the emitter knows: a 0-based input line for one reading a single text, or a
+ * file-and-line pair for one assembling from several files.
  */
 
-/** A line's origin is a 0-based line of the emitter's own input, or absent where the chunk carried none. */
+/** A line's origin as a 0-based line of the emitter's single input - what one-text emitters use. */
 export type LineOrigin = number | undefined;
 
-/** Emitted text, and the input line each of its lines came from. */
-export interface EmittedText {
+/** Emitted text, and the origin each of its lines came from; `undefined` where the chunk carried none. */
+export interface EmittedText<Origin = number> {
     text: string;
-    origins: readonly LineOrigin[];
+    origins: readonly (Origin | undefined)[];
 }
 
 /** One already-emitted piece of output, and where it came from. */
-export interface TrackedChunk {
+export interface TrackedChunk<Origin = number> {
     text: string;
-    line?: number;
+    origin?: Origin;
 }
 
 /**
@@ -31,25 +34,25 @@ export interface TrackedChunk {
  *
  * For emitters that build their output bottom-up as plain strings and assemble it with `join`: the
  * assembly points are where provenance is still known, so tracking there keeps the leaves untouched. The
- * granularity is therefore the chunk - every line of one names the same source line.
+ * granularity is therefore the chunk - every line of one names the same origin.
  */
-export function joinTracked(chunks: readonly TrackedChunk[], separator: string): EmittedText {
-    const out = new TrackedText();
+export function joinTracked<Origin>(chunks: readonly TrackedChunk<Origin>[], separator: string): EmittedText<Origin> {
+    const out = new TrackedText<Origin>();
     chunks.forEach((chunk, index) => {
-        if (index > 0) out.add(separator, chunk.line);
-        out.add(chunk.text, chunk.line);
+        if (index > 0) out.add(separator, chunk.origin);
+        out.add(chunk.text, chunk.origin);
     });
     return { text: out.text, origins: out.origins };
 }
 
-export class TrackedText {
+export class TrackedText<Origin = number> {
     private readonly chunks: string[] = [];
-    private readonly lineOrigins: LineOrigin[] = [];
+    private readonly lineOrigins: (Origin | undefined)[] = [];
     /** Whether the text so far ends mid-line, in which case the next chunk joins the line already open. */
     private lineOpen = false;
 
     /** Append text, attributing every line it opens to `origin`. */
-    add(text: string, origin?: number): void {
+    add(text: string, origin?: Origin): void {
         if (text === "") return;
         this.chunks.push(text);
 
@@ -72,7 +75,7 @@ export class TrackedText {
      * lines came from, and re-deriving that at the outer level would throw the answer away. Where a line
      * is still open, the piece's first line joins it and keeps the origin that line already has.
      */
-    addAll(emitted: EmittedText): void {
+    addAll(emitted: EmittedText<Origin>): void {
         if (emitted.text === "") return;
         this.chunks.push(emitted.text);
         const origins = this.lineOpen ? emitted.origins.slice(1) : emitted.origins;
@@ -85,8 +88,8 @@ export class TrackedText {
         return this.chunks.join("");
     }
 
-    /** For each line of `text`, the input line it came from. */
-    get origins(): readonly LineOrigin[] {
+    /** For each line of `text`, the origin it came from. */
+    get origins(): readonly (Origin | undefined)[] {
         return this.lineOrigins;
     }
 }

@@ -7,8 +7,6 @@
 // Direct `export ... from` form so the bundler doesn't flag an unused local import.
 export { SyntaxKind } from "ts-morph";
 
-import type { TrackedChunk } from "../../common/tracked-text";
-
 /** Inline function metadata: maps function name to its expansion */
 export interface InlineFunc {
     targetFunc: string; // Function being called, e.g., "sfall_func2" or "reg_anim_func"
@@ -30,8 +28,16 @@ export interface TsslContext {
     definedFunctions: Set<string>;
     functionJsDocs: Map<string, string>;
     doStatementCounter: number;
-    /** Known enum names for expanding property accesses in inline function args */
-    enumNames: ReadonlySet<string>;
+    /** Enums declared in project code: `Enum.Member` prints as the flat define `Enum_Member`. */
+    localEnumNames: ReadonlySet<string>;
+    /** `declare enum`s from .d.ts files: `Enum.Member` prints as the bare `Member` the headers define. */
+    externEnumNames: ReadonlySet<string>;
+    /**
+     * The CURRENT module's import renames (local name -> declaration name); the emitter swaps this as it
+     * moves between modules. Scoped by name, not by binding: a function-local variable shadowing an
+     * imported alias would be renamed too, the same limit the bundler's rename repair always had.
+     */
+    importRenames: ReadonlyMap<string, string>;
 }
 
 /**
@@ -54,33 +60,8 @@ export const FORBIDDEN_GLOBALS = new Set([
     "Proxy",
 ]);
 
-/** Variable names that conflict with folib exports and cause esbuild renaming issues */
+/** Variable names that conflict with the folib list()/map() helper functions. */
 export const RESERVED_VAR_NAMES = new Set(["list", "map"]);
-
-/**
- * Data extracted from the main source file before bundling.
- * Grouped to reduce parameter count in function signatures.
- */
-export interface MainFileData {
-    constants: Map<string, string>;
-    letVars: Set<string>;
-    includes: string[];
-}
-
-/**
- * One source file's contributions, kept apart so bundled and main code can be emitted in separate blocks.
- *
- * Each entry carries the bundled line the statement behind it started on, because the emitter regroups
- * them into buckets and the output order is not the input order - after that, nothing can recover which
- * statement produced which line.
- */
-export interface SourceSection {
-    source: string;
-    defines: TrackedChunk[];
-    variables: TrackedChunk[];
-    declarations: TrackedChunk[];
-    procedures: TrackedChunk[];
-}
 
 // Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
 // pipe. `setConlog()` lets a host swap this sink (the test suite installs a
@@ -98,9 +79,3 @@ export function setConlog(next: Conlog): void {
 export const conlog: Conlog = (message) => {
     conlogSink(message);
 };
-
-/**
- * How many lines to look backwards when searching for esbuild source comments.
- * esbuild inserts comments like "// node_modules/folib/sfall.ts" before bundled code.
- */
-export const SOURCE_COMMENT_LOOKBACK = 10;

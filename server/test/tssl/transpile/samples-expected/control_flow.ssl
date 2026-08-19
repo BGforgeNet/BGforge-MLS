@@ -14,11 +14,13 @@ procedure start() begin
             debug_msg("many");
         end
     end
+
     variable i = 0;
     while (i < count) do begin
         debug_msg("tick");
         i = i + 1;
     end
+
     variable levels = [1, 2, 3];
     foreach (variable lvl in levels) begin
         debug_msg("level");

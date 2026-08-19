@@ -286,7 +286,7 @@ import { MY_CONST, helper } from "./my-lib";
 import { dude_obj, self_obj } from "folib/base.d";
 ```
 
-`.d.ts` imports are externalized by esbuild. They provide type information but produce no output code. All `declare function` and `declare const` for engine builtins must live in `.d.ts` files.
+`.d.ts` imports are declaration-only: they provide type information but produce no output code. All `declare function` and `declare const` for engine builtins must live in `.d.ts` files.
 
 ### // #include Magic Comments
 
@@ -323,14 +323,14 @@ The transpiler replaces all `sfall_typeof` occurrences with `typeof` in the outp
 
 ### FLOAT1 Constant
 
-esbuild strips `.0` from float literals (e.g., `1.0` becomes `1`). To force float division in SSL, use `FLOAT1`:
+Float literals reach the output exactly as written: `1.0` stays `1.0`, so writing the literal is enough to
+force float division. `FLOAT1` predates this (an earlier pipeline normalised `1.0` to `1`) and is still
+supported for existing sources - it is replaced with `1.0` in the output:
 
 ```typescript
 const ratio = (FLOAT1 * a) / b;
-// -> #define ratio 1.0 * a / b
+// -> #define ratio (1.0 * a) / b
 ```
-
-`FLOAT1` is replaced with `1.0` in the output.
 
 ### Engine Procedures
 
@@ -364,7 +364,7 @@ function init(mode: number) {
 // JSDoc is preserved above the procedure in SSL output
 ```
 
-JSDoc is extracted before bundling (since esbuild strips it), so it works on the main file's functions.
+JSDoc is preserved for the main file's functions; imported files' procedures are emitted without it.
 
 ## Forbidden Syntax
 
@@ -384,23 +384,19 @@ These produce explicit transpiler errors:
 
 ## Unsupported Syntax
 
-These produce broken output or are silently ignored -- no explicit error:
+Syntax with no SSL counterpart is refused with the file and line it sits on: arrow functions, function
+expressions, template literals, optional chaining `x?.y`, nullish coalescing `x ?? y`, spread `...arr`,
+exponentiation `x ** y` (SSL spells it `^`), `new`, `await`, `yield`, regular expression literals, and
+import forms other than named imports.
 
-| Syntax                                  | What Happens                               |
-| --------------------------------------- | ------------------------------------------ |
-| Arrow functions `() => {}`              | Broken output (not recognized as function) |
-| Template literals `` `${x}` ``          | Broken output                              |
-| Optional chaining `x?.y`                | Broken output                              |
-| Nullish coalescing `x ?? y`             | Broken output                              |
-| Spread `...arr`                         | Broken output                              |
-| Exponentiation `x ** y`                 | Broken output                              |
-| Destructuring (except for-of 2-element) | Broken output                              |
-| `instanceof`                            | Broken output                              |
-| `new Foo()`                             | Broken output                              |
-| `await` / `async`                       | Broken output                              |
-| `yield` / generators                    | Broken output                              |
-| Classes (runtime use)                   | Silently ignored (type-only use is fine)   |
-| Decorators (runtime)                    | Silently ignored                           |
+A few forms are silently ignored rather than refused:
+
+| Syntax                                  | What Happens                             |
+| --------------------------------------- | ---------------------------------------- |
+| Destructuring (except for-of 2-element) | Broken output                            |
+| `instanceof`                            | Broken output                            |
+| Classes (runtime use)                   | Silently ignored (type-only use is fine) |
+| Decorators (runtime)                    | Silently ignored                         |
 
 ## Gotchas and Pitfalls
 
@@ -462,25 +458,19 @@ const x = { PID_MINIGUN: 9 }; // Wrong: becomes "PID_MINIGUN": 9
 
 Always use `[CONSTANT]` syntax for object keys.
 
-### Import Aliasing
+### Name Collisions
 
-Importing the same function from different module paths causes esbuild to rename one (`func` becomes `func2`). Import each function from a single consistent path.
-
-### Float Literal Stripping
-
-esbuild optimizes `1.0` to `1`, losing the float type in SSL. Use the `FLOAT1` constant to force float context:
-
-```typescript
-const ratio = (FLOAT1 * a) / b; // -> 1.0 * a / b  (float division)
-const ratio = (1.0 * a) / b; // -> 1 * a / b    (integer division!)
-```
+An imported alias (`import { atoi as base_atoi }`) is emitted under the name its declaration carries, so
+aliasing is safe. What is refused is one name genuinely defined as two different things across the files a
+script pulls in - the error names both locations; rename one of them. Two constants stating the same value
+under one name are tolerated.
 
 ## Compilation
 
 Press **Ctrl+R** in VSCode (with the extension active) to compile the current `.tssl` file. The pipeline is:
 
-1. `.tssl` source is bundled with esbuild (resolving imports, tree-shaking)
-2. The bundled TypeScript AST is converted to SSL syntax
+1. Imports are resolved with the TypeScript compiler (folib, local `.ts` files, `.d.ts` declarations)
+2. The reachable declarations are converted to SSL syntax, unused ones tree-shaken away
 3. The `.ssl` file is written next to the `.tssl` file
 4. sslc compiles the `.ssl` to `.int` bytecode
 

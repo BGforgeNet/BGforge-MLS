@@ -112,7 +112,7 @@ function emitBeginTracked(begin: TDBegin): EmittedText {
     out.add("\n");
     out.addAll(
         joinTracked(
-            begin.states.map((s) => ({ text: emitState(s), line: s.line })),
+            begin.states.map((s) => ({ text: emitState(s), origin: s.line })),
             "\n\n",
         ),
     );
@@ -130,7 +130,7 @@ function emitAppendTracked(append: TDAppend): EmittedText {
     out.add(`${keyword} ${ifExists}${append.filename}\n`);
     out.addAll(
         joinTracked(
-            append.states.map((s) => ({ text: indentBlock(emitState(s)), line: s.line })),
+            append.states.map((s) => ({ text: indentBlock(emitState(s)), origin: s.line })),
             "\n\n",
         ),
     );

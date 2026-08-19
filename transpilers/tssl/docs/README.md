@@ -2,7 +2,7 @@
 
 TSSL is a TypeScript subset that transpiles to Fallout SSL (Star-Trek Scripting Language). It lets you write Fallout 1/2 game scripts using TypeScript syntax with full IDE support -- type checking, autocomplete, go-to-definition, and module imports -- while targeting the same runtime as hand-written SSL.
 
-`.tssl` files are bundled with esbuild, converted to `.ssl` via the transpiler, then compiled to `.int` bytecode by sslc.
+`.tssl` files are resolved and converted to `.ssl` by the transpiler (imports included), then compiled to `.int` bytecode by sslc.
 
 ## How It Works
 

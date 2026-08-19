@@ -106,6 +106,22 @@
   These errors used to land in the generated file, which the author never edits and often does not have
   open, at a line number matching nothing in their source. A line the transpiler produced on its own, with
   no source line behind it, keeps its error on the generated file rather than being given a misleading one.
+- TSSL reads your TypeScript directly instead of bundling it through a JavaScript bundler first, which
+  fixes what the bundler silently changed in the generated SSL:
+  - Float literals survive as written. `x / 100.0` used to reach the output as `x / 100` - integer
+    division - because the bundler normalised the literal; `FLOAT1` is no longer needed for this, though
+    it still works.
+  - Parentheses survive as written. SSL's `and` and `or` share one precedence level, so
+    `(a && b) || (c && d)` used to compile as `((a and b) or c) and d` once the bundler stripped the
+    "redundant" parentheses.
+  - An identifier imported under one name is emitted under the name it declares, instead of the bundler
+    renaming it around a collision (`PRODATA_SC_TYPE2`); a name genuinely defined as two different things
+    is refused with both locations.
+  - Blank lines between statements and single-quoted strings come through as the author wrote them
+    (re-quoted double, as SSL requires).
+- TSSL syntax with no SSL counterpart - template literals, arrow functions, spread, `new`, `await`,
+  `**`, `??`, `?.` - is refused with the file and line it sits on. Previously these passed through as
+  broken SSL that failed later, in the generated file.
 
 ## 3.13.2
 

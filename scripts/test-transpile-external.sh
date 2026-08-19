@@ -60,13 +60,32 @@ test_repo() {
         return 1
     fi
 
-    # Check git status - any modified files mean transpiler output changed
+    # .baf and .d outputs must match the committed files byte for byte - their pipelines promise it.
     local changed
-    changed=$(git -C "$dir" diff --name-only)
+    changed=$(git -C "$dir" diff --name-only -- ':!*.ssl')
     if [[ -n "$changed" ]]; then
         echo "FAIL: $repo (output differs from committed files)"
-        git -C "$dir" diff --stat
+        git -C "$dir" diff --stat -- ':!*.ssl'
         return 1
+    fi
+
+    # Generated .ssl text is allowed to drift (spacing, literal spelling, comments); what ships is the
+    # compiled script, so the gate is bytecode equivalence against the committed version at every level.
+    # The two allow-listed files are VERIFIED corrections of the committed baseline, not tolerated noise:
+    #   gl_g_healing_revision.ssl - the author's 100.0 float divisors were shipped as integer 100
+    #     (integer division) by the old bundler's literal normalisation; the transpiler now preserves them.
+    #   gl_g_molotov.ssl - SSL's and/or share one precedence level, so the old output's stripped
+    #     parentheses changed `(a && b) || (c && d)` into `((a and b) or c) and d`; the transpiler now
+    #     keeps the author's grouping.
+    if [[ -n "$(git -C "$dir" diff --name-only -- '*.ssl')" ]]; then
+        if ! (cd "$ROOT_DIR" && pnpm --silent ssl-equiv "$dir" \
+            --allow gl_g_healing_revision.ssl --allow gl_g_molotov.ssl); then
+            echo "FAIL: $repo (generated .ssl no longer compiles to the committed bytecode)"
+            return 1
+        fi
+        # Other suites read these trees (the SSL corpus differential compiles the .ssl files), so the
+        # equivalence-checked drift is put back rather than left for them to sweep.
+        git -C "$dir" checkout -- '*.ssl'
     fi
 
     echo "PASS: $repo"

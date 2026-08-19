@@ -343,7 +343,7 @@ let ratio: number;
 ratio = (FLOAT1 * a) / b;
 ```
 
-`FLOAT1` is needed because esbuild strips `.0` from float literals.
+Writing the float literal directly (`1.0 * a / b`) works too; `FLOAT1` is the spelling older sources use.
 
 ## Validation Checklist
 

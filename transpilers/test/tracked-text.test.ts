@@ -70,8 +70,8 @@ describe("TrackedText", () => {
     it("joins chunks and keeps each one's origin for the lines it produced", () => {
         const joined = joinTracked(
             [
-                { text: "IF ~~ one\nEND", line: 3 },
-                { text: "IF ~~ two\nEND", line: 9 },
+                { text: "IF ~~ one\nEND", origin: 3 },
+                { text: "IF ~~ two\nEND", origin: 9 },
             ],
             "\n\n",
         );
@@ -81,7 +81,7 @@ describe("TrackedText", () => {
     });
 
     it("joins a single chunk without emitting a separator", () => {
-        const joined = joinTracked([{ text: "only\n", line: 2 }], "\n\n");
+        const joined = joinTracked([{ text: "only\n", origin: 2 }], "\n\n");
         expect(joined.text).toBe("only\n");
         expect(joined.origins).toEqual([2]);
     });

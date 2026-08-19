@@ -73,6 +73,7 @@
         "binary": "node binary/out/cli.js",
         "ssl": "node compilers/ssl/out/cli.js",
         "ssl-diff": "tsx compilers/ssl/scripts/ssl-diff.mts",
+        "ssl-equiv": "tsx compilers/ssl/scripts/ssl-equiv.mts",
         "ssl-verdicts": "tsx compilers/ssl/scripts/ssl-verdicts.mts",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",

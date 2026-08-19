@@ -1,11 +1,31 @@
 /**
  * Operator conversion for TSSL transpiler.
  * Converts TypeScript operators and expressions to SSL syntax using the AST.
+ *
+ * The input is raw TypeScript, so TYPE syntax is erased here: `as`/`satisfies` casts and non-null
+ * assertions unwrap to their expression, and rebuilt forms (calls, unaries, declarations) never copy a
+ * source span that could carry an annotation. The bundler used to do this erasure; without it, the one
+ * place type syntax could still leak into output is a raw `getText()`, so the default arm refuses what
+ * it does not recognise instead of passing it through.
  */
 
 import type { Node } from "ts-morph";
 import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, type TsslContext } from "./types";
-import { TranspileError } from "../../common/transpile-error";
+import { refuseAt } from "./program-model";
+
+/** Syntax with no SSL counterpart: passing it through would emit text SSL cannot compile. */
+const REFUSED_EXPRESSIONS = new Map<SyntaxKind, string>([
+    [SyntaxKind.TemplateExpression, "template literals are not supported; concatenate with +"],
+    [SyntaxKind.TaggedTemplateExpression, "template literals are not supported; concatenate with +"],
+    [SyntaxKind.ArrowFunction, "arrow functions are not supported; declare a function"],
+    [SyntaxKind.FunctionExpression, "function expressions are not supported; declare a function"],
+    [SyntaxKind.SpreadElement, "spread is not supported"],
+    [SyntaxKind.AwaitExpression, "await is not supported"],
+    [SyntaxKind.YieldExpression, "yield is not supported"],
+    [SyntaxKind.NewExpression, "'new' is not supported; SSL has no objects"],
+    [SyntaxKind.ClassExpression, "classes are not supported"],
+    [SyntaxKind.RegularExpressionLiteral, "regular expressions are not supported"],
+]);
 
 /**
  * Converts operators from TypeScript to SSL syntax using the AST
@@ -14,6 +34,9 @@ import { TranspileError } from "../../common/transpile-error";
  * @returns The expression with converted operators
  */
 export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
+    const refusal = REFUSED_EXPRESSIONS.get(node.getKind());
+    if (refusal !== undefined) throw refuseAt(node, refusal);
+
     // Different handling based on node kind
     switch (node.getKind()) {
         case SyntaxKind.BinaryExpression: {
@@ -23,6 +46,12 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             // Handle comma expression (0, expr) - just return the right side
             if (operator === ",") {
                 return convertOperatorsAST(binary.getRight(), ctx);
+            }
+            if (operator === "**") {
+                throw refuseAt(node, "'**' is not supported; SSL spells exponentiation '^'");
+            }
+            if (operator === "??") {
+                throw refuseAt(node, "'??' is not supported; SSL has no null");
             }
 
             const left = convertOperatorsAST(binary.getLeft(), ctx);
@@ -62,9 +91,11 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             } else if (operator === SyntaxKind.TildeToken) {
                 return `bnot ${operand}`;
             }
-
-            // Other unary operators (++x, --x, -x, +x) remain as-is
-            return prefix.getText();
+            // Rebuilt from the converted operand rather than copied, so a cast inside stays erased.
+            if (operator === SyntaxKind.MinusToken) return `-${operand}`;
+            if (operator === SyntaxKind.PlusToken) return `+${operand}`;
+            if (operator === SyntaxKind.PlusPlusToken) return `++${operand}`;
+            return `--${operand}`;
         }
 
         case SyntaxKind.PostfixUnaryExpression: {
@@ -85,6 +116,16 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             const expression = convertOperatorsAST(parens.getExpression(), ctx);
             return `(${expression})`;
         }
+
+        // Type-level wrappers: the cast exists for the checker and erases from the output.
+        case SyntaxKind.AsExpression:
+            return convertOperatorsAST(node.asKindOrThrow(SyntaxKind.AsExpression).getExpression(), ctx);
+        case SyntaxKind.SatisfiesExpression:
+            return convertOperatorsAST(node.asKindOrThrow(SyntaxKind.SatisfiesExpression).getExpression(), ctx);
+        case SyntaxKind.NonNullExpression:
+            return convertOperatorsAST(node.asKindOrThrow(SyntaxKind.NonNullExpression).getExpression(), ctx);
+        case SyntaxKind.TypeAssertionExpression:
+            return convertOperatorsAST(node.asKindOrThrow(SyntaxKind.TypeAssertionExpression).getExpression(), ctx);
 
         // Handle array literals
         case SyntaxKind.ArrayLiteralExpression: {
@@ -110,12 +151,11 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
                         // Handle computed property names: [PID_MINIGUN] -> PID_MINIGUN
                         if (nameNode.getKind() === SyntaxKind.ComputedPropertyName) {
                             const computed = nameNode.asKindOrThrow(SyntaxKind.ComputedPropertyName);
-                            const expr = computed.getExpression();
-                            return `${expr.getText()}: ${initializer}`;
+                            return `${convertOperatorsAST(computed.getExpression(), ctx)}: ${initializer}`;
                         }
-                        // String literal key - already quoted, use as-is
+                        // String literal key - normalised like any other string
                         if (nameNode.getKind() === SyntaxKind.StringLiteral) {
-                            return `${nameNode.getText()}: ${initializer}`;
+                            return `${convertOperatorsAST(nameNode, ctx)}: ${initializer}`;
                         }
                         // Numeric literal key - no quotes needed
                         if (nameNode.getKind() === SyntaxKind.NumericLiteral) {
@@ -139,27 +179,35 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             return `(${condition}) ? ${whenTrue} : ${whenFalse}`;
         }
 
-        // Handle property access - strip folib_exports. prefix
         case SyntaxKind.PropertyAccessExpression: {
             const propAccess = node.asKindOrThrow(SyntaxKind.PropertyAccessExpression);
-            const obj = propAccess.getExpression().getText();
+            if (propAccess.hasQuestionDotToken()) {
+                throw refuseAt(node, "'?.' is not supported; SSL has no null");
+            }
+            const raw = propAccess.getExpression().getText();
             const prop = propAccess.getName();
 
             // Check for forbidden globals
-            if (FORBIDDEN_GLOBALS.has(obj)) {
-                throw TranspileError.fromNode(node, `${obj}.${prop} is not available in SSL runtime`);
+            if (FORBIDDEN_GLOBALS.has(raw)) {
+                throw refuseAt(node, `${raw}.${prop} is not available in SSL runtime`);
             }
 
-            // Strip folib_exports. or similar _exports. prefixes
-            if (obj.endsWith("_exports")) {
-                return prop;
-            }
+            // An enum member access prints as the name its define carries: the flat EnumName_Member for
+            // an enum declared in project code, the bare member for a declare-enum whose values the SSL
+            // headers already #define. An imported alias of an enum resolves through the rename first.
+            const obj = ctx?.importRenames.get(raw) ?? raw;
+            if (ctx?.localEnumNames.has(obj)) return `${obj}_${prop}`;
+            if (ctx?.externEnumNames.has(obj)) return prop;
+
             return `${convertOperatorsAST(propAccess.getExpression(), ctx)}.${prop}`;
         }
 
         // Handle element access (array indexing) - need to process the index expression
         case SyntaxKind.ElementAccessExpression: {
             const elemAccess = node.asKindOrThrow(SyntaxKind.ElementAccessExpression);
+            if (elemAccess.hasQuestionDotToken()) {
+                throw refuseAt(node, "'?.' is not supported; SSL has no null");
+            }
             const obj = convertOperatorsAST(elemAccess.getExpression(), ctx);
             const arg = elemAccess.getArgumentExpression();
             const index = arg ? convertOperatorsAST(arg, ctx) : "";
@@ -207,25 +255,27 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             return `${fnName}(${args.join(", ")})`;
         }
 
-        case SyntaxKind.NumericLiteral: {
+        case SyntaxKind.StringLiteral: {
+            // SSL strings are double-quoted; a single-quoted literal is re-quoted with the same value.
             const text = node.getText();
-            // Preserve float literals - if it has a decimal point, keep it
-            // If it's an integer but was originally written as X.0, esbuild strips the .0
-            // We can't recover that, but we can ensure numbers with decimals stay as floats
-            if (text.includes(".")) {
-                return text;
-            }
-            // For integers, just return as-is
-            return text;
+            if (text.startsWith('"')) return text;
+            const value = node.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();
+            return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "\\n").replaceAll("\t", "\\t").replaceAll("\r", "\\r")}"`;
+        }
+
+        case SyntaxKind.NumericLiteral: {
+            // Read from the source text, so `100.0` stays the float the author wrote - the old pipeline
+            // let the bundler normalise it to `100`, silently turning float division into integer.
+            return node.getText();
         }
 
         case SyntaxKind.Identifier: {
             const text = node.getText();
-            // FLOAT1 is a special constant that forces float division
-            // esbuild strips .0 from float literals, so we use FLOAT1 * a / b
-            // to ensure float division in SSL output
+            // FLOAT1 predates float-literal preservation: sources written against the old pipeline
+            // spell 1.0 this way, so it keeps meaning exactly that.
             if (text === "FLOAT1") return "1.0";
-            return text;
+            // The output holds declaration names only, so an imported alias renders as what it names.
+            return ctx?.importRenames.get(text) ?? text;
         }
 
         default:
@@ -235,76 +285,28 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
 }
 
 /**
- * Converts a let or const VariableStatement node to a 'variable' statement, preserving formatting.
+ * Converts a let or const VariableStatement node to a 'variable' statement.
  *
- * @param stmt The ts-morph Node representing the VariableStatement.
- * @param ctx Transpilation context
- * @returns The converted 'variable' statement as a string.
- * @throws Error if the statement is not a let/const variable declaration.
+ * Rebuilt from the declarations rather than patched over the source text: the raw text carries type
+ * annotations (`let x: number;`) that SSL cannot hold, and rebuilding is what erases them.
  */
 export function convertVarOrConstToVariable(stmt: Node, ctx: TsslContext): string {
     const varStmt = stmt.asKind(SyntaxKind.VariableStatement);
-    if (!varStmt) throw TranspileError.fromNode(stmt, "Statement is not a VariableStatement");
+    if (!varStmt) throw refuseAt(stmt, "Statement is not a VariableStatement");
 
     const declList = varStmt.getDeclarationList();
-    const keywordNode = declList.getFirstChild();
-    const keywordKind = keywordNode ? keywordNode.getKind() : undefined;
-
-    if (keywordKind !== SyntaxKind.LetKeyword && keywordKind !== SyntaxKind.ConstKeyword) {
-        throw TranspileError.fromNode(stmt, "VariableStatement is not a let/const declaration");
+    const keyword = declList.getFirstChild()?.getKind();
+    if (keyword !== SyntaxKind.LetKeyword && keyword !== SyntaxKind.ConstKeyword) {
+        throw refuseAt(stmt, "VariableStatement is not a let/const declaration");
     }
 
-    // Use AST positions to do precise substitution
-    let originalText = stmt.getText();
-    const stmtStart = stmt.getStart();
-
-    // Collect all replacements with their positions, then apply from end to start
-    // to avoid position shifts
-    const replacements: { start: number; end: number; text: string }[] = [];
-
-    for (const decl of declList.getDeclarations()) {
+    const parts = declList.getDeclarations().map((decl) => {
         const varName = decl.getName();
         if (RESERVED_VAR_NAMES.has(varName)) {
-            throw TranspileError.fromNode(
-                decl,
-                `Variable name '${varName}' conflicts with folib export. Use a different name.`,
-            );
+            throw refuseAt(decl, `Variable name '${varName}' conflicts with folib export. Use a different name.`);
         }
         const initializer = decl.getInitializer();
-        if (initializer) {
-            const converted = convertOperatorsAST(initializer, ctx);
-            if (converted !== initializer.getText()) {
-                replacements.push({
-                    start: initializer.getStart() - stmtStart,
-                    end: initializer.getEnd() - stmtStart,
-                    text: converted,
-                });
-            }
-        }
-    }
-
-    // Apply replacements from end to start
-    replacements.sort((a, b) => b.start - a.start);
-    for (const r of replacements) {
-        originalText = originalText.substring(0, r.start) + r.text + originalText.substring(r.end);
-    }
-
-    // Get the position of the keyword in the source file
-    // keywordNode is guaranteed non-null: we checked keywordKind above
-    const keywordPos = keywordNode!.getStart();
-    const keywordEnd = keywordNode!.getEnd();
-    const keywordRelativePos = keywordPos - stmt.getStart(); // Position within the statement text
-
-    // Replace only the keyword exactly
-    const beforeKeyword = originalText.substring(0, keywordRelativePos);
-    const afterKeyword = originalText.substring(keywordRelativePos + (keywordEnd - keywordPos));
-    let result = beforeKeyword + "variable" + afterKeyword;
-
-    // Add semicolon at the end if needed (only if it doesn't already end with one)
-    if (!result.trim().endsWith(";")) {
-        const lastNonWhitespacePos = result.trimEnd().length;
-        result = result.substring(0, lastNonWhitespacePos) + ";" + result.substring(lastNonWhitespacePos);
-    }
-
-    return result;
+        return initializer ? `${varName} = ${convertOperatorsAST(initializer, ctx)}` : varName;
+    });
+    return `variable ${parts.join(", ")};`;
 }
