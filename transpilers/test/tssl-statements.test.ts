@@ -8,7 +8,11 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { transpile } from "../tssl/src/index";
+import { createBatchState, transpile } from "../tssl/src/index";
+
+// One ts-morph project for the whole file: creating one per case re-parses the TypeScript default
+// library every time, which is most of a small fixture's transpile cost.
+const batch = createBatchState();
 
 let tmpDir: string;
 
@@ -24,7 +28,7 @@ let fileSeq = 0;
 async function emit(src: string): Promise<string> {
     const filePath = path.join(tmpDir, `case${fileSeq++}.tssl`);
     fs.writeFileSync(filePath, src, "utf-8");
-    return transpile(filePath, src, undefined);
+    return transpile(filePath, src, batch);
 }
 
 describe("control-flow statement handlers", () => {
