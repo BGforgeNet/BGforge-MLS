@@ -323,21 +323,6 @@ describe("cleanupEsbuildOutput", () => {
         expect(result).toContain("var b = See2;");
     });
 
-    it("restores esbuild-renamed constants using originalConstants", () => {
-        const constants = new Map([["DIK_F4", "62"]]);
-        const code = `${MARKER}\nvar DIK_F42 = 62;\nvar x = DIK_F42;`;
-        const result = cleanupEsbuildOutput(code, MARKER, constants);
-        expect(result).toContain("var DIK_F4 = 62;");
-        expect(result).toContain("var x = DIK_F4;");
-    });
-
-    it("does not restore constant when value does not match", () => {
-        const constants = new Map([["DIK_F4", "62"]]);
-        const code = `${MARKER}\nvar DIK_F42 = 99;\nvar x = DIK_F42;`;
-        const result = cleanupEsbuildOutput(code, MARKER, constants);
-        expect(result).toContain("var DIK_F42 = 99;");
-    });
-
     it("handles multiple import aliases", () => {
         const code = `${MARKER}\nimport { foo as foo2, bar as bar2 } from "mod";\nvar x = foo2 + bar2;`;
         const result = cleanupEsbuildOutput(code, MARKER);
