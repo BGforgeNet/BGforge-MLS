@@ -61,7 +61,7 @@ declare -A suite_label=(
     ["client-unit"]="client unit tests"
     [format]="format unit tests"
     [image]="image unit tests"
-    [ssl]="ssl unit tests"
+    [ssl]="ssl unit tests + corpus canary"
     [transpilers]="transpilers unit tests"
     [scripts]="scripts unit tests"
     ["tssl-plugin"]="tssl-plugin unit tests"
@@ -89,7 +89,9 @@ declare -A suite_cmd=(
     ["client-unit"]="pnpm exec vitest run --config client/vitest.config.ts"
     [format]="pnpm exec vitest run --config format/vitest.config.ts"
     [image]="pnpm exec vitest run --config image/vitest.config.ts"
-    [ssl]="pnpm exec vitest run --config compilers/ssl/vitest.config.ts"
+    # The only suite that runs two configs: the compiler's unit tests never touch a real script, so an
+    # ssl change gets the 3.5s corpus canary too - the same probe `pnpm test` runs one tier up.
+    [ssl]="pnpm exec vitest run --config compilers/ssl/vitest.config.ts && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
     [transpilers]="pnpm exec vitest run --config transpilers/vitest.config.ts"
     [scripts]="pnpm exec vitest run --config scripts/vitest.config.ts"
     ["tssl-plugin"]="pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts"
