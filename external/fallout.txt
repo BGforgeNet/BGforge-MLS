@@ -3,7 +3,8 @@
 #   - URL alone:           cloned shallow at upstream HEAD (follows upstream)
 #   - URL + commit SHA:    fetched shallow at the pinned commit (reproducible)
 # Pinning makes the integration tests reproducible across upstream pushes;
-# bump the SHA when intentionally tracking newer upstream content.
+# bump the SHA when intentionally tracking newer upstream content. After bumping a repo the SSL corpus
+# reads (RP, FO2tweaks, Party_Orders, sfall), regenerate the committed oracles: pnpm ssl-oracles
 https://github.com/BGforgeNet/FO2tweaks acf81c2b923c55e6b0a0eb9d267dcf6627e03410
 https://github.com/BGforgeNet/Fallout2_Restoration_Project 4f4c7a0cb323c2a3b709c29dc77ec3d4ce60f040
 https://github.com/BGforgeNet/Fallout2_Party_Orders 14c4d134d772b1a97f1389fdc5967a3bfb6e38eb

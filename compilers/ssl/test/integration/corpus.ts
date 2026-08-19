@@ -14,9 +14,13 @@
 
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
 import { narrow, scriptsIn, scriptsUnder } from "./corpus-files.ts";
+
+// Anchored to this file rather than through the shared `repo-root` helper: that helper reads
+// `__dirname`, which the `pnpm ssl-oracles` ES-module entry chain does not have. Same reasoning as
+// corpus-files.ts, which the standalone scripts have always imported.
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
 
 export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
 

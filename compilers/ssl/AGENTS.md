@@ -33,7 +33,7 @@ pnpm ssl-verdicts --check tmp/verdicts.txt   # after each change
 
 `ssl-diff` answers "does THIS construct match"; this answers "did anything about the corpus change". It
 sweeps every script at every level through this front end only - no reference process, so it takes about
-three minutes rather than sixteen, and about one with `--levels 0` while you are still iterating - and
+three minutes, and about one with `--levels 0` while you are still iterating - and
 records one line per script per level: the emitted bytes' digest, or the message it was refused with.
 `--check` reports every difference grouped by what it means (now refused, now accepted, bytes changed,
 first message changed) and exits non-zero if there are any.
@@ -54,9 +54,15 @@ keeping graduates from the probe into a case there. Refusals belong in `test/low
 other lowering guards, asserting the message AND its `line:column` prefix - the language server turns that
 prefix into the diagnostic's position, so an error without one lands on line 1.
 
-`test/integration/` sweeps every script in `external/fallout` at each level and takes about sixteen
-minutes. It is the close-out gate, not the edit loop, and it can only tell you about constructs real
-scripts happen to contain.
+`test/integration/` sweeps every script in `external/fallout` at each level against the COMMITTED oracle
+digests (`test/integration/reference-oracles.txt`), in-process and in a few minutes. It is the close-out
+gate, not the edit loop, and it can only tell you about constructs real scripts happen to contain.
+
+The oracles are regenerated - the old sixteen-minute live differential - with `pnpm ssl-oracles`, which
+re-runs the bundled compiler over the whole corpus and refuses to write a manifest ours diverges from.
+Regenerate after bumping the bundled compiler dependency, bumping a corpus pin in `external/fallout.txt`,
+or deliberately changing preprocessor behaviour; the sweeps assert the first two pins themselves and fail
+with "regenerate" when they have moved.
 
 ## The corpus cannot tell you what the language is
 

@@ -1,11 +1,11 @@
 /**
  * Records what THIS front end does with every corpus script, so a change can be checked against a
- * baseline in about a minute instead of sixteen.
+ * baseline in about a minute, with no reference process involved.
  *
  * The corpus differential answers "do we still match the reference", and pays for the reference process
  * per script to do it. A front-end refactor asks a narrower question - "does the set of scripts I accept,
  * the reason I refuse the rest, and the bytes I emit for the ones I take, all still match what they were
- * before I started" - and that needs no reference at all. Dropping it turns a sixteen-minute sweep into an
+ * before I started" - and that needs no reference at all. Dropping it turns a long sweep into an
  * in-process one.
  *
  * That is the gate the multi-error work needs: converting a throw into a recorded diagnostic must not

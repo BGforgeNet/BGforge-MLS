@@ -3,7 +3,7 @@
  * whether the bytes match.
  *
  * This is the loop the corpus sweep is too slow to serve. That sweep answers "did anything regress across
- * 1500 real scripts" in about sixteen minutes; this answers "does THIS construct match" in about a second,
+ * 1500 real scripts"; this answers "does THIS construct match" in about a second,
  * which is the question every front-end change actually starts from. Findings graduate from here into the
  * case table in `test/int/compile.test.ts`, which is where they become a guard.
  *

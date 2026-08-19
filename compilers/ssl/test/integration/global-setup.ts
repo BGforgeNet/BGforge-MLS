@@ -14,7 +14,11 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+
+// Anchored to this file rather than through the shared `repo-root` helper: that helper reads
+// `__dirname`, which the `pnpm ssl-oracles` ES-module entry chain does not have - it runs this setup
+// before its sweep, exactly as vitest does before the integration suites.
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
 
 const FALLOUT = path.join(REPO_ROOT, "external/fallout");
 const RP_SCRIPTS = path.join(FALLOUT, "Fallout2_Restoration_Project/scripts_src");
