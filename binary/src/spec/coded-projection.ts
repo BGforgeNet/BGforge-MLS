@@ -44,7 +44,17 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  *   parlance; the slug is the toolchain token. One translation point
  *   (label <-> slug) is the simplest split for a single-vocabulary toolchain.
  */
+/**
+ * Both caches key on values that are stable for the process: display names and flag tables come from the
+ * static specs, and a display walk re-derives the same handful of them once per field instance - on a MAP
+ * with thousands of objects that slug/compile work was over 30% of parse time.
+ */
+const slugCache = new Map<string, string>();
+
 export function slugifyCodedName(displayName: string): string {
+    const cached = slugCache.get(displayName);
+    if (cached !== undefined) return cached;
+
     const normalized = displayName
         .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
         .replaceAll(/[^A-Za-z0-9]+/g, " ")
@@ -79,6 +89,7 @@ export function slugifyCodedName(displayName: string): string {
             `slugifyCodedName: name "${displayName}" produced reserved sentinel "${camel}"; flag display names must not slugify to bit<N>`,
         );
     }
+    slugCache.set(displayName, camel);
     return camel;
 }
 
@@ -100,10 +111,18 @@ export interface FlagBitEntry {
  *
  * Returns frozen entries to discourage in-place mutation.
  */
-export function compileFlagTable(table: Readonly<Record<number, string>>): {
+interface CompiledFlagTable {
     entries: readonly FlagBitEntry[];
     namedMask: number;
-} {
+}
+
+/** Keyed on the spec table's identity, so a table rebuilt at runtime compiles afresh. See `slugCache`. */
+const flagTableCache = new WeakMap<Readonly<Record<number, string>>, CompiledFlagTable>();
+
+export function compileFlagTable(table: Readonly<Record<number, string>>): CompiledFlagTable {
+    const cached = flagTableCache.get(table);
+    if (cached !== undefined) return cached;
+
     const entries: FlagBitEntry[] = [];
     let namedMask = 0;
     for (const [maskStr, displayName] of Object.entries(table)) {
@@ -116,7 +135,9 @@ export function compileFlagTable(table: Readonly<Record<number, string>>): {
         namedMask = (namedMask | mask) >>> 0;
     }
     entries.sort((a, b) => a.key.localeCompare(b.key));
-    return { entries: Object.freeze(entries), namedMask };
+    const compiled: CompiledFlagTable = { entries: Object.freeze(entries), namedMask };
+    flagTableCache.set(table, compiled);
+    return compiled;
 }
 
 /**

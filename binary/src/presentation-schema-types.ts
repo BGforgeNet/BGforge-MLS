@@ -69,7 +69,21 @@ export function compilePatternFields(
     }));
 }
 
+/**
+ * Keyed on the spec table's identity: a display walk restringifies the same static table once per field
+ * instance, which on a large MAP was over 10% of parse time. Callers now share one object, so it is frozen -
+ * a consumer that assigns into an option table gets a loud TypeError instead of a silent cross-record edit.
+ */
+const stringKeyCache = new WeakMap<Readonly<Record<number, string>>, Record<string, string>>();
+
 /** Convert a numeric-keyed enum/flag table to a string-keyed shape suitable for the schema. */
 export function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
-    return Object.fromEntries(Object.entries(table).map(([key, value]) => [String(key), value]));
+    const cached = stringKeyCache.get(table);
+    if (cached !== undefined) return cached;
+
+    const stringified = Object.freeze(
+        Object.fromEntries(Object.entries(table).map(([key, value]) => [String(key), value])),
+    );
+    stringKeyCache.set(table, stringified);
+    return stringified;
 }
