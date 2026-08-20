@@ -880,6 +880,31 @@ function deadVariableRemoval(procedure: ProcedureDecl): ProcedureDecl {
     };
 }
 
+/** Structural equality, the notion the JSON comparison it replaced had, without building the JSON. */
+function sameShape(a: unknown, b: unknown): boolean {
+    if (a === b) return true;
+    if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+    if (Array.isArray(a)) {
+        if (!Array.isArray(b) || a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) if (!sameShape(a[i], b[i])) return false;
+        return true;
+    }
+    if (Array.isArray(b)) return false;
+    const ao = a as Record<string, unknown>;
+    const bo = b as Record<string, unknown>;
+    let count = 0;
+    for (const key in ao) {
+        if (!Object.hasOwn(ao, key)) continue;
+        const value = ao[key];
+        if (value === undefined) continue;
+        count++;
+        if (!sameShape(value, bo[key])) return false;
+    }
+    let other = 0;
+    for (const key in bo) if (Object.hasOwn(bo, key) && bo[key] !== undefined) other++;
+    return count === other;
+}
+
 /**
  * One procedure through the reference's own pass order, looped until nothing moves.
  *
@@ -894,7 +919,7 @@ function optimizeProcedure(procedure: ProcedureDecl): ProcedureDecl {
         let changed = false;
 
         const folded = body.map((statement) => remapWith(statement, foldConstants));
-        if (JSON.stringify(folded) !== JSON.stringify(body)) changed = true;
+        if (!sameShape(folded, body)) changed = true;
         body = folded;
 
         const stores = deadStoreRemoval({ ...procedure, body, locals });
@@ -903,7 +928,7 @@ function optimizeProcedure(procedure: ProcedureDecl): ProcedureDecl {
         changed ||= stores.changed;
 
         const reduced = foldStatements(body);
-        if (JSON.stringify(reduced) !== JSON.stringify(body)) changed = true;
+        if (!sameShape(reduced, body)) changed = true;
         body = reduced;
 
         const combined = combineAssignments(body);
@@ -1011,9 +1036,9 @@ export function optimize(program: Program, options: OptimizeOptions = {}): Progr
         ),
     });
     for (let round = 0; round < 16; round++) {
-        const before = JSON.stringify(program);
+        const before = program;
         program = propagateConstantGlobals(eliminate(simplify(eliminate(program))));
-        if (JSON.stringify(program) === before) break;
+        if (sameShape(program, before)) break;
     }
     return eliminate(program);
 }
