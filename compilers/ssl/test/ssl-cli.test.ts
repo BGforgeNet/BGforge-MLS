@@ -289,3 +289,78 @@ describe("ssl CLI", () => {
         });
     });
 });
+
+/**
+ * The pool exists to spend more cores, not to compile differently, so what these pin is SAMENESS: the
+ * bytes, the transcript and the exit code a parallel run produces must be the ones a sequential run
+ * produces. A schedule-dependent transcript would be the first thing to break, and only across enough
+ * inputs that the workers finish out of order - hence a batch rather than a pair.
+ */
+describe("ssl CLI batch compilation", () => {
+    beforeEach(() => {
+        if (!fs.existsSync(CLI)) throw new Error("compilers/ssl/out/cli.js not built. Run: pnpm build:ssl");
+        fs.mkdirSync(tmpDir, { recursive: true });
+    });
+
+    afterEach(() => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    /** Distinct sources, so a mixed-up result would show as wrong bytes rather than as coincidentally equal. */
+    function batch(count: number): string[] {
+        return Array.from({ length: count }, (_, i) =>
+            source(`batch${i}.ssl`, `procedure start begin\n   display_msg("script ${i}");\nend\n`),
+        );
+    }
+
+    function outputs(files: readonly string[]): Record<string, string> {
+        const out: Record<string, string> = {};
+        for (const file of files) {
+            const int = file.replace(/\.ssl$/, ".int");
+            out[path.basename(int)] = fs.readFileSync(int).toString("base64");
+        }
+        return out;
+    }
+
+    it("produces the same bytes, transcript and exit code in parallel as sequentially", () => {
+        const files = batch(12);
+
+        const sequential = run("-l", "-q", "-O2", "-j1", ...files);
+        expect(sequential.code).toBe(0);
+        const sequentialOut = outputs(files);
+        for (const file of files) fs.rmSync(file.replace(/\.ssl$/, ".int"));
+
+        const parallel = run("-l", "-q", "-O2", "-j4", ...files);
+        expect(parallel.code).toBe(sequential.code);
+        expect(parallel.stdout).toBe(sequential.stdout);
+        expect(parallel.stderr).toBe(sequential.stderr);
+        expect(outputs(files)).toEqual(sequentialOut);
+        // Not vacuous: every input really was compiled, rather than the run failing identically twice.
+        expect(Object.keys(sequentialOut)).toHaveLength(12);
+    });
+
+    it("compiles the inputs after a failing one and counts the failure", () => {
+        const good = source("after-ok.ssl", HELLO);
+        const broken = source("broken.ssl", "procedure start begin\n   nosuchthing();\nend\n");
+        const alsoGood = source("after-ok2.ssl", HELLO);
+
+        const result = run("-l", "-q", "-O2", broken, good, alsoGood);
+        expect(result.code).toBe(1);
+        expect(result.stderr).toMatch(/THERE WERE ERRORS \(1 of them\)/);
+        // The reference abandons the batch here; both later inputs must still have been compiled.
+        expect(fs.existsSync(good.replace(/\.ssl$/, ".int"))).toBe(true);
+        expect(fs.existsSync(alsoGood.replace(/\.ssl$/, ".int"))).toBe(true);
+        expect(fs.existsSync(broken.replace(/\.ssl$/, ".int"))).toBe(false);
+    });
+
+    it("reports each input in the order it was given, whatever order the workers finish in", () => {
+        const files = batch(8);
+        const result = run("-l", "-q", "-O2", "-j4", ...files);
+        expect(result.code).toBe(0);
+        const reported = result.stdout
+            .split("\n")
+            .filter((line) => line.startsWith("Compiling "))
+            .map((line) => path.basename(line.slice("Compiling ".length)));
+        expect(reported).toEqual(files.map((file) => path.basename(file)));
+    });
+});

@@ -1,7 +1,9 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-    entry: ["src/index.ts", "src/cli.ts"],
+    // cli-worker is a third entry rather than a chunk: the pool starts it by path at runtime
+    // (out/cli-worker.js), so it has to be a file rather than something folded into the CLI bundle.
+    entry: ["src/index.ts", "src/cli.ts", "src/cli-worker.ts"],
     format: ["esm"],
     // Only the library entry has an importable contract; the CLI is a bin, not a module.
     dts: { entry: "src/index.ts" },

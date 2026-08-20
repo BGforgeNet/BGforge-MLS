@@ -56,6 +56,11 @@ export interface SslArgs {
     listing: boolean;
     /** `--help` or `-h`, which the reference has no equivalent for. */
     help: boolean;
+    /**
+     * `-j<n>`: how many inputs to compile at once. 0 asks for one worker per core, which is the default.
+     * Not a reference switch - it changes nothing about the output, only how long a batch takes.
+     */
+    jobs: number;
     defines: Record<string, string>;
     includeDirs: string[];
     inputs: SslInput[];
@@ -109,6 +114,7 @@ export function parseArgs(argv: readonly string[]): SslArgs {
     let help = false;
     let decompile = false;
     let listing = false;
+    let jobs = 0;
     // Whether an -O was WRITTEN, which the resolved level cannot answer: it defaults to 1, so a conflict
     // decided by the level would fire on every command line that never mentioned one.
     let levelGiven = false;
@@ -169,6 +175,11 @@ export function parseArgs(argv: readonly string[]): SslArgs {
                 break;
             case "X":
                 listing = true;
+                break;
+            case "j":
+                // Read with the same `atoi` as -O, so a bare -j or an unparseable one means "decide for
+                // me" rather than being rejected. A negative is meaningless; it lands on auto too.
+                jobs = Math.max(0, atoi(rest));
                 break;
             case "O":
                 // A bare `-O` is the reference's shorthand for full optimisation.
@@ -263,6 +274,7 @@ export function parseArgs(argv: readonly string[]): SslArgs {
         includeDirs,
         inputs,
         notices,
+        jobs,
     };
 }
 
