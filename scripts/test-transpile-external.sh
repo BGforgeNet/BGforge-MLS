@@ -88,6 +88,18 @@ test_repo() {
         git -C "$dir" checkout -- '*.ssl'
     fi
 
+    # The bytecode oracle measures the same property as ssl-equiv above - the transpiler still produces
+    # something that compiles to the bytes it used to - without needing a committed .ssl to compare
+    # against, so it is what remains once a mod stops shipping the intermediate. Both run while both can:
+    # ssl-equiv covers the text as committed, this covers the bytecode at four switch sets including the
+    # `-s` the mods actually ship, which no other sweep exercises on a real script.
+    if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
+        if ! (cd "$ROOT_DIR" && pnpm --silent tssl-oracles "$dir"); then
+            echo "FAIL: $repo (transpiled bytecode differs from the committed oracles)"
+            return 1
+        fi
+    fi
+
     echo "PASS: $repo"
 }
 

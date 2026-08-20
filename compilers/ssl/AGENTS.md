@@ -64,6 +64,18 @@ Regenerate after bumping the bundled compiler dependency, bumping a corpus pin i
 or deliberately changing preprocessor behaviour; the sweeps assert the first two pins themselves and fail
 with "regenerate" when they have moved.
 
+`pnpm tssl-oracles <repo>` is the same idea one layer up, for the transpiler: it digests the INT bytes each
+`.tssl` in a mod repo transpiles-and-compiles to, against `test/integration/tssl-int-oracles.txt`. It runs
+from `scripts/test-transpile-external.sh` and exists to outlive `ssl-equiv`, which needs a committed `.ssl`
+to compare against and so cannot survive a mod dropping the intermediate.
+
+**Its pinning is the deliberate inverse of the manifest above, and the distinction is the whole point.**
+`reference-oracles.txt` pins the compiler because a bump invalidates the oracle; there, both the transpiler
+and the compiler are ours and under test, so a digest that moves is a finding to review and never a prompt
+to regenerate. Only the corpus is pinned. `--update` rewrites the manifest and is an explicit reviewed act.
+It is also the only sweep that compiles a real script with `-s`: the switch sets are recorded in the
+manifest header, and they include the `-O2 -s` mods actually ship.
+
 ## The corpus cannot tell you what the language is
 
 Every defect found by reading the reference compiler's own lexer and parser was invisible to a green sweep
