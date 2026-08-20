@@ -1657,11 +1657,13 @@ function collectStringLiterals(root: SyntaxNode, onWarning?: (message: string, n
             }
             out.push(unquote(node.text));
         }
+        const children = node.namedChildren;
         // `@Name` interns the procedure's name, though the source never quotes it.
-        if (node.type === "proc_ref" && node.namedChildren[0]) out.push(node.namedChildren[0].text);
-        for (const child of node.namedChildren) {
+        if (node.type === "proc_ref" && children[0]) out.push(children[0].text);
+        const memberId = node.type === "member_expr" ? node.childForFieldName("member")?.id : undefined;
+        for (const child of children) {
             if (!child) continue;
-            if (node.type === "member_expr" && child.id === node.childForFieldName("member")?.id) {
+            if (memberId !== undefined && child.id === memberId) {
                 out.push(child.text);
                 continue;
             }
