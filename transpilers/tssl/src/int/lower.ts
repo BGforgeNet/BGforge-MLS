@@ -30,6 +30,7 @@ import type {
     VariableDecl,
 } from "../../../../compilers/ssl/src/int/ir";
 import { engineFunction } from "../../../../compilers/ssl/src/int/engine-functions";
+import { Expansions, type Desugarer, type Origin } from "../../../../compilers/ssl/src/desugar";
 import {
     buildProgramModel,
     refuseAt,
@@ -49,12 +50,25 @@ export function lowerTsslProgram(filePath: string, text: string): Program {
     const model = buildProgramModel(project, entry, filePath, engineProcedureNames, (source) =>
         extractInlineFunctions(source),
     );
-    return new TsslLowering(model).lower();
+    return new TsslLowering(model, project).lower();
+}
+
+/** Where a node sits, in the coordinates the shared expansions position their complaints with. */
+function originOf(node: Node): Origin {
+    return { line: node.getStartLineNumber(), column: 1 };
 }
 
 /** A procedure's locals, arguments first - the slot order the emitter and the engine both assume. */
 interface Scope {
     slots: Map<string, number>;
+    /**
+     * An `@inline` macro's parameters bound to the caller's argument expressions, in force while its
+     * expansion is lowered. Substitution is TEXTUAL in the route this mirrors, so a parameter is
+     * replaced wherever it appears - including inside a compound operand like
+     * `SCRIPT_REALNAME + ": " + msg`, which arrives as one operand and not as a bare parameter
+     * reference. Checked before every other kind of name, as a preprocessor would.
+     */
+    bindings?: Map<string, Expr>;
 }
 
 /** TypeScript spellings that mean an SSL binary operator. Anything absent is refused, not guessed. */
@@ -75,7 +89,12 @@ const BINARY_OPS = new Map<string, BinaryOp>([
     ["&", "bwand"],
     ["|", "bwor"],
     ["^", "bwxor"],
+    ["&&", "and"],
+    ["||", "or"],
 ]);
+
+/** Comments reach the statement walk as trivia nodes; they contribute nothing to the output. */
+const COMMENT_KINDS = new Set([SyntaxKind.SingleLineCommentTrivia, SyntaxKind.MultiLineCommentTrivia]);
 
 const ASSIGN_OPS = new Map<string, "=" | "+=" | "-=" | "*=" | "/=">([
     ["=", "="],
@@ -89,33 +108,106 @@ class TsslLowering {
     private readonly declarations: Declaration[] = [];
     /** Procedure slot per name, allocated by the forward-declaration pass. */
     private readonly procedures = new Map<string, number>();
+    /**
+     * Declared parameter defaults per procedure slot. A call may omit trailing arguments whose
+     * parameters declare one, and the default is supplied at the CALL SITE - so they have to be known
+     * before any body is lowered, which is why the declaration pass records them.
+     */
+    private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
     private readonly strings: string[] = [];
+    /**
+     * Top-level `const` initialisers by name, and enum members by their flat `Enum_Member` name.
+     *
+     * The text route emits these as `#define`s, so the reference is a TEXTUAL substitution - which is
+     * why the initialiser NODE is kept rather than a lowered value. Lowering it once and sharing the
+     * result would intern a string constant once where the preprocessor interns it per use, and the
+     * string table is built in use order, so every later offset would shift.
+     */
+    private readonly constants = new Map<string, Node>();
+    /** Enum members whose value the declaration gives directly rather than through an initialiser. */
+    private readonly enumValues = new Map<string, number | string>();
+    /** Names generated temporaries `tmp.<n>`, counted across the whole unit as the SSL side does. */
+    private tempCounter = 0;
+    private scratchSeq = 0;
+    /** Global slot per name. Allocated after every procedure, which is the order the text route emits. */
+    private readonly globals = new Map<string, number>();
+    /**
+     * The four expansions with byte-exact invariants, shared with the SSL front end rather than
+     * reimplemented here - which is the whole reason they were lifted out of its lowering.
+     */
+    private readonly expansions = new Expansions();
     /** The procedure a local declaration appends its slot to. */
     private currentProcedure: ProcedureDecl | null = null;
     private readonly model: TsslProgram;
+    private readonly project: Project;
 
-    constructor(model: TsslProgram) {
+    constructor(model: TsslProgram, project: Project) {
         this.model = model;
+        this.project = project;
     }
 
     lower(): Program {
+        this.collectConstants();
         const kept = this.keptFunctions();
         // Forward declarations first: they allocate every procedure slot, and their order is the name
         // table's order.
         for (const func of kept) {
             const name = func.getName();
             if (name === undefined) continue;
-            this.procedures.set(name, this.declarations.length);
+            const index = this.declarations.length;
+            this.procedures.set(name, index);
+            const parameters = func.getParameters();
+            this.paramDefaults.set(
+                index,
+                parameters.map((parameter) => {
+                    const initial = parameter.getInitializer();
+                    return initial ? this.constantOf(initial) : null;
+                }),
+            );
             this.declarations.push({
                 kind: "procedure",
-                procedure: { name, args: [], locals: [], body: [] },
+                procedure: { name, args: parameters.map((parameter) => parameter.getName()), locals: [], body: [] },
             });
+        }
+        // Globals take their name-table slots after every procedure, bundled modules before the entry -
+        // the order the text route's emitter renders them, and the order the offsets are baked in.
+        for (const module of this.model.modules) {
+            for (const decl of module.lets) {
+                if (!this.model.kept.has(decl)) continue;
+                const initializer = decl.getInitializer();
+                const initial = initializer ? this.constantOf(initializer) : null;
+                if (initializer && initial === null) {
+                    throw refuseAt(decl, "a global's initial value must be a literal");
+                }
+                this.globals.set(decl.getName().toLowerCase(), this.globals.size);
+                this.declarations.push({
+                    kind: "global",
+                    variable: { name: decl.getName(), initial: initial ?? { kind: "int", value: 0 } },
+                });
+            }
         }
         for (const func of kept) this.lowerBody(func);
         return {
             declarations: this.declarations,
             ...(this.strings.length > 0 ? { stringLiterals: this.strings } : {}),
         };
+    }
+
+    /** Every module's `const`s and enum members, in module order so an earlier definition wins. */
+    private collectConstants(): void {
+        for (const module of this.model.modules) {
+            for (const decl of module.consts) {
+                const initializer = decl.getInitializer();
+                if (initializer && !this.constants.has(decl.getName())) this.constants.set(decl.getName(), initializer);
+            }
+            for (const decl of module.enums) {
+                for (const member of decl.getMembers()) {
+                    const flat = `${decl.getName()}_${member.getName()}`;
+                    const value = member.getValue();
+                    this.enumValues.set(flat, value ?? 0);
+                }
+            }
+        }
     }
 
     /**
@@ -143,11 +235,14 @@ class TsslLowering {
         const entry = this.declarations[index];
         if (entry === undefined || entry.kind !== "procedure") return;
 
-        if (func.getParameters().length > 0) throw refuseAt(func, "procedure parameters are not lowered yet");
         const body = func.getBody();
         if (body === undefined) throw refuseAt(func, "a procedure with no body has nothing to lower");
 
+        // Arguments occupy the first local slots, in declaration order, so locals index after them.
         const scope: Scope = { slots: new Map() };
+        for (const parameter of func.getParameters()) {
+            scope.slots.set(parameter.getName().toLowerCase(), scope.slots.size);
+        }
         this.currentProcedure = entry.procedure;
         entry.procedure.body = this.lowerStatements(body, scope);
         this.currentProcedure = null;
@@ -156,6 +251,7 @@ class TsslLowering {
     private lowerStatements(block: Node, scope: Scope): Stmt[] {
         const out: Stmt[] = [];
         for (const statement of block.getChildrenOfKind(SyntaxKind.SyntaxList).flatMap((list) => list.getChildren())) {
+            if (COMMENT_KINDS.has(statement.getKind())) continue;
             const lowered = this.lowerStatement(statement, scope);
             if (lowered) out.push(lowered);
         }
@@ -188,8 +284,63 @@ class TsslLowering {
             case SyntaxKind.Block:
                 return { kind: "block", body: this.lowerStatements(node, scope) };
 
+            case SyntaxKind.BreakStatement:
+                return { kind: "break" };
+            case SyntaxKind.ContinueStatement:
+                return { kind: "continue" };
+
+            case SyntaxKind.ForOfStatement: {
+                const loop = node.asKindOrThrow(SyntaxKind.ForOfStatement);
+                const declared = loop.getInitializer().asKind(SyntaxKind.VariableDeclarationList);
+                if (!declared) throw refuseAt(loop, "a for-of must declare its loop variable");
+                const variable = declared.getDeclarations()[0];
+                if (!variable) throw refuseAt(loop, "for-of has no loop variable");
+                const name = variable.getName();
+                const subject = loop.getExpression();
+                const body = loop.getStatement();
+                return this.expansions.foreach(this.hostFor(scope), {
+                    origin: originOf(node),
+                    declares: { key: null, value: { text: name, origin: originOf(variable) } },
+                    subject: {
+                        isVariable: subject.getKind() === SyntaxKind.Identifier,
+                        get: () => this.lowerExpression(subject, scope),
+                    },
+                    key: null,
+                    value: () => this.lowerExpression(variable.getNameNode(), scope),
+                    guard: null,
+                    body: () => this.lowerBranch(body, scope),
+                });
+            }
+
+            case SyntaxKind.ForStatement: {
+                const loop = node.asKindOrThrow(SyntaxKind.ForStatement);
+                const init = loop.getInitializer();
+                const cond = loop.getCondition();
+                const update = loop.getIncrementor();
+                const body = loop.getStatement();
+                return this.expansions.for(this.hostFor(scope), {
+                    origin: originOf(node),
+                    init: init ? () => this.lowerStatement(init, scope) : null,
+                    cond: cond ? () => this.lowerExpression(cond, scope) : null,
+                    update: update ? () => this.lowerStatement(update, scope) : null,
+                    body: body ? () => this.lowerBranch(body, scope) : null,
+                });
+            }
+
+            case SyntaxKind.VariableDeclarationList:
+                return this.lowerLocalDeclaration(node, scope);
+
+            case SyntaxKind.PostfixUnaryExpression:
+            case SyntaxKind.PrefixUnaryExpression: {
+                const step = this.incrementOf(node, scope);
+                if (step) return step;
+                return { kind: "expr", expr: this.lowerExpression(node, scope) };
+            }
+
             case SyntaxKind.ExpressionStatement: {
                 const inner = node.asKindOrThrow(SyntaxKind.ExpressionStatement).getExpression();
+                const step = this.incrementOf(inner, scope);
+                if (step) return step;
                 if (inner.getKind() === SyntaxKind.CallExpression) return this.lowerCallStatement(inner, scope);
                 if (inner.getKind() === SyntaxKind.BinaryExpression) {
                     const assignment = this.lowerAssignment(inner, scope);
@@ -199,7 +350,12 @@ class TsslLowering {
             }
             case SyntaxKind.ReturnStatement: {
                 const value = node.asKindOrThrow(SyntaxKind.ReturnStatement).getExpression();
-                return value ? { kind: "return", value: this.lowerExpression(value, scope) } : { kind: "return" };
+                // A bare `return;` returns zero rather than nothing: the language synthesises the value,
+                // so it compiles to the same value-returning sequence as `return 0`.
+                return {
+                    kind: "return",
+                    value: value ? this.lowerExpression(value, scope) : { kind: "int", value: 0 },
+                };
             }
             default:
                 throw refuseAt(node, `${node.getKindName()} is not lowered yet`);
@@ -212,18 +368,52 @@ class TsslLowering {
         const callee = call.getExpression();
         if (callee.getKind() !== SyntaxKind.Identifier) throw refuseAt(callee, "only a plain callee is lowered yet");
         const name = callee.getText();
+
+        // The callee is resolved BEFORE its arguments are lowered. An inline macro re-lowers its own
+        // spliced text, so lowering the arguments first would intern their string literals twice and in
+        // the wrong order - and the string table is built in intern order, which fixes every offset.
+        // folib spells an array or map literal as a call; both are literals, not procedures.
+        if (name === "list" || name === "map") {
+            return { kind: "expr", expr: this.lowerListHelper(call, name === "map", scope) };
+        }
+        const inlineMacro = this.model.inlineFunctions.get(name);
+        if (inlineMacro) {
+            // Lowered as a STATEMENT rather than as an expression wrapped afterwards, so an expansion
+            // that bottoms out in an engine call gets that call's own `popsResult` - and so a macro
+            // expanding to another macro recurses here and resolves at whatever depth it ends.
+            const parsed = this.expansionOf(inlineMacro, call.getArguments(), callee);
+            if (parsed.getKind() === SyntaxKind.CallExpression) return this.lowerCallStatement(parsed, scope);
+            return { kind: "expr", expr: this.lowerExpression(parsed, scope) };
+        }
+
         const args = call.getArguments().map((argument) => this.lowerExpression(argument, scope));
 
-        const fn = engineFunction(name, 2);
-        if (fn) return { kind: "libStmt", opcode: fn.opcode, args, ...(fn.returns ? { popsResult: true } : {}) };
+        const fn = engineFunction(name.toLowerCase(), 2);
+        if (fn) {
+            const bound = this.withProcedureArgs(call, args, fn.procArgs ?? 0);
+            // `popsResult`, NOT `returns`: the table keeps them apart deliberately - `returns` is what
+            // the documented signature yields, `popsResult` is what the statement form actually discards.
+            return { kind: "libStmt", opcode: fn.opcode, args: bound, ...(fn.popsResult ? { popsResult: true } : {}) };
+        }
 
-        const target = this.procedures.get(name);
+        const target = this.procedures.get(this.declaredName(callee, name));
         if (target === undefined) throw refuseAt(callee, `unknown procedure '${name}'`);
-        return { kind: "callStmt", target: { kind: "procRef", index: target }, args };
+        return {
+            kind: "callStmt",
+            target: { kind: "procRef", index: target },
+            args: this.padWithDefaults(target, args),
+        };
     }
 
+    /**
+     * A branch is always a block. The route this must agree with renders every branch as
+     * `begin ... end`, so the tree it parses back has a block even where the author wrote one bare
+     * statement - and a bare statement here would be a different tree and different bytes.
+     */
     private lowerBranch(node: Node, scope: Scope): Stmt {
-        return this.lowerStatement(node, scope) ?? { kind: "block", body: [] };
+        const lowered = this.lowerStatement(node, scope);
+        if (lowered === null) return { kind: "block", body: [] };
+        return lowered.kind === "block" ? lowered : { kind: "block", body: [lowered] };
     }
 
     /**
@@ -232,7 +422,10 @@ class TsslLowering {
      */
     private lowerLocalDeclaration(node: Node, scope: Scope): Stmt | null {
         const assignments: Stmt[] = [];
-        for (const decl of node.asKindOrThrow(SyntaxKind.VariableStatement).getDeclarationList().getDeclarations()) {
+        const list =
+            node.asKind(SyntaxKind.VariableStatement)?.getDeclarationList() ??
+            node.asKindOrThrow(SyntaxKind.VariableDeclarationList);
+        for (const decl of list.getDeclarations()) {
             const name = decl.getName();
             const initializer = decl.getInitializer();
             const literal = initializer ? this.literalOf(initializer) : ({ kind: "int", value: 0 } as const);
@@ -243,6 +436,24 @@ class TsslLowering {
         }
         if (assignments.length === 0) return null;
         return assignments.length === 1 ? (assignments[0] as Stmt) : { kind: "block", body: assignments };
+    }
+
+    /** `i++` / `i--` in statement position, which is what a `for` update usually is. */
+    private incrementOf(node: Node, scope: Scope): Stmt | null {
+        const postfix = node.asKind(SyntaxKind.PostfixUnaryExpression);
+        const prefix = postfix ? undefined : node.asKind(SyntaxKind.PrefixUnaryExpression);
+        const operator = postfix?.getOperatorToken() ?? prefix?.getOperatorToken();
+        if (operator !== SyntaxKind.PlusPlusToken && operator !== SyntaxKind.MinusMinusToken) return null;
+        const operand = postfix?.getOperand() ?? prefix?.getOperand();
+        if (!operand) return null;
+        const target = this.lowerExpression(operand, scope);
+        if (target.kind !== "var") throw refuseAt(operand, "increment target must be a variable");
+        return {
+            kind: "assign",
+            target,
+            op: operator === SyntaxKind.PlusPlusToken ? "+=" : "-=",
+            value: { kind: "int", value: 1 },
+        };
     }
 
     /** An assignment written as a binary expression; anything else is an ordinary operator. */
@@ -268,11 +479,19 @@ class TsslLowering {
         return { kind: "var", scope: "local", index, name };
     }
 
-    /** The literal an initialiser folds to, or null when it needs code to compute. */
+    /**
+     * The initial value a LOCAL slot is born with. Only a bare literal qualifies: anything else -
+     * including a NEGATED literal - is left as zero and assigned where the declaration appears. Global
+     * scope differs and folds a negation into the slot, which is why the two readers are separate.
+     */
     private literalOf(node: Node): VariableDecl["initial"] | null {
         switch (node.getKind()) {
+            case SyntaxKind.ParenthesizedExpression:
+                return this.literalOf(node.asKindOrThrow(SyntaxKind.ParenthesizedExpression).getExpression());
             case SyntaxKind.NumericLiteral:
-            case SyntaxKind.StringLiteral: {
+            case SyntaxKind.StringLiteral:
+            case SyntaxKind.TrueKeyword:
+            case SyntaxKind.FalseKeyword: {
                 const value = this.lowerExpression(node, { slots: new Map() });
                 return value.kind === "int" || value.kind === "float" || value.kind === "string" ? value : null;
             }
@@ -281,15 +500,303 @@ class TsslLowering {
         }
     }
 
+    /** As `literalOf`, but for the places that DO fold a negation: a global's slot and a param default. */
+    private constantOf(node: Node): VariableDecl["initial"] | null {
+        const unary = node.asKind(SyntaxKind.PrefixUnaryExpression);
+        if (unary && unary.getOperatorToken() === SyntaxKind.MinusToken) {
+            const inner = this.constantOf(unary.getOperand());
+            if (inner?.kind === "int") return { kind: "int", value: -inner.value };
+            if (inner?.kind === "float") return { kind: "float", value: -inner.value };
+            return null;
+        }
+        return this.literalOf(node);
+    }
+
+    /** This front end's side of the shared expansions' contract, bound to one procedure's scope. */
+    private hostFor(scope: Scope): Desugarer {
+        return {
+            declareLocal: (name, initial) => this.declareLocal(scope, name, initial),
+            newTemp: () => this.declareLocal(scope, `tmp.${this.tempCounter++}`, { kind: "int", value: 0 }),
+            engineCall: (name, args) => {
+                const fn = engineFunction(name, 2);
+                if (!fn) throw new Error(`engine function '${name}' is unavailable`);
+                return { kind: "libCall", opcode: fn.opcode, args };
+            },
+            // This front end refuses rather than collecting, so there is no stand-in to carry on with.
+            report: (message) => {
+                throw new Error(message);
+            },
+        };
+    }
+
+    /**
+     * The name a local import binding actually declares. `import { atoi as base_atoi }` calls the
+     * declaration, not the local alias, and the rename map is kept per importing module.
+     */
+    private declaredName(node: Node, name: string): string {
+        return this.model.importRenames.get(node.getSourceFile())?.get(name) ?? name;
+    }
+
+    /**
+     * Expands an `@inline` function into the call it stands for.
+     *
+     * Substitution is TEXTUAL, deliberately, because the route this must agree with expands these as
+     * `#define` macros through the C preprocessor. An argument is spliced in WITHOUT parentheses, so
+     * precedence re-associates across the boundary: `ndebug("a " + x)` against
+     * `#define ndebug(msg) debug_msg(NAME + ": " + msg)` yields `((NAME + ": ") + "a ") + x`, not
+     * `(NAME + ": ") + ("a " + x)`. The two compute the same string and compile to different bytes, and
+     * matching the bytes is what keeps an emitted `.ssl` guaranteed to compile to what we emit directly.
+     * Substituting the caller's parsed subtree instead would be the hygienic reading and is a change to
+     * make deliberately, not by accident.
+     */
+    private expansionOf(
+        inline: { targetFunc: string; args: { type: string; value: string }[]; params: string[] },
+        actual: Node[],
+        at: Node,
+    ): Node {
+        const substitution = new Map<string, string>();
+        inline.params.forEach((parameter, position) => {
+            const supplied = actual[position];
+            if (supplied) substitution.set(parameter, supplied.getText());
+        });
+        const args = inline.args.map((argument) =>
+            argument.type === "param"
+                ? (substitution.get(argument.value) ?? argument.value)
+                : this.substituteParams(argument.value, substitution, at),
+        );
+        return this.parseExpression(`${inline.targetFunc}(${args.join(", ")})`, at);
+    }
+
+    /**
+     * Replaces parameter names in a macro operand's source text. Driven by the parser's identifier
+     * positions rather than by a regex, so a parameter name occurring inside a string literal or as a
+     * property name is left alone - which is what makes this a token substitution and not a text one.
+     */
+    private substituteParams(text: string, substitution: Map<string, string>, at: Node): string {
+        if (substitution.size === 0) return text;
+        const parsed = this.parseExpression(text, at);
+        const offset = parsed.getStart();
+        const self = parsed.getKind() === SyntaxKind.Identifier ? [parsed.asKindOrThrow(SyntaxKind.Identifier)] : [];
+        const replacements = [...parsed.getDescendantsOfKind(SyntaxKind.Identifier), ...self]
+            .filter((identifier) => substitution.has(identifier.getText()))
+            .map((identifier) => ({
+                start: identifier.getStart() - offset,
+                end: identifier.getEnd() - offset,
+                with: substitution.get(identifier.getText()) as string,
+            }))
+            .sort((a, b) => b.start - a.start);
+        let out = text;
+        for (const replacement of replacements) {
+            out = out.slice(0, replacement.start) + replacement.with + out.slice(replacement.end);
+        }
+        return out;
+    }
+
+    /**
+     * Parses one expression's source text through the checker's own parser.
+     *
+     * The wrapping parenthesis is unwrapped before returning, so the result's `getStart()` lines up with
+     * index 0 of `text` - which is what lets `substituteParams` splice by parsed identifier position.
+     */
+    private parseExpression(text: string, at: Node): Node {
+        const scratch = this.project.createSourceFile(`__inline-${this.scratchSeq++}.ts`, `const __v = (${text});`, {
+            overwrite: true,
+        });
+        const wrapper = scratch
+            .getVariableDeclarations()[0]
+            ?.getInitializer()
+            ?.asKind(SyntaxKind.ParenthesizedExpression);
+        const inner = wrapper?.getExpression();
+        if (!inner) throw refuseAt(at, `cannot parse inline operand '${text}'`);
+        return inner;
+    }
+
+    /** Trailing arguments the call omitted, taken from the callee's declared defaults. */
+    private padWithDefaults(procedure: number, args: Expr[]): Expr[] {
+        const defaults = this.paramDefaults.get(procedure) ?? [];
+        const padded = [...args];
+        for (let position = padded.length; position < defaults.length; position++) {
+            const fallback = defaults[position];
+            if (!fallback) break;
+            padded.push(fallback);
+        }
+        return padded;
+    }
+
+    /** `list(a, b)` and `map({...})` build the same literals the bracket forms do. */
+    private lowerListHelper(call: Node, isMap: boolean, scope: Scope): Expr {
+        const args = call.asKindOrThrow(SyntaxKind.CallExpression).getArguments();
+        const sole = args[0];
+        if (isMap) {
+            if (!sole) throw refuseAt(call, "map() needs an object literal");
+            return this.lowerExpression(sole, scope);
+        }
+        return this.expansions.arrayLiteral(this.hostFor(scope), {
+            origin: originOf(call),
+            isMap: false,
+            entries: args.map((argument) => ({ key: null, value: () => this.lowerExpression(argument, scope) })),
+        });
+    }
+
+    /**
+     * Replaces the arguments in procedure-taking slots with a reference rather than a call. A slot
+     * declared to take a procedure resolves procedures ahead of variables; anywhere else the same bare
+     * name CALLS it, so the position is what decides.
+     */
+    private withProcedureArgs(call: Node, args: Expr[], procArgs: number): Expr[] {
+        if (procArgs === 0) return args;
+        const written = call.asKindOrThrow(SyntaxKind.CallExpression).getArguments();
+        return args.map((argument, index) => {
+            if ((procArgs & (1 << index)) === 0) return argument;
+            const node = written[index];
+            if (!node || node.getKind() !== SyntaxKind.Identifier) return argument;
+            const procedure = this.procedures.get(this.declaredName(node, node.getText()));
+            return procedure === undefined ? argument : { kind: "procRef", index: procedure };
+        });
+    }
+
+    private engineCall(at: Node, name: string, args: Expr[]): Expr {
+        const fn = engineFunction(name, 2);
+        if (!fn) throw refuseAt(at, `engine function '${name}' is unavailable`);
+        return { kind: "libCall", opcode: fn.opcode, args };
+    }
+
+    /** A map key. A bare word is the string it spells, as the object-literal syntax means it. */
+    private lowerMapKey(name: Node, scope: Scope): Expr {
+        if (name.getKind() === SyntaxKind.Identifier) {
+            const text = name.getText();
+            this.strings.push(text);
+            return { kind: "string", value: text };
+        }
+        return this.lowerExpression(name, scope);
+    }
+
+    /** An enum member's declared value. A string member interns like any other string constant. */
+    private valueOf(value: number | string): Expr {
+        if (typeof value === "number") {
+            return Number.isInteger(value) ? { kind: "int", value } : { kind: "float", value };
+        }
+        this.strings.push(value);
+        return { kind: "string", value };
+    }
+
     private lowerExpression(node: Node, scope: Scope): Expr {
         switch (node.getKind()) {
+            case SyntaxKind.TrueKeyword:
+                return { kind: "int", value: 1 };
+            case SyntaxKind.FalseKeyword:
+                return { kind: "int", value: 0 };
+
             case SyntaxKind.Identifier: {
                 const name = node.getText();
+                const bound = scope.bindings?.get(name);
+                if (bound) return bound;
+                // Locals first, so a parameter or local shadows a module constant as TypeScript scoping
+                // says it does.
                 const slot = scope.slots.get(name.toLowerCase());
                 if (slot !== undefined) return { kind: "var", scope: "local", index: slot, name };
+                const constant = this.constants.get(name);
+                if (constant !== undefined) return this.lowerExpression(constant, scope);
+                const flat = this.enumValues.get(name);
+                if (flat !== undefined) return this.valueOf(flat);
+                const global = this.globals.get(name.toLowerCase());
+                if (global !== undefined) return { kind: "var", scope: "global", index: global, name };
+                // An engine function with no arguments is written without parentheses. These are lexer
+                // keywords, so they take precedence over a user name that happens to match.
+                const engine = engineFunction(name.toLowerCase(), 2);
+                if (engine) return { kind: "libCall", opcode: engine.opcode, args: [] };
+                // A bare procedure name in expression position CALLS it with no arguments rather than
+                // yielding its index.
                 const procedure = this.procedures.get(name);
-                if (procedure !== undefined) return { kind: "procRef", index: procedure };
+                if (procedure !== undefined) {
+                    return {
+                        kind: "call",
+                        target: { kind: "procRef", index: procedure },
+                        args: this.padWithDefaults(procedure, []),
+                    };
+                }
                 throw refuseAt(node, `unknown identifier '${name}'`);
+            }
+
+            // `Enum.Member`, which the text route flattens to an `Enum_Member` define.
+            case SyntaxKind.PropertyAccessExpression: {
+                const access = node.asKindOrThrow(SyntaxKind.PropertyAccessExpression);
+                const flat = `${access.getExpression().getText()}_${access.getName()}`;
+                const value = this.enumValues.get(flat);
+                if (value !== undefined) return this.valueOf(value);
+                const constant = this.constants.get(flat);
+                if (constant !== undefined) return this.lowerExpression(constant, scope);
+                throw refuseAt(node, `unknown enum member '${flat}'`);
+            }
+
+            // Type syntax carries no value: `x as number`, `x satisfies T` and `x!` are all their operand.
+            case SyntaxKind.AsExpression:
+                return this.lowerExpression(node.asKindOrThrow(SyntaxKind.AsExpression).getExpression(), scope);
+            case SyntaxKind.SatisfiesExpression:
+                return this.lowerExpression(node.asKindOrThrow(SyntaxKind.SatisfiesExpression).getExpression(), scope);
+            case SyntaxKind.NonNullExpression:
+                return this.lowerExpression(node.asKindOrThrow(SyntaxKind.NonNullExpression).getExpression(), scope);
+
+            case SyntaxKind.PrefixUnaryExpression: {
+                const unary = node.asKindOrThrow(SyntaxKind.PrefixUnaryExpression);
+                const operand = unary.getOperand();
+                switch (unary.getOperatorToken()) {
+                    case SyntaxKind.MinusToken:
+                        // NOT folded here. In an expression `-1` is a push and a NEGATE, where a folded
+                        // constant would be one push - different bytes. Folding happens only in
+                        // `constantOf`, where an initial value is required to be constant.
+                        return { kind: "unary", op: "negate", operand: this.lowerExpression(operand, scope) };
+                    case SyntaxKind.PlusToken:
+                        return this.lowerExpression(operand, scope);
+                    case SyntaxKind.ExclamationToken:
+                        return { kind: "unary", op: "not", operand: this.lowerExpression(operand, scope) };
+                    case SyntaxKind.TildeToken:
+                        return { kind: "unary", op: "bwnot", operand: this.lowerExpression(operand, scope) };
+                    default:
+                        throw refuseAt(unary, `prefix '${unary.getOperatorToken()}' is not lowered yet`);
+                }
+            }
+
+            case SyntaxKind.ArrayLiteralExpression: {
+                const literal = node.asKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+                return this.expansions.arrayLiteral(this.hostFor(scope), {
+                    origin: originOf(node),
+                    isMap: false,
+                    entries: literal.getElements().map((element) => ({
+                        key: null,
+                        value: () => this.lowerExpression(element, scope),
+                    })),
+                });
+            }
+
+            case SyntaxKind.ObjectLiteralExpression: {
+                const literal = node.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+                return this.expansions.arrayLiteral(this.hostFor(scope), {
+                    origin: originOf(node),
+                    isMap: true,
+                    entries: literal.getProperties().map((property) => {
+                        const assignment = property.asKind(SyntaxKind.PropertyAssignment);
+                        if (!assignment) throw refuseAt(property, "only `key: value` entries are lowered yet");
+                        const name = assignment.getNameNode();
+                        const value = assignment.getInitializer();
+                        if (!value) throw refuseAt(property, "map entry has no value");
+                        return {
+                            key: () => this.lowerMapKey(name, scope),
+                            value: () => this.lowerExpression(value, scope),
+                        };
+                    }),
+                });
+            }
+
+            // `arr[i]` reads through the engine rather than by address.
+            case SyntaxKind.ElementAccessExpression: {
+                const access = node.asKindOrThrow(SyntaxKind.ElementAccessExpression);
+                const index = access.getArgumentExpression();
+                if (!index) throw refuseAt(access, "element access has no index");
+                return this.engineCall(access, "get_array", [
+                    this.lowerExpression(access.getExpression(), scope),
+                    this.lowerExpression(index, scope),
+                ]);
             }
 
             case SyntaxKind.ParenthesizedExpression:

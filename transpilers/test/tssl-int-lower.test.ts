@@ -56,18 +56,44 @@ describe("declarations", () => {
         const program = lower('function start() {\n    display_msg("hi");\n}\n');
         expect(emitProgram(program).length).toBeGreaterThan(0);
     });
+
+    it("gives arguments the first local slots, so locals index after them", () => {
+        const program = lower("function start(a: number, b: number) {\n    let c = 0;\n    c = a + b;\n}\n");
+        const [first] = program.declarations;
+        if (first?.kind !== "procedure") throw new Error("expected a procedure");
+        expect(first.procedure.args).toEqual(["a", "b"]);
+        const assignment = first.procedure.body[0];
+        if (assignment?.kind !== "assign") throw new Error("expected an assignment");
+        // `c` is the third slot: two arguments precede it.
+        expect(assignment.target.index).toBe(2);
+    });
+
+    it("does not fold a negation in expression position, where it is a push and a NEGATE", () => {
+        const program = lower("function start() {\n    let x = 0;\n    x = -1;\n}\n");
+        const [first] = program.declarations;
+        if (first?.kind !== "procedure") throw new Error("expected a procedure");
+        const assignment = first.procedure.body[0];
+        if (assignment?.kind !== "assign") throw new Error("expected an assignment");
+        expect(assignment.value).toEqual({ kind: "unary", op: "negate", operand: { kind: "int", value: 1 } });
+    });
+
+    it("folds a negation into a global's slot, where an initial value must be constant", () => {
+        const program = lower("let g = -1;\nfunction start() {\n    display_msg(g);\n}\n");
+        const global = program.declarations.find((d) => d.kind === "global");
+        expect(global?.kind === "global" && global.variable.initial).toEqual({ kind: "int", value: -1 });
+    });
 });
 
 describe("refusals", () => {
     it.each([
-        [
-            "procedure parameters",
-            "function start(a: number) {\n    display_msg(a);\n}\n",
-            /parameters are not lowered yet/,
-        ],
         ["an unknown identifier", "function start() {\n    display_msg(nope);\n}\n", /unknown identifier 'nope'/],
         ["an operator with no mapping", "function start() {\n    let x = 1 << 2;\n}\n", /'<<' is not lowered yet/],
-        ["a statement with no mapping", "function start() {\n    for (;;) {}\n}\n", /ForStatement is not lowered yet/],
+        [
+            "a statement with no mapping",
+            "function start() {\n    switch (1) {\n    }\n}\n",
+            /SwitchStatement is not lowered yet/,
+        ],
+        ["a for loop with no condition", "function start() {\n    for (;;) {}\n}\n", /for loop has no condition/],
     ])("refuses %s rather than approximating it", (_name, source, message) => {
         expect(() => lower(source)).toThrow(message);
     });
