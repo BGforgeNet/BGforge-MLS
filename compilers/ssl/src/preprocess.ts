@@ -529,6 +529,8 @@ function evalCondition(
 // ---------------------------------------------------------------------------
 
 const DIRECTIVE = /^[ \t]*#[ \t]*([A-Za-z_]\w*)?[ \t]*([\s\S]*)$/;
+/** Cheap first test, so the capture above runs only on the few lines that are directives at all. */
+const DIRECTIVE_START = /^[ \t]*#/;
 const INCLUDE_OPERAND = /^\s*"([^"]+)"|^\s*<([^>]+)>/;
 // Directives the toolchain's own preprocessor rejects as unknown, verified against it. Refusing them is
 // what keeps this compiler from accepting scripts that then fail to build there; `#warning` in
@@ -569,10 +571,11 @@ function record(state: State, error: PreprocessError): boolean {
 /**
  * Runs a step that reports by throwing, and folds its refusal into the collected list.
  *
- * `evalCondition` and `parseDefine` are recursive-descent parsers that report from deep inside
- * themselves; threading a collector through them would tangle both to no benefit, since neither has any
- * useful way to continue past its own error. Catching at the call site keeps the recovery decision -
- * which arm to take, which definition to drop - where the surrounding context can make it.
+ * `evalCondition` is a recursive-descent parser that reports from deep inside itself; threading a
+ * collector through it would tangle it to no benefit, since it has no useful way to continue past its
+ * own error. Catching at the call site keeps the recovery decision - which arm to take - where the
+ * surrounding context can make it. (`parseDefine` used to report the same way; it now returns its
+ * complaint, because it runs before anything knows whether its line will be reached.)
  */
 function attempt<T>(state: State, step: () => T): T | null {
     try {
@@ -585,25 +588,18 @@ function attempt<T>(state: State, step: () => T): T | null {
 }
 
 /**
- * Parsed `#define` operands, keyed on the text after the directive. A header's definitions are re-parsed
- * once per script that includes it - the same few thousand lines, some fifteen hundred times over.
+ * A `#define`'s operands, parsed - or the complaint they could not be. Reported by value rather than
+ * thrown because this runs when a file is PREPARED, before anything knows whether the line will be
+ * reached: a definition inside a branch that turns out to be dead must not report anything at all. The
+ * caller raises it, positioned at the line, only if the walk gets there.
  */
-const DEFINE_CACHE = new Map<string, Macro>();
+type ParsedDefine = Macro | { error: string };
 
-function parseDefine(rest: string, file: string, line: number): Macro {
-    const cached = DEFINE_CACHE.get(rest);
-    if (cached !== undefined) return cached;
-    const parsed = parseDefineText(rest, file, line);
-    DEFINE_CACHE.set(rest, parsed);
-    return parsed;
-}
-
-/** A `Macro` is derived entirely from `rest`; `file` and `line` only position the complaint. */
-function parseDefineText(rest: string, file: string, line: number): Macro {
+function parseDefineText(rest: string): ParsedDefine {
     const m = /^([A-Za-z_]\w*)(\(([^)]*)\))?([\s\S]*)$/.exec(rest);
-    if (m === null) throw new PreprocessError("malformed #define", file, line);
+    if (m === null) return { error: "malformed #define" };
     const [, name, parenGroup, paramList, rawBody] = m;
-    if (name === undefined) throw new PreprocessError("malformed #define", file, line);
+    if (name === undefined) return { error: "malformed #define" };
     const body = (rawBody ?? "").trim();
     if (parenGroup === undefined) return { name, params: null, body, variadic: false };
 
@@ -618,7 +614,7 @@ function parseDefineText(rest: string, file: string, line: number): Macro {
         // own preprocessor rejects it too ("Missing "," or ")" in parameter list"), so accepting it here
         // would let a script build with this compiler and fail with the other one. Use `...` and
         // `__VA_ARGS__`, which both accept.
-        throw new PreprocessError("named variadic parameters are not supported", file, line);
+        return { error: "named variadic parameters are not supported" };
     }
     return { name, params, body, variadic };
 }
@@ -657,13 +653,13 @@ const MAX_CALL_LINES = 32;
  *
  * @returns the last line index consumed, which the caller's loop continues from.
  */
-function expandFrom(state: State, lines: readonly string[], n: number, file: string): number {
-    let text = lines[n] ?? "";
+function expandFrom(state: State, lines: readonly PreparedLine[], n: number, file: string): number {
+    let text = lines[n]?.text ?? "";
     let last = n;
     let result = state.expander.expandChunk(text);
     while (result.unclosedCall && last + 1 < lines.length && last - n < MAX_CALL_LINES) {
         last++;
-        text += `\n${lines[last] ?? ""}`;
+        text += `\n${lines[last]?.text ?? ""}`;
         result = state.expander.expandChunk(text);
     }
     state.out.push(result.text);
@@ -677,13 +673,34 @@ function expandFrom(state: State, lines: readonly string[], n: number, file: str
 }
 
 /**
- * A file's line form, which no macro state takes part in - so an included file yields the same lines
- * every time, and a build re-includes the same handful of headers once per script. Stamped with mtime
- * and size because the language server's compile worker outlives a user's edits to a header.
+ * One source line, with everything about it that no macro state takes part in already worked out.
+ *
+ * Splicing, comment-stripping, deciding whether the line is a directive and parsing a `#define`'s
+ * operands are all functions of the file's bytes alone, so a header included by fifteen hundred scripts
+ * can have them done once. Keeping only the TEXT was the previous shape and left the biggest of those on
+ * the hot path: the define cache it fed was keyed on the operand string, which the directive regex
+ * re-creates per line, so every one of five million lookups hashed a whole macro body - 365 MB of
+ * hashing to answer at a 99.7% hit rate. Classifying at prepare time removes the key rather than making
+ * it cheaper.
  */
-const LINE_CACHE = new Map<string, { stamp: string; lines: readonly string[] }>();
+interface PreparedLine {
+    /** The line as the expander sees it. */
+    text: string;
+    /** The directive's name, `""` for the null directive; absent when the line is not one. */
+    directive?: string;
+    /** Everything after the directive's name. */
+    rest?: string;
+    /** Present exactly when `directive` is `"define"`. */
+    define?: ParsedDefine;
+}
 
-function preparedLines(file: string): readonly string[] {
+/**
+ * Prepared files, stamped with mtime and size because the language server's compile worker outlives a
+ * user's edits to a header.
+ */
+const LINE_CACHE = new Map<string, { stamp: string; lines: readonly PreparedLine[] }>();
+
+function preparedLines(file: string): readonly PreparedLine[] {
     let stamp: string;
     try {
         const stat = fs.statSync(file);
@@ -701,9 +718,21 @@ function preparedLines(file: string): readonly string[] {
     return lines;
 }
 
-/** Translation phases 2 and 3, then the split into lines the directive walk reads. */
-function prepare(text: string): readonly string[] {
-    return stripComments(spliceLines(text)).split(/\r?\n/);
+/** Translation phases 2 and 3, then the classification the directive walk would otherwise redo. */
+function prepare(text: string): readonly PreparedLine[] {
+    return stripComments(spliceLines(text))
+        .split(/\r?\n/)
+        .map((line) => classify(line));
+}
+
+function classify(text: string): PreparedLine {
+    if (!DIRECTIVE_START.test(text)) return { text };
+    const m = DIRECTIVE.exec(text);
+    if (m === null) return { text };
+    const directive = m[1] ?? "";
+    const rest = m[2] ?? "";
+    if (directive !== "define") return { text, directive, rest };
+    return { text, directive, rest, define: parseDefineText(rest) };
 }
 
 /**
@@ -711,21 +740,20 @@ function prepare(text: string): readonly string[] {
  * where a quoted `#include` looks and which file an error names, so a buffer that has never been saved
  * can be preprocessed under the path it would occupy.
  */
-function processSource(input: string | readonly string[], file: string, state: State): void {
+function processSource(input: string | readonly PreparedLine[], file: string, state: State): void {
     const lines = typeof input === "string" ? prepare(input) : input;
     const dir = path.dirname(file);
     const stack: Conditional[] = [];
     const emitting = (): boolean => stack.every((s) => s.active);
 
     for (let n = 0; n < lines.length; n++) {
-        const line = lines[n] ?? "";
-        const directive = /^[ \t]*#/.test(line) ? DIRECTIVE.exec(line) : null;
-        if (directive === null) {
+        const line = lines[n];
+        if (line === undefined || line.directive === undefined) {
             if (emitting()) n = expandFrom(state, lines, n, file);
             continue;
         }
-        const name = directive[1] ?? "";
-        const rest = directive[2] ?? "";
+        const name = line.directive;
+        const rest = line.rest ?? "";
 
         switch (name) {
             case "ifdef":
@@ -787,8 +815,13 @@ function processSource(input: string | readonly string[], file: string, state: S
                 if (!emitting()) break;
                 // A definition that will not parse is skipped rather than guessed at. Uses of the name go
                 // on to expand to nothing, but the run is already doomed, so nothing downstream sees it.
-                const macro = attempt(state, () => parseDefine(rest, file, n + 1));
-                if (macro) state.macros.set(macro.name, macro);
+                const parsed = line.define;
+                if (parsed === undefined) break;
+                if ("error" in parsed) {
+                    if (!record(state, new PreprocessError(parsed.error, file, n + 1))) return;
+                    break;
+                }
+                state.macros.set(parsed.name, parsed);
                 break;
             }
             case "undef": {
@@ -823,7 +856,7 @@ function processSource(input: string | readonly string[], file: string, state: S
                 // boolean operators. Dropping one silently changes how `and`/`or` compile, so pass the
                 // line through untouched, as gcc -E does.
                 if (emitting()) {
-                    state.out.push(line);
+                    state.out.push(line.text);
                     state.origins.push({ file, line: n + 1 });
                 }
                 break;

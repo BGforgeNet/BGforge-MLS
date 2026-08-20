@@ -4,7 +4,7 @@
  * A compile is CPU-bound and single-threaded, and inputs do not interact - each is its own translation
  * unit, reading only its own source and the headers it includes - so a whole mod's worth of scripts is
  * work N cores can finish in a fraction of the time. One invocation over the 1525-script Restoration
- * Project corpus at -O2: 45.6s with -j1, 24.0s with -j2, 13.3s with -j4, 10.3s with -j8, on ten cores.
+ * Project corpus at -O2: 39.2s with -j1, 20.6s with -j2, 11.8s with -j4, 9.2s with -j8, on ten cores.
  *
  * Output is buffered per input and flushed IN INPUT ORDER, so a parallel run reads exactly like a
  * sequential one and two runs of the same command produce the same transcript. Workers therefore return
