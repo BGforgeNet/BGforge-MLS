@@ -28,6 +28,19 @@ export default defineConfig({
         // layering.
         coverage: coverageConfig({
             reportsDirectory: "coverage/transpile",
+            // Scoped to this package's own sources. Without it v8 measures whatever the tests happened to
+            // LOAD, so a cross-workspace import drags another package in at whatever coverage it gets
+            // here - `compilers/ssl/src` arrived that way once the TSSL front end started targeting the
+            // IR, ~6000 lines at 1-2%, and those files already answer to their own far stricter gate.
+            include: ["common/**/*.ts", "src/**/*.ts", "tbaf/src/**/*.ts", "td/src/**/*.ts", "tssl/src/**/*.ts"],
+            // The include above scopes what is INSIDE this package; it cannot reach a file outside it,
+            // whose path relativises to `../..` and slips past every pattern. Cross-workspace imports
+            // therefore need excluding by name - both these packages gate their own coverage, and far
+            // higher (ssl at 97% lines, shared at 99%), so counting them here measured nothing and
+            // masked this package's real figure. Spelled out to the source directory rather than as
+            // `**/compilers/**`: this package is a candidate to move under `compilers/`, and the broad
+            // form would silently zero its own denominator on the day it does.
+            exclude: ["**/compilers/ssl/src/**", "**/shared/*.ts"],
             thresholds: {
                 lines: 73,
                 functions: 78,
