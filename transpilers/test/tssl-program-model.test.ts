@@ -89,6 +89,22 @@ describe("imports and renames", () => {
             emit(`import lib from "./lib";\nfunction start() {}\n`, { "lib.ts": "export default 1;\n" }),
         ).rejects.toThrow(/only named imports are supported/);
     });
+
+    it("refuses an import whose module does not resolve, naming the specifier", async () => {
+        // Skipping it used to leave the module's constants, macros and procedures out of an otherwise
+        // successful transpile, so the hole surfaced as an unrelated SSL compiler complaint.
+        await expect(
+            emit(`import { helper } from "./missing";\nfunction start() {\n    helper();\n}\n`),
+        ).rejects.toThrow(/cannot resolve module '\.\/missing'/);
+    });
+
+    it("refuses a re-export whose module does not resolve", async () => {
+        await expect(
+            emit(`import { a } from "./one";\nfunction start() {\n    a();\n}\n`, {
+                "one.ts": 'export { b } from "./gone";\nexport function a(): void {\n    display_msg(1);\n}\n',
+            }),
+        ).rejects.toThrow(/cannot resolve module '\.\/gone'/);
+    });
 });
 
 describe("collisions", () => {

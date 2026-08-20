@@ -144,15 +144,20 @@ function collectModuleItems(source: SourceFile, file: string, isEntry: boolean):
 function moduleEdges(source: SourceFile): SourceFile[] {
     const targets: SourceFile[] = [];
     for (const stmt of source.getStatements()) {
-        if (Node.isImportDeclaration(stmt)) {
-            if (stmt.isTypeOnly()) continue;
-            const target = stmt.getModuleSpecifierSourceFile();
-            if (target) targets.push(target);
-        } else if (Node.isExportDeclaration(stmt)) {
-            if (stmt.isTypeOnly()) continue;
-            const target = stmt.getModuleSpecifierSourceFile();
-            if (target) targets.push(target);
+        if (!Node.isImportDeclaration(stmt) && !Node.isExportDeclaration(stmt)) continue;
+        if (stmt.isTypeOnly()) continue;
+        // `export { x }` re-exports this file's own declarations and names no module.
+        const specifier = stmt.getModuleSpecifierValue();
+        if (specifier === undefined) continue;
+        const target = stmt.getModuleSpecifierSourceFile();
+        if (target === undefined) {
+            // Refused rather than skipped. A module that does not resolve contributes none of its
+            // constants, macros or procedures, and the transpile succeeds anyway - so the hole surfaces
+            // as an unrelated complaint from the SSL compiler, or not at all if some other declaration
+            // happens to carry the same name.
+            throw refuseAt(stmt, `cannot resolve module '${specifier}'`);
         }
+        targets.push(target);
     }
     return targets;
 }
