@@ -91,6 +91,24 @@ fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r
 
 Without `--save`, the transpiled output is printed to stdout.
 
+### Compiling `.tssl` straight to bytecode
+
+`--int` compiles a `.tssl` to `.int` with no generated SSL in between - the TypeScript AST becomes the
+compiler's IR directly, so nothing writes or re-parses an intermediate file.
+
+```
+fgtp myscript.tssl --int                      # writes myscript.int, and nothing else
+fgtp src/ -r --int --opt 2 --short-circuit    # what a mod build wants
+fgtp src/ -r --int --save                     # bytecode, keeping the readable .ssl beside it
+```
+
+- `--opt <0|1|2>` - optimisation level (default 1, matching the `ssl` compiler's own default)
+- `--short-circuit` - skip the right operand of `and`/`or` once the left decides the result
+
+Adding `--save` keeps the `.ssl` as well, and that pairing is checked rather than trusted: the repo's
+external gate compiles the emitted SSL and byte-compares it against what `--int` writes, at every
+optimisation level and with short-circuiting both ways. The two cannot drift apart unnoticed.
+
 ## Per-language transpiler guides
 
 - [TSSL](./tssl/docs/) - TypeScript to Fallout SSL

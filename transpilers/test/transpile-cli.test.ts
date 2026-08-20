@@ -62,6 +62,62 @@ describe("transpile CLI integration", () => {
         });
     });
 
+    describe("--int: straight to bytecode, no intermediate file", () => {
+        const source = 'function start() {\n    display_msg("hi");\n}\n';
+
+        /** A self-contained script: no imports, so nothing depends on a mod's node_modules. */
+        function write(name: string): string {
+            const file = path.join(tmpDir, name);
+            fs.writeFileSync(file, source, "utf-8");
+            return file;
+        }
+
+        it("writes bytecode and no .ssl at all", () => {
+            const file = write("solo.tssl");
+            const { code } = run(file, "--int");
+            expect(code).toBe(0);
+            const int = fs.readFileSync(file.replace(/\.tssl$/, ".int"));
+            expect(int.length).toBeGreaterThan(0);
+            expect(fs.existsSync(file.replace(/\.tssl$/, ".ssl"))).toBe(false);
+        });
+
+        it("keeps the readable SSL alongside when --save is given too", () => {
+            const file = write("both.tssl");
+            const { code } = run(file, "--int", "--save");
+            expect(code).toBe(0);
+            expect(fs.existsSync(file.replace(/\.tssl$/, ".int"))).toBe(true);
+            expect(fs.readFileSync(file.replace(/\.tssl$/, ".ssl"), "utf-8")).toContain("procedure start");
+        });
+
+        it("changes the bytes when the optimisation level changes", () => {
+            // A procedure whose every path returns: -O2 drops the fall-through epilogue, -O0 keeps it.
+            // Measured at 212 bytes against 194. An unreferenced procedure would NOT do - the program
+            // model tree-shakes it before the optimiser ever sees it - nor would the trivial script
+            // above, which gives the optimiser nothing to remove.
+            const file = path.join(tmpDir, "opt.tssl");
+            fs.writeFileSync(file, 'function start() {\n    display_msg("hi");\n    return 1;\n}\n', "utf-8");
+            run(file, "--int", "--opt", "0");
+            const unoptimised = fs.readFileSync(file.replace(/\.tssl$/, ".int"));
+            run(file, "--int", "--opt", "2");
+            const optimised = fs.readFileSync(file.replace(/\.tssl$/, ".int"));
+            expect(Buffer.compare(unoptimised, optimised)).not.toBe(0);
+        });
+
+        it("refuses a level the compiler does not have", () => {
+            const { code, stderr } = run(write("bad.tssl"), "--int", "--opt", "9");
+            expect(code).toBe(1);
+            expect(stderr).toContain("--opt takes 0, 1 or 2");
+        });
+
+        it("refuses a source with no bytecode target", () => {
+            const file = path.join(tmpDir, "x.td");
+            fs.writeFileSync(file, "", "utf-8");
+            const { code, stderr } = run(file, "--int");
+            expect(code).not.toBe(0);
+            expect(stderr).toContain("--int compiles");
+        });
+    });
+
     describe("stdout mode", () => {
         it("outputs transpiled D content to stdout", () => {
             const sample = path.join(SAMPLES_DIR, "botsmith.td");

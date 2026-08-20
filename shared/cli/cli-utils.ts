@@ -50,11 +50,28 @@ interface CliArgs {
     quiet: boolean;
     jobs: number;
     filesFrom?: string;
+    /**
+     * Values for the options a caller registered through `extraOptions`, keyed by camelCase name.
+     * Optional because only `parseCliArgs` produces it: a caller hand-building args for `runCli` has no
+     * parser output to supply, and requiring it would make every such site carry an empty object.
+     */
+    extra?: Record<string, unknown>;
 }
 
-export function parseCliArgs(helpText: string): CliArgs | null {
+/** One caller-specific option: the flag spelling cac takes, and its help line. */
+export type ExtraOption = readonly [flags: string, description: string];
+
+/**
+ * @param extraOptions Options belonging to ONE cli rather than to all three. Registered here rather
+ * than read out of `process.argv` by the caller so cac still validates them and `--help` still lists
+ * them; their values come back in `extra` rather than widening `CliArgs` with fields the other CLIs
+ * have no use for.
+ */
+export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOption[] = []): CliArgs | null {
     const cli = cac();
-    cli.command("[target]", "File or directory to process")
+    const command = cli.command("[target]", "File or directory to process");
+    for (const [flags, description] of extraOptions) command.option(flags, description);
+    command
         .option("--save", "Write output to files")
         .option("--check", "Check output without writing")
         .option("--save-and-check", "Write output and check for changes")
@@ -100,7 +117,15 @@ export function parseCliArgs(helpText: string): CliArgs | null {
 
     const mode: OutputMode = saveAndCheck ? "save-and-check" : save ? "save" : check ? "check" : "stdout";
 
-    return { target, mode, recursive: recursive ?? false, quiet: quiet ?? false, jobs: jobCount, filesFrom };
+    return {
+        target,
+        mode,
+        recursive: recursive ?? false,
+        quiet: quiet ?? false,
+        jobs: jobCount,
+        filesFrom,
+        extra: cli.options as Record<string, unknown>,
+    };
 }
 
 /**
