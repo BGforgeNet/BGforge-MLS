@@ -76,6 +76,19 @@ to regenerate. Only the corpus is pinned. `--update` rewrites the manifest and i
 It is also the only sweep that compiles a real script with `-s`: the switch sets are recorded in the
 manifest header, and they include the `-O2 -s` mods actually ship.
 
+## The second front end
+
+`transpilers/tssl/src/int/lower.ts` builds the IR from a TypeScript AST instead of from the grammar, so a
+`.tssl` reaches bytecode with no SSL text in between. It is incomplete on purpose and refuses every
+construct it does not lower, positioned at the line - `pnpm tssl-int-diff <repo-or-file>` reports how far
+it gets, and `src/desugar.ts` holds the expansions the two front ends must not reimplement separately.
+
+`tssl-int-diff` compiles each source both ways and byte-compares, rendering both programs back through
+`printProgram` and naming the first line they disagree on. **The text route is the oracle, and it is on a
+clock**: it exists only while a mod still commits the generated `.ssl`. Once that stops, the only check
+left on the direct route is `tssl-oracles`, which reports that a byte moved without saying which
+construct moved it - so bring constructs across while the comparison is still available.
+
 ## The corpus cannot tell you what the language is
 
 Every defect found by reading the reference compiler's own lexer and parser was invisible to a green sweep

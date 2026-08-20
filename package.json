@@ -76,6 +76,7 @@
         "ssl-equiv": "tsx compilers/ssl/scripts/ssl-equiv.mts",
         "ssl-oracles": "tsx compilers/ssl/scripts/ssl-oracles.mts",
         "ssl-verdicts": "tsx compilers/ssl/scripts/ssl-verdicts.mts",
+        "tssl-int-diff": "tsx compilers/ssl/scripts/tssl-int-diff.mts",
         "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
