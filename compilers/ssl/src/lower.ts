@@ -187,7 +187,13 @@ function libCall(opcode: number, args: Expr[]): Expr {
     return { kind: "libCall", opcode, args, ...(PURE_LIB_OPCODES.has(opcode) ? { pure: true } : {}) };
 }
 
-/** A procedure's locals, arguments first - the slot order the emitter and the engine both assume. */
+/**
+ * A procedure's locals, arguments first - the slot order the emitter and the engine both assume.
+ *
+ * Slots are handed out in the order declarations are ENCOUNTERED, generated `tmp.<n>` temporaries
+ * included, and the index is baked into every fetch and store - so a pre-pass that hoisted declarations
+ * to the top of a procedure would renumber every slot after the first `foreach` and change the output.
+ */
 interface Scope {
     slots: Map<string, number>;
 }
