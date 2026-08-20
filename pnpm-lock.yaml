@@ -385,8 +385,8 @@ importers:
         version: 2.9.0
     optionalDependencies:
       sslc-emscripten-noderawfs:
-        specifier: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
-        version: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
+        specifier: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
+        version: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
 
   transpilers:
     dependencies:
@@ -3953,8 +3953,8 @@ packages:
   spdx-license-ids@3.0.23:
     resolution: {integrity: sha512-CWLcCCH7VLu13TgOH+r8p1O/Znwhqv/dbb6lqWy67G+pT1kHmeD/+V36AVb/vq8QMIQwVShJ6Ssl5FPh0fuSdw==}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz:
-    resolution: {integrity: sha512-aa9UKOqA3KaUhMihcxo00XvXaOJYCmGHVkEFfEPRKmTofuGK+ikR4GOBAEzQwPqpcxfbfGBp9G/boixZyn+YFA==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz}
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz:
+    resolution: {integrity: sha512-rfaUD8f+Bsj2baPKZ3ZTzLqa4FK+2pHc17KmyFiiBC9iue7GeCCc5pz27oBhwh9Ev7j8F37IQWtqH1KsthZUbg==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz}
     version: 1.0.0
     hasBin: true
 
@@ -8065,7 +8065,7 @@ snapshots:
 
   spdx-license-ids@3.0.23: {}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz:
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz:
     optional: true
 
   stackback@0.0.2: {}
