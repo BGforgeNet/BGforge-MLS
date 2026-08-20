@@ -16,7 +16,14 @@ export interface InlineFunc {
 
 export interface InlineArg {
     type: "param" | "constant";
-    value: string; // param name or constant value
+    /** Param name, or the constant already converted to SSL spelling (`|` rendered as `bwor`). */
+    value: string;
+    /**
+     * The same constant as the author WROTE it, in TypeScript. `value` is SSL text, which a TypeScript
+     * parser cannot read back once an operator has been converted - so a consumer that re-parses the
+     * operand rather than splicing it into SSL reads this instead.
+     */
+    source?: string;
 }
 
 /**

@@ -79,15 +79,27 @@ manifest header, and they include the `-O2 -s` mods actually ship.
 ## The second front end
 
 `transpilers/tssl/src/int/lower.ts` builds the IR from a TypeScript AST instead of from the grammar, so a
-`.tssl` reaches bytecode with no SSL text in between. It is incomplete on purpose and refuses every
-construct it does not lower, positioned at the line - `pnpm tssl-int-diff <repo-or-file>` reports how far
-it gets, and `src/desugar.ts` holds the expansions the two front ends must not reimplement separately.
+`.tssl` reaches bytecode with no SSL text in between. **It compiles the whole FO2tweaks repo
+byte-identically to the text route** - 27 scripts at `-O0`, `-O1`, `-O2` and the `-O2 -s` mods ship - and
+still refuses, positioned at the line, anything it does not lower. `src/desugar.ts` holds the expansions
+the two front ends must not reimplement separately; `for`, `foreach`, `switch` and array/map literals all
+reach it from both sides.
 
-`tssl-int-diff` compiles each source both ways and byte-compares, rendering both programs back through
-`printProgram` and naming the first line they disagree on. **The text route is the oracle, and it is on a
-clock**: it exists only while a mod still commits the generated `.ssl`. Once that stops, the only check
-left on the direct route is `tssl-oracles`, which reports that a byte moved without saying which
-construct moved it - so bring constructs across while the comparison is still available.
+`pnpm tssl-int-diff <repo-or-file> [switches] [-- more switches]` compiles each source both ways and
+byte-compares, rendering both programs through `printProgram` and naming the first line they disagree on.
+It runs in `scripts/test-transpile-external.sh` as an enforced gate, which is what makes an emitted `.ssl`
+a guarantee rather than an offer: it is checked to compile to the same bytes the direct route produces.
+
+**The text route is the oracle, and it is on a clock**: it exists only while a mod still commits the
+generated `.ssl`. Once that stops, the only check left is `tssl-oracles`, which reports that a byte moved
+without saying which construct moved it.
+
+Three agreements are load-bearing and were each found by this differential rather than by reading, so
+change them only deliberately: an `@inline` macro substitutes its arguments TEXTUALLY (so `+` re-associates
+across the splice, exactly as the `#define` it mirrors does); a negation folds to a constant only where an
+initial value must be constant, never in an expression, where it is a push and a NEGATE; and a `switch`
+always evaluates its subject into a temporary, because the text route renders `switch (X)` parenthesised
+and its parser therefore never sees a bare name.
 
 ## The corpus cannot tell you what the language is
 

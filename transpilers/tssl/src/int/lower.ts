@@ -295,20 +295,72 @@ class TsslLowering {
                 if (!declared) throw refuseAt(loop, "a for-of must declare its loop variable");
                 const variable = declared.getDeclarations()[0];
                 if (!variable) throw refuseAt(loop, "for-of has no loop variable");
-                const name = variable.getName();
                 const subject = loop.getExpression();
                 const body = loop.getStatement();
+
+                // `for (const [k, v] of m)` walks an associative array: the pattern's two elements are
+                // the key and the value, and the loop fetches them separately.
+                const pattern = variable.getNameNode().asKind(SyntaxKind.ArrayBindingPattern);
+                const bound = pattern
+                    ? pattern.getElements().map((element) => {
+                          const named = element.asKind(SyntaxKind.BindingElement);
+                          if (!named) throw refuseAt(element, "a hole in a for-of pattern is not lowered yet");
+                          return named.getNameNode();
+                      })
+                    : [variable.getNameNode()];
+                const [firstName, secondName] = bound;
+                if (!firstName) throw refuseAt(loop, "for-of has no loop variable");
+                if (bound.length > 2) throw refuseAt(loop, "a for-of pattern takes at most a key and a value");
+                // With one name it binds the VALUE; with two, the first is the key.
+                const keyNode = secondName ? firstName : null;
+                const valueNode = secondName ?? firstName;
+
                 return this.expansions.foreach(this.hostFor(scope), {
                     origin: originOf(node),
-                    declares: { key: null, value: { text: name, origin: originOf(variable) } },
+                    declares: {
+                        key: keyNode ? { text: keyNode.getText(), origin: originOf(keyNode) } : null,
+                        value: { text: valueNode.getText(), origin: originOf(valueNode) },
+                    },
                     subject: {
                         isVariable: subject.getKind() === SyntaxKind.Identifier,
                         get: () => this.lowerExpression(subject, scope),
                     },
-                    key: null,
-                    value: () => this.lowerExpression(variable.getNameNode(), scope),
+                    key: keyNode ? () => this.lowerExpression(keyNode, scope) : null,
+                    value: () => this.lowerExpression(valueNode, scope),
                     guard: null,
                     body: () => this.lowerBranch(body, scope),
+                });
+            }
+
+            case SyntaxKind.SwitchStatement: {
+                const statement = node.asKindOrThrow(SyntaxKind.SwitchStatement);
+                const subject = statement.getExpression();
+                const clauses = statement.getClauses();
+                return this.expansions.switch(this.hostFor(scope), {
+                    origin: originOf(node),
+                    subject: {
+                        // Always a temporary, never iterated in place. The route this must agree with
+                        // renders `switch (X)` with the parentheses, so its parser sees a parenthesised
+                        // expression rather than a bare name and allocates one even for a plain
+                        // variable - and the temporary takes a slot, which shifts every later index.
+                        isVariable: false,
+                        get: () => this.lowerExpression(subject, scope),
+                    },
+                    cases: clauses
+                        .filter((clause) => clause.getKind() === SyntaxKind.CaseClause)
+                        .map((clause) => {
+                            const cased = clause.asKindOrThrow(SyntaxKind.CaseClause);
+                            return {
+                                value: () => this.lowerExpression(cased.getExpression(), scope),
+                                body: () => this.lowerClauseBody(cased.getStatements(), scope),
+                            };
+                        }),
+                    fallback: (() => {
+                        const otherwise = clauses.find((clause) => clause.getKind() === SyntaxKind.DefaultClause);
+                        if (!otherwise) return null;
+                        const cased = otherwise.asKindOrThrow(SyntaxKind.DefaultClause);
+                        return () => this.lowerClauseBody(cased.getStatements(), scope);
+                    })(),
                 });
             }
 
@@ -367,7 +419,10 @@ class TsslLowering {
         const call = node.asKindOrThrow(SyntaxKind.CallExpression);
         const callee = call.getExpression();
         if (callee.getKind() !== SyntaxKind.Identifier) throw refuseAt(callee, "only a plain callee is lowered yet");
-        const name = callee.getText();
+        // The rename is applied FIRST: `import { atoi as base_atoi }` names an ambient engine function,
+        // so looking the local alias up in the engine table would miss and fall through to a procedure
+        // that does not exist.
+        const name = this.calleeName(callee);
 
         // The callee is resolved BEFORE its arguments are lowered. An inline macro re-lowers its own
         // spliced text, so lowering the arguments first would intern their string literals twice and in
@@ -396,13 +451,28 @@ class TsslLowering {
             return { kind: "libStmt", opcode: fn.opcode, args: bound, ...(fn.popsResult ? { popsResult: true } : {}) };
         }
 
-        const target = this.procedures.get(this.declaredName(callee, name));
+        const target = this.procedures.get(name);
         if (target === undefined) throw refuseAt(callee, `unknown procedure '${name}'`);
         return {
             kind: "callStmt",
             target: { kind: "procRef", index: target },
             args: this.padWithDefaults(target, args),
         };
+    }
+
+    /**
+     * A switch clause's statements, without the `break` that ends it. SSL cases do not fall through, so
+     * the target has nothing for a `break` to mean here - and left in place it would compile to a jump
+     * out of the enclosing LOOP, which is a different statement entirely.
+     */
+    private lowerClauseBody(statements: Node[], scope: Scope): Stmt[] {
+        const body = statements.filter((statement) => statement.getKind() !== SyntaxKind.BreakStatement);
+        const out: Stmt[] = [];
+        for (const statement of body) {
+            const lowered = this.lowerStatement(statement, scope);
+            if (lowered) out.push(lowered);
+        }
+        return out;
     }
 
     /**
@@ -462,6 +532,22 @@ class TsslLowering {
         const operator = binary.getOperatorToken().getText();
         const op = ASSIGN_OPS.get(operator);
         if (op === undefined) return null;
+
+        // `arr[key] = value` writes through the engine; there is no slot to assign to.
+        const element = binary.getLeft().asKind(SyntaxKind.ElementAccessExpression);
+        if (element) {
+            if (op !== "=") throw refuseAt(binary, `'${operator}' on an array element is not lowered yet`);
+            const index = element.getArgumentExpression();
+            if (!index) throw refuseAt(element, "element assignment has no index");
+            const call = this.engineCall(element, "set_array", [
+                this.lowerExpression(element.getExpression(), scope),
+                this.lowerExpression(index, scope),
+                this.lowerExpression(binary.getRight(), scope),
+            ]);
+            if (call.kind !== "libCall") throw refuseAt(element, "set_array did not lower to an engine call");
+            return { kind: "libStmt", opcode: call.opcode, args: call.args };
+        }
+
         const target = this.lowerExpression(binary.getLeft(), scope);
         if (target.kind !== "var") throw refuseAt(binary.getLeft(), "assignment target must be a variable");
         return { kind: "assign", target, op, value: this.lowerExpression(binary.getRight(), scope) };
@@ -538,6 +624,17 @@ class TsslLowering {
     }
 
     /**
+     * A callee's name as the output spells it: the declaration behind a renamed import, and `typeof` for
+     * `sfall_typeof`, which exists only because `typeof` is a TypeScript keyword. The text route makes
+     * the same substitution as a final pass over its rendered output.
+     */
+    private calleeName(callee: Node): string {
+        const written = callee.getText();
+        if (written === "sfall_typeof") return "typeof";
+        return this.declaredName(callee, written);
+    }
+
+    /**
      * Expands an `@inline` function into the call it stands for.
      *
      * Substitution is TEXTUAL, deliberately, because the route this must agree with expands these as
@@ -550,7 +647,7 @@ class TsslLowering {
      * make deliberately, not by accident.
      */
     private expansionOf(
-        inline: { targetFunc: string; args: { type: string; value: string }[]; params: string[] },
+        inline: { targetFunc: string; args: { type: string; value: string; source?: string }[]; params: string[] },
         actual: Node[],
         at: Node,
     ): Node {
@@ -559,11 +656,12 @@ class TsslLowering {
             const supplied = actual[position];
             if (supplied) substitution.set(parameter, supplied.getText());
         });
-        const args = inline.args.map((argument) =>
-            argument.type === "param"
-                ? (substitution.get(argument.value) ?? argument.value)
-                : this.substituteParams(argument.value, substitution, at),
-        );
+        const args = inline.args.map((argument) => {
+            if (argument.type === "param") return substitution.get(argument.value) ?? argument.value;
+            // `source`, not `value`: the latter has already been converted to SSL spelling, which is not
+            // TypeScript once an operator has changed (`|` becomes `bwor`).
+            return this.substituteParams(argument.source ?? argument.value, substitution, at);
+        });
         return this.parseExpression(`${inline.targetFunc}(${args.join(", ")})`, at);
     }
 
@@ -628,8 +726,13 @@ class TsslLowering {
         const args = call.asKindOrThrow(SyntaxKind.CallExpression).getArguments();
         const sole = args[0];
         if (isMap) {
-            if (!sole) throw refuseAt(call, "map() needs an object literal");
-            return this.lowerExpression(sole, scope);
+            if (sole) return this.lowerExpression(sole, scope);
+            // `map<K, V>()` with no entries is still a map literal, just an empty one.
+            return this.expansions.arrayLiteral(this.hostFor(scope), {
+                origin: originOf(call),
+                isMap: true,
+                entries: [],
+            });
         }
         return this.expansions.arrayLiteral(this.hostFor(scope), {
             origin: originOf(call),
@@ -663,6 +766,9 @@ class TsslLowering {
 
     /** A map key. A bare word is the string it spells, as the object-literal syntax means it. */
     private lowerMapKey(name: Node, scope: Scope): Expr {
+        // `{[expr]: v}` wraps its key; the brackets say the key is computed, not that it is a name.
+        const computed = name.asKind(SyntaxKind.ComputedPropertyName);
+        if (computed) return this.lowerExpression(computed.getExpression(), scope);
         if (name.getKind() === SyntaxKind.Identifier) {
             const text = name.getText();
             this.strings.push(text);
@@ -824,6 +930,8 @@ class TsslLowering {
                     return { kind: "libCall", opcode: statement.opcode, args: statement.args };
                 if (statement.kind === "callStmt")
                     return { kind: "call", target: statement.target, args: statement.args };
+                // A macro or a `list()`/`map()` helper lowers straight to a value.
+                if (statement.kind === "expr") return statement.expr;
                 throw refuseAt(node, "call is not usable as a value here");
             }
 

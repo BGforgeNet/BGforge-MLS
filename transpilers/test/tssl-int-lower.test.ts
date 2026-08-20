@@ -90,8 +90,14 @@ describe("refusals", () => {
         ["an operator with no mapping", "function start() {\n    let x = 1 << 2;\n}\n", /'<<' is not lowered yet/],
         [
             "a statement with no mapping",
+            "function start() {\n    do {} while (1);\n}\n",
+            /DoStatement is not lowered yet/,
+        ],
+        // Reported by the expansion shared with the SSL front end, not by this file.
+        [
+            "a switch with no cases",
             "function start() {\n    switch (1) {\n    }\n}\n",
-            /SwitchStatement is not lowered yet/,
+            /switch statement with no cases/,
         ],
         ["a for loop with no condition", "function start() {\n    for (;;) {}\n}\n", /for loop has no condition/],
     ])("refuses %s rather than approximating it", (_name, source, message) => {

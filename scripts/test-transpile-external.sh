@@ -98,6 +98,16 @@ test_repo() {
             echo "FAIL: $repo (transpiled bytecode differs from the committed oracles)"
             return 1
         fi
+        # The two routes to bytecode must agree: through generated SSL text, and straight to the IR.
+        # This is what makes an emitted .ssl a guarantee rather than a hope - it is not merely offered
+        # alongside the .int, it is checked to compile to the same bytes, at every switch set the mods
+        # use. Enforced rather than advisory now that the direct route covers the whole repo.
+        # One invocation covering every switch set: transpiling and lowering are the expensive half and
+        # are done once, where a run per set repeated them and cost four times as long.
+        if ! (cd "$ROOT_DIR" && pnpm --silent tssl-int-diff "$dir" -O0 -- -O1 -- -O2 -- -O2 -s); then
+            echo "FAIL: $repo (direct-to-IR compilation differs from the text route)"
+            return 1
+        fi
     fi
 
     echo "PASS: $repo"

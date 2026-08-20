@@ -61,8 +61,9 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
                 if (paramNames.has(argText)) {
                     inlineArgs.push({ type: "param", value: argText });
                 } else {
-                    // Convert operators to SSL syntax (| -> bwor, etc.)
-                    inlineArgs.push({ type: "constant", value: convertOperatorsAST(arg) });
+                    // Convert operators to SSL syntax (| -> bwor, etc.), keeping the TypeScript spelling
+                    // for the consumer that re-parses rather than splices.
+                    inlineArgs.push({ type: "constant", value: convertOperatorsAST(arg), source: argText });
                 }
             }
         };
