@@ -357,45 +357,52 @@ function spliceLines(src: string): string {
 
 /** Replace each comment with one space, string-aware. Newlines inside block comments are preserved. */
 function stripComments(src: string): string {
+    const n = src.length;
     let out = "";
-    for (let i = 0; i < src.length;) {
-        const c = src[i];
-        if (c === '"' || c === "'") {
-            const quote = c;
-            out += c;
+    let run = 0;
+    let i = 0;
+    while (i < n) {
+        const c = src.codePointAt(i);
+        if (c === 34 || c === 39) {
             i++;
-            while (i < src.length) {
-                if (src[i] === "\\") {
-                    out += src[i] + (src[i + 1] ?? "");
+            while (i < n) {
+                const d = src.codePointAt(i);
+                if (d === 92) {
                     i += 2;
                     continue;
                 }
-                out += src[i];
-                const done = src[i] === quote || src[i] === "\n";
                 i++;
-                if (done) break;
+                if (d === c || d === 10) break;
             }
             continue;
         }
-        if (c === "/" && src[i + 1] === "*") {
-            i += 2;
-            let newlines = "";
-            while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
-                if (src[i] === "\n") newlines += "\n";
-                i++;
+        if (c === 47) {
+            const d = src.codePointAt(i + 1);
+            if (d === 42) {
+                out += src.slice(run, i);
+                let j = i + 2;
+                let newlines = 0;
+                while (j < n && !(src.codePointAt(j) === 42 && src.codePointAt(j + 1) === 47)) {
+                    if (src.codePointAt(j) === 10) newlines++;
+                    j++;
+                }
+                out += newlines === 0 ? " " : ` ${"\n".repeat(newlines)}`;
+                i = j + 2;
+                run = i;
+                continue;
             }
-            i += 2;
-            out += ` ${newlines}`;
-            continue;
+            if (d === 47) {
+                out += src.slice(run, i);
+                let j = i + 2;
+                while (j < n && src.codePointAt(j) !== 10) j++;
+                i = j;
+                run = i;
+                continue;
+            }
         }
-        if (c === "/" && src[i + 1] === "/") {
-            while (i < src.length && src[i] !== "\n") i++;
-            continue;
-        }
-        out += c;
         i++;
     }
-    return out;
+    return run === 0 ? src : out + src.slice(run);
 }
 
 // ---------------------------------------------------------------------------
@@ -577,7 +584,22 @@ function attempt<T>(state: State, step: () => T): T | null {
     }
 }
 
+/**
+ * Parsed `#define` operands, keyed on the text after the directive. A header's definitions are re-parsed
+ * once per script that includes it - the same few thousand lines, some fifteen hundred times over.
+ */
+const DEFINE_CACHE = new Map<string, Macro>();
+
 function parseDefine(rest: string, file: string, line: number): Macro {
+    const cached = DEFINE_CACHE.get(rest);
+    if (cached !== undefined) return cached;
+    const parsed = parseDefineText(rest, file, line);
+    DEFINE_CACHE.set(rest, parsed);
+    return parsed;
+}
+
+/** A `Macro` is derived entirely from `rest`; `file` and `line` only position the complaint. */
+function parseDefineText(rest: string, file: string, line: number): Macro {
     const m = /^([A-Za-z_]\w*)(\(([^)]*)\))?([\s\S]*)$/.exec(rest);
     if (m === null) throw new PreprocessError("malformed #define", file, line);
     const [, name, parenGroup, paramList, rawBody] = m;
@@ -614,8 +636,7 @@ function processFile(file: string, state: State): void {
         record(state, new PreprocessError("include nesting too deep", file, 0));
         return;
     }
-    // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
-    processSource(fs.readFileSync(file, "latin1"), file, state);
+    processSource(preparedLines(file), file, state);
 }
 
 /**
@@ -656,12 +677,42 @@ function expandFrom(state: State, lines: readonly string[], n: number, file: str
 }
 
 /**
- * One translation unit's text, however it was obtained. `file` is not read - it says where a quoted
- * `#include` looks and which file an error names, so a buffer that has never been saved can be
- * preprocessed under the path it would occupy.
+ * A file's line form, which no macro state takes part in - so an included file yields the same lines
+ * every time, and a build re-includes the same handful of headers once per script. Stamped with mtime
+ * and size because the language server's compile worker outlives a user's edits to a header.
  */
-function processSource(text: string, file: string, state: State): void {
-    const lines = stripComments(spliceLines(text)).split(/\r?\n/);
+const LINE_CACHE = new Map<string, { stamp: string; lines: readonly string[] }>();
+
+function preparedLines(file: string): readonly string[] {
+    let stamp: string;
+    try {
+        const stat = fs.statSync(file);
+        stamp = `${stat.mtimeMs}:${stat.size}`;
+    } catch {
+        // Let the read report the failure, as it did when there was no cache in front of it.
+        LINE_CACHE.delete(file);
+        return prepare(fs.readFileSync(file, "latin1"));
+    }
+    const cached = LINE_CACHE.get(file);
+    if (cached !== undefined && cached.stamp === stamp) return cached.lines;
+    // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
+    const lines = prepare(fs.readFileSync(file, "latin1"));
+    LINE_CACHE.set(file, { stamp, lines });
+    return lines;
+}
+
+/** Translation phases 2 and 3, then the split into lines the directive walk reads. */
+function prepare(text: string): readonly string[] {
+    return stripComments(spliceLines(text)).split(/\r?\n/);
+}
+
+/**
+ * One translation unit, as text or as the lines a caller already prepared. `file` is not read - it says
+ * where a quoted `#include` looks and which file an error names, so a buffer that has never been saved
+ * can be preprocessed under the path it would occupy.
+ */
+function processSource(input: string | readonly string[], file: string, state: State): void {
+    const lines = typeof input === "string" ? prepare(input) : input;
     const dir = path.dirname(file);
     const stack: Conditional[] = [];
     const emitting = (): boolean => stack.every((s) => s.active);
