@@ -13,6 +13,17 @@
  */
 
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
+import {
+    Expansions,
+    type ArrayLiteralForm,
+    type Desugarer,
+    type ForeachForm,
+    type ForForm,
+    type Origin,
+    POISON,
+    type SwitchForm,
+    type VarExpr,
+} from "./desugar";
 import { engineFunction, type EngineFunction } from "./int/engine-functions";
 import { Op } from "./int/opcodes";
 import type {
@@ -62,13 +73,10 @@ export class LowerError extends Error {
 /** How many complaints one lowering reports before it gives up collecting. */
 const MAX_ERRORS = 100;
 
-/**
- * What a reported expression lowers to so the walk can continue past it.
- *
- * Nothing is emitted while there are diagnostics, so this value never reaches an output file; its only
- * job is to be a well-formed `Expr` that the rest of lowering can consume without special-casing.
- */
-const POISON: Expr = { kind: "int", value: 0 };
+/** A node's position in the coordinates a diagnostic and a shared expansion both speak. */
+function originOf(node: SyntaxNode): Origin {
+    return { line: node.startPosition.row + 1, column: node.startPosition.column + 1 };
+}
 
 /**
  * The statement form of the same stand-in. An empty block emits nothing, so a reported statement leaves
@@ -179,10 +187,6 @@ function libCall(opcode: number, args: Expr[]): Expr {
     return { kind: "libCall", opcode, args, ...(PURE_LIB_OPCODES.has(opcode) ? { pure: true } : {}) };
 }
 
-/** Marks a literal built inside another array expression, and the terminator that closes one. */
-const ARRAY_FLAG_EXPR_PUSH = 32;
-const ARRAY_FLAG_EXPR_POP = 64;
-
 /** A procedure's locals, arguments first - the slot order the emitter and the engine both assume. */
 interface Scope {
     slots: Map<string, number>;
@@ -209,8 +213,6 @@ class Lowering {
     /** Procedures declared `pure`, whose calls the optimiser may drop when nothing reads the result. */
     private readonly pureProcedures = new Set<number>();
     private readonly undefinedProcedures: UndefinedProcedure[] = [];
-    /** Depth of nested array/map literals; a nested one is flagged and terminated differently. */
-    private arrayNesting = 0;
     /**
      * Enclosing loops. `break` emits a bare jump that consumes the exit address a loop left on the stack,
      * so outside one it jumps somewhere arbitrary rather than failing - the reference rejects it, and
@@ -252,7 +254,7 @@ class Lowering {
     private readonly reportedNames = new Set<string>();
 
     /** Records a user error and yields the stand-in that lets lowering continue. */
-    private report(detail: string, node: SyntaxNode): Expr {
+    private report(detail: string, node: SyntaxNode | Origin): Expr {
         const error = new LowerError(detail, node);
         if (this.diagnostics.length < MAX_ERRORS && !this.diagnostics.some((d) => d.message === error.message)) {
             this.diagnostics.push(error);
@@ -625,7 +627,12 @@ class Lowering {
      * warning about; the temporaries this class allocates reuse the mechanism with names of their own
      * making and must never trip it.
      */
-    private declareLocal(scope: Scope, name: string, initial: VariableDecl["initial"], at?: SyntaxNode): Expr {
+    private declareLocal(
+        scope: Scope,
+        name: string,
+        initial: VariableDecl["initial"],
+        at?: SyntaxNode | Origin,
+    ): VarExpr {
         const target = this.currentTarget;
         if (!target) throw new Error("local declared outside a procedure");
         const key = name.toLowerCase();
@@ -642,8 +649,24 @@ class Lowering {
         return { kind: "var", scope: "local", index, name };
     }
 
-    private newTemp(scope: Scope): Expr {
+    private newTemp(scope: Scope): VarExpr {
         return this.declareLocal(scope, `tmp.${this.tempCounter++}`, { kind: "int", value: 0 });
+    }
+
+    /**
+     * The shared expansions, and this front end's side of their contract. One instance for the whole
+     * lowering because it counts array-literal nesting across the operand thunks it hands back here;
+     * the host is per-scope, which is the part an expansion cannot know.
+     */
+    private readonly expansions = new Expansions();
+
+    private hostFor(scope: Scope): Desugarer {
+        return {
+            declareLocal: (name, initial, origin) => this.declareLocal(scope, name, initial, origin),
+            newTemp: () => this.newTemp(scope),
+            engineCall: (name, args, origin) => this.engineCall(origin, name, args),
+            report: (message, origin) => this.report(message, origin),
+        };
     }
 
     /** Lowers an explicit statement list, dropping the ones that emit nothing. */
@@ -748,57 +771,25 @@ class Lowering {
         throw new LowerError(`unsupported statement '${node.type}'`, node);
     }
 
-    /**
-     * `for` is not a loop form of its own. It becomes the initialiser followed by a while whose body
-     * ends with a loop-end marker and then the update, which is what makes `continue` run the update
-     * before retesting the condition.
-     *
-     * An absent condition is not "loop forever" by omission - the reference requires the expression, so
-     * a missing one is a source error rather than something to substitute a default for.
-     */
+    /** `for (init; cond; update) body`. The expansion, and what fixes its order, is in `desugar.ts`. */
     private lowerFor(node: SyntaxNode, scope: Scope): Stmt {
         const init = node.childForFieldName("init");
         const cond = node.childForFieldName("cond");
         const update = node.childForFieldName("update");
         const body = node.childForFieldName("body");
-
-        // Lowering order is the reference's PARSE order - init, condition, update, then body - because
-        // slots are allocated as they are encountered, so a different order here renumbers them.
-        const initStmt = init ? this.lowerForClause(init, scope) : null;
-        const condition = cond ? this.lowerExpression(cond, scope) : this.report("for loop has no condition", node);
-        const updateStmt = update ? this.lowerForClause(update, scope) : null;
-
-        const inner: Stmt[] = [];
-        if (body) inner.push(this.lowerBranchNode(body, scope));
-        inner.push({ kind: "loopEnd" });
-        if (updateStmt) inner.push(updateStmt);
-
-        const loop: Stmt = { kind: "while", cond: condition, body: { kind: "block", body: inner } };
-        return initStmt ? { kind: "block", body: [initStmt, loop] } : loop;
+        const form: ForForm = {
+            origin: originOf(node),
+            init: init ? () => this.lowerForClause(init, scope) : null,
+            cond: cond ? () => this.lowerExpression(cond, scope) : null,
+            update: update ? () => this.lowerForClause(update, scope) : null,
+            body: body ? () => this.lowerBranchNode(body, scope) : null,
+        };
+        return this.expansions.for(this.hostFor(scope), form);
     }
 
-    /**
-     * `foreach v in arr do body` walks an array by index. It expands to:
-     *
-     *     count := 0;  len := len_array(arr);
-     *     while (count < len) do begin
-     *         key := array_key(arr, count);
-     *         v   := get_array(arr, key);
-     *         body
-     *         LOOP_END
-     *         count += 1;
-     *     end
-     *
-     * Three details are load-bearing for the output rather than cosmetic. The subject is evaluated into
-     * a temporary UNLESS it is already a plain variable, so a call is not re-evaluated per iteration.
-     * The temporaries are allocated in a fixed order - subject, len, count, then the key when the source
-     * named none - because that order fixes both their `tmp.<n>` names and their slot indices. And the
-     * key is fetched separately from the value so the same expansion serves associative arrays, where
-     * the index and the key differ.
-     */
+    /** `foreach v in arr do body`. The expansion, and what fixes its temporaries, is in `desugar.ts`. */
     private lowerForeach(node: SyntaxNode, scope: Scope): Stmt {
         const iter = node.childForFieldName("iter");
-        const body = node.childForFieldName("body");
         if (!iter) throw new LowerError("foreach has no iterable", node);
 
         // The parenthesised form puts a lone variable in the `key` field, so the value is whichever of
@@ -811,111 +802,54 @@ class Lowering {
         if (!valueName) throw new LowerError("foreach has no loop variable", node);
 
         const declares = node.children.some((c) => c?.type === "variable");
-        const statements: Stmt[] = [];
-
-        // Allocation order is the reference's PARSE order, and it decides both the `tmp.<n>` names and
-        // every local slot index: the loop variables are declared as they are read, before `in` and so
-        // before any temporary exists. Allocating the temporaries first shifts every later slot by one.
-        if (declares) {
-            if (keyName) this.declareLocal(scope, keyName.text, { kind: "int", value: 0 }, keyName);
-            this.declareLocal(scope, valueName.text, { kind: "int", value: 0 }, valueName);
-        }
-
-        // A bare variable is iterated in place; anything else is evaluated once into a temporary.
-        let subject: Expr;
-        if (iter.type === "identifier") {
-            subject = this.reference(iter, scope);
-        } else {
-            subject = this.newTemp(scope);
-            if (subject.kind !== "var") throw new LowerError("temporary is not a variable", node);
-            statements.push({ kind: "assign", target: subject, op: "=", value: this.lowerExpression(iter, scope) });
-        }
-
-        const len = this.newTemp(scope);
-        const count = this.newTemp(scope);
-        const key = keyName ? this.reference(keyName, scope) : this.newTemp(scope);
-        const value = this.reference(valueName, scope);
-        // A loop the source did not declare names existing variables, so either name can be something
-        // else entirely; the temporaries above are variables by construction.
-        if (key.kind !== "var" || value.kind !== "var") {
-            const offender = key.kind === "var" ? value : key;
-            if (offender !== POISON) this.report("foreach loop variable is not a variable", node);
-            return { kind: "block", body: statements };
-        }
-        if (len.kind !== "var" || count.kind !== "var") {
-            throw new LowerError("temporary is not a variable", node);
-        }
-
-        const call = (name: string, args: Expr[]): Expr => this.engineCall(node, name, args);
-
-        statements.push(
-            { kind: "assign", target: count, op: "=", value: { kind: "int", value: 0 } },
-            { kind: "assign", target: len, op: "=", value: call("len_array", [subject]) },
-        );
-
-        let condition: Expr = { kind: "binary", op: "<", left: count, right: len };
         const guard = node.childForFieldName("while_cond");
-        if (guard) {
-            condition = { kind: "binary", op: "and", left: condition, right: this.lowerExpression(guard, scope) };
-        }
-
-        const inner: Stmt[] = [
-            { kind: "assign", target: key, op: "=", value: call("array_key", [subject, count]) },
-            { kind: "assign", target: value, op: "=", value: call("get_array", [subject, key]) },
-        ];
-        if (body) inner.push(this.lowerBranchNode(body, scope));
-        inner.push({ kind: "loopEnd" }, { kind: "assign", target: count, op: "+=", value: { kind: "int", value: 1 } });
-
-        statements.push({ kind: "while", cond: condition, body: { kind: "block", body: inner } });
-        return { kind: "block", body: statements };
+        const body = node.childForFieldName("body");
+        const isVariable = iter.type === "identifier";
+        const form: ForeachForm = {
+            origin: originOf(node),
+            declares: declares
+                ? {
+                      key: keyName ? { text: keyName.text, origin: originOf(keyName) } : null,
+                      value: { text: valueName.text, origin: originOf(valueName) },
+                  }
+                : null,
+            subject: {
+                isVariable,
+                get: () => (isVariable ? this.reference(iter, scope) : this.lowerExpression(iter, scope)),
+            },
+            key: keyName ? () => this.reference(keyName, scope) : null,
+            value: () => this.reference(valueName, scope),
+            guard: guard ? () => this.lowerExpression(guard, scope) : null,
+            body: body ? () => this.lowerBranchNode(body, scope) : null,
+        };
+        return this.expansions.foreach(this.hostFor(scope), form);
     }
 
-    /**
-     * `switch` is a nested if/else-if chain over equality comparisons, not a jump table. The subject is
-     * evaluated into a temporary unless it is already a plain variable, so it is tested once per case
-     * without being recomputed.
-     *
-     * There is no fallthrough to model: each case's statements are its own branch, and `default`
-     * becomes the innermost else.
-     */
+    /** `switch`. The if/else-if chain it becomes, and the order it is built in, are in `desugar.ts`. */
     private lowerSwitch(node: SyntaxNode, scope: Scope): Stmt {
         const value = node.childForFieldName("value");
         if (!value) throw new LowerError("switch has no subject", node);
 
-        const statements: Stmt[] = [];
-        let subject: Expr;
-        if (value.type === "identifier") {
-            subject = this.reference(value, scope);
-        } else {
-            subject = this.newTemp(scope);
-            if (subject.kind !== "var") throw new LowerError("temporary is not a variable", node);
-            statements.push({ kind: "assign", target: subject, op: "=", value: this.lowerExpression(value, scope) });
-        }
-
-        const cases = node.namedChildren.filter((c): c is SyntaxNode => c?.type === "case_clause");
-        // A lone `default` does not qualify: the language wants at least one case, so the whole
-        // statement is refused rather than reduced to its fallback.
-        if (cases.length === 0) this.report("switch statement with no cases", node);
+        const clauses = node.namedChildren.filter((c): c is SyntaxNode => c?.type === "case_clause");
         const fallback = node.namedChildren.find((c): c is SyntaxNode => c?.type === "default_clause");
-
-        // Built innermost-first so each case's else holds the chain below it.
-        let chain: Stmt | undefined = fallback
-            ? { kind: "block", body: this.lowerClauseBody(fallback, scope) }
-            : undefined;
-        for (let index = cases.length - 1; index >= 0; index--) {
-            const clause = cases[index] as SyntaxNode;
-            const caseValue = clause.childForFieldName("value");
-            if (!caseValue) throw new LowerError("case has no value", clause);
-            const branch: Stmt = {
-                kind: "if",
-                cond: { kind: "binary", op: "==", left: subject, right: this.lowerExpression(caseValue, scope) },
-                thenBranch: { kind: "block", body: this.lowerClauseBody(clause, scope) },
-            };
-            chain = chain ? { ...branch, elseBranch: chain } : branch;
-        }
-
-        if (chain) statements.push(chain);
-        return statements.length === 1 ? (statements[0] as Stmt) : { kind: "block", body: statements };
+        const isVariable = value.type === "identifier";
+        const form: SwitchForm = {
+            origin: originOf(node),
+            subject: {
+                isVariable,
+                get: () => (isVariable ? this.reference(value, scope) : this.lowerExpression(value, scope)),
+            },
+            cases: clauses.map((clause) => {
+                const caseValue = clause.childForFieldName("value");
+                if (!caseValue) throw new LowerError("case has no value", clause);
+                return {
+                    value: () => this.lowerExpression(caseValue, scope),
+                    body: () => this.lowerClauseBody(clause, scope),
+                };
+            }),
+            fallback: fallback ? () => this.lowerClauseBody(fallback, scope) : null,
+        };
+        return this.expansions.switch(this.hostFor(scope), form);
     }
 
     /**
@@ -1470,67 +1404,27 @@ class Lowering {
         throw new LowerError(`unsupported expression '${node.type}'`, node);
     }
 
-    /**
-     * Array and map literals build their value by SUMMING engine calls rather than by any dedicated
-     * instruction: a `temp_array` seed plus one `arrayexpr(key, value)` term per entry, added
-     * left to right. An array numbers its own keys from zero; a map takes the written key.
-     *
-     * The seed's size argument distinguishes the two (0 for an array, -1 for a map), and its flags
-     * argument marks a NESTED literal, which additionally emits a terminator so the engine's expression
-     * stack unwinds. Nesting depth is therefore part of the emitted code, not just a parsing concern.
-     */
+    /** An array or map literal. What it sums, and why nesting depth matters, are in `desugar.ts`. */
     private lowerArrayLiteral(node: SyntaxNode, scope: Scope, isMap: boolean): Expr {
-        this.arrayNesting++;
-        try {
-            const nested = this.arrayNesting > 1;
-            const seed = this.engineCall(node, "temp_array", [
-                { kind: "int", value: isMap ? -1 : 0 },
-                { kind: "int", value: nested ? ARRAY_FLAG_EXPR_PUSH : 0 },
-            ]);
-
-            let result: Expr = seed;
-            const add = (term: Expr): void => {
-                result = { kind: "binary", op: "+", left: result, right: term };
-            };
-
+        const entries: ArrayLiteralForm["entries"] = [];
+        for (const child of node.namedChildren) {
+            if (!child) continue;
             if (isMap) {
-                for (const entry of node.namedChildren) {
-                    if (!entry || entry.type !== "map_entry") continue;
-                    const key = entry.childForFieldName("key");
-                    const value = entry.childForFieldName("value");
-                    if (!key || !value) throw new LowerError("malformed map entry", entry);
-                    add(
-                        this.engineCall(node, "arrayexpr", [
-                            this.lowerExpression(key, scope),
-                            this.lowerExpression(value, scope),
-                        ]),
-                    );
-                }
+                if (child.type !== "map_entry") continue;
+                const key = child.childForFieldName("key");
+                const value = child.childForFieldName("value");
+                if (!key || !value) throw new LowerError("malformed map entry", child);
+                entries.push({
+                    key: () => this.lowerExpression(key, scope),
+                    value: () => this.lowerExpression(value, scope),
+                });
             } else {
-                let index = 0;
-                for (const element of node.namedChildren) {
-                    if (!element || element.type === "comment" || element.type === "line_comment") continue;
-                    add(
-                        this.engineCall(node, "arrayexpr", [
-                            { kind: "int", value: index++ },
-                            this.lowerExpression(element, scope),
-                        ]),
-                    );
-                }
+                if (child.type === "comment" || child.type === "line_comment") continue;
+                entries.push({ key: null, value: () => this.lowerExpression(child, scope) });
             }
-
-            if (nested) {
-                add(
-                    this.engineCall(node, "temp_array", [
-                        { kind: "int", value: 0 },
-                        { kind: "int", value: ARRAY_FLAG_EXPR_POP },
-                    ]),
-                );
-            }
-            return result;
-        } finally {
-            this.arrayNesting--;
         }
+        const form: ArrayLiteralForm = { origin: originOf(node), isMap, entries };
+        return this.expansions.arrayLiteral(this.hostFor(scope), form);
     }
 
     /**
@@ -1549,7 +1443,7 @@ class Lowering {
         this.report(`'${name}' takes ${expected}, not ${args.length}`, node);
     }
 
-    private engineCall(node: SyntaxNode, name: string, args: Expr[]): Expr {
+    private engineCall(node: SyntaxNode | Origin, name: string, args: Expr[]): Expr {
         const fn = engineFunction(name, this.game);
         if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
         return libCall(fn.opcode, args);

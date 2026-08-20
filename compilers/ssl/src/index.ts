@@ -14,6 +14,28 @@ export {
     type CompileResult,
 } from "./compile";
 export { lowerProgram, LowerError, type LowerOptions } from "./lower";
+/**
+ * The IR a front end constructs. Exported because the back end is meant to serve more than the SSL
+ * front end - see `int/ir.ts` for why it is a tree - and a second front end cannot build a `Program`
+ * through a type it cannot name.
+ */
+export {
+    alwaysReturns,
+    externalsOf,
+    globalsOf,
+    proceduresOf,
+    type AssignOp,
+    type BinaryOp,
+    type Declaration,
+    type Expr,
+    type ProcedureDecl,
+    type Program,
+    type Stmt,
+    type UnaryOp,
+    type UndefinedProcedure,
+    type VariableDecl,
+    type VarScope,
+} from "./int/ir";
 export { optimize, type OptimizeOptions } from "./optimize";
 export {
     preprocess,
