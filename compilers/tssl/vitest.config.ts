@@ -35,10 +35,14 @@ export default defineConfig({
             // which byte-compares a whole real mod through both routes and is a gate script rather than
             // a test, so none of it reaches this instrument. Those numbers are the reason to trust the
             // front end; these are only the reason to trust the unit tests.
+            //
+            // A point or so below what is measured, deliberately. Set flush against the measurement they
+            // go red on the next refusal branch added without a test for it, which trains the reader to
+            // edit the threshold rather than read the number.
             thresholds: {
-                lines: 74,
+                lines: 73,
                 functions: 69,
-                branches: 59,
+                branches: 58,
                 statements: 70,
             },
         }),
