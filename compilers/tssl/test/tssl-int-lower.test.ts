@@ -104,3 +104,23 @@ describe("refusals", () => {
         expect(() => lower(source)).toThrow(message);
     });
 });
+
+describe("destructuring", () => {
+    // The text route refuses this; without the same refusal here the two disagree, and this side would
+    // declare a local literally named "[p, q]".
+    it("refuses a destructured local", () => {
+        // `pair` is declared, so lowering reaches the destructured declaration rather than dying on an
+        // unknown identifier first - which is what the refusal has to be provoked past.
+        expect(() => lower("function start() {\n    let pair = [1, 2];\n    let [p, q] = pair;\n}\n")).toThrow(
+            /destructuring/,
+        );
+    });
+
+    // The two-element form a for-of takes is a different construct and must keep working.
+    it("still lowers the key/value pattern a for-of takes", () => {
+        const program = lower(
+            "function start() {\n    let m = [1, 2];\n    for (const [k, v] of m) {\n        display_msg(k);\n    }\n}\n",
+        );
+        expect(program.declarations.length).toBeGreaterThan(0);
+    });
+});

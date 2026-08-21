@@ -1,7 +1,7 @@
 /**
  * TSSL operator-conversion tests: the TypeScript -> SSL operator mappings
- * (&& -> and, || -> or, & -> bwand, | -> bwor, ^ -> bxor, ! -> not,
- * ~ -> bnot), the FLOAT1 float-division marker, ternaries, and let/const ->
+ * (&& -> and, || -> or, & -> bwand, | -> bwor, ^ -> bwxor, ! -> not,
+ * ~ -> bwnot), the FLOAT1 float-division marker, ternaries, and let/const ->
  * `variable` statements (tssl/src/convert-operators.ts).
  *
  * These drive the real transpile() entry point so the assertions keep holding
@@ -44,15 +44,15 @@ describe("operator mappings", () => {
         expect(out).toContain("(global_var(1) and global_var(2)) or global_var(3)");
     });
 
-    it("converts bitwise & / | / ^ to bwand / bwor / bxor", async () => {
+    it("converts bitwise & / | / ^ to bwand / bwor / bwxor", async () => {
         const out = await emit(`function start() {\n    let x = (global_var(1) & 2) | (global_var(2) ^ 5);\n}\n`);
-        expect(out).toContain("(global_var(1) bwand 2) bwor (global_var(2) bxor 5)");
+        expect(out).toContain("(global_var(1) bwand 2) bwor (global_var(2) bwxor 5)");
     });
 
-    it("converts ! to not and ~ to bnot", async () => {
+    it("converts ! to not and ~ to bwnot", async () => {
         const out = await emit(`function start() {\n    let x = !global_var(1);\n    let y = ~global_var(2);\n}\n`);
         expect(out).toContain("not global_var(1)");
-        expect(out).toContain("bnot global_var(2)");
+        expect(out).toContain("bwnot global_var(2)");
     });
 
     it("rewrites the FLOAT1 marker to a 1.0 literal for float division", async () => {
@@ -115,5 +115,24 @@ describe("expressions the emitter does not recognise", () => {
 
     it("refuses a construct it has no rendering for, instead of copying the source text", async () => {
         await expect(emit(`function start() {\n    let n = null;\n}\n`)).rejects.toThrow(/NullKeyword/);
+    });
+});
+
+describe("constructs with no SSL spelling", () => {
+    // These reached the output verbatim and failed in the generated file, where the error named a line
+    // nobody wrote. The bytecode front end already refused them, so the two routes disagreed.
+    it("refuses a binary operator SSL does not have", async () => {
+        await expect(emit(`function start() {\n    let v = a instanceof b;\n}\n`)).rejects.toThrow(/instanceof/);
+    });
+
+    it("refuses destructuring in a variable declaration", async () => {
+        await expect(emit(`function start() {\n    let [p, q] = pair;\n}\n`)).rejects.toThrow(/destructuring/);
+    });
+
+    it("still allows the two-element destructuring a for-of takes", async () => {
+        const out = await emit(
+            `function start() {\n    for (const [k, v] of m) {\n        display_msg(k);\n    }\n}\n`,
+        );
+        expect(out).toContain("foreach (variable k: v in m) begin");
     });
 });

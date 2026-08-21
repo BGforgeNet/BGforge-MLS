@@ -13,6 +13,41 @@ import type { Node } from "ts-morph";
 import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, sslName, type TsslContext } from "./types";
 import { refuseAt } from "./program-model";
 
+/**
+ * TypeScript binary operators and the SSL they render as. An allowlist rather than a fix-up switch: the
+ * old form passed anything it did not recognise straight through, so `a instanceof b` reached the output
+ * verbatim and failed in the generated file, where the error named a line nobody wrote.
+ *
+ * Assignment forms are here because an assignment arrives as a binary expression too. SSL's own set is
+ * wider than this - `in`, `div`, `orelse`, `andalso` have no TypeScript spelling to map from.
+ */
+const BINARY_OPERATORS = new Map<string, string>([
+    ["+", "+"],
+    ["-", "-"],
+    ["*", "*"],
+    ["/", "/"],
+    ["%", "%"],
+    ["==", "=="],
+    ["===", "=="],
+    ["!=", "!="],
+    ["!==", "!="],
+    ["<", "<"],
+    ["<=", "<="],
+    [">", ">"],
+    [">=", ">="],
+    ["&&", "and"],
+    ["||", "or"],
+    ["&", "bwand"],
+    ["|", "bwor"],
+    // `bwxor`, not `bxor` - the latter is not an SSL token and the compiler rejects it.
+    ["^", "bwxor"],
+    ["=", "="],
+    ["+=", "+="],
+    ["-=", "-="],
+    ["*=", "*="],
+    ["/=", "/="],
+]);
+
 /** Syntax with no SSL counterpart: passing it through would emit text SSL cannot compile. */
 const REFUSED_EXPRESSIONS = new Map<SyntaxKind, string>([
     [SyntaxKind.TemplateExpression, "template literals are not supported; concatenate with +"],
@@ -57,29 +92,13 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
                 throw refuseAt(node, "'??' is not supported; SSL has no null");
             }
 
-            const left = convertOperatorsAST(binary.getLeft(), ctx);
-            const right = convertOperatorsAST(binary.getRight(), ctx);
-
-            // Convert operator
-            let sslOperator = operator;
-            switch (operator) {
-                case "&&":
-                    sslOperator = "and";
-                    break;
-                case "||":
-                    sslOperator = "or";
-                    break;
-                case "&":
-                    sslOperator = "bwand";
-                    break;
-                case "|":
-                    sslOperator = "bwor";
-                    break;
-                case "^":
-                    sslOperator = "bxor";
-                    break;
+            const sslOperator = BINARY_OPERATORS.get(operator);
+            if (sslOperator === undefined) {
+                throw refuseAt(node, `'${operator}' has no SSL equivalent`);
             }
 
+            const left = convertOperatorsAST(binary.getLeft(), ctx);
+            const right = convertOperatorsAST(binary.getRight(), ctx);
             return `${left} ${sslOperator} ${right}`;
         }
 
@@ -92,7 +111,8 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             if (operator === SyntaxKind.ExclamationToken) {
                 return `not ${operand}`;
             } else if (operator === SyntaxKind.TildeToken) {
-                return `bnot ${operand}`;
+                // `bwnot`, not `bnot` - the latter is not an SSL token.
+                return `bwnot ${operand}`;
             }
             // Rebuilt from the converted operand rather than copied, so a cast inside stays erased.
             if (operator === SyntaxKind.MinusToken) return `-${operand}`;
@@ -310,6 +330,12 @@ export function convertVarOrConstToVariable(stmt: Node, ctx: TsslContext): strin
     }
 
     const parts = declList.getDeclarations().map((decl) => {
+        // `getName()` on a binding pattern returns the pattern text, which used to be emitted as though
+        // it were an identifier. SSL declares one name at a time; the two-element form a `foreach` takes
+        // is a different construct, handled where that loop is rendered.
+        if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
+            throw refuseAt(decl, "destructuring is not supported; declare each variable separately");
+        }
         const varName = decl.getName();
         if (RESERVED_VAR_NAMES.has(varName)) {
             throw refuseAt(decl, `Variable name '${varName}' conflicts with folib export. Use a different name.`);

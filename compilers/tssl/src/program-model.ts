@@ -124,7 +124,16 @@ function collectModuleItems(source: SourceFile, file: string, isEntry: boolean):
                         : keyword === SyntaxKind.LetKeyword
                           ? items.lets
                           : null;
-                if (bucket) bucket.push(...declList.getDeclarations());
+                if (bucket) {
+                    for (const decl of declList.getDeclarations()) {
+                        // A binding pattern's `getName()` is the pattern text, which both back ends would
+                        // emit as though it were an identifier. Refused here so neither has to.
+                        if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
+                            throw refuseAt(decl, "destructuring is not supported; declare each variable separately");
+                        }
+                        bucket.push(decl);
+                    }
+                }
                 break;
             }
             case SyntaxKind.EnumDeclaration: {

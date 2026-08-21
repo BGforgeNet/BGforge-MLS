@@ -500,6 +500,11 @@ class TsslLowering {
             throw refuseAt(node, "a for initializer declares one variable; declare the others before the loop");
         }
         for (const decl of list.getDeclarations()) {
+            // The text route refuses this too; a binding pattern here would declare a local named after
+            // the pattern text. The key/value form a for-of takes never reaches this method.
+            if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
+                throw refuseAt(decl, "destructuring is not supported; declare each variable separately");
+            }
             const name = decl.getName();
             const initializer = decl.getInitializer();
             const literal = initializer ? this.literalOf(initializer) : ({ kind: "int", value: 0 } as const);

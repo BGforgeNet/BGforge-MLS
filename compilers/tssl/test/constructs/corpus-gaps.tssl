@@ -21,6 +21,12 @@ export function start(): void {
         display_msg("both");
     }
 
+    // Bitwise xor and not. The text route spelled these `bxor` and `bnot`, which are not SSL tokens at
+    // all - the compiler rejects both - while the direct route emitted the correct `bwxor`/`bwnot`. No
+    // script in the corpus uses either operator, so nothing caught it.
+    let mask = (limit ^ 6) & ~limit;
+    display_msg(mask);
+
     // A float literal written out. The old bundler normalised 1.0 to 1 and silently turned float
     // division into integer division.
     let ratio = 1.0 * 7 / 2;

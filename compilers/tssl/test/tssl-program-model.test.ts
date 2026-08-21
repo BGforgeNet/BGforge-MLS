@@ -171,3 +171,20 @@ describe("refusals of syntax with no SSL counterpart", () => {
         await expect(emit(`function start() {\n    ${statement}\n}\n`)).rejects.toThrow(message);
     });
 });
+
+describe("destructuring in a top-level declaration", () => {
+    // `getName()` on a binding pattern returns the pattern text, so an unrefused one reaches the output
+    // as though `[a, b]` were an identifier. Both back ends read these declarations, so the refusal
+    // belongs where they are collected rather than in either renderer.
+    it("refuses a destructured top-level let", async () => {
+        await expect(emit(`let [a, b] = pair;\nfunction start() {\n    display_msg(a);\n}\n`)).rejects.toThrow(
+            /destructuring/,
+        );
+    });
+
+    it("refuses a destructured top-level const", async () => {
+        await expect(emit(`const { x } = source;\nfunction start() {\n    display_msg(x);\n}\n`)).rejects.toThrow(
+            /destructuring/,
+        );
+    });
+});
