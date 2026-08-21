@@ -1,8 +1,8 @@
 TSSL Reference for LLMs
 
-You are writing TSSL -- a TypeScript subset that transpiles to Fallout SSL.
-Files use the .tssl extension. The transpiler converts TypeScript AST to SSL syntax.
-Everything below describes what the transpiler supports and how it behaves.
+You are writing TSSL -- a TypeScript subset that compiles to Fallout 2 INT bytecode.
+Files use the .tssl extension. The compiler lowers the TypeScript AST straight to bytecode.
+Everything below describes what the compiler supports and how it behaves.
 
 === VARIABLES ===
 
@@ -80,7 +80,7 @@ Zero-arg inline calls have parens stripped: dude_tile() -> dude_tile
 list(1, 2, 3)               -> [1, 2, 3]     (array literal)
 map({[KEY]: val})            -> {KEY: val}     (map literal)
 sfall_typeof(x)              -> typeof(x)      (TS keyword workaround)
-FLOAT1                       -> 1.0            (esbuild strips .0 from literals)
+FLOAT1                       -> 1.0            (legacy spelling; 1.0 works directly)
 
 === IMPORTS ===
 
@@ -106,7 +106,7 @@ barter_p_proc, barter_init_p_proc, use_ad_on_p_proc, use_disad_on_p_proc
 
 Functions passed to register_hook_proc/register_hook_proc_spec are also preserved.
 
-=== FORBIDDEN (transpiler error) ===
+=== FORBIDDEN (compile error) ===
 
 try/catch/finally             -> "try/catch is not supported in SSL"
 Object/Array/JSON/Math/Date   -> "X is not available in SSL runtime"
@@ -144,11 +144,11 @@ Classes (runtime), decorators (runtime)
 4. Computed keys required: { [PID_GUN]: 9 } keeps constant.
    { PID_GUN: 9 } becomes string literal "PID_GUN".
 
-5. Import aliasing: importing same function from different paths causes
-   esbuild renaming (func -> func2). Use one import path per function.
+5. Name collisions: two kept declarations sharing a name are REFUSED, naming
+   both locations. Rename one. (Identical constants are allowed.)
 
-6. Float literals: esbuild strips .0 (1.0 -> 1). Use FLOAT1 * a / b
-   for float division.
+6. Float literals are preserved as written: 1.0 stays a float, so `1.0 * a / b`
+   gives float division. FLOAT1 still means 1.0, for sources that predate this.
 
 7. @tra tag: add /** @tra filename.tra */ in a comment to set translation file.
    Accepts both .tra and .msg extensions.
@@ -185,5 +185,8 @@ function on_combat() {
 
 === COMPILATION ===
 
-.tssl -> (esbuild bundle + transpiler) -> .ssl -> (sslc) -> .int
-Press Ctrl+R in VSCode or use the transpile CLI.
+.tssl -> (tssl compiler) -> .int
+No SSL text is produced or read on the way, and no external compiler is involved.
+Press Ctrl+R in VSCode, or run: tssl script.tssl
+Readable SSL is optional: `tssl script.tssl --transpile`, or the bgforge.tssl.emitSsl setting.
+Anything the compiler cannot render is refused with the line it sits on, never emitted as guessed output.

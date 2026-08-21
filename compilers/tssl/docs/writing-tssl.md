@@ -1,6 +1,6 @@
 # Writing TSSL
 
-TSSL is a TypeScript subset that transpiles to Fallout SSL (Star-Trek Scripting Language). You write `.tssl` files using standard TypeScript syntax, and the transpiler converts them to `.ssl` files that the sslc compiler then compiles to `.int` bytecode for the Fallout engine. TSSL gives you type checking, autocomplete, go-to-definition, and module imports while targeting the same runtime as hand-written SSL.
+TSSL is a TypeScript subset that compiles to Fallout 2 INT bytecode. You write `.tssl` files using standard TypeScript syntax, and the `tssl` compiler lowers them straight to the `.int` the Fallout engine runs -- no SSL text in between. TSSL gives you type checking, autocomplete, go-to-definition, and module imports while targeting the same runtime as hand-written SSL.
 
 ## Supported Syntax
 
@@ -161,7 +161,7 @@ switch (x) {
 
 ### Operators
 
-The transpiler converts TypeScript operators to SSL equivalents:
+TypeScript operators map to their SSL equivalents:
 
 | TypeScript | SSL     | Description |
 | ---------- | ------- | ----------- |
@@ -319,7 +319,8 @@ if (sfall_typeof(x) == 2) {
 // -> if (typeof(x) == 2) then begin ... end
 ```
 
-The transpiler replaces all `sfall_typeof` occurrences with `typeof` in the output.
+The compiler renders the name as `typeof` wherever an identifier is emitted. A `sfall_typeof` occurring
+inside a string literal is left alone.
 
 ### FLOAT1 Constant
 
@@ -368,7 +369,7 @@ JSDoc is preserved for the main file's functions; imported files' procedures are
 
 ## Forbidden Syntax
 
-These produce explicit transpiler errors:
+These produce explicit compile errors:
 
 | Syntax                                      | Error                                                    |
 | ------------------------------------------- | -------------------------------------------------------- |
@@ -470,8 +471,11 @@ under one name are tolerated.
 Press **Ctrl+R** in VSCode (with the extension active) to compile the current `.tssl` file. The pipeline is:
 
 1. Imports are resolved with the TypeScript compiler (folib, local `.ts` files, `.d.ts` declarations)
-2. The reachable declarations are converted to SSL syntax, unused ones tree-shaken away
-3. The `.ssl` file is written next to the `.tssl` file
-4. sslc compiles the `.ssl` to `.int` bytecode
+2. The reachable declarations are lowered to the compiler's intermediate representation, unused ones
+   tree-shaken away
+3. The `.int` bytecode is written where the output settings say
 
-You can also compile from the command line using the transpile CLI.
+Set `bgforge.tssl.emitSsl` to also write the readable `.ssl` beside the source.
+
+From the command line, `tssl script.tssl` does the same thing, and `tssl src/ -r --opt 2 -s` is what a mod build
+wants. Add `--transpile` for the `.ssl`. (`fgtp` handles TBAF and TD; it does not accept `.tssl`.)

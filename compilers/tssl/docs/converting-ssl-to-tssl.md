@@ -129,7 +129,7 @@ function do_damage(target: CritterPtr, amount: number) {
 }
 ```
 
-Types are optional but recommended. The transpiler ignores them (they're for TypeScript checking only).
+Types are optional but recommended. The compiler ignores them (they're for TypeScript checking only).
 
 ### 5. Replace variable with let
 
@@ -221,7 +221,7 @@ if typeof(x) == 2 then begin
 if (sfall_typeof(x) == 2) {
 ```
 
-The transpiler converts `sfall_typeof` back to `typeof` in the output.
+The compiler renders the name as `typeof` in the output.
 
 ### 10. Add parentheses to zero-arg function calls
 
@@ -243,7 +243,7 @@ if (game_loaded()) {
 }
 ```
 
-The transpiler strips the parentheses in the output, producing the same SSL.
+The compiler strips the parentheses, producing the same SSL.
 
 ### 11. Add types (optional but recommended)
 
