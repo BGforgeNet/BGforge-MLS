@@ -50,6 +50,21 @@ function outputFor(filePath: string, extension: string): string {
     return filePath.slice(0, -EXT_TSSL.length) + extension;
 }
 
+/**
+ * The file's current contents, or null when it does not exist yet.
+ *
+ * Read through try/catch rather than existsSync-then-read, which leaves the TOCTOU window CodeQL's
+ * js/file-system-race flags.
+ */
+function readIfPresent(filePath: string): Buffer | null {
+    try {
+        return fs.readFileSync(filePath);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        return null;
+    }
+}
+
 async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
     if (!filePath.toLowerCase().endsWith(EXT_TSSL)) {
         console.error(`Error: not a ${EXT_TSSL} source: ${filePath}`);
@@ -66,26 +81,31 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         const options = { level: switches.level, shortCircuit: switches.shortCircuit };
         const bytes = emitProgram(optimize(lowerTsslProgram(resolved, text), options), options);
         const intPath = outputFor(filePath, ".int");
-        fs.writeFileSync(intPath, bytes);
-        console.log(`Compiled: ${filePath} -> ${path.basename(intPath)}`);
+        const currentInt = readIfPresent(intPath);
+        let changed = currentInt === null || !currentInt.equals(bytes);
+        if (!changed) {
+            console.log(`Up to date: ${path.basename(intPath)}`);
+        } else if (mode === "check") {
+            // Bytecode has no readable diff to print, so the report is what a reader can act on: which
+            // side is missing, or by how much the two differ.
+            const detail =
+                currentInt === null ? "missing" : `${currentInt.length} bytes on disk, ${bytes.length} compiled`;
+            console.error(`Stale: ${intPath} (${detail})`);
+        } else {
+            fs.writeFileSync(intPath, bytes);
+            console.log(`Compiled: ${filePath} -> ${path.basename(intPath)}`);
+        }
 
-        if (!switches.transpile) return "changed";
+        if (!switches.transpile) return changed ? "changed" : "unchanged";
 
         if (!batch) batch = createBatchState();
         const ssl = await transpile(resolved, text, batch);
         const sslPath = outputFor(filePath, ".ssl");
-        // Read through try/catch rather than existsSync-then-read, which leaves the TOCTOU window
-        // CodeQL's js/file-system-race flags.
-        let existing: string | null;
-        try {
-            existing = fs.readFileSync(sslPath, "utf-8");
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-            existing = null;
-        }
-        if (existing === ssl) return "unchanged";
+        const currentSsl = readIfPresent(sslPath)?.toString("utf-8") ?? null;
+        if (currentSsl === ssl) return changed ? "changed" : "unchanged";
+        changed = true;
         if (mode === "check") {
-            reportDiff(filePath, existing ?? "", ssl);
+            reportDiff(filePath, currentSsl ?? "", ssl);
             return "changed";
         }
         fs.writeFileSync(sslPath, ssl, "utf-8");
@@ -100,7 +120,7 @@ const HELP = `Usage: tssl <file.tssl|dir> [--transpile] [--opt <0|1|2>] [-s] [-r
   --transpile       Also write the readable .ssl beside the bytecode
   --opt <0|1|2>     Optimisation level (default: 1, as the ssl compiler's own default)
   -s                Short-circuit and/or: skip the right operand once the left decides the result
-  --check           With --transpile, report a stale .ssl instead of rewriting it
+  --check           Report stale output instead of writing it (exit 1 if any is stale)
   -r                Recurse into directories
   -q                Quiet mode: suppress the summary
   --jobs <n>        Process directory files with N parallel workers

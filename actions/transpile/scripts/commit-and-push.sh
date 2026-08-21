@@ -4,10 +4,10 @@
 # finalize_commit_and_push (../_shared/lib.sh).
 #
 # fgtp writes each source's output to a sibling path with a different extension
-# (.td -> .d, .tbaf -> .baf, .tssl -> .ssl). The staged unit is the OUTPUT, so we
-# map each processed source in LIST to its output path and stage that - never a
-# blind `find *.ssl`, which would also sweep up hand-written, non-transpiled
-# sources sharing those extensions.
+# (.td -> .d, .tbaf -> .baf). The staged unit is the OUTPUT, so we map each
+# processed source in LIST to its output path and stage that - never a blind
+# `find *.d`, which would also sweep up hand-written, non-transpiled sources
+# sharing those extensions.
 #
 # Inputs (env): COMMIT_MESSAGE, COMMIT_AUTHOR_NAME, COMMIT_AUTHOR_EMAIL,
 #               LIST (the processed-source list from the list-changed step).
@@ -23,7 +23,6 @@ while IFS= read -r f; do
     case "$f" in
         *.td) out="${f%.td}.d" ;;
         *.tbaf) out="${f%.tbaf}.baf" ;;
-        *.tssl) out="${f%.tssl}.ssl" ;;
         *) continue ;;
     esac
     [[ -f "$out" ]] && git add -- "$out"

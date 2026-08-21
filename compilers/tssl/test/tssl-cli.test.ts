@@ -93,4 +93,57 @@ describe("tssl CLI integration", () => {
             expect(stderr).toContain("--opt takes 0, 1 or 2");
         });
     });
+
+    // What actions/tssl runs with `check: true`, and what a mod's CI gates on.
+    describe("--check reports stale output instead of writing it", () => {
+        const source = 'function start() {\n    display_msg("hi");\n}\n';
+
+        function write(name: string): string {
+            const file = path.join(tmpDir, name);
+            fs.writeFileSync(file, source, "utf-8");
+            return file;
+        }
+
+        it("exits 1 when the bytecode is missing, and writes none", () => {
+            const file = write("absent.tssl");
+            const intPath = file.replace(/\.tssl$/, ".int");
+
+            const { code, stderr } = run(file, "--check");
+
+            expect(code).toBe(1);
+            expect(stderr).toContain("missing");
+            expect(fs.existsSync(intPath)).toBe(false);
+        });
+
+        // The half that matters: a check firing on correct input would fail every run of a mod's CI.
+        it("exits 0 when the bytecode is current", () => {
+            const file = write("current.tssl");
+            expect(run(file, "--save").code).toBe(0);
+
+            expect(run(file, "--check").code).toBe(0);
+        });
+
+        it("exits 1 on stale bytecode and leaves it as it found it", () => {
+            const file = write("stale.tssl");
+            const intPath = file.replace(/\.tssl$/, ".int");
+            run(file, "--save");
+            fs.writeFileSync(intPath, "not bytecode");
+
+            const { code } = run(file, "--check");
+
+            expect(code).toBe(1);
+            expect(fs.readFileSync(intPath, "utf-8")).toBe("not bytecode");
+        });
+
+        it("checks the .ssl too when --transpile asks for one, without writing it", () => {
+            const file = write("withssl.tssl");
+            const sslPath = file.replace(/\.tssl$/, ".ssl");
+            run(file, "--save");
+
+            const { code } = run(file, "--check", "--transpile");
+
+            expect(code).toBe(1);
+            expect(fs.existsSync(sslPath)).toBe(false);
+        });
+    });
 });

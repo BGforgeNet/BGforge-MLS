@@ -119,4 +119,9 @@ major. Pinning the tag fixes the _action code_ only - the `@bgforge/transpile` i
 ## Limitations
 
 - **Deleted sources leave orphaned outputs.** Removing a `.td`/`.tbaf` source does not remove its
-  generated `.d`/`.baf`/`.ssl` file. Delete the output manually in the same commit.
+  generated `.d`/`.baf` file. Delete the output manually in the same commit.
+
+## TSSL
+
+`.tssl` is not handled here. TSSL compiles straight to Fallout `.int` bytecode rather than transpiling to
+another language, and it ships as its own package and CLI - see [`actions/tssl`](../tssl/README.md).

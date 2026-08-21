@@ -14,7 +14,7 @@
     "bugs": {
         "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
     },
-    "license": "SEE LICENSE IN ../../LICENSE.txt",
+    "license": "SEE LICENSE IN LICENSE.txt",
     "author": "BGforge",
     "repository": {
         "type": "git",
@@ -27,7 +27,9 @@
     "files": [
         "out/",
         "!out/*.map",
-        "README.md"
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.txt"
     ],
     "type": "module",
     "main": "out/index.js",

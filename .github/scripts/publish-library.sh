@@ -37,8 +37,14 @@ case "$prefix" in
         script="scripts/publish-transpile.sh"
         testcfg=""
         ;;
+    tssl)
+        pkgname="@bgforge/tssl"
+        pkgjson="compilers/tssl/package.json"
+        script="scripts/publish-tssl.sh"
+        testcfg="compilers/tssl/vitest.config.ts"
+        ;;
     *)
-        echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, or transpile)." >&2
+        echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, transpile, or tssl)." >&2
         exit 1
         ;;
 esac

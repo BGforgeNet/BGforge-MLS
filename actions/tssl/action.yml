@@ -1,0 +1,117 @@
+name: "Compile TSSL"
+description: "Compile TSSL sources to Fallout INT bytecode with @bgforge/tssl and commit the generated files back to the branch."
+author: "BGforge"
+
+inputs:
+  paths:
+    description: "Path passed to the tssl CLI (single path; recursive scan)."
+    required: false
+    default: "."
+  version:
+    description: "npm version specifier for @bgforge/tssl."
+    required: false
+    default: "latest"
+  transpile:
+    description: 'If "true", also write the readable .ssl beside each .int and commit it.'
+    required: false
+    default: "false"
+  opt:
+    description: "Optimisation level passed to the compiler (0, 1 or 2). Empty uses the compiler's default."
+    required: false
+    default: ""
+  short-circuit:
+    description: 'If "true", compile and/or to skip the right operand once the left decides the result.'
+    required: false
+    default: "false"
+  commit-message:
+    description: "Commit subject when compiled output changes."
+    required: false
+    default: "chore: update compiled output"
+  commit-author-name:
+    description: "git author name for the compile commit."
+    required: false
+    default: "github-actions[bot]"
+  commit-author-email:
+    description: "git author email for the compile commit."
+    required: false
+    default: "41898282+github-actions[bot]@users.noreply.github.com"
+  check:
+    description: 'If "true", verify each output is up to date with its source (exit 1 on stale or missing output) and skip commit/push.'
+    required: false
+    default: "false"
+
+outputs:
+  changed:
+    description: "true if any compiled output changed and was committed."
+    value: ${{ steps.commit.outputs.changed }}
+  changed-files:
+    description: "Newline-separated list of committed output files."
+    value: ${{ steps.commit.outputs.changed-files }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Guard against fork pull_request (read-only token cannot push)
+      if: inputs.check != 'true'
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      run: ${{ github.action_path }}/../_shared/guard-fork-pr.sh
+
+    - name: Set up Node.js
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: 24
+
+    - name: Install @bgforge/tssl
+      shell: bash
+      env:
+        PKG_VERSION: ${{ inputs.version }}
+      # zizmor: ignore[adhoc-packages] this step's purpose IS installing the
+      # consumer-selected published @bgforge/tssl version to run it; there is no
+      # lockfile to install from since the version is a caller-chosen input.
+      run: npm install -g "@bgforge/tssl@${PKG_VERSION}"
+
+    - name: List changed source files
+      id: list
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        SCAN_PATH: ${{ inputs.paths }}
+        BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA_PR: ${{ github.event.pull_request.head.sha }}
+        BASE_SHA_PUSH: ${{ github.event.before }}
+        HEAD_SHA_PUSH: ${{ github.sha }}
+      run: ${{ github.action_path }}/scripts/list-changed.sh
+
+    - name: Build the compiler switches
+      id: switches
+      shell: bash
+      env:
+        TRANSPILE: ${{ inputs.transpile }}
+        OPT: ${{ inputs.opt }}
+        SHORT_CIRCUIT: ${{ inputs.short-circuit }}
+      run: ${{ github.action_path }}/scripts/switches.sh
+
+    - name: Run tssl CLI (--save by default, --check when check=true)
+      shell: bash
+      env:
+        CLI: tssl
+        CHECK_MODE: ${{ inputs.check }}
+        LIST: ${{ steps.list.outputs.list }}
+        COUNT: ${{ steps.list.outputs.count }}
+        EXTRA_ARGS: ${{ steps.switches.outputs.args }}
+      run: ${{ github.action_path }}/../_shared/run-cli.sh
+
+    - name: Commit and push if changed
+      id: commit
+      if: inputs.check != 'true'
+      shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        COMMIT_AUTHOR_NAME: ${{ inputs.commit-author-name }}
+        COMMIT_AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
+        LIST: ${{ steps.list.outputs.list }}
+        TRANSPILE: ${{ inputs.transpile }}
+      run: ${{ github.action_path }}/scripts/commit-and-push.sh
