@@ -17,10 +17,16 @@ import type { CompileRequest } from "../src/tssl/compile-worker-protocol";
 // The thread is the one seam replaced here: the request still runs through the worker's own compile, so
 // what these assert about placement and contents is what the worker really does with it. The plumbing
 // either side has its own tests - see tssl/compile-worker-client.test.ts.
+/** Held by the displacement test so a compile can still be in flight when the next one arrives. */
+const gate: { pending: Promise<void> | null; release: (() => void) | null } = { pending: null, release: null };
+
 vi.mock("../src/tssl/compile-worker-client", async () => {
     const { runTsslCompile } = await import("../src/tssl/compile-worker");
     return {
-        compileOnWorker: async (request: Omit<CompileRequest, "id">) => {
+        compileOnWorker: async (request: Omit<CompileRequest, "id">, signal?: AbortSignal) => {
+            if (gate.pending) await gate.pending;
+            // The real client resolves `false` without writing anything once its signal fires.
+            if (signal?.aborted) return false;
             await runTsslCompile({ ...request, id: 0 });
             // The real client resolves `true` for a completed compile; `false` means displaced.
             return true;
@@ -171,5 +177,27 @@ describe("compileTsslToInt", () => {
 
         expect(fs.existsSync(path.join(dir, "script.int"))).toBe(false);
         expect(fs.existsSync(path.join(dir, "script.ssl"))).toBe(false);
+    });
+
+    // Nothing else covers the wiring: `compileOnWorker`'s own tests prove it honours a signal, but not
+    // that this module hands it one a newer compile can fire. Removing the signal here left every other
+    // test green.
+    it("lets a newer compile of the same document displace the one in flight", async () => {
+        const file = writeSource();
+        gate.pending = new Promise<void>((resolve) => {
+            gate.release = resolve;
+        });
+        try {
+            const first = compileFile(file, settingsWith({}));
+            const second = compileFile(file, settingsWith({}));
+            gate.release?.();
+
+            // The displaced compile reports nothing; the newer one is the result that counts.
+            expect(await first).toBeNull();
+            expect(await second).not.toBeNull();
+        } finally {
+            gate.pending = null;
+            gate.release = null;
+        }
     });
 });
