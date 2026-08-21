@@ -109,9 +109,7 @@ export function exportSSL(
         out.add("/* ===== end main body ===== */\n");
     }
 
-    // Replace sfall_typeof with typeof (TS keyword conflict workaround). A same-line substitution, so it
-    // cannot move a line and the origins collected above still line up.
-    return { text: out.text.replaceAll(/\bsfall_typeof\b/g, "typeof"), origins: [...out.origins] };
+    return { text: out.text, origins: [...out.origins] };
 }
 
 /** Renders one module's kept declarations into buckets, in the module's own statement order. */

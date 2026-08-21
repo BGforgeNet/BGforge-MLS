@@ -70,6 +70,17 @@ export const FORBIDDEN_GLOBALS = new Set([
 /** Variable names that conflict with the folib list()/map() helper functions. */
 export const RESERVED_VAR_NAMES = new Set(["list", "map"]);
 
+/**
+ * The name SSL knows a TSSL identifier by. `typeof` is a keyword in both languages, so folib declares
+ * the engine function as `sfall_typeof` and the output carries the SSL spelling.
+ *
+ * Applied wherever a name is rendered - never over finished text, which cannot tell an identifier from
+ * the same letters inside a string literal.
+ */
+export function sslName(name: string): string {
+    return name === "sfall_typeof" ? "typeof" : name;
+}
+
 // Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
 // pipe. `setConlog()` lets a host swap this sink (the test suite installs a
 // capturing logger); with no override the sink stays `console.error`, preserving

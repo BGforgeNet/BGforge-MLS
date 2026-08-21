@@ -4,7 +4,7 @@
  */
 
 import type { SourceFile, Node } from "ts-morph";
-import { SyntaxKind, type InlineFunc, type InlineArg, type TsslContext } from "./types";
+import { SyntaxKind, sslName, type InlineFunc, type InlineArg, type TsslContext } from "./types";
 import { convertOperatorsAST } from "./convert-operators";
 
 /** Cache for inline functions extracted from imported files, keyed by absolute path. */
@@ -117,7 +117,9 @@ export function generateInlineMacros(
         const argList = inline.args
             .map((a) => (a.type === "constant" ? expandEnumAccess(a.value, enumNames) : a.value))
             .join(", ");
-        macros.push(`#define ${funcName}${paramList} ${inline.targetFunc}(${argList})`);
+        // `targetFunc` is the callee's raw source text, so it carries the TypeScript spelling of a name
+        // the output states differently.
+        macros.push(`#define ${funcName}${paramList} ${sslName(inline.targetFunc)}(${argList})`);
     }
     return macros;
 }

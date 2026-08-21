@@ -24,6 +24,7 @@ import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, Variabl
 import { engineFunction } from "../../../ssl/src/int/engine-functions";
 import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
 import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
+import { sslName } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
@@ -621,14 +622,12 @@ class TsslLowering {
     }
 
     /**
-     * A callee's name as the output spells it: the declaration behind a renamed import, and `typeof` for
-     * `sfall_typeof`, which exists only because `typeof` is a TypeScript keyword. The text route makes
-     * the same substitution as a final pass over its rendered output.
+     * A callee's name as the output spells it: the declaration behind a renamed import, then the SSL
+     * spelling of that declaration. Resolving the rename FIRST is what makes `import { sfall_typeof as
+     * vt }` reach the same name a direct call does.
      */
     private calleeName(callee: Node): string {
-        const written = callee.getText();
-        if (written === "sfall_typeof") return "typeof";
-        return this.declaredName(callee, written);
+        return sslName(this.declaredName(callee, callee.getText()));
     }
 
     /**

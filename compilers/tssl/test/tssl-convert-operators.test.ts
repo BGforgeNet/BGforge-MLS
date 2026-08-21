@@ -77,3 +77,25 @@ describe("variable statements", () => {
         expect(out).toContain("variable limit = global_var(1) bwor 2;");
     });
 });
+
+describe("the sfall_typeof spelling", () => {
+    // `typeof` is a keyword in both SSL and TypeScript, so folib declares the engine function
+    // `sfall_typeof` and the output carries the SSL name.
+    it("renders a call to sfall_typeof under its SSL name", async () => {
+        const out = await emit(`function start() {\n    let t = sfall_typeof(global_var(1));\n}\n`);
+        expect(out).toContain("variable t = typeof(global_var(1));");
+    });
+
+    it("renders the SSL name inside an @inline macro's expansion", async () => {
+        const out = await emit(
+            `/** @inline */\nfunction value_type(obj: number): number {\n    return sfall_typeof(obj);\n}\n` +
+                `function start() {\n    let t = value_type(global_var(1));\n}\n`,
+        );
+        expect(out).toContain("#define value_type(obj) typeof(obj)");
+    });
+
+    it("leaves the name alone inside a string literal", async () => {
+        const out = await emit(`function start() {\n    let s = "call sfall_typeof here";\n}\n`);
+        expect(out).toContain(`variable s = "call sfall_typeof here";`);
+    });
+});

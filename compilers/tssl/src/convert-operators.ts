@@ -10,7 +10,7 @@
  */
 
 import type { Node } from "ts-morph";
-import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, type TsslContext } from "./types";
+import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, sslName, type TsslContext } from "./types";
 import { refuseAt } from "./program-model";
 
 /** Syntax with no SSL counterpart: passing it through would emit text SSL cannot compile. */
@@ -275,7 +275,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             // spell 1.0 this way, so it keeps meaning exactly that.
             if (text === "FLOAT1") return "1.0";
             // The output holds declaration names only, so an imported alias renders as what it names.
-            return ctx?.importRenames.get(text) ?? text;
+            return sslName(ctx?.importRenames.get(text) ?? text);
         }
 
         default:
