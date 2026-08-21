@@ -36,10 +36,10 @@ export default defineConfig({
             // a test, so none of it reaches this instrument. Those numbers are the reason to trust the
             // front end; these are only the reason to trust the unit tests.
             thresholds: {
-                lines: 68,
-                functions: 61,
-                branches: 53,
-                statements: 64,
+                lines: 74,
+                functions: 69,
+                branches: 59,
+                statements: 70,
             },
         }),
     },

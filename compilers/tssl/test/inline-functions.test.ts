@@ -4,12 +4,8 @@
 
 import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
-import {
-    extractInlineFunctions,
-    generateInlineMacros,
-    type InlineFunctionCache,
-} from "../../compilers/tssl/src/inline-functions";
-import type { InlineFunc } from "../../compilers/tssl/src/types";
+import { extractInlineFunctions, generateInlineMacros, type InlineFunctionCache } from "../src/inline-functions";
+import type { InlineFunc } from "../src/types";
 
 describe("generateInlineMacros", () => {
     it("generates basic inline macro without params", () => {
