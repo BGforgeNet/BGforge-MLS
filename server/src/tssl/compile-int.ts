@@ -18,7 +18,21 @@ import { EXT_TSSL } from "../core/languages";
 import { parseArgs } from "../../../compilers/ssl/src/args";
 import { intOutputPath } from "../core/int-output-path";
 import { compileOnWorker } from "./compile-worker-client";
+import { abortAllCompiles, withCompileLifecycle } from "../core/compile-with-tmp-file";
+import { normalizeUri } from "../core/normalized-uri";
 import type { MLSsettings } from "../settings";
+
+/**
+ * In-flight compiles per document, so a save displaces the compile the previous one started rather
+ * than queueing behind it. Same bookkeeping the Fallout SSL and WeiDU compilers keep, for the same
+ * reason: the older answer would otherwise land after the newer one and win.
+ */
+const activeCompiles = new Map<ReturnType<typeof normalizeUri>, AbortController>();
+
+/** Abort every in-flight TSSL compile. Called from server shutdown. */
+export function abortInFlightTsslCompiles(): void {
+    abortAllCompiles(activeCompiles);
+}
 
 export interface TsslCompileResult {
     /**
@@ -32,8 +46,9 @@ export interface TsslCompileResult {
 }
 
 /**
- * Compiles `text` and writes the result, returning what it produced. A refusal from the front end
- * propagates as the positioned `TranspileError` it already is.
+ * Compiles `text` and writes the result, returning what it produced - or `null` when a newer compile
+ * of the same document displaced this one, which is not a failure and has nothing to report. A refusal
+ * from the front end propagates as the positioned `TranspileError` it already is.
  */
 export async function compileTsslToInt(
     uri: string,
@@ -41,7 +56,7 @@ export async function compileTsslToInt(
     text: string,
     settings: MLSsettings,
     interactive: boolean,
-): Promise<TsslCompileResult> {
+): Promise<TsslCompileResult | null> {
     // The optimisation switches come from the Fallout SSL compiler's own command line, because that
     // setting is what already decided how a `.tssl` was compiled when it went through generated SSL.
     // The rest of that line addresses an SSL text compiler - a preprocessor, a keyword set, an output
@@ -52,14 +67,25 @@ export async function compileTsslToInt(
     const intPath = intOutputPath(filepath, settings.falloutSSL.outputDirectory, uri, written);
     const sslPath = settings.tssl.emitSsl ? filepath.slice(0, -EXT_TSSL.length) + ".ssl" : null;
 
-    await compileOnWorker({
-        text,
-        filepath,
-        intPath: written ? intPath : null,
-        sslPath,
-        level: args.level,
-        shortCircuit: args.shortCircuit,
+    let completed = false;
+    await withCompileLifecycle({
+        uri: normalizeUri(uri),
+        activeCompiles,
+        run: async (signal) => {
+            completed = await compileOnWorker(
+                {
+                    text,
+                    filepath,
+                    intPath: written ? intPath : null,
+                    sslPath,
+                    level: args.level,
+                    shortCircuit: args.shortCircuit,
+                },
+                signal,
+            );
+        },
     });
+    if (!completed) return null;
 
     return sslPath === null ? { intPath } : { intPath, sslPath };
 }

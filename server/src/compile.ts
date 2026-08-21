@@ -140,7 +140,11 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const { intPath, sslPath } = await compileTsslToInt(uri, filePath, text, settings, interactive);
+                const compiled = await compileTsslToInt(uri, filePath, text, settings, interactive);
+                // Null means a newer compile of this document displaced this one; its result is the
+                // one that matters and it reports for itself.
+                if (compiled === null) return;
+                const { intPath, sslPath } = compiled;
                 if (interactive) {
                     // An interactive compile always keeps its output, so `intPath` names a real file
                     // here whatever `compileOnValidate` says.

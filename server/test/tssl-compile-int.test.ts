@@ -20,7 +20,11 @@ import type { CompileRequest } from "../src/tssl/compile-worker-protocol";
 vi.mock("../src/tssl/compile-worker-client", async () => {
     const { runTsslCompile } = await import("../src/tssl/compile-worker");
     return {
-        compileOnWorker: (request: Omit<CompileRequest, "id">) => runTsslCompile({ ...request, id: 0 }),
+        compileOnWorker: async (request: Omit<CompileRequest, "id">) => {
+            await runTsslCompile({ ...request, id: 0 });
+            // The real client resolves `true` for a completed compile; `false` means displaced.
+            return true;
+        },
         stopTsslCompileWorker: () => Promise.resolve(),
     };
 });
@@ -69,12 +73,19 @@ function compileFile(file: string, settings: MLSsettings, interactive = false) {
     return compileTsslToInt(`file://${file}`, file, fs.readFileSync(file, "utf-8"), settings, interactive);
 }
 
+/** As `compileFile`, for the cases that expect a result rather than a displaced compile. */
+async function compileFileOk(file: string, settings: MLSsettings, interactive = false) {
+    const result = await compileFile(file, settings, interactive);
+    expect(result).not.toBeNull();
+    return result as NonNullable<Awaited<ReturnType<typeof compileFile>>>;
+}
+
 describe("compileTsslToInt", () => {
     // An empty outputDirectory means "beside the source". It has to be resolved against the source's
     // own directory: a bare relative name would land wherever the editor happened to start the server.
     it("writes the bytecode beside the source when no output directory is set", async () => {
         const file = writeSource();
-        const result = await compileFile(file, settingsWith({}));
+        const result = await compileFileOk(file, settingsWith({}));
 
         expect(result.intPath).toBe(path.join(path.dirname(file), "script.int"));
         expect(fs.statSync(result.intPath).size).toBeGreaterThan(0);
@@ -85,7 +96,7 @@ describe("compileTsslToInt", () => {
         const outDir = path.join(tmpDir, "compiled");
         fs.mkdirSync(outDir, { recursive: true });
 
-        const result = await compileFile(file, settingsWith({ outputDirectory: outDir }));
+        const result = await compileFileOk(file, settingsWith({ outputDirectory: outDir }));
 
         expect(result.intPath).toBe(path.join(outDir, "script.int"));
         expect(fs.existsSync(result.intPath)).toBe(true);
@@ -103,14 +114,14 @@ describe("compileTsslToInt", () => {
     // ...but an explicit compile is the user asking for the file, so it is written whatever that says.
     it("still writes it when the user asked for the compile", async () => {
         const file = writeSource();
-        const result = await compileFile(file, settingsWith({ compileOnValidate: false }), true);
+        const result = await compileFileOk(file, settingsWith({ compileOnValidate: false }), true);
 
         expect(fs.existsSync(result.intPath)).toBe(true);
     });
 
     it("writes no SSL by default - the bytecode is the product", async () => {
         const file = writeSource();
-        const result = await compileFile(file, settingsWith({}));
+        const result = await compileFileOk(file, settingsWith({}));
 
         expect(result.sslPath).toBeUndefined();
         expect(fs.existsSync(path.join(path.dirname(file), "script.ssl"))).toBe(false);
@@ -118,7 +129,7 @@ describe("compileTsslToInt", () => {
 
     it("writes the readable SSL beside the source when the setting asks for it", async () => {
         const file = writeSource();
-        const result = await compileFile(file, settingsWith({ emitSsl: true }));
+        const result = await compileFileOk(file, settingsWith({ emitSsl: true }));
 
         expect(result.sslPath).toBe(path.join(path.dirname(file), "script.ssl"));
         expect(fs.readFileSync(result.sslPath!, "utf-8")).toContain("procedure start");
@@ -131,7 +142,7 @@ describe("compileTsslToInt", () => {
         const outDir = path.join(tmpDir, "compiled");
         fs.mkdirSync(outDir, { recursive: true });
 
-        const result = await compileFile(file, settingsWith({ outputDirectory: outDir, emitSsl: true }));
+        const result = await compileFileOk(file, settingsWith({ outputDirectory: outDir, emitSsl: true }));
 
         expect(result.intPath).toBe(path.join(outDir, "script.int"));
         expect(result.sslPath).toBe(path.join(path.dirname(file), "script.ssl"));

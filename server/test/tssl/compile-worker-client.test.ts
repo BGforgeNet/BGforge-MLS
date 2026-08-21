@@ -77,7 +77,52 @@ describe("TSSL compile worker client", () => {
         const pending = compileOnWorker({ ...REQUEST });
         current().emit("message", { id: current().posted[0]!.id });
 
-        await expect(pending).resolves.toBeUndefined();
+        await expect(pending).resolves.toBe(true);
+    });
+
+    // A newer compile of the same document displaces this one. That is not a failure - rejecting would
+    // put an error on a document whose newer compile is about to report for itself.
+    it("resolves false when the caller's signal aborts, without rejecting", async () => {
+        const controller = new AbortController();
+        const pending = compileOnWorker({ ...REQUEST }, controller.signal);
+        controller.abort();
+
+        await expect(pending).resolves.toBe(false);
+    });
+
+    it("resolves false immediately when handed an already-aborted signal", async () => {
+        const controller = new AbortController();
+        controller.abort();
+
+        await expect(compileOnWorker({ ...REQUEST }, controller.signal)).resolves.toBe(false);
+    });
+
+    // A worker that DIES rejects through its exit handler; one that simply never answers has no event
+    // to hang the rejection on, so the compile would wait forever without this.
+    it("rejects when the worker never answers", async () => {
+        vi.useFakeTimers();
+        try {
+            const pending = compileOnWorker({ ...REQUEST });
+            const settled = expect(pending).rejects.toThrow(/did not answer/);
+            await vi.advanceTimersByTimeAsync(60_000);
+            await settled;
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    // The late answer arrives after nobody is waiting; it must not throw or resurrect the request.
+    it("ignores an answer that arrives after the request timed out", async () => {
+        vi.useFakeTimers();
+        try {
+            const pending = compileOnWorker({ ...REQUEST });
+            const settled = expect(pending).rejects.toThrow(/did not answer/);
+            await vi.advanceTimersByTimeAsync(60_000);
+            await settled;
+            expect(() => current().emit("message", { id: current().posted[0]!.id })).not.toThrow();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     // A structured clone drops class identity, so the location the caller reports from has to be
@@ -131,7 +176,7 @@ describe("TSSL compile worker client", () => {
         const retry = compileOnWorker({ ...REQUEST });
         current().emit("message", { id: current().posted[0]!.id });
 
-        await expect(retry).resolves.toBeUndefined();
+        await expect(retry).resolves.toBe(true);
         expect(FakeWorker.instances).toHaveLength(2);
     });
 
