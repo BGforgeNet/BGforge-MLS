@@ -70,11 +70,14 @@ const { TranspileError } = await vi.hoisted(async () => await import("../../tran
 vi.mock("../../transpilers/src/index", () => ({
     // The handler takes the map-carrying entry points, so those are what the mocks stand in for. TD has
     // only one: its transpile already returns a result object, and the map rides along on it.
-    tsslWithSourceMap: (...args: unknown[]) => mockTssl(...args),
     tbafWithSourceMap: (...args: unknown[]) => mockTbaf(...args),
     td: (...args: unknown[]) => mockTd(...args),
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
     TranspileError,
+}));
+// TSSL comes from its own package: it is a compiler now, not one of the transpilers above.
+vi.mock("../../compilers/tssl/src/index", () => ({
+    transpileWithSourceMap: (...args: unknown[]) => mockTssl(...args),
 }));
 
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
