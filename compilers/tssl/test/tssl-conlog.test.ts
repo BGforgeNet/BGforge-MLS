@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { conlog, setConlog } from "../tssl/src/types";
+import { conlog, setConlog } from "../src/types";
 
 describe("tssl conlog injection", () => {
     afterEach(() => {

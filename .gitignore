@@ -29,6 +29,7 @@ format/out
 binary/out
 image/out
 compilers/ssl/out
+compilers/tssl/out
 
 plugins/*/out
 

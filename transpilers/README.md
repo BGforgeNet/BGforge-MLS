@@ -2,7 +2,6 @@
 
 TypeScript-to-scripting-language transpilers for classic RPG mod development:
 
-- **TSSL** -> Fallout SSL
 - **TBAF** -> Infinity Engine BAF (AI scripts)
 - **TD** -> Infinity Engine D (dialog files)
 
@@ -24,7 +23,7 @@ Requires Node 20 or newer.
 import { transpile } from "@bgforge/transpile";
 
 const result = await transpile("mydialog.td", sourceText);
-console.log(result.kind); // "td" | "tbaf" | "tssl"
+console.log(result.kind); // "td" | "tbaf"
 console.log(result.output); // generated script
 if (result.kind === "td") {
   console.log(result.warnings); // TD only
@@ -34,24 +33,23 @@ if (result.kind === "td") {
 ### Call a transpiler directly
 
 ```ts
-import { tssl, tbaf, td } from "@bgforge/transpile";
+import { tbaf, td } from "@bgforge/transpile";
 
-const ssl = await tssl("script.tssl", sourceText);
 const baf = await tbaf("script.tbaf", sourceText);
 const dResult = await td("dialog.td", sourceText);
 ```
 
-The named exports are direct re-exports of each transpiler's underlying function - no wrapping. Pass any extra arguments the underlying function accepts (e.g. TSSL's optional `batchState` for cross-file inline-function caching).
+The named exports are direct re-exports of each transpiler's underlying function - no wrapping.
 
 ### Map generated lines back to the source
 
-`tsslWithSourceMap` and `tbafWithSourceMap` transpile exactly as above and additionally return `sourceMap`: for each 0-based line of the generated file, the absolute path and 0-based line the author wrote it on, or `undefined` for a line the transpiler emitted on its own. `td` already returns a result object, so it carries `sourceMap` without a separate entry point.
+`tbafWithSourceMap` transpiles exactly as above and additionally returns `sourceMap`: for each 0-based line of the generated file, the absolute path and 0-based line the author wrote it on, or `undefined` for a line the transpiler emitted on its own. `td` already returns a result object, so it carries `sourceMap` without a separate entry point.
 
 ```ts
-import { tsslWithSourceMap } from "@bgforge/transpile";
+import { tbafWithSourceMap } from "@bgforge/transpile";
 
-const { output, sourceMap } = await tsslWithSourceMap("script.tssl", sourceText);
-const origin = sourceMap[12]; // { file: "/mod/script.tssl", line: 4 } | undefined
+const { output, sourceMap } = await tbafWithSourceMap("script.tbaf", sourceText);
+const origin = sourceMap[12]; // { file: "/mod/script.tbaf", line: 4 } | undefined
 ```
 
 This is what lets a caller move an error reported against the generated file onto the line the author can act on - the SSL and WeiDU compilers only ever see the generated output.
@@ -79,11 +77,11 @@ pnpm add -g @bgforge/transpile
 ```
 
 ```
-fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+fgtp <file.td|file.tbaf|dir> [--save] [--check] [--save-and-check] [-r] [-q]
 ```
 
 - `--save` - write the transpiled output alongside the source
-  (`.td` -> `.d`, `.tbaf` -> `.baf`, `.tssl` -> `.ssl`)
+  (`.td` -> `.d`, `.tbaf` -> `.baf`)
 - `--check` - exit 1 if any output is not up to date
 - `--save-and-check` - save and verify in one pass
 - `-r` - recurse into directories
@@ -91,32 +89,14 @@ fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r
 
 Without `--save`, the transpiled output is printed to stdout.
 
-### Compiling `.tssl` straight to bytecode
+### TSSL is not here
 
-`--int` compiles a `.tssl` to `.int` with no generated SSL in between - the TypeScript AST becomes the
-compiler's IR directly, so nothing writes or re-parses an intermediate file.
-
-```
-fgtp myscript.tssl --int                      # writes myscript.int, and nothing else
-fgtp src/ -r --int --opt 2 --short-circuit    # what a mod build wants
-fgtp src/ -r --int --save                     # bytecode, keeping the readable .ssl beside it
-```
-
-- `--opt <0|1|2>` - optimisation level (default 1, matching the `ssl` compiler's own default)
-- `--short-circuit` - skip the right operand of `and`/`or` once the left decides the result
-
-Adding `--save` keeps the `.ssl` as well, and that pairing is checked rather than trusted: the repo's
-external gate compiles the emitted SSL and byte-compares it against what `--int` writes, at every
-optimisation level and with short-circuiting both ways. The two cannot drift apart unnoticed.
+`.tssl` is compiled by [`@bgforge/tssl`](../compilers/tssl/), which installs its own `tssl` binary. It is
+a compiler rather than a transpiler: its default output is Fallout INT bytecode with no intermediate SSL,
+and emitting the readable `.ssl` is one option of it (`tssl --transpile`). See
+[CHANGELOG](./CHANGELOG.md) 0.3.0 for the migration.
 
 ## Per-language transpiler guides
 
-- [TSSL](./tssl/docs/) - TypeScript to Fallout SSL
 - [TBAF](./tbaf/docs/) - TypeScript to Infinity Engine BAF
 - [TD](./td/docs/) - TypeScript to Infinity Engine D
-
-## Build note
-
-TSSL imports `server/out/fallout-ssl-engine-procedures.json` - a tracked output of the server data
-pipeline, regenerated from YAML by `scripts/generate-data.sh` (see `docs/data-pipeline.md`). A fresh
-clone builds without running the generator; regenerate only after editing the YAML sources.

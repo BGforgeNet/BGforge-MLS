@@ -1,9 +1,0 @@
-{
-    "name": "@bgforge/tssl",
-    "version": "0.1.0",
-    "private": true,
-    "description": "TSSL transpiler (TypeScript to Fallout SSL)",
-    "devDependencies": {
-        "ts-morph": "catalog:"
-    }
-}

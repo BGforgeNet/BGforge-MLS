@@ -19,7 +19,12 @@ import { getDocumentSettings } from "./settings-service";
 // handler owns the file write and the user-facing message, keeping the library a
 // pure source->string transformation. Imported by relative path so esbuild
 // bundles it into the server rather than treating it as an external npm dependency.
-import { tbafWithSourceMap, td, tsslWithSourceMap, outputPathFor, TranspileError } from "../../transpilers/src/index";
+import { tbafWithSourceMap, td, outputPathFor, TranspileError } from "../../transpilers/src/index";
+// TSSL is a compiler now, in its own package, so it comes from there rather than from the transpile
+// barrel. This path still goes through the generated SSL; switching it to the direct IR route is a
+// separate change, because the bytes have to land where `fallout-ssl/compiler.ts` puts them and that
+// module owns the output directory, the compileOptions parsing, the diagnostics and the cleanup.
+import { transpileWithSourceMap as tsslWithSourceMap } from "../../compilers/tssl/src/index";
 import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";

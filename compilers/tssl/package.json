@@ -1,34 +1,33 @@
 {
-    "name": "@bgforge/transpile",
-    "version": "0.3.0",
-    "description": "Library for transpiling TSSL, TBAF, and TD source files to Fallout SSL, WeiDU BAF, and WeiDU D",
+    "name": "@bgforge/tssl",
+    "version": "0.1.0",
+    "description": "TSSL compiler: TypeScript to Fallout INT bytecode, with the tssl CLI and an option to emit SSL",
     "keywords": [
+        "compiler",
         "fallout",
-        "infinity-engine",
+        "int",
         "modding",
-        "transpiler",
-        "weidu"
+        "ssl",
+        "typescript"
     ],
     "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
     "bugs": {
         "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
     },
-    "license": "SEE LICENSE IN LICENSE.txt",
+    "license": "SEE LICENSE IN ../../LICENSE.txt",
     "author": "BGforge",
     "repository": {
         "type": "git",
         "url": "https://github.com/BGforgeNet/BGforge-MLS",
-        "directory": "transpilers"
+        "directory": "compilers/tssl"
     },
     "bin": {
-        "fgtp": "out/cli.js"
+        "tssl": "out/cli.js"
     },
     "files": [
         "out/",
         "!out/*.map",
-        "README.md",
-        "CHANGELOG.md",
-        "LICENSE.txt"
+        "README.md"
     ],
     "type": "module",
     "main": "out/index.js",
@@ -43,16 +42,17 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsdown && chmod +x out/cli.js"
+        "build": "tsdown && chmod +x out/cli.js",
+        "test": "vitest run --config vitest.config.ts"
     },
     "dependencies": {
         "cac": "catalog:",
         "diff": "catalog:",
-        "esbuild-wasm": "catalog:"
+        "ts-morph": "catalog:"
     },
     "devDependencies": {
-        "fast-check": "catalog:",
-        "tsdown": "catalog:"
+        "tsdown": "catalog:",
+        "vitest": "catalog:"
     },
     "engines": {
         "node": ">=20"

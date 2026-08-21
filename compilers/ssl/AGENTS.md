@@ -78,7 +78,7 @@ manifest header, and they include the `-O2 -s` mods actually ship.
 
 ## The second front end
 
-`transpilers/tssl/src/int/lower.ts` builds the IR from a TypeScript AST instead of from the grammar, so a
+`compilers/tssl/src/int/lower.ts` builds the IR from a TypeScript AST instead of from the grammar, so a
 `.tssl` reaches bytecode with no SSL text in between. **It compiles the whole FO2tweaks repo
 byte-identically to the text route** - 27 scripts at `-O0`, `-O1`, `-O2` and the `-O2 -s` mods ship - and
 still refuses, positioned at the line, anything it does not lower. `src/desugar.ts` holds the expansions

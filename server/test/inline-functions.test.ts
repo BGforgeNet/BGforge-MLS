@@ -8,8 +8,8 @@ import {
     extractInlineFunctions,
     generateInlineMacros,
     type InlineFunctionCache,
-} from "../../transpilers/tssl/src/inline-functions";
-import type { InlineFunc } from "../../transpilers/tssl/src/types";
+} from "../../compilers/tssl/src/inline-functions";
+import type { InlineFunc } from "../../compilers/tssl/src/types";
 
 describe("generateInlineMacros", () => {
     it("generates basic inline macro without params", () => {

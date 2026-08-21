@@ -97,8 +97,14 @@ const config: KnipConfig = {
         "plugins/td-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
         },
-        "transpilers/tssl": {
-            entry: ["src/index.ts"],
+        "compilers/tssl": {
+            // The tests are entry points of their own; nothing in src imports them. The CLI needs no
+            // entry - knip reads it from the package's `bin`.
+            entry: ["test/*.test.ts"],
+            // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any workspace;
+            // knip's per-workspace dep tracing doesn't reach across that boundary. Same note as binary
+            // and format, which use the same shared CLI helpers.
+            ignoreDependencies: ["cac", "diff"],
         },
         "transpilers/tbaf": {
             entry: ["src/index.ts"],

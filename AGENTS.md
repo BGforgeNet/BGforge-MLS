@@ -41,7 +41,7 @@ VSCode extension providing IDE features for niche scripting languages used in cl
 - **Fallout SSL** - Scripting language for Fallout 1/2 game scripts
 - **WeiDU formats** - Modding toolchain for Infinity Engine games: `.baf` (scripts), `.d` (dialogs), `.tp2` (mod installers), `.tra` (translations), `.2da` (tables)
 - **SCS SSL/SLB** - Sword Coast Stratagems scripting (Infinity Engine AI mods)
-- **Transpilers** - TypeScript-like languages compiling to the above: TSSL->SSL, TBAF->BAF, TD->D
+- **Transpilers** - TypeScript-like languages compiling to the above: TBAF->BAF, TD->D. TSSL is a compiler: TypeScript straight to Fallout INT bytecode, with SSL as an optional output
 
 **Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
 
@@ -67,6 +67,7 @@ binary-editor/           # @bgforge/binary-editor package: declarative layout la
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
 compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "built-in" compiler
+compilers/tssl/          # @bgforge/tssl package: TypeScript -> INT compiler + the `tssl` CLI. Emits bytecode by default; `--transpile` also writes the readable SSL
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
 editors/                 # Hand-written editor syntax inputs, merged with generated output by build-editors.sh
 syntaxes/                # TextMate grammars (YAML source + JSON compiled)
@@ -75,9 +76,8 @@ language-configurations/ # VSCode language config files (brackets, comments, ind
 snippets/                # Code snippets: fallout-ssl.json, weidu-baf.json, weidu-tp2.json
 scripts/                 # Build, test, data generation scripts
 actions/                 # Reusable composite GitHub Actions published from this repo: binary/ (refresh/check JSON snapshots for any format @bgforge/binary supports), format/ (fgfmt in-place formatting), transpile/ (fgtp source->output regeneration). Each runs the matching CLI over the event's changed files and commits the result back (or verifies it with check: true). _shared/ holds the scripts common to all three
-transpilers/             # Transpiler implementations + user documentation
+transpilers/             # Transpiler implementations + user documentation (TBAF and TD; TSSL is a compiler and lives under compilers/)
   common/                # Shared transpiler utilities (workspace-internal, not published). The name predates the repo-wide "shared" term for this role; renaming would churn ~40 files plus the @bgforge/transpiler-common package name for no functional gain
-  tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
   tbaf/                  # @bgforge/tbaf package: TypeScript to WeiDU BAF
   td/                    # @bgforge/td package: TypeScript to WeiDU D
 docs/                    # User docs, editor setup guides, architecture, changelog
@@ -144,7 +144,7 @@ LSP-based extension with provider-registry pattern. Monorepo with separate `clie
 
 **Providers** (`server/src/*/provider.ts`): fallout-ssl, fallout-worldmap, weidu-baf, weidu-d, weidu-log, weidu-tp2
 
-**Transpilers** (`transpilers/*/src/`): tssl, tbaf, td + shared `transpilers/common/`
+**Transpilers** (`transpilers/*/src/`): tbaf, td + shared `transpilers/common/`. TSSL is a compiler (`compilers/tssl`), not a transpiler: it emits INT bytecode by default and the SSL text on request.
 
 For detailed architecture, see:
 
@@ -197,7 +197,8 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Editor setup            | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)     |
 | TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
 | Transpile library       | `transpilers/README.md`                                                                                                    |
-| Transpiler guides       | `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`)                |
+| Transpiler guides       | `transpilers/{tbaf,td}/docs/` (each has README + writing guide)                                                            |
+| TSSL compiler + CLI     | `compilers/tssl/README.md` and `compilers/tssl/docs/` (CLI ships as `tssl` bin in `@bgforge/tssl`)                         |
 | Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
 | Image library           | `image/README.md`                                                                                                          |

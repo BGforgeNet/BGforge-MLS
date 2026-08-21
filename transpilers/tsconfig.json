@@ -7,5 +7,5 @@
         "noEmit": true,
         "tsBuildInfoFile": "../tmp/transpilers-lib.tsbuildinfo"
     },
-    "include": ["src", "test", "common", "tssl", "tbaf", "td"]
+    "include": ["src", "test", "common", "tbaf", "td"]
 }

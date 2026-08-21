@@ -9,8 +9,8 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { emitProgram } from "../../compilers/ssl/src/compile";
-import { lowerTsslProgram } from "../tssl/src/int/lower";
+import { emitProgram } from "../../ssl/src/compile";
+import { lowerTsslProgram } from "../src/int/lower";
 
 let tmpDir: string;
 let fileSeq = 0;

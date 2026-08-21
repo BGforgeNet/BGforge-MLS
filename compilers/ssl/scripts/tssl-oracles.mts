@@ -32,8 +32,8 @@ import * as path from "node:path";
 import { Language, Parser } from "web-tree-sitter";
 import { compilePreprocessed, type CompileOptions } from "../src/compile.ts";
 import { preprocessTextWithOrigins } from "../src/preprocess.ts";
-import { createBatchState, transpile } from "../../../transpilers/tssl/src/index.ts";
-import { setConlog } from "../../../transpilers/tssl/src/types.ts";
+import { createBatchState, transpile } from "../../tssl/src/index.ts";
+import { setConlog } from "../../tssl/src/types.ts";
 
 // Anchored to this file rather than to cwd; the shared `repo-root` helper reads `__dirname`, which an ES
 // module does not have - the sibling `ssl-equiv.mts` computes its own for the same reason.

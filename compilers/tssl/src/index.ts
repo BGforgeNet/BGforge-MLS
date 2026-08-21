@@ -14,7 +14,7 @@
 
 import * as path from "path";
 import { Project } from "ts-morph";
-import { EXT_TSSL } from "../../common/extensions";
+import { EXT_TSSL } from "../../../transpilers/common/extensions";
 import { conlog, type TsslContext } from "./types";
 import { extractInlineFunctions, extractJsDocs, type InlineFunctionCache } from "./inline-functions";
 import { exportSSL } from "./emit";
@@ -22,8 +22,8 @@ import { buildProgramModel, shadowEntryPath, TSSL_COMPILER_OPTIONS } from "./pro
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
 import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
-import type { SourcePosition } from "../../common/line-map";
-import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
+import type { SourcePosition } from "../../../transpilers/common/line-map";
+import { createTranspiler, type TranspilerEvent } from "../../../transpilers/common/transpiler-pipeline";
 
 /**
  * Shared state for batch transpilation (CLI directory mode).

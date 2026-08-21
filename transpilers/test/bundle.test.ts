@@ -57,7 +57,7 @@ describe("@bgforge/transpile bundle smoke", () => {
     it("loads and exposes the public API", () => {
         const script = `
             import * as m from ${JSON.stringify(BUNDLE)};
-            const expected = ["tssl", "tbaf", "td", "transpile", "UnknownTranspileExtensionError"];
+            const expected = ["tbaf", "td", "transpile", "UnknownTranspileExtensionError"];
             const missing = expected.filter((k) => !(k in m));
             if (missing.length) throw new Error("missing exports: " + missing.join(","));
             console.log("OK");
@@ -68,15 +68,16 @@ describe("@bgforge/transpile bundle smoke", () => {
         expect(stdout.trim()).toBe("OK");
     });
 
-    it("round-trips a TSSL fixture through the bundle", () => {
+    it("round-trips a TBAF fixture through the bundle", () => {
         const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bundle-smoke-"));
-        const fixturePath = path.join(tmp, "foo.tssl");
-        fs.writeFileSync(fixturePath, "function start() {}\n", "utf-8");
+        const fixturePath = path.join(tmp, "foo.tbaf");
+        const source = "if (See(Player1)) {\n    Attack(Player1);\n}\n";
+        fs.writeFileSync(fixturePath, source, "utf-8");
         try {
             const script = `
                 import { transpile } from ${JSON.stringify(BUNDLE)};
-                const r = await transpile(${JSON.stringify(fixturePath)}, "function start() {}\\n");
-                if (r.kind !== "tssl") throw new Error("wrong kind: " + r.kind);
+                const r = await transpile(${JSON.stringify(fixturePath)}, ${JSON.stringify(source)});
+                if (r.kind !== "tbaf") throw new Error("wrong kind: " + r.kind);
                 if (typeof r.output !== "string") throw new Error("bad output type");
                 console.log("OK");
             `;
@@ -117,13 +118,13 @@ describe("@bgforge/transpile bundle smoke", () => {
             fs.writeFileSync(
                 fixture,
                 [
-                    `import { tssl, tbaf, td, transpile, createBatchState, UnknownTranspileExtensionError } from ${JSON.stringify(BUNDLE)};`,
-                    `import type { TranspileResult, TranspileBatchState } from ${JSON.stringify(BUNDLE)};`,
+                    `import { tbaf, td, transpile, UnknownTranspileExtensionError } from ${JSON.stringify(BUNDLE)};`,
+                    `import type { TranspileResult, SourcePosition } from ${JSON.stringify(BUNDLE)};`,
                     `// Reference each value to keep tsc honest about presence.`,
-                    `void tssl; void tbaf; void td; void transpile; void createBatchState; void UnknownTranspileExtensionError;`,
+                    `void tbaf; void td; void transpile; void UnknownTranspileExtensionError;`,
                     `// Reference each type via a no-op signature.`,
-                    `type _R = TranspileResult; type _B = TranspileBatchState;`,
-                    `const _r: _R | undefined = undefined; const _b: _B | undefined = undefined; void _r; void _b;`,
+                    `type _R = TranspileResult; type _S = SourcePosition;`,
+                    `const _r: _R | undefined = undefined; const _s: _S | undefined = undefined; void _r; void _s;`,
                 ].join("\n"),
                 "utf-8",
             );

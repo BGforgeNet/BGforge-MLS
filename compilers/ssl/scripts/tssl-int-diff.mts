@@ -22,8 +22,8 @@ import { buildProgram, compilePreprocessed, emitProgram, type CompileOptions } f
 import { optimize } from "../src/optimize.ts";
 import { preprocessTextWithOrigins } from "../src/preprocess.ts";
 import { printProgram } from "../src/int/print.ts";
-import { createBatchState, transpile } from "../../../transpilers/tssl/src/index.ts";
-import { setConlog } from "../../../transpilers/tssl/src/types.ts";
+import { createBatchState, transpile } from "../../tssl/src/index.ts";
+import { setConlog } from "../../tssl/src/types.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
@@ -65,7 +65,7 @@ async function run(target: string, sets: { label: string; options: CompileOption
     // rather than failing to load - which is what lets the harness be the first thing written.
     let direct: ((file: string, text: string) => unknown) | null = null;
     try {
-        const mod = (await import("../../../transpilers/tssl/src/int/lower.ts")) as {
+        const mod = (await import("../../tssl/src/int/lower.ts")) as {
             lowerTsslProgram?: (file: string, text: string) => unknown;
         };
         direct = mod.lowerTsslProgram ?? null;

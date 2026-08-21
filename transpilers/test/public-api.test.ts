@@ -14,15 +14,12 @@ import * as transpile from "../src/index";
 
 const REQUIRED_VALUE_EXPORTS = [
     // Per-language transpilers
-    "tssl",
     "tbaf",
     "td",
     // Dispatcher
     "transpile",
     // Output-path mapping (compile consumers that own file I/O)
     "outputPathFor",
-    // Batch-state helper (TSSL multi-file passes)
-    "createBatchState",
     // Error type
     "UnknownTranspileExtensionError",
 ] as const;

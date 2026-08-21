@@ -10,6 +10,7 @@ set -eu -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLI="$(node -e "const path=require('node:path'); const pkgPath=process.argv[1]; const pkg=require(pkgPath); process.stdout.write(path.resolve(path.dirname(pkgPath), pkg.bin.fgtp));" "$ROOT_DIR/transpilers/package.json")"
+TSSL_CLI="$(node -e "const path=require('node:path'); const pkgPath=process.argv[1]; const pkg=require(pkgPath); process.stdout.write(path.resolve(path.dirname(pkgPath), pkg.bin.tssl));" "$ROOT_DIR/compilers/tssl/package.json")"
 
 # shellcheck source=scripts/timing-lib.sh
 source "$SCRIPT_DIR/timing-lib.sh"
@@ -21,10 +22,14 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
-# Build CLI if missing
+# Build CLIs if missing
 if [[ ! -f "$CLI" ]]; then
     step "Building transpile CLI"
     (cd "$ROOT_DIR" && pnpm build:transpile)
+fi
+if [[ ! -f "$TSSL_CLI" ]]; then
+    step "Building tssl CLI"
+    (cd "$ROOT_DIR" && pnpm build:tssl)
 fi
 
 # Transpile all files in a repo, then check git status for changes.
@@ -54,10 +59,20 @@ test_repo() {
         (cd "$dir" && pnpm install --ignore-workspace --ignore-scripts)
     fi
 
-    # Transpile all files in one process using directory mode
-    if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
-        echo "FAIL: $repo (transpilation errors)"
-        return 1
+    # One process per language family, and only where that family has sources. `.tssl` belongs to the
+    # tssl compiler, which emits bytecode by default - `--transpile` is what asks it for the .ssl this
+    # gate compares. `fgtp` covers the rest.
+    if [[ -n "$(git -C "$dir" ls-files '*.td' '*.tbaf')" ]]; then
+        if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
+            echo "FAIL: $repo (transpilation errors)"
+            return 1
+        fi
+    fi
+    if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
+        if ! node --no-warnings "$TSSL_CLI" "$dir" -r --transpile 2>&1; then
+            echo "FAIL: $repo (tssl compilation errors)"
+            return 1
+        fi
     fi
 
     # .baf and .d outputs must match the committed files byte for byte - their pipelines promise it.

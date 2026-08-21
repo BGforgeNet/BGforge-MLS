@@ -20,17 +20,9 @@
  */
 
 import { Project, SyntaxKind, type FunctionDeclaration, type Node } from "ts-morph";
-import type {
-    BinaryOp,
-    Declaration,
-    Expr,
-    ProcedureDecl,
-    Program,
-    Stmt,
-    VariableDecl,
-} from "../../../../compilers/ssl/src/int/ir";
-import { engineFunction } from "../../../../compilers/ssl/src/int/engine-functions";
-import { Expansions, type Desugarer, type Origin } from "../../../../compilers/ssl/src/desugar";
+import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, VariableDecl } from "../../../ssl/src/int/ir";
+import { engineFunction } from "../../../ssl/src/int/engine-functions";
+import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
 import {
     buildProgramModel,
     refuseAt,
