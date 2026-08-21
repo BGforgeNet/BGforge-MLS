@@ -19,6 +19,14 @@ export interface SSLsettings {
     compiler: "wasm" | "built-in";
 }
 
+export interface TSSLsettings {
+    /**
+     * Also write the readable `.ssl` beside the bytecode. Off by default: the compiler produces the
+     * bytecode directly and nothing downstream needs the text.
+     */
+    emitSsl: boolean;
+}
+
 export interface WeiDUsettings {
     path: string;
     gamePath: string;
@@ -28,6 +36,7 @@ type ValidationMode = "manual" | "save" | "type" | "saveAndType";
 
 export interface MLSsettings {
     falloutSSL: SSLsettings;
+    tssl: TSSLsettings;
     weidu: WeiDUsettings;
     validate: ValidationMode;
     // Tree-sitter parse-error diagnostics. Gated independently of `validate`
@@ -50,6 +59,7 @@ export const defaultSettings: MLSsettings = {
         compileOnValidate: true,
         compiler: "wasm",
     },
+    tssl: { emitSsl: false },
     weidu: { path: "weidu", gamePath: "" },
     validate: "saveAndType",
     diagnostics: true,
@@ -64,6 +74,7 @@ export function normalizeSettings(value: unknown): MLSsettings {
     // to defaults rather than throwing.
     const raw = (value ?? {}) as Partial<MLSsettings> & {
         falloutSSL?: Partial<SSLsettings>;
+        tssl?: Partial<TSSLsettings>;
         weidu?: Partial<WeiDUsettings>;
     };
 
@@ -71,6 +82,10 @@ export function normalizeSettings(value: unknown): MLSsettings {
         falloutSSL: {
             ...defaultSettings.falloutSSL,
             ...raw.falloutSSL,
+        },
+        tssl: {
+            ...defaultSettings.tssl,
+            ...raw.tssl,
         },
         weidu: {
             ...defaultSettings.weidu,

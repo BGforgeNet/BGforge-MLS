@@ -97,15 +97,29 @@
 
 ### Transpilers
 
-- A TSSL, TBAF or TD file the transpiler cannot handle is reported in the Problems panel, on the file being
+- A TSSL, TBAF or TD file the toolchain cannot handle is reported in the Problems panel, on the file being
   edited rather than on the generated output. It is reported on save as well as on an explicit compile:
   previously the failure appeared only as a popup and only when the compile had been asked for, so saving a
   file with an unsupported construct in it reported nothing at all.
-- An error from the compiler that reads the generated `.ssl`, `.baf` or `.d` is now shown on the line of
-  the `.tssl`, `.tbaf` or `.td` it was written on - including when that line came from an imported file.
-  These errors used to land in the generated file, which the author never edits and often does not have
-  open, at a line number matching nothing in their source. A line the transpiler produced on its own, with
-  no source line behind it, keeps its error on the generated file rather than being given a misleading one.
+- An error from the compiler that reads the generated `.baf` or `.d` is now shown on the line of the
+  `.tbaf` or `.td` it was written on - including when that line came from an imported file. These errors
+  used to land in the generated file, which the author never edits and often does not have open, at a line
+  number matching nothing in their source. A line the transpiler produced on its own, with no source line
+  behind it, keeps its error on the generated file rather than being given a misleading one.
+
+### TSSL
+
+- TSSL is a compiler now, not a transpiler: compiling a `.tssl` writes the Fallout `.int` bytecode
+  directly, with no `.ssl` produced or read on the way. It goes where
+  `bgforge.falloutSSL.outputDirectory` says, honours `bgforge.falloutSSL.compileOnValidate`, and takes
+  the optimisation switches (`-O`, `-s`) from `bgforge.falloutSSL.compileOptions`. Nothing needs to be
+  installed for it - it is the extension's own compiler.
+- The readable SSL is still available, behind the new `bgforge.tssl.emitSsl` setting: turn it on and the
+  `.ssl` is written beside the source as before, alongside the bytecode. It is checked against a real
+  corpus, at every optimisation level, to compile to the same bytes - so the file you ship and the
+  bytecode the editor wrote cannot disagree.
+- A construct the compiler cannot handle is reported at the line in your TypeScript that it sits on. It
+  used to be found by the SSL compiler reading the generated file, and mapped back.
 - TSSL reads your TypeScript directly instead of bundling it through a JavaScript bundler first, which
   fixes what the bundler silently changed in the generated SSL:
   - Float literals survive as written. `x / 100.0` used to reach the output as `x / 100` - integer

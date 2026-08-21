@@ -59,7 +59,7 @@ vi.mock("../src/weidu-compile", () => ({
 // The transpilers are consumed through the public @bgforge/transpile barrel:
 // the no-write transpile functions plus outputPathFor. compile.ts owns the file
 // write and the user-facing message.
-const mockTssl = vi.fn();
+const mockTsslCompile = vi.fn();
 const mockTbaf = vi.fn();
 const mockTd = vi.fn();
 const mockOutputPathFor = vi.fn();
@@ -75,9 +75,10 @@ vi.mock("../../transpilers/src/index", () => ({
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
     TranspileError,
 }));
-// TSSL comes from its own package: it is a compiler now, not one of the transpilers above.
-vi.mock("../../compilers/tssl/src/index", () => ({
-    transpileWithSourceMap: (...args: unknown[]) => mockTssl(...args),
+// TSSL is a compiler, not one of the transpilers above: it produces the bytecode itself, so the
+// dispatcher has no generated file to write and no second compiler to chain.
+vi.mock("../src/tssl/compile-int", () => ({
+    compileTsslToInt: (...args: unknown[]) => mockTsslCompile(...args),
 }));
 
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
@@ -277,26 +278,40 @@ describe("compile dispatcher", () => {
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TBAF: TBAF syntax error"));
         });
 
-        it("routes .tssl files to the TSSL transpiler and chains SSL compilation", async () => {
-            mockTssl.mockResolvedValue({ output: "ssl output", sourceMap: [] });
-            mockOutputPathFor.mockReturnValue("/output/test.ssl");
-            // The registry handles the chained SSL compilation
-            mockRegistryCompile.mockResolvedValue(true);
+        // The point of the direct route: nothing here writes SSL text or hands anything to the SSL
+        // compiler, so a regression that quietly restored the old chain fails on the two negatives
+        // rather than on the message.
+        it("compiles .tssl straight to bytecode, with no SSL step in between", async () => {
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int" });
 
             await compile("file:///test.tssl", "typescript", false, "tssl content");
 
-            expect(mockTssl).toHaveBeenCalledWith("/test.tssl", "tssl content");
-            expect(mockWriteFile).toHaveBeenCalledWith("/output/test.ssl", "ssl output", "utf-8");
-            expect(mockRegistryCompile).toHaveBeenCalledWith(
-                LANG_FALLOUT_SSL,
-                "file:///output/test.ssl",
-                "ssl output",
+            expect(mockTsslCompile).toHaveBeenCalledWith(
+                "file:///test.tssl",
+                "/test.tssl",
+                "tssl content",
+                expect.anything(),
                 false,
+            );
+            expect(mockWriteFile).not.toHaveBeenCalled();
+            expect(mockRegistryCompile).not.toHaveBeenCalledWith(
+                LANG_FALLOUT_SSL,
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
             );
         });
 
-        it("shows error message on TSSL transpile failure", async () => {
-            mockTssl.mockRejectedValue(new Error("TSSL error"));
+        it("names the .ssl too when the setting asked for one", async () => {
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int", sslPath: "/test.ssl" });
+
+            await compile("file:///test.tssl", "typescript", true, "tssl content");
+
+            expect(mockShowInfo).toHaveBeenCalledWith("Compiled test.int and test.ssl");
+        });
+
+        it("shows error message on TSSL compile failure", async () => {
+            mockTsslCompile.mockRejectedValue(new Error("TSSL error"));
 
             await compile("file:///test.tssl", "typescript", true, "bad tssl");
 
@@ -325,28 +340,6 @@ describe("compile dispatcher", () => {
             const calls = mockSendDiagnostics.mock.calls.filter((call) => call[0].uri === uri);
             return calls.at(-1)?.[0].diagnostics ?? [];
         }
-
-        it("moves a chained SSL error onto the TSSL line it came from", async () => {
-            mockTssl.mockResolvedValue({
-                output: "ssl output",
-                sourceMap: [undefined, { file: "/test.tssl", line: 4 }],
-            });
-            mockOutputPathFor.mockReturnValue("/output/test.ssl");
-            mockRegistryCompile.mockImplementation((_lang: string, sslUri: string) => {
-                setDiagnostics(sslUri, "compiler", [errorOnGeneratedLine(1, "unknown identifier 'nope'")]);
-                return true;
-            });
-
-            await compile("file:///test.tssl", "typescript", false, "tssl content");
-
-            expect(showingOn("file:///test.tssl")).toEqual([
-                expect.objectContaining({
-                    message: "unknown identifier 'nope'",
-                    range: { start: { line: 4, character: 0 }, end: { line: 4, character: 0 } },
-                }),
-            ]);
-            expect(showingOn("file:///output/test.ssl")).toEqual([]);
-        });
 
         it("moves a chained BAF error onto the TBAF line it came from", async () => {
             mockTbaf.mockResolvedValue({
@@ -395,7 +388,7 @@ describe("compile dispatcher", () => {
     // the Problems panel instead, on the source the author is editing rather than the generated output.
     describe("transpile failures reach the editor", () => {
         it("reports a TSSL failure on the save path, which showed nothing before", async () => {
-            mockTssl.mockRejectedValue(new TranspileError("try/catch is not supported in SSL", { line: 12 }));
+            mockTsslCompile.mockRejectedValue(new TranspileError("try/catch is not supported in SSL", { line: 12 }));
 
             await compile("file:///test.tssl", "typescript", false, "bad tssl");
 
@@ -436,7 +429,7 @@ describe("compile dispatcher", () => {
         });
 
         it("anchors an error carrying no location at line 1 rather than guessing one", async () => {
-            mockTssl.mockRejectedValue(new Error("no location on this one"));
+            mockTsslCompile.mockRejectedValue(new Error("no location on this one"));
 
             await compile("file:///test.tssl", "typescript", false, "bad tssl");
 
@@ -458,7 +451,7 @@ describe("compile dispatcher", () => {
         });
 
         it("keeps the line when the failure is in the file being edited", async () => {
-            mockTssl.mockRejectedValue(new TranspileError("bad construct", { file: "/test.tssl", line: 12 }));
+            mockTsslCompile.mockRejectedValue(new TranspileError("bad construct", { file: "/test.tssl", line: 12 }));
 
             await compile("file:///test.tssl", "typescript", false, "bad tssl");
 
@@ -482,7 +475,7 @@ describe("compile dispatcher", () => {
         // A transpiler bundles the file's imports, so a failure can belong to a file the author never
         // opened. Its line means nothing against the one on screen, so the diagnostic says where instead.
         it("names the other file rather than putting its line on the one being edited", async () => {
-            mockTssl.mockRejectedValue(new TranspileError("bad construct", { file: "/lib/folib.ts", line: 42 }));
+            mockTsslCompile.mockRejectedValue(new TranspileError("bad construct", { file: "/lib/folib.ts", line: 42 }));
 
             await compile("file:///test.tssl", "typescript", false, "bad tssl");
 
@@ -504,9 +497,7 @@ describe("compile dispatcher", () => {
         });
 
         it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {
-            mockTssl.mockResolvedValue({ output: "ssl output", sourceMap: [] });
-            mockOutputPathFor.mockReturnValue("/output/test.ssl");
-            mockRegistryCompile.mockResolvedValue(true);
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int" });
 
             await compile("file:///test.tssl", "typescript", false, "tssl content");
 

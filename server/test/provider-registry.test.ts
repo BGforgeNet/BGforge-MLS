@@ -88,6 +88,9 @@ describe("ProviderRegistry", () => {
                 compileOnValidate: true,
                 compiler: "wasm" as const,
             },
+            tssl: {
+                emitSsl: false,
+            },
             weidu: {
                 path: "weidu",
                 gamePath: "",

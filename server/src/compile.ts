@@ -10,7 +10,7 @@ import { clearCompilerDiagnostics } from "./diagnostic-store";
 import { conlog } from "./logger";
 import { isDirectory, tmpDir } from "./path-utils";
 import { pathToUri, uriToPath } from "./uri-utils";
-import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL } from "./core/languages";
+import { EXT_TBAF, EXT_TD, EXT_TSSL } from "./core/languages";
 import { showError, showInfo, showWarning } from "./user-messages";
 import { registry } from "./provider-registry";
 import { getDocumentSettings } from "./settings-service";
@@ -20,11 +20,9 @@ import { getDocumentSettings } from "./settings-service";
 // pure source->string transformation. Imported by relative path so esbuild
 // bundles it into the server rather than treating it as an external npm dependency.
 import { tbafWithSourceMap, td, outputPathFor, TranspileError } from "../../transpilers/src/index";
-// TSSL is a compiler now, in its own package, so it comes from there rather than from the transpile
-// barrel. This path still goes through the generated SSL; switching it to the direct IR route is a
-// separate change, because the bytes have to land where `fallout-ssl/compiler.ts` puts them and that
-// module owns the output directory, the compileOptions parsing, the diagnostics and the cleanup.
-import { transpileWithSourceMap as tsslWithSourceMap } from "../../compilers/tssl/src/index";
+// TSSL is a compiler rather than one of the transpilers above, so it does not come from that barrel and
+// does not chain through a generated file: `compileTsslToInt` produces the bytecode itself.
+import { compileTsslToInt } from "./tssl/compile-int";
 import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
@@ -139,23 +137,16 @@ export async function compile(uri: string, langId: string, interactive = false, 
             return;
         }
         if (uri.toLowerCase().endsWith(EXT_TSSL)) {
-            // Two files carry diagnostics on this path - the source here, and the generated .ssl below -
-            // so both are cleared, or a fixed error stays on screen until something republishes the file.
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const { output, sourceMap } = await tsslWithSourceMap(filePath, text);
-                const sslPath = outputPathFor(filePath);
-                await fs.promises.writeFile(sslPath, output, "utf-8");
-                const sslName = path.basename(sslPath);
+                const { intPath, sslPath } = await compileTsslToInt(uri, filePath, text, settings, interactive);
                 if (interactive) {
-                    showInfo(`Transpiled to ${sslName}`);
+                    // An interactive compile always keeps its output, so `intPath` names a real file
+                    // here whatever `compileOnValidate` says.
+                    const also = sslPath ? ` and ${path.basename(sslPath)}` : "";
+                    showInfo(`Compiled ${path.basename(intPath)}${also}`);
                 }
-                // Chain SSL compilation via registry, reusing the in-memory output.
-                const sslUri = pathToUri(sslPath);
-                clearCompilerDiagnostics(sslUri);
-                await registry.compile(LANG_FALLOUT_SSL, sslUri, output, interactive);
-                relocateGeneratedDiagnostics(sslUri, sourceMap);
             } catch (error) {
                 reportTranspileFailure(error, uri, "TSSL", interactive);
             }

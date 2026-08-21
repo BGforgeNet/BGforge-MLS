@@ -733,6 +733,11 @@
                     "default": "wasm",
                     "description": "Which compiler to use when no external compilePath is set."
                 },
+                "bgforge.tssl.emitSsl": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Whether compiling a `.tssl` file should also write the readable `.ssl` beside it.\n\nTSSL compiles straight to Fallout `.int` bytecode, so the SSL text is not produced on the way and nothing downstream needs it. Enable this if your mod still ships generated `.ssl`, or to read what a script became. The emitted text is checked to compile to the same bytes."
+                },
                 "bgforge.weidu.path": {
                     "type": "string",
                     "default": "weidu",

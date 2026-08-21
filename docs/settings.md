@@ -24,6 +24,17 @@ All settings are under the `bgforge` namespace.
 | `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output.                                                                                                                                                                  |
 | `bgforge.falloutSSL.compiler`          | `wasm`                  | Which compiler runs when no `compilePath` is set. `wasm` is the reference sslc built to WebAssembly, run in a separate process through a temporary file; `built-in` is the extension's own, which compiles the editor's text directly and matches the other's output at `-O0` to `-O2`. |
 
+## TSSL
+
+A `.tssl` file compiles straight to Fallout `.int` bytecode - no SSL text is produced or parsed on the
+way. The `.int` lands where `bgforge.falloutSSL.outputDirectory` says, and the optimisation switches in
+`bgforge.falloutSSL.compileOptions` (`-O`, `-s`) apply; the rest of that line addresses an SSL text
+compiler and names nothing a TypeScript source has.
+
+| Setting                | Default | Description                                                                                                                                                                                                                      |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.tssl.emitSsl` | `false` | Also write the readable `.ssl` beside the bytecode. Enable this if your mod still ships generated `.ssl`, or to read what a script became. The emitted text is checked to compile to the same bytes the compiler wrote directly. |
+
 ## WeiDU
 
 | Setting                  | Default | Description                                                                                                                                                                                 |

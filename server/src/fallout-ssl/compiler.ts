@@ -14,7 +14,6 @@
  */
 
 import * as cp from "child_process";
-import * as crypto from "crypto";
 import * as os from "os";
 import * as path from "path";
 import { parseArgs } from "../../../compilers/ssl/src/args";
@@ -26,11 +25,11 @@ import {
     type ParseItemList,
 } from "../diagnostics";
 import { conlog } from "../logger";
-import { tmpDir } from "../path-utils";
 import { pathToUri, uriToPath } from "../uri-utils";
 import { needsShell, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, withCompileLifecycle, writeTmpSource } from "../core/compile-with-tmp-file";
 import { withDirectoryGate } from "../core/directory-gate";
+import { intOutputPath } from "../core/int-output-path";
 import { compileOnWorker, stopCompileWorker } from "./compile-worker-client";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
@@ -303,11 +302,6 @@ function runExternalCompiler(
     return runProcess(executable, allArgs, cwdTo, signal);
 }
 
-function getValidationOutputPath(uri: string, base: string) {
-    const uriHash = crypto.createHash("md5").update(uri).digest("hex").slice(0, 8);
-    return path.join(tmpDir, `tmp-${uriHash}-${base}.int`);
-}
-
 export async function compile(
     uri: NormalizedUri,
     sslSettings: SSLsettings,
@@ -321,12 +315,9 @@ export async function compile(
     const tmpUri = pathToUri(tmpPath);
     const parsed = path.parse(filepath);
     const baseName = parsed.base;
-    const base = parsed.name;
     const compileOptions = sslSettings.compileOptions.split(/\s+/).filter(Boolean);
     const shouldWriteOutput = interactive || sslSettings.compileOnValidate;
-    const dstPath = shouldWriteOutput
-        ? path.join(sslSettings.outputDirectory, base + ".int")
-        : getValidationOutputPath(uri, base);
+    const dstPath = intOutputPath(filepath, sslSettings.outputDirectory, uri, shouldWriteOutput);
 
     if (parsed.ext.toLowerCase() !== sslExt) {
         // vscode loses open file if clicked on console or elsewhere
