@@ -40,6 +40,7 @@ export default defineConfig({
         exclude: [
             path.resolve(__dirname, "test/smoke-stdio.test.ts"),
             path.resolve(__dirname, "test/lsp-probe.test.ts"),
+            path.resolve(__dirname, "test/tssl-worker-smoke.test.ts"),
             path.resolve(__dirname, "test/integration/**"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes

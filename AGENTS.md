@@ -101,7 +101,7 @@ pnpm test:all          # Close-out gate: the same categories at full depth - tes
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
 pnpm test:cli          # CLI mode tests (check/save/stdout exit codes, diff output)
 pnpm test:e2e          # E2E tests (requires build and host Electron libraries)
-pnpm bench             # Run server perf benches (server/test/perf/*.bench.ts) - manual/local only, not in CI
+pnpm bench             # Run perf benches (server/test/perf/, compilers/tssl/test/perf/) - manual/local only, not in CI
 pnpm package           # Create VSIX
 ```
 

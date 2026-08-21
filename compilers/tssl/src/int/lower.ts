@@ -19,30 +19,30 @@
  * before the entry, then variables, then bodies.
  */
 
-import { Project, SyntaxKind, type FunctionDeclaration, type Node } from "ts-morph";
+import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "ts-morph";
 import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, VariableDecl } from "../../../ssl/src/int/ir";
 import { engineFunction } from "../../../ssl/src/int/engine-functions";
 import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
-import {
-    buildProgramModel,
-    refuseAt,
-    shadowEntryPath,
-    TSSL_COMPILER_OPTIONS,
-    type TsslProgram,
-} from "../program-model";
+import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
+import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 import engineProcedureNames from "../../../../server/out/fallout-ssl-engine-procedures.json";
 
-/** Builds the IR for one `.tssl` compilation unit. Throws a positioned refusal on anything unhandled. */
-export function lowerTsslProgram(filePath: string, text: string): Program {
-    const project = new Project({ compilerOptions: TSSL_COMPILER_OPTIONS });
-    const entry = project.createSourceFile(shadowEntryPath(filePath), text, { overwrite: true });
-    project.resolveSourceFileDependencies();
-    const model = buildProgramModel(project, entry, filePath, engineProcedureNames, (source) =>
-        extractInlineFunctions(source),
+/**
+ * Builds the IR for one `.tssl` compilation unit. Throws a positioned refusal on anything unhandled.
+ *
+ * `batch` is what a caller compiling repeatedly passes to keep the ts-morph project between compiles,
+ * which is the difference between roughly 700 ms and 60 ms - see `../batch.ts`. Without it each call
+ * stands up a TypeScript program of its own and throws it away.
+ */
+export function lowerTsslProgram(filePath: string, text: string, batch?: TranspileBatchState): Program {
+    const state = batch ?? createBatchState();
+    const entry = prepareEntry(state, filePath, text);
+    const model = buildProgramModel(state.project, entry, filePath, engineProcedureNames, (source) =>
+        extractInlineFunctions(source, state.inlineFunctionCache),
     );
-    return new TsslLowering(model, project).lower();
+    return new TsslLowering(model, state.project).lower();
 }
 
 /** Where a node sits, in the coordinates the shared expansions position their complaints with. */

@@ -50,8 +50,9 @@ const config: KnipConfig = {
             // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
             // The "redundant entry" hint for lsp-probe.mts is spurious: removing that entry
             // flips the file to an unused-files error.
-            // compile-worker.ts is a second bundle entry, started by path from
-            // compile-worker-client.ts rather than imported, so nothing references it in source.
+            // Both compile-worker.ts files are bundle entries of their own, started by path from the
+            // matching compile-worker-client.ts rather than imported, so nothing references them in
+            // source.
             // sslc-wrapper.mjs is the same shape one step further out: the build copies it beside the
             // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
             entry: [
@@ -59,6 +60,7 @@ const config: KnipConfig = {
                 "test/**/*.test.ts",
                 "scripts/lsp-probe.mts",
                 "src/fallout-ssl/compile-worker.ts",
+                "src/tssl/compile-worker.ts",
                 "src/sslc/sslc-wrapper.mjs",
             ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
@@ -101,6 +103,8 @@ const config: KnipConfig = {
             // The tests are entry points of their own; nothing in src imports them. The CLI needs no
             // entry - knip reads it from the package's `bin`.
             entry: ["test/*.test.ts"],
+            // Bench files invoked explicitly; not reachable from any declared entry point.
+            ignore: ["test/perf/**"],
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any workspace;
             // knip's per-workspace dep tracing doesn't reach across that boundary. Same note as binary
             // and format, which use the same shared CLI helpers.

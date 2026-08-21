@@ -101,7 +101,7 @@
         "publish:transpile": "./scripts/publish-transpile.sh",
         "supply-chain:verify": "./scripts/verify-supply-chain.sh",
         "test:mutation": "stryker run",
-        "bench": "cd server && pnpm bench"
+        "bench": "pnpm --filter @bgforge/mls-server bench && pnpm --filter @bgforge/tssl bench"
     },
     "devDependencies": {
         "@oxlint/plugins": "1.73.0",

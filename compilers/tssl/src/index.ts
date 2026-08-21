@@ -13,35 +13,20 @@
  */
 
 import * as path from "path";
-import { Project } from "ts-morph";
 import { EXT_TSSL } from "../../../transpilers/common/extensions";
 import { conlog, type TsslContext } from "./types";
-import { extractInlineFunctions, extractJsDocs, type InlineFunctionCache } from "./inline-functions";
+import { createBatchState, prepareEntry, type TranspileBatchState } from "./batch";
+import { extractInlineFunctions, extractJsDocs } from "./inline-functions";
 import { exportSSL } from "./emit";
-import { buildProgramModel, shadowEntryPath, TSSL_COMPILER_OPTIONS } from "./program-model";
+import { buildProgramModel } from "./program-model";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
 import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
 import type { SourcePosition } from "../../../transpilers/common/line-map";
 import { createTranspiler, type TranspilerEvent } from "../../../transpilers/common/transpiler-pipeline";
 
-/**
- * Shared state for batch transpilation (CLI directory mode).
- * Reusing a Project avoids re-initializing the TypeScript compiler for each file.
- * The inline function cache avoids re-walking shared imports (e.g., folib).
- */
-export interface TranspileBatchState {
-    readonly project: Project;
-    readonly inlineFunctionCache: InlineFunctionCache;
-}
-
-/** Create a batch state for processing multiple TSSL files efficiently. */
-export function createBatchState(): TranspileBatchState {
-    return {
-        project: new Project({ compilerOptions: TSSL_COMPILER_OPTIONS }),
-        inlineFunctionCache: new Map(),
-    };
-}
+// Part of the package's public surface: a caller compiling more than once passes one of these in.
+export { createBatchState, type TranspileBatchState } from "./batch";
 
 /** Generated SSL, plus where each of its lines came from in the files the author wrote. */
 export interface TSSLResult {
@@ -55,18 +40,12 @@ const tssl = createTranspiler<TSSLResult, TranspileBatchState | undefined>({
     name: "TSSL",
 
     async transpileCore(filePath, text, traTag, batch) {
-        // Reuse project from batch state, or create a fresh one (LSP / single-file mode)
-        const project = batch?.project ?? new Project({ compilerOptions: TSSL_COMPILER_OPTIONS });
+        // Reuse the caller's project, or stand one up for this compile alone (single-file mode).
+        const state = batch ?? createBatchState();
+        const entrySource = prepareEntry(state, filePath, text);
 
-        // The buffer's text compiles as the file at `filePath`, which is never read - the shadow name is
-        // what lets the checker resolve its imports (it does not resolve from an extension it does not
-        // know), and the model reports everything against the real path.
-        const entrySource = project.createSourceFile(shadowEntryPath(filePath), text, { overwrite: true });
-        // Pulls the dependency closure into the project, so imports resolve to source files.
-        project.resolveSourceFileDependencies();
-
-        const program = buildProgramModel(project, entrySource, filePath, engineProcedureNames, (source) =>
-            extractInlineFunctions(source, batch?.inlineFunctionCache),
+        const program = buildProgramModel(state.project, entrySource, filePath, engineProcedureNames, (source) =>
+            extractInlineFunctions(source, state.inlineFunctionCache),
         );
         conlog(`Found ${program.inlineFunctions.size} inline functions`);
 

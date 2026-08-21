@@ -44,6 +44,7 @@
         "access": "public"
     },
     "scripts": {
+        "bench": "vitest bench --run test/perf",
         "build": "tsdown && chmod +x out/cli.js",
         "test": "vitest run --config vitest.config.ts"
     },

@@ -9,16 +9,15 @@
  * author who wants to read what their script became. It is written from the same source, not decompiled
  * from the bytecode, and `scripts/test-transpile-external.sh` byte-compares the two routes across a real
  * corpus at every optimisation level, so the file beside the bytecode does compile to those bytes.
+ *
+ * Nothing here compiles anything: the work runs on a worker thread, which is where the ts-morph project
+ * it needs lives between compiles. This module decides only what to produce and where to put it.
  */
 
-import * as fs from "fs";
 import { EXT_TSSL } from "../core/languages";
 import { parseArgs } from "../../../compilers/ssl/src/args";
-import { emitProgram } from "../../../compilers/ssl/src/compile";
-import { optimize } from "../../../compilers/ssl/src/optimize";
-import { lowerTsslProgram } from "../../../compilers/tssl/src/int/lower";
-import { transpile } from "../../../compilers/tssl/src/index";
 import { intOutputPath } from "../core/int-output-path";
+import { compileOnWorker } from "./compile-worker-client";
 import type { MLSsettings } from "../settings";
 
 export interface TsslCompileResult {
@@ -48,24 +47,19 @@ export async function compileTsslToInt(
     // The rest of that line addresses an SSL text compiler - a preprocessor, a keyword set, an output
     // format - and names nothing a TypeScript source has, so it is not read here.
     const args = parseArgs(settings.falloutSSL.compileOptions.split(/\s+/).filter(Boolean));
-    const options = { level: args.level, shortCircuit: args.shortCircuit };
-
-    const program = lowerTsslProgram(filepath, text);
-    const bytes = emitProgram(optimize(program, options), options);
 
     const written = interactive || settings.falloutSSL.compileOnValidate;
     const intPath = intOutputPath(filepath, settings.falloutSSL.outputDirectory, uri, written);
-    if (written) {
-        await fs.promises.writeFile(intPath, bytes);
-    }
+    const sslPath = settings.tssl.emitSsl ? filepath.slice(0, -EXT_TSSL.length) + ".ssl" : null;
 
-    if (!settings.tssl.emitSsl) return { intPath };
+    await compileOnWorker({
+        text,
+        filepath,
+        intPath: written ? intPath : null,
+        sslPath,
+        level: args.level,
+        shortCircuit: args.shortCircuit,
+    });
 
-    // Written from the source rather than from `program`: the intermediate representation above has
-    // already been desugared and optimised, so rendering it back would produce something that compiles
-    // to the same bytes but no longer reads like the script the author wrote.
-    const ssl = await transpile(filepath, text);
-    const sslPath = filepath.slice(0, -EXT_TSSL.length) + ".ssl";
-    await fs.promises.writeFile(sslPath, ssl, "utf-8");
-    return { intPath, sslPath };
+    return sslPath === null ? { intPath } : { intPath, sslPath };
 }

@@ -31,6 +31,7 @@ import * as renameHandler from "./handlers/rename";
 import * as documentLifecycleHandler from "./handlers/document-lifecycle";
 import * as executeCommandHandler from "./handlers/execute-command";
 import { abortInFlightSSLCompiles } from "./fallout-ssl/compiler";
+import { stopTsslCompileWorker } from "./tssl/compile-worker-client";
 import { abortInFlightWeiduCompiles } from "./weidu-compile";
 
 // Create a connection for the server.
@@ -107,6 +108,9 @@ connection.onShutdown(() => {
     // started with via runProcess; aborting clears the per-URI tracking maps.
     abortInFlightSSLCompiles();
     abortInFlightWeiduCompiles();
+    // The TSSL worker holds a ts-morph project and would otherwise outlive the transport it reports
+    // through. Nothing awaits this: shutdown is not held up for a result no one will read.
+    void stopTsslCompileWorker();
 });
 
 // Attach the document manager and start the LSP transport.

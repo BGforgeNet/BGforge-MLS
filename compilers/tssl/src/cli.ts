@@ -43,8 +43,12 @@ interface CompileSwitches {
 
 let switches: CompileSwitches = { level: 1, shortCircuit: false, transpile: false };
 
-/** Shared across a directory run: one ts-morph project, and the inline extraction it caches. */
-let batch: TranspileBatchState | undefined;
+/**
+ * Shared across a run: one ts-morph project, and the inline extraction it caches. Standing one up costs
+ * far more than compiling a script does, so both routes below take the same one rather than a fresh
+ * project per file.
+ */
+const batch: TranspileBatchState = createBatchState();
 
 function outputFor(filePath: string, extension: string): string {
     return filePath.slice(0, -EXT_TSSL.length) + extension;
@@ -79,7 +83,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         // `emitProgram` rather than the raw emitter: it reconciles the level with a `#pragma sce` and
         // with whether the optimiser removed the fall-through epilogue.
         const options = { level: switches.level, shortCircuit: switches.shortCircuit };
-        const bytes = emitProgram(optimize(lowerTsslProgram(resolved, text), options), options);
+        const bytes = emitProgram(optimize(lowerTsslProgram(resolved, text, batch), options), options);
         const intPath = outputFor(filePath, ".int");
         const currentInt = readIfPresent(intPath);
         let changed = currentInt === null || !currentInt.equals(bytes);
@@ -98,7 +102,6 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
         if (!switches.transpile) return changed ? "changed" : "unchanged";
 
-        if (!batch) batch = createBatchState();
         const ssl = await transpile(resolved, text, batch);
         const sslPath = outputFor(filePath, ".ssl");
         const currentSsl = readIfPresent(sslPath)?.toString("utf-8") ?? null;
@@ -150,7 +153,10 @@ async function main() {
         transpile: extra.transpile === true,
     };
 
-    await runCli({ args, extensions: [EXT_TSSL], description: EXT_TSSL, processFile });
+    // One chunk per worker: a TSSL compile is dominated by standing up the TypeScript program, which a
+    // child pays once and then reuses through `batch`. Cut finer, the parallel run spawns a process per
+    // file and comes out slower than the sequential walk.
+    await runCli({ args, extensions: [EXT_TSSL], description: EXT_TSSL, processFile, chunksPerJob: 1 });
 }
 
 main().catch((error) => {

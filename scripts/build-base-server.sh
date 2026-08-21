@@ -26,6 +26,15 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
     "$imu_define" \
     "$@"
 
+# The TSSL compile worker, a third entry point for the same reason: it is started as a worker thread
+# from its own file, beside server.js. It carries ts-morph, so it is the one bundle here that is large
+# on its own - keeping it out of server.js is what stops every server start paying for that.
+esbuild ./server/src/tssl/compile-worker.ts --bundle --outfile=server/out/tssl-compile-worker.js \
+    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --banner:js="$imu_banner" \
+    "$imu_define" \
+    "$@"
+
 # The WebAssembly compiler's wrapper. Copied rather than bundled: it is forked as a file, and the module
 # it loads is resolved from server/node_modules at run time. It must sit beside server.js, which is where
 # ssl_compiler.ts looks for it - the same relative path that finds it next to the source.

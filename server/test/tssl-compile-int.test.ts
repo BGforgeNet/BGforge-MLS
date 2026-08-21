@@ -7,12 +7,25 @@
  * checks against a real mod at every optimisation level.
  */
 
-import { describe, expect, it, beforeEach, afterAll } from "vitest";
+import { describe, expect, it, beforeEach, afterAll, vi } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { compileTsslToInt } from "../src/tssl/compile-int";
 import { defaultSettings, type MLSsettings } from "../src/settings";
+import type { CompileRequest } from "../src/tssl/compile-worker-protocol";
+
+// The thread is the one seam replaced here: the request still runs through the worker's own compile, so
+// what these assert about placement and contents is what the worker really does with it. The plumbing
+// either side has its own tests - see tssl/compile-worker-client.test.ts.
+vi.mock("../src/tssl/compile-worker-client", async () => {
+    const { runTsslCompile } = await import("../src/tssl/compile-worker");
+    return {
+        compileOnWorker: (request: Omit<CompileRequest, "id">) => runTsslCompile({ ...request, id: 0 }),
+        stopTsslCompileWorker: () => Promise.resolve(),
+    };
+});
+
+const { compileTsslToInt } = await import("../src/tssl/compile-int");
 
 const SOURCE = "function start() {\n    let n = 1;\n    n = n + 1;\n}\n";
 
