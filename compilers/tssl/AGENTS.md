@@ -2,8 +2,9 @@
 
 Guidance for changing `compilers/tssl`. The package README describes what the compiler is and how to use
 it; `compilers/ssl/AGENTS.md` covers the shared back end and the differentials that gate both front ends.
-This file covers the one thing neither of those does: what this compiler assumes about
-[folib](https://github.com/BGforgeNet/folib), the library every `.tssl` is written against.
+This file covers the one thing neither of those does: what this compiler and
+[folib](https://github.com/BGforgeNet/folib) - the library every `.tssl` is written against - owe each
+other.
 
 ## folib is the user's dependency, not ours
 
@@ -18,25 +19,40 @@ checked-out mod. An unresolvable import is refused rather than skipped, so that 
 compared nothing - `pnpm tssl-int-diff external/fallout/FO2tweaks` with folib absent exits non-zero on
 `cannot resolve module 'folib'`, not with 27 sources counted as unsupported.
 
-## What this compiler assumes about it
+## folib's names this compiler hardcodes
 
-Change any of these only against folib as it actually is, not from the name alone.
+Four names, and they are the whole of what folib's vocabulary costs us; `list` and `map` share every site
+and so share a row below. Two more things the compiler does with
+folib are neither its names nor its due: `declare const` staying ambient vocabulary, and resolving a
+named-re-export barrel through package.json `exports`. Both are requirements the repo-root `AGENTS.md`
+already places on any library a transpiler imports, so any conforming library gets them.
 
-| Assumption                                                             | Where                                      |
-| ---------------------------------------------------------------------- | ------------------------------------------ |
-| `list` and `map` are reserved variable names                           | `src/types.ts`, `src/convert-operators.ts` |
-| `list()` and `map()` are literal syntax, not procedure calls           | `src/emit.ts`, `src/int/lower.ts`          |
-| `sfall_typeof` is how a keyword-colliding engine function is spelled   | `src/types.ts` (`sslName`)                 |
-| `@inline` on a function is what asks for a `#define`                   | `src/inline-functions.ts`                  |
-| A tagged function whose body is not the macro shape stays a procedure  | `src/program-model.ts` (`map_first_run`)   |
-| `declare const` is ambient vocabulary, never emitted                   | `src/program-model.ts` (`SCRIPT_REALNAME`) |
-| The same constant defined twice with the same value is not a conflict  | `src/program-model.ts` (`PRODATA_SC_TYPE`) |
-| A barrel of named re-exports, routed through package.json `exports`    | `src/program-model.ts`, `src/index.ts`     |
-| `FLOAT1` means `1.0`, for sources predating float-literal preservation | `src/convert-operators.ts`                 |
+| Name           | Meaning                                                   | Where                                      |
+| -------------- | --------------------------------------------------------- | ------------------------------------------ |
+| `list`, `map`  | Array and map literal syntax, and reserved variable names | `src/types.ts`, then both routes' lowering |
+| `sfall_typeof` | The engine's `typeof`, renamed around the TS keyword      | `src/types.ts` (`sslName`)                 |
+| `FLOAT1`       | `1.0`, for sources predating float-literal preservation   | `src/convert-operators.ts`, marked to go   |
 
-Two of these are packaging rules the repo-root `AGENTS.md` states as requirements for any library a
-transpiler imports: named re-exports rather than `export *`, and ambient declarations in `.d.ts` rather
-than `.ts`. They are listed here because this compiler is what breaks when they are not met.
+**Why these are hardcoded rather than read off tags on folib's declarations**, the way `@inline` is: both
+sets are closed. `sfall_typeof` is the only rename among folib's 22 `sfall_*` names - the rest are the
+engine's own spellings - and `list`/`map` are the only literal-syntax helpers, with `list_as_array` and
+`map_var` sitting beside them as ordinary functions. The engine's function set does not grow, so folib
+cannot acquire a third case, and a tag convention would be a mechanism for a population that cannot change.
+
+## What this compiler guarantees folib
+
+The coupling runs both ways, and this direction is the one with no compile error to catch it: folib is
+written against these, so tightening any of them breaks a released folib rather than this package.
+
+- **`@inline` on a function asks for a `#define`.** The tag's name and its meaning are a shared
+  convention; renaming it, or changing what it expands to, is a change to both repos.
+- **A tagged function the macro extractor cannot read stays an ordinary procedure.** Inline-ness is
+  decided by successful extraction, never by the tag alone, so a body outside the one-call shape falls
+  back rather than failing. folib's `map_first_run` is tagged and returns a comparison; making extraction
+  failure an error would stop it compiling (`src/program-model.ts`).
+- **The same constant declared twice with the same value is not a collision.** Both declarations emit and
+  the second `#define` is a no-op; only a name bound to two different values is refused. fo2tweaks and
+  folib both define `PRODATA_SC_TYPE` as 32 (`src/program-model.ts`).
 
 ## The compiler reads folib's source, not its API
 

@@ -294,8 +294,9 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
 
         case SyntaxKind.Identifier: {
             const text = node.getText();
-            // FLOAT1 predates float-literal preservation: sources written against the old pipeline
-            // spell 1.0 this way, so it keeps meaning exactly that.
+            // FLOAT1 predates float-literal preservation; sources written against the old pipeline spell
+            // 1.0 this way. TODO: delete - folib's `export const FLOAT1 = 1.0` carries the value, so the
+            // corpus compiles byte-identically without this and the SSL keeps the author's spelling.
             if (text === "FLOAT1") return "1.0";
             // The output holds declaration names only, so an imported alias renders as what it names.
             return sslName(ctx?.importRenames.get(text) ?? text);

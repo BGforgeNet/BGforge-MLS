@@ -196,7 +196,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Transpiler guides       | `transpilers/{tbaf,td}/docs/` (each has README + writing guide)                                                            |
 | Compilers overview      | `compilers/README.md` (what each compiler is; the differentials live in `compilers/ssl/AGENTS.md`)                         |
 | TSSL compiler + CLI     | `compilers/tssl/README.md` and `compilers/tssl/docs/` (CLI ships as `tssl` bin in `@bgforge/tssl`)                         |
-| TSSL <-> folib contract | `compilers/tssl/AGENTS.md` (what the compiler assumes about folib, and why it reads its source)                            |
+| TSSL <-> folib contract | `compilers/tssl/AGENTS.md` (what each owes the other, and why the compiler reads folib's source)                           |
 | Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
 | Image library           | `image/README.md`                                                                                                          |
