@@ -198,7 +198,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
 | Transpile library       | `transpilers/README.md`                                                                                                    |
 | Transpiler guides       | `transpilers/{tbaf,td}/docs/` (each has README + writing guide)                                                            |
-| Compilers overview      | `compilers/README.md` (both compilers, the back end they share, and the differentials between them)                        |
+| Compilers overview      | `compilers/README.md` (what each compiler is; the differentials live in `compilers/ssl/AGENTS.md`)                         |
 | TSSL compiler + CLI     | `compilers/tssl/README.md` and `compilers/tssl/docs/` (CLI ships as `tssl` bin in `@bgforge/tssl`)                         |
 | Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
