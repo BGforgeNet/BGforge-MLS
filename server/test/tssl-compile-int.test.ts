@@ -148,4 +148,17 @@ describe("compileTsslToInt", () => {
         });
         expect(fs.existsSync(path.join(path.dirname(file), "script.int"))).toBe(false);
     });
+
+    // The two routes do not refuse the same programs: `list` is a folib helper name the emitter rejects
+    // and the bytecode front end accepts. Neither file may survive a refusal, or the author is left with
+    // fresh-looking bytecode beside an error that never mentions it.
+    it("writes neither file when only the SSL emitter refuses", async () => {
+        const file = writeSource("function start() {\n    let list = 1;\n    display_msg(list);\n}\n");
+        const dir = path.dirname(file);
+
+        await expect(compileFile(file, settingsWith({ emitSsl: true }))).rejects.toThrow(/conflicts with folib/);
+
+        expect(fs.existsSync(path.join(dir, "script.int"))).toBe(false);
+        expect(fs.existsSync(path.join(dir, "script.ssl"))).toBe(false);
+    });
 });

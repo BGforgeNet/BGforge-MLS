@@ -32,16 +32,22 @@ export async function runTsslCompile(request: CompileRequest): Promise<void> {
     // `emitProgram` rather than the raw emitter: it reconciles the level with a `#pragma sce` and with
     // whether the optimiser removed the fall-through epilogue.
     const bytes = emitProgram(optimize(lowerTsslProgram(request.filepath, request.text, batch), options), options);
-    if (request.intPath !== null) {
-        await fs.promises.writeFile(request.intPath, bytes);
-    }
-    if (request.sslPath === null) return;
 
     // Written from the source rather than from the IR above, which has already been desugared and
     // optimised: rendering that back would compile to the same bytes but no longer read like the script
     // the author wrote.
-    const ssl = await transpile(request.filepath, request.text, batch);
-    await fs.promises.writeFile(request.sslPath, ssl, "utf-8");
+    //
+    // Produced BEFORE either file is written, because the two routes do not refuse the same programs -
+    // the emitter rejects a name the bytecode front end accepts. Writing as we went left a fresh `.int`
+    // beside a reported failure, which reads as a compile that succeeded.
+    const ssl = request.sslPath === null ? null : await transpile(request.filepath, request.text, batch);
+
+    if (request.intPath !== null) {
+        await fs.promises.writeFile(request.intPath, bytes);
+    }
+    if (request.sslPath !== null && ssl !== null) {
+        await fs.promises.writeFile(request.sslPath, ssl, "utf-8");
+    }
 }
 
 function failureOf(error: unknown): CompileFailure {
