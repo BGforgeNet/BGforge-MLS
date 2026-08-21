@@ -279,21 +279,21 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
     const body = forStmt.getStatement();
 
     let initStr = "";
-    // SSL's for-initializer holds exactly one declarator, so the rest are declared ahead of the loop.
-    // Scope is unaffected: an SSL `variable` belongs to its procedure, not to the loop.
-    let hoisted = "";
     if (init) {
         if (init.getKind() === SyntaxKind.VariableDeclarationList) {
             const declList = init.asKindOrThrow(SyntaxKind.VariableDeclarationList);
-            const [first, ...rest] = declList.getDeclarations();
+            const declarations = declList.getDeclarations();
+            // SSL's for-initializer holds exactly ONE declarator, and the ways around that disagree with
+            // the bytecode front end on slot order: hoisting the extras above the loop gives them the
+            // lower slots, where lowering the list in place keeps source order. Slot indices are baked
+            // into the output, so the two routes would compile the same source to different bytes.
+            if (declarations.length > 1) {
+                throw refuseAt(init, "a for initializer declares one variable; declare the others before the loop");
+            }
+            const [first] = declarations;
             if (first) {
                 const initializer = first.getInitializer();
                 initStr = `variable ${first.getName()} = ${initializer ? convertOperatorsAST(initializer, ctx) : "0"}`;
-            }
-            for (const decl of rest) {
-                const initializer = decl.getInitializer();
-                const value = initializer ? ` = ${convertOperatorsAST(initializer, ctx)}` : "";
-                hoisted += `${indent}variable ${decl.getName()}${value};\n`;
             }
         } else {
             initStr = convertOperatorsAST(init, ctx);
@@ -303,7 +303,7 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
     const condStr = cond ? convertOperatorsAST(cond, ctx) : "true";
     const incrStr = incr ? convertOperatorsAST(incr, ctx) : "";
 
-    let result = `${hoisted}${indent}for (${initStr}; ${condStr}; ${incrStr}) begin\n`;
+    let result = `${indent}for (${initStr}; ${condStr}; ${incrStr}) begin\n`;
     result += processFunctionBody(body, indent + "    ", ctx);
     return result + `\n${indent}end\n`;
 }

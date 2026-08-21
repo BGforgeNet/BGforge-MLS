@@ -128,6 +128,15 @@ test_repo() {
     echo "PASS: $repo"
 }
 
+# The in-repo construct fixture runs first, and unconditionally: it covers the shapes no real .tssl in
+# the pinned corpus contains, so the external sweep below cannot tell the two routes apart on them. It
+# needs no checkout, so it still guards when external/ is absent.
+step "TSSL construct fixture (both routes)"
+if ! (cd "$ROOT_DIR" && pnpm --silent tssl-int-diff compilers/tssl/test/constructs -O0 -- -O1 -- -O2 -- -O2 -s); then
+    echo "FAIL: construct fixture (direct-to-IR compilation differs from the text route)"
+    exit 1
+fi
+
 step "Transpile external repos"
 parallel \
     "bg2-tweaks-and-tricks" "test_repo '$ROOT_DIR/external/infinity-engine/bg2-tweaks-and-tricks'" \

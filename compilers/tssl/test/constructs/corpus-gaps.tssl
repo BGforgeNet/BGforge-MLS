@@ -1,0 +1,28 @@
+// Constructs no real .tssl in the pinned corpus exercises, so the corpus sweep cannot tell the two
+// routes to bytecode apart on them. Each one below was a real divergence or a silent miscompile.
+
+export function start(): void {
+    // A plain counted loop, as the baseline the cases below sit beside.
+    let limit = 3;
+    for (let i = 0; i < limit; i++) {
+        display_msg(i);
+    }
+
+    // sfall_typeof inside a string literal. The text route used to rewrite the whole output, so the
+    // literal came out reading "typeof" while the direct route kept it - different string tables.
+    let note = "sfall_typeof stays spelled this way in text";
+    display_msg(note);
+
+    // Boolean literals. These reached the emitter's default arm and were copied through as source text
+    // rather than rendered, which is what let unrenderable syntax reach the output beside them.
+    let on = true;
+    let off = false;
+    if (on && !off) {
+        display_msg("both");
+    }
+
+    // A float literal written out. The old bundler normalised 1.0 to 1 and silently turned float
+    // division into integer division.
+    let ratio = 1.0 * 7 / 2;
+    display_msg(ratio);
+}

@@ -109,21 +109,19 @@ describe("control-flow statement handlers", () => {
 });
 
 describe("a for initializer declaring more than one variable", () => {
-    // SSL's `for_var_decl` holds exactly one declarator, so the extras are declared ahead of the loop.
-    // They are procedure-scoped either way, which is what the bytecode front end already does with them.
-    it("hoists every declarator after the first above the loop", async () => {
-        const out = await emit(
-            `function start() {\n    for (let i = 0, n = 10; i < n; i++) {\n        display_msg(i);\n    }\n}\n`,
-        );
-        expect(out).toContain("variable n = 10;");
-        expect(out).toContain("for (variable i = 0; i < n; i++) begin");
+    // Silently dropping the extras emitted SSL referencing an undeclared name. Hoisting them above the
+    // loop compiles, but gives them the lower slots, where the bytecode front end keeps source order -
+    // so the two routes compiled one source to different bytes. Refusing is what keeps them agreeing.
+    it("refuses the form rather than choosing a slot order", async () => {
+        await expect(
+            emit(`function start() {\n    for (let i = 0, n = 10; i < n; i++) {\n        display_msg(i);\n    }\n}\n`),
+        ).rejects.toThrow(/for initializer declares one variable/);
     });
 
-    it("gives a hoisted declarator without an initializer a bare declaration", async () => {
+    it("still accepts the single-declarator form", async () => {
         const out = await emit(
-            `function start() {\n    for (let i = 0, seen; i < 3; i++) {\n        seen = i;\n    }\n}\n`,
+            `function start() {\n    for (let i = 0; i < 10; i++) {\n        display_msg(i);\n    }\n}\n`,
         );
-        expect(out).toContain("variable seen;");
-        expect(out).toContain("for (variable i = 0; i < 3; i++) begin");
+        expect(out).toContain("for (variable i = 0; i < 10; i++) begin");
     });
 });

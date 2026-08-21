@@ -490,9 +490,14 @@ class TsslLowering {
      */
     private lowerLocalDeclaration(node: Node, scope: Scope): Stmt | null {
         const assignments: Stmt[] = [];
-        const list =
-            node.asKind(SyntaxKind.VariableStatement)?.getDeclarationList() ??
-            node.asKindOrThrow(SyntaxKind.VariableDeclarationList);
+        const statement = node.asKind(SyntaxKind.VariableStatement);
+        const list = statement?.getDeclarationList() ?? node.asKindOrThrow(SyntaxKind.VariableDeclarationList);
+        // A bare declaration list reaches here only as a `for` initializer, where SSL holds exactly one
+        // declarator. Refused rather than lowered: the text route has to put the extras somewhere else,
+        // and wherever it puts them they take different slots than they do here.
+        if (!statement && list.getDeclarations().length > 1) {
+            throw refuseAt(node, "a for initializer declares one variable; declare the others before the loop");
+        }
         for (const decl of list.getDeclarations()) {
             const name = decl.getName();
             const initializer = decl.getInitializer();
