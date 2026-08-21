@@ -2,7 +2,7 @@
 
 Project UI conventions for the binary-editor WEBVIEW (the Svelte render layer) - what a writer here must honor.
 The _schema-side_ decisions (which fields, byte order, flag grouping, shared fragments) live in
-`binary/src/AGENTS.md`; the holistic review brief + fuller rationale in `docs/binary-editor-ui-guidelines.md`.
+`binary/src/AGENTS.md`; the holistic review brief + fuller rationale in `binary-editor/AGENTS.md`.
 General UI/UX principles (size to content, align columns, legible contrast, don't encode meaning in color
 alone) are assumed - this records what is SPECIFIC to this editor, including which apparent oddities are
 intentional so a change doesn't "fix" them.

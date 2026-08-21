@@ -58,3 +58,8 @@ per-layer rules above PLUS:
 These paths and the cross-references between them (this index, the two nested `AGENTS.md`/`CLAUDE.md` pairs in
 `client/src/binary-editor/webview/` and `binary/src/`, and the root `AGENTS.md` pointer) are pinned by
 `scripts/utils/test/ui-guidelines-refs.test.ts` - it fails if a file or reference goes missing or stale.
+
+This file is itself an `AGENTS.md`, with the same `CLAUDE.md` symlink beside it: it lives here rather than in
+`docs/` because it is written for whoever is about to change the editor, not for someone using it, and because
+`binary-editor/` owns the harness whose screenshots the review brief is about. It auto-loads when you edit the
+layout layer or the harness; the two per-layer files auto-load in their own dirs and link back here.

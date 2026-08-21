@@ -5,7 +5,7 @@ Applies when authoring the DECLARATIVE LAYOUT for a binary format - the `*/layou
 presentation schema. **Skip this for parser / codec / spec-data work** - it is only about how a parsed record
 is _presented_. The _render_ conventions (width tiers, spacing, column-major fill) live in
 `client/src/binary-editor/webview/AGENTS.md`; the holistic review brief + fuller rationale in
-`docs/binary-editor-ui-guidelines.md`.
+`binary-editor/AGENTS.md`.
 
 ## One shared fragment per record - same record renders identically
 
