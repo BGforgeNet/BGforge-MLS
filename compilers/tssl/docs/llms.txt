@@ -45,8 +45,8 @@ TypeScript   SSL         Description
 !            not         logical NOT
 &            bwand       bitwise AND
 |            bwor        bitwise OR
-^            bxor        bitwise XOR
-~            bnot        bitwise NOT
+^            bwxor       bitwise XOR
+~            bwnot       bitwise NOT
 ==  !=  < > <= >=        unchanged
 +  -  *  /  %           unchanged
 =  +=  -=  *=  /=       unchanged
@@ -113,22 +113,26 @@ Object/Array/JSON/Math/Date   -> "X is not available in SSL runtime"
 Promise/Map/Set/WeakMap/WeakSet/Symbol/Reflect/Proxy  -> same error
 let list = ...; let map = ...; -> "conflicts with folib export"
 for (const [a,b,c] of ...)   -> "must have exactly 2 elements"
+typeof x                      -> "call sfall_typeof(x) for the engine's value type"
+a instanceof b                -> "'instanceof' has no SSL equivalent"
+let [p, q] = pair             -> "destructuring is not supported"
+for (let i = 0, n = 3; ...)   -> "a for initializer declares one variable"
+() => {}                      -> "arrow functions are not supported; declare a function"
+`a${x}b`                      -> "template literals are not supported; concatenate with +"
+x?.y  and  x ?? y             -> "SSL has no null"
+...spread                     -> "spread is not supported"
+x ** y                        -> "SSL spells exponentiation '^'"
+new X()  /  await  /  yield   -> not supported
 
 None of these JS built-ins exist at runtime. The only runtime data structures
 are sfall lists (flat arrays) and sfall maps (key-value stores), created with
 folib's list() and map() helpers. No objects, classes, or other data structures.
 
-=== UNSUPPORTED (broken output, no error) ===
+=== SILENTLY IGNORED ===
 
-Arrow functions () => {}
-Template literals `${x}`
-Optional chaining x?.y
-Nullish coalescing x ?? y
-Spread ...arr
-Exponentiation x ** y
-Destructuring (except 2-element for-of)
-instanceof, new, await/async, yield/generators
-Classes (runtime), decorators (runtime)
+A runtime class or decorator contributes nothing to the output and raises no error
+(type-only use of a class is fine). Everything else the compiler cannot render is
+refused with the line it sits on - nothing is copied through as TypeScript.
 
 === GOTCHAS ===
 

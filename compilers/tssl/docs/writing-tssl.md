@@ -170,8 +170,8 @@ TypeScript operators map to their SSL equivalents:
 | `!`        | `not`   | Logical NOT |
 | `&`        | `bwand` | Bitwise AND |
 | `\|`       | `bwor`  | Bitwise OR  |
-| `^`        | `bxor`  | Bitwise XOR |
-| `~`        | `bnot`  | Bitwise NOT |
+| `^`        | `bwxor` | Bitwise XOR |
+| `~`        | `bwnot` | Bitwise NOT |
 
 Operators that pass through unchanged: `==`, `!=`, `<`, `>`, `<=`, `>=`, `+`, `-`, `*`, `/`, `%`, `=`, `+=`, `-=`, `*=`, `/=`, `++`, `--`.
 
@@ -378,6 +378,12 @@ These produce explicit compile errors:
 | `JSON.parse(...)`, `Math.floor(...)`, etc.  | Same -- all 13 forbidden globals                         |
 | `let list = 0` or `let map = 0`             | "Variable name 'list'/'map' conflicts with folib export" |
 | foreach destructuring != 2 elements         | "foreach destructuring must have exactly 2 elements"     |
+| `typeof x`                                  | "'typeof' is not supported; call sfall_typeof(x)"        |
+| `for (let i = 0, n = 10; ...)`              | "a for initializer declares one variable"                |
+
+SSL's `for` holds a single declarator, so declare the others above the loop. Anything else the compiler has
+no rendering for is refused the same way, naming the construct and the line - nothing is copied into the
+output as the TypeScript you wrote.
 
 **Forbidden globals** (full list): `Object`, `Array`, `JSON`, `Math`, `Date`, `Promise`, `Map`, `Set`, `WeakMap`, `WeakSet`, `Symbol`, `Reflect`, `Proxy`. None of these exist in the SSL runtime. The only runtime data structures are sfall lists and sfall maps, created with folib's `list()` and `map()` helpers.
 
@@ -390,14 +396,16 @@ expressions, template literals, optional chaining `x?.y`, nullish coalescing `x 
 exponentiation `x ** y` (SSL spells it `^`), `new`, `await`, `yield`, regular expression literals, and
 import forms other than named imports.
 
-A few forms are silently ignored rather than refused:
+`instanceof` and destructuring in a variable declaration are refused too - both used to reach the output
+verbatim and fail in the generated file. The two-element destructuring a `foreach` takes is a different
+construct and still works.
 
-| Syntax                                  | What Happens                             |
-| --------------------------------------- | ---------------------------------------- |
-| Destructuring (except for-of 2-element) | Broken output                            |
-| `instanceof`                            | Broken output                            |
-| Classes (runtime use)                   | Silently ignored (type-only use is fine) |
-| Decorators (runtime)                    | Silently ignored                         |
+Two forms are silently ignored rather than refused:
+
+| Syntax                | What Happens                             |
+| --------------------- | ---------------------------------------- |
+| Classes (runtime use) | Silently ignored (type-only use is fine) |
+| Decorators (runtime)  | Silently ignored                         |
 
 ## Gotchas and Pitfalls
 

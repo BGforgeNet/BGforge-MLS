@@ -26,8 +26,8 @@ Step-by-step guide for converting existing Fallout SSL scripts to TSSL.
 | `not x`                                    | `!x`                                                      | Auto-converted                                        |
 | `x bwand y`                                | `x & y`                                                   | Auto-converted                                        |
 | `x bwor y`                                 | `x \| y`                                                  | Auto-converted                                        |
-| `x bxor y`                                 | `x ^ y`                                                   | Auto-converted                                        |
-| `bnot x`                                   | `~x`                                                      | Auto-converted                                        |
+| `x bwxor y`                                | `x ^ y`                                                   | Auto-converted                                        |
+| `bwnot x`                                  | `~x`                                                      | Auto-converted                                        |
 | `typeof(x)`                                | `sfall_typeof(x)`                                         | `typeof` is a TS keyword                              |
 | `game_loaded`                              | `game_loaded()`                                           | Zero-arg functions need parens                        |
 | `call my_proc;`                            | `my_proc();`                                              | `call` added automatically for user-defined functions |
@@ -192,8 +192,8 @@ These SSL keywords have no TSSL equivalent. The curly braces replace them:
 | `not`   | `!`    |
 | `bwand` | `&`    |
 | `bwor`  | `\|`   |
-| `bxor`  | `^`    |
-| `bnot`  | `~`    |
+| `bwxor` | `^`    |
+| `bwnot` | `~`    |
 
 ```ssl
 // Before
