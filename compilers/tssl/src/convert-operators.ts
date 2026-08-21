@@ -25,6 +25,9 @@ const REFUSED_EXPRESSIONS = new Map<SyntaxKind, string>([
     [SyntaxKind.NewExpression, "'new' is not supported; SSL has no objects"],
     [SyntaxKind.ClassExpression, "classes are not supported"],
     [SyntaxKind.RegularExpressionLiteral, "regular expressions are not supported"],
+    // SSL has a `typeof` too, so copying this one through produced a program that compiled and meant
+    // something else - the engine operator yields a value type where TypeScript yields a type name.
+    [SyntaxKind.TypeOfExpression, "'typeof' is not supported; call sfall_typeof(x) for the engine's value type"],
 ]);
 
 /**
@@ -278,9 +281,15 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             return sslName(ctx?.importRenames.get(text) ?? text);
         }
 
+        // SSL spells the booleans the same way, but they are rendered rather than copied so that
+        // nothing reaches the refusal below by accident.
+        case SyntaxKind.TrueKeyword:
+            return "true";
+        case SyntaxKind.FalseKeyword:
+            return "false";
+
         default:
-            // If no operators to convert, return the original text
-            return node.getText();
+            throw refuseAt(node, `${node.getKindName()} is not supported`);
     }
 }
 

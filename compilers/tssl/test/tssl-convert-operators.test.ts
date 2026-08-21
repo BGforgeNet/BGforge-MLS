@@ -99,3 +99,21 @@ describe("the sfall_typeof spelling", () => {
         expect(out).toContain(`variable s = "call sfall_typeof here";`);
     });
 });
+
+describe("expressions the emitter does not recognise", () => {
+    it("emits the boolean literals", async () => {
+        const out = await emit(`function start() {\n    let a = true;\n    let b = false;\n}\n`);
+        expect(out).toContain("variable a = true;");
+        expect(out).toContain("variable b = false;");
+    });
+
+    it("refuses TypeScript's typeof, which SSL spells as an engine call", async () => {
+        await expect(emit(`function start() {\n    let t = typeof global_var(1);\n}\n`)).rejects.toThrow(
+            /sfall_typeof/,
+        );
+    });
+
+    it("refuses a construct it has no rendering for, instead of copying the source text", async () => {
+        await expect(emit(`function start() {\n    let n = null;\n}\n`)).rejects.toThrow(/NullKeyword/);
+    });
+});
