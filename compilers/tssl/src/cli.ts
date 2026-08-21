@@ -117,7 +117,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: tssl <file.tssl|dir> [--transpile] [--opt <0|1|2>] [-s] [-r] [-q]
+const HELP = `Usage: tssl <file.tssl|dir> [--transpile] [--opt <0|1|2>] [-s] [--check] [-r] [-q] [--jobs <n>]
   Compiles TSSL to Fallout INT bytecode. No SSL text is produced or read on the way.
 
   --transpile       Also write the readable .ssl beside the bytecode

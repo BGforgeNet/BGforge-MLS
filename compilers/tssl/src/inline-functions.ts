@@ -31,9 +31,10 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
         const func = stmt.asKind(SyntaxKind.FunctionDeclaration);
         if (!func) continue;
 
-        // Check for @inline JSDoc tag
+        // The tag itself, not the substring: a description mentioning @inline - or a tag named
+        // @inlineable - is not a request to expand the function at its call sites.
         const jsDocs = func.getJsDocs();
-        const hasInlineTag = jsDocs.some((doc) => doc.getText().includes("@inline"));
+        const hasInlineTag = jsDocs.some((doc) => doc.getTags().some((tag) => tag.getTagName() === "inline"));
         if (!hasInlineTag) continue;
 
         const funcName = func.getName();

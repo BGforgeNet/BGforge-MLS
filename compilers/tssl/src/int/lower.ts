@@ -4,14 +4,15 @@
  * The back end was built to take a tree from more than one front end - `compilers/ssl/src/int/ir.ts`
  * says so and names this one. What is left for a front end is resolving names to slots and walking its
  * own AST; the constructs whose expansion carries byte-exact invariants are not reimplemented here but
- * taken from `compilers/ssl/src/desugar.ts`, which nothing below reaches yet only because `for`,
- * `foreach`, `switch` and array literals are still refused.
+ * taken from `compilers/ssl/src/desugar.ts` - `for`, `foreach`, `switch` and array literals all lower
+ * through its `Expansions`.
  *
  * **Incomplete by construction, and refusing is how it stays honest.** Every construct it does not yet
- * lower is refused with the line it sits on rather than approximated, so the coverage figure
- * `pnpm tssl-int-diff` reports is the real one. Grow it against that differential while the text route
- * still exists to be compared with: once a mod stops committing its generated `.ssl`, the only remaining
- * check on this file is a digest that says a byte moved without saying which construct moved it.
+ * lower - `do`/`while`, `for-in`, `try` among them - is refused with the line it sits on rather than
+ * approximated, so the coverage figure `pnpm tssl-int-diff` reports is the real one. Grow it against
+ * that differential while the text route still exists to be compared with: once a mod stops committing
+ * its generated `.ssl`, the only remaining check on this file is a digest that says a byte moved
+ * without saying which construct moved it.
  *
  * Order is the constraint to respect when extending. The name table is built in declaration order and
  * its offsets are baked into the procedure table, so declarations must be produced in exactly the order
@@ -24,7 +25,7 @@ import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, Variabl
 import { engineFunction } from "../../../ssl/src/int/engine-functions";
 import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
 import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
-import { sslName } from "../types";
+import { sslName, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
@@ -441,7 +442,7 @@ class TsslLowering {
 
         const args = call.getArguments().map((argument) => this.lowerExpression(argument, scope));
 
-        const fn = engineFunction(name.toLowerCase(), 2);
+        const fn = engineFunction(name.toLowerCase());
         if (fn) {
             const bound = this.withProcedureArgs(call, args, fn.procArgs ?? 0);
             // `popsResult`, NOT `returns`: the table keeps them apart deliberately - `returns` is what
@@ -607,7 +608,7 @@ class TsslLowering {
             declareLocal: (name, initial) => this.declareLocal(scope, name, initial),
             newTemp: () => this.declareLocal(scope, `tmp.${this.tempCounter++}`, { kind: "int", value: 0 }),
             engineCall: (name, args) => {
-                const fn = engineFunction(name, 2);
+                const fn = engineFunction(name);
                 if (!fn) throw new Error(`engine function '${name}' is unavailable`);
                 return { kind: "libCall", opcode: fn.opcode, args };
             },
@@ -647,11 +648,7 @@ class TsslLowering {
      * Substituting the caller's parsed subtree instead would be the hygienic reading and is a change to
      * make deliberately, not by accident.
      */
-    private expansionOf(
-        inline: { targetFunc: string; args: { type: string; value: string; source?: string }[]; params: string[] },
-        actual: Node[],
-        at: Node,
-    ): Node {
+    private expansionOf(inline: InlineFunc, actual: Node[], at: Node): Node {
         const substitution = new Map<string, string>();
         inline.params.forEach((parameter, position) => {
             const supplied = actual[position];
@@ -760,7 +757,7 @@ class TsslLowering {
     }
 
     private engineCall(at: Node, name: string, args: Expr[]): Expr {
-        const fn = engineFunction(name, 2);
+        const fn = engineFunction(name);
         if (!fn) throw refuseAt(at, `engine function '${name}' is unavailable`);
         return { kind: "libCall", opcode: fn.opcode, args };
     }
@@ -810,7 +807,7 @@ class TsslLowering {
                 if (global !== undefined) return { kind: "var", scope: "global", index: global, name };
                 // An engine function with no arguments is written without parentheses. These are lexer
                 // keywords, so they take precedence over a user name that happens to match.
-                const engine = engineFunction(name.toLowerCase(), 2);
+                const engine = engineFunction(name.toLowerCase());
                 if (engine) return { kind: "libCall", opcode: engine.opcode, args: [] };
                 // A bare procedure name in expression position CALLS it with no arguments rather than
                 // yielding its index.

@@ -1,10 +1,9 @@
 /**
  * Where a transpiler failure is reported, driven through the real transpilers.
  *
- * Everything after bundling reads one concatenated text, so the line a failure carries is a line of that
- * text - the file the author has open is a different file with different line numbers, and an imported one
- * is a different file entirely. These drive the transpilers a consumer calls and assert the position it
- * gets back names something the author can open.
+ * A compilation unit spans several files, so a failure's line has to name the file it actually sits in -
+ * the entry the author has open, or an imported module entirely elsewhere. These drive the compiler a
+ * consumer calls and assert the position it gets back names something the author can open.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
@@ -43,7 +42,7 @@ async function failureOf(run: () => Promise<unknown>): Promise<TranspileError> {
 }
 
 describe("TSSL failure positions", () => {
-    it("names the file the author has open, not the bundle esbuild was given", async () => {
+    it("names the file the author has open, not the entry it was handed", async () => {
         const source = `export function start(): void {\n    let x = Math.floor(3);\n}\n`;
         const filePath = write("plain.tssl", source);
 
@@ -53,9 +52,9 @@ describe("TSSL failure positions", () => {
         expect(error.location.line).toBe(2);
     });
 
-    it("accounts for the lines an enum loses when it is flattened ahead of bundling", async () => {
+    it("accounts for the lines an enum loses when it is flattened", async () => {
         // Every line below the enum shifts when its members become flat consts, so a line read off the
-        // bundle lands above where the author wrote it - here, inside the enum rather than on the call.
+        // flattening lands above where the author wrote it - here, inside the enum rather than on the call.
         const source =
             `enum Color {\n    Red = 1,\n    Green = 2,\n}\n\n` +
             `export function start(): void {\n    let x = Math.floor(Color.Red);\n}\n`;
@@ -66,7 +65,7 @@ describe("TSSL failure positions", () => {
         expect(error.location.line).toBe(7);
     });
 
-    // The bundler resolves the entry before handing it over, so without care the failure comes back under
+    // The entry is registered under a shadow name, so without care the failure comes back under
     // a path the caller never used - and a consumer comparing it against its own would read the file it is
     // compiling as some other file.
     it("names the entry by the path it was given, not the one symlinks resolve to", async () => {

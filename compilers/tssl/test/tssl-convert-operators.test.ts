@@ -7,7 +7,7 @@
  * These drive the real transpile() entry point so the assertions keep holding
  * across internal refactors. TSSL resolves its source through the real
  * filesystem (ts-morph addSourceFileAtPath), so fixtures are written to a
- * temp dir - same setup as api.test.ts.
+ * temp dir.
  */
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";

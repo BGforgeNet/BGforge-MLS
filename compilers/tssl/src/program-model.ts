@@ -333,7 +333,7 @@ export function buildProgramModel(
         if (!scanned.has(decl) && !kept.has(decl)) queue.push(decl);
     };
 
-    /** Marks whatever one identifier reaches. Returns the declaration for callers that need more. */
+    /** Marks whatever one identifier reaches. */
     const markIdentifier = (id: Identifier): void => {
         const decl = declarationOf(id);
         if (!decl || !isEmittable(decl)) return;

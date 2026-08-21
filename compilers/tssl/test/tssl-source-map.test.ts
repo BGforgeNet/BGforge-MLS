@@ -3,7 +3,7 @@
  *
  * The SSL compiler reports against the generated file, so without this map a diagnostic names a line of
  * something nobody opened. Driven through real transpiles, since the map only matters if it survives the
- * bundle-parse-emit path - and TSSL always bundles, so it always has one to survive.
+ * whole resolve-model-emit path.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
