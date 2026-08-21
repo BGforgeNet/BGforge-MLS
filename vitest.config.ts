@@ -26,6 +26,7 @@ export default defineConfig({
             "format/vitest.config.ts",
             "image/vitest.config.ts",
             "compilers/ssl/vitest.config.ts",
+            "compilers/tssl/vitest.config.ts",
             "scripts/vitest.cli.config.ts",
         ],
     },
