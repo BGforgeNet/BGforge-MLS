@@ -70,12 +70,22 @@ export interface TsslProgram {
     importRenames: Map<SourceFile, ReadonlyMap<string, string>>;
 }
 
-/** The compiler options module resolution needs: folib routes through package.json `exports`. */
-export const TSSL_COMPILER_OPTIONS = {
+/**
+ * The compiler options module resolution needs: folib routes through package.json `exports`.
+ *
+ * `lib` is pinned to the language core because the default for this target is `lib.es2022.full.d.ts`,
+ * which adds DOM, WebWorker and ScriptHost - 1.70 MB of declarations to parse and bind against 0.11 MB
+ * without them, for a language whose scripts run inside a game engine. Dropping them takes standing the
+ * program up and modelling one script from 854 ms to 547 ms, and its retained heap from 113 MB to 85 MB.
+ * It changes nothing a script can express: a name from those libraries was refused before and is refused
+ * now, having simply stopped resolving first.
+ */
+export const TSSL_COMPILER_OPTIONS: ts.CompilerOptions = {
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
-} as const;
+    lib: ["lib.es2022.d.ts"],
+};
 
 /**
  * The entry registers under a shadow `.ts` name because the checker does not resolve imports from a
@@ -163,10 +173,19 @@ function moduleEdges(source: SourceFile): SourceFile[] {
 }
 
 /**
+ * What a module contributed the last time it was walked.
+ *
+ * The nodes in here belong to one project's AST, so a cache is only ever valid against the project it
+ * was filled from, and only while that project's parse of each file still stands. Whoever owns the
+ * project owns the invalidation - see `batch.ts`.
+ */
+export type ModuleWalkCache = Map<string, { edges: SourceFile[]; items: ModuleItems }>;
+
+/**
  * The graph's modules in dependency-first order - the order a bundler concatenates them, which fixes
  * the order procedures are declared in and therefore the compiled procedure table.
  */
-function modulesInOrder(entrySource: SourceFile, entryRealPath: string): ModuleItems[] {
+function modulesInOrder(entrySource: SourceFile, entryRealPath: string, cache?: ModuleWalkCache): ModuleItems[] {
     const visited = new Set<SourceFile>();
     const ordered: ModuleItems[] = [];
     const visit = (source: SourceFile, isEntry: boolean): void => {
@@ -175,8 +194,20 @@ function modulesInOrder(entrySource: SourceFile, entryRealPath: string): ModuleI
         // A .d.ts contributes declarations to the checker, never code to the output; its own imports
         // are type-level and pull nothing in either.
         if (source.getFilePath().endsWith(".d.ts")) return;
-        for (const target of moduleEdges(source)) visit(target, false);
-        ordered.push(collectModuleItems(source, isEntry ? entryRealPath : source.getFilePath(), isEntry));
+        // The entry is never cached: its text is what changed to cause this compile.
+        if (isEntry) {
+            for (const target of moduleEdges(source)) visit(target, false);
+            ordered.push(collectModuleItems(source, entryRealPath, true));
+            return;
+        }
+        const file = source.getFilePath();
+        let walked = cache?.get(file);
+        if (!walked) {
+            walked = { edges: moduleEdges(source), items: collectModuleItems(source, file, false) };
+            cache?.set(file, walked);
+        }
+        for (const target of walked.edges) visit(target, false);
+        ordered.push(walked.items);
     };
     visit(entrySource, true);
     return ordered;
@@ -261,8 +292,9 @@ export function buildProgramModel(
     entryPath: string,
     engineProcedureNames: readonly string[],
     extractInline: (source: SourceFile) => Map<string, InlineFunc>,
+    moduleWalkCache?: ModuleWalkCache,
 ): TsslProgram {
-    const modules = modulesInOrder(entrySource, entryPath);
+    const modules = modulesInOrder(entrySource, entryPath, moduleWalkCache);
     const importRenames = collectImportRenames(modules);
     const entry = modules[modules.length - 1];
     if (!entry?.isEntry) throw new Error("module order lost the entry");

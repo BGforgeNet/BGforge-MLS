@@ -124,9 +124,10 @@
   in a session is roughly ten times faster. Almost all of what a TSSL compile costs is TypeScript
   reading your script and everything it imports, which used to happen from scratch on each compile, on
   the thread answering hover and completion. It now runs alongside them and keeps what it read, so a
-  384-line script that took about three quarters of a second recompiles in around 60 milliseconds. The
-  `tssl` command line gains the same: a folder of 27 scripts compiles in 8 seconds rather than 22, and
-  in under 6 with `--jobs 4`, which used to be slower than not passing it.
+  384-line script that took about three quarters of a second recompiles in under a tenth of one, and the
+  read it needs happens when you open the file rather than when you first compile it. The `tssl` command
+  line gains the same: a folder of 27 scripts compiles in 8 seconds rather than 22, and in under 6 with
+  `--jobs 4`, which used to be slower than not passing it.
 - TSSL reads your TypeScript directly instead of bundling it through a JavaScript bundler first, which
   fixes what the bundler silently changed in the generated SSL:
   - Float literals survive as written. `x / 100.0` used to reach the output as `x / 100` - integer

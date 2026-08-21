@@ -63,3 +63,10 @@ export async function compileTsslToInt(
 
     return sslPath === null ? { intPath } : { intPath, sslPath };
 }
+
+// Prewarming on open - sending the document to the worker so its TypeScript program is standing before
+// the author's first save - was built and dropped: opening a document already compiles it. The LSP
+// document manager raises a content-change for a `didOpen`, so the debounced validation runs about
+// 300 ms after the file appears, which is earlier than any save and pays exactly the same cost. Under a
+// `bgforge.validate` that skips typing it would help, at the price of a second compile on open for
+// everyone else.

@@ -1,14 +1,14 @@
 /**
  * Runs the TSSL compiler on a worker thread.
  *
- * A compile is around 700 ms of straight-line CPU, almost all of it inside TypeScript's own parser and
- * binder, and validation runs while the user types - so on the server's own thread it would stall every
- * other request for that whole time. The SSL back end is here for the same reason; see
+ * A first compile is over a second of straight-line CPU, almost all of it inside TypeScript's own
+ * parser and binder, and validation runs while the user types - so on the server's own thread it would
+ * stall every other request for that whole time. The SSL back end is here for the same reason; see
  * `../fallout-ssl/compile-worker.ts`.
  *
- * The ts-morph project is built once and kept, because standing one up is what that 700 ms buys: after
- * the first compile the same document recompiles in tens of milliseconds. Requests are serialised
- * behind one another, since they all mutate that project.
+ * The ts-morph project is built once and kept, because standing one up is what that second buys: after
+ * the first compile the same document recompiles in under 100 ms. Requests are serialised behind one
+ * another, since they all mutate that project.
  */
 
 import * as fs from "fs";

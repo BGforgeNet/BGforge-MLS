@@ -1,7 +1,7 @@
 /**
  * The ts-morph project a compile runs in, and how it is kept across compiles.
  *
- * Building one costs about 700 ms - overwhelmingly TypeScript's own parser and binder, against which
+ * Building one costs over a second - overwhelmingly TypeScript's own parser and binder, against which
  * lowering a script is under 2% - so a caller that compiles more than once reuses a project rather than
  * paying that again per file. What reuse costs in return is freshness: a project holds the dependencies
  * it parsed, and will not notice one of them changing on disk. `prepareEntry` is what settles that,
@@ -11,7 +11,7 @@
 import * as fs from "fs";
 import { Project, type SourceFile } from "ts-morph";
 import type { InlineFunctionCache } from "./inline-functions";
-import { shadowEntryPath, TSSL_COMPILER_OPTIONS } from "./program-model";
+import { shadowEntryPath, TSSL_COMPILER_OPTIONS, type ModuleWalkCache } from "./program-model";
 
 /**
  * Shared state for compiling more than one file, or one file more than once.
@@ -21,6 +21,8 @@ import { shadowEntryPath, TSSL_COMPILER_OPTIONS } from "./program-model";
 export interface TranspileBatchState {
     readonly project: Project;
     readonly inlineFunctionCache: InlineFunctionCache;
+    /** What each imported module contributed, so a second compile does not walk it again. */
+    readonly moduleWalkCache: ModuleWalkCache;
     /** Size and mtime of each dependency as this project last read it, keyed by absolute path. */
     readonly seen: Map<string, string>;
 }
@@ -30,6 +32,7 @@ export function createBatchState(): TranspileBatchState {
     return {
         project: new Project({ compilerOptions: TSSL_COMPILER_OPTIONS }),
         inlineFunctionCache: new Map(),
+        moduleWalkCache: new Map(),
         seen: new Map(),
     };
 }
@@ -59,6 +62,7 @@ function syncDependencies(batch: TranspileBatchState): void {
         if (previous !== undefined && previous !== stamp) {
             source.refreshFromFileSystemSync();
             batch.inlineFunctionCache.delete(filePath);
+            batch.moduleWalkCache.delete(filePath);
         }
     }
 }
@@ -84,3 +88,7 @@ export function prepareEntry(batch: TranspileBatchState, filePath: string, text:
     syncDependencies(batch);
     return entry;
 }
+
+// Skipping the dependency re-resolve on an unchanged re-compile was measured and dropped: 6 ms, and it
+// loses a module outright when an entry's imports change between compiles - the resolve is what pulls
+// the new one in.

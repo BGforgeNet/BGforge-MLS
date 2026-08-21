@@ -44,8 +44,13 @@ const tssl = createTranspiler<TSSLResult, TranspileBatchState | undefined>({
         const state = batch ?? createBatchState();
         const entrySource = prepareEntry(state, filePath, text);
 
-        const program = buildProgramModel(state.project, entrySource, filePath, engineProcedureNames, (source) =>
-            extractInlineFunctions(source, state.inlineFunctionCache),
+        const program = buildProgramModel(
+            state.project,
+            entrySource,
+            filePath,
+            engineProcedureNames,
+            (source) => extractInlineFunctions(source, state.inlineFunctionCache),
+            state.moduleWalkCache,
         );
         conlog(`Found ${program.inlineFunctions.size} inline functions`);
 

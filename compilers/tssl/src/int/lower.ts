@@ -33,14 +33,19 @@ import engineProcedureNames from "../../../../server/out/fallout-ssl-engine-proc
  * Builds the IR for one `.tssl` compilation unit. Throws a positioned refusal on anything unhandled.
  *
  * `batch` is what a caller compiling repeatedly passes to keep the ts-morph project between compiles,
- * which is the difference between roughly 700 ms and 60 ms - see `../batch.ts`. Without it each call
- * stands up a TypeScript program of its own and throws it away.
+ * which is the difference between a compile of over a second and one under 100 ms - see `../batch.ts`.
+ * Without it each call stands up a TypeScript program of its own and throws it away.
  */
 export function lowerTsslProgram(filePath: string, text: string, batch?: TranspileBatchState): Program {
     const state = batch ?? createBatchState();
     const entry = prepareEntry(state, filePath, text);
-    const model = buildProgramModel(state.project, entry, filePath, engineProcedureNames, (source) =>
-        extractInlineFunctions(source, state.inlineFunctionCache),
+    const model = buildProgramModel(
+        state.project,
+        entry,
+        filePath,
+        engineProcedureNames,
+        (source) => extractInlineFunctions(source, state.inlineFunctionCache),
+        state.moduleWalkCache,
     );
     return new TsslLowering(model, state.project).lower();
 }
