@@ -279,14 +279,21 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
     const body = forStmt.getStatement();
 
     let initStr = "";
+    // SSL's for-initializer holds exactly one declarator, so the rest are declared ahead of the loop.
+    // Scope is unaffected: an SSL `variable` belongs to its procedure, not to the loop.
+    let hoisted = "";
     if (init) {
         if (init.getKind() === SyntaxKind.VariableDeclarationList) {
             const declList = init.asKindOrThrow(SyntaxKind.VariableDeclarationList);
-            const decl = declList.getDeclarations()[0];
-            if (decl) {
-                const name = decl.getName();
+            const [first, ...rest] = declList.getDeclarations();
+            if (first) {
+                const initializer = first.getInitializer();
+                initStr = `variable ${first.getName()} = ${initializer ? convertOperatorsAST(initializer, ctx) : "0"}`;
+            }
+            for (const decl of rest) {
                 const initializer = decl.getInitializer();
-                initStr = `variable ${name} = ${initializer ? convertOperatorsAST(initializer, ctx) : "0"}`;
+                const value = initializer ? ` = ${convertOperatorsAST(initializer, ctx)}` : "";
+                hoisted += `${indent}variable ${decl.getName()}${value};\n`;
             }
         } else {
             initStr = convertOperatorsAST(init, ctx);
@@ -296,7 +303,7 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
     const condStr = cond ? convertOperatorsAST(cond, ctx) : "true";
     const incrStr = incr ? convertOperatorsAST(incr, ctx) : "";
 
-    let result = `${indent}for (${initStr}; ${condStr}; ${incrStr}) begin\n`;
+    let result = `${hoisted}${indent}for (${initStr}; ${condStr}; ${incrStr}) begin\n`;
     result += processFunctionBody(body, indent + "    ", ctx);
     return result + `\n${indent}end\n`;
 }

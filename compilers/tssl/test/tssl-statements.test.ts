@@ -107,3 +107,23 @@ describe("control-flow statement handlers", () => {
         expect(out).not.toContain("break;");
     });
 });
+
+describe("a for initializer declaring more than one variable", () => {
+    // SSL's `for_var_decl` holds exactly one declarator, so the extras are declared ahead of the loop.
+    // They are procedure-scoped either way, which is what the bytecode front end already does with them.
+    it("hoists every declarator after the first above the loop", async () => {
+        const out = await emit(
+            `function start() {\n    for (let i = 0, n = 10; i < n; i++) {\n        display_msg(i);\n    }\n}\n`,
+        );
+        expect(out).toContain("variable n = 10;");
+        expect(out).toContain("for (variable i = 0; i < n; i++) begin");
+    });
+
+    it("gives a hoisted declarator without an initializer a bare declaration", async () => {
+        const out = await emit(
+            `function start() {\n    for (let i = 0, seen; i < 3; i++) {\n        seen = i;\n    }\n}\n`,
+        );
+        expect(out).toContain("variable seen;");
+        expect(out).toContain("for (variable i = 0; i < 3; i++) begin");
+    });
+});
