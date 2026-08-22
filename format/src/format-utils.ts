@@ -3,6 +3,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { findParseError } from "../../shared/parse-errors";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {
@@ -18,16 +19,23 @@ export function stripBom(text: string): string {
 /** Function that strips comments from text while respecting string literals. */
 export type CommentStripper = (text: string) => string;
 
-/** Find first ERROR or MISSING node in tree. */
-function findParseError(node: SyntaxNode): SyntaxNode | null {
-    if (node.type === "ERROR" || node.isMissing) {
-        return node;
-    }
+/**
+ * The source's own spelling of a keyword, for formatters to re-emit.
+ *
+ * These grammars match keywords case-insensitively, so `PROCEDURE` and `procedure` are the same token.
+ * Re-spelling one is not a formatter's decision to make: `validateFormatting` compares the text exactly,
+ * so a rewritten keyword reads as lost content and the file is refused rather than formatted.
+ *
+ * A grammar that aliases its case-insensitive keyword back to a canonical name is matched by node type;
+ * one that does not is matched by text. The keyword itself is the fallback, for a caller asking about a
+ * keyword this node does not carry.
+ */
+export function keywordText(node: SyntaxNode, keyword: string): string {
+    const wanted = keyword.toUpperCase();
     for (const child of node.children) {
-        const error = findParseError(child);
-        if (error) return error;
+        if (child.type === keyword || child.text.toUpperCase() === wanted) return child.text;
     }
-    return null;
+    return keyword;
 }
 
 /**
@@ -520,7 +528,9 @@ export function validateFormatting(original: string, formatted: string, stripCom
         const context = 20;
         const origSnippet = normalizedOriginal.slice(Math.max(0, diffPos - context), diffPos + context);
         const fmtSnippet = normalizedFormatted.slice(Math.max(0, diffPos - context), diffPos + context);
-        return `Formatter changed content at position ${diffPos}: "${origSnippet}" vs "${fmtSnippet}"`;
+        // Each caller says who is reporting and what it did about it, so the message itself states only
+        // what differed.
+        return `content changed at position ${diffPos}: "${origSnippet}" vs "${fmtSnippet}"`;
     }
     return null;
 }

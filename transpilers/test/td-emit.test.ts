@@ -18,7 +18,8 @@ import {
 const HEADER = "/* Generated from test.td - do not edit */\n\n";
 
 function emit(constructs: TDConstruct[]): string {
-    return emitD({ sourceFile: "/virtual/test.td", constructs });
+    // These assert the emitted text; the per-line provenance alongside it has its own suite.
+    return emitD({ sourceFile: "/virtual/test.td", constructs }).text;
 }
 
 const literal = (value: string) => ({ type: TDTextType.Literal, value });

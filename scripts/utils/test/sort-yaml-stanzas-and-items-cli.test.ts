@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const TMP_BASE = "tmp";
 
@@ -24,6 +25,7 @@ describe("sort-yaml-stanzas-and-items CLI", () => {
 
         execSync(`pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}"`, {
             cwd: process.cwd(),
+            timeout: SPAWN_TIMEOUT_MS,
         });
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`a:
@@ -49,7 +51,7 @@ b:
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,
-            { cwd: process.cwd() },
+            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:
@@ -79,7 +81,7 @@ b:
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --map-path repository --sequence-key patterns --sort-key match`,
-            { cwd: process.cwd() },
+            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:
@@ -110,7 +112,7 @@ b:
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,
-            { cwd: process.cwd() },
+            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:

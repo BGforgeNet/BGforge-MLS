@@ -15,6 +15,7 @@ export {
     normalizeLineComment,
     normalizeBlockComment,
     normalizeComment,
+    keywordText,
     WeiduTokenType,
 } from "./format-utils";
 export type { CommentStripper, WeiduToken, FormatOutput, TildeDelimiter } from "./format-utils";

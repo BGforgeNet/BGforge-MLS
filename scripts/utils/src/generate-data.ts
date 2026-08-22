@@ -129,6 +129,21 @@ const COMPLETION_TAG_DEPRECATED = 1;
  * Validates that parsed YAML data conforms to the DataFile structure.
  * Checks that each stanza has a numeric type and an items array.
  */
+/**
+ * A signature whose parameter list is never closed reads as a no-argument value to anything parsing it,
+ * so the truncation is invisible downstream: hover renders the half-signature verbatim and an argument
+ * count derived from it comes back as zero. Three entries were in that state when this check landed.
+ */
+function assertBalancedDetail(item: DataItem, stanza: string, source: string): void {
+    const detail = item?.detail;
+    if (typeof detail !== "string") return;
+    const open = (detail.match(/\(/g) ?? []).length;
+    const close = (detail.match(/\)/g) ?? []).length;
+    if (open !== close) {
+        throw new Error(`Unbalanced parentheses in '${item.name}' detail (stanza '${stanza}' of ${source}): ${detail}`);
+    }
+}
+
 function validateDataFile(data: unknown, source: string): DataFile {
     if (typeof data !== "object" || data === null) {
         throw new Error(`Expected object in ${source}, got ${data === null ? "null" : typeof data}`);
@@ -145,6 +160,9 @@ function validateDataFile(data: unknown, source: string): DataFile {
         }
         if (!Array.isArray(stanza["items"])) {
             throw new TypeError(`Expected 'items' array in stanza '${key}' of ${source}`);
+        }
+        for (const item of stanza["items"] as readonly DataItem[]) {
+            assertBalancedDetail(item, key, source);
         }
         result[key] = stanza as unknown as DataStanza;
     }

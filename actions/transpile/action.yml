@@ -1,5 +1,5 @@
 name: "Transpile sources"
-description: "Transpile TSSL/TBAF/TD sources to Fallout SSL / WeiDU BAF / WeiDU D with @bgforge/transpile (fgtp) and commit the generated files back to the branch."
+description: "Transpile TBAF/TD sources to WeiDU BAF / WeiDU D with @bgforge/transpile (fgtp) and commit the generated files back to the branch."
 author: "BGforge"
 
 inputs:

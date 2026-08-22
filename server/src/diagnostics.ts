@@ -132,9 +132,10 @@ export function reportCompileResult(
     failMsg: string,
 ) {
     if (!interactive) return;
-    // Intentional: warnings (e.g. from sslc) indicate real issues that should be surfaced
-    // as failures in interactive mode, so users don't miss them.
-    if (parseResult.errors.length > 0 || parseResult.warnings.length > 0) {
+    // Warnings do not make it a failure: the compiler produced its output, and saying otherwise
+    // contradicts the file that was just written. They are not lost by this - every one of them is a
+    // diagnostic in its own right, which is where a warning belongs.
+    if (parseResult.errors.length > 0) {
         showError(failMsg);
     } else {
         showInfo(successMsg);

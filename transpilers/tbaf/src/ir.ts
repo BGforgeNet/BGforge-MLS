@@ -10,6 +10,8 @@ export interface BAFCondition {
     negated: boolean;
     name: string; // "See", "Global", "LevelLT", etc.
     args: string[]; // ["Player1"], ["\"x\"", "\"LOCALS\"", "0"]
+    /** 0-based line of the bundled source this came from, where one is known. See BAFBlock.line. */
+    line?: number;
 }
 
 /** OR group: (a || b || c) - emits as OR(n) followed by conditions */
@@ -25,6 +27,8 @@ export interface BAFAction {
     name: string;
     args: string[];
     comment?: string; // Optional inline comment
+    /** 0-based line of the bundled source this came from, where one is known. See BAFBlock.line. */
+    line?: number;
 }
 
 /** A complete IF/THEN/END block */
@@ -32,6 +36,12 @@ export interface BAFBlock {
     conditions: BAFTopCondition[]; // ANDed together
     actions: BAFAction[];
     response: number; // Usually 100
+    /**
+     * 0-based line of the bundled source this block was built from, where one is known. Carried so a
+     * diagnostic the BAF compiler reports can be traced back past the emitter, which is the last place
+     * that still knows the correspondence. Absent for a block with no single statement behind it.
+     */
+    line?: number;
 }
 
 /** Complete BAF script */

@@ -1,0 +1,10 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["es2023"],
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "tsBuildInfoFile": "../../tmp/tssl-lib.tsbuildinfo"
+    },
+    "include": ["src", "test", "scripts"]
+}

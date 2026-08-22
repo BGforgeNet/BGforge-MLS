@@ -1,0 +1,63 @@
+{
+    "name": "@bgforge/tssl",
+    "version": "0.1.0",
+    "description": "TSSL compiler: TypeScript to Fallout INT bytecode, with the tssl CLI and an option to emit SSL",
+    "keywords": [
+        "compiler",
+        "fallout",
+        "int",
+        "modding",
+        "ssl",
+        "typescript"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "compilers/tssl"
+    },
+    "bin": {
+        "tssl": "out/cli.js"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.txt"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "bench": "vitest bench --run test/perf",
+        "build": "tsdown && chmod +x out/cli.js",
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "dependencies": {
+        "cac": "catalog:",
+        "diff": "catalog:",
+        "ts-morph": "catalog:"
+    },
+    "devDependencies": {
+        "tsdown": "catalog:",
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

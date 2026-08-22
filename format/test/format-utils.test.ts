@@ -268,7 +268,7 @@ describe("shared/format-utils", () => {
             const result = validateFormatting(original, formatted, stripCommentsFalloutSsl);
 
             expect(result).not.toBeNull();
-            expect(result).toContain("Formatter changed content");
+            expect(result).toContain("content changed");
         });
 
         it("should return error with context when content changed", () => {

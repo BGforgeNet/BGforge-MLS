@@ -116,6 +116,15 @@ pre-commit:
         - "pnpm-workspace.yaml"
         - "pnpm-lock.yaml"
       run: pnpm exec tsc --noEmit --project image/tsconfig.json
+    typecheck-ssl:
+      glob:
+        - "compilers/ssl/**"
+        - "shared/**"
+        - "tsconfig*.json"
+        - "package.json"
+        - "pnpm-workspace.yaml"
+        - "pnpm-lock.yaml"
+      run: pnpm exec tsc --noEmit --project compilers/ssl/tsconfig.json
     typecheck-binary-editor:
       glob:
         - "binary-editor/**"

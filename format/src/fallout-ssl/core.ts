@@ -15,7 +15,7 @@ import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, format
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
-import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { throwOnParseError, normalizeComment, keywordText } from "@bgforge/format";
 // Comment normalization is shared across all formatters; re-export the imported
 // binding so existing `./core` importers (e.g. control-flow) keep their path.
 export { normalizeComment } from "@bgforge/format";
@@ -188,7 +188,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             const expr = node.namedChildren[0];
             // Column for expression: depth indent + "return "
             const column = depth * ctx.indent.length + 7;
-            return `return${expr ? " " + formatExpression(expr, column, 1) : ""};`;
+            return `${keywordText(node, "return")}${expr ? " " + formatExpression(expr, column, 1) : ""};`;
         }
         case SyntaxType.CallStmt:
             return formatCallStmt(node);
@@ -288,23 +288,53 @@ function formatChildren(node: SyntaxNode, depth: number): string {
     return parts.join("\n");
 }
 
+/**
+ * Everything ahead of the `procedure` keyword. Rebuilding the header from fields means anything not
+ * named here is dropped from the output - and a dropped modifier changes what the script compiles to,
+ * silently, on a file the user only asked to reformat.
+ */
+function formatProcedureModifiers(node: SyntaxNode): string {
+    const critical = node.childForFieldName("critical");
+    const modifier = node.childForFieldName("modifier");
+    return `${critical ? `${critical.text} ` : ""}${modifier ? `${modifier.text} ` : ""}`;
+}
+
+/** The `in <constant>` or `when <expr>` clause that sits between the parameter list and `begin`. */
+function formatProcedureSchedule(node: SyntaxNode): string {
+    const timed = node.childForFieldName("timed");
+    if (timed) return ` ${keywordText(node, "in")} ${formatNode(timed, 0)}`;
+    const condition = node.childForFieldName("condition");
+    return condition ? ` ${keywordText(node, "when")} ${formatNode(condition, 0)}` : "";
+}
+
 function formatProcedureForward(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
+    const prefix = `${formatProcedureModifiers(node)}${keywordText(node, "procedure")} ${name}`;
     if (params) {
-        return `procedure ${name}${formatParamList(params)};`;
+        return `${prefix}${formatParamList(params)};`;
     }
-    return `procedure ${name};`;
+    return `${prefix};`;
 }
 
 function formatProcedure(node: SyntaxNode, depth: number): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
 
-    const header = params ? `procedure ${name}${formatParamList(params)} begin` : `procedure ${name} begin`;
+    const signature =
+        `${formatProcedureModifiers(node)}${keywordText(node, "procedure")} ${name}` +
+        `${params ? formatParamList(params) : ""}`;
+    const header = `${signature}${formatProcedureSchedule(node)} ${keywordText(node, "begin")}`;
 
     const bodyParts: string[] = [];
     const skipTypes: Set<string> = new Set([SyntaxType.Identifier, SyntaxType.ParamList]);
+    // The schedule clause is already in the header. Its operand is an ordinary expression node, so it
+    // is skipped by identity - matching on type would swallow a body statement of the same shape.
+    const scheduleIds = new Set(
+        [node.childForFieldName("timed"), node.childForFieldName("condition")]
+            .filter((n): n is SyntaxNode => n !== null)
+            .map((n) => n.id),
+    );
     const children = node.children;
 
     children.forEach((child, i) => {
@@ -312,6 +342,9 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         const prevChild = children[i - 1]; // undefined at start
 
         if (skipTypes.has(child.type)) return;
+        if (scheduleIds.has(child.id)) return;
+        // The keyword introducing the clause, dropped alongside the operand above.
+        if (scheduleIds.size > 0 && /^(?:in|when)$/i.test(child.text)) return;
         // Skip begin/end/procedure keywords - they may appear as identifiers due to macros
         // (e.g., `else begin` after a macro that expands to if-then-begin-end).
         // Content validation catches any actual semantic changes.
@@ -347,10 +380,11 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         }
     });
 
+    const kwEnd = keywordText(node, "end");
     if (bodyParts.length === 0) {
-        return `${header}\nend`;
+        return `${header}\n${kwEnd}`;
     }
-    return `${header}\n${bodyParts.join("\n")}\nend`;
+    return `${header}\n${bodyParts.join("\n")}\n${kwEnd}`;
 }
 
 function formatParamList(node: SyntaxNode): string {
@@ -364,11 +398,11 @@ function formatParamList(node: SyntaxNode): string {
 }
 
 function formatParam(node: SyntaxNode): string {
-    const hasVariable = node.children.some((c) => c.text === "variable");
+    const variableKw = node.children.find((c) => c.type === "variable");
     const name = node.childForFieldName("name")?.text || "";
     const defaultValue = node.childForFieldName("default");
 
-    let result = hasVariable ? `variable ${name}` : name;
+    let result = variableKw ? `${variableKw.text} ${name}` : name;
     if (defaultValue) {
         // Preserve := vs = from original
         const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
@@ -397,12 +431,13 @@ function formatVariableDecl(node: SyntaxNode, depth: number = 0): string {
         if (currentGroup.length > 0) {
             lines.push(ctx.indent + currentGroup.join(", ") + ";");
         }
-        return `variable begin\n${lines.join("\n")}\nend`;
+        const kwVariable = keywordText(node, "variable");
+        return `${kwVariable} ${keywordText(node, "begin")}\n${lines.join("\n")}\n${keywordText(node, "end")}`;
     }
 
-    const hasImport = node.children.some((c) => c.text === "import");
+    const importKw = node.children.find((c) => c.type === "import");
     const hasSemicolon = node.children.some((c) => c.text === ";");
-    const prefix = hasImport ? "import variable " : "variable ";
+    const prefix = `${importKw ? `${importKw.text} ` : ""}${keywordText(node, "variable")} `;
     const varInits: string[] = [];
     for (const child of node.children) {
         if (child.type === SyntaxType.VarInit) {
@@ -435,11 +470,12 @@ function formatVarInit(node: SyntaxNode, depth: number = 0, prefixLen: number = 
 function formatExportDecl(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const value = node.childForFieldName("value");
+    const declaration = `${keywordText(node, "export")} ${keywordText(node, "variable")} ${name}`;
     if (value) {
         const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
-        return `export variable ${name} ${op} ${formatExpression(value)};`;
+        return `${declaration} ${op} ${formatExpression(value)};`;
     }
-    return `export variable ${name};`;
+    return `${declaration};`;
 }
 
 export function formatBlock(node: SyntaxNode, depth: number): string {
@@ -498,9 +534,11 @@ export function formatBlock(node: SyntaxNode, depth: number): string {
         }
     });
 
+    const kwBegin = keywordText(node, "begin");
+    const kwEnd = keywordText(node, "end");
     if (stmts.length === 0) {
-        return `begin${beginComment}\nend${endComment}`;
+        return `${kwBegin}${beginComment}\n${kwEnd}${endComment}`;
     }
 
-    return `begin${beginComment}\n${stmts.join("\n")}\n${ctx.indent.repeat(depth)}end${endComment}`;
+    return `${kwBegin}${beginComment}\n${stmts.join("\n")}\n${ctx.indent.repeat(depth)}${kwEnd}${endComment}`;
 }

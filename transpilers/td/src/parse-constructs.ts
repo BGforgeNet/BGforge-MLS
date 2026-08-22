@@ -141,6 +141,8 @@ export function transformReplaceState(
         label: stateNum.toString(),
         say: [],
         transitions: [],
+        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
+        line: call.getStartLineNumber() - 1,
     };
 
     for (const s of (body as Block).getStatements()) {

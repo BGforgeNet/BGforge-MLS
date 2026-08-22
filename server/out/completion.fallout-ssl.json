@@ -196,7 +196,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid art_anim(int fid)\n```\nReturns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)"
+            "value": "```fallout-ssl-tooltip\nint art_anim(int fid)\n```\nReturns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)"
         }
     },
     {
@@ -216,7 +216,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results\n```\nCauses the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack"
+            "value": "```fallout-ssl-tooltip\nvoid attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results)\n```\nCauses the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack"
         }
     },
     {
@@ -346,7 +346,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid critter_heal(ObjectPtr who, int amount)\n```\nHeals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds"
+            "value": "```fallout-ssl-tooltip\nint critter_heal(ObjectPtr who, int amount)\n```\nHeals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds"
         }
     },
     {
@@ -409,7 +409,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_set_flee_state(ObjectPtr who, bool flee_on\n```\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
+            "value": "```fallout-ssl-tooltip\nint critter_set_flee_state(ObjectPtr who, bool flee_on)\n```\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
         }
     },
     {
@@ -952,7 +952,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint has_trait(int trait_type, ObjectPtr who, int trait\n```\nReturns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.)."
+            "value": "```fallout-ssl-tooltip\nint has_trait(int trait_type, ObjectPtr who, int trait)\n```\nReturns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.)."
         }
     },
     {
@@ -6706,7 +6706,7 @@
         "category": "sfall_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_shader_mode(int mode)\n```\nTells sfall when to use a shader. The parameter is a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.\nThe graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing."
+            "value": "```fallout-ssl-tooltip\nvoid set_shader_mode(int ID, int mode)\n```\nTells sfall when to use a shader. `mode` is a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.\nThe graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing."
         }
     },
     {

@@ -9,8 +9,10 @@
  * invisible to a corpus sweep, but is still syntax a user can write. FORCED_SUBCOMPONENT's predicate,
  * MENU_STYLE and LOAD were all found this way, with zero corpus occurrences between them.
  *
- * Skips cleanly when no WeiDU binary is on PATH, the way the corpus suites skip on an unchecked-out
- * external/. CI provisions one (see .github/workflows/build.yml).
+ * Skips cleanly when no WeiDU binary can be found, the way the corpus suites skip on an unchecked-out
+ * external/ - but that path is now the exception rather than the norm: `scripts/ensure-weidu.sh`, run by
+ * both test scripts and by CI, downloads a pinned WeiDU when the host has none, so a skip means an
+ * offline first run rather than an ordinary machine.
  */
 
 import { execFileSync } from "child_process";
@@ -29,6 +31,13 @@ const WEIDU_PARSE_ERROR = 4;
 
 /** A wedged child cannot be interrupted by vitest's own timeout - execFileSync holds the worker thread. */
 const WEIDU_TIMEOUT_MS = 15000;
+
+/**
+ * The binary to drive. `scripts/ensure-weidu.sh` sets WEIDU_BIN - the host's own WeiDU, or a pinned one
+ * it downloaded - so a run through the test scripts does not depend on PATH; a bare vitest invocation
+ * still falls back to it.
+ */
+const WEIDU = process.env.WEIDU_BIN ?? "weidu";
 
 /** WeiDU rejects a TP2 whose BACKUP is not followed by AUTHOR, so every TP2-context snippet needs both. */
 const TP2_PREAMBLE = "BACKUP ~x~\nAUTHOR ~me~\n\n";
@@ -146,7 +155,7 @@ let tmpDir = "";
 /** True when a WeiDU binary is on PATH and answers --version. */
 function probeWeidu(): boolean {
     try {
-        execFileSync("weidu", ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
+        execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
         return true;
     } catch {
         return false;
@@ -177,7 +186,7 @@ function weiduVerdict(code: string, slug: string): WeiduVerdict {
     writeFileSync(file, code);
     for (const type of ["TP2", "TPA", "TPP"]) {
         try {
-            execFileSync("weidu", ["--nogame", "--noautoupdate", "--parse-check", type, file], {
+            execFileSync(WEIDU, ["--nogame", "--noautoupdate", "--parse-check", type, file], {
                 cwd: tmpDir,
                 timeout: WEIDU_TIMEOUT_MS,
                 stdio: "ignore",

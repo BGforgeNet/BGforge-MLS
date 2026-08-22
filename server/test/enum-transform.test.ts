@@ -322,7 +322,7 @@ const facing = Direction.N;
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
 
             // Enum values should be resolved to their numeric constants
             expect(output).toContain("Direction_S");
@@ -359,7 +359,7 @@ Foo();
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
             // Should not throw - .d.ts externalization + extensionless resolution should handle this
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
             expect(output).toContain("Foo");
         } finally {
             cleanTmpDir();
@@ -396,7 +396,7 @@ const c = Color.Red;
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
 
             expect(output).toContain("Color_Red");
             expect(output).not.toContain("Color.Red");
@@ -437,7 +437,7 @@ const y = ClassID.BASILISK;
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
 
             // Externalized enum: prefix stripped, symbolic name preserved
             expect(output).toContain("ANKHEG");
@@ -479,7 +479,7 @@ const y = CLASS.MAGE;
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
 
             // Externalized enum: prefix stripped, symbolic names preserved
             expect(output).toContain("THIEF_ALL");
@@ -522,7 +522,7 @@ const cls = ClassID.ANKHEG;
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            const output = await bundle(tbafPath, source);
+            const { code: output } = await bundle(tbafPath, source);
 
             // Bundled enum: expanded to flat var with value
             expect(output).toContain("Direction_S");

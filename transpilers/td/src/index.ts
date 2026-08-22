@@ -16,6 +16,9 @@ import { Node, Project, SyntaxKind } from "ts-morph";
 import { EXT_TD } from "../../common/extensions";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
+import { TranspileError } from "../../common/transpile-error";
+import type { SourcePosition } from "../../common/line-map";
+import type { LineOrigin } from "../../common/tracked-text";
 import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
@@ -25,12 +28,23 @@ export type { TDWarning } from "./types";
 interface TDTranspileResult {
     output: string;
     warnings: TDWarning[];
+    /** For each line of the generated D, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
+}
+
+/** What the emitter produces before its bundled lines are resolved to files. */
+interface EmittedD {
+    output: string;
+    warnings: TDWarning[];
+    origins: readonly LineOrigin[];
 }
 
 interface TDCompileResult {
     dPath: string;
     warnings: TDWarning[];
     events: readonly TranspilerEvent[];
+    /** For each line of the generated D, the file and 0-based line the author wrote it on. */
+    sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
 const td = createTranspiler<TDTranspileResult>({
@@ -40,36 +54,54 @@ const td = createTranspiler<TDTranspileResult>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const bundled = await bundle(filePath, text);
+        const { code: bundled, origins } = await bundle(filePath, text);
 
-        // 2. Parse bundled code.
-        // Uses a per-compile Project rather than the module-scoped shared one
-        // in transpilers/common/shared-project.ts. The bundled source and the
-        // original source (for orphan detection below) both live through the
-        // whole transpile; a concurrent transpile would overwrite their
-        // virtual files mid-walk. Fresh-Project construction at per-compile
-        // granularity is a small fraction of total compile time.
-        const project = new Project({ useInMemoryFileSystem: true });
-        const sourceFile = project.createSourceFile("bundled.ts", bundled);
-
-        // 3. Parse AST to IR, using original file path for the header comment
-        const ir = { ...parse(sourceFile), sourceFile: filePath, traTag };
-
-        // 4. Detect orphans from original source (pre-bundling).
-        // The parser's own orphan detection runs on bundled code, which may be
-        // missing tree-shaken functions. This pass catches those.
-        // Skip when bundling didn't change the source (no imports = no tree-shaking).
-        const orphanWarnings = bundled === text ? [] : detectOrphansFromOriginal(text, ir);
-        const warnings = mergeWarnings(ir.warnings ?? [], orphanWarnings);
-
-        // 5. Emit D text
-        const output = emitD(ir);
-
-        return { output, warnings };
+        // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
+        // against the file it came from on the way out.
+        try {
+            const emitted = parseBundled(bundled, text, filePath, traTag);
+            // The emitter reports bundled lines; the bundler says which file and line each of those was.
+            // Composing them is what turns a position in the generated file into one the author can open.
+            return {
+                output: emitted.output,
+                warnings: emitted.warnings,
+                sourceMap: emitted.origins.map((line) => (line === undefined ? undefined : origins[line])),
+            };
+        } catch (error) {
+            throw TranspileError.remap(error, origins);
+        }
     },
 
     getOutput: (result) => result.output,
 });
+
+/** Parse the bundled text to IR, collect warnings, and emit D. */
+function parseBundled(bundled: string, text: string, filePath: string, traTag: string | undefined): EmittedD {
+    // 2. Parse bundled code.
+    // Uses a per-compile Project rather than the module-scoped shared one
+    // in transpilers/common/shared-project.ts. The bundled source and the
+    // original source (for orphan detection below) both live through the
+    // whole transpile; a concurrent transpile would overwrite their
+    // virtual files mid-walk. Fresh-Project construction at per-compile
+    // granularity is a small fraction of total compile time.
+    const project = new Project({ useInMemoryFileSystem: true });
+    const sourceFile = project.createSourceFile("bundled.ts", bundled);
+
+    // 3. Parse AST to IR, using original file path for the header comment
+    const ir = { ...parse(sourceFile), sourceFile: filePath, traTag };
+
+    // 4. Detect orphans from original source (pre-bundling).
+    // The parser's own orphan detection runs on bundled code, which may be
+    // missing tree-shaken functions. This pass catches those.
+    // Skip when bundling didn't change the source (no imports = no tree-shaking).
+    const orphanWarnings = bundled === text ? [] : detectOrphansFromOriginal(text, ir);
+    const warnings = mergeWarnings(ir.warnings ?? [], orphanWarnings);
+
+    // 5. Emit D text
+    const emitted = emitD(ir);
+
+    return { output: emitted.text, warnings, origins: emitted.origins };
+}
 
 /**
  * Compile a TD file to D, writing the output to disk.
@@ -77,7 +109,7 @@ const td = createTranspiler<TDTranspileResult>({
  */
 export async function compile(uri: string, text: string): Promise<TDCompileResult> {
     const { outPath, result, events } = await td.compile(uri, text);
-    return { dPath: outPath, warnings: result.warnings, events };
+    return { dPath: outPath, warnings: result.warnings, events, sourceMap: result.sourceMap };
 }
 
 /**

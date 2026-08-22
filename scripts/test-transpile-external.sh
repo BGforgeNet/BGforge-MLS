@@ -10,6 +10,7 @@ set -eu -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CLI="$(node -e "const path=require('node:path'); const pkgPath=process.argv[1]; const pkg=require(pkgPath); process.stdout.write(path.resolve(path.dirname(pkgPath), pkg.bin.fgtp));" "$ROOT_DIR/transpilers/package.json")"
+TSSL_CLI="$(node -e "const path=require('node:path'); const pkgPath=process.argv[1]; const pkg=require(pkgPath); process.stdout.write(path.resolve(path.dirname(pkgPath), pkg.bin.tssl));" "$ROOT_DIR/compilers/tssl/package.json")"
 
 # shellcheck source=scripts/timing-lib.sh
 source "$SCRIPT_DIR/timing-lib.sh"
@@ -21,10 +22,14 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
-# Build CLI if missing
+# Build CLIs if missing
 if [[ ! -f "$CLI" ]]; then
     step "Building transpile CLI"
     (cd "$ROOT_DIR" && pnpm build:transpile)
+fi
+if [[ ! -f "$TSSL_CLI" ]]; then
+    step "Building tssl CLI"
+    (cd "$ROOT_DIR" && pnpm build:tssl)
 fi
 
 # Transpile all files in a repo, then check git status for changes.
@@ -54,23 +59,94 @@ test_repo() {
         (cd "$dir" && pnpm install --ignore-workspace --ignore-scripts)
     fi
 
-    # Transpile all files in one process using directory mode
-    if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
-        echo "FAIL: $repo (transpilation errors)"
+    # One process per language family, and only where that family has sources. `.tssl` belongs to the
+    # tssl compiler, which emits bytecode by default - `--transpile` is what asks it for the .ssl this
+    # gate compares. `fgtp` covers the rest.
+    if [[ -n "$(git -C "$dir" ls-files '*.td' '*.tbaf')" ]]; then
+        if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
+            echo "FAIL: $repo (transpilation errors)"
+            return 1
+        fi
+    fi
+    if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
+        if ! node --no-warnings "$TSSL_CLI" "$dir" -r --transpile 2>&1; then
+            echo "FAIL: $repo (tssl compilation errors)"
+            return 1
+        fi
+    fi
+
+    # .baf and .d outputs must match the committed files byte for byte - their pipelines promise it.
+    local changed
+    changed=$(git -C "$dir" diff --name-only -- ':!*.ssl')
+    if [[ -n "$changed" ]]; then
+        echo "FAIL: $repo (output differs from committed files)"
+        git -C "$dir" diff --stat -- ':!*.ssl'
         return 1
     fi
 
-    # Check git status - any modified files mean transpiler output changed
-    local changed
-    changed=$(git -C "$dir" diff --name-only)
-    if [[ -n "$changed" ]]; then
-        echo "FAIL: $repo (output differs from committed files)"
-        git -C "$dir" diff --stat
-        return 1
+    # Generated .ssl text is allowed to drift (spacing, literal spelling, comments); what ships is the
+    # compiled script, so the gate is bytecode equivalence against the committed version at every level.
+    # An allow-listed file is a VERIFIED intended divergence from the committed baseline, not tolerated
+    # noise - a correction the old pipeline got wrong, or codegen the tag now honours:
+    #   gl_g_healing_revision.ssl - the author's 100.0 float divisors were shipped as integer 100
+    #     (integer division) by the old bundler's literal normalisation; the transpiler now preserves them.
+    #   gl_g_molotov.ssl - SSL's and/or share one precedence level, so the old output's stripped
+    #     parentheses changed `(a && b) || (c && d)` into `((a and b) or c) and d`; the transpiler now
+    #     keeps the author's grouping.
+    #   gl_g_level5.ssl, gl_g_map_hotkey.ssl, gl_g_modoc_brahmin.ssl, gl_g_no_drop_items_on_death.ssl -
+    #     each bundles an `@inline` function the old pipeline emitted as a procedure anyway
+    #     (map_first_run, shitter_has_blown, inven_count); it is now the `#define` the tag asks for, so
+    #     the script carries one procedure fewer and the body sits at the call site.
+    #     TODO: temporary - the baseline is stale, not wrong. folib 0.4.2 drops the tag on all three, so
+    #     bumping the FO2tweaks pin in external/fallout.txt to a commit that resolves it (and
+    #     regenerating the oracles, as that file says) makes these match again; drop them from this list
+    #     then, so their bytecode is checked once more.
+    if [[ -n "$(git -C "$dir" diff --name-only -- '*.ssl')" ]]; then
+        if ! (cd "$ROOT_DIR" && pnpm --silent ssl-equiv "$dir" \
+            --allow gl_g_healing_revision.ssl --allow gl_g_molotov.ssl \
+            --allow gl_g_level5.ssl --allow gl_g_map_hotkey.ssl \
+            --allow gl_g_modoc_brahmin.ssl --allow gl_g_no_drop_items_on_death.ssl); then
+            echo "FAIL: $repo (generated .ssl no longer compiles to the committed bytecode)"
+            return 1
+        fi
+        # Other suites read these trees (the SSL corpus differential compiles the .ssl files), so the
+        # equivalence-checked drift is put back rather than left for them to sweep.
+        git -C "$dir" checkout -- '*.ssl'
+    fi
+
+    # The bytecode oracle measures the same property as ssl-equiv above - the transpiler still produces
+    # something that compiles to the bytes it used to - without needing a committed .ssl to compare
+    # against, so it is what remains once a mod stops shipping the intermediate. Both run while both can:
+    # ssl-equiv covers the text as committed, this covers the bytecode at four switch sets including the
+    # `-s` the mods actually ship, which no other sweep exercises on a real script.
+    if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
+        if ! (cd "$ROOT_DIR" && pnpm --silent tssl-oracles "$dir"); then
+            echo "FAIL: $repo (transpiled bytecode differs from the committed oracles)"
+            return 1
+        fi
+        # The two routes to bytecode must agree: through generated SSL text, and straight to the IR.
+        # This is what makes an emitted .ssl a guarantee rather than a hope - it is not merely offered
+        # alongside the .int, it is checked to compile to the same bytes, at every switch set the mods
+        # use. Enforced rather than advisory now that the direct route covers the whole repo.
+        # One invocation covering every switch set: transpiling and lowering are the expensive half and
+        # are done once, where a run per set repeated them and cost four times as long.
+        if ! (cd "$ROOT_DIR" && pnpm --silent tssl-int-diff "$dir" -O0 -- -O1 -- -O2 -- -O2 -s); then
+            echo "FAIL: $repo (direct-to-IR compilation differs from the text route)"
+            return 1
+        fi
     fi
 
     echo "PASS: $repo"
 }
+
+# The in-repo construct fixture runs first, and unconditionally: it covers the shapes no real .tssl in
+# the pinned corpus contains, so the external sweep below cannot tell the two routes apart on them. It
+# needs no checkout, so it still guards when external/ is absent.
+step "TSSL construct fixture (both routes)"
+if ! (cd "$ROOT_DIR" && pnpm --silent tssl-int-diff compilers/tssl/test/constructs -O0 -- -O1 -- -O2 -- -O2 -s); then
+    echo "FAIL: construct fixture (direct-to-IR compilation differs from the text route)"
+    exit 1
+fi
 
 step "Transpile external repos"
 parallel \

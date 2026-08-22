@@ -259,7 +259,9 @@ export class TBAFTransformer implements TransformerContext {
     transformCallToCondition(call: CallExpression): BAFCondition {
         const funcName = call.getExpression().getText();
         const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
-        return { negated: false, name: funcName, args };
+        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0. The algebra
+        // below copies conditions with spread, so this rides along through negation and CNF.
+        return { negated: false, name: funcName, args, line: call.getStartLineNumber() - 1 };
     }
 
     /**
@@ -268,7 +270,8 @@ export class TBAFTransformer implements TransformerContext {
     private transformCallToAction(call: CallExpression): BAFAction {
         const funcName = call.getExpression().getText();
         const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
-        return { name: funcName, args };
+        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
+        return { name: funcName, args, line: call.getStartLineNumber() - 1 };
     }
 
     /**

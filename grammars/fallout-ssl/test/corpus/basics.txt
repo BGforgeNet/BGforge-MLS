@@ -99,6 +99,23 @@ procedure foo(variable a, variable b);
         name: (identifier)))))
 
 ================================================================================
+Names that begin with a keyword stay whole
+================================================================================
+
+procedure begins(variable thenx, variable endif);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_forward
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier))
+      (param
+        name: (identifier)))))
+
+================================================================================
 Procedure params reject call-expression defaults
 ================================================================================
 
@@ -115,7 +132,8 @@ procedure foo(variable x := random(1, 2));
         default: (param_default
           (identifier)))
       (ERROR
-        (number)
+        (number))
+      (ERROR
         (number)))
     (ERROR)))
 
@@ -384,7 +402,7 @@ end
   (procedure
     name: (identifier)
     body: (foreach_stmt
-      var: (identifier)
+      key: (identifier)
       iter: (identifier)
       body: (block
         (assignment
@@ -610,6 +628,32 @@ end
           value: (number))))))
 
 ================================================================================
+Map literal keyed by an expression
+================================================================================
+
+procedure foo begin
+    x = {(1): "a", 2 + 3: "b"};
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (map_expr
+        (map_entry
+          key: (paren_expr
+            (number))
+          value: (string))
+        (map_entry
+          key: (binary_expr
+            left: (number)
+            right: (number))
+          value: (string))))))
+
+================================================================================
 Procedure reference
 ================================================================================
 
@@ -819,3 +863,359 @@ end
         (block
           (assignment left: (identifier) right: (number))
           (assignment left: (identifier) right: (number)))))))
+
+================================================================================
+integer division (div)
+================================================================================
+
+procedure foo begin
+    x := a div b;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (binary_expr
+        left: (identifier)
+        right: (identifier)))))
+
+================================================================================
+prefix operators floor and bwnot
+================================================================================
+
+procedure foo begin
+    x := floor a;
+    y := bwnot b;
+    z := not c;
+    w := -d;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))
+    body: (assignment left: (identifier) right: (unary_expr expr: (identifier)))))
+
+================================================================================
+bitwise operators bind at the same level as addition
+================================================================================
+
+procedure foo begin
+    x := a bwand b + c;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (binary_expr
+        left: (binary_expr
+          left: (identifier)
+          right: (identifier))
+        right: (identifier)))))
+
+================================================================================
+Ternary in a variable initialiser
+================================================================================
+
+procedure foo begin
+    variable r := g if m else h;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        value: (ternary_expr
+          true_value: (identifier)
+          cond: (identifier)
+          false_value: (identifier))))))
+
+================================================================================
+Bare block as a statement, followed by else
+================================================================================
+
+procedure foo begin
+    if (a) then begin
+        begin x := 1; end
+    end else begin
+        y := 2;
+    end
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (if_stmt
+      cond: (paren_expr
+        (identifier))
+      then: (block
+        (block
+          (assignment
+            left: (identifier)
+            right: (number))))
+      else: (block
+        (assignment
+          left: (identifier)
+          right: (number))))))
+
+================================================================================
+Procedure modifier and case-insensitive call keyword
+================================================================================
+
+pure procedure foo(variable a) begin
+    return a;
+end
+
+procedure bar begin
+    Call foo;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    modifier: (procedure_modifier)
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)))
+    body: (return_stmt
+      (identifier)))
+  (procedure
+    name: (identifier)
+    body: (call_stmt
+      target: (identifier))))
+
+================================================================================
+Critical procedures, alone and combined with another modifier
+================================================================================
+
+critical procedure alone begin
+end
+
+critical pure procedure both(variable a) begin
+    return a;
+end
+
+critical procedure forward_declared;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    critical: (procedure_critical)
+    name: (identifier))
+  (procedure
+    critical: (procedure_critical)
+    modifier: (procedure_modifier)
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)))
+    body: (return_stmt
+      (identifier)))
+  (procedure_forward
+    critical: (procedure_critical)
+    name: (identifier)))
+
+================================================================================
+Timed and guarded procedures
+================================================================================
+
+procedure fires_later in 5 begin
+end
+
+procedure guarded when (g == 1) begin
+end
+
+procedure start begin
+    call fires_later in 10;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    timed: (number))
+  (procedure
+    name: (identifier)
+    condition: (paren_expr
+      (binary_expr
+        left: (identifier)
+        right: (number))))
+  (procedure
+    name: (identifier)
+    body: (call_stmt
+      target: (identifier)
+      delay: (number))))
+
+================================================================================
+Keywords are case-insensitive
+================================================================================
+
+PROCEDURE Foo BEGIN
+    VARIABLE x := TRUE;
+    IF (x) THEN BEGIN
+        RETURN FALSE;
+    END
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        value: (boolean)))
+    body: (if_stmt
+      cond: (paren_expr
+        (identifier))
+      then: (block
+        (return_stmt
+          (boolean))))))
+
+================================================================================
+Adjacent string literals are one string
+================================================================================
+
+procedure foo begin
+    x = "ab" "cd";
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (string))))
+
+================================================================================
+Character constant
+================================================================================
+
+procedure foo begin
+    x = 'A';
+    y = '\n';
+    z = '\0101';
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (char))
+    body: (assignment
+      left: (identifier)
+      right: (char))
+    body: (assignment
+      left: (identifier)
+      right: (char))))
+
+================================================================================
+Array declaration with size and flags
+================================================================================
+
+procedure foo begin
+    variable a[10];
+    variable b[4, 2];
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        size: (number)))
+    body: (variable_decl
+      (var_init
+        name: (identifier)
+        size: (number)
+        flags: (number)))))
+
+================================================================================
+Process control statements
+================================================================================
+
+procedure foo begin
+    startcritical;
+    spawn("child");
+    wait(50);
+    cancel(bar);
+    cancelall;
+    endcritical;
+    exit;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (process_stmt)
+    body: (process_stmt
+      arg: (string))
+    body: (process_stmt
+      arg: (number))
+    body: (process_stmt
+      arg: (identifier))
+    body: (process_stmt)
+    body: (process_stmt)
+    body: (process_stmt)))
+
+================================================================================
+Foreach with a while guard
+================================================================================
+
+procedure foo begin
+    foreach v in arr while (i < 3) begin
+        i = i + 1;
+    end
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (foreach_stmt
+      key: (identifier)
+      iter: (identifier)
+      while_cond: (paren_expr
+        (binary_expr
+          left: (identifier)
+          right: (number)))
+      body: (block
+        (assignment
+          left: (identifier)
+          right: (binary_expr
+            left: (identifier)
+            right: (number)))))))

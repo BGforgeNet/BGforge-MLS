@@ -15,13 +15,25 @@ All settings are under the `bgforge` namespace.
 
 ## Fallout SSL
 
-| Setting                                | Default                 | Description                                                                                                            |
-| -------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `bgforge.falloutSSL.compilePath`       | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use built-in.           |
-| `bgforge.falloutSSL.compileOptions`    | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                                         |
-| `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                        |
-| `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                             |
-| `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output. |
+| Setting                                | Default                 | Description                                                                                                                                                                                                                                                                             |
+| -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.falloutSSL.compilePath`       | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use whichever compiler `bgforge.falloutSSL.compiler` selects.                                                                                                                            |
+| `bgforge.falloutSSL.compileOptions`    | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                                                                                                                                                                                                          |
+| `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                                                                                                                                                                                         |
+| `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                                                                                                                                                                                              |
+| `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output.                                                                                                                                                                  |
+| `bgforge.falloutSSL.compiler`          | `wasm`                  | Which compiler runs when no `compilePath` is set. `wasm` is the reference sslc built to WebAssembly, run in a separate process through a temporary file; `built-in` is the extension's own, which compiles the editor's text directly and matches the other's output at `-O0` to `-O2`. |
+
+## TSSL
+
+A `.tssl` file compiles straight to Fallout `.int` bytecode - no SSL text is produced or parsed on the
+way. The `.int` lands where `bgforge.falloutSSL.outputDirectory` says, and the optimisation switches in
+`bgforge.falloutSSL.compileOptions` (`-O`, `-s`) apply; the rest of that line addresses an SSL text
+compiler and names nothing a TypeScript source has.
+
+| Setting                | Default | Description                                                                                                                                                                                                                      |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.tssl.emitSsl` | `false` | Also write the readable `.ssl` beside the bytecode. Enable this if your mod still ships generated `.ssl`, or to read what a script became. The emitted text is checked to compile to the same bytes the compiler wrote directly. |
 
 ## WeiDU
 

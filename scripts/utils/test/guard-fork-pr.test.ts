@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const SCRIPT = path.join(REPO_ROOT, "actions", "_shared", "guard-fork-pr.sh");
@@ -21,6 +22,7 @@ function runGuard(eventName: string, isFork: string): number {
     const proc = spawnSync(SCRIPT, [], {
         env: { ...process.env, EVENT_NAME: eventName, IS_FORK: isFork },
         encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
     });
     return proc.status ?? -1;
 }

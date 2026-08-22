@@ -1,71 +1,17 @@
+/**
+ * MAP parser: interface, canonical-document behaviour, serializer invariants, ambiguous-boundary handling
+ * and error cases - the cases that run against committed fixtures.
+ *
+ * Two sibling files carry the rest so vitest can run them in parallel (see `map-fixtures.ts`):
+ * `map-json-snapshot.test.ts` (the JSON-snapshot x parse-mode matrix) and `map-real-corpus.test.ts`
+ * (everything needing a real vanilla map from `external/fallout`).
+ */
+
 import { describe, expect, it } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
 import { mapParser } from "../src/map";
-import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
+import { createBinaryJsonSnapshot } from "../src/json-snapshot";
 import type { ParseResult } from "../src/types";
-import { REPO_ROOT } from "./repo-root";
-
-const REAL_MAPS = [
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/artemple.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/arvillag.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/navarro.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/vault13.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/newr1.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/sftanker.map"),
-] as const;
-const hasExternalMaps = fs.existsSync(path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps"));
-
-const LOCAL_FIXTURE_MAPS = new Set([
-    "artemple.map",
-    "arcaves.map",
-    "bhrnddst.map",
-    "denbus1.map",
-    "newr2.map",
-    "sfsheng.map",
-]);
-
-const LOCAL_STRICT_FIXTURE_MAPS = ["artemple.map", "arcaves.map", "bhrnddst.map", "denbus1.map", "newr2.map"] as const;
-
-const LOCAL_GRACEFUL_FIXTURE_MAPS = [...LOCAL_STRICT_FIXTURE_MAPS, "sfsheng.map"] as const;
-
-function resolveMapPath(fileName: string): string {
-    if (LOCAL_FIXTURE_MAPS.has(fileName)) {
-        return path.join(REPO_ROOT, "client/testFixture/maps", fileName);
-    }
-    return path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps", fileName);
-}
-
-function loadMap(mapPath: string): Uint8Array {
-    return new Uint8Array(fs.readFileSync(mapPath));
-}
-
-function findFieldByName(fields: unknown[], name: string): { value: unknown; type?: unknown; rawValue?: unknown } {
-    const found = fields.find((field) => {
-        if (!field || typeof field !== "object") return false;
-        return "name" in field && field.name === name;
-    });
-
-    if (!found || typeof found !== "object" || !("value" in found)) {
-        throw new Error(`Missing field ${name}`);
-    }
-
-    return found as { value: unknown; type?: unknown; rawValue?: unknown };
-}
-
-function findGroupByName(fields: unknown[], name: string): { name: string; fields: unknown[] } {
-    const found = fields.find((field) => {
-        if (!field || typeof field !== "object") return false;
-        return "name" in field && field.name === name && "fields" in field;
-    });
-
-    if (!found || typeof found !== "object" || !("fields" in found)) {
-        throw new Error(`Missing group ${name}`);
-    }
-
-    return found as { name: string; fields: unknown[] };
-}
+import { findFieldByName, findGroupByName, loadMap, resolveMapPath } from "./map-fixtures";
 
 describe("MAP parser - interface", () => {
     it("has id 'map'", () => {
@@ -86,26 +32,6 @@ describe("MAP parser - interface", () => {
 });
 
 describe("MAP parser - real maps", () => {
-    it
-        .skipIf(!hasExternalMaps)
-        .each([REAL_MAPS[0], REAL_MAPS[1], REAL_MAPS[2], REAL_MAPS[3], REAL_MAPS[4], REAL_MAPS[5]])(
-        "strictly parses %s without errors",
-        (mapPath) => {
-            const result = mapParser.parse(loadMap(mapPath));
-            expect(result.errors).toBeUndefined();
-            expect(result.root.fields.length).toBeGreaterThan(1);
-        },
-    );
-
-    it.skipIf(!hasExternalMaps).each(REAL_MAPS)("round-trips %s byte-for-byte", (mapPath) => {
-        const mapData = loadMap(mapPath);
-        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
-
-        expect(result.errors).toBeUndefined();
-        const serialized = mapParser.serialize!(result);
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
     it("attaches a semantic canonical MAP document alongside the editor tree", () => {
         const result = mapParser.parse(loadMap(resolveMapPath("artemple.map")), {
             gracefulMapBoundaries: true,
@@ -141,57 +67,6 @@ describe("MAP parser - real maps", () => {
         ).toBe(true);
     });
 
-    it.each(LOCAL_STRICT_FIXTURE_MAPS)("strict JSON snapshots round-trip %s byte-for-byte", (fileName) => {
-        const mapData = loadMap(resolveMapPath(fileName));
-        const result = mapParser.parse(mapData);
-
-        expect(result.errors).toBeUndefined();
-
-        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-        const serialized = mapParser.serialize!(snapshot);
-
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.each(LOCAL_STRICT_FIXTURE_MAPS)("strict editor-mode JSON snapshots round-trip %s byte-for-byte", (fileName) => {
-        const mapData = loadMap(resolveMapPath(fileName));
-        const result = mapParser.parse(mapData, { skipMapTiles: true });
-
-        expect(result.errors).toBeUndefined();
-
-        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-        const serialized = mapParser.serialize!(snapshot);
-
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.each(LOCAL_GRACEFUL_FIXTURE_MAPS)("graceful JSON snapshots round-trip %s byte-for-byte", (fileName) => {
-        const mapData = loadMap(resolveMapPath(fileName));
-        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
-
-        expect(result.errors).toBeUndefined();
-
-        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-        const serialized = mapParser.serialize!(snapshot);
-
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.each(LOCAL_GRACEFUL_FIXTURE_MAPS)(
-        "graceful editor-mode JSON snapshots round-trip %s byte-for-byte",
-        (fileName) => {
-            const mapData = loadMap(resolveMapPath(fileName));
-            const result = mapParser.parse(mapData, { gracefulMapBoundaries: true, skipMapTiles: true });
-
-            expect(result.errors).toBeUndefined();
-
-            const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-            const serialized = mapParser.serialize!(snapshot);
-
-            expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-        },
-    );
-
     it("strict mode preserves PRO-dependent object tails as opaque ranges without parse errors", () => {
         const mapData = loadMap(resolveMapPath("denbus1.map"));
         const result = mapParser.parse(mapData);
@@ -201,63 +76,6 @@ describe("MAP parser - real maps", () => {
 
         const serialized = mapParser.serialize!(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.skipIf(!hasExternalMaps)("can skip loading tile groups for editor-oriented MAP parsing", () => {
-        const mapData = loadMap(REAL_MAPS[0]);
-        const result = mapParser.parse(mapData, { skipMapTiles: true, gracefulMapBoundaries: true });
-
-        expect(result.errors).toBeUndefined();
-        expect(
-            result.root.fields.some(
-                (field) =>
-                    field &&
-                    typeof field === "object" &&
-                    "name" in field &&
-                    /^Elevation \d+ Tiles$/.test(String(field.name)),
-            ),
-        ).toBe(false);
-
-        const serialized = mapParser.serialize!(result);
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.skipIf(!hasExternalMaps)("preserves skipped tile bytes through JSON snapshots", () => {
-        const mapData = loadMap(REAL_MAPS[0]);
-        const result = mapParser.parse(mapData, { skipMapTiles: true, gracefulMapBoundaries: true });
-
-        expect(result.opaqueRanges?.some((range) => range.label === "tiles")).toBe(true);
-
-        const reparsedSnapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-        const serialized = mapParser.serialize!(reparsedSnapshot);
-
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-    });
-
-    it.skipIf(!hasExternalMaps)("re-packs tile ids and flags into the original 32-bit word", () => {
-        const mapData = loadMap(REAL_MAPS[0]);
-        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
-        const tileGroup = result.root.fields.find((field) => "name" in field && field.name === "Elevation 0 Tiles");
-
-        expect(tileGroup).toBeDefined();
-        expect("fields" in tileGroup!).toBe(true);
-
-        const tileFields = (tileGroup as { fields: unknown[] }).fields;
-        const floorField = findFieldByName(tileFields, "Tile 0 Floor");
-        const floorFlagsField = findFieldByName(tileFields, "Tile 0 Floor Flags");
-        const roofField = findFieldByName(tileFields, "Tile 0 Roof");
-        const roofFlagsField = findFieldByName(tileFields, "Tile 0 Roof Flags");
-
-        floorField.value = 0x234;
-        floorFlagsField.value = 0x5;
-        roofField.value = 0x678;
-        roofFlagsField.value = 0x9;
-        (result as ParseResult).document = undefined;
-
-        const serialized = mapParser.serialize!(result);
-        const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
-
-        expect(view.getUint32(240, false)).toBe(0x96785234);
     });
 
     it("serializes from the canonical MAP document instead of the display tree when present", () => {
@@ -348,36 +166,6 @@ describe("MAP parser - real maps", () => {
         const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
         expect(view.getInt32(0x1c, false)).toBe(5);
     });
-
-    it.skipIf(!hasExternalMaps)(
-        "parses object section counts and leaves a TODO when subtype resolution is missing",
-        () => {
-            const mapData = loadMap(REAL_MAPS[2]);
-            const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
-            const objectsSection = result.root.fields.find(
-                (field) => "name" in field && field.name === "Objects Section",
-            );
-
-            expect(objectsSection).toBeDefined();
-            expect("fields" in objectsSection!).toBe(true);
-
-            const objectFields = (objectsSection as { fields: unknown[] }).fields;
-            const totalObjects = findFieldByName(objectFields, "Total Objects");
-            expect(totalObjects.value).toBe(4886);
-
-            const elevation0 = objectFields.find(
-                (field) =>
-                    field && typeof field === "object" && "name" in field && field.name === "Elevation 0 Objects",
-            ) as { fields: unknown[] } | undefined;
-            expect(elevation0).toBeDefined();
-            expect(findFieldByName(elevation0!.fields, "Object Count").value).toBe(4294);
-
-            const todoNote = objectFields.find(
-                (field) => field && typeof field === "object" && "name" in field && field.name === "Truncated",
-            ) as { value: unknown } | undefined;
-            expect(todoNote?.value).toContain("PRO");
-        },
-    );
 
     it("parses arcaves.map object headers at the correct script boundary", () => {
         const mapData = loadMap(resolveMapPath("arcaves.map"));

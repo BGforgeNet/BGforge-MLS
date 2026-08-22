@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Dev-loop test suite: static analysis, unit tests (no coverage), builds,
-# smoke + sample + CLI tests. The close-out gate (coverage thresholds, external
-# corpus, integration, grammars) is test-all.sh, which drives this script with
-# TEST_COVERAGE=1 / TEST_STOP_AFTER_BUILD=1.
+# Dev-loop test suite: static analysis, unit tests (no coverage), builds, smoke + sample + CLI tests,
+# grammars, server integration, and the SSL corpus canary - every category the gate covers, at dev-loop
+# depth, so none can break silently until close-out. The close-out gate (coverage thresholds, the
+# external-corpus format sweep, the full SSL corpus sweeps, transpile-external) is test-all.sh, which
+# drives this script with TEST_COVERAGE=1 / TEST_STOP_AFTER_BUILD=1.
 # Uses parallel execution for independent stages to minimize wall time.
 # Each parallel job logs to tmp/test-logs/ - silent on success, full output on failure.
 set -eu -o pipefail
@@ -54,6 +55,8 @@ parallel \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
+    "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
+    "Typecheck tssl" "(cd compilers/tssl && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Lint md-links" "pnpm lint:md-links" \
@@ -85,6 +88,8 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
         "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
@@ -104,6 +109,8 @@ else
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
         "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
         "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
+        "Unit ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
+        "Unit tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \
         "Unit shared" "pnpm exec vitest run --config shared/vitest.config.ts --maxWorkers=1"
 fi
 
@@ -112,7 +119,9 @@ step "Phase 2: Building Server + CLIs"
 parallel \
     "Server bundle" "$SCRIPT_DIR/build-base-server.sh" \
     "Format CLI" "pnpm --filter @bgforge/format build" \
-    "Binary CLI" "pnpm --filter @bgforge/binary build"
+    "Binary CLI" "pnpm --filter @bgforge/binary build" \
+    "SSL CLI" "pnpm --filter @bgforge/ssl build" \
+    "TSSL CLI" "pnpm --filter @bgforge/tssl build"
 
 # Support early exit for test-all.sh (runs its own Phase 3 with extended tests interleaved)
 if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
@@ -120,14 +129,27 @@ if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
     exit 0
 fi
 
+# The differential inside the integration suite uses the real WeiDU as its authority and SKIPS without
+# one, so resolve it here rather than letting the suite quietly drop itself. Cached after the first run.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
+
 # --- Phase 3: Tests that need builds (all in parallel) ---
-# The external-corpus + integration chain lives in test-all.sh only: it is the
-# multi-minute tail of the suite and belongs to the close-out gate, not the
-# dev loop. bin-cli tests that read external/ are gated behind
-# RUN_EXTERNAL_CLI_TESTS and skip cleanly here.
-step "Phase 3: Smoke + Samples + CLI"
+# Every category the close-out gate covers is represented here at dev-loop depth: grammars whole, server
+# integration whole, and the SSL corpus as its 24-script canary, which states its own denominator so a
+# green here cannot read as a swept corpus. Close-out keeps the full corpus sweeps and
+# transpile-external, plus the format/idempotency sweep.
+#
+# Every job in this block READS external/ and none writes it, which is what lets them run together - the
+# format sweep MUTATES those trees (hence the reset trap in test-external.sh) and stays in test-all.sh
+# for that reason, and bin-cli tests that read external/ are gated behind RUN_EXTERNAL_CLI_TESTS and skip
+# cleanly here. Adding a job that writes there, or setting that variable, breaks both sides at once.
+step "Phase 3: Smoke + Samples + CLI + Grammars + Integration + Corpus canary"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
-    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli"
+    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
+    "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars" \
+    "Server integration" "(cd server && pnpm exec vitest run --config vitest.integration.config.ts)" \
+    "Corpus canary" "pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
 
 timing_summary "All tests passed"

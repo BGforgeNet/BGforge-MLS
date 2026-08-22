@@ -31,11 +31,17 @@ TEST_STOP_AFTER_BUILD=1 TEST_COVERAGE=1 "$SCRIPT_DIR/test.sh"
 # its own redundant reset (the export inside test.sh doesn't survive the subprocess).
 export EXTERNAL_REPOS_CLEAN=1
 
+# test.sh exported this for its own Phase 3, which the line above skipped, so resolve it again here.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
+
 # All remaining tests in one parallel block.
 # Each job only needs CLIs built (done above). Grammar tests build format CLI if missing.
-# Keep in sync with test.sh Phase 3 block (this adds the external-corpus +
-# integration chain, grammar and transpile-external jobs; test.sh runs only
-# smoke + samples + CLI).
+# Keep in sync with test.sh Phase 3 block: what this adds is DEPTH, not new categories -
+# the external-corpus format sweep, transpile-external, and the full SSL corpus sweeps
+# where test.sh runs only their canary. Grammars and server integration are identical in
+# both; integration is chained here rather than parallel only because the format sweep
+# beside it rewrites the trees it reads.
 # External + Integration + Transpile-external are chained: they all touch the same
 # external repos and would race if parallelized. The format step modifies .baf files and
 # transpile-external checks git-clean status; concurrent access corrupts both. The EXIT
@@ -48,7 +54,7 @@ step "Phase 3 + Extended: All remaining tests"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
-    "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.ts) && pnpm test:transpile-external && pnpm test:cli:external" \
+    "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.ts) && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && pnpm test:transpile-external && pnpm test:cli:external" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars"
 
 timing_summary "All tests passed (full suite)"

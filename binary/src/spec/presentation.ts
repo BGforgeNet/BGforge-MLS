@@ -32,11 +32,19 @@ export type StructPresentation<T> = Partial<Record<keyof T, FieldPresentation>>;
  * string. Per-field display tweaks (e.g. "Kit Usability 1") belong in a
  * `labels` override, which changes only the display name, not this key.
  */
+/** Field names come from the static specs, so the same handful recur once per field instance. */
+const humanizeCache = new Map<string, string>();
+
 export function humanize(fieldName: string): string {
-    return fieldName
+    const cached = humanizeCache.get(fieldName);
+    if (cached !== undefined) return cached;
+
+    const label = fieldName
         .replaceAll(/([a-z])([A-Z])/g, "$1 $2")
         .replaceAll(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
         .replace(/^(.)/, (c) => c.toUpperCase());
+    humanizeCache.set(fieldName, label);
+    return label;
 }
 
 /**

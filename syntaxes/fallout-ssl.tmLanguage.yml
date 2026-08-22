@@ -8,6 +8,7 @@ patterns:
   - include: '#function-invocation'
   - include: '#variable'
   - include: '#strings'
+  - include: '#character'
   - include: '#function-declaration'
   - include: '#function-definition'
   - include: '#types'
@@ -560,7 +561,7 @@ repository:
       - match: \b(?i)(while)\b
   operators:
     patterns:
-      - match: (\b(?i)(and|or|not|band|bwor|bnot|bwxor|bwand|andalso|orelse)\b)
+      - match: (\b(?i)(and|or|not|bwor|bwnot|bwxor|bwand|andalso|orelse)\b)
         name: keyword.control.fallout-ssl
       - match: (=|:|>|<|\+\+|\-|\+|;|!|%|\^)
         name: keyword.control.fallout-ssl
@@ -981,6 +982,11 @@ repository:
     name: string.quoted.double.fallout-ssl
     patterns:
       - match: .
+  # A character constant is one character or one escape - matched whole, so an apostrophe in prose cannot
+  # open a run that swallows the rest of the line.
+  character:
+    match: "'(\\\\0[0-7]{2,3}|\\\\[^'\\\\0]|[^'\\\\])'"
+    name: constant.character.fallout-ssl
   types:
     patterns:
       - match: \b(?i)(int|string|ObjectPtr)\b

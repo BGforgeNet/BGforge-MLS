@@ -5,11 +5,12 @@ packages:
   - format
   - image
   - server
+  - compilers/ssl
+  - compilers/tssl
   - grammars/*
   - plugins/*
   - transpilers
   - transpilers/common
-  - transpilers/tssl
   - transpilers/tbaf
   - transpilers/td
 

@@ -97,6 +97,40 @@ describe("expandEnumPropertyAccess", () => {
         expect(out).toContain("return ANKHEG;");
         expect(out).not.toContain("ClassID");
     });
+
+    // A compat object is dropped or rewritten into one line per referenced member, so this pass both
+    // removes and adds lines. Every output line still has an origin - a rewritten one belongs to the
+    // statement it replaced - and reporting it is what keeps a later position traceable to the source.
+    describe("line survival", () => {
+        it("drops the line of a compat object nothing references", () => {
+            const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return 42; }\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, new Set(["Color"]), new Set(), survivors);
+            expect(survivors).toEqual([1]);
+        });
+
+        it("keeps one line per referenced member, all tracing to the statement they replaced", () => {
+            const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return Color.Red + Color.Green; }\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, new Set(["Color"]), new Set(), survivors);
+            // Two generated `var Color_<member>` lines, both from input line 0, then the function.
+            expect(survivors).toEqual([0, 0, 1]);
+        });
+
+        it("maps every line to itself when only prefixes are stripped, which stays on one line", () => {
+            const code = "function f() { return ClassID.ANKHEG; }\nfunction g() { return 1; }\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, new Set(), new Set(["ClassID"]), survivors);
+            expect(survivors).toEqual([0, 1]);
+        });
+
+        it("maps every line to itself on the fast path, where nothing is rewritten", () => {
+            const code = "var Color = { Red: 0 };\nvar x = 1;\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, new Set(), new Set(), survivors);
+            expect(survivors).toEqual([0, 1]);
+        });
+    });
 });
 
 describe("extractDeclareEnumNames", () => {

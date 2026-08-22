@@ -15,6 +15,8 @@ import {
     enumTransformPlugin,
 } from "./enum-transform";
 import { ensureNodeOnPath } from "./node-runtime";
+import { lineCount, composeLineMaps, type SourcePosition } from "./line-map";
+import { decodeMappings } from "./source-map";
 
 let esbuildInitialized = false;
 
@@ -42,13 +44,6 @@ interface BundleConfig {
     readonly filePath: string;
     /** Source text content */
     readonly sourceText: string;
-    /**
-     * Pre-computed enum names from the source text.
-     * When provided, skips the internal transformEnums() call on sourceText
-     * (caller already transformed it and needs the result for other purposes).
-     * sourceText should already be enum-transformed in this case.
-     */
-    readonly preTransformed?: { readonly enumNames: ReadonlySet<string> };
     /** Marker string prepended to source for stripping esbuild runtime helpers */
     readonly marker: string;
     /** esbuild target (e.g., "esnext", "es2022") */
@@ -65,8 +60,6 @@ interface BundleConfig {
      * sharedEnumNames/sharedExternalEnumNames so all plugins share state.
      */
     readonly extraPlugins?: esbuild.Plugin[];
-    /** Original constants for restoring esbuild-renamed identifiers in cleanup */
-    readonly originalConstants?: Map<string, string>;
     /**
      * Mutable set for extra plugins to add enum names into.
      * Merged with the main file's enum names before bundling.
@@ -90,6 +83,8 @@ interface BundleResult {
     readonly externalEnumNames: ReadonlySet<string>;
     /** Input files from metafile (only when metafile: true was requested) */
     readonly inputFiles: readonly string[];
+    /** For each line of `code`, the file and 0-based line it came from; absent where the map has none. */
+    readonly origins: ReadonlyArray<SourcePosition | undefined>;
 }
 
 /**
@@ -111,11 +106,10 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     const { filePath, sourceText, marker, target, metafile } = config;
 
     // Pre-transform: convert enums to flat consts before esbuild sees them.
-    // If caller already transformed (and needs the result for other purposes),
-    // skip redundant work via preTransformed.
-    const { code: enumTransformed, enumNames } = config.preTransformed
-        ? { code: sourceText, enumNames: config.preTransformed.enumNames }
-        : transformEnums(sourceText);
+    // Where each line of the entry stood before its enums were flattened: without the map, the lines
+    // below an enum would be reported one place off for every line the flattening removed.
+    const entryLineMap: number[] = [];
+    const { code: enumTransformed, enumNames } = transformEnums(sourceText, entryLineMap);
 
     // Accumulate enum names from imported files during bundling.
     // Mutated via closure in the enum-transform plugin.
@@ -152,6 +146,14 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
         absWorkingDir: resolveDir,
         bundle: true,
         write: false,
+        // Asked for so a position in the bundle can be traced back to the file the author wrote. It is
+        // never written to disk - `write: false` hands it back alongside the code, and only the mappings
+        // are read. "external" rather than true: the inline form appends a `sourceMappingURL` comment to
+        // the code, which would then be one more line for the parser downstream to read.
+        sourcemap: "external",
+        // Named only because an external map is refused without an output path. `write: false` means
+        // nothing reaches disk under this name; it exists so the map arrives as its own output file.
+        outfile: path.join(resolveDir, "bundle.js"),
         metafile: metafile ?? false,
         format: "esm",
         treeShaking: true,
@@ -172,17 +174,41 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     });
 
     // write: false guarantees outputFiles exists, but array might be empty
-    const outputFile = result.outputFiles[0];
+    // Selected by extension rather than by index: asking for a source map adds a second output file, so
+    // the first is no longer reliably the code.
+    const outputFile = result.outputFiles.find((file) => !file.path.endsWith(".map"));
     if (outputFile === undefined) {
         throw new Error("esbuild produced no output");
     }
+    const mapFile = result.outputFiles.find((file) => file.path.endsWith(".map"));
 
     // Strip ESM module boilerplate from esbuild output
-    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, config.originalConstants);
+    const afterCleanup: number[] = [];
+    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, afterCleanup);
 
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
-    const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames);
+    const afterExpand: number[] = [];
+    const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames, afterExpand);
+
+    // Both passes only ever moved lines relative to what esbuild emitted, so composing them lands on a
+    // line of that output; the source map then says which file and line that came from.
+    const lineMap = composeLineMaps(afterCleanup, afterExpand);
+    const origins = resolveOrigins(lineMap, mapFile?.text, resolveDir, {
+        // What esbuild will call the entry in its map. `sourcefile` is a label, not a path, so it is
+        // resolved the way the map's other sources are - otherwise a relative one never compares equal
+        // and the entry is mistaken for an import.
+        alias: path.resolve(resolveDir, config.sourcefile ?? realPath),
+        // What to report it as: the path the caller passed in. The label above stands in for it where a
+        // transpiler hands esbuild a name its own loader understands, and the resolved form names the
+        // same file under a path the caller never used - which a consumer comparing the two reads as a
+        // different file entirely.
+        file: filePath,
+        // esbuild reads the entry as `marker + "\n" + source`, so every line it reports for that file
+        // sits one lower in the file the author actually has open. Other sources are read as-is.
+        shift: lineCount(marker + "\n"),
+        lineMap: entryLineMap,
+    });
 
     // Extract input files from metafile if requested.
     // Only .ts files, not .d.ts.
@@ -194,7 +220,47 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
                   .map((f) => path.resolve(resolveDir, f))
             : [];
 
-    return { code, allEnumNames, externalEnumNames, inputFiles };
+    return { code, allEnumNames, externalEnumNames, inputFiles, origins };
+}
+
+/**
+ * Turns each bundled line into the file and line it came from, given the esbuild output line it sits on.
+ *
+ * A line with no mapping stays undefined rather than borrowing its neighbour's: an approximate origin is
+ * indistinguishable from a real one once it reaches an error message, and a missing one at least says so.
+ * The map's `sources` are relative to the directory esbuild worked in, so they are resolved against it.
+ */
+function resolveOrigins(
+    lineMap: readonly number[],
+    mapText: string | undefined,
+    resolveDir: string,
+    entry: { alias: string; file: string; shift: number; lineMap: readonly number[] },
+): Array<SourcePosition | undefined> {
+    const unmapped: Array<SourcePosition | undefined> = lineMap.map(() => void 0);
+    if (mapText === undefined) return unmapped;
+
+    const parsed = JSON.parse(mapText) as { sources?: string[]; mappings?: string };
+    const sources = parsed.sources ?? [];
+    const perOutputLine = decodeMappings(parsed.mappings ?? "");
+
+    function originAt(outputLine: number): SourcePosition | undefined {
+        const origin = perOutputLine[outputLine];
+        if (origin === undefined) return;
+        const source = sources[origin.source];
+        if (source === undefined) return;
+        const resolved = path.resolve(resolveDir, source);
+        if (resolved !== entry.alias) return { file: resolved, line: origin.line };
+        // Only the entry was rewritten before esbuild read it: strip the marker it was given, then take
+        // the line back through the enum flattening. Every other source reached esbuild untouched.
+        const beforeMarker = origin.line - entry.shift;
+        const line = entry.lineMap[beforeMarker] ?? beforeMarker;
+        // A prepended line can push an early mapping above the file's own first line; that names nothing
+        // the author can open, so it is dropped rather than clamped onto an unrelated line.
+        if (line < 0) return;
+        return { file: entry.file, line };
+    }
+
+    return lineMap.map((outputLine) => originAt(outputLine));
 }
 
 /**
@@ -205,25 +271,36 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
  * 1. Strips everything before the marker (runtime helpers like __defProp, __name)
  * 2. Builds alias map from import statements (regex)
  * 3. Detects collision patterns (name2 -> name22)
- * 4. Uses original constants to restore esbuild-renamed identifiers
+ * 4. Removes import declarations
  * 5. Renames identifiers back to originals (string-aware, skips string literals)
- * 6. Removes import declarations
  *
  * Uses regex + string-aware tokenization instead of a full TypeScript AST parser.
- * esbuild output is predictable (no regex literals, no exotic syntax), making
- * this safe. Verified against the ts-morph implementation on all three transpiler
- * outputs (TSSL, TBAF, TD) - produces identical results.
+ * esbuild output is predictable (no regex literals, no exotic syntax), making this safe.
  *
  * @param code Bundled code from esbuild
  * @param marker Marker string to find start of user code
- * @param originalConstants Original constant names and values from source file (for restoring renamed vars)
  * @returns Cleaned code
  */
-export function cleanupEsbuildOutput(code: string, marker: string, originalConstants?: Map<string, string>): string {
+export function cleanupEsbuildOutput(
+    code: string,
+    marker: string,
+    /**
+     * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
+     * returned so the existing call sites keep their `string` return; only a caller tracing a position
+     * back through the bundle asks for it.
+     */
+    survivors?: number[],
+): string {
     // Step 1: Strip everything before marker
     const markerIndex = code.indexOf(marker);
+    // Lines the prefix strip consumes. Every later line index is stated relative to the ORIGINAL input,
+    // so this offset is added back at the end rather than tracked through each step.
+    let droppedAhead = 0;
     if (markerIndex !== -1) {
-        code = code.substring(markerIndex + marker.length).trimStart();
+        const afterMarker = code.substring(markerIndex + marker.length);
+        const lead = afterMarker.length - afterMarker.trimStart().length;
+        droppedAhead = lineCount(code.substring(0, markerIndex + marker.length + lead));
+        code = afterMarker.trimStart();
     }
 
     // Step 2: Extract import aliases via regex
@@ -263,46 +340,28 @@ export function cleanupEsbuildOutput(code: string, marker: string, originalConst
         }
     }
 
-    // Step 4: Detect and fix esbuild's variable renaming due to name collisions.
-    //
-    // Problem: When TSSL defines a constant that also exists in folib imports,
-    // esbuild renames the local constant by appending a single digit to avoid collision.
-    // Example: `const DIK_F4 = 62` in TSSL + `DIK_F4` exported from folib
-    //          -> esbuild outputs `var DIK_F42 = 62` (appended '2')
-    //
-    // Solution: Use the original constants extracted from the TSSL source file
-    // (passed via originalConstants parameter) to identify and reverse these renames.
-    //
-    // Algorithm:
-    // 1. Find all var declarations in bundled code via regex: name -> value
-    // 2. For each var ending in a digit, strip the last char to get candidate original name
-    // 3. If originalConstants has that name with the SAME value, it's a rename -> restore it
-    //
-    // Why this is robust:
-    // - Requires BOTH name pattern match AND exact value equality
-    // - Not just regex pattern matching - uses actual constant values from source
-    // - False positive scenario: original has `FOO=5` and `FOO2=5` (same value)
-    //   This is rare and would require user to define two constants with same value
-    //   where one name is the other plus a digit - unlikely in practice
-    if (originalConstants !== undefined && originalConstants.size > 0) {
-        const varDeclRegex = /^var\s+(\w+)\s*=\s*(.+?)\s*;$/gm;
-        let varMatch;
-        while ((varMatch = varDeclRegex.exec(code)) !== null) {
-            // Groups 1 and 2 are guaranteed by the regex pattern
-            const bundledName = varMatch[1]!;
-            const bundledValue = varMatch[2]!;
-            if (!/\d$/.test(bundledName)) continue;
-            const baseName = bundledName.slice(0, -1);
-            if (originalConstants.get(baseName) === bundledValue && !aliasMap.has(bundledName)) {
-                aliasMap.set(bundledName, baseName);
-            }
+    // Step 4: Remove import declarations (single-line and multi-line)
+    const importDecl = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm;
+    // The ranges are read off the same matches the removal uses, before it runs: deriving them from the
+    // result instead would have to re-identify lines by content, which step 5's renaming then breaks.
+    const removed = new Set<number>();
+    if (survivors !== undefined) {
+        for (const match of code.matchAll(importDecl)) {
+            const from = lineCount(code.substring(0, match.index));
+            // A match that swallowed its newline vacates exactly the lines it spans. One at end-of-input
+            // has no newline to swallow and leaves an empty last line, which collapses into the trailing
+            // newline every other line already ends with - so it vacates one line more.
+            const span = match[0].endsWith("\n") ? lineCount(match[0]) : lineCount(match[0]) + 1;
+            for (let line = from; line < from + span; line++) removed.add(line);
+        }
+        const total = lineCount(code);
+        for (let line = 0; line < total; line++) {
+            if (!removed.has(line)) survivors.push(droppedAhead + line);
         }
     }
+    code = code.replaceAll(importDecl, "");
 
-    // Step 5: Remove import declarations (single-line and multi-line)
-    code = code.replaceAll(/^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm, "");
-
-    // Step 6: Rename identifiers (string-aware, skips string literals and comments)
+    // Step 5: Rename identifiers (string-aware, skips string literals and comments)
     if (aliasMap.size > 0) {
         // Sort by length (longest first) to avoid partial replacements
         const sorted = [...aliasMap.entries()].sort((a, b) => b[0].length - a[0].length);

@@ -9,13 +9,13 @@
  *
  * Runs synchronously on every edit, deliberately NOT debounced like the external
  * compiler: the parse is in-memory, tree-sitter is fast, and instant feedback is
- * the point - a debounce would defeat it. `collectParseErrors` prunes clean
+ * the point - a debounce would defeat it. `collectParseDiagnostics` prunes clean
  * subtrees, so cost tracks the broken regions rather than file size.
  */
 
 import { parserManager } from "../../shared/parsers/parser-manager";
 import { setDiagnostics } from "./diagnostic-store";
-import { collectParseErrors } from "./shared/tree-sitter-diagnostics";
+import { collectParseDiagnostics } from "./shared/tree-sitter-diagnostics";
 
 /**
  * Parse `text` for `langId` and publish ERROR / MISSING nodes as the URI's
@@ -31,5 +31,5 @@ export function updateTreeSitterDiagnostics(uri: string, langId: string, text: s
     if (!tree) {
         return;
     }
-    setDiagnostics(uri, "tree-sitter", collectParseErrors(tree.rootNode));
+    setDiagnostics(uri, "tree-sitter", collectParseDiagnostics(tree.rootNode));
 }

@@ -11,6 +11,12 @@ export default defineConfig({
     test: {
         name: "binary-editor",
         include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        // Module registry shared across files in a worker rather than rebuilt per file: measured 19.6s ->
+        // 14.3s, because this suite's per-file import cost dominates its actual test time (import 67.7s ->
+        // 22.6s). Safe here because no file in it calls vi.mock/vi.spyOn/vi.stubGlobal - every case builds
+        // its own session from a fixture - and six shuffled-order runs of both this suite and transpilers
+        // stayed green. A new test needing a fresh registry must avoid it, or this flag comes off.
+        isolate: false,
         // v8 coverage instrumentation roughly doubles per-test time, and the parallel suite
         // block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the slowest
         // MAP-object test runs ~33s under that starvation. Same 60s ceiling as the binary

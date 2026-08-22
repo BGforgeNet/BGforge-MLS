@@ -1,5 +1,5 @@
 /**
- * Built-in SSL compiler using sslc WASM module.
+ * The reference sslc compiler, built to WebAssembly and shipped with the extension.
  * Compiles Fallout SSL scripts without requiring external compile.exe.
  */
 
@@ -9,10 +9,24 @@ import { conlog } from "../logger";
 import { showWarning } from "../user-messages";
 import { fork } from "child_process";
 
-const COMPILER_MODULE = path.join(__dirname, "../node_modules/sslc-emscripten-noderawfs/compiler.mjs");
+/**
+ * Our own wrapper rather than the package's - see sslc-wrapper.mjs for what its one differs in. The build
+ * copies it beside the server bundle, so this relative path holds both there and here in the source tree.
+ */
+const COMPILER_MODULE = path.join(__dirname, "sslc-wrapper.mjs");
+
+/**
+ * Where the compiler package is installed, as seen from the bundle (`server/out`) and from this file in
+ * the source tree. Both are checked because tests import this module from source while the shipped server
+ * is one flat bundle, and the answer decides whether the compiler can run at all.
+ */
+const PACKAGE_DIRS = [
+    path.join(__dirname, "../node_modules/sslc-emscripten-noderawfs"),
+    path.join(__dirname, "../../node_modules/sslc-emscripten-noderawfs"),
+];
 
 export function isSslcAvailable(): boolean {
-    return fs.existsSync(COMPILER_MODULE);
+    return fs.existsSync(COMPILER_MODULE) && PACKAGE_DIRS.some((dir) => fs.existsSync(dir));
 }
 
 export async function ssl_compile(opts: {
@@ -31,7 +45,7 @@ export async function ssl_compile(opts: {
 }) {
     if (!isSslcAvailable()) {
         const msg =
-            "Built-in SSL compiler not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
+            "The WebAssembly compiler is not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
         conlog(msg);
         return {
             returnCode: 1,
@@ -53,9 +67,11 @@ export async function ssl_compile(opts: {
             cmdArgs = cmdArgs.filter((s) => !s.startsWith("-I"));
         }
 
-        const headersDir = path.parse(opts.headersDir);
-
-        cmdArgs.push("-I" + path.join(headersDir.root, headersDir.dir, headersDir.name));
+        // The directory as configured, not reassembled from `path.parse` parts: rebuilding it from
+        // `root + dir + name` drops whatever follows the last dot of the final segment as an "extension",
+        // so a headers directory named `headers.v2` or `fo2.rp` silently became `headers` / `fo2` and the
+        // include path pointed somewhere that does not exist.
+        cmdArgs.push("-I" + path.resolve(opts.headersDir));
     }
 
     cmdArgs.push(opts.inputFileName, "-o", opts.outputFileName);
@@ -63,7 +79,7 @@ export async function ssl_compile(opts: {
     let p;
     try {
         // fork() launches process.execPath - the extension host's own runtime - so, unlike
-        // esbuild's internal spawn("node"), the built-in compiler needs no PATH shim. Both of
+        // esbuild's internal spawn("node"), this compiler needs no PATH shim. Both of
         // this extension's child-Node spawns follow one invariant: launch via process.execPath,
         // never a bare "node" PATH lookup (esbuild reaches it via ensureNodeOnPath in
         // transpilers/common/node-runtime.ts, which is the documented home of that invariant).
@@ -76,9 +92,15 @@ export async function ssl_compile(opts: {
         // fork() can throw synchronously (e.g. EINVAL on Windows with bad env).
         // Return an error result instead of crashing the server.
         const msg = error instanceof Error ? error.message : String(error);
-        conlog(`Built-in compiler fork failed: ${msg}`);
+        conlog(`WebAssembly compiler fork failed: ${msg}`);
         return { returnCode: 1, stdout: "", stderr: msg };
     }
+
+    // After reporting errors the compiler waits for a keypress unless `-q` is among the options, and a
+    // forked child's stdin is a pipe this process holds open - so that read has no EOF to find and the
+    // compile ends only when the timeout kills it. Closing the pipe makes the wait end immediately,
+    // whatever the user has left in their compile options.
+    p.stdin?.end();
 
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -110,16 +132,20 @@ export async function ssl_compile(opts: {
 
         // Kill on wall-clock timeout; resolve with an error result.
         const timer = setTimeout(() => {
-            const msg = `Built-in compiler timed out after ${timeoutMs}ms`;
-            conlog(msg);
+            // Kill and settle before reporting. This is the bound that turns a compile which stopped
+            // making progress into a returned failure, so it cannot be left depending on the logger being
+            // reachable - a throw here would leave the child running and the promise unresolved, which is
+            // the hang it exists to end.
+            const msg = `WebAssembly compiler timed out after ${timeoutMs}ms`;
             if (!p.killed) p.kill();
             settle({ returnCode: 1, stdout: stdout.join(""), stderr: msg });
+            conlog(msg);
         }, timeoutMs);
 
         // Handle fork failures (e.g., ENOENT when compiler module is missing).
         // Without this, the promise would never resolve if fork fails before "close".
         p.on("error", (err) => {
-            conlog(`Built-in compiler fork error: ${err.message}`);
+            conlog(`WebAssembly compiler fork error: ${err.message}`);
             stderr.push(err.message);
         });
 
@@ -130,7 +156,7 @@ export async function ssl_compile(opts: {
             // log on every compile.
             if (opts.debug) {
                 conlog(
-                    `Built-in compiler:\n` +
+                    `WebAssembly compiler:\n` +
                         "opts=" +
                         JSON.stringify(opts) +
                         "\n" +

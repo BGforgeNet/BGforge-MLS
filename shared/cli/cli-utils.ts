@@ -50,11 +50,28 @@ interface CliArgs {
     quiet: boolean;
     jobs: number;
     filesFrom?: string;
+    /**
+     * Values for the options a caller registered through `extraOptions`, keyed by camelCase name.
+     * Optional because only `parseCliArgs` produces it: a caller hand-building args for `runCli` has no
+     * parser output to supply, and requiring it would make every such site carry an empty object.
+     */
+    extra?: Record<string, unknown>;
 }
 
-export function parseCliArgs(helpText: string): CliArgs | null {
+/** One caller-specific option: the flag spelling cac takes, and its help line. */
+export type ExtraOption = readonly [flags: string, description: string];
+
+/**
+ * @param extraOptions Options belonging to ONE cli rather than to all three. Registered here rather
+ * than read out of `process.argv` by the caller so cac still validates them and `--help` still lists
+ * them; their values come back in `extra` rather than widening `CliArgs` with fields the other CLIs
+ * have no use for.
+ */
+export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOption[] = []): CliArgs | null {
     const cli = cac();
-    cli.command("[target]", "File or directory to process")
+    const command = cli.command("[target]", "File or directory to process");
+    for (const [flags, description] of extraOptions) command.option(flags, description);
+    command
         .option("--save", "Write output to files")
         .option("--check", "Check output without writing")
         .option("--save-and-check", "Write output and check for changes")
@@ -100,7 +117,15 @@ export function parseCliArgs(helpText: string): CliArgs | null {
 
     const mode: OutputMode = saveAndCheck ? "save-and-check" : save ? "save" : check ? "check" : "stdout";
 
-    return { target, mode, recursive: recursive ?? false, quiet: quiet ?? false, jobs: jobCount, filesFrom };
+    return {
+        target,
+        mode,
+        recursive: recursive ?? false,
+        quiet: quiet ?? false,
+        jobs: jobCount,
+        filesFrom,
+        extra: cli.options as Record<string, unknown>,
+    };
 }
 
 /**
@@ -195,6 +220,12 @@ interface RunOptions {
     description: string;
     init?: () => Promise<void>;
     processFile: (filePath: string, mode: OutputMode) => Promise<FileResult> | FileResult;
+    /**
+     * How many chunks to cut the file list into per worker under `--jobs`. The default of 8 levels out
+     * per-file skew; a CLI whose per-PROCESS warmup dominates its per-file work sets 1, so each worker
+     * pays that warmup once over a contiguous run instead of once per chunk.
+     */
+    chunksPerJob?: number;
 }
 
 interface ChildCounts {
@@ -261,7 +292,7 @@ function runChild(
  * each child's spooled output is replayed in chunk order so the combined
  * output matches the sequential walk. Counts come back over the IPC channel.
  */
-async function runParallelJobs(files: string[], args: CliArgs): Promise<void> {
+async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: number): Promise<void> {
     const jobs = Math.min(args.jobs, files.length);
     // Many more chunks than workers: per-file cost is highly skewed (one big
     // record can cost 1000x a small one), and with one contiguous chunk per
@@ -269,7 +300,7 @@ async function runParallelJobs(files: string[], args: CliArgs): Promise<void> {
     // idle. Small chunks pulled from a shared queue level that out while
     // keeping chunk-order output deterministic; contiguity preserves the
     // sequential walk order within and across chunks.
-    const chunkSize = Math.max(1, Math.ceil(files.length / (jobs * 8)));
+    const chunkSize = Math.max(1, Math.ceil(files.length / (jobs * chunksPerJob)));
     const chunks: string[][] = [];
     for (let i = 0; i < files.length; i += chunkSize) {
         chunks.push(files.slice(i, i + chunkSize));
@@ -330,7 +361,7 @@ async function runParallelJobs(files: string[], args: CliArgs): Promise<void> {
 }
 
 export async function runCli(options: RunOptions): Promise<void> {
-    const { args, extensions, description, init, processFile } = options;
+    const { args, extensions, description, init, processFile, chunksPerJob = 8 } = options;
 
     // Child mode (spawned by runParallelJobs): process the handed list with
     // the normal sequential loop and report counts back over IPC. No summary
@@ -374,7 +405,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         if (!args.quiet) console.log(`Found ${files.length} ${description} files`);
         // init() is skipped here: the parent only orchestrates, each child
         // initializes its own parsers.
-        await runParallelJobs(files, args);
+        await runParallelJobs(files, args, chunksPerJob);
         return;
     }
 

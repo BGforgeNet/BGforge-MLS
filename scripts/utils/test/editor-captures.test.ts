@@ -72,12 +72,17 @@ describe("per-editor highlight queries", () => {
         ]);
     });
 
-    // Neovim reads the canonical file because it is written in Neovim's convention; Zed reads it because
-    // its own longest-dotted-prefix lookup resolves those names already. Only Helix needs a variant, and
-    // a mapping table appearing for either of the other two is a decision to re-examine, not a detail.
-    it.each(["neovim", "zed"] as const)("leaves the canonical file untouched for %s", (editor) => {
+    // Neovim reads the canonical file unchanged because it is written in Neovim's convention. A mapping
+    // entry for any other editor is a decision to re-examine rather than a detail, so the two that exist
+    // are named here: Helix uses TextMate scope names throughout, and Zed's themes define no `character`
+    // root for a character literal to fall back to, which is the single capture it has to rename.
+    it("leaves the canonical file untouched for neovim", () => {
         for (const grammar of GRAMMARS) {
-            expect(mapQuery(editor, canonicalQuery(grammar))).toBe(canonicalQuery(grammar));
+            expect(mapQuery("neovim", canonicalQuery(grammar))).toBe(canonicalQuery(grammar));
         }
+    });
+
+    it("rewrites exactly one capture for zed", () => {
+        expect(Object.keys(CAPTURE_MAPPINGS.zed)).toEqual(["character"]);
     });
 });

@@ -10,6 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import pkg from "../package.json";
 import { REPO_ROOT } from "./repo-root";
+import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const NODE = process.execPath;
 const CLI = path.join(REPO_ROOT, "transpilers", pkg.bin?.fgtp ?? "");
@@ -31,6 +32,7 @@ describe("@bgforge/transpile bin entry (fgtp)", () => {
         const stdout = execFileSync(NODE, ["--no-warnings", CLI, "--help"], {
             encoding: "utf-8",
             stdio: ["pipe", "pipe", "pipe"],
+            timeout: SPAWN_TIMEOUT_MS,
         });
         expect(stdout).toContain("Usage: fgtp");
     });

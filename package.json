@@ -29,7 +29,7 @@
     "scripts": {
         "vscode:prepublish": "./scripts/prepublish.sh",
         "prepare": "lefthook install",
-        "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary",
+        "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary && pnpm build:ssl && pnpm build:tssl",
         "build:dev": "./scripts/build-dev.sh",
         "dev:web": "./scripts/dev-web.sh",
         "build:all": "pnpm build:grammar && pnpm build && pnpm build:editors",
@@ -42,6 +42,8 @@
         "build:format": "pnpm --filter @bgforge/format build",
         "build:transpile": "pnpm --filter @bgforge/transpile build",
         "build:binary": "pnpm --filter @bgforge/binary build",
+        "build:ssl": "pnpm --filter @bgforge/ssl build",
+        "build:tssl": "pnpm --filter @bgforge/tssl build",
         "build:grammar": "bash ./scripts/build-grammar.sh",
         "build:editors": "./scripts/build-editors.sh",
         "build:base:client": "./scripts/build-base-client.sh",
@@ -70,6 +72,14 @@
         "package:grammars": "./scripts/package-grammars.sh && ./scripts/verify-grammar-bundle.sh",
         "format": "node --no-warnings format/out/cli.js",
         "binary": "node binary/out/cli.js",
+        "ssl": "node compilers/ssl/out/cli.js",
+        "tssl": "node compilers/tssl/out/cli.js",
+        "ssl-diff": "tsx compilers/ssl/scripts/ssl-diff.mts",
+        "ssl-equiv": "tsx compilers/ssl/scripts/ssl-equiv.mts",
+        "ssl-oracles": "tsx compilers/ssl/scripts/ssl-oracles.mts",
+        "ssl-verdicts": "tsx compilers/ssl/scripts/ssl-verdicts.mts",
+        "tssl-int-diff": "tsx compilers/ssl/scripts/tssl-int-diff.mts",
+        "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
@@ -91,7 +101,7 @@
         "publish:transpile": "./scripts/publish-transpile.sh",
         "supply-chain:verify": "./scripts/verify-supply-chain.sh",
         "test:mutation": "stryker run",
-        "bench": "cd server && pnpm bench"
+        "bench": "pnpm --filter @bgforge/mls-server bench && pnpm --filter @bgforge/tssl bench"
     },
     "devDependencies": {
         "@oxlint/plugins": "1.73.0",
@@ -474,6 +484,16 @@
         ],
         "customEditors": [
             {
+                "viewType": "bgforge.intEditor",
+                "displayName": "Fallout Script (decompiled)",
+                "selector": [
+                    {
+                        "filenamePattern": "*.int"
+                    }
+                ],
+                "priority": "default"
+            },
+            {
                 "viewType": "bgforge.binaryEditor",
                 "displayName": "BGforge Binary Editor",
                 "selector": [
@@ -678,7 +698,7 @@
                 "bgforge.falloutSSL.compilePath": {
                     "type": "string",
                     "default": "",
-                    "description": "Path to sslc compiler. Drop compile.exe/sslc into system PATH and enter filename or specify full path.\nLeave empty to use the built-in compiler."
+                    "description": "Path to sslc compiler. Drop compile.exe/sslc into system PATH and enter filename or specify full path.\nLeave empty to use one of the compilers shipped with the extension, chosen by bgforge.falloutSSL.compiler."
                 },
                 "bgforge.falloutSSL.compileOptions": {
                     "type": "string",
@@ -699,6 +719,24 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Whether validation triggered by save/edit should also write the compiled .int output. Disable this to validate SSL without overwriting compiled artifacts."
+                },
+                "bgforge.falloutSSL.compiler": {
+                    "type": "string",
+                    "enum": [
+                        "wasm",
+                        "built-in"
+                    ],
+                    "enumDescriptions": [
+                        "The reference sslc compiler, built to WebAssembly and shipped with the extension. Each compile runs in a separate process and reads the script through a temporary file on disk.",
+                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and produces the same bytes as the WebAssembly one at optimization levels 0 to 2."
+                    ],
+                    "default": "wasm",
+                    "description": "Which compiler to use when no external compilePath is set."
+                },
+                "bgforge.tssl.emitSsl": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Whether compiling a `.tssl` file should also write the readable `.ssl` beside it.\n\nTSSL compiles straight to Fallout `.int` bytecode, so the SSL text is not produced on the way and nothing downstream needs it. Enable this if your mod still ships generated `.ssl`, or to read what a script became. The emitted text is checked to compile to the same bytes."
                 },
                 "bgforge.weidu.path": {
                     "type": "string",
@@ -768,7 +806,9 @@
     "activationEvents": [
         "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
+        "onCustomEditor:bgforge.intEditor",
         "onFileSystem:bgforge-ie-resource",
+        "onFileSystem:bgforge-int",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",

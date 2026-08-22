@@ -121,7 +121,8 @@ function scopeToRole(scopes: readonly string[]): HighlightRole | undefined {
  * Tokenize one field's fragment in the grammar for `lang`. Spans are returned in the text's own coordinates.
  *
  * Synchronous and total: never throws. An uninitialised tokenizer (or an unknown lang) returns [], and the
- * caller renders flat text - degraded and visible, never blank. A condition is normally one line, but tokenizing
+ * caller renders flat text - degraded and visible, never blank. A line the grammar chokes on is skipped and
+ * warned about, never allowed to end the pass early - the rest of the value keeps its highlighting. A condition is normally one line, but tokenizing
  * line by line (threading the rule stack) keeps a multi-line value aligned rather than assuming a single line.
  *
  * TextMate partitions each line into contiguous, non-overlapping tokens, so the spans satisfy toParts'
@@ -140,8 +141,15 @@ export function tokenize(lang: TmLang, text: string): Span[] {
         let result;
         try {
             result = grammar.tokenizeLine(line, stack);
-        } catch {
-            return spans;
+        } catch (error) {
+            // Skip only the offending line, rather than returning early: an early return silently drops
+            // highlighting for the whole REST of the value, and a truncated result is indistinguishable
+            // from a complete one at the call site. The rule stack is reset because the failed line left
+            // it unknown, so later lines highlight from a clean state instead of a stale one.
+            console.warn(`[bgforge] tokenizing ${lang} failed on one line; it renders as plain text`, error);
+            stack = INITIAL;
+            offset += line.length + 1;
+            continue;
         }
         stack = result.ruleStack;
         for (const token of result.tokens) {

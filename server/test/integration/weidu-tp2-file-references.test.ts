@@ -1,9 +1,9 @@
 /**
  * Integration: COPY/COMPILE/INCLUDE file-path go-to-definition against real WeiDU mods.
  *
- * The safety invariant this guards: for every navigable path position in the real corpus,
- * getDefinition either returns null or a location that actually exists (a file on disk, or a
- * same-file heredoc block) - it must NEVER point at a nonexistent path (a wrong jump) or throw.
+ * The safety invariant this guards: for every navigable path position in a sample of the real corpus
+ * (see `SAMPLE_FILES`), getDefinition either returns null or a location that actually exists (a file on
+ * disk, or a same-file heredoc block) - it must NEVER point at a nonexistent path (a wrong jump) or throw.
  * Also asserts the resolver is not vacuously all-null: a real fraction of literal paths resolve,
  * which exercises the WeiDU %MOD_FOLDER% resolution on the real nested `<repo>/<mod>/...` layout.
  */
@@ -70,9 +70,24 @@ function navigableValueNodes(root: SyntaxNode): SyntaxNode[] {
     return found;
 }
 
-const scripts = corpusScripts();
+/**
+ * Sampled by stride like the sibling corpus sweeps (`completion-gating-corpus.test.ts`), and for the same
+ * reason: what is measured is a RATE - "no navigable position resolves to a nonexistent location" - which a
+ * deterministic even spread over the sorted corpus answers, while every position costs a `getDefinition`
+ * that probes the filesystem. Evenly spaced, not the alphabetically-first N, so the sample crosses mods
+ * rather than sitting inside whichever one sorts first. The totals below are asserted so a sample that
+ * silently collected nothing cannot read as a pass.
+ */
+const SAMPLE_FILES = 200;
 
-describe.skipIf(scripts.length === 0)("weidu-tp2 file-reference navigation (real corpus)", () => {
+const allScripts = corpusScripts();
+const scripts = (() => {
+    if (allScripts.length <= SAMPLE_FILES) return allScripts;
+    const stride = allScripts.length / SAMPLE_FILES;
+    return Array.from({ length: SAMPLE_FILES }, (_, i) => allScripts[Math.floor(i * stride)]!);
+})();
+
+describe.skipIf(allScripts.length === 0)("weidu-tp2 file-reference navigation (real corpus)", () => {
     it("never resolves a navigable path to a nonexistent location, and resolves a real fraction", () => {
         let positions = 0;
         let resolvedToFile = 0;
@@ -110,7 +125,14 @@ describe.skipIf(scripts.length === 0)("weidu-tp2 file-reference navigation (real
             }
         }
 
-        // Not vacuous, and filename-first genuinely resolves cross-file targets on the real corpus.
+        // Not vacuous, and filename-first genuinely resolves cross-file targets on the real corpus. The
+        // denominator is stated so a green run cannot read as a swept corpus.
+        console.log(
+            `file-reference sweep: ${scripts.length} of ${allScripts.length} scripts, ${positions} navigable positions ` +
+                `(${resolvedToFile} cross-file, ${resolvedToHeredoc} same-file)`,
+        );
+        // A stride that collided would silently probe the same file N times and still report 200.
+        expect(new Set(scripts).size).toBe(scripts.length);
         expect(positions).toBeGreaterThan(0);
         expect(resolvedToFile).toBeGreaterThan(0);
     });

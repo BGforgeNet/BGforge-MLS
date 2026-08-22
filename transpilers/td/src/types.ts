@@ -172,6 +172,12 @@ export interface TDState {
     weight?: number;
     say: TDSay[];
     transitions: TDTransition[];
+    /**
+     * 0-based line of the bundled source this state was parsed from, where one is known. Carried so a
+     * diagnostic WeiDU reports against the generated D can be traced back: the emitter is the last place
+     * that still knows which source construct produced which output.
+     */
+    line?: number;
 }
 
 /** SAY statement, can have multiple texts (multisay) */

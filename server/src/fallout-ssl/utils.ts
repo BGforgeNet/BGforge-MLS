@@ -349,7 +349,15 @@ export function extractMacros(root: Node): MacroData[] {
         if (!nameNode) return;
 
         const name = nameNode.text;
-        const bodyText = bodyNode?.text || "";
+        // The body is everything after the macro header, taken as source text rather than from the
+        // `body` node alone. A macro body is free text and frequently is not valid SSL - `call(F(X,Y))`
+        // is rejected by the compiler too - so part of it can land in a sibling ERROR node, which
+        // reading the field would silently drop.
+        const headerEnd = (paramsNode ?? nameNode).endIndex;
+        const bodyText =
+            headerEnd > defineNode.startIndex
+                ? defineNode.text.slice(headerEnd - defineNode.startIndex).trimEnd()
+                : (bodyNode?.text ?? "");
 
         let params: string[] | undefined;
         let hasParams = false;

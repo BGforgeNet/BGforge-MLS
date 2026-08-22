@@ -15,13 +15,14 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
-const INDEX = "docs/binary-editor-ui-guidelines.md";
+const INDEX = "binary-editor/AGENTS.md";
 const RENDER_RULES = "client/src/binary-editor/webview/AGENTS.md";
 const SCHEMA_RULES = "binary/src/AGENTS.md";
 const ROOT_AGENTS = "AGENTS.md";
 const SELF = "scripts/utils/test/ui-guidelines-refs.test.ts";
-const OLD_PATH = "binary-editor/test/harness/UI-GUIDELINES.md";
+const OLD_PATH = "docs/binary-editor-ui-guidelines.md";
 
 const read = (p: string): string => fs.readFileSync(p, "utf8");
 
@@ -33,7 +34,7 @@ describe("binary-editor UI-guidelines wiring", () => {
     });
 
     it("each rule dir has a CLAUDE.md symlink to its AGENTS.md", () => {
-        for (const agents of [RENDER_RULES, SCHEMA_RULES]) {
+        for (const agents of [INDEX, RENDER_RULES, SCHEMA_RULES]) {
             const claude = path.join(path.dirname(agents), "CLAUDE.md");
             expect(fs.existsSync(claude), `${claude} is missing`).toBe(true);
             expect(fs.lstatSync(claude).isSymbolicLink(), `${claude} should be a symlink`).toBe(true);
@@ -58,7 +59,10 @@ describe("binary-editor UI-guidelines wiring", () => {
         // otherwise match itself.
         let matches = "";
         try {
-            matches = execSync(`git grep -lF "${OLD_PATH}" -- . ':!${SELF}'`, { encoding: "utf8" });
+            matches = execSync(`git grep -lF "${OLD_PATH}" -- . ':!${SELF}'`, {
+                encoding: "utf8",
+                timeout: SPAWN_TIMEOUT_MS,
+            });
         } catch {
             matches = ""; // exit 1 == no matches
         }

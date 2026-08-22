@@ -1,6 +1,6 @@
 name: "Publish library"
 
-# Publishes a single @bgforge library (binary, format, or transpile) to npm when its
+# Publishes a single @bgforge library (binary, format, transpile, or tssl) to npm when its
 # own version tag is pushed. The libraries version independently of the extension, so
 # they release on their own `<lib>/vX.Y.Z` tags here rather than on the repo-level
 # `vX.Y.Z` tag that build.yml handles (VSIX + server). build.yml's push trigger is
@@ -11,6 +11,7 @@ on:
       - "binary/v[0-9]+.[0-9]+.[0-9]+"
       - "format/v[0-9]+.[0-9]+.[0-9]+"
       - "transpile/v[0-9]+.[0-9]+.[0-9]+"
+      - "tssl/v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read

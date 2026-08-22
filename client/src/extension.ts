@@ -20,6 +20,9 @@ import {
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerImageEditor } from "./image-editor/register";
+import { routeCompile } from "./int-editor/compile-command";
+import { INT_SCHEME } from "./int-editor/document";
+import { registerIntEditor } from "./int-editor/register";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
 
@@ -65,7 +68,11 @@ export async function activate(context: ExtensionContext) {
 
     // Register binary file and animation editors
     // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
-    context.subscriptions.push(registerBinaryEditor(context, gameLookups), registerImageEditor(context));
+    context.subscriptions.push(
+        registerBinaryEditor(context, gameLookups),
+        registerImageEditor(context),
+        registerIntEditor(context),
+    );
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used
@@ -92,6 +99,11 @@ export async function activate(context: ExtensionContext) {
             { scheme: "file", language: "fallout-msg" },
             { scheme: "file", language: "fallout-scripts-lst" },
             { scheme: "file", language: "fallout-ssl" },
+            // A decompiled `.int`, which is Fallout SSL on its own scheme rather than on disk. Without
+            // this the language client never attaches and the tab has highlighting but no completion,
+            // hover or outline - the parts that come from the server rather than from the grammar.
+            // Compiling one is refused server-side: the URI names no file to write output beside.
+            { scheme: INT_SCHEME, language: "fallout-ssl" },
             { scheme: "file", language: "fallout-worldmap-txt" },
 
             { scheme: "file", language: "weidu-tp2" },
@@ -147,14 +159,17 @@ async function compile(document = vscode.window.activeTextEditor?.document) {
     if (!document || client === undefined) {
         return;
     }
-    const uri = document.uri;
-    const params: ExecuteCommandParams = {
-        command: LSP_COMMAND_COMPILE,
-        arguments: [
-            {
-                uri: uri.toString(),
-            },
-        ],
-    };
-    await client.sendRequest(ExecuteCommandRequest.type, params);
+    const target = document;
+    const activeClient = client;
+    await routeCompile(target, async () => {
+        const params: ExecuteCommandParams = {
+            command: LSP_COMMAND_COMPILE,
+            arguments: [
+                {
+                    uri: target.uri.toString(),
+                },
+            ],
+        };
+        await activeClient.sendRequest(ExecuteCommandRequest.type, params);
+    });
 }

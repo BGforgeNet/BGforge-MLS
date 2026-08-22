@@ -6,10 +6,14 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockGetEditorconfigSettings = vi.fn();
+const mockConlog = vi.fn();
 
 vi.mock("@bgforge/format", () => ({
     getEditorconfigSettings: (...args: unknown[]) => mockGetEditorconfigSettings(...args),
 }));
+
+// conlog reaches for the LSP connection, which no unit test initialises.
+vi.mock("../../src/logger", () => ({ conlog: (...args: unknown[]) => mockConlog(...args) }));
 
 import { getFormatOptions } from "../../src/shared/format-options";
 
@@ -67,6 +71,9 @@ describe("shared/format-options", () => {
 
             expect(result.indentSize).toBe(DEFAULT_INDENT);
             expect(result.lineLimit).toBe(DEFAULT_LINE_LIMIT);
+            // An existing-but-unreadable config silently swaps the user's indent for ours, so falling
+            // back is not enough on its own - it has to say so.
+            expect(mockConlog).toHaveBeenCalledWith(expect.stringContaining("Permission denied"));
         });
 
         it("returns defaults for a non-file URI that cannot be converted", () => {

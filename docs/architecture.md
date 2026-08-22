@@ -24,6 +24,7 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
   - [Format CLI](#format-cli)
   - [Transpile CLI](#transpile-cli)
   - [Binary CLI](#binary-cli)
+  - [SSL CLI](#ssl-cli)
   - [Shared CLI Infrastructure](#shared-cli-infrastructure)
 - [Grammar Architecture](#grammar-architecture)
   - [Tree-Sitter Grammars](#tree-sitter-grammars)
@@ -61,6 +62,7 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
 |    fgfmt (cli.js) |   No VSCode dependency
 |   transpile.js    |
 |    fgbin (cli.js) |
+|      ssl (cli.js) |
 +-------------------+
 ```
 
@@ -138,6 +140,12 @@ vscode-mls/
 |   +-- test/                   Library tests (vitest)
 |   +-- out/                    tsdown output
 |
++-- compilers/              Compilers, one per source language (transpilers/ holds the ones that emit source)
+|   +-- ssl/                    @bgforge/ssl package: Fallout SSL -> INT compiler + the `ssl` CLI bin (private)
+|       +-- src/                    preprocess/lower/optimize + int/ back end, cli.ts (the `ssl` bin)
+|       +-- test/                   Library + CLI tests (vitest) + corpus differentials (test/integration/)
+|       +-- out/                    tsdown output + WASM files
+|
 +-- shared/                 Pure TypeScript helpers shared across workspaces
 |   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
 |   +-- parsers/                Tree-sitter parser factory/manager + per-language facades + WASM
@@ -192,6 +200,7 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | Format lib    | `format/src/{index,cli}.ts`                                             | `format/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgfmt bin     |
 | Transpile lib | `transpilers/src/{index,cli}.ts`                                        | `transpilers/out/{index,cli}.js`            | ESM, tsdown-bundled; cli.js is the fgtp bin      |
 | Binary lib    | `binary/src/{index,cli}.ts`                                             | `binary/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgbin bin     |
+| SSL lib       | `compilers/ssl/src/{index,cli}.ts`                                      | `compilers/ssl/out/{index,cli}.js`          | ESM, tsdown-bundled; cli.js is the `ssl` bin     |
 | Grammars      | `grammars/*/grammar.js`                                                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
 | TextMate      | `syntaxes/*.tmLanguage.yml`                                             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
@@ -206,6 +215,7 @@ pnpm build
   +-> build:transpile     @bgforge/transpile library + fgtp CLI (tsdown)
   +-> build:format        @bgforge/format library + fgfmt CLI (tsdown)
   +-> build:binary        @bgforge/binary library + fgbin CLI (tsdown)
+  +-> build:ssl           @bgforge/ssl library + ssl CLI (tsdown)
 
 pnpm build:all            Full build: build:grammar + build + build:editors + build:transpile
 pnpm build:dev            Minimal build for F5 development (skips CLIs, linting, tests)
@@ -523,6 +533,19 @@ Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsdown to `binary
 
 Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
 Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`.
+
+### SSL CLI
+
+```
+ssl {switches} filename [-o outputname] [filename [..]]
+```
+
+Compiles Fallout SSL to INT bytecode. The switches are the reference `sslc` compiler's, so a build script
+written for it can call this instead; `compilers/ssl/README.md` lists them and the handful of deliberate differences.
+Output is byte-identical to the reference at `-O0`, `-O1` and `-O2`, which the corpus differentials in
+`compilers/ssl/test/integration/` hold it to. Ships as the `ssl` bin of the private `@bgforge/ssl` package (tsdown to
+`compilers/ssl/out/cli.js`, with the SSL grammar WASM copied beside it), and the same library backs the language
+server's `typescript` compiler setting.
 
 Snapshot contract:
 
@@ -858,9 +881,9 @@ Debug logs intentionally keep raw URIs to preserve diagnostic ability.
 Cases where apparent duplication is intentional. Each subsection explains why the
 components stay separate.
 
-### Three Separate CLIs (format, transpile, binary)
+### Four Separate CLIs (format, transpile, binary, ssl)
 
-`format/` (fgfmt bin), `transpilers/` (fgtp bin), and `binary/` (fgbin bin) stay as separate bundles.
+`format/` (fgfmt bin), `transpilers/` (fgtp bin), `binary/` (fgbin bin) and `compilers/ssl/` (`ssl` bin) stay as separate bundles.
 Shared scaffolding (argument parsing, file discovery, output modes) is already extracted to
 `shared/cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
 
@@ -875,6 +898,11 @@ Shared scaffolding (argument parsing, file discovery, output modes) is already e
   CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, and the binary CLI ships
   as the `fgbin` bin entry within `@bgforge/binary` -- each library and its CLI share one
   package, one version, and one tarball without coupling to the other tools.
+- The `ssl` CLI is the one that does not use `shared/cli/cli-utils.ts`. Its argument grammar is the
+  reference SSL compiler's rather than this repo's `--save`/`--check` convention, so that a build script
+  written for that compiler can call it unchanged; sharing the parser would mean parameterising it into
+  two unrelated grammars. Its own parser lives in `compilers/ssl/src/args.ts` and is shared with the language
+  server, which reads the same command line out of the `compileOptions` setting.
 
 ### Two Separate TypeScript Plugins (tssl-plugin, td-plugin)
 

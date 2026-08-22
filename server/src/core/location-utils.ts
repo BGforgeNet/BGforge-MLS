@@ -8,8 +8,8 @@
  */
 
 import { type Location } from "vscode-languageserver/node";
-import { fileURLToPath } from "url";
 import { basename, extname, relative } from "path";
+import { uriToPath } from "../uri-utils";
 
 /**
  * Check if a Location is valid for VSCode navigation.
@@ -77,12 +77,14 @@ export function extractFilename(path: string): string {
  * Returns a path relative to workspaceRoot if possible,
  * otherwise falls back to filename only.
  *
- * @param uri - File URI (file:// protocol)
+ * @param uri - Document URI; usually `file:`, but any scheme the editor opens
  * @param workspaceRoot - Workspace root path (optional)
  * @returns Relative path or filename for display
  */
 export function computeDisplayPath(uri: string, workspaceRoot?: string): string {
-    const absolutePath = fileURLToPath(uri);
+    // Through the shared conversion rather than `fileURLToPath` directly: this runs for every opened
+    // document while extracting symbols, so a scheme it refuses to decode would exit the server.
+    const absolutePath = uriToPath(uri);
 
     if (workspaceRoot) {
         const relativePath = relative(workspaceRoot, absolutePath);

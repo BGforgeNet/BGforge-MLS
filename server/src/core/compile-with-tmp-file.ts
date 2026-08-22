@@ -49,28 +49,58 @@ export function abortAllCompiles(activeCompiles: Map<NormalizedUri, AbortControl
     activeCompiles.clear();
 }
 
-export async function compileWithTmpFile(params: CompileWithTmpFileParams): Promise<void> {
-    const { uri, tmpPath, text, activeCompiles, extraCleanupPaths, run } = params;
+/**
+ * The abort bookkeeping and cleanup every compile needs, without the tmp source file.
+ *
+ * A compiler that reads the document from memory still has to displace an in-flight compile of the
+ * same URI: the older one may be a subprocess that has not finished, and its diagnostics would land
+ * after the newer ones and win.
+ */
+export async function withCompileLifecycle(params: {
+    uri: NormalizedUri;
+    activeCompiles: Map<NormalizedUri, AbortController>;
+    cleanupPaths?: readonly string[];
+    run: (signal: AbortSignal) => Promise<void>;
+}): Promise<void> {
+    const { uri, activeCompiles, cleanupPaths, run } = params;
 
     activeCompiles.get(uri)?.abort();
     const controller = new AbortController();
     activeCompiles.set(uri, controller);
 
     try {
-        // Pre-unlink and atomic create: predictable paths in os.tmpdir() can
-        // be hijacked by a symlink. Unlink removes any stale path (including a
-        // symlink), then `wx` makes the create atomic with O_EXCL - if an
-        // attacker raced a symlink in, the open fails rather than redirecting
-        // the write to the symlink target. Mode 0o600 keeps the file owner-only.
-        // (CodeQL js/insecure-temporary-file.)
-        await fs.promises.unlink(tmpPath).catch(() => {});
-        await fs.promises.writeFile(tmpPath, text, { flag: "wx", mode: 0o600 });
         await run(controller.signal);
     } finally {
         activeCompiles.delete(uri);
-        await removeTmpFile(tmpPath);
-        if (extraCleanupPaths) {
-            await Promise.all(extraCleanupPaths.map((extra) => removeTmpFile(extra)));
+        if (cleanupPaths) {
+            await Promise.all(cleanupPaths.map((extra) => removeTmpFile(extra)));
         }
     }
+}
+
+/**
+ * Materialises the document for a compiler that can only be handed a path.
+ *
+ * Pre-unlink and atomic create: predictable paths in os.tmpdir() can be hijacked by a symlink. Unlink
+ * removes any stale path (including a symlink), then `wx` makes the create atomic with O_EXCL - if an
+ * attacker raced a symlink in, the open fails rather than redirecting the write to the symlink target.
+ * Mode 0o600 keeps the file owner-only. (CodeQL js/insecure-temporary-file.)
+ */
+export async function writeTmpSource(tmpPath: string, text: string): Promise<void> {
+    await fs.promises.unlink(tmpPath).catch(() => {});
+    await fs.promises.writeFile(tmpPath, text, { flag: "wx", mode: 0o600 });
+}
+
+export async function compileWithTmpFile(params: CompileWithTmpFileParams): Promise<void> {
+    const { uri, tmpPath, text, activeCompiles, extraCleanupPaths, run } = params;
+
+    return withCompileLifecycle({
+        uri,
+        activeCompiles,
+        cleanupPaths: [tmpPath, ...(extraCleanupPaths ?? [])],
+        run: async (signal) => {
+            await writeTmpSource(tmpPath, text);
+            await run(signal);
+        },
+    });
 }

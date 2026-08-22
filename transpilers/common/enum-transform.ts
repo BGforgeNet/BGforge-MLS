@@ -12,6 +12,7 @@ import * as fs from "fs";
 import type * as esbuild from "esbuild-wasm";
 import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
+import { lineCount, survivorsFromEdits, type LineEdit } from "./line-map";
 
 /** Result of transforming enums in source text */
 interface EnumTransformResult {
@@ -32,9 +33,16 @@ interface EnumTransformResult {
  * @param sourceText TypeScript source text
  * @returns Transformed code and set of enum names
  */
-export function transformEnums(sourceText: string): EnumTransformResult {
+export function transformEnums(sourceText: string, survivors?: number[]): EnumTransformResult {
+    /** Every line unchanged, for the paths that rewrite nothing. */
+    const reportIdentity = () => {
+        if (survivors === undefined) return;
+        for (let line = 0; line < lineCount(sourceText); line++) survivors.push(line);
+    };
+
     // Fast path: no enums in source
     if (!sourceText.includes("enum ")) {
+        reportIdentity();
         return { code: sourceText, enumNames: new Set() };
     }
 
@@ -45,6 +53,7 @@ export function transformEnums(sourceText: string): EnumTransformResult {
 
     // Fast path: enum keyword found in text but no actual enum declarations
     if (enumDecls.length === 0) {
+        reportIdentity();
         return { code: sourceText, enumNames: new Set() };
     }
 
@@ -52,7 +61,10 @@ export function transformEnums(sourceText: string): EnumTransformResult {
     const enumInfos = collectEnumInfo(enumDecls);
 
     // Replace enum declarations with flat consts (in reverse to preserve positions)
-    replaceEnumDeclarations(enumDecls, enumInfos);
+    const edits: LineEdit[] = [];
+    replaceEnumDeclarations(enumDecls, enumInfos, edits);
+    // The property-access rewrite below stays on one line, so these are the only lines that moved.
+    if (survivors !== undefined) survivors.push(...survivorsFromEdits(edits, lineCount(sourceText)));
 
     // After replaceEnumDeclarations, individual enum nodes are stale but the
     // sourceFile itself remains valid. getDescendantsOfKind re-walks the current tree.
@@ -110,7 +122,12 @@ function collectEnumInfo(enumDecls: readonly EnumDeclaration[]): readonly EnumIn
  * Replace each enum declaration with flat const declarations and a compat object.
  * Processes in reverse order to preserve source positions.
  */
-function replaceEnumDeclarations(enumDecls: readonly EnumDeclaration[], enumInfos: readonly EnumInfo[]): void {
+function replaceEnumDeclarations(
+    enumDecls: readonly EnumDeclaration[],
+    enumInfos: readonly EnumInfo[],
+    /** Filled, when passed, with what each rewrite did to the line count. */
+    edits?: LineEdit[],
+): void {
     // Build a map from enum name to info for lookup
     const infoByName = new Map(enumInfos.map((e) => [e.name, e]));
 
@@ -140,6 +157,13 @@ function replaceEnumDeclarations(enumDecls: readonly EnumDeclaration[], enumInfo
             lines.push(`${exportPrefix}const ${info.name} = {} as const;`);
         }
 
+        // Recorded before the rewrite and while walking in reverse, so these are still the declaration's
+        // original line numbers - every edit so far was made below it.
+        edits?.push({
+            startLine: enumDecl.getStartLineNumber() - 1,
+            inputSpan: enumDecl.getEndLineNumber() - enumDecl.getStartLineNumber() + 1,
+            outputSpan: lines.length,
+        });
         enumDecl.replaceWithText(lines.join("\n"));
     }
 }
@@ -199,9 +223,22 @@ export function expandEnumPropertyAccess(
     code: string,
     enumNames: ReadonlySet<string>,
     externalEnumNames: ReadonlySet<string> = new Set(),
+    /**
+     * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
+     * returned so existing call sites keep their `string` return; only a caller tracing a position back
+     * through the bundle asks for it.
+     */
+    survivors?: number[],
 ): string {
+    /** Every line unchanged, for the paths that rewrite nothing or nothing line-bearing. */
+    const reportIdentity = (text: string) => {
+        if (survivors === undefined) return;
+        for (let line = 0; line < lineCount(text); line++) survivors.push(line);
+    };
+
     // Fast path: nothing to expand
     if (enumNames.size === 0 && externalEnumNames.size === 0) {
+        reportIdentity(code);
         return code;
     }
 
@@ -226,6 +263,14 @@ export function expandEnumPropertyAccess(
     }
 
     const expandedInfos: EnumInfo[] = [];
+    // What each rewritten statement did to the line count. Recorded during the loop below because it
+    // walks statements in REVERSE, so a statement's line numbers are still its original ones when it is
+    // reached - every edit so far was made after it.
+    const edits: Array<{ startLine: number; inputSpan: number; outputSpan: number }> = [];
+    const spanOf = (stmt: { getStartLineNumber(): number; getEndLineNumber(): number }) => ({
+        startLine: stmt.getStartLineNumber() - 1,
+        inputSpan: stmt.getEndLineNumber() - stmt.getStartLineNumber() + 1,
+    });
 
     // Second pass: find compat object declarations and replace with only referenced members
     const stmts = sourceFile.getStatements();
@@ -259,6 +304,7 @@ export function expandEnumPropertyAccess(
 
         // No members referenced - remove the compat object entirely
         if (!usedMembers || usedMembers.size === 0) {
+            edits.push({ ...spanOf(varStmt), outputSpan: 0 });
             varStmt.remove();
             continue;
         }
@@ -285,6 +331,8 @@ export function expandEnumPropertyAccess(
 
         // Replace var statement with individual declarations for referenced members only
         const lines = members.map((m) => `var ${name}_${m.name} = ${m.value};`);
+        // No members left to write still leaves the statement's line behind, empty, rather than closing it.
+        edits.push({ ...spanOf(varStmt), outputSpan: Math.max(1, lines.length) });
         varStmt.replaceWithText(lines.join("\n"));
     }
 
@@ -299,6 +347,10 @@ export function expandEnumPropertyAccess(
     if (externalEnumNames.size > 0) {
         stripExternalEnumPrefixes(sourceFile, externalEnumNames);
     }
+
+    // Both passes above rewrite a property access into an identifier in place, so only the statement
+    // rewrites recorded above moved any line.
+    if (survivors !== undefined) survivors.push(...survivorsFromEdits(edits, lineCount(code)));
 
     return sourceFile.getFullText();
 }

@@ -10,6 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import transpileLibPackage from "../package.json";
 import { REPO_ROOT } from "./repo-root";
+import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "transpilers", transpileLibPackage.bin.fgtp);
 const NODE = process.execPath;
@@ -22,6 +23,7 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
         const stdout = execFileSync(NODE, ["--no-warnings", CLI, ...args], {
             encoding: "utf-8",
             stdio: ["pipe", "pipe", "pipe"],
+            timeout: SPAWN_TIMEOUT_MS,
         });
         return { code: 0, stdout, stderr: "" };
     } catch (error: unknown) {

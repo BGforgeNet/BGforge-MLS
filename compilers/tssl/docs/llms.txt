@@ -1,0 +1,207 @@
+TSSL Reference for LLMs
+
+You are writing TSSL -- a TypeScript subset that compiles to Fallout 2 INT bytecode.
+Files use the .tssl extension. The compiler lowers the TypeScript AST straight to bytecode.
+Everything below describes what the compiler supports and how it behaves.
+
+=== VARIABLES ===
+
+Top-level const NAME = value;  -> #define NAME value  (compile-time constant)
+const inside function body     -> variable NAME = value;  (same as let)
+let name = value;              -> variable name = value;  (runtime, function-scoped)
+let name: type;                -> variable name;  (declaration only)
+
+All variables are function-scoped (like var). Declaration+assignment in a let
+is hoisted to function start and runs ONCE. To reset in a loop:
+
+  let x: number;              // hoist declaration
+  for (...) { x = 0; }       // assign in loop body
+
+=== FUNCTIONS ===
+
+function name(param: Type, param2 = default) { ... }
+  -> procedure name(variable param, variable param2 = default) begin ... end
+
+Standalone calls to user-defined functions get "call" prefix automatically.
+Return values work: return expr;  -> return expr;
+
+=== CONTROL FLOW ===
+
+if (cond) { ... } else { ... }     -> if (cond) then begin ... end else begin ... end
+while (cond) { ... }               -> while (cond) do begin ... end
+for (let i = 0; i < n; i++) { }    -> for (variable i = 0; i < n; i++) begin ... end
+do { ... } while (cond);           -> emulated with flag variable + while
+for (const x of arr) { }           -> foreach (variable x in arr) begin ... end
+for (const [k, v] of m as [K,V][]) -> foreach (variable k: v in m) begin ... end
+for (const k in obj) { }           -> foreach (variable k in obj) begin ... end
+switch (x) { case 1: ...; break; } -> switch (x) begin case 1: ... end
+break; continue; return;           -> break; continue; return;
+
+=== OPERATORS ===
+
+TypeScript   SSL         Description
+&&           and         logical AND
+||           or          logical OR
+!            not         logical NOT
+&            bwand       bitwise AND
+|            bwor        bitwise OR
+^            bwxor       bitwise XOR
+~            bwnot       bitwise NOT
+==  !=  < > <= >=        unchanged
++  -  *  /  %           unchanged
+=  +=  -=  *=  /=       unchanged
+++  --                   unchanged
+? :                      ternary (supported)
+
+=== ENUMS ===
+
+enum DamageType { Normal = 0, Fire = 3 }
+  -> #define DamageType_Normal 0
+  -> #define DamageType_Fire 3
+
+DamageType.Fire -> DamageType_Fire
+Unused members are tree-shaken.
+
+=== @inline FUNCTIONS ===
+
+/** @inline */
+function dude_tile() { return tile_num(dude_obj); }
+  -> #define dude_tile tile_num(dude_obj)
+
+/** @inline */
+function get_stat(who, stat) { return get_critter_stat(who, stat); }
+  -> #define get_stat(who, stat) get_critter_stat(who, stat)
+
+/** @inline */
+function announce(who) { display_msg("arriving"); display_msg(who); }
+  -> #define announce(who) display_msg("arriving"); display_msg(who)
+
+/** @inline */
+function map_first_run() { return metarule(METARULE_TEST_FIRSTRUN, 0) != 0; }
+  -> #define map_first_run (metarule(METARULE_TEST_FIRSTRUN, 0) != 0)
+  A returned expression is wrapped so it cannot re-associate at the call site. A call is not.
+
+Tag MUST be in JSDoc (/** */), not regular comments.
+Zero-arg inline calls have parens stripped: dude_tile() -> dude_tile
+A body that is neither a sequence of calls nor a returned value - control flow, a local - stays a
+procedure and the tag does nothing: SSL has no expression form for a statement sequence.
+
+=== SPECIAL FUNCTIONS ===
+
+list(1, 2, 3)               -> [1, 2, 3]     (array literal)
+map({[KEY]: val})            -> {KEY: val}     (map literal)
+sfall_typeof(x)              -> typeof(x)      (TS keyword workaround)
+FLOAT1                       -> 1.0            (legacy spelling; 1.0 works directly)
+
+=== IMPORTS ===
+
+import { func } from "folib/sfall";     folib modules (typed engine wrappers)
+import { helper } from "./my-lib";       local .ts files (bundled into output)
+import { dude_obj } from "folib/base.d"; .d.ts files (stripped, declarations only)
+// #include "headers/custom.h"           magic comment -> #include in output
+
+folib module mapping:
+  sfall/sfall.h          -> folib/sfall
+  sfall/define_lite.h    -> folib/sfall/define_lite
+  sfall/command_lite.h   -> folib/sfall/command_lite
+
+=== ENGINE PROCEDURES (preserved from tree-shaking) ===
+
+start, map_enter_p_proc, map_exit_p_proc, map_update_p_proc,
+create_p_proc, destroy_p_proc, critter_p_proc, combat_p_proc,
+combat_is_starting_p_proc, combat_is_over_p_proc, damage_p_proc,
+talk_p_proc, look_at_p_proc, description_p_proc, use_p_proc,
+use_obj_on_p_proc, use_skill_on_p_proc, pickup_p_proc, drop_p_proc,
+is_dropping_p_proc, push_p_proc, spatial_p_proc, timed_event_p_proc,
+barter_p_proc, barter_init_p_proc, use_ad_on_p_proc, use_disad_on_p_proc
+
+Functions passed to register_hook_proc/register_hook_proc_spec are also preserved.
+
+=== FORBIDDEN (compile error) ===
+
+try/catch/finally             -> "try/catch is not supported in SSL"
+Object/Array/JSON/Math/Date   -> "X is not available in SSL runtime"
+Promise/Map/Set/WeakMap/WeakSet/Symbol/Reflect/Proxy  -> same error
+let list = ...; let map = ...; -> "conflicts with folib export"
+for (const [a,b,c] of ...)   -> "must have exactly 2 elements"
+typeof x                      -> "call sfall_typeof(x) for the engine's value type"
+a instanceof b                -> "'instanceof' has no SSL equivalent"
+let [p, q] = pair             -> "destructuring is not supported"
+for (let i = 0, n = 3; ...)   -> "a for initializer declares one variable"
+() => {}                      -> "arrow functions are not supported; declare a function"
+`a${x}b`                      -> "template literals are not supported; concatenate with +"
+x?.y  and  x ?? y             -> "SSL has no null"
+...spread                     -> "spread is not supported"
+x ** y                        -> "SSL spells exponentiation '^'"
+new X()  /  await  /  yield   -> not supported
+
+None of these JS built-ins exist at runtime. The only runtime data structures
+are sfall lists (flat arrays) and sfall maps (key-value stores), created with
+folib's list() and map() helpers. No objects, classes, or other data structures.
+
+=== SILENTLY IGNORED ===
+
+A runtime class or decorator contributes nothing to the output and raises no error
+(type-only use of a class is fine). Everything else the compiler cannot render is
+refused with the line it sits on - nothing is copied through as TypeScript.
+
+=== GOTCHAS ===
+
+1. Variable hoisting: let x = val in a loop -> assignment runs once at function
+   start. Separate declaration (let x: type) from assignment (x = val).
+
+2. Zero-arg externals: game_loaded() in TSSL -> game_loaded in SSL output.
+   You must write parens in TSSL. Without parens it's a reference, not a call.
+
+3. No undefined, no objects: missing map keys return 0. Use == 0, not == undefined.
+   Only runtime data structures are sfall lists and sfall maps (folib's list()/map()).
+
+4. Computed keys required: { [PID_GUN]: 9 } keeps constant.
+   { PID_GUN: 9 } becomes string literal "PID_GUN".
+
+5. Name collisions: two kept declarations sharing a name are REFUSED, naming
+   both locations. Rename one. (Identical constants are allowed.)
+
+6. Float literals are preserved as written: 1.0 stays a float, so `1.0 * a / b`
+   gives float division. FLOAT1 still means 1.0, for sources that predate this.
+
+7. @tra tag: add /** @tra filename.tra */ in a comment to set translation file.
+   Accepts both .tra and .msg extensions.
+
+8. JSDoc on functions is preserved as SSL comments (extracted before bundling).
+
+=== EXAMPLE ===
+
+import { ndebug } from "folib";
+import { game_loaded, register_hook_proc, HOOK_COMBATTURN } from "folib/sfall";
+
+const MAX_HP = 100;
+
+/** @inline */
+function dude_tile(): number {
+    return tile_num(dude_obj);
+}
+
+let hookActive: number;
+
+function start() {
+    if (game_loaded()) {
+        hookActive = 1;
+        register_hook_proc(HOOK_COMBATTURN, on_combat);
+        ndebug("Script loaded at tile " + dude_tile());
+    }
+}
+
+function on_combat() {
+    if (hookActive) {
+        // handle combat
+    }
+}
+
+=== COMPILATION ===
+
+.tssl -> (tssl compiler) -> .int
+No SSL text is produced or read on the way, and no external compiler is involved.
+Press Ctrl+R in VSCode, or run: tssl script.tssl
+Readable SSL is optional: `tssl script.tssl --transpile`, or the bgforge.tssl.emitSsl setting.
+Anything the compiler cannot render is refused with the line it sits on, never emitted as guessed output.

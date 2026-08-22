@@ -20,7 +20,8 @@ describe("TD state resolution", () => {
     }
 
     function transpile(code: string): string {
-        return emitD(parseIR(code));
+        // These assert the emitted text; the per-line provenance alongside it has its own suite.
+        return emitD(parseIR(code)).text;
     }
 
     // =========================================================================

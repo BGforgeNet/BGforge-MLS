@@ -15,6 +15,7 @@ import {
     WeiduTokenType,
     normalizeComment,
     withNormalizedComment,
+    keywordText,
 } from "@bgforge/format";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
@@ -42,17 +43,6 @@ function getTransitionNode(node: SyntaxNode): SyntaxNode | null {
         return node;
     }
     return null;
-}
-
-// Find a keyword token in node's children by checking text (case-insensitive)
-function findKeyword(node: SyntaxNode, keyword: string): string {
-    const upper = keyword.toUpperCase();
-    for (const child of node.children) {
-        if (child.text.toUpperCase() === upper) {
-            return child.text;
-        }
-    }
-    return keyword; // fallback
 }
 
 // withNormalizedComment (inline + standalone comment handling) is shared with
@@ -351,16 +341,16 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
     const say = node.childForFieldName("say");
 
     // IF header
-    let ifLine = indent + findKeyword(node, "IF");
+    let ifLine = indent + keywordText(node, "IF");
     if (weight) {
-        ifLine += " " + findKeyword(node, "WEIGHT") + " #" + weight.text;
+        ifLine += " " + keywordText(node, "WEIGHT") + " #" + weight.text;
     }
     ifLine += " " + (trigger ? normalizeDelimitedString(trigger.text) : "~~");
     ifLine += " " + (label?.text ?? "");
 
     // Try to keep SAY on same line as IF if it fits
     if (say) {
-        const sayText = findKeyword(node, "SAY") + " " + formatSayText(say);
+        const sayText = keywordText(node, "SAY") + " " + formatSayText(say);
         const combined = ifLine + " " + sayText;
         if (combined.length <= lineLimit) {
             ifLine = combined;
@@ -383,7 +373,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         }
     }
 
-    lines.push(indent + findKeyword(node, "END"));
+    lines.push(indent + keywordText(node, "END"));
     return lines.join("\n");
 }
 
@@ -460,7 +450,7 @@ function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: bo
     });
 
     if (trailingEnd) {
-        lines.push(findKeyword(node, "END"));
+        lines.push(keywordText(node, "END"));
     }
     return lines.join("\n");
 }
@@ -506,7 +496,7 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
         return null;
     });
 
-    lines.push(findKeyword(node, "END"));
+    lines.push(keywordText(node, "END"));
     return lines.join("\n");
 }
 

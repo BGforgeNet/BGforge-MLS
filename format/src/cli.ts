@@ -210,7 +210,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         }
         const validationError = validateFormatting(text, result.text, stripComments);
         if (validationError) {
-            console.error(`${filePath}: Formatter bug: ${validationError}`);
+            // The formatter is only allowed to move whitespace, so a content change is our defect, not
+            // the file's. Say the file was left alone: that is the part the reader needs.
+            console.error(`${filePath}: left unchanged - formatter bug: ${validationError}`);
             return "error";
         }
 

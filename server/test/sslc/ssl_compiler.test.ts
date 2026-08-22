@@ -1,11 +1,12 @@
 /**
- * Unit tests for sslc/ssl_compiler.ts - built-in SSL compiler using WASM.
+ * Unit tests for sslc/ssl_compiler.ts - the reference sslc built to WebAssembly.
  * Tests fork-based compilation with mock child processes.
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 import fs from "node:fs";
+import path from "node:path";
 
 const mockShowWarning = vi.fn();
 // A persistent spy, unlike a fresh `vi.fn()` returned from the factory below on
@@ -66,6 +67,29 @@ describe("ssl_compile", () => {
         headersDir: "",
         interactive: false,
     };
+
+    // A dotted directory used to be refused here rather than compiled, because the compiler package's own
+    // command-line wrapper chdirs somewhere that does not exist for one. The extension now forks its own
+    // wrapper instead, so there is nothing to refuse - that the compile really does work in such a
+    // directory is asserted against a real compile in dotted-directory.test.ts, which a mocked fork
+    // cannot show.
+    describe("directory whose name contains a dot", () => {
+        it("is forked like any other", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, cwd: "/tmp/mymod.v2" });
+            proc.emit("close", 0);
+
+            const result = await promise;
+            expect(result.returnCode).toBe(0);
+            expect(mockFork).toHaveBeenCalledWith(
+                expect.stringContaining("sslc-wrapper.mjs"),
+                expect.anything(),
+                expect.objectContaining({ cwd: "/tmp/mymod.v2" }),
+            );
+        });
+    });
 
     describe("successful compilation", () => {
         it("resolves with returnCode 0 on success", async () => {
@@ -136,7 +160,7 @@ describe("ssl_compile", () => {
             await promise;
 
             expect(mockConsoleLog).toHaveBeenCalledTimes(1);
-            expect(mockConsoleLog.mock.calls[0]?.[0]).toEqual(expect.stringContaining("Built-in compiler:"));
+            expect(mockConsoleLog.mock.calls[0]?.[0]).toEqual(expect.stringContaining("WebAssembly compiler:"));
         });
     });
 
@@ -238,19 +262,29 @@ describe("ssl_compile", () => {
             const proc = createMockProcess();
             mockFork.mockReturnValue(proc);
 
-            const opts = {
-                ...baseOpts,
-                headersDir: "/my/headers/include.h",
-            };
+            const opts = { ...baseOpts, headersDir: "/my/headers" };
 
             const promise = ssl_compile(opts);
             proc.emit("close", 0);
             await promise;
 
             const forkArgs = mockFork.mock.calls[0]![1] as string[];
-            const iFlag = forkArgs.find((s: string) => s.startsWith("-I"));
-            expect(iFlag).toBeDefined();
-            expect(iFlag).toContain("headers");
+            expect(forkArgs).toContain(`-I${path.resolve("/my/headers")}`);
+        });
+
+        it("passes a headers directory whose name contains a dot through intact", async () => {
+            // Reassembling the path from `path.parse` parts drops everything after the final dot as an
+            // extension, so this directory used to reach sslc as `-I/my/headers` - an include path that
+            // does not exist. Dots in directory names are ordinary (`fo2.rp`, `headers.v2`).
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, headersDir: "/my/headers.v2" });
+            proc.emit("close", 0);
+            await promise;
+
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
+            expect(forkArgs).toContain(`-I${path.resolve("/my/headers.v2")}`);
         });
 
         it("splits and trims options string", async () => {
@@ -351,7 +385,7 @@ describe("ssl_compile", () => {
             const result = await ssl_compile(baseOpts);
 
             expect(result.returnCode).toBe(1);
-            expect(result.stderr).toContain("Built-in SSL compiler not available");
+            expect(result.stderr).toContain("The WebAssembly compiler is not available");
             expect(mockFork).not.toHaveBeenCalled();
         });
 

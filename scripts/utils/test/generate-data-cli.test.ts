@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
+import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -36,7 +37,7 @@ describe("generate-data CLI", () => {
 
         execSync(
             `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --hover "${hoverFile}" --tooltip-lang test-tooltip`,
-            { cwd: process.cwd() },
+            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         const completion = JSON.parse(fs.readFileSync(completionFile, "utf8"));
@@ -67,7 +68,7 @@ describe("generate-data CLI", () => {
 
         execSync(
             `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --hover "${hoverFile}" --signature "${signatureFile}" --tooltip-lang test-tooltip`,
-            { cwd: process.cwd() },
+            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         const sig = JSON.parse(fs.readFileSync(signatureFile, "utf8"));

@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 
 const mockShowInfo = vi.fn();
 const mockShowError = vi.fn();
@@ -58,15 +59,26 @@ vi.mock("../src/weidu-compile", () => ({
 // The transpilers are consumed through the public @bgforge/transpile barrel:
 // the no-write transpile functions plus outputPathFor. compile.ts owns the file
 // write and the user-facing message.
-const mockTssl = vi.fn();
+const mockTsslCompile = vi.fn();
 const mockTbaf = vi.fn();
 const mockTd = vi.fn();
 const mockOutputPathFor = vi.fn();
+// The real TranspileError, not a stand-in: compile.ts narrows on `instanceof` to read the location,
+// so a mock class would silently take the no-location path and the position assertions would pass
+// against a fallback rather than against the error's own line.
+const { TranspileError } = await vi.hoisted(async () => await import("../../transpilers/common/transpile-error"));
 vi.mock("../../transpilers/src/index", () => ({
-    tssl: (...args: unknown[]) => mockTssl(...args),
-    tbaf: (...args: unknown[]) => mockTbaf(...args),
+    // The handler takes the map-carrying entry points, so those are what the mocks stand in for. TD has
+    // only one: its transpile already returns a result object, and the map rides along on it.
+    tbafWithSourceMap: (...args: unknown[]) => mockTbaf(...args),
     td: (...args: unknown[]) => mockTd(...args),
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
+    TranspileError,
+}));
+// TSSL is a compiler, not one of the transpilers above: it produces the bytecode itself, so the
+// dispatcher has no generated file to write and no second compiler to chain.
+vi.mock("../src/tssl/compile-int", () => ({
+    compileTsslToInt: (...args: unknown[]) => mockTsslCompile(...args),
 }));
 
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
@@ -81,8 +93,10 @@ vi.mock("../src/logger", () => ({
     conlog: vi.fn(),
 }));
 
+const mockSendParseResult = vi.fn();
 vi.mock("../src/diagnostics", () => ({
     errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+    sendParseResult: (...args: unknown[]) => mockSendParseResult(...args),
 }));
 
 vi.mock("../src/path-utils", () => ({
@@ -97,6 +111,7 @@ vi.mock("../src/uri-utils", () => ({
 
 import { conlog } from "../src/logger";
 import { LANG_FALLOUT_SSL } from "../src/core/languages";
+import { setDiagnostics } from "../src/diagnostic-store";
 import { compile } from "../src/compile";
 
 describe("compile dispatcher", () => {
@@ -105,6 +120,28 @@ describe("compile dispatcher", () => {
         mockRegistryHas.mockReturnValue(false);
         mockRegistryCompile.mockResolvedValue(false);
         mockWriteFile.mockResolvedValue(undefined);
+    });
+
+    // A decompiled script is served on its own scheme so it can be edited as source, and the language
+    // client attaches to it for completion and hover. Compiling one has nowhere to put the output - the
+    // URI names no file - and the editor writes it back through its own save instead.
+    describe("documents that are not files on disk", () => {
+        it("does not compile them, whatever language they claim", async () => {
+            mockRegistryHas.mockReturnValue(true);
+            mockRegistryCompile.mockResolvedValue(true);
+
+            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+
+            expect(mockRegistryCompile).not.toHaveBeenCalled();
+        });
+
+        it("stays silent about it on the automatic path, which runs on every save and keystroke", async () => {
+            mockRegistryHas.mockReturnValue(true);
+
+            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+
+            expect(mockShowInfo).not.toHaveBeenCalled();
+        });
     });
 
     describe("provider routing", () => {
@@ -197,7 +234,7 @@ describe("compile dispatcher", () => {
         });
 
         it("routes .tbaf files to the TBAF transpiler and writes the output", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
@@ -207,7 +244,7 @@ describe("compile dispatcher", () => {
         });
 
         it("clears diagnostics before TBAF transpile", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
@@ -224,7 +261,7 @@ describe("compile dispatcher", () => {
         });
 
         it("does not fall through to unknown-language after successful TBAF transpile", async () => {
-            mockTbaf.mockResolvedValue("baf output");
+            mockTbaf.mockResolvedValue({ output: "baf output", sourceMap: [] });
             mockOutputPathFor.mockReturnValue("/output/test.baf");
 
             await compile("file:///test.tbaf", "typescript", true, "tbaf content");
@@ -241,30 +278,230 @@ describe("compile dispatcher", () => {
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TBAF: TBAF syntax error"));
         });
 
-        it("routes .tssl files to the TSSL transpiler and chains SSL compilation", async () => {
-            mockTssl.mockResolvedValue("ssl output");
-            mockOutputPathFor.mockReturnValue("/output/test.ssl");
-            // The registry handles the chained SSL compilation
-            mockRegistryCompile.mockResolvedValue(true);
+        // The point of the direct route: nothing here writes SSL text or hands anything to the SSL
+        // compiler, so a regression that quietly restored the old chain fails on the two negatives
+        // rather than on the message.
+        it("compiles .tssl straight to bytecode, with no SSL step in between", async () => {
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int" });
 
             await compile("file:///test.tssl", "typescript", false, "tssl content");
 
-            expect(mockTssl).toHaveBeenCalledWith("/test.tssl", "tssl content");
-            expect(mockWriteFile).toHaveBeenCalledWith("/output/test.ssl", "ssl output", "utf-8");
-            expect(mockRegistryCompile).toHaveBeenCalledWith(
-                LANG_FALLOUT_SSL,
-                "file:///output/test.ssl",
-                "ssl output",
+            expect(mockTsslCompile).toHaveBeenCalledWith(
+                "file:///test.tssl",
+                "/test.tssl",
+                "tssl content",
+                expect.anything(),
                 false,
+            );
+            expect(mockWriteFile).not.toHaveBeenCalled();
+            expect(mockRegistryCompile).not.toHaveBeenCalledWith(
+                LANG_FALLOUT_SSL,
+                expect.anything(),
+                expect.anything(),
+                expect.anything(),
             );
         });
 
-        it("shows error message on TSSL transpile failure", async () => {
-            mockTssl.mockRejectedValue(new Error("TSSL error"));
+        it("names the .ssl too when the setting asked for one", async () => {
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int", sslPath: "/test.ssl" });
+
+            await compile("file:///test.tssl", "typescript", true, "tssl content");
+
+            expect(mockShowInfo).toHaveBeenCalledWith("Compiled test.int and test.ssl");
+        });
+
+        it("shows error message on TSSL compile failure", async () => {
+            mockTsslCompile.mockRejectedValue(new Error("TSSL error"));
 
             await compile("file:///test.tssl", "typescript", true, "bad tssl");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TSSL: TSSL error"));
+        });
+    });
+
+    /**
+     * Only the second step of a transpiled build reports compiler errors, and it reports them against the
+     * generated file. The author edits the source, so an error left on the generated line is one they
+     * cannot act on - in a file they may not even have open.
+     */
+    describe("compiler errors from the generated file", () => {
+        /** What the chained compiler would have published for the generated file. */
+        function errorOnGeneratedLine(line: number, message: string): Diagnostic {
+            return {
+                severity: DiagnosticSeverity.Error,
+                range: { start: { line, character: 0 }, end: { line, character: 6 } },
+                message,
+                source: "BGforge MLS",
+            };
+        }
+
+        /** The diagnostics most recently published for `uri`, which is what the editor is showing. */
+        function showingOn(uri: string) {
+            const calls = mockSendDiagnostics.mock.calls.filter((call) => call[0].uri === uri);
+            return calls.at(-1)?.[0].diagnostics ?? [];
+        }
+
+        it("moves a chained BAF error onto the TBAF line it came from", async () => {
+            mockTbaf.mockResolvedValue({
+                output: "baf output",
+                sourceMap: [{ file: "/test.tbaf", line: 7 }],
+            });
+            mockOutputPathFor.mockReturnValue("/output/test.baf");
+            mockWeiduCompile.mockImplementation((bafUri: string) => {
+                setDiagnostics(bafUri, "compiler", [errorOnGeneratedLine(0, "unknown action")]);
+            });
+
+            await compile("file:///test.tbaf", "typescript", false, "tbaf content");
+
+            expect(showingOn("file:///test.tbaf")).toEqual([
+                expect.objectContaining({
+                    message: "unknown action",
+                    range: { start: { line: 7, character: 0 }, end: { line: 7, character: 0 } },
+                }),
+            ]);
+        });
+
+        it("moves a chained D error onto the TD line it came from", async () => {
+            mockTd.mockResolvedValue({
+                output: "d output",
+                warnings: [],
+                sourceMap: [{ file: "/test.td", line: 2 }],
+            });
+            mockOutputPathFor.mockReturnValue("/output/test.d");
+            mockWeiduCompile.mockImplementation((dUri: string) => {
+                setDiagnostics(dUri, "compiler", [errorOnGeneratedLine(0, "unknown trigger")]);
+            });
+
+            await compile("file:///test.td", "typescript", false, "td content");
+
+            expect(showingOn("file:///test.td")).toEqual([
+                expect.objectContaining({
+                    message: "unknown trigger",
+                    range: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } },
+                }),
+            ]);
+        });
+    });
+
+    // A failing transpile used to reach the user only as a popup, and only when they had asked for the
+    // compile - so saving a file with an unsupported construct in it reported nothing at all. These go to
+    // the Problems panel instead, on the source the author is editing rather than the generated output.
+    describe("transpile failures reach the editor", () => {
+        it("reports a TSSL failure on the save path, which showed nothing before", async () => {
+            mockTsslCompile.mockRejectedValue(new TranspileError("try/catch is not supported in SSL", { line: 12 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                {
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 12,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "try/catch is not supported in SSL",
+                        },
+                    ],
+                    warnings: [],
+                },
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        it.each([
+            ["tbaf", () => mockTbaf],
+            ["td", () => mockTd],
+        ])("reports a %s failure the same way - one error type, three languages", async (ext, transpiler) => {
+            transpiler().mockRejectedValue(new TranspileError("bad", { line: 7, column: 3 }));
+
+            await compile(`file:///test.${ext}`, "typescript", false, "bad source");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                {
+                    errors: [{ uri: `file:///test.${ext}`, line: 7, columnStart: 3, columnEnd: 3, message: "bad" }],
+                    warnings: [],
+                },
+                `file:///test.${ext}`,
+                `file:///test.${ext}`,
+            );
+        });
+
+        it("anchors an error carrying no location at line 1 rather than guessing one", async () => {
+            mockTsslCompile.mockRejectedValue(new Error("no location on this one"));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 1,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "no location on this one",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        it("keeps the line when the failure is in the file being edited", async () => {
+            mockTsslCompile.mockRejectedValue(new TranspileError("bad construct", { file: "/test.tssl", line: 12 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 12,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "bad construct",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        // A transpiler bundles the file's imports, so a failure can belong to a file the author never
+        // opened. Its line means nothing against the one on screen, so the diagnostic says where instead.
+        it("names the other file rather than putting its line on the one being edited", async () => {
+            mockTsslCompile.mockRejectedValue(new TranspileError("bad construct", { file: "/lib/folib.ts", line: 42 }));
+
+            await compile("file:///test.tssl", "typescript", false, "bad tssl");
+
+            expect(mockSendParseResult).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    errors: [
+                        {
+                            uri: "file:///test.tssl",
+                            line: 1,
+                            columnStart: 0,
+                            columnEnd: 0,
+                            message: "/lib/folib.ts:42: bad construct",
+                        },
+                    ],
+                }),
+                "file:///test.tssl",
+                "file:///test.tssl",
+            );
+        });
+
+        it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {
+            mockTsslCompile.mockResolvedValue({ intPath: "/output/test.int" });
+
+            await compile("file:///test.tssl", "typescript", false, "tssl content");
+
+            expect(mockSendDiagnostics).toHaveBeenCalledWith({ uri: "file:///test.tssl", diagnostics: [] });
         });
     });
 

@@ -1,5 +1,76 @@
 # Changelog
 
+## Unreleased
+
+### Fallout SSL
+
+SSL gets a native TS compiler implementation. Enable with `bgforge.falloutSSL.compiler: built-in`.
+Same options as sslc.
+
+- Compiled `.int` scripts open as editable SSL - highlighting, outline and search - and save back over the
+  `.int` in place. An unedited script round-trips byte for byte. Local and argument names are not stored in
+  a compiled script so those are generated, and constants, macros and comments were resolved away before it
+  was compiled. A script that cannot be structured back opens as an instruction listing, which cannot be saved.
+- A failed compile reports everything it found rather than stopping at the first problem, and a misspelled
+  name once rather than at every use.
+- Three warnings, behind `-n` in `compileOptions`: an escape no table entry covers, a variable declared
+  twice, and a script with no `start` procedure.
+- Keywords are read in any casing, as the language reads them. Formatting keeps whichever spelling the
+  source used.
+- More of the language is recognised, by highlighting, formatting and both compilers: procedure modifiers
+  (`pure`, `inline`, `critical`), timed and guarded procedures (`procedure foo in 5`, `when (cond)`,
+  `call foo in 10`), compound assignment and stepping into elements (`a[k] += 1`, `a[i + 1]++`, evaluating
+  a complex index once), adjacent string literals (`"ab" "cd"`), character constants (`'A'`, `'\n'`,
+  `'\0101'`), `foreach ... while` in every spelling, the process-control statements (`spawn`, `callstart`,
+  `exec`, `fork`, `wait`, `cancel`, `cancelall`, `startcritical`, `endcritical`, `exit`, `detach`, `noop`),
+  `variable a[10]` and its two-argument flag form, `not`/`bwnot` in a global initialiser, and `#elif`,
+  `#error` and `#line`.
+- More is reported rather than quietly accepted: a procedure declared and never defined, `++x` (the language
+  has no prefix increment), `break` or `continue` outside a loop, an array declared outside a procedure, a
+  procedure called without `call`, a bare expression statement, and a parenthesised operand in a global
+  initialiser.
+- Compiling in a directory whose name contains a dot (`fo2.rp`) works, as does pointing
+  `bgforge.falloutSSL.headersDirectory` at one. Everything after the last dot was read as an extension and
+  dropped, so both addressed a directory that does not exist.
+- Two scripts in one folder no longer interfere when they compile at the same time; different folders still
+  compile in parallel.
+- Formatting no longer drops a `foreach` loop's `while` guard, nor rewrites `variable i := 0` to `= 0`.
+- Engine signatures corrected: `set_shader_mode` takes the shader it applies to, nine functions had the
+  wrong argument count, `art_anim` and `critter_heal` were shown returning nothing, and three were missing
+  the closing parenthesis of their parameter list.
+
+### Transpilers
+
+- A TSSL, TBAF or TD file the toolchain cannot handle is reported in the Problems panel, on the file you
+  are editing rather than on the generated output, and on save as well as on an explicit compile. It used
+  to be a popup, and only when a compile had been asked for.
+- An error from the compiler that reads the generated `.baf` or `.d` lands on the line of the `.tbaf` or
+  `.td` it was written on, imported files included. A line the transpiler produced on its own keeps its
+  error on the generated file rather than being given a misleading one.
+
+### TSSL
+
+- TSSL is a compiler now, not a transpiler: compiling a `.tssl` writes Fallout `.int` bytecode directly,
+  with no `.ssl` in between. It respects `bgforge.falloutSSL.outputDirectory`, `compileOnValidate` and the
+  `-O`/`-s` switches in `compileOptions`, and needs nothing installed.
+- New `bgforge.tssl.emitSsl` also writes the readable `.ssl` beside the bytecode, checked against a real
+  corpus to compile to the same bytes.
+- Errors report on the line of your TypeScript, not on the generated file.
+- Compiling no longer freezes the editor, and a repeat compile is about ten times faster. The `tssl`
+  command line gains the same.
+- Float literals, parentheses, imported names, blank lines and quoting reach the output as written.
+- `x ^ y` and `~x` compile. They were emitted as `bxor` and `bnot`, which SSL does not accept.
+- Syntax with no SSL equivalent is refused with its line, instead of producing SSL that fails later.
+- An `@inline` function whose body is several calls now inlines all of them. The macro used to be built
+  from the first call alone, and every other statement in the body was dropped from the compiled script
+  without a word. A body that is not a sequence of calls - anything returning a value beyond a single
+  call - stays an ordinary procedure rather than losing part of itself.
+- An `@inline` function whose returned call is written through a chain of type assertions now inlines.
+  Only one assertion was seen through, so a call cast twice compiled as a procedure despite the tag.
+- An `@inline` function returning a value that is not itself a call - a comparison, an arithmetic
+  expression - now inlines too, parenthesised so it cannot re-associate with the code around the call.
+  Only a returned call was accepted before, so these compiled as procedures despite the tag.
+
 ## 3.13.2
 
 ### WeiDU TP2
@@ -56,6 +127,9 @@
 
 ### Fixes
 
+- A compile that produced only warnings is no longer announced as "Failed to compile". It wrote its output
+  file, so reporting a failure contradicted what was on disk; the warnings themselves are unchanged and
+  still listed. Applies to Fallout SSL and WeiDU alike.
 - An Infinity Engine `.pro` opened as a plain file now says it is an IE projectile instead of reporting an
   unknown object type.
 - Fallout SSL name matching now spans files: a procedure declared in a header is found from a script that

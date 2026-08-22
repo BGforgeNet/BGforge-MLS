@@ -50,7 +50,19 @@ const config: KnipConfig = {
             // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
             // The "redundant entry" hint for lsp-probe.mts is spurious: removing that entry
             // flips the file to an unused-files error.
-            entry: ["vitest.mutation.config.ts", "test/**/*.test.ts", "scripts/lsp-probe.mts"],
+            // Both compile-worker.ts files are bundle entries of their own, started by path from the
+            // matching compile-worker-client.ts rather than imported, so nothing references them in
+            // source.
+            // sslc-wrapper.mjs is the same shape one step further out: the build copies it beside the
+            // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
+            entry: [
+                "vitest.mutation.config.ts",
+                "test/**/*.test.ts",
+                "scripts/lsp-probe.mts",
+                "src/fallout-ssl/compile-worker.ts",
+                "src/tssl/compile-worker.ts",
+                "src/sslc/sslc-wrapper.mjs",
+            ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",
@@ -87,8 +99,16 @@ const config: KnipConfig = {
         "plugins/td-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
         },
-        "transpilers/tssl": {
-            entry: ["src/index.ts"],
+        "compilers/tssl": {
+            // The tests are entry points of their own; nothing in src imports them. The CLI needs no
+            // entry - knip reads it from the package's `bin`.
+            entry: ["test/*.test.ts"],
+            // Bench files invoked explicitly; not reachable from any declared entry point.
+            ignore: ["test/perf/**"],
+            // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any workspace;
+            // knip's per-workspace dep tracing doesn't reach across that boundary. Same note as binary
+            // and format, which use the same shared CLI helpers.
+            ignoreDependencies: ["cac", "diff"],
         },
         "transpilers/tbaf": {
             entry: ["src/index.ts"],
@@ -130,6 +150,20 @@ const config: KnipConfig = {
         image: {
             entry: ["test/**/*.test.ts"],
         },
+        "compilers/ssl": {
+            // Both suites, since the gcc differential runs from its own config in the close-out phase.
+            // The `scripts/*.mts` probes are run by hand through the root scripts of the same name, so
+            // nothing imports them.
+            entry: ["test/**/*.test.ts", "test/integration/**/*.test.ts", "scripts/*.mts"],
+            // gcc is the differential's reference preprocessor - an environment prerequisite for that
+            // suite (which skips without it), not a dependency this package can declare.
+            ignoreBinaries: ["gcc"],
+            // The reference SSL compiler is resolved from the server package rather than declared here,
+            // and deliberately so: the codegen differential must run against the compiler the extension
+            // actually ships. A second pin in this package could drift from the server's, leaving the
+            // differential green against a compiler no user has. The test skips when it is absent.
+            ignoreDependencies: ["sslc-emscripten-noderawfs"],
+        },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.
@@ -148,12 +182,6 @@ const config: KnipConfig = {
         "scripts/**",
         // spawned as a child process by the --jobs fan-out tests, never imported
         "shared/cli/test/fixtures/**",
-    ],
-    ignoreBinaries: [
-        // The WeiDU parser, spawned by the grammar differential suite as the authority on legal TP2
-        // syntax. Not a package dependency: it is an external toolchain binary the suite skips without,
-        // provisioned in CI by .github/scripts/install-weidu.sh.
-        "weidu",
     ],
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")

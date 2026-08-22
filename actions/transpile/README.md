@@ -1,6 +1,6 @@
 # Transpile sources action
 
-Transpiles TSSL / TBAF / TD sources to Fallout SSL / WeiDU BAF / WeiDU D with
+Transpiles TBAF / TD sources to WeiDU BAF / WeiDU D with
 [`@bgforge/transpile`](https://www.npmjs.com/package/@bgforge/transpile) (the `fgtp` CLI) and commits the
 generated files back to the branch that triggered the workflow. Use this to keep the committed transpiler output
 in sync with its source without each contributor running the transpiler locally.
@@ -13,7 +13,6 @@ output, not the source. The input/output mapping is documented under
 | ------- | ------ |
 | `.td`   | `.d`   |
 | `.tbaf` | `.baf` |
-| `.tssl` | `.ssl` |
 
 ## Usage
 
@@ -28,7 +27,6 @@ on:
     paths:
       - "**/*.td"
       - "**/*.tbaf"
-      - "**/*.tssl"
 
 permissions:
   contents: write
@@ -120,5 +118,10 @@ major. Pinning the tag fixes the _action code_ only - the `@bgforge/transpile` i
 
 ## Limitations
 
-- **Deleted sources leave orphaned outputs.** Removing a `.td`/`.tbaf`/`.tssl` source does not remove its
-  generated `.d`/`.baf`/`.ssl` file. Delete the output manually in the same commit.
+- **Deleted sources leave orphaned outputs.** Removing a `.td`/`.tbaf` source does not remove its
+  generated `.d`/`.baf` file. Delete the output manually in the same commit.
+
+## TSSL
+
+`.tssl` is not handled here. TSSL compiles straight to Fallout `.int` bytecode rather than transpiling to
+another language, and it ships as its own package and CLI - see [`actions/tssl`](../tssl/README.md).

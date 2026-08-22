@@ -3,7 +3,7 @@
 # Produce the list of SOURCE files to feed into the fgtp transpiler CLI.
 #
 # fgtp maps each source to a different-extension output in the same directory
-# (.td -> .d, .tbaf -> .baf, .tssl -> .ssl). The unit of work is the SOURCE file.
+# (.td -> .d, .tbaf -> .baf). The unit of work is the SOURCE file.
 # As with the binary action's <name>.json -> binary mapping, a changed OUTPUT
 # file maps back to its source so a hand-edited generated file is regenerated
 # (reverting the manual edit, or failing the job in check mode). The extension
@@ -19,9 +19,10 @@ set -euo pipefail
 source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 
 # fgtp source extensions (dot-less). Each maps to an output by inserting 't'
-# after the leading dot: .td<-.d, .tbaf<-.baf, .tssl<-.ssl (see the filter below).
-# Keep in sync with @bgforge/transpile (transpilers/src/cli.ts).
-in_exts=(td tbaf tssl)
+# after the leading dot: .td<-.d, .tbaf<-.baf (see the filter below). Keep in
+# sync with @bgforge/transpile (transpilers/src/cli.ts). TSSL is a compiler
+# rather than a transpiler and has its own action (actions/tssl).
+in_exts=(td tbaf)
 in_alt="$(
     IFS='|'
     echo "${in_exts[*]}"
@@ -39,7 +40,6 @@ done
 filter() {
     awk -v alt="$in_alt" '
         $0 ~ "\\.("alt")$" { print; next }
-        /\.ssl$/ { sub(/\.ssl$/, ".tssl"); print; next }
         /\.baf$/ { sub(/\.baf$/, ".tbaf"); print; next }
         /\.d$/   { sub(/\.d$/,   ".td");   print; next }
     '
