@@ -10,7 +10,7 @@ import YAML from "yaml";
 import { cmpStr, litscal } from "../../../utils/src/yaml-helpers.ts";
 export { litscal } from "../../../utils/src/yaml-helpers.ts";
 import { findFile } from "./header-defines.ts";
-import type { FalloutCompletionItem, SfallCategory } from "./types.ts";
+import type { FalloutCompletionItem, SfallCategory, SfallFunction } from "./types.ts";
 import { validateArray, validateSfallCategory, validateSfallHook } from "./validate.ts";
 
 const FUNCTIONS_YAML = "functions.yml";
@@ -49,6 +49,36 @@ function buildCompletionItem(
 }
 
 /**
+ * TODO: remove once sfall's functions.yml documents the real signature (BGforgeNet/sfall).
+ *
+ * The engine takes two parameters - `ScriptShaders.h` declares `SetShaderMode(DWORD d, DWORD mode)`, and
+ * sfall's own rain example calls it with two - so importing the one-parameter doc entry would leave hover
+ * and completion contradicting the built-in compiler, which refuses a one-argument call.
+ */
+const SHADER_MODE_FIX = {
+    name: "set_shader_mode",
+    detail: { from: "void set_shader_mode(int mode)", to: "void set_shader_mode(int ID, int mode)" },
+    doc: { from: "The parameter is a set of 32 flags", to: "`mode` is a set of 32 flags" },
+} as const;
+
+/** Applies {@link SHADER_MODE_FIX}, refusing to run on upstream text it no longer recognises. */
+function correctShaderMode(func: SfallFunction): SfallFunction {
+    if (func.name !== SHADER_MODE_FIX.name) return func;
+    const doc = func.doc ?? "";
+    if (func.detail !== SHADER_MODE_FIX.detail.from || !doc.includes(SHADER_MODE_FIX.doc.from)) {
+        throw new Error(
+            `${SHADER_MODE_FIX.name} no longer matches the text the local override corrects ` +
+                `(detail: "${func.detail}"). Check the signature upstream and drop the override if it is fixed.`,
+        );
+    }
+    return {
+        ...func,
+        detail: SHADER_MODE_FIX.detail.to,
+        doc: doc.replace(SHADER_MODE_FIX.doc.from, SHADER_MODE_FIX.doc.to),
+    };
+}
+
+/**
  * Loads sfall functions.yml, validates the data, and produces completion items.
  * Categories and functions are sorted alphabetically to minimize diff noise.
  */
@@ -73,7 +103,7 @@ export function loadSfallFunctions(srcDir: string): SfallFunctionsResult {
             const sortedFunctions = [...category.items].sort((a, b) => cmpStr(a.name, b.name));
 
             for (const func of sortedFunctions) {
-                completionItems.push(buildCompletionItem(func, categoryDoc));
+                completionItems.push(buildCompletionItem(correctShaderMode(func), categoryDoc));
             }
         }
     }

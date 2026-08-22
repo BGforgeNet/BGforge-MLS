@@ -86,6 +86,34 @@ describe("loadSfallFunctions", () => {
         expect(item.type).toBe("int");
     });
 
+    it("corrects the one-parameter set_shader_mode sfall documents", () => {
+        const yaml = `
+- name: "Graphics"
+  items:
+    - name: set_shader_mode
+      detail: "void set_shader_mode(int mode)"
+      doc: "Tells sfall when to use a shader. The parameter is a set of 32 flags naming screens."
+`;
+        fs.writeFileSync(path.join(tmpDir, "functions.yml"), yaml, "utf8");
+        const item = loadSfallFunctions(tmpDir).completionItems[0]!;
+
+        expect(item.detail).toBe("void set_shader_mode(int ID, int mode)");
+        expect(item.doc).toContain("`mode` is a set of 32 flags");
+    });
+
+    it("throws when set_shader_mode no longer carries the text the override corrects", () => {
+        const yaml = `
+- name: "Graphics"
+  items:
+    - name: set_shader_mode
+      detail: "void set_shader_mode(int ID, int mode)"
+      doc: "Tells sfall when to use a shader. \`mode\` is a set of 32 flags naming screens."
+`;
+        fs.writeFileSync(path.join(tmpDir, "functions.yml"), yaml, "utf8");
+
+        expect(() => loadSfallFunctions(tmpDir)).toThrow("no longer matches the text the local override corrects");
+    });
+
     it("throws when functions.yml not found", () => {
         expect(() => loadSfallFunctions(tmpDir)).toThrow("functions.yml not found");
     });
