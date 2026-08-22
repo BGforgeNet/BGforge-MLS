@@ -120,7 +120,8 @@ parallel \
     "Server bundle" "$SCRIPT_DIR/build-base-server.sh" \
     "Format CLI" "pnpm --filter @bgforge/format build" \
     "Binary CLI" "pnpm --filter @bgforge/binary build" \
-    "SSL CLI" "pnpm --filter @bgforge/ssl build"
+    "SSL CLI" "pnpm --filter @bgforge/ssl build" \
+    "TSSL CLI" "pnpm --filter @bgforge/tssl build"
 
 # Support early exit for test-all.sh (runs its own Phase 3 with extended tests interleaved)
 if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
