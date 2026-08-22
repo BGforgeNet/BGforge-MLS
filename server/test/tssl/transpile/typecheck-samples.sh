@@ -10,16 +10,19 @@ cd "$(dirname "$0")"
 ROOT="$(cd ../../../../ && pwd)"
 TSC="$ROOT/node_modules/.bin/tsc"
 
-# Create all symlinks first (.tssl -> .ts so tsc will parse them). Clean them up on every exit
-# path so a failed typecheck never leaves stray .ts symlinks in the source tree.
-links=()
-cleanup() { rm -f "${links[@]}"; }
+# Create all symlinks first (.tssl -> .ts so tsc will parse them), under the repo tmp/ rather than
+# beside the samples: the root test script runs Knip in parallel with this harness, and a .ts file
+# in the source tree is an unused file to Knip. Clean them up on every exit path.
+LINKDIR="$ROOT/tmp/typecheck-tssl.$$"
+mkdir -p "$LINKDIR"
+cleanup() { rm -rf "$LINKDIR"; }
 trap cleanup EXIT
 
+links=()
 for sample in samples/*.tssl; do
     name=$(basename "$sample" .tssl)
-    link="${name}.ts"
-    ln -sf "$sample" "$link"
+    link="$LINKDIR/${name}.ts"
+    ln -sf "$PWD/$sample" "$link"
     links+=("$link")
 done
 

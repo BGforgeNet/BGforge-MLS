@@ -48,8 +48,6 @@ const config: KnipConfig = {
             // listing it explicitly is redundant. Test files are explicit entries because
             // knip's vitest plugin cannot derive them from the config's absolute
             // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
-            // The "redundant entry" hint for lsp-probe.mts is spurious: removing that entry
-            // flips the file to an unused-files error.
             // Both compile-worker.ts files are bundle entries of their own, started by path from the
             // matching compile-worker-client.ts rather than imported, so nothing references them in
             // source.
@@ -58,7 +56,10 @@ const config: KnipConfig = {
             entry: [
                 "vitest.mutation.config.ts",
                 "test/**/*.test.ts",
-                "scripts/lsp-probe.mts",
+                // Production mode does not read package.json scripts, so the `lsp-probe` script's
+                // reference to this file is invisible there and it reports as an unused file. The
+                // default run resolves it through that script, where listing it is redundant.
+                ...(isProductionKnip ? ["scripts/lsp-probe.mts"] : []),
                 "src/fallout-ssl/compile-worker.ts",
                 "src/tssl/compile-worker.ts",
                 "src/sslc/sslc-wrapper.mjs",
@@ -70,13 +71,6 @@ const config: KnipConfig = {
                 // Pattern is only present when build has run; knip hints "Remove from ignore"
                 // before build, but the ignore is still required after build.
                 "out/**",
-                // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
-                // (root scripts/test.sh runs Knip alongside the sample harness). Verified required:
-                // with the symlinks present, dropping these makes Knip fail on 6 "Unused files".
-                // The tssl entry draws a "Remove from ignore" hint when the symlinks are absent -
-                // benign and expected, same as out/** above.
-                "test/td/*.ts",
-                "test/tssl/transpile/*.ts",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
                 // In production mode test files are not entries, so any non-.test.ts helper under test/
