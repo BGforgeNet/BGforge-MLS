@@ -36,7 +36,7 @@ jobs:
   compile:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
         with:
           opt: "2"
@@ -66,7 +66,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
         with:
           check: "true"

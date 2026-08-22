@@ -42,7 +42,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/format@actions/format/v1
 ```
 
@@ -61,7 +61,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/format@actions/format/v1
         with:
           check: "true"

@@ -35,7 +35,7 @@ jobs:
   snapshot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
 ```
 
@@ -54,7 +54,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
         with:
           check: "true"
