@@ -18,7 +18,11 @@ export function register(ctx: HandlerContext): void {
                 }
                 const langId = textDoc.languageId;
                 const text = textDoc.getText();
-                const symbol = symbolAtPosition(text, textDocumentPosition.position);
+                const symbol = symbolAtPosition(
+                    text,
+                    textDocumentPosition.position,
+                    registry.identifierExtraChars(langId),
+                );
                 const serverCtx = await getServerContext();
                 const { debug } = serverCtx.settings;
 
