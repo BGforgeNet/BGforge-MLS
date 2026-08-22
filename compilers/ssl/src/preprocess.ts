@@ -701,21 +701,29 @@ interface PreparedLine {
 const LINE_CACHE = new Map<string, { stamp: string; lines: readonly PreparedLine[] }>();
 
 function preparedLines(file: string): readonly PreparedLine[] {
-    let stamp: string;
+    let fd: number;
     try {
-        const stat = fs.statSync(file);
-        stamp = `${stat.mtimeMs}:${stat.size}`;
-    } catch {
-        // Let the read report the failure, as it did when there was no cache in front of it.
+        fd = fs.openSync(file, "r");
+    } catch (error) {
+        // A file that has gone away must not keep serving cached lines; the open reports the failure, as
+        // the read did when there was no cache in front of it.
         LINE_CACHE.delete(file);
-        return prepare(fs.readFileSync(file, "latin1"));
+        throw error;
     }
-    const cached = LINE_CACHE.get(file);
-    if (cached !== undefined && cached.stamp === stamp) return cached.lines;
-    // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
-    const lines = prepare(fs.readFileSync(file, "latin1"));
-    LINE_CACHE.set(file, { stamp, lines });
-    return lines;
+    try {
+        // Stamp and content come from the one handle, so the cache cannot key freshly-read lines to the
+        // stamp of a version replaced between the two calls.
+        const stat = fs.fstatSync(fd);
+        const stamp = `${stat.mtimeMs}:${stat.size}`;
+        const cached = LINE_CACHE.get(file);
+        if (cached !== undefined && cached.stamp === stamp) return cached.lines;
+        // latin1 keeps the byte-for-byte content of legacy cp1252 sources intact.
+        const lines = prepare(fs.readFileSync(fd, "latin1"));
+        LINE_CACHE.set(file, { stamp, lines });
+        return lines;
+    } finally {
+        fs.closeSync(fd);
+    }
 }
 
 /** Translation phases 2 and 3, then the classification the directive walk would otherwise redo. */

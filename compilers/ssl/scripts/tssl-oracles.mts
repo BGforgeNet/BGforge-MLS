@@ -190,9 +190,22 @@ async function digestRepo(repo: string, switches: SwitchSet[]): Promise<Map<stri
     return entries;
 }
 
+/**
+ * The committed manifest, or `null` when there is none. Read rather than probed first: a check leaves a
+ * window in which the file can go away before the read.
+ */
+function readCommittedManifest(): Manifest | null {
+    try {
+        return parseManifest(fs.readFileSync(MANIFEST_PATH, "utf-8"));
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+        throw error;
+    }
+}
+
 async function run(repo: string, update: boolean): Promise<void> {
     const corpusPin = corpusPinOf(repo);
-    const committed = fs.existsSync(MANIFEST_PATH) ? parseManifest(fs.readFileSync(MANIFEST_PATH, "utf-8")) : null;
+    const committed = readCommittedManifest();
     if (committed === null && !update) {
         console.error(`FAIL: no manifest at ${path.relative(REPO_ROOT, MANIFEST_PATH)}; generate it with --update`);
         process.exit(1);

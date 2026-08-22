@@ -1588,8 +1588,22 @@ const ESCAPES: Record<string, string> = {
     v: "\t",
 };
 
-/** One quoted run; several may sit adjacently, and the grammar hands those over as a single node. */
-const STRING_SEGMENT = /"([^"\\]|\\.)*"/g;
+/**
+ * The inner text of each quoted run, in source order; several may sit adjacently, and the grammar hands
+ * those over as a single node. Scanned rather than matched because a regex for a quoted run restarts at
+ * every quote it passes, which costs quadratic time on a long malformed literal.
+ */
+function* quotedRuns(text: string): Generator<string> {
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] !== '"') continue;
+        const start = i + 1;
+        let end = start;
+        while (end < text.length && text[end] !== '"') end += text[end] === "\\" ? 2 : 1;
+        if (end >= text.length) return;
+        yield text.slice(start, end);
+        i = end;
+    }
+}
 
 /**
  * Escapes that mean themselves rather than being unrecognised. `\\` and `"` decode to their own
@@ -1600,8 +1614,8 @@ const SELF_ESCAPES = new Set(["\\", '"']);
 /** Decodes one string literal, or several written adjacently - the grammar hands those over as one node. */
 function unquote(text: string): string {
     let out = "";
-    for (const [segment] of text.matchAll(STRING_SEGMENT)) {
-        out += segment.slice(1, -1).replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
+    for (const segment of quotedRuns(text)) {
+        out += segment.replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
     }
     return out;
 }
@@ -1614,8 +1628,8 @@ function unquote(text: string): string {
  */
 function unknownEscapes(text: string): string[] {
     const out: string[] = [];
-    for (const [segment] of text.matchAll(STRING_SEGMENT)) {
-        for (const [, char] of segment.slice(1, -1).matchAll(/\\(.)/g)) {
+    for (const segment of quotedRuns(text)) {
+        for (const [, char] of segment.matchAll(/\\(.)/g)) {
             if (char !== undefined && ESCAPES[char] === undefined && !SELF_ESCAPES.has(char)) out.push(char);
         }
     }
