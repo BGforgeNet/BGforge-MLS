@@ -7,10 +7,36 @@
 // Direct `export ... from` form so the bundler doesn't flag an unused local import.
 export { SyntaxKind } from "ts-morph";
 
-/** Inline function metadata: maps function name to its expansion */
-export interface InlineFunc {
+/** One call in an inline function's body. */
+export interface InlineCall {
     targetFunc: string; // Function being called, e.g., "sfall_func2" or "reg_anim_func"
     args: InlineArg[]; // Arguments in order, either param references or constants
+}
+
+/**
+ * What an `@inline` function expands to.
+ *
+ * `calls` holds more than one only where the body is a sequence of calls and nothing else - a
+ * value-returning body cannot be a sequence, SSL having no expression form for one.
+ *
+ * `expression` is a returned value that is not itself a call, and it is spliced PARENTHESISED: an
+ * argument re-associates across a bare splice, and so does a body. `a := m + 1` against a bare
+ * `metarule(46, 0) != 0` compiles to different bytes than against the wrapped form, because SSL reads
+ * the bare one as a comparison against `0 + 1`. A call is atomic and needs no such wrapping.
+ */
+export type InlineBody =
+    | { kind: "calls"; calls: InlineCall[] }
+    | {
+          kind: "expression";
+          /** The expression in SSL spelling, for the emitted `#define`. */
+          value: string;
+          /** The same expression as TypeScript, for the consumer that re-parses rather than splices. */
+          source: string;
+      };
+
+/** Inline function metadata: maps function name to its expansion. */
+export interface InlineFunc {
+    body: InlineBody;
     params: string[]; // Ordered parameter names from function signature
 }
 

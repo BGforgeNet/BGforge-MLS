@@ -47,9 +47,9 @@ written against these, so tightening any of them breaks a released folib rather 
 - **`@inline` on a function asks for a `#define`.** The tag's name and its meaning are a shared
   convention; renaming it, or changing what it expands to, is a change to both repos.
 - **A tagged function the macro extractor cannot read stays an ordinary procedure.** Inline-ness is
-  decided by successful extraction, never by the tag alone, so a body outside the one-call shape falls
-  back rather than failing. folib's `map_first_run` is tagged and returns a comparison; making extraction
-  failure an error would stop it compiling (`src/program-model.ts`).
+  decided by successful extraction, never by the tag alone, so a body that is neither a sequence of calls
+  nor a returned value - control flow, a local - falls back rather than failing. Making extraction
+  failure an error would stop such a folib function compiling (`src/program-model.ts`).
 - **The same constant declared twice with the same value is not a collision.** Both declarations emit and
   the second `#define` is a no-op; only a name bound to two different values is refused. fo2tweaks and
   folib both define `PRODATA_SC_TYPE` as 32 (`src/program-model.ts`).

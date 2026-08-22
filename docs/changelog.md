@@ -61,6 +61,15 @@ Same options as sslc.
 - Float literals, parentheses, imported names, blank lines and quoting reach the output as written.
 - `x ^ y` and `~x` compile. They were emitted as `bxor` and `bnot`, which SSL does not accept.
 - Syntax with no SSL equivalent is refused with its line, instead of producing SSL that fails later.
+- An `@inline` function whose body is several calls now inlines all of them. The macro used to be built
+  from the first call alone, and every other statement in the body was dropped from the compiled script
+  without a word. A body that is not a sequence of calls - anything returning a value beyond a single
+  call - stays an ordinary procedure rather than losing part of itself.
+- An `@inline` function whose returned call is written through a chain of type assertions now inlines.
+  Only one assertion was seen through, so a call cast twice compiled as a procedure despite the tag.
+- An `@inline` function returning a value that is not itself a call - a comparison, an arithmetic
+  expression - now inlines too, parenthesised so it cannot re-associate with the code around the call.
+  Only a returned call was accepted before, so these compiled as procedures despite the tag.
 
 ## 3.13.2
 

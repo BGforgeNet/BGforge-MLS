@@ -436,8 +436,17 @@ class TsslLowering {
             // that bottoms out in an engine call gets that call's own `popsResult` - and so a macro
             // expanding to another macro recurses here and resolves at whatever depth it ends.
             const parsed = this.expansionOf(inlineMacro, call.getArguments(), callee);
-            if (parsed.getKind() === SyntaxKind.CallExpression) return this.lowerCallStatement(parsed, scope);
-            return { kind: "expr", expr: this.lowerExpression(parsed, scope) };
+            // A body of several calls is a sequence, matching the semicolon-separated `#define` the text
+            // route writes. It reaches a value position only through `lowerExpression`, which refuses a
+            // block - the same answer SSL gives, having no expression form for a sequence.
+            if (parsed.length > 1) {
+                return { kind: "block", body: parsed.map((expanded) => this.lowerCallStatement(expanded, scope)) };
+            }
+            // Non-empty by construction: extraction drops a function it found no call in, so a macro
+            // that reaches here expands to at least one.
+            const sole = parsed[0] as Node;
+            if (sole.getKind() === SyntaxKind.CallExpression) return this.lowerCallStatement(sole, scope);
+            return { kind: "expr", expr: this.lowerExpression(sole, scope) };
         }
 
         const args = call.getArguments().map((argument) => this.lowerExpression(argument, scope));
@@ -653,19 +662,27 @@ class TsslLowering {
      * Substituting the caller's parsed subtree instead would be the hygienic reading and is a change to
      * make deliberately, not by accident.
      */
-    private expansionOf(inline: InlineFunc, actual: Node[], at: Node): Node {
+    private expansionOf(inline: InlineFunc, actual: Node[], at: Node): Node[] {
         const substitution = new Map<string, string>();
         inline.params.forEach((parameter, position) => {
             const supplied = actual[position];
             if (supplied) substitution.set(parameter, supplied.getText());
         });
-        const args = inline.args.map((argument) => {
-            if (argument.type === "param") return substitution.get(argument.value) ?? argument.value;
-            // `source`, not `value`: the latter has already been converted to SSL spelling, which is not
-            // TypeScript once an operator has changed (`|` becomes `bwor`).
-            return this.substituteParams(argument.source ?? argument.value, substitution, at);
+        if (inline.body.kind === "expression") {
+            // Parenthesised, as the emitted `#define` writes it - the wrapping is what stops the body
+            // re-associating with the call site, so a route that dropped it would diverge from the text.
+            const substituted = this.substituteParams(inline.body.source, substitution, at);
+            return [this.parseExpression(`(${substituted})`, at)];
+        }
+        return inline.body.calls.map((call) => {
+            const args = call.args.map((argument) => {
+                if (argument.type === "param") return substitution.get(argument.value) ?? argument.value;
+                // `source`, not `value`: the latter has already been converted to SSL spelling, which is
+                // not TypeScript once an operator has changed (`|` becomes `bwor`).
+                return this.substituteParams(argument.source ?? argument.value, substitution, at);
+            });
+            return this.parseExpression(`${call.targetFunc}(${args.join(", ")})`, at);
         });
-        return this.parseExpression(`${inline.targetFunc}(${args.join(", ")})`, at);
     }
 
     /**

@@ -227,7 +227,33 @@ function get_stat(who: CritterPtr, stat: number): number {
 const t = dude_tile(); // -> dude_tile  (no parens in output)
 ```
 
+**Several calls:** a body that is a sequence of calls inlines all of them.
+
+```typescript
+/** @inline */
+function announce(who: string): void {
+  display_msg("arriving");
+  display_msg(who);
+}
+// -> #define announce(who) display_msg("arriving"); display_msg(who)
+```
+
+**A returned expression:** a body returning something other than a call inlines parenthesised, so it
+cannot re-associate with the code around the call site.
+
+```typescript
+/** @inline */
+function map_first_run(): boolean {
+  return metarule(METARULE_TEST_FIRSTRUN, 0) != 0;
+}
+// -> #define map_first_run (metarule(METARULE_TEST_FIRSTRUN, 0) != 0)
+```
+
 The `@inline` tag must appear in a JSDoc comment (`/** @inline */`), not a regular comment.
+
+A body the macro cannot stand for stays an ordinary procedure, and the tag has no effect. SSL has no
+expression form for a sequence of statements, so a body that both returns a value and does more than one
+thing cannot be a macro; loops, conditionals and local variables are outside every shape above.
 
 ### list() and map() Helpers
 

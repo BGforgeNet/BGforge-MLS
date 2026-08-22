@@ -72,8 +72,19 @@ function dude_tile() { return tile_num(dude_obj); }
 function get_stat(who, stat) { return get_critter_stat(who, stat); }
   -> #define get_stat(who, stat) get_critter_stat(who, stat)
 
+/** @inline */
+function announce(who) { display_msg("arriving"); display_msg(who); }
+  -> #define announce(who) display_msg("arriving"); display_msg(who)
+
+/** @inline */
+function map_first_run() { return metarule(METARULE_TEST_FIRSTRUN, 0) != 0; }
+  -> #define map_first_run (metarule(METARULE_TEST_FIRSTRUN, 0) != 0)
+  A returned expression is wrapped so it cannot re-associate at the call site. A call is not.
+
 Tag MUST be in JSDoc (/** */), not regular comments.
 Zero-arg inline calls have parens stripped: dude_tile() -> dude_tile
+A body that is neither a sequence of calls nor a returned value - control flow, a local - stays a
+procedure and the tag does nothing: SSL has no expression form for a statement sequence.
 
 === SPECIAL FUNCTIONS ===
 

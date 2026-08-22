@@ -1,7 +1,33 @@
 // Constructs no real .tssl in the pinned corpus exercises, so the corpus sweep cannot tell the two
 // routes to bytecode apart on them. Each one below was a real divergence or a silent miscompile.
 
+/**
+ * An @inline body of more than one call. Every folib inline is a single call, so nothing in the corpus
+ * reaches this: the text route writes a semicolon-separated `#define`, the direct route a statement
+ * sequence, and the two agreeing is what the differential is here to check.
+ * @inline
+ */
+function greet(who: string): void {
+    display_msg("first");
+    display_msg(who);
+}
+
+/**
+ * An @inline body that is an expression rather than a call, parenthesised by its author. The text route
+ * splices it into a `#define` and the direct route parses it back, so the two agreeing is what this
+ * checks; no folib inline is written this way, so the corpus never reaches the shape.
+ * @inline
+ */
+function has_flag(mask: number): boolean {
+    return ((mask & 2) != 0);
+}
+
 export function start(): void {
+    greet("second");
+    if (has_flag(6)) {
+        display_msg("flagged");
+    }
+
     // A plain counted loop, as the baseline the cases below sit beside.
     let limit = 3;
     for (let i = 0; i < limit; i++) {
