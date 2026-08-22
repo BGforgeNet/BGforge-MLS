@@ -86,15 +86,26 @@ test_repo() {
 
     # Generated .ssl text is allowed to drift (spacing, literal spelling, comments); what ships is the
     # compiled script, so the gate is bytecode equivalence against the committed version at every level.
-    # The two allow-listed files are VERIFIED corrections of the committed baseline, not tolerated noise:
+    # An allow-listed file is a VERIFIED intended divergence from the committed baseline, not tolerated
+    # noise - a correction the old pipeline got wrong, or codegen the tag now honours:
     #   gl_g_healing_revision.ssl - the author's 100.0 float divisors were shipped as integer 100
     #     (integer division) by the old bundler's literal normalisation; the transpiler now preserves them.
     #   gl_g_molotov.ssl - SSL's and/or share one precedence level, so the old output's stripped
     #     parentheses changed `(a && b) || (c && d)` into `((a and b) or c) and d`; the transpiler now
     #     keeps the author's grouping.
+    #   gl_g_level5.ssl, gl_g_map_hotkey.ssl, gl_g_modoc_brahmin.ssl, gl_g_no_drop_items_on_death.ssl -
+    #     each bundles an `@inline` function the old pipeline emitted as a procedure anyway
+    #     (map_first_run, shitter_has_blown, inven_count); it is now the `#define` the tag asks for, so
+    #     the script carries one procedure fewer and the body sits at the call site.
+    #     TODO: temporary - the baseline is stale, not wrong. folib 0.4.2 drops the tag on all three, so
+    #     bumping the FO2tweaks pin in external/fallout.txt to a commit that resolves it (and
+    #     regenerating the oracles, as that file says) makes these match again; drop them from this list
+    #     then, so their bytecode is checked once more.
     if [[ -n "$(git -C "$dir" diff --name-only -- '*.ssl')" ]]; then
         if ! (cd "$ROOT_DIR" && pnpm --silent ssl-equiv "$dir" \
-            --allow gl_g_healing_revision.ssl --allow gl_g_molotov.ssl); then
+            --allow gl_g_healing_revision.ssl --allow gl_g_molotov.ssl \
+            --allow gl_g_level5.ssl --allow gl_g_map_hotkey.ssl \
+            --allow gl_g_modoc_brahmin.ssl --allow gl_g_no_drop_items_on_death.ssl); then
             echo "FAIL: $repo (generated .ssl no longer compiles to the committed bytecode)"
             return 1
         fi
