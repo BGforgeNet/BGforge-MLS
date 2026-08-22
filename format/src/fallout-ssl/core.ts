@@ -390,12 +390,20 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
 
 function formatParamList(node: SyntaxNode): string {
     const params: string[] = [];
+    // The language allows one comma after the last parameter and both compilers accept it, emitting the
+    // same bytecode either way. Rebuilding the list from the `param` children alone would drop that token,
+    // which the content guard reads as lost code - so the whole file gets refused rather than formatted.
+    // Punctuation is matched by text because the generated SyntaxType enum covers only named nodes.
+    let trailingComma = false;
     for (const child of node.children) {
         if (child.type === SyntaxType.Param) {
             params.push(formatParam(child));
+            trailingComma = false;
+        } else if (child.text === ",") {
+            trailingComma = true;
         }
     }
-    return `(${params.join(", ")})`;
+    return `(${params.join(", ")}${trailingComma ? "," : ""})`;
 }
 
 function formatParam(node: SyntaxNode): string {

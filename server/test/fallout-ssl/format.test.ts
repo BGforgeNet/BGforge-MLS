@@ -63,6 +63,28 @@ describe("fallout-ssl formatter: foreach headers", () => {
  * check compares the text exactly, so a rewritten keyword reads as lost content and the whole file is
  * refused rather than formatted.
  */
+describe("fallout-ssl formatter: parameter lists", () => {
+    const PARAMS = "procedure robot_arm(\n variable a = 2,\n variable b = 3,\n) begin\nend\n";
+
+    it("keeps a trailing comma after the last parameter", () => {
+        // The grammar accepts one and both compilers emit the same bytecode either way, so dropping it
+        // would be a content change - which the guard refuses, leaving the file unformatted.
+        expect(format(PARAMS)).toContain("variable b = 3,)");
+    });
+
+    it("passes the content guard, so such a file is formatted rather than refused", () => {
+        expect(validateFormatting(PARAMS, format(PARAMS), stripCommentsForCompareFalloutSsl)).toBeNull();
+    });
+
+    it("adds no comma to a list that had none", () => {
+        expect(format("procedure robot_arm(variable a = 2, variable b = 3) begin\nend\n")).toContain("variable b = 3)");
+    });
+
+    it("leaves an empty parameter list empty", () => {
+        expect(format("procedure p() begin\nend\n")).toContain("procedure p()");
+    });
+});
+
 describe("fallout-ssl formatter: keyword case", () => {
     const UPPERCASE = [
         "IMPORT VARIABLE g_shared;",
