@@ -7,6 +7,11 @@
 import type { Position } from "vscode-languageserver/node";
 import { REGEX_MSG_INLAY, REGEX_MSG_INLAY_FLOATER_RAND } from "./core/patterns";
 
+/** Escape the characters that carry meaning inside a regex character class. */
+function escapeForCharClass(chars: string): string {
+    return chars.replaceAll(/[\\\]^-]/g, "\\$&");
+}
+
 /** Extract the text from the start of the line up to the cursor position. */
 export function getLinePrefix(text: string, position: Position): string {
     return text.split("\n")[position.line]?.substring(0, position.character) ?? "";
@@ -18,7 +23,7 @@ export function getLinePrefix(text: string, position: Position): string {
  * or `NOption(154` or `NOption`
  * From that hover will extract the actual symbol or tra reference to search for.
  */
-export function symbolAtPosition(text: string, position: Position) {
+export function symbolAtPosition(text: string, position: Position, extraChars = "") {
     const lines = text.split(/\r?\n/g);
     const str = lines[position.line];
     if (!str) {
@@ -37,9 +42,11 @@ export function symbolAtPosition(text: string, position: Position) {
         return msgMatch;
     }
 
-    // Search for the word's beginning and end.
-    let left = str.slice(0, pos + 1).search(/\w+$/),
-        right = str.slice(pos).search(/\W/);
+    // Search for the word's beginning and end. The boundary widens by the caller's language-specific
+    // characters (see IDENTIFIER_EXTRA_CHARS), so a name is not cut short at a `-` or `#` it contains.
+    const extra = escapeForCharClass(extraChars);
+    let left = str.slice(0, pos + 1).search(new RegExp(`[\\w${extra}]+$`)),
+        right = str.slice(pos).search(new RegExp(`[^\\w${extra}]`));
 
     let result: string;
     // The last word in the string is a special case.

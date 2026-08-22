@@ -71,6 +71,16 @@ Same options as sslc.
   expression - now inlines too, parenthesised so it cannot re-associate with the code around the call.
   Only a returned call was accepted before, so these compiled as procedures despite the tag.
 
+### Fixes
+
+- WeiDU BAF no longer reports a syntax error on an IDS name containing a hyphen - `KUO-TOA`, `YUAN-TI`,
+  `WILL-O-WISP` - whether written as a plain argument or inside an object specifier such as
+  `[EVILCUTOFF.0.KUO-TOA]`.
+- Hover now works on a name carrying a hyphen or a hash. The word under the cursor was read up to the
+  punctuation, so the lookup searched for `KUO` rather than `KUO-TOA`, and `tb` rather than `tb#factorial`,
+  and found nothing. Affects BAF IDS names and TP2 macros and variables such as `sc#addWmpAre` and
+  `FL#FJ_CRE_REINDEX`.
+
 ## 3.13.2
 
 ### WeiDU TP2

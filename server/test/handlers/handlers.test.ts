@@ -525,6 +525,31 @@ describe("hover handler", () => {
         expect(dataSpy).not.toHaveBeenCalled();
         expect(result).toBeNull();
     });
+
+    // The extracted symbol must span the whole name, or the lookup misses a shipped symbol: BAF
+    // IDS names carry `-` (KUO-TOA) and TP2 macro names carry `#` (tb#factorial). The handler is
+    // where the language's character set is applied, so this is the seam that broke.
+    it.each([
+        { lang: "weidu-baf", text: "\tRace(Myself,KUO-TOA)", character: 15, symbol: "KUO-TOA" },
+        { lang: "weidu-tp2", text: "  LAUNCH_PATCH_MACRO tb#factorial", character: 24, symbol: "tb#factorial" },
+    ])("passes the whole $lang name '$symbol' to registry.hover", async ({ lang, text, character, symbol }) => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(text, lang)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(translationStub, "getHover").mockReturnValue(null);
+        vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.notHandled());
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(false);
+        const dataSpy = vi.spyOn(registry, "hover").mockReturnValue(null);
+
+        hover.register(ctx);
+        await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: { line: 0, character },
+        });
+        expect(dataSpy).toHaveBeenCalledWith(lang, KNOWN_URI, symbol, text);
+    });
 });
 
 // --- definition handler ----------------------------------------------------------------------
@@ -564,6 +589,28 @@ describe("definition handler", () => {
         });
         expect(provSpy).toHaveBeenCalledWith("fallout-ssl", DEF_TEXT, DEF_POS, KNOWN_URI);
         expect(result).toBe(loc);
+    });
+
+    // Same seam as the hover handler: definition extracts the symbol with the same helper, so it
+    // needs the language's extra identifier characters applied at its own call site too.
+    it("passes the whole hyphenated name to registry.symbolDefinition", async () => {
+        const text = "\tRace(Myself,KUO-TOA)";
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(text, "weidu-baf")]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        vi.spyOn(registry, "isPositionInString").mockReturnValue(false);
+        const symSpy = vi.spyOn(registry, "symbolDefinition").mockReturnValue(null);
+
+        definition.register(ctx);
+        await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: { line: 0, character: 15 },
+        });
+        expect(symSpy).toHaveBeenCalledWith("weidu-baf", "KUO-TOA");
     });
 
     it("returns translation definition when registry.definition is null and translation matches", async () => {

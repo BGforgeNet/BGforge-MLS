@@ -8,12 +8,19 @@ cd "$(dirname "$0")"
 ROOT="$(cd ../../../ && pwd)"
 TSC="$ROOT/node_modules/.bin/tsc"
 
-# Create symlinks for all samples
+# Create symlinks for all samples, under the repo tmp/ rather than beside the samples: the root test
+# script runs Knip in parallel with this harness, and a .ts file in the source tree is an unused file
+# to Knip. Clean them up on every exit path, not just the success one.
+LINKDIR="$ROOT/tmp/typecheck-tbaf.$$"
+mkdir -p "$LINKDIR"
+cleanup() { rm -rf "$LINKDIR"; }
+trap cleanup EXIT
+
 links=()
 for sample in samples/*.tbaf; do
     name=$(basename "$sample" .tbaf)
-    link="${name}.ts"
-    ln -sf "$sample" "$link"
+    link="$LINKDIR/${name}.ts"
+    ln -sf "$PWD/$sample" "$link"
     links+=("$link")
 done
 
@@ -25,5 +32,3 @@ if $TSC --noEmit --allowUnusedLabels --skipLibCheck --lib ES2015 tbaf-runtime.d.
 else
     exit 1
 fi
-
-rm -f "${links[@]}"

@@ -26,6 +26,13 @@ import {
     type SignatureHelp,
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
+import {
+    LANG_FALLOUT_SSL,
+    LANG_WEIDU_BAF,
+    LANG_WEIDU_SLB,
+    LANG_WEIDU_SSL,
+    LANG_WEIDU_TP2,
+} from "../../shared/languages";
 
 // Mock per-concern modules to suppress logs and control file finding during tests
 vi.mock("../src/logger", () => ({
@@ -143,6 +150,33 @@ describe("ProviderRegistry", () => {
             registry.registerAlias("orphan-alias", "nonexistent");
 
             expect(registry.get("orphan-alias")).toBeUndefined();
+        });
+    });
+
+    describe("identifierExtraChars()", () => {
+        it("should return the characters declared for a language", async () => {
+            const registry = await createRegistry();
+
+            expect(registry.identifierExtraChars(LANG_WEIDU_BAF)).toBe("-");
+            expect(registry.identifierExtraChars(LANG_WEIDU_TP2)).toBe("#-");
+        });
+
+        it("should return an empty string for a language declaring none", async () => {
+            const registry = await createRegistry();
+
+            expect(registry.identifierExtraChars(LANG_FALLOUT_SSL)).toBe("");
+            expect(registry.identifierExtraChars("nonexistent")).toBe("");
+        });
+
+        // SCS SSL and SLB are aliases of BAF, so they parse with the BAF grammar and must get
+        // its character set - looking up the alias id directly would silently return none.
+        it("should resolve an alias to its parent's characters", async () => {
+            const registry = await createRegistry();
+            registry.registerAlias(LANG_WEIDU_SSL, LANG_WEIDU_BAF);
+            registry.registerAlias(LANG_WEIDU_SLB, LANG_WEIDU_BAF);
+
+            expect(registry.identifierExtraChars(LANG_WEIDU_SSL)).toBe("-");
+            expect(registry.identifierExtraChars(LANG_WEIDU_SLB)).toBe("-");
         });
     });
 

@@ -35,6 +35,7 @@ import { type FormatResult, type LanguageProvider, type ProviderContext, HoverRe
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
 import { showError } from "./user-messages";
+import { IDENTIFIER_EXTRA_CHARS } from "./core/languages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
@@ -66,6 +67,15 @@ class ProviderRegistry {
 
     private resolveLangId(langId: string): string {
         return this.aliases.get(langId) ?? langId;
+    }
+
+    /**
+     * Characters beyond `\w` that this language's names may contain, for the cursor word-scan.
+     * Resolved through the alias table so SCS SSL and SLB inherit BAF's set - they parse with the
+     * BAF grammar, and a direct map lookup on the alias id would return none.
+     */
+    identifierExtraChars(langId: string): string {
+        return IDENTIFIER_EXTRA_CHARS[this.resolveLangId(langId)] ?? "";
     }
 
     /** Initialize all registered providers sequentially (simpler debugging). */

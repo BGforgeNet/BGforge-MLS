@@ -86,7 +86,11 @@ export default grammar({
         variable_ref: ($) => token(seq("%", /[a-zA-Z_][a-zA-Z0-9_]*/, "%")),
 
         // Terminals
-        identifier: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
+
+        // The hyphen is part of the name: IDS symbols carry it (RACE.IDS has KUO-TOA, YUAN-TI, WILL-O-WISP).
+        // BAF has no arithmetic, so a hyphen's only other role is leading a negative `number` - which the
+        // leading [a-zA-Z_] keeps out of an identifier.
+        identifier: ($) => /[a-zA-Z_][a-zA-Z0-9_-]*/,
 
         number: ($) => token(choice(/-?\d+/, /0x[0-9a-fA-F]+/)),
 

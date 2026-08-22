@@ -28,7 +28,7 @@ export function register(ctx: HandlerContext): void {
                     return providerResult;
                 }
 
-                const symbol = symbolAtPosition(text, params.position);
+                const symbol = symbolAtPosition(text, params.position, registry.identifierExtraChars(langId));
                 const serverCtx = await getServerContext();
 
                 // Try translation definition (mstr/tra/@123 references -> .msg/.tra files)

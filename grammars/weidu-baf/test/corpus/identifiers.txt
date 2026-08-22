@@ -1,0 +1,89 @@
+================================================================================
+Identifier: hyphenated IDS name as an argument
+================================================================================
+
+IF
+  Race(Myself,KUO-TOA)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (identifier)
+          args: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Identifier: hyphenated IDS name inside an object specifier
+================================================================================
+
+IF
+  Range([EVILCUTOFF.0.KUO-TOA],30)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref
+            (identifier)
+            (number)
+            (identifier))
+          args: (number))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Identifier: a hyphen still starts a negative number, not an identifier tail
+================================================================================
+
+IF
+  Race(Myself,YUAN-TI)
+THEN
+  RESPONSE #100
+    SetGlobal("wm_x","GLOBAL",-1)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (identifier)
+          args: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (string)
+            args: (string)
+            args: (number)))))))

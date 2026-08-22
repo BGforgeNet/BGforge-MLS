@@ -146,6 +146,32 @@ describe("symbolAtPosition", () => {
         const result = symbolAtPosition(text, { line: 0, character: 0 });
         expect(result).toBe("tra(50)");
     });
+
+    // Some grammars admit characters `\w` excludes - BAF/TP2 IDS and macro names carry `-` and `#`
+    // (KUO-TOA, tb#factorial). Callers pass their language's extra characters so the scan does not
+    // stop mid-name; languages that declare none keep the plain `\w` boundary.
+    describe("extra identifier characters", () => {
+        const text = "Race(Myself,KUO-TOA)";
+
+        it.each([12, 15, 16, 18])("spans a hyphen when '-' is declared (cursor at %i)", (character) => {
+            expect(symbolAtPosition(text, { line: 0, character }, "-")).toBe("KUO-TOA");
+        });
+
+        it("stops at the hyphen when no extra characters are declared", () => {
+            expect(symbolAtPosition(text, { line: 0, character: 13 })).toBe("KUO");
+        });
+
+        it.each([21, 24, 30])("spans a hash when '#' is declared (cursor at %i)", (character) => {
+            const tp2 = "  LAUNCH_PATCH_MACRO tb#factorial";
+            expect(symbolAtPosition(tp2, { line: 0, character }, "#-")).toBe("tb#factorial");
+        });
+
+        it("leaves SSL subtraction alone - fallout-ssl declares no extra characters", () => {
+            // Guards the reason the character set is per-language rather than global: in SSL
+            // `a-b` is arithmetic, so widening the boundary everywhere would return "a-b" here.
+            expect(symbolAtPosition("variable x := a-b;", { line: 0, character: 14 })).toBe("a");
+        });
+    });
 });
 
 describe("sendParseResult", () => {
