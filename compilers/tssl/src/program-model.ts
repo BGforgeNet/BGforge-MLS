@@ -319,8 +319,8 @@ export function buildProgramModel(
     }
 
     // Inline-ness is decided by successful EXTRACTION, not the @inline tag alone: a tagged function
-    // whose body is not the one-call shape the macro extractor reads stays a regular procedure, which is
-    // what folib relies on (map_first_run is tagged @inline but returns a comparison).
+    // whose body is none of the shapes the macro extractor reads - control flow, a local - stays a
+    // regular procedure rather than refusing the compile.
     const inlineFunctions = new Map<string, InlineFunc>();
     for (const module of modules) {
         for (const [name, fn] of extractInline(module.source)) inlineFunctions.set(name, fn);
