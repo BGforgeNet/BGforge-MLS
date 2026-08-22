@@ -6,7 +6,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, isComment, throwFormatError } from "./core";
-import { keywordText } from "../format-utils";
+import { canonicalKeyword, canonicalOp } from "./canonical-keyword";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 /** Format an expression node to a string, with optional column tracking for line-breaking. */
@@ -66,8 +66,9 @@ export function formatExpression(
             // as identifiers in the parse tree (e.g., `else` after macro that expands to
             // if-then-begin-end). Content validation catches any actual semantic changes.
             return node.text;
-        case "number":
         case "boolean":
+            return canonicalKeyword(node.text);
+        case "number":
         case "string":
             return node.text;
         case "for_var_decl": {
@@ -82,7 +83,7 @@ export function formatExpression(
             }
             // Same `:=`-or-`=` choice as the sibling assignment below, and the same need to keep it.
             const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
-            return `${keywordText(node, "variable")} ${name.text} ${op} ${formatExpression(value)}`;
+            return `${canonicalKeyword("variable")} ${name.text} ${op} ${formatExpression(value)}`;
         }
         case "for_init_assign": {
             const name = node.childForFieldName("name");
@@ -107,7 +108,7 @@ export function formatExpression(
 // Uses the "op" field defined in the grammar, which is reliable even when
 // ERROR nodes appear between operands (e.g., CRLF line endings producing stray nodes).
 function getBinaryOp(node: SyntaxNode): string {
-    return node.childForFieldName("op")?.text ?? "";
+    return canonicalOp(node);
 }
 
 // Flatten a chain of binary expressions with the same operator (e.g., a or b or c)
@@ -137,10 +138,9 @@ function formatBinaryExpr(node: SyntaxNode, column: number = 0, extraLength: num
     const right = node.childForFieldName("right");
     const op = getBinaryOp(node);
 
-    // For logical/bitwise chains, try compact first then break if too long. Matched case-insensitively,
-    // so a source spelling these operators in capitals gets the same line breaking as a lowercase one.
+    // For logical/bitwise chains, try compact first then break if too long.
     const breakableOps = ["or", "and", "bwor", "bwand", "bwxor"];
-    if (breakableOps.includes(op.toLowerCase())) {
+    if (breakableOps.includes(op)) {
         const operands = flattenBinaryChain(node, op);
         // Try compact first - format without column info for length check
         const compactOperands = operands.map((o) => formatExpression(o));
@@ -169,7 +169,7 @@ function formatBinaryExpr(node: SyntaxNode, column: number = 0, extraLength: num
 }
 
 function formatUnaryExpr(node: SyntaxNode): string {
-    const op = node.childForFieldName("op")?.text || "";
+    const op = canonicalOp(node);
     const expr = node.childForFieldName("expr");
 
     if (node.children[0]?.text === "++" || node.children[0]?.text === "--") {
@@ -276,10 +276,7 @@ export function formatCallStmt(node: SyntaxNode): string {
 
     if (!target) return node.text;
 
-    // Keep the keyword as written. It is case-insensitive and real scripts use `Call`; emitting a
-    // fixed spelling would rewrite source the formatter is only meant to re-indent.
-    const keyword = node.children.find((c) => c.type === "call");
-    let result = `${keyword?.text ?? "call"} `;
+    let result = `${canonicalKeyword("call")} `;
     if (target.type === SyntaxType.CallExpr) {
         result += formatCallExpr(target);
     } else {

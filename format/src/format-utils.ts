@@ -22,13 +22,13 @@ export type CommentStripper = (text: string) => string;
 /**
  * The source's own spelling of a keyword, for formatters to re-emit.
  *
- * These grammars match keywords case-insensitively, so `PROCEDURE` and `procedure` are the same token.
- * Re-spelling one is not a formatter's decision to make: `validateFormatting` compares the text exactly,
- * so a rewritten keyword reads as lost content and the file is refused rather than formatted.
+ * Matched by node type where a grammar aliases its keyword back to a canonical name, by text otherwise.
+ * The keyword itself is the fallback, for a caller asking about a keyword this node does not carry.
  *
- * A grammar that aliases its case-insensitive keyword back to a canonical name is matched by node type;
- * one that does not is matched by text. The keyword itself is the fallback, for a caller asking about a
- * keyword this node does not carry.
+ * Only the WeiDU D formatter still calls this, and D declares its keywords as case-sensitive literals,
+ * so the lookup can only return the spelling passed in. Kept rather than inlined because collapsing it
+ * touches call sites unrelated to any current change; the SSL formatter canonicalises instead, via
+ * `fallout-ssl/canonical-keyword.ts`.
  */
 export function keywordText(node: SyntaxNode, keyword: string): string {
     const wanted = keyword.toUpperCase();

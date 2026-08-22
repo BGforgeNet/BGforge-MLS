@@ -15,6 +15,7 @@ const REQUIRED_VALUE_EXPORTS = [
     "validateFormatting",
     "stripCommentsWeidu",
     "stripCommentsFalloutSsl",
+    "stripCommentsForCompareFalloutSsl",
     "stripCommentsTra",
     "stripCommentsFalloutMsg",
     "stripComments2da",

@@ -1,6 +1,6 @@
 # Fallout SSL Formatter
 
-The Fallout SSL formatter preserves code structure while normalizing indentation, whitespace, and comment formatting. It handles both regular code and preprocessor directives.
+The Fallout SSL formatter preserves code structure while normalizing indentation, whitespace, comment formatting, and keyword casing. It handles both regular code and preprocessor directives.
 
 **Implementation:** [`../../format/src/fallout-ssl/core.ts`](../../format/src/fallout-ssl/core.ts)
 
@@ -144,6 +144,21 @@ Directives are normalized with consistent spacing:
 - Consistent indentation (default 4 spaces, configurable via `.editorconfig`)
 - Nested structures get incremental indent
 - Leading/trailing whitespace trimmed
+
+### 7. Keyword Casing
+
+The grammar matches keywords case-insensitively, so a script may spell any keyword any way. The formatter
+writes the canonical spelling rather than the source's:
+
+- Lowercase for every keyword and operator - `PROCEDURE` becomes `procedure`, `BWOR` becomes `bwor`,
+  `FALSE` becomes `false`.
+- `orElse` and `andAlso` keep their camelCase, which is how both short-circuit operators are written in
+  practice.
+
+Keywords inside a `#define` body are left as written, along with the rest of the macro: macro bodies are
+preprocessor text, and the formatter emits them verbatim.
+
+Identifiers and string literals are never re-cased.
 
 ## Examples
 

@@ -20,7 +20,7 @@ import {
     getEditorconfigSettings,
     validateFormatting,
     stripCommentsWeidu,
-    stripCommentsFalloutSsl,
+    stripCommentsForCompareFalloutSsl,
     stripCommentsTra,
     stripCommentsFalloutMsg,
     stripComments2da,
@@ -190,7 +190,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         let stripComments;
         switch (fileType) {
             case "ssl":
-                stripComments = stripCommentsFalloutSsl;
+                stripComments = stripCommentsForCompareFalloutSsl;
                 break;
             case "tra":
                 stripComments = stripCommentsTra;

@@ -15,7 +15,8 @@ import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, format
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
-import { throwOnParseError, normalizeComment, keywordText } from "@bgforge/format";
+import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { canonicalKeyword } from "./canonical-keyword";
 // Comment normalization is shared across all formatters; re-export the imported
 // binding so existing `./core` importers (e.g. control-flow) keep their path.
 export { normalizeComment } from "@bgforge/format";
@@ -188,7 +189,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             const expr = node.namedChildren[0];
             // Column for expression: depth indent + "return "
             const column = depth * ctx.indent.length + 7;
-            return `${keywordText(node, "return")}${expr ? " " + formatExpression(expr, column, 1) : ""};`;
+            return `${canonicalKeyword("return")}${expr ? " " + formatExpression(expr, column, 1) : ""};`;
         }
         case SyntaxType.CallStmt:
             return formatCallStmt(node);
@@ -296,21 +297,21 @@ function formatChildren(node: SyntaxNode, depth: number): string {
 function formatProcedureModifiers(node: SyntaxNode): string {
     const critical = node.childForFieldName("critical");
     const modifier = node.childForFieldName("modifier");
-    return `${critical ? `${critical.text} ` : ""}${modifier ? `${modifier.text} ` : ""}`;
+    return `${critical ? `${canonicalKeyword(critical.text)} ` : ""}${modifier ? `${canonicalKeyword(modifier.text)} ` : ""}`;
 }
 
 /** The `in <constant>` or `when <expr>` clause that sits between the parameter list and `begin`. */
 function formatProcedureSchedule(node: SyntaxNode): string {
     const timed = node.childForFieldName("timed");
-    if (timed) return ` ${keywordText(node, "in")} ${formatNode(timed, 0)}`;
+    if (timed) return ` ${canonicalKeyword("in")} ${formatNode(timed, 0)}`;
     const condition = node.childForFieldName("condition");
-    return condition ? ` ${keywordText(node, "when")} ${formatNode(condition, 0)}` : "";
+    return condition ? ` ${canonicalKeyword("when")} ${formatNode(condition, 0)}` : "";
 }
 
 function formatProcedureForward(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
-    const prefix = `${formatProcedureModifiers(node)}${keywordText(node, "procedure")} ${name}`;
+    const prefix = `${formatProcedureModifiers(node)}${canonicalKeyword("procedure")} ${name}`;
     if (params) {
         return `${prefix}${formatParamList(params)};`;
     }
@@ -322,9 +323,9 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
     const params = node.childForFieldName("params");
 
     const signature =
-        `${formatProcedureModifiers(node)}${keywordText(node, "procedure")} ${name}` +
+        `${formatProcedureModifiers(node)}${canonicalKeyword("procedure")} ${name}` +
         `${params ? formatParamList(params) : ""}`;
-    const header = `${signature}${formatProcedureSchedule(node)} ${keywordText(node, "begin")}`;
+    const header = `${signature}${formatProcedureSchedule(node)} ${canonicalKeyword("begin")}`;
 
     const bodyParts: string[] = [];
     const skipTypes: Set<string> = new Set([SyntaxType.Identifier, SyntaxType.ParamList]);
@@ -380,7 +381,7 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         }
     });
 
-    const kwEnd = keywordText(node, "end");
+    const kwEnd = canonicalKeyword("end");
     if (bodyParts.length === 0) {
         return `${header}\n${kwEnd}`;
     }
@@ -402,7 +403,7 @@ function formatParam(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const defaultValue = node.childForFieldName("default");
 
-    let result = variableKw ? `${variableKw.text} ${name}` : name;
+    let result = variableKw ? `${canonicalKeyword("variable")} ${name}` : name;
     if (defaultValue) {
         // Preserve := vs = from original
         const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
@@ -431,13 +432,13 @@ function formatVariableDecl(node: SyntaxNode, depth: number = 0): string {
         if (currentGroup.length > 0) {
             lines.push(ctx.indent + currentGroup.join(", ") + ";");
         }
-        const kwVariable = keywordText(node, "variable");
-        return `${kwVariable} ${keywordText(node, "begin")}\n${lines.join("\n")}\n${keywordText(node, "end")}`;
+        const kwVariable = canonicalKeyword("variable");
+        return `${kwVariable} ${canonicalKeyword("begin")}\n${lines.join("\n")}\n${canonicalKeyword("end")}`;
     }
 
     const importKw = node.children.find((c) => c.type === "import");
     const hasSemicolon = node.children.some((c) => c.text === ";");
-    const prefix = `${importKw ? `${importKw.text} ` : ""}${keywordText(node, "variable")} `;
+    const prefix = `${importKw ? `${canonicalKeyword("import")} ` : ""}${canonicalKeyword("variable")} `;
     const varInits: string[] = [];
     for (const child of node.children) {
         if (child.type === SyntaxType.VarInit) {
@@ -470,7 +471,7 @@ function formatVarInit(node: SyntaxNode, depth: number = 0, prefixLen: number = 
 function formatExportDecl(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const value = node.childForFieldName("value");
-    const declaration = `${keywordText(node, "export")} ${keywordText(node, "variable")} ${name}`;
+    const declaration = `${canonicalKeyword("export")} ${canonicalKeyword("variable")} ${name}`;
     if (value) {
         const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
         return `${declaration} ${op} ${formatExpression(value)};`;
@@ -534,8 +535,8 @@ export function formatBlock(node: SyntaxNode, depth: number): string {
         }
     });
 
-    const kwBegin = keywordText(node, "begin");
-    const kwEnd = keywordText(node, "end");
+    const kwBegin = canonicalKeyword("begin");
+    const kwEnd = canonicalKeyword("end");
     if (stmts.length === 0) {
         return `${kwBegin}${beginComment}\n${kwEnd}${endComment}`;
     }

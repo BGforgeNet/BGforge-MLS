@@ -7,7 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, normalizeComment, formatNode, formatBlock } from "./core";
 import { formatExpression } from "./expressions";
-import { keywordText } from "../format-utils";
+import { canonicalKeyword } from "./canonical-keyword";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean = false): string {
@@ -56,9 +56,9 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     const formattedCond = formatExpression(cond, condColumn, extraLength);
     const condIsBroken = formattedCond.includes("\n");
 
-    const kwIf = keywordText(node, "if");
-    const kwThen = keywordText(node, "then");
-    const kwElse = keywordText(node, "else");
+    const kwIf = canonicalKeyword("if");
+    const kwThen = canonicalKeyword("then");
+    const kwElse = canonicalKeyword("else");
 
     // If condition was broken across lines, put "then" on its own line
     let result: string;
@@ -110,8 +110,8 @@ export function formatWhileStmt(node: SyntaxNode, depth: number): string {
     const formattedCond = formatExpression(cond, condColumn, extraLength);
     const condIsBroken = formattedCond.includes("\n");
 
-    const kwWhile = keywordText(node, "while");
-    const kwDo = keywordText(node, "do");
+    const kwWhile = canonicalKeyword("while");
+    const kwDo = canonicalKeyword("do");
 
     // If condition was broken across lines, put "do" on its own line
     let result: string;
@@ -141,7 +141,7 @@ export function formatForStmt(node: SyntaxNode, depth: number): string {
     const condStr = cond ? formatExpression(cond) : "";
     const updateStr = update ? formatExpression(update) : "";
 
-    let result = `${keywordText(node, "for")} (${initStr}; ${condStr}; ${updateStr})`;
+    let result = `${canonicalKeyword("for")} (${initStr}; ${condStr}; ${updateStr})`;
 
     if (body?.type === SyntaxType.Block) {
         result += " " + formatBlock(body, depth);
@@ -168,10 +168,10 @@ export function formatForeachStmt(node: SyntaxNode, depth: number): string {
     // independently optional, so one head assembled from parts is the only shape that cannot drop
     // whichever combination a branch per form would have missed.
     const loopVar = keyNode && valueNode ? `${keyNode.text}: ${valueNode.text}` : (keyNode?.text ?? "");
-    const binding = loopVar ? `${variableKw ? `${variableKw.text} ` : ""}${loopVar} ` : "";
-    const guardText = guard ? ` ${keywordText(node, "while")} ${formatExpression(guard)}` : "";
-    const head = `${binding}${keywordText(node, "in")} ${formatExpression(iter)}${guardText}`;
-    const kwForeach = keywordText(node, "foreach");
+    const binding = loopVar ? `${variableKw ? `${canonicalKeyword("variable")} ` : ""}${loopVar} ` : "";
+    const guardText = guard ? ` ${canonicalKeyword("while")} ${formatExpression(guard)}` : "";
+    const head = `${binding}${canonicalKeyword("in")} ${formatExpression(iter)}${guardText}`;
+    const kwForeach = canonicalKeyword("foreach");
     const header = hasParens ? `${kwForeach} (${head})` : `${kwForeach} ${head}`;
 
     if (body?.type === SyntaxType.Block) {
@@ -186,7 +186,7 @@ export function formatForeachStmt(node: SyntaxNode, depth: number): string {
 export function formatSwitchStmt(node: SyntaxNode, depth: number): string {
     const ctx = getCtx();
     const value = node.childForFieldName("value");
-    const parts: string[] = [`${keywordText(node, "switch")} ${formatExpression(value)} ${keywordText(node, "begin")}`];
+    const parts: string[] = [`${canonicalKeyword("switch")} ${formatExpression(value)} ${canonicalKeyword("begin")}`];
 
     for (const child of node.children) {
         if (child.type === SyntaxType.CaseClause) {
@@ -196,7 +196,7 @@ export function formatSwitchStmt(node: SyntaxNode, depth: number): string {
         }
     }
 
-    parts.push(ctx.indent.repeat(depth) + keywordText(node, "end"));
+    parts.push(ctx.indent.repeat(depth) + canonicalKeyword("end"));
     return parts.join("\n");
 }
 
@@ -222,13 +222,13 @@ function formatCaseClause(node: SyntaxNode, depth: number): string {
     const ctx = getCtx();
     const value = node.childForFieldName("value");
     const stmts = formatClauseBody(node, depth, new Set(["case", ":"]), value ?? undefined);
-    const header = ctx.indent.repeat(depth) + `${keywordText(node, "case")} ${formatExpression(value)}:`;
+    const header = ctx.indent.repeat(depth) + `${canonicalKeyword("case")} ${formatExpression(value)}:`;
     return stmts.length > 0 ? header + "\n" + stmts.join("\n") : header;
 }
 
 function formatDefaultClause(node: SyntaxNode, depth: number): string {
     const ctx = getCtx();
     const stmts = formatClauseBody(node, depth, new Set(["default", ":"]));
-    const header = ctx.indent.repeat(depth) + `${keywordText(node, "default")}:`;
+    const header = ctx.indent.repeat(depth) + `${canonicalKeyword("default")}:`;
     return stmts.length > 0 ? header + "\n" + stmts.join("\n") : header;
 }

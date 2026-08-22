@@ -15,8 +15,9 @@ Same options as sslc.
   name once rather than at every use.
 - Three warnings, behind `-n` in `compileOptions`: an escape no table entry covers, a variable declared
   twice, and a script with no `start` procedure.
-- Keywords are read in any casing, as the language reads them. Formatting keeps whichever spelling the
-  source used.
+- Keywords are read in any casing, as the language reads them. Formatting now writes them the canonical
+  way - lowercase, except the short-circuit operators `orElse` and `andAlso`. Keywords inside a `#define`
+  body are left as written, along with the rest of the macro.
 - More of the language is recognised, by highlighting, formatting and both compilers: procedure modifiers
   (`pure`, `inline`, `critical`), timed and guarded procedures (`procedure foo in 5`, `when (cond)`,
   `call foo in 10`), compound assignment and stepping into elements (`a[k] += 1`, `a[i + 1]++`, evaluating

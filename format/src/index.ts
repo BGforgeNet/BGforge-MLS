@@ -25,6 +25,7 @@ export { getEditorconfigSettings } from "./editorconfig";
 
 // Tree-based formatters: caller passes the parsed rootNode + options
 export { formatDocument as formatFalloutSsl } from "./fallout-ssl/core";
+export { stripCommentsForCompareFalloutSsl } from "./fallout-ssl/canonical-keyword";
 export { formatDocument as formatWeiduBaf } from "./weidu-baf/core";
 export { formatDocument as formatWeiduD } from "./weidu-d/core";
 export { formatDocument as formatWeiduTp2 } from "./weidu-tp2/core";

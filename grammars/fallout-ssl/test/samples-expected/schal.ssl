@@ -151,7 +151,7 @@ procedure map_enter_p_proc begin
     // end edits
 
     set_self_ai(AI_TOUGH_GUARD);
-    if (is_loading_game == FALSE) then begin
+    if (is_loading_game == false) then begin
         call checkLoadConditions;
         add_timer_event(self_obj, game_ticks(1), TIMER_APPEAR);
         if ((cur_map_index == MAP_NCR_DOWNTOWN)

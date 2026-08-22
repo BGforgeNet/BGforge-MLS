@@ -58,7 +58,7 @@ import {
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
-import { stripCommentsFalloutSsl, formatFalloutSsl as formatAst } from "@bgforge/format";
+import { stripCommentsForCompareFalloutSsl, formatFalloutSsl as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
 import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
@@ -195,7 +195,7 @@ class FalloutSslProvider
             parse: parseWithCache,
             formatAst: (rootNode, options) => formatAst(rootNode, options),
             getFormatOptions,
-            stripComments: stripCommentsFalloutSsl,
+            stripComments: stripCommentsForCompareFalloutSsl,
         });
     }
 

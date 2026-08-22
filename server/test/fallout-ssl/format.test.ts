@@ -9,7 +9,11 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { initParser, getParser } from "../../../shared/parsers/fallout-ssl";
-import { formatFalloutSsl as formatDocument } from "@bgforge/format";
+import {
+    formatFalloutSsl as formatDocument,
+    validateFormatting,
+    stripCommentsForCompareFalloutSsl,
+} from "@bgforge/format";
 
 beforeAll(async () => {
     await initParser();
@@ -80,38 +84,75 @@ describe("fallout-ssl formatter: keyword case", () => {
         "END",
     ].join("\n");
 
-    it("changes only whitespace, so the file is formatted rather than refused", () => {
-        // The exact check the shared content guard makes, and the reason a re-spelled keyword is not a
-        // cosmetic difference: this equality is what decides whether the file is written at all.
-        const strip = (text: string) => text.replaceAll(/\s+/g, "");
-        expect(strip(format(UPPERCASE))).toBe(strip(UPPERCASE));
-    });
+    // None of these is a substring of any identifier in the fixture, so a hit is a keyword rather than
+    // incidental text.
+    const KEYWORDS = [
+        "procedure",
+        "variable",
+        "foreach",
+        "switch",
+        "begin",
+        "end",
+        "then",
+        "else",
+        "call",
+        "default",
+        "import",
+        "export",
+    ];
 
-    it("emits no keyword in its own canonical lowercase", () => {
+    it("rewrites every keyword to its canonical lowercase", () => {
         const output = format(UPPERCASE);
-
-        // None of these is a substring of any identifier in the fixture, so a hit is a rewritten
-        // keyword rather than incidental text.
-        for (const rewritten of [
-            "procedure",
-            "variable",
-            "foreach",
-            "switch",
-            "begin",
-            "end",
-            "then",
-            "else",
-            "call",
-            "default",
-            "import",
-            "export",
-        ]) {
-            expect(output).not.toContain(rewritten);
+        for (const keyword of KEYWORDS) {
+            expect(output).toContain(keyword);
+            expect(output).not.toContain(keyword.toUpperCase());
         }
     });
 
+    it("passes the content guard, so the file is formatted rather than refused", () => {
+        // The exact check the CLI and the LSP formatting path both make. A canonicalised keyword must
+        // not read as lost content, or an uppercase script is refused instead of reformatted.
+        expect(validateFormatting(UPPERCASE, format(UPPERCASE), stripCommentsForCompareFalloutSsl)).toBeNull();
+    });
+
     it("still reindents an uppercase script", () => {
-        expect(format(UPPERCASE)).toContain("\n    VARIABLE x := 5, arr[4];");
+        expect(format(UPPERCASE)).toContain("\n    variable x := 5, arr[4];");
+    });
+
+    it("keeps the camelCase spelling of the two short-circuit operators", () => {
+        // Their lowercase form is the grammar's internal alias and appears in no real script.
+        const output = format("procedure start begin\nvariable x;\nx := (1 ORELSE 2) ANDALSO 3;\nend");
+        expect(output).toContain("orElse");
+        expect(output).toContain("andAlso");
+        expect(output).not.toContain("orelse");
+        expect(output).not.toContain("andalso");
+    });
+
+    it("canonicalises bitwise operators and boolean literals", () => {
+        const output = format("procedure start begin\nvariable x;\nx := (1 BWAND 2) BWOR TRUE;\nend");
+        expect(output).toContain("bwand");
+        expect(output).toContain("bwor");
+        expect(output).toContain("true");
+        expect(output).not.toContain("BWOR");
+        expect(output).not.toContain("TRUE");
+    });
+
+    it("leaves the case of string literals alone", () => {
+        const output = format('procedure start begin\ndisplay_msg("Hello World");\nend');
+        expect(output).toContain('"Hello World"');
+    });
+
+    it("leaves keywords inside a #define body spelled as written", () => {
+        // Macro bodies are preprocessor text and the formatter emits them verbatim; canonicalisation
+        // inherits that boundary rather than widening the formatter's scope.
+        const output = format("#define DAM_CRIP  (DAM_LEFT BWOR DAM_RIGHT)\nprocedure start begin\nend");
+        expect(output).toContain("BWOR");
+    });
+
+    it("still refuses a formatter that changes the case of a string literal", () => {
+        // The fold applies outside quoted runs only, so the guard has not been widened past keywords.
+        const error = validateFormatting('x := "Hello";', 'x := "hello";', stripCommentsForCompareFalloutSsl);
+        expect(error).not.toBeNull();
     });
 
     it("keeps `:=` in a for-loop declaration rather than rewriting it to `=`", () => {
