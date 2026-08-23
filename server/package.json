@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/mls-server",
-    "version": "3.13.2",
+    "version": "3.14.0",
     "description": "LSP server for Fallout SSL, WeiDU (BAF/D/TP2), and related modding languages",
     "keywords": [
         "fallout",

@@ -2,6 +2,16 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## 0.6.1
+
+### Changed
+
+- `stringifyKeys` and `compileFlagTable` memoize on the identity of the spec table they are given, and
+  `slugifyCodedName` and `humanize` on their input string. A display walk re-derived the same handful of
+  tables and names once per field instance, which on a large MAP was most of the parse time. The
+  memoized results are frozen and shared between callers, so a consumer that assigned into a returned
+  option table now gets a `TypeError` instead of silently editing every other record's copy.
+
 ## 0.6.0
 
 ### Added

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.14.0
 
 ### Fallout SSL
 
@@ -24,8 +24,10 @@ Same options as sslc.
   a complex index once), adjacent string literals (`"ab" "cd"`), character constants (`'A'`, `'\n'`,
   `'\0101'`), `foreach ... while` in every spelling, the process-control statements (`spawn`, `callstart`,
   `exec`, `fork`, `wait`, `cancel`, `cancelall`, `startcritical`, `endcritical`, `exit`, `detach`, `noop`),
-  `variable a[10]` and its two-argument flag form, `not`/`bwnot` in a global initialiser, and `#elif`,
-  `#error` and `#line`.
+  `variable a[10]` and its two-argument flag form, a trailing comma after a procedure's last parameter,
+  a bare `begin ... end` block, a ternary in a variable initialiser (`variable v := 1 if c else 2`), a
+  procedure called through a string name (`"node_1"(1)`), `not`/`bwnot` in a global initialiser, and
+  `#elif`, `#error` and `#line`.
 - More is reported rather than quietly accepted: a procedure declared and never defined, `++x` (the language
   has no prefix increment), `break` or `continue` outside a loop, an array declared outside a procedure, a
   procedure called without `call`, a bare expression statement, and a parenthesised operand in a global
@@ -35,7 +37,13 @@ Same options as sslc.
   dropped, so both addressed a directory that does not exist.
 - Two scripts in one folder no longer interfere when they compile at the same time; different folders still
   compile in parallel.
-- Formatting no longer drops a `foreach` loop's `while` guard, nor rewrites `variable i := 0` to `= 0`.
+- Formatting no longer drops a `foreach` loop's `while` guard, nor rewrites `variable i := 0` to `= 0` in
+  a `for` header.
+- Two constructs used to parse as something else, with no error to show for it. A bare `begin ... end`
+  block lexed as two ordinary identifiers, so its `end` closed the enclosing procedure early and
+  formatting refused the file rather than write out the `begin` it had lost. A procedure called through
+  a string name was read as a string followed by a parenthesised expression, and formatting split it
+  over two lines.
 - Engine signatures corrected: `set_shader_mode` takes the shader it applies to, nine functions had the
   wrong argument count, `art_anim` and `critter_heal` were shown returning nothing, and three were missing
   the closing parenthesis of their parameter list.

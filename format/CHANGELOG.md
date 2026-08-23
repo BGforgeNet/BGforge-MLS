@@ -2,10 +2,32 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
-## Unreleased
+## 0.6.0
+
+### Added
+
+- `fgfmt` formats Fallout SSL it used to report as a syntax error: a character constant (`'A'`, `'\n'`,
+  `'\0101'`), `foreach ... while` written without parentheses, a timed or guarded procedure
+  (`procedure foo in 5`, `procedure foo when (cond)`), stepping into a computed element (`a[i + 1]++`),
+  a ternary in a variable initialiser (`variable v := 1 if c else 2`), and a trailing comma after the
+  last parameter.
+- `fgfmt` formats Fallout SSL it used to refuse after formatting, when the whitespace-only check caught
+  the output no longer matching the input: a keyword spelled any way but lowercase (`Procedure`, `IF`,
+  `Begin`), a bare block inside a procedure, a `foreach` whose `while` guard sits inside the parentheses,
+  and `variable i := 0` in a `for` header, which was rewritten to `= 0`. `critical` and `pure` in a
+  procedure header were each pushed onto a line of their own instead of staying in it.
+- WeiDU BAF IDS names containing a hyphen - `KUO-TOA`, `YUAN-TI`, `WILL-O-WISP` - are formatted rather
+  than reported as a syntax error.
 
 ### Changed
 
+- The Fallout SSL formatter writes keywords in the project's canonical spelling - lowercase, except the
+  short-circuit operators `orElse` and `andAlso` - rather than whichever spelling the source used. The
+  grammar matches them case-insensitively, so every spelling is legal input. Keywords inside a `#define`
+  body are left as written, along with the rest of the macro.
+- Because of that, `validateFormatting` needs a normaliser that folds keyword case to check an SSL file,
+  exported as `stripCommentsForCompareFalloutSsl`. Pass it in place of `stripCommentsFalloutSsl`, which
+  still strips comments and nothing else.
 - Helpers shaped by the tree-sitter grammars moved to a second entry point, `@bgforge/format/internal`:
   `scanTildeDelimiter`, the comment normalisers, the TP2 formatting defaults and keyword constants, and
   the TP2 node predicates. Importing one of those needs the `/internal` path now. The main entry point
@@ -14,14 +36,19 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 - `CommentStripper` is now `CompareNormalizer`, after what `validateFormatting` does with it: reduce a
   file to the content formatting has to preserve. Every language drops comments there; Fallout SSL also
   folds keyword case, since its formatter canonicalises keyword spelling.
+- `fgfmt` reports a formatter bug as `left unchanged - formatter bug: ...`, since the file is not written
+  when the whitespace-only check fails.
+
+### Fixed
+
+- A procedure called through a string name - `"node_1"(1)`, which the engine resolves at run time - is
+  laid out as one call. It parsed as a string followed by a parenthesised expression, so the two landed
+  on separate lines.
 
 ### Removed
 
 - The WeiDU tokeniser - `tokenizeWeidu`, `normalizeWhitespaceWeidu`, `WeiduTokenType` and the
   `WeiduToken` type. It is used only to build the formatters this package already exposes.
-- `keywordText`, which returned a keyword spelled as the source spelled it. No formatter needs it: the
-  Fallout SSL formatter canonicalises keyword spelling instead, and every other grammar accepts exactly
-  one spelling, so the lookup could only ever return what it was given.
 
 ## 0.5.0
 
