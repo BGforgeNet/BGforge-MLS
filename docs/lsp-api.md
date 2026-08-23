@@ -34,7 +34,8 @@ Behavior:
 
 - Fallout SSL: compiles `.ssl` using external or built-in compiler
 - WeiDU files: parse-checks `.tp2`, `.tpa`, `.tph`, `.tpp`, `.d`, `.baf`
-- Transpiler files: transpiles `.tssl`, `.tbaf`, `.td`, then runs the relevant downstream compile/parse flow
+- TSSL: compiles `.tssl` straight to `.int` bytecode, with no SSL text in between
+- Transpiler files: transpiles `.tbaf`, `.td`, then runs the relevant downstream compile/parse flow
 
 Notes:
 

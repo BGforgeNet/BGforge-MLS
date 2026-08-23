@@ -1,8 +1,9 @@
 # @bgforge/ssl
 
 Fallout SSL compiler: preprocessor, parser, optimizer and INT back end, plus the `ssl` command-line
-front end. It is a library rather than a program: no binary to install, and no process to start, which
-is what lets the extension compile in places neither of the other two can be run.
+front end, as well as INT decompiler. It is a library rather than a program: no binary to install, and
+no process to start, which is what lets the extension compile in places neither of the other two can be
+run.
 
 Internal to this repository and not published. The extension's language server uses it as a library; the
 CLI exists so the same compiler can be driven from a build script or checked by hand.
