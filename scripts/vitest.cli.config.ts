@@ -26,6 +26,7 @@ export default defineConfig({
             path.resolve(root, "transpilers/test/transpile-cli.test.ts"),
             path.resolve(root, "compilers/ssl/test/ssl-cli.test.ts"),
             path.resolve(root, "compilers/tssl/test/tssl-cli.test.ts"),
+            path.resolve(root, "scripts/utils/test/cli-help.test.ts"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout

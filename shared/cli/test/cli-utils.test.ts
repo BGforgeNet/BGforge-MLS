@@ -205,21 +205,22 @@ describe("findFiles", () => {
 describe("parseCliArgs", () => {
     const originalArgv = process.argv;
     let exitSpy: ReturnType<typeof vi.spyOn>;
-    let logSpy: ReturnType<typeof vi.spyOn>;
+    // cac's outputHelp writes through console.info, so that is the stream --help has to be read on.
+    let infoSpy: ReturnType<typeof vi.spyOn>;
     let errorSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
             throw new Error("exit");
         });
-        logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
         errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     });
 
     afterEach(() => {
         process.argv = originalArgv;
         exitSpy.mockRestore();
-        logSpy.mockRestore();
+        infoSpy.mockRestore();
         errorSpy.mockRestore();
     });
 
@@ -283,10 +284,12 @@ describe("parseCliArgs", () => {
         expect(args?.quiet).toBe(true);
     });
 
-    it("exits with help text on --help", () => {
+    it("returns null and prints the help text once, verbatim, on --help", () => {
         process.argv = ["node", "cli.js", "--help"];
-        expect(() => parseCliArgs("Usage info")).toThrow("exit");
-        expect(logSpy).toHaveBeenCalledWith("Usage info");
+        expect(parseCliArgs("Usage info")).toBeNull();
+        // Registering the text with cac AND printing it here gave two copies, the cac one colon-suffixed.
+        expect(infoSpy).toHaveBeenCalledTimes(1);
+        expect(infoSpy).toHaveBeenCalledWith("Usage info");
     });
 
     it("exits on missing target", () => {

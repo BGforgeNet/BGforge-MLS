@@ -12,6 +12,11 @@ Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-e
   memoized results are frozen and shared between callers, so a consumer that assigned into a returned
   option table now gets a `TypeError` instead of silently editing every other record's copy.
 
+### Fixed
+
+- `fgbin --help` prints the help text once. It was registered with the argument parser and printed again
+  by hand, so every invocation emitted two copies, the first with a stray colon appended.
+
 ## 0.6.0
 
 ### Added

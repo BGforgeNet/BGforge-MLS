@@ -66,6 +66,7 @@ export type ExtraOption = readonly [flags: string, description: string];
  * than read out of `process.argv` by the caller so cac still validates them and `--help` still lists
  * them; their values come back in `extra` rather than widening `CliArgs` with fields the other CLIs
  * have no use for.
+ * @returns null when `--help` was handled and the caller should stop; a bad argument exits here instead.
  */
 export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOption[] = []): CliArgs | null {
     const cli = cac();
@@ -80,13 +81,13 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
         .option("--jobs <n>", "Process directory files with N parallel workers")
         .option("--files-from <path>", "Process the newline-separated file list (internal, used by --jobs)")
         .action(() => {});
-    cli.help(() => [{ title: helpText, body: "" }]);
+    // cac renders a section as `${title}:\n${body}`, so the text goes in `body`; as a title it would
+    // pick up a trailing colon. cac prints it itself on --help, so returning null here - rather than
+    // printing a second copy - is what leaves the caller with one.
+    cli.help(() => [{ body: helpText }]);
     cli.parse(process.argv, { run: false });
 
-    if (cli.options.help) {
-        console.log(helpText);
-        process.exit(0);
-    }
+    if (cli.options.help) return null;
 
     const target = cli.args[0] as string | undefined;
     const { save, check, saveAndCheck, recursive, quiet, jobs, filesFrom } = cli.options as {

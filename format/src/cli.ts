@@ -2,7 +2,7 @@
 /**
  * CLI tool to format Fallout SSL, WeiDU BAF, WeiDU D, WeiDU TP2, WeiDU TRA,
  * Fallout MSG, Infinity Engine 2DA, and Fallout scripts.lst files.
- * Usage: node format-cli.js <file|dir> [--save] [-r] [-q] [--check]
+ * Usage: fgfmt <file|dir> [--save] [-r] [-q] [--check]
  * Supported extensions: .ssl, .baf, .d, .tp2 (/.tph/.tpa/.tpp), .tra, .msg, .2da, scripts.lst
  */
 
@@ -250,7 +250,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: format-cli <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
+const HELP = `Usage: fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
   Supported: .ssl, .baf, .d, .tp2 (/.tph/.tpa/.tpp), .tra, .msg, .2da, scripts.lst
   --save            Write formatted output back to file(s)
   --check           Check if files are formatted (exit 1 if not)

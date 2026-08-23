@@ -4,6 +4,11 @@ Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
 ## 0.3.0
 
+### Fixed
+
+- `fgtp --help` prints the help text once. It was registered with the argument parser and printed again
+  by hand, so every invocation emitted two copies, the first with a stray colon appended.
+
 ### Removed
 
 - **`.tssl` is no longer handled.** TSSL became a compiler in its own right and moved to

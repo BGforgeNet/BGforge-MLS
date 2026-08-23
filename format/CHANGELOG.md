@@ -44,6 +44,10 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 - A procedure called through a string name - `"node_1"(1)`, which the engine resolves at run time - is
   laid out as one call. It parsed as a string followed by a parenthesised expression, so the two landed
   on separate lines.
+- `fgfmt --help` names the command you actually run. It announced itself as `format-cli`, which is not
+  what the package installs.
+- `fgfmt --help` prints the help text once. It was registered with the argument parser and printed again
+  by hand, so every invocation emitted two copies, the first with a stray colon appended.
 
 ### Removed
 

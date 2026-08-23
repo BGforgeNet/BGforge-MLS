@@ -57,7 +57,7 @@ describe("format CLI integration", () => {
 
         it("prints a usage banner to stdout with --help", () => {
             const { stdout } = run("--help");
-            expect(stdout).toContain("Usage: format-cli");
+            expect(stdout).toContain("Usage: fgfmt");
         });
     });
 
