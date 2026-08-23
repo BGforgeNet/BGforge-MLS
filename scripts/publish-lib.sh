@@ -16,11 +16,19 @@ do_publish() {
     echo "=== Publishing $display ==="
     cd "$subdir" || exit 1
 
-    # --provenance adds a signed attestation; requires GitHub Actions OIDC
-    # (id-token: write), so it is only added when running under Actions.
-    local provenance=""
+    # --provenance needs GitHub Actions OIDC, so a local publish cannot attest one - and pnpm blocks an
+    # install whose trust level regressed, so shipping one unprovenanced would break consumers.
+    local provenance="" dry_run=""
+    for arg in "$@"; do
+        if [ "$arg" = "--dry-run" ]; then dry_run=1; fi
+    done
     if [ -n "${GITHUB_ACTIONS:-}" ]; then
         provenance="--provenance"
+    elif [ -z "$dry_run" ]; then
+        echo "Error: a real publish must run in GitHub Actions, which can attest provenance."
+        echo "  Publishing $display from here would drop it below the trust level its earlier"
+        echo "  versions carry. Push a <lib>/vX.Y.Z tag, or add --dry-run to rehearse locally."
+        exit 1
     fi
 
     # --no-git-checks: CI checks out a detached HEAD, which breaks pnpm's
