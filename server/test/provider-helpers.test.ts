@@ -150,7 +150,7 @@ describe("formatWithValidation", () => {
             parse: () => null,
             formatAst: () => ({ text: "" }),
             getFormatOptions: () => ({}),
-            stripComments: (t: string) => t,
+            normalizeForCompare: (t: string) => t,
         });
         expect(result.edits).toEqual([]);
     });
@@ -164,7 +164,7 @@ describe("formatWithValidation", () => {
             parse: () => null,
             formatAst: () => ({ text: "" }),
             getFormatOptions: () => ({}),
-            stripComments: (t: string) => t,
+            normalizeForCompare: (t: string) => t,
         });
         expect(result.edits).toEqual([]);
     });
@@ -178,7 +178,7 @@ describe("formatWithValidation", () => {
             parse: () => ({ rootNode: {} }),
             formatAst: () => ({ text: "code" }),
             getFormatOptions: () => ({}),
-            stripComments: (t: string) => t,
+            normalizeForCompare: (t: string) => t,
         });
         expect(result.edits).toHaveLength(1);
     });
@@ -194,7 +194,7 @@ describe("formatWithValidation", () => {
                 throw new Error("parse fail");
             },
             getFormatOptions: () => ({}),
-            stripComments: (t: string) => t,
+            normalizeForCompare: (t: string) => t,
         });
         expect(result.edits).toEqual([]);
         expect(result.warning).toContain("TEST formatter error");
@@ -209,7 +209,7 @@ describe("formatWithValidation", () => {
             parse: () => ({ rootNode: {} }),
             formatAst: () => ({ text: "xyz" }),
             getFormatOptions: () => ({}),
-            stripComments: (t: string) => t,
+            normalizeForCompare: (t: string) => t,
         });
         expect(result.edits).toEqual([]);
         expect(result.warning).toContain("TEST formatter validation failed");

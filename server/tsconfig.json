@@ -7,7 +7,8 @@
         "outDir": "out",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
         "paths": {
-            "@bgforge/format": ["../format/src/index.ts"]
+            "@bgforge/format": ["../format/src/index.ts"],
+            "@bgforge/format/internal": ["../format/src/internal.ts"]
         }
     },
     "include": ["src", "test", "scripts", "../shared", "../transpilers", "../format/src", "../test"],

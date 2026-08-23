@@ -16,27 +16,12 @@ export function stripBom(text: string): string {
     return text.startsWith("\uFEFF") ? text.slice(1) : text;
 }
 
-/** Function that strips comments from text while respecting string literals. */
-export type CommentStripper = (text: string) => string;
-
 /**
- * The source's own spelling of a keyword, for formatters to re-emit.
- *
- * Matched by node type where a grammar aliases its keyword back to a canonical name, by text otherwise.
- * The keyword itself is the fallback, for a caller asking about a keyword this node does not carry.
- *
- * Only the WeiDU D formatter still calls this, and D declares its keywords as case-sensitive literals,
- * so the lookup can only return the spelling passed in. Kept rather than inlined because collapsing it
- * touches call sites unrelated to any current change; the SSL formatter canonicalises instead, via
- * `fallout-ssl/canonical-keyword.ts`.
+ * Reduces text to the content formatting must preserve, for validateFormatting to compare against.
+ * Every language drops comments; Fallout SSL also folds keyword case, because its formatter
+ * canonicalises keyword spelling and the guard would otherwise read that as changed content.
  */
-export function keywordText(node: SyntaxNode, keyword: string): string {
-    const wanted = keyword.toUpperCase();
-    for (const child of node.children) {
-        if (child.type === keyword || child.text.toUpperCase() === wanted) return child.text;
-    }
-    return keyword;
-}
+export type CompareNormalizer = (text: string) => string;
 
 /**
  * Throw if the tree contains any ERROR or MISSING nodes.
@@ -511,10 +496,14 @@ export function stripCommentsFalloutScriptsLst(text: string): string {
 /**
  * Validate that formatting only changed whitespace, not content.
  * Returns error message if content changed, null if OK.
- * @param stripComments Language-specific function to strip comments while respecting strings
+ * @param normalizeForCompare Language-specific reduction to comparable content
  */
-export function validateFormatting(original: string, formatted: string, stripComments: CommentStripper): string | null {
-    const normalize = (text: string) => stripComments(text).replaceAll(/\s+/g, "");
+export function validateFormatting(
+    original: string,
+    formatted: string,
+    normalizeForCompare: CompareNormalizer,
+): string | null {
+    const normalize = (text: string) => normalizeForCompare(text).replaceAll(/\s+/g, "");
     const normalizedOriginal = normalize(original);
     const normalizedFormatted = normalize(formatted);
 

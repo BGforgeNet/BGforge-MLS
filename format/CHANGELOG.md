@@ -2,6 +2,27 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## Unreleased
+
+### Changed
+
+- Helpers shaped by the tree-sitter grammars moved to a second entry point, `@bgforge/format/internal`:
+  `scanTildeDelimiter`, the comment normalisers, the TP2 formatting defaults and keyword constants, and
+  the TP2 node predicates. Importing one of those needs the `/internal` path now. The main entry point
+  keeps the formatters, the format-and-validate pipeline and editorconfig discovery, and is the only
+  surface the version number speaks for - `/internal` follows the grammars and can change in any release.
+- `CommentStripper` is now `CompareNormalizer`, after what `validateFormatting` does with it: reduce a
+  file to the content formatting has to preserve. Every language drops comments there; Fallout SSL also
+  folds keyword case, since its formatter canonicalises keyword spelling.
+
+### Removed
+
+- The WeiDU tokeniser - `tokenizeWeidu`, `normalizeWhitespaceWeidu`, `WeiduTokenType` and the
+  `WeiduToken` type. It is used only to build the formatters this package already exposes.
+- `keywordText`, which returned a keyword spelled as the source spelled it. No formatter needs it: the
+  Fallout SSL formatter canonicalises keyword spelling instead, and every other grammar accepts exactly
+  one spelling, so the lookup could only ever return what it was given.
+
 ## 0.5.0
 
 ### Added

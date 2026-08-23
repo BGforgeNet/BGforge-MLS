@@ -11,7 +11,7 @@ import type { Symbols } from "../core/symbol-index";
 import type { FormatResult } from "../language-provider";
 import { conlog } from "../logger";
 import { createFullDocumentEdit } from "./format-edits";
-import { validateFormatting, type CommentStripper, type FormatOutput } from "@bgforge/format";
+import { validateFormatting, type CompareNormalizer, type FormatOutput } from "@bgforge/format";
 
 // ============================================
 // Symbol resolution
@@ -97,8 +97,8 @@ interface FormatWithValidationOptions<TRoot = unknown, TOpts = unknown> {
     formatAst: (rootNode: TRoot, options: TOpts) => FormatOutput;
     /** Get format options for a URI */
     getFormatOptions: (uri: string) => TOpts;
-    /** Strip comments for validation (language-specific) */
-    stripComments: CommentStripper;
+    /** Reduce text to comparable content for the post-format content guard (language-specific) */
+    normalizeForCompare: CompareNormalizer;
 }
 
 /**
@@ -131,7 +131,7 @@ export function formatWithValidation<TRoot, TOpts>(opts: FormatWithValidationOpt
         return { edits: [], warning: result.warning };
     }
 
-    const validationError = validateFormatting(opts.text, result.text, opts.stripComments);
+    const validationError = validateFormatting(opts.text, result.text, opts.normalizeForCompare);
     if (validationError) {
         conlog(`${opts.languageName} formatter validation failed: ${validationError}`);
         return {

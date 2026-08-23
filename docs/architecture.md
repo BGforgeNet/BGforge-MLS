@@ -132,7 +132,7 @@ vscode-mls/
 |   +-- test/                   Layout + structure-op tests (vitest) + Playwright render harness (test/harness/, e2e-tier)
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
-|   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
+|   +-- src/                    index.ts (public library) + internal.ts (in-repo helpers) + cli.ts (fgfmt bin)
 |   +-- out/                    tsdown output + WASM files
 |
 +-- image/                  @bgforge/image package: animation library (Fallout FRM / IE BAM codecs, FRM <-> BAM conversion, PNG/APNG import-export)
@@ -245,7 +245,9 @@ separate top-level step - it runs inside `build:client`.
    `__dirname`) so inlined CJS resolves in the ESM bundle. `fixedExtension: false` keeps the
    `.js` extension the `type: module` packages expect (it defaults to `.mjs` on node). transpile
    externalizes `esbuild-wasm` (it refuses to be bundled - it inspects its own `__filename`);
-   format copies the tree-sitter WASM next to the CLI via an `onSuccess` hook.
+   format copies the tree-sitter WASM next to the CLI via an `onSuccess` hook and has a second
+   library entry, `out/internal.js` + `.d.ts`, behind the `./internal` subpath export - helpers the
+   server and the tests need that are shaped by the grammars and so carry no semver promise.
 
    Moving off tsup required one source change. The grammars' `SyntaxType` enum used to live only
    in the generated `tree-sitter.d.ts`, and an enum in a `.d.ts` has no runtime representation:

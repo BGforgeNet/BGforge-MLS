@@ -100,7 +100,7 @@ class WeiduBafProvider
             parse: parseWithCache,
             formatAst: (rootNode, options) => formatAst(rootNode, options),
             getFormatOptions,
-            stripComments: stripCommentsWeidu,
+            normalizeForCompare: stripCommentsWeidu,
         });
     }
 

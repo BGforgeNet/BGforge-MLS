@@ -23,11 +23,11 @@ import {
     normalizeWhitespaceWeidu,
     normalizeComment,
     normalizeLineComment,
-} from "@bgforge/format";
+} from "../format-utils";
 
 // Comment normalizers now live in @bgforge/format (shared across all formatters);
 // re-export so sibling TP2 modules keep importing them from "./utils".
-export { normalizeComment, normalizeLineComment } from "@bgforge/format";
+export { normalizeComment, normalizeLineComment } from "../format-utils";
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)

@@ -6,7 +6,8 @@
         "noEmit": true,
         "tsBuildInfoFile": "../tmp/format-lib.tsbuildinfo",
         "paths": {
-            "@bgforge/format": ["./src/index.ts"]
+            "@bgforge/format": ["./src/index.ts"],
+            "@bgforge/format/internal": ["./src/internal.ts"]
         }
     },
     "include": ["src", "test"]

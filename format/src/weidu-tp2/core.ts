@@ -61,7 +61,7 @@ import {
     formatReplaceBcsBlock,
 } from "./blocks";
 import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
-import { throwOnParseError } from "@bgforge/format";
+import { throwOnParseError } from "../format-utils";
 
 // ============================================
 // Simple node formatters

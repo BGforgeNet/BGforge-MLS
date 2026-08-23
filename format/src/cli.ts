@@ -187,28 +187,28 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             return "error";
         }
 
-        let stripComments;
+        let normalizeForCompare;
         switch (fileType) {
             case "ssl":
-                stripComments = stripCommentsForCompareFalloutSsl;
+                normalizeForCompare = stripCommentsForCompareFalloutSsl;
                 break;
             case "tra":
-                stripComments = stripCommentsTra;
+                normalizeForCompare = stripCommentsTra;
                 break;
             case "msg":
-                stripComments = stripCommentsFalloutMsg;
+                normalizeForCompare = stripCommentsFalloutMsg;
                 break;
             case "2da":
-                stripComments = stripComments2da;
+                normalizeForCompare = stripComments2da;
                 break;
             case "scripts-lst":
-                stripComments = stripCommentsFalloutScriptsLst;
+                normalizeForCompare = stripCommentsFalloutScriptsLst;
                 break;
             default:
-                stripComments = stripCommentsWeidu;
+                normalizeForCompare = stripCommentsWeidu;
                 break;
         }
-        const validationError = validateFormatting(text, result.text, stripComments);
+        const validationError = validateFormatting(text, result.text, normalizeForCompare);
         if (validationError) {
             // The formatter is only allowed to move whitespace, so a content change is our defect, not
             // the file's. Say the file was left alone: that is the part the reader needs.

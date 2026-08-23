@@ -14,9 +14,8 @@ import {
     tokenizeWeidu,
     WeiduTokenType,
     normalizeComment,
-    withNormalizedComment,
-    keywordText,
-} from "@bgforge/format";
+} from "../format-utils";
+import { withNormalizedComment } from "../weidu-tp2/utils";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
 // WeiDU D-specific context shape (carries indent2 for nested transitions).
@@ -340,17 +339,19 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
     const label = node.childForFieldName("label");
     const say = node.childForFieldName("say");
 
-    // IF header
-    let ifLine = indent + keywordText(node, "IF");
+    // Keywords are literals because D's grammar declares them case-sensitive: one spelling parses, and
+    // anything else is an ERROR node throwOnParseError rejects. Fallout SSL matches case-insensitively,
+    // so it needs a spelling policy instead - see fallout-ssl/canonical-keyword.ts.
+    let ifLine = indent + "IF";
     if (weight) {
-        ifLine += " " + keywordText(node, "WEIGHT") + " #" + weight.text;
+        ifLine += " WEIGHT #" + weight.text;
     }
     ifLine += " " + (trigger ? normalizeDelimitedString(trigger.text) : "~~");
     ifLine += " " + (label?.text ?? "");
 
     // Try to keep SAY on same line as IF if it fits
     if (say) {
-        const sayText = keywordText(node, "SAY") + " " + formatSayText(say);
+        const sayText = "SAY " + formatSayText(say);
         const combined = ifLine + " " + sayText;
         if (combined.length <= lineLimit) {
             ifLine = combined;
@@ -373,7 +374,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         }
     }
 
-    lines.push(indent + keywordText(node, "END"));
+    lines.push(indent + "END");
     return lines.join("\n");
 }
 
@@ -410,7 +411,7 @@ function getActionHeader(node: SyntaxNode): string {
     for (const child of node.children) {
         // Stop at states or END keyword
         if (child.type === "state") break;
-        if (child.text.toUpperCase() === "END") break;
+        if (child.text === "END") break;
         // Stop at comments that are NOT on the header line
         if (isComment(child) && child.startPosition.row !== headerRow) break;
         parts.push(isComment(child) ? normalizeComment(child.text) : child.text);
@@ -450,7 +451,7 @@ function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: bo
     });
 
     if (trailingEnd) {
-        lines.push(keywordText(node, "END"));
+        lines.push("END");
     }
     return lines.join("\n");
 }
@@ -467,7 +468,7 @@ function getExtendHeader(node: SyntaxNode): string {
             isCopyOrMacro(child)
         )
             break;
-        if (child.text.toUpperCase() === "END") break;
+        if (child.text === "END") break;
         // Don't insert space after "#" - keep "#N" as a single token (position number).
         // TODO: fix in grammar instead - tokenize "#N" as a single node (like tlk_ref does),
         // also for _weight_value. Then this workaround can be removed.
@@ -496,7 +497,7 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
         return null;
     });
 
-    lines.push(keywordText(node, "END"));
+    lines.push("END");
     return lines.join("\n");
 }
 

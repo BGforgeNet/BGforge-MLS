@@ -19,6 +19,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
+import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
 import {
     normalizeLineComment,
     normalizeBlockComment,
@@ -32,8 +33,7 @@ import {
     isFunctionDef,
     isFunctionCall,
     isBodyContent,
-    formatWeiduTp2 as formatDocument,
-} from "@bgforge/format";
+} from "@bgforge/format/internal";
 import { initParser, getParser } from "../../../shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 

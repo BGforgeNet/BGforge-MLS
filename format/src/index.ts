@@ -1,31 +1,12 @@
-// Format-pipeline helpers (validation + comment stripping for safety checks)
-export {
-    stripBom,
-    validateFormatting,
-    stripCommentsWeidu,
-    stripCommentsFalloutSsl,
-    stripCommentsTra,
-    stripCommentsFalloutMsg,
-    stripComments2da,
-    stripCommentsFalloutScriptsLst,
-    tokenizeWeidu,
-    normalizeWhitespaceWeidu,
-    throwOnParseError,
-    scanTildeDelimiter,
-    normalizeLineComment,
-    normalizeBlockComment,
-    normalizeComment,
-    keywordText,
-    WeiduTokenType,
-} from "./format-utils";
-export type { CommentStripper, WeiduToken, FormatOutput, TildeDelimiter } from "./format-utils";
-
-// Editorconfig discovery (CLI uses directly; server's format-options wraps this)
-export { getEditorconfigSettings } from "./editorconfig";
+/**
+ * Public entry point for @bgforge/format.
+ *
+ * Scope: format a document, and the pipeline needed to do that safely. Grammar-shaped helpers move
+ * whenever a grammar does and carry no semver promise, so they live in ./internal instead.
+ */
 
 // Tree-based formatters: caller passes the parsed rootNode + options
 export { formatDocument as formatFalloutSsl } from "./fallout-ssl/core";
-export { stripCommentsForCompareFalloutSsl } from "./fallout-ssl/canonical-keyword";
 export { formatDocument as formatWeiduBaf } from "./weidu-baf/core";
 export { formatDocument as formatWeiduD } from "./weidu-d/core";
 export { formatDocument as formatWeiduTp2 } from "./weidu-tp2/core";
@@ -36,18 +17,20 @@ export { formatMsg } from "./fallout-msg";
 export { format2da } from "./infinity-2da";
 export { formatScriptsLst } from "./fallout-scripts-lst";
 
-// TP2 types and constants used by server providers and tests
-export { DEFAULT_OPTIONS as weiduTp2DefaultOptions, KW_BEGIN, KW_END } from "./weidu-tp2/types";
+// Safety pipeline: parse-error guard before formatting, content guard after it
+export { stripBom, throwOnParseError, validateFormatting } from "./format-utils";
+export type { CompareNormalizer, FormatOutput } from "./format-utils";
 
-// TP2 utilities used by server symbol provider, snippets, and tests
+// Per-language normalizers for validateFormatting's content guard
 export {
-    normalizeWhitespace,
-    withNormalizedComment,
-    isAction,
-    isPatch,
-    isControlFlow,
-    isCopyAction,
-    isFunctionDef,
-    isFunctionCall,
-    isBodyContent,
-} from "./weidu-tp2/utils";
+    stripCommentsWeidu,
+    stripCommentsFalloutSsl,
+    stripCommentsTra,
+    stripCommentsFalloutMsg,
+    stripComments2da,
+    stripCommentsFalloutScriptsLst,
+} from "./format-utils";
+export { stripCommentsForCompareFalloutSsl } from "./fallout-ssl/canonical-keyword";
+
+// Editorconfig discovery (CLI uses directly; server's format-options wraps this)
+export { getEditorconfigSettings } from "./editorconfig";

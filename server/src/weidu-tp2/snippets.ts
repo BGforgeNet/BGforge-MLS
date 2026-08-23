@@ -6,7 +6,7 @@
  */
 
 import type { CallableInfo, CallableParam } from "../core/symbol";
-import { weiduTp2DefaultOptions as DEFAULT_OPTIONS } from "@bgforge/format";
+import { weiduTp2DefaultOptions as DEFAULT_OPTIONS } from "@bgforge/format/internal";
 import { SyntaxType } from "./syntax-type";
 
 /**

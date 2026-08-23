@@ -37,6 +37,10 @@
         ".": {
             "types": "./out/index.d.ts",
             "import": "./out/index.js"
+        },
+        "./internal": {
+            "types": "./out/internal.d.ts",
+            "import": "./out/internal.js"
         }
     },
     "publishConfig": {

@@ -8,7 +8,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../../../shared/syntax-types/weidu-baf";
-import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { throwOnParseError, normalizeComment } from "../format-utils";
 import { type FormatResult } from "../format-types";
 
 // Formatting options. BAF intentionally declares its own narrower options type

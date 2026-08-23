@@ -15,11 +15,11 @@ import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, format
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
-import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { throwOnParseError, normalizeComment } from "../format-utils";
 import { canonicalKeyword } from "./canonical-keyword";
 // Comment normalization is shared across all formatters; re-export the imported
 // binding so existing `./core` importers (e.g. control-flow) keep their path.
-export { normalizeComment } from "@bgforge/format";
+export { normalizeComment } from "../format-utils";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
 // Shared format-pipeline helper; re-export so `./core` importers (expressions) keep their path.

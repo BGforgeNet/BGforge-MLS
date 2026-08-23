@@ -12,7 +12,7 @@
  * trimming trailing whitespace.
  */
 
-import { stripBom, type FormatOutput } from "@bgforge/format";
+import { stripBom, type FormatOutput } from "./format-utils";
 
 const MIN_GAP = 4;
 const TOKEN_RE = /\S+/g;

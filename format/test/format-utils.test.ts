@@ -11,11 +11,13 @@ import {
     stripComments2da,
     stripCommentsFalloutScriptsLst,
     validateFormatting,
+} from "@bgforge/format";
+import {
     scanTildeDelimiter,
     normalizeComment,
     normalizeLineComment,
     normalizeBlockComment,
-} from "@bgforge/format";
+} from "@bgforge/format/internal";
 
 describe("shared/format-utils", () => {
     describe("normalizeLineComment()", () => {

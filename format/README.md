@@ -33,8 +33,13 @@ Tree-based formatters (`formatFalloutSsl`, `formatWeiduBaf`, `formatWeiduD`,
 see the source for the exact signatures.
 
 Other helpers cover comment stripping (`stripCommentsWeidu`, `stripCommentsFalloutSsl`,
-...), formatting validation (`validateFormatting`), tokenisation (`tokenizeWeidu`),
-and editorconfig discovery (`getEditorconfigSettings`).
+...), formatting validation (`validateFormatting`), and editorconfig discovery
+(`getEditorconfigSettings`).
+
+`@bgforge/format/internal` is a second entry point holding helpers shaped by the
+tree-sitter grammars - comment normalisers, tilde-delimiter scanning, and TP2 node
+predicates. It exists for this repo's own callers and carries no semver promise;
+its contents move whenever a grammar does.
 
 ## `fgfmt` CLI
 

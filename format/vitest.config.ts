@@ -5,6 +5,7 @@ import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
 export default defineConfig({
     resolve: {
         alias: {
+            "@bgforge/format/internal": path.resolve(__dirname, "./src/internal.ts"),
             "@bgforge/format": path.resolve(__dirname, "./src/index.ts"),
         },
     },
