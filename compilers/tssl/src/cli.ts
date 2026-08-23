@@ -14,7 +14,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { EXT_TSSL } from "../../../transpilers/common/extensions";
+import { EXT_TSSL } from "../../../shared/languages";
 import { emitProgram } from "../../ssl/src/compile";
 import { optimize } from "../../ssl/src/optimize";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";

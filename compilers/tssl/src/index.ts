@@ -13,7 +13,7 @@
  */
 
 import * as path from "path";
-import { EXT_TSSL } from "../../../transpilers/common/extensions";
+import { EXT_TSSL } from "../../../shared/languages";
 import { conlog, type TsslContext } from "./types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "./batch";
 import { extractInlineFunctions, extractJsDocs } from "./inline-functions";
