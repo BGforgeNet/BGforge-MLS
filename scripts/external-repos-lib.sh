@@ -23,9 +23,10 @@ init_submodules() {
 }
 
 # Clone each repo listed in $1 into $2.
-# If a target directory already exists, leave its checkout alone - callers
-# rely on this for the "already cloned" optimisation. Submodules are still
-# initialised on that path so pre-existing checkouts converge with fresh ones.
+# An existing checkout is left alone unless the list pins a commit it is not
+# on: bumping a pin has to move the local tree, or the tests keep reading the
+# old corpus and report on it as if it were the pinned one. Submodules are
+# initialised on every path so pre-existing checkouts converge with fresh ones.
 clone_repos() {
     local txt_file="$1"
     local target_dir="$2"
@@ -39,7 +40,19 @@ clone_repos() {
         name=$(basename "$url" .git)
 
         if [[ -d "$target_dir/$name" ]]; then
-            echo "  Already cloned: $name"
+            local head_sha=""
+            if [[ -n "$commit" ]]; then
+                head_sha=$(git -C "$target_dir/$name" rev-parse HEAD 2>/dev/null || true)
+            fi
+            if [[ -n "$commit" && "$head_sha" != "$commit" ]]; then
+                echo "  Repinning: $name @ ${commit:0:12}"
+                git -C "$target_dir/$name" fetch --depth 1 -q origin "$commit"
+                # --force: these checkouts are disposable fixtures that tests are free to
+                # dirty, and reset-external.sh discards local edits in them anyway.
+                git -C "$target_dir/$name" -c advice.detachedHead=false checkout -q --force FETCH_HEAD
+            else
+                echo "  Already cloned: $name"
+            fi
             init_submodules "$target_dir/$name"
             continue
         fi

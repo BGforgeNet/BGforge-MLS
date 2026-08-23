@@ -84,9 +84,9 @@ jobs:
           key: grammars-${{ runner.os }}-${{ hashFiles('grammars/*/grammar.js', 'grammars/*/tree-sitter.json', 'pnpm-lock.yaml') }}
 
       # External corpus cache: keyed strictly on the pinned-ref lists with no
-      # restore-keys - clone_repos skips already-present repos, so a stale
-      # restore at an old ref would silently test the wrong corpus. A ref bump
-      # changes the key and forces a fresh clone.
+      # restore-keys, so the restored corpus matches the pins directly instead
+      # of leaning on clone_repos to notice a stale ref and re-pin it. A ref
+      # bump changes the key and forces a fresh clone.
       - name: Restore external-corpus cache (non-release only)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
