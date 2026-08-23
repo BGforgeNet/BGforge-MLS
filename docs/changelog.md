@@ -80,6 +80,12 @@ Same options as sslc.
   expression - now inlines too, parenthesised so it cannot re-associate with the code around the call.
   Only a returned call was accepted before, so these compiled as procedures despite the tag.
 
+### GitHub Actions
+
+- New: `actions/tssl` compiles a mod's `.tssl` sources in CI, failing the job on a compile error. It commits
+  nothing by default, bytecode being a build artifact rather than a tracked file; `transpile: true` keeps the
+  generated `.ssl` in sync instead.
+
 ### Fixes
 
 - WeiDU BAF no longer reports a syntax error on an IDS name containing a hyphen - `KUO-TOA`, `YUAN-TI`,

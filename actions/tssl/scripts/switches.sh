@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Translate this action's compiler inputs into the tssl CLI's own switches, for
-# run-cli.sh to pass through as EXTRA_ARGS.
+# run.sh to pass through as EXTRA_ARGS.
 #
 # Emitted as one space-separated string because that is what a composite action
 # can carry between steps; every token here is a fixed flag or a single digit
-# validated below, so the word-splitting run-cli.sh does on it cannot surprise.
+# validated below, so the word-splitting run.sh does on it cannot surprise.
 #
 # Inputs (env): TRANSPILE, OPT, SHORT_CIRCUIT, GITHUB_OUTPUT.
 set -euo pipefail

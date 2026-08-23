@@ -1,25 +1,28 @@
 # Compile TSSL action
 
-Compiles TSSL sources to Fallout INT bytecode with
-[`@bgforge/tssl`](https://www.npmjs.com/package/@bgforge/tssl) (the `tssl` CLI) and commits the generated files
-back to the branch that triggered the workflow. Use this to keep the committed bytecode in sync with its source
-without each contributor running the compiler locally.
+Compiles every TSSL source to Fallout INT bytecode with
+[`@bgforge/tssl`](https://www.npmjs.com/package/@bgforge/tssl) (the `tssl` CLI). Bytecode is a build artifact, not
+a committed one, so by default the action commits nothing: a clean compile IS the check, and a compile error fails
+the job.
 
 TSSL is a compiler, not a transpiler: the TypeScript source becomes bytecode directly, with no SSL text produced
-or read on the way. `tssl` writes each source to a sibling file, so the committed change is the generated output,
-not the source:
+or read on the way.
 
-| Source  | Output | When                     |
-| ------- | ------ | ------------------------ |
-| `.tssl` | `.int` | always                   |
-| `.tssl` | `.ssl` | with `transpile: "true"` |
+| Source  | Output | When                     | Committed                |
+| ------- | ------ | ------------------------ | ------------------------ |
+| `.tssl` | `.int` | always                   | never - a build artifact |
+| `.tssl` | `.ssl` | with `transpile: "true"` | yes                      |
 
-The `.ssl` is the readable equivalent of what was compiled, for a mod that still ships generated SSL. It is
-checked to compile to the same bytes the compiler wrote directly, so the two files in a commit cannot disagree.
+The `.ssl` is the readable equivalent of what was compiled, for a mod that still ships generated SSL. That is the
+one output worth committing, so `transpile: "true"` is what turns this action into a committing one. The emitted
+text is checked to compile to the same bytes the compiler wrote directly.
+
+Every run compiles the whole `paths` tree rather than just the files an event touched: TSSL has imports, so a
+change to one module can invalidate dependents that the event's diff does not name.
 
 ## Usage
 
-### Save mode (default): compile and commit
+### Default: compile as a CI check
 
 ```yaml
 name: Compile TSSL
@@ -28,9 +31,6 @@ on:
     branches: [main]
     paths:
       - "**/*.tssl"
-
-permissions:
-  contents: write
 
 jobs:
   compile:
@@ -43,7 +43,9 @@ jobs:
           short-circuit: "true"
 ```
 
-### Also committing the readable SSL
+### Committing the readable SSL
+
+Needs `permissions: contents: write`, since this is the mode that pushes.
 
 ```yaml
 - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
@@ -51,10 +53,11 @@ jobs:
     transpile: "true"
 ```
 
-### Check mode: validate output is current without committing
+### Check mode: verify the committed SSL is current
 
-Set `check: true` to verify each source's committed output exists and matches a fresh compile. The action exits
-non-zero (failing the job) on the first stale or missing output, and never commits or pushes.
+Set `check: true` alongside `transpile: "true"` to verify the committed `.ssl` matches a fresh compile. The action
+exits non-zero (failing the job) if any is stale, and never commits or pushes. With `transpile` off there is
+nothing committed to compare, so check mode adds nothing over the default compile.
 
 ```yaml
 name: Validate compiled output
@@ -70,10 +73,11 @@ jobs:
       - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
         with:
           check: "true"
+          transpile: "true"
 ```
 
-The switches must match the ones the committed output was built with, or every file reports as stale - pass the
-same `opt` / `short-circuit` / `transpile` values in both workflows.
+The switches must match the ones the committed `.ssl` was built with, or every file reports as stale - pass the
+same `opt` / `short-circuit` values in both workflows.
 
 ## Versioning
 
@@ -97,48 +101,48 @@ particular.
 
 ## Inputs
 
-| Name                  | Default                                                 | Description                                                                                    |
-| --------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `paths`               | `.`                                                     | Path passed to the tssl CLI (single path; recursive scan).                                     |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/tssl`.                                                     |
-| `transpile`           | `false`                                                 | If `true`, also write the readable `.ssl` beside each `.int` and commit it.                    |
-| `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                       |
-| `short-circuit`       | `false`                                                 | If `true`, compile `and`/`or` to skip the right operand once the left decides the result.      |
-| `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                   |
-| `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                               |
-| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                     |
-| `check`               | `false`                                                 | If `true`, verify each output is up to date (exit 1 on stale or missing output) and skip push. |
+| Name                  | Default                                                 | Description                                                                                                             |
+| --------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `paths`               | `.`                                                     | Path passed to the tssl CLI (single path; recursive scan).                                                              |
+| `version`             | `latest`                                                | npm version specifier for `@bgforge/tssl`.                                                                              |
+| `transpile`           | `false`                                                 | If `true`, also write the readable `.ssl` beside each `.int` and commit it. The `.int` is never committed.              |
+| `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                                                |
+| `short-circuit`       | `false`                                                 | If `true`, compile `and`/`or` to skip the right operand once the left decides the result.                               |
+| `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                                            |
+| `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                                        |
+| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                              |
+| `check`               | `false`                                                 | If `true`, verify the committed `.ssl` is up to date (exit 1 if stale) and skip push. Only meaningful with `transpile`. |
 
 ## Outputs
 
-| Name            | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| `changed`       | `true` if any compiled output changed and was committed. |
-| `changed-files` | Newline-separated list of committed output files.        |
+| Name            | Description                                               |
+| --------------- | --------------------------------------------------------- |
+| `changed`       | `true` if any generated `.ssl` changed and was committed. |
+| `changed-files` | Newline-separated list of committed `.ssl` files.         |
 
 ## Notes
 
-- In **save mode** the consumer workflow MUST grant `permissions: contents: write` (job-level or workflow-level)
-  so the default `GITHUB_TOKEN` can push. **Check mode** does not push and needs no extra permissions; in that mode
-  the `changed` / `changed-files` outputs are empty.
+- Only a run with `transpile: "true"` and `check` off pushes, and that one MUST be granted
+  `permissions: contents: write` (job-level or workflow-level) so the default `GITHUB_TOKEN` can push. The default
+  compile-only mode and check mode need no extra permissions; in those the `changed` / `changed-files` outputs are
+  empty.
 - Pushes made with the default `GITHUB_TOKEN` do not retrigger workflows, so there is no infinite-loop risk.
 - The action exits with an error on `pull_request` and `pull_request_target` events from forks: the token is
   read-only (or, for `pull_request_target`, base-scoped) and cannot push to the fork's head branch, and running
   the CLI over fork-controlled files under `pull_request_target` is itself a risk. Run the action on `push`
-  events to your own branches. The guard is skipped in **check mode**, since check mode never pushes -
-  fork-PR check runs (this action's documented check-mode use case) proceed normally.
+  events to your own branches. The guard applies only to a run that can push, so compile-only and check runs from
+  fork PRs proceed normally.
 - For `pull_request` triggers within your own repo, your `actions/checkout` step must specify
   `ref: ${{ github.head_ref }}` so the output commit lands on the PR head, not on a detached merge ref.
 - Concurrent pushes to the same branch may cause the rebase-and-push step to fail; wrap the consumer job in a
   `concurrency:` block if your workflow can fire on rapid successive pushes.
-- Only sources added or modified in the current event's diff are processed (a changed output file maps back to its
-  source so a hand-edited generated file is regenerated). The action best-effort fetches the base and head SHAs
-  into the local clone, but on events where no usable base SHA is available (new-branch push, manual
-  `workflow_dispatch`, scheduled runs) it falls back to a full recursive scan of `paths` for sources.
+- Every source under `paths` is compiled on every run, not just the ones the event changed - a module's
+  dependents are invisible to a changed-file diff, so an incremental run could miss a break the change caused.
 - A hand-written `.ssl` and the `.int` compiled from it are how most Fallout mods are still written, and this
-  action does not touch them: an output only maps back to a source when a `.tssl` of that name exists.
+  action does not commit them: the files it stages are derived from the `.tssl` sources it found, so a `.ssl`
+  with no `.tssl` beside it is never claimed as generated output.
 
 ## Limitations
 
-- **Deleted sources leave orphaned outputs.** Removing a `.tssl` source does not remove its generated `.int`
-  (or `.ssl`). Delete the output manually in the same commit.
+- **Deleted sources leave orphaned outputs.** Removing a `.tssl` source does not remove a previously committed
+  `.ssl`. Delete it manually in the same commit.

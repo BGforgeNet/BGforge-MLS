@@ -94,7 +94,8 @@ describe("tssl CLI integration", () => {
         });
     });
 
-    // What actions/tssl runs with `check: true`, and what a mod's CI gates on.
+    // The CLI's own check mode, for a caller that keeps compiled output in tree. actions/tssl does not
+    // use it: a mod does not commit .int, so "missing" there is the normal state rather than staleness.
     describe("--check reports stale output instead of writing it", () => {
         const source = 'function start() {\n    display_msg("hi");\n}\n';
 
