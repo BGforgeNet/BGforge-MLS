@@ -16,6 +16,8 @@ fi
 prefix="${TAG_NAME%%/*}"      # e.g. binary
 tag_version="${TAG_NAME#*/v}" # e.g. 0.2.0
 
+needs_grammar=""
+
 # Map the tag prefix to the package name, its package.json, and its publish script.
 # The allowlist is also the validation: an unrecognized prefix aborts.
 case "$prefix" in
@@ -30,6 +32,7 @@ case "$prefix" in
         pkgjson="format/package.json"
         script="scripts/publish-format.sh"
         testcfg="format/vitest.config.ts"
+        needs_grammar=1
         ;;
     transpile)
         pkgname="@bgforge/transpile"
@@ -58,6 +61,17 @@ if [[ "$tag_version" != "$pkg_version" ]]; then
 fi
 
 echo "Publishing $pkgname@$pkg_version (tag $TAG_NAME)"
+
+# format bundles the tree-sitter grammar WASM and its gate reads the grammar's generated
+# node types - both gitignored artifacts this lean checkout lacks. publish-format.sh builds
+# them itself, but that runs after the gate below, too late for the tests.
+if [[ -n "$needs_grammar" ]]; then
+    pnpm build:grammar
+    # build:grammar also regenerates tracked grammar sources; restore them so regen drift
+    # cannot leave the tree dirty and trip the clean-tree guard in publish-lib.sh.
+    git checkout -- .
+    export SKIP_GRAMMAR_BUILD=1
+fi
 
 # Run the package's vitest suite as a pre-publish gate FROM THE REPO ROOT. These
 # suites resolve shared fixtures (client/testFixture/, external/) relative to the
