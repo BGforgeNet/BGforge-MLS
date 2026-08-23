@@ -67,11 +67,57 @@ The four library packages version independently of the extension and of each oth
 3. Commit.
 4. Tag `<lib>/vX.Y.Z`, matching the new version exactly, and push the tag.
 
-`publish-library.yml` resolves the tag prefix to the package, verifies the tag version matches the package's `package.json`, runs the package's build and tests, then publishes to npm with provenance.
+`publish-library.yml` resolves the tag prefix to the package, verifies the tag version matches the package's `package.json`, runs the package's build and tests, then publishes to npm with provenance. How that publish authenticates - and how a package moves to trusted publishing - is described in _npm authentication_ below.
 
 ### The server and VSIX bundle their libraries (no release ordering)
 
 Neither the published `@bgforge/mls-server` nor the VSIX declares an `@bgforge/*` package as a runtime dependency. The server bundles `@bgforge/format` and the transpilers into `server/out/server.js`, and the VSIX bundles `@bgforge/binary` and `@bgforge/binary-editor` into the client bundle (esbuild externalizes only `vscode` and `esbuild-wasm`); `@bgforge/format` is a `devDependency` of `server/`, consumed at build time. So a fresh `npm install @bgforge/mls-server` resolves no `@bgforge/*` packages, and the extension and the libraries can release in any order. A library bump is needed only to publish that library's own npm package and CLI for external consumers.
+
+## npm authentication (tokens and trusted publishing)
+
+Two workflows publish to npm: `publish-library.yml` (the four libraries, on `<lib>/vX.Y.Z` tags) and
+`build.yml` (`@bgforge/mls-server`, on the extension's `vX.Y.Z` tag). Both authenticate with the `NPM_TOKEN`
+repository secret, passed to the publish step as `NODE_AUTH_TOKEN`, and both jobs carry `id-token: write` so
+the publish can attest SLSA provenance.
+
+### The first publish of a new package name
+
+A trusted publisher can only be configured on a package that already exists on npm, so a brand-new package
+name cannot start on OIDC - its first publish has to go through `NPM_TOKEN`. Two things bite only on a first
+publish:
+
+- The token must be allowed to CREATE a package. A granular access token restricted to an explicit package
+  allowlist publishes the existing packages happily and still fails on a new name; scope it to the `@bgforge`
+  scope, or use an automation token, before tagging.
+- The package must be published public. `scripts/publish-lib.sh` passes `--access public` and each manifest
+  sets `publishConfig.access`; a scoped package would otherwise be rejected as private.
+
+### Migrating a package to trusted publishing
+
+Trusted publishing is configured per package on npmjs.com, naming this repository and the workflow that
+publishes it (`publish-library.yml` for a library, `build.yml` for the server). It can be adopted one package
+at a time, and switching one over needs no workflow change: npm attempts the OIDC exchange before it reads
+any configured credentials, and on success replaces the auth token for that request. So a package publishes
+over OIDC from the moment its trusted publisher exists, while the rest keep using the token.
+
+Both version floors are already met here: npm 11.5.1 and Node 22.14.0 on the runner (Node 24 ships npm
+11.17.0), and pnpm 11.0.9 with `pnpm/action-setup` v6.0.6 - `pnpm publish` delegates to `npm publish`, and
+earlier pnpm 11.0.x releases lost the OIDC handshake on the way, failing with a masked `E404`.
+
+Once a package is on trusted publishing npm generates its provenance automatically, so the explicit
+`--provenance` flag becomes redundant for it - harmless, and still doing the work for every package left on
+the token path.
+
+### Why `NPM_TOKEN` comes out afterwards
+
+While the secret is still set, a broken trusted-publisher configuration does not fail the release: the
+publish quietly falls back to the token, and the package drops from the Trusted Publisher trust tier back to
+Provenance without saying so. Remove `NODE_AUTH_TOKEN` from a publish step once every package that step can
+publish has a working trusted publisher, so a misconfiguration fails loudly instead.
+
+Trust tiers are safe to climb and not to descend: pnpm refuses to install a version whose trust level
+regressed from the previous one (`ERR_PNPM_TRUST_DOWNGRADE`), so a package that has published with provenance
+must keep publishing with at least provenance.
 
 ## Releasing a reusable Action (`actions/<name>/vX.Y.Z`)
 
