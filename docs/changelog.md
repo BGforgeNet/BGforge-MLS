@@ -7,78 +7,62 @@
 SSL gets a native TS compiler implementation. Enable with `bgforge.falloutSSL.compiler: built-in`.
 Same options as sslc.
 
-- Compiled `.int` scripts open as editable SSL - highlighting, outline and search - and save back over the
-  `.int` in place. An unedited script round-trips byte for byte. Local and argument names are not stored in
-  a compiled script so those are generated, and constants, macros and comments were resolved away before it
-  was compiled. A script that cannot be structured back opens as an instruction listing, which cannot be saved.
-- A failed compile reports everything it found rather than stopping at the first problem, and a misspelled
-  name once rather than at every use.
-- Three warnings, behind `-n` in `compileOptions`: an escape no table entry covers, a variable declared
-  twice, and a script with no `start` procedure.
-- Keywords are read in any casing, as the language reads them. Formatting now writes them the canonical
-  way - lowercase, except the short-circuit operators `orElse` and `andAlso`. Keywords inside a `#define`
-  body are left as written, along with the rest of the macro.
-- More of the language is recognised, by highlighting, formatting and both compilers: procedure modifiers
-  (`pure`, `inline`, `critical`), timed and guarded procedures (`procedure foo in 5`, `when (cond)`,
-  `call foo in 10`), compound assignment and stepping into elements (`a[k] += 1`, `a[i + 1]++`, evaluating
-  a complex index once), adjacent string literals (`"ab" "cd"`), character constants (`'A'`, `'\n'`,
-  `'\0101'`), `foreach ... while` in every spelling, the process-control statements (`spawn`, `callstart`,
-  `exec`, `fork`, `wait`, `cancel`, `cancelall`, `startcritical`, `endcritical`, `exit`, `detach`, `noop`),
-  `variable a[10]` and its two-argument flag form, a trailing comma after a procedure's last parameter,
-  a bare `begin ... end` block, a ternary in a variable initialiser (`variable v := 1 if c else 2`), a
-  procedure called through a string name (`"node_1"(1)`), `not`/`bwnot` in a global initialiser, and
-  `#elif`, `#error` and `#line`.
-- More is reported rather than quietly accepted: a procedure declared and never defined, `++x` (the language
-  has no prefix increment), `break` or `continue` outside a loop, an array declared outside a procedure, a
+- Compiled `.int` scripts open as editable SSL - highlighting, outline, search - and save back in place.
+  An unedited script round-trips byte for byte. Local and argument names are generated, since a compiled
+  script does not store them. One that cannot be structured back opens as a read-only instruction listing.
+- A failed compile lists every problem it found, not only the first, and a misspelled name once.
+- Three new warnings, behind `-n` in `compileOptions`: an unknown escape, a variable declared twice, and a
+  script with no `start` procedure.
+- Compiling works in a directory whose name contains a dot (`fo2.rp`), including one named by
+  `bgforge.falloutSSL.headersDirectory`.
+- Two scripts in one folder no longer interfere when compiled at the same time.
+- Newly accepted by highlighting, formatting and both compilers: procedure modifiers (`pure`, `inline`,
+  `critical`), timed and guarded procedures (`procedure foo in 5`, `when (cond)`, `call foo in 10`),
+  compound assignment and element stepping (`a[k] += 1`, `a[i + 1]++`), adjacent string literals
+  (`"ab" "cd"`), character constants (`'A'`, `'\n'`, `'\0101'`), `foreach ... while` in every spelling,
+  the process-control statements (`spawn`, `callstart`, `exec`, `fork`, `wait`, `cancel`, `cancelall`,
+  `startcritical`, `endcritical`, `exit`, `detach`, `noop`), `variable a[10]` and its two-argument flag
+  form, a trailing comma after a procedure's last parameter, a bare `begin ... end` block, a ternary
+  initialiser (`variable v := 1 if c else 2`), a procedure called by string name (`"node_1"(1)`),
+  `not`/`bwnot` in a global initialiser, and `#elif`, `#error` and `#line`.
+- Newly flagged in the Problems panel instead of silently accepted: a procedure declared and never defined, `++x` (SSL has no
+  prefix increment), `break` or `continue` outside a loop, an array declared outside a procedure, a
   procedure called without `call`, a bare expression statement, and a parenthesised operand in a global
   initialiser.
-- Compiling in a directory whose name contains a dot (`fo2.rp`) works, as does pointing
-  `bgforge.falloutSSL.headersDirectory` at one. Everything after the last dot was read as an extension and
-  dropped, so both addressed a directory that does not exist.
-- Two scripts in one folder no longer interfere when they compile at the same time; different folders still
-  compile in parallel.
-- Formatting no longer drops a `foreach` loop's `while` guard, nor rewrites `variable i := 0` to `= 0` in
-  a `for` header.
-- Two constructs used to parse as something else, with no error to show for it. A bare `begin ... end`
-  block lexed as two ordinary identifiers, so its `end` closed the enclosing procedure early and
-  formatting refused the file rather than write out the `begin` it had lost. A procedure called through
-  a string name was read as a string followed by a parenthesised expression, and formatting split it
-  over two lines.
-- Engine signatures corrected: `set_shader_mode` takes the shader it applies to, nine functions had the
-  wrong argument count, `art_anim` and `critter_heal` were shown returning nothing, and three were missing
-  the closing parenthesis of their parameter list.
+- Engine signatures corrected in hover, signature help and both compilers: `set_shader_mode` takes the
+  shader it applies to, nine functions had the wrong argument count, `art_anim` and `critter_heal` were
+  shown returning nothing, and three were missing a closing parenthesis.
+
+#### Formatter
+
+- A bare `begin ... end` block formats correctly. The file used to be refused outright.
+- A procedure called by string name (`"node_1"(1)`) stays on one line. It used to be split over two.
+- A `foreach` loop keeps its `while` guard.
+- `variable i := 0` in a `for` header is no longer rewritten to `= 0`.
+- Keywords are written in their canonical spelling - lowercase, except `orElse` and `andAlso`. Any casing
+  is still read, and a `#define` body is left as written.
 
 ### Transpilers
 
-- A TSSL, TBAF or TD file the toolchain cannot handle is reported in the Problems panel, on the file you
-  are editing rather than on the generated output, and on save as well as on an explicit compile. It used
-  to be a popup, and only when a compile had been asked for.
-- An error from the compiler that reads the generated `.baf` or `.d` lands on the line of the `.tbaf` or
-  `.td` it was written on, imported files included. A line the transpiler produced on its own keeps its
-  error on the generated file rather than being given a misleading one.
+- A file the toolchain cannot handle is reported in the Problems panel, on the file you are editing, and on
+  save. It used to be a popup, and only on an explicit compile.
+- An error from the compiler reading the generated `.baf` or `.d` lands on the `.tbaf` or `.td` line it came
+  from, imported files included.
 
 ### TSSL
 
-- TSSL is a compiler now, not a transpiler: compiling a `.tssl` writes Fallout `.int` bytecode directly,
-  with no `.ssl` in between. It respects `bgforge.falloutSSL.outputDirectory`, `compileOnValidate` and the
-  `-O`/`-s` switches in `compileOptions`, and needs nothing installed.
-- New `bgforge.tssl.emitSsl` also writes the readable `.ssl` beside the bytecode, checked against a real
-  corpus to compile to the same bytes.
-- Errors report on the line of your TypeScript, not on the generated file.
+- TSSL is a compiler now: a `.tssl` compiles straight to `.int` bytecode, with no `.ssl` in between and
+  nothing to install. Respects `bgforge.falloutSSL.outputDirectory`, `compileOnValidate` and `-O`/`-s`.
+- New `bgforge.tssl.emitSsl` also writes the readable `.ssl` beside the bytecode.
+- Errors report on your TypeScript line, not on the generated file.
 - Compiling no longer freezes the editor, and a repeat compile is about ten times faster. The `tssl`
   command line gains the same.
 - Float literals, parentheses, imported names, blank lines and quoting reach the output as written.
-- `x ^ y` and `~x` compile. They were emitted as `bxor` and `bnot`, which SSL does not accept.
+- `x ^ y` and `~x` compile. They used to emit `bxor`/`bnot`, which SSL does not accept.
 - Syntax with no SSL equivalent is refused with its line, instead of producing SSL that fails later.
-- An `@inline` function whose body is several calls now inlines all of them. The macro used to be built
-  from the first call alone, and every other statement in the body was dropped from the compiled script
-  without a word. A body that is not a sequence of calls - anything returning a value beyond a single
-  call - stays an ordinary procedure rather than losing part of itself.
-- An `@inline` function whose returned call is written through a chain of type assertions now inlines.
-  Only one assertion was seen through, so a call cast twice compiled as a procedure despite the tag.
-- An `@inline` function returning a value that is not itself a call - a comparison, an arithmetic
-  expression - now inlines too, parenthesised so it cannot re-associate with the code around the call.
-  Only a returned call was accepted before, so these compiled as procedures despite the tag.
+- `@inline` honours every body a macro can stand for: several calls, a returned call behind type
+  assertions, and a returned expression. Only the first call used to be kept, and the rest of the body was
+  dropped from the compiled script without a word.
 
 ### GitHub Actions
 
@@ -88,13 +72,10 @@ Same options as sslc.
 
 ### Fixes
 
-- WeiDU BAF no longer reports a syntax error on an IDS name containing a hyphen - `KUO-TOA`, `YUAN-TI`,
-  `WILL-O-WISP` - whether written as a plain argument or inside an object specifier such as
-  `[EVILCUTOFF.0.KUO-TOA]`.
-- Hover now works on a name carrying a hyphen or a hash. The word under the cursor was read up to the
-  punctuation, so the lookup searched for `KUO` rather than `KUO-TOA`, and `tb` rather than `tb#factorial`,
-  and found nothing. Affects BAF IDS names and TP2 macros and variables such as `sc#addWmpAre` and
-  `FL#FJ_CRE_REINDEX`.
+- WeiDU BAF no longer reports a syntax error on a hyphenated IDS name (`KUO-TOA`, `YUAN-TI`,
+  `WILL-O-WISP`), including inside an object specifier such as `[EVILCUTOFF.0.KUO-TOA]`.
+- Hover works on a name carrying a hyphen or a hash: BAF IDS names, and TP2 macros and variables such as
+  `sc#addWmpAre` and `FL#FJ_CRE_REINDEX`.
 
 ## 3.13.2
 
