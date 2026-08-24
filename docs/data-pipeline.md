@@ -51,6 +51,7 @@ generate-data.sh   (runs at build time - produces all runtime outputs)
   weidu-baf-base.yml  ──┐
   weidu-baf-iesdp.yml ──┤──► completion.weidu-baf.json
   weidu-baf-ids.yml   ──┘──► hover.weidu-baf.json
+                        └──► strrefs.weidu-baf.json
   weidu-baf-iesdp.yml    ──► update-baf-highlight.ts ──► weidu-baf.tmLanguage.yml
 
   weidu-d-base.yml ──► completion.weidu-d.json
@@ -63,6 +64,10 @@ syntaxes-to-json.sh   (runs after any tmLanguage.yml change)
 
   *.tmLanguage.yml ──► *.tmLanguage.json
 ```
+
+`strrefs.weidu-baf.json` maps each action that takes a TLK string reference to the argument positions holding
+one, read off the `StrRef:` parameter types in its signature. The server uses it to annotate strrefs with the
+text they resolve to, so the set of annotated actions follows the engine data rather than a list kept in code.
 
 ## Generated tree-sitter type declarations
 

@@ -101,6 +101,7 @@ describe("ProviderRegistry", () => {
             weidu: {
                 path: "weidu",
                 gamePath: "",
+                tlkEncoding: "",
             },
             validate: "saveAndType",
             diagnostics: true,

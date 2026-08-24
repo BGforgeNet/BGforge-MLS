@@ -32,6 +32,7 @@ import { formatTra, formatMsg, formatScriptsLst } from "@bgforge/format";
 import { weiduLogProvider } from "../weidu-log/provider";
 import { Translation } from "../translation";
 import { initServerContext, updateServerSettings } from "../server-context";
+import { GameStrings } from "../ie-resources/game-strings";
 import { getServerCapabilities } from "../server-capabilities";
 import type { HandlerContext } from "./context";
 
@@ -131,6 +132,7 @@ export function register(ctx: HandlerContext): void {
             projectSettings,
             settings: defaultSettings,
             translation,
+            gameStrings: new GameStrings(),
         });
 
         // Reload translation files for any documents already open

@@ -38,6 +38,10 @@
         ".": {
             "types": "./out/index.d.ts",
             "import": "./out/index.js"
+        },
+        "./archive": {
+            "types": "./out/archive/index.d.ts",
+            "import": "./out/archive/index.js"
         }
     },
     "publishConfig": {

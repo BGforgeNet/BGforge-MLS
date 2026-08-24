@@ -25,6 +25,7 @@ export default defineConfig({
         // without requiring a build step. The built out/ does not exist until
         // pnpm --filter @bgforge/format build runs, but tests run from source.
         alias: {
+            "@bgforge/binary/archive": path.resolve(__dirname, "../binary/src/archive/index.ts"),
             "@bgforge/format/internal": path.resolve(__dirname, "../format/src/internal.ts"),
             "@bgforge/format": path.resolve(__dirname, "../format/src/index.ts"),
         },

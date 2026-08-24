@@ -38,6 +38,7 @@ import { showError } from "./user-messages";
 import { IDENTIFIER_EXTRA_CHARS } from "./core/languages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
+import type { StrRefSite } from "./ie-resources/strref-sites";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
@@ -269,6 +270,11 @@ class ProviderRegistry {
             return provider.inlayHints(text, normUri, range);
         }
         return [];
+    }
+
+    strRefs(langId: string, text: string, uri: string): StrRefSite[] {
+        const normUri = normalizeUri(uri);
+        return this.get(langId)?.strRefs?.(text, normUri) ?? [];
     }
 
     semanticTokens(langId: string, text: string, uri: string): SemanticTokens {

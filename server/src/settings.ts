@@ -30,6 +30,11 @@ export interface TSSLsettings {
 export interface WeiDUsettings {
     path: string;
     gamePath: string;
+    /**
+     * Codepage of the game's `dialog.tlk`, or "" to let the edition decide (UTF-8 for Enhanced Editions,
+     * windows-1252 otherwise). Only classic non-Western installs need it: they record their encoding nowhere.
+     */
+    tlkEncoding: string;
 }
 
 type ValidationMode = "manual" | "save" | "type" | "saveAndType";
@@ -60,7 +65,7 @@ export const defaultSettings: MLSsettings = {
         compiler: "wasm",
     },
     tssl: { emitSsl: false },
-    weidu: { path: "weidu", gamePath: "" },
+    weidu: { path: "weidu", gamePath: "", tlkEncoding: "" },
     validate: "saveAndType",
     diagnostics: true,
     debug: false,

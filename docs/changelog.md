@@ -4,6 +4,12 @@
 
 ### Infinity Engine games
 
+- BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,
+  `SetName`, `AddJournalEntry` and the rest - get an inline preview of the text beside the number, and
+  hovering the number shows it in full, the same way `.tra` and `.msg` references already work. The text
+  comes from the `dialog.tlk` of the install at `bgforge.weidu.gamePath`; without one configured, nothing
+  is shown. Which arguments are string references is taken from each action's own signature in the engine
+  data, so the list follows the data rather than being fixed in code.
 - New `bgforge.weidu.tlkEncoding` setting, for classic installs whose text shows as garbled characters.
   A classic game records its text encoding nowhere, so it was always read as windows-1252 - right for
   English, French, German, Italian, Spanish and the other Western languages, wrong for Russian, Polish,

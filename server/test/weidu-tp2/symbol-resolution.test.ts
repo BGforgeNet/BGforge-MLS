@@ -53,7 +53,7 @@ describe("weidu-tp2 symbol resolution", () => {
             workspaceRoot: undefined,
             settings: {
                 ...defaultSettings,
-                weidu: { path: "", gamePath: "" },
+                weidu: { path: "", gamePath: "", tlkEncoding: "" },
             },
         });
     });

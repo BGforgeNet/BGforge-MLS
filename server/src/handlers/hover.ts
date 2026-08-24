@@ -4,6 +4,8 @@ import { conlog } from "../logger";
 import { timeHandler } from "../shared/time-handler";
 import { registry } from "../provider-registry";
 import { getServerContext } from "../server-context";
+import { getDocumentSettings } from "../settings-service";
+import { strRefHover } from "../ie-resources/strref-features";
 import type { HandlerContext } from "./context";
 
 export function register(ctx: HandlerContext): void {
@@ -37,6 +39,22 @@ export function register(ctx: HandlerContext): void {
                 if (!registry.shouldProvideFeatures(langId, text, textDocumentPosition.position)) {
                     if (debug) conlog(`[hover] suppressed (shouldProvideFeatures=false)`);
                     return;
+                }
+
+                // A number is a strref only by virtue of which argument it is, so this matches by position.
+                // Languages that have none skip the settings fetch entirely.
+                const strRefSites = registry.strRefs(langId, text, uri);
+                if (strRefSites.length > 0) {
+                    const { weidu } = await getDocumentSettings(uri);
+                    const strRef = strRefHover(
+                        strRefSites,
+                        (ref) => serverCtx.gameStrings.resolve(ref, weidu),
+                        textDocumentPosition.position,
+                    );
+                    if (strRef) {
+                        if (debug) conlog(`[hover] strref hover returned`);
+                        return strRef;
+                    }
                 }
 
                 // Check translation hover first (for @123 or NOption(123) references)
