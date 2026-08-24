@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { dlgParser } from "../src/dlg";
+import { buildDlg, dlgParser } from "../src/dlg";
 import type { DlgCanonicalDocument } from "../src/dlg/canonical-schemas";
 import { createCanonicalDlgJsonSnapshot, loadCanonicalDlgJsonSnapshot } from "../src/dlg/json-snapshot";
 import { REPO_ROOT } from "./repo-root";
@@ -58,6 +58,48 @@ describe("dlgParser - BG1-era 48-byte header", () => {
 
         expect(round.byteLength).toBe(BG1_HEADER_SIZE);
         expect([...round]).toEqual([...original]);
+    });
+});
+
+describe("serializeDlg - a document that does not fit its bytes", () => {
+    // Both writers land here, and the JSON-snapshot path is the one that can arrive with a document
+    // someone edited by hand (`fgbin --load`). Writing a header whose counts or refs address bytes the
+    // file does not have produces a DLG that overruns in every reader, so it has to be refused rather
+    // than emitted.
+    function snapshotOf(bytes: Uint8Array): Record<string, never> {
+        return JSON.parse(createCanonicalDlgJsonSnapshot(dlgParser.parse(bytes)));
+    }
+
+    const source = (): Uint8Array =>
+        buildDlg({
+            states: [{ text: 1, firstTransition: 0, transitionCount: 0, triggerIndex: 0 }],
+            transitions: [],
+            stateTriggers: ['Dead("x")'],
+            transitionTriggers: [],
+            actions: ["Wait(1)"],
+        });
+
+    test.each([
+        ["a text ref reaching past the end", (d: Record<string, any>) => (d.actionRefs[0].length += 5000)],
+        ["a text ref starting past the end", (d: Record<string, any>) => (d.actionRefs[0].offset += 5000)],
+        ["a record count larger than its table", (d: Record<string, any>) => (d.header.stateCount += 500)],
+        ["a table offset past the end", (d: Record<string, any>) => (d.header.stateTableOffset += 5000)],
+    ])("refuses %s", (_name, corrupt) => {
+        const snapshot = snapshotOf(source()) as Record<string, any>;
+        corrupt(snapshot.document);
+
+        expect(() => loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot))).toThrow(/does not fit|out of range/i);
+    });
+
+    test("accepts the document it was given untouched", () => {
+        // The negative control: the same path with nothing corrupted has to stay silent, or the guard is
+        // refusing correct input.
+        const original = source();
+        const snapshot = snapshotOf(original);
+
+        const { bytes } = loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot));
+
+        expect([...bytes!]).toEqual([...original]);
     });
 });
 

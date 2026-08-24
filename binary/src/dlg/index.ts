@@ -329,6 +329,42 @@ class DlgParser implements BinaryParser {
  * DLG from nothing is the construction API's job and needs a layout policy this deliberately does not
  * invent.
  */
+/**
+ * Every section a write would touch has to lie inside the file. The JSON-snapshot path can arrive with a
+ * hand-edited document (`fgbin --load`), and a header whose counts or refs address bytes that are not there
+ * produces a DLG that overruns in every reader - so it is refused rather than written.
+ */
+function assertFits(document: DlgCanonicalDocument, size: number): void {
+    const h = document.header;
+    const sections: [string, number, number][] = [
+        ["header", 0, document.headerInterrupt ? DLG_HEADER_WITH_INTERRUPT_SIZE : DLG_HEADER_SIZE],
+        ["state table", h.stateTableOffset, h.stateCount * DLG_STATE_SIZE],
+        ["transition table", h.transitionTableOffset, h.transitionCount * DLG_TRANSITION_SIZE],
+        ["state trigger table", h.stateTriggerTableOffset, h.stateTriggerCount * DLG_TEXT_REF_SIZE],
+        ["transition trigger table", h.transitionTriggerTableOffset, h.transitionTriggerCount * DLG_TEXT_REF_SIZE],
+        ["action table", h.actionTableOffset, h.actionCount * DLG_TEXT_REF_SIZE],
+    ];
+    for (const [name, offset, length] of sections) {
+        if (offset < 0 || offset + length > size) {
+            throw new Error(`Cannot serialize DLG: ${name} does not fit - ${offset}+${length} in ${size} bytes`);
+        }
+    }
+    const refs: [string, DlgTextRefData[]][] = [
+        ["state trigger", document.stateTriggerRefs],
+        ["transition trigger", document.transitionTriggerRefs],
+        ["action", document.actionRefs],
+    ];
+    for (const [name, list] of refs) {
+        list.forEach((ref, i) => {
+            if (ref.offset + ref.length > size) {
+                throw new Error(
+                    `Cannot serialize DLG: ${name} ${i} does not fit - ${ref.offset}+${ref.length} in ${size} bytes`,
+                );
+            }
+        });
+    }
+}
+
 export function serializeDlg(result: ParseResult): Uint8Array {
     const document = result.document as DlgCanonicalDocument | undefined;
     if (!document) throw new Error("Cannot serialize DLG: parse result carries no canonical document");
@@ -336,6 +372,7 @@ export function serializeDlg(result: ParseResult): Uint8Array {
 
     const out = new Uint8Array(result.sourceData);
     const h = document.header;
+    assertFits(document, out.byteLength);
     writeRecord(out, dlgHeaderSchema, 0, h);
     if (document.headerInterrupt) {
         writeRecord(out, dlgHeaderInterruptSchema, DLG_HEADER_SIZE, document.headerInterrupt);
