@@ -136,6 +136,10 @@ binary/src/
                                # `headerSizeOf`): BG1-era files stop at 48 bytes, later ones append the
                                # interrupt-flags dword, and 1002 of a 4286-file stock corpus take the
                                # shorter form
+    build.ts                   # buildDlg: builds a file from content, DECIDING its layout, where
+                               # serializeDlg re-emits one over its own bytes and cannot change a string's
+                               # length. The layout is the reference implementation's, and reproduces 4203
+                               # of the 4286-file corpus byte for byte
     canonical-schemas.ts, canonical-writer.ts, format-adapter.ts, json-snapshot.ts, index.ts
                                # No presentation or layout schema: a DLG is read through the dialog editor
                                # (`shared/dialog-model-dlg.ts` -> `DialogModel`), not the field-form one

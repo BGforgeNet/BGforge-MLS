@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
-import { dlgParser, readDlg } from "../src/dlg";
+import { buildDlg, dlgParser, readDlg, toDlgBuildInput } from "../src/dlg";
 
 /**
  * Structural sweep over a real game install's DLG resources.
@@ -29,6 +29,49 @@ function findDlgFiles(root: string): string[] {
 }
 
 const files = CORPUS_ROOT ? findDlgFiles(CORPUS_ROOT) : [];
+
+const STATE_SIZE = 16;
+const TRANSITION_SIZE = 32;
+const PAIR_SIZE = 8;
+
+/**
+ * Whether the file itself uses the layout `buildDlg` writes: tables in wire order right after the header,
+ * then every string appended in table order, ending at EOF.
+ */
+function isCanonicalLayout(bytes: Uint8Array): boolean {
+    const result = dlgParser.parse(bytes);
+    const doc = result.document as
+        | {
+              header: Record<string, number>;
+              headerInterrupt?: unknown;
+              states: unknown[];
+              transitions: unknown[];
+              stateTriggerRefs: { offset: number; length: number }[];
+              transitionTriggerRefs: { offset: number; length: number }[];
+              actionRefs: { offset: number; length: number }[];
+          }
+        | undefined;
+    if (!doc) return false;
+
+    const headerSize = doc.headerInterrupt ? 0x34 : 0x30;
+    const refs = [...doc.stateTriggerRefs, ...doc.transitionTriggerRefs, ...doc.actionRefs];
+    let at = headerSize;
+    for (const [offset, count, size] of [
+        [doc.header.stateTableOffset, doc.states.length, STATE_SIZE],
+        [doc.header.transitionTableOffset, doc.transitions.length, TRANSITION_SIZE],
+        [doc.header.stateTriggerTableOffset, doc.stateTriggerRefs.length, PAIR_SIZE],
+        [doc.header.transitionTriggerTableOffset, doc.transitionTriggerRefs.length, PAIR_SIZE],
+        [doc.header.actionTableOffset, doc.actionRefs.length, PAIR_SIZE],
+    ] as [number, number, number][]) {
+        if (offset !== at) return false;
+        at += count * size;
+    }
+    for (const ref of refs) {
+        if (ref.offset !== at) return false;
+        at += ref.length;
+    }
+    return at === bytes.byteLength;
+}
 
 describe.skipIf(files.length === 0)("readDlg - real install corpus", () => {
     test("every DLG parses with a V1 header and in-bounds table indices", () => {
@@ -72,9 +115,10 @@ describe.skipIf(files.length === 0)("readDlg - real install corpus", () => {
     });
 
     test("every DLG round-trips byte-identically", () => {
-        // The case that matters is the one the WeiDU fixtures cannot show: 17 files in this corpus have
-        // text refs that SHARE an offset, and 4 carry bytes after the text block. A writer that recomputed
-        // the layout from the resolved strings would change all 21 while still passing the fixture suite.
+        // The case that matters is the one the WeiDU fixtures cannot show: 547 files of a stock BG:EE plus
+        // BG2:ToB pair have text refs that SHARE an offset, and 80 order the text block by dialog structure
+        // rather than by table. `buildDlg` reproduces neither, by design - preserving the source bytes is
+        // what makes an unedited file come back exactly.
         const mismatched: string[] = [];
 
         for (const file of files) {
@@ -86,6 +130,43 @@ describe.skipIf(files.length === 0)("readDlg - real install corpus", () => {
         }
 
         expect(mismatched).toEqual([]);
+    });
+
+    test("rebuilding every DLG from its own content preserves that content", () => {
+        // `buildDlg`'s gate cannot be byte-identity - it decides a layout rather than preserving one - so
+        // what it owes is that nothing is lost or reordered on the way through.
+        const mismatched: string[] = [];
+
+        for (const file of files) {
+            const original = new Uint8Array(fs.readFileSync(file));
+            const rebuilt = readDlg(buildDlg(toDlgBuildInput(original)));
+            const before = readDlg(original);
+            if (JSON.stringify(rebuilt) !== JSON.stringify(before)) mismatched.push(path.basename(file));
+        }
+
+        expect(mismatched).toEqual([]);
+    });
+
+    test("a rebuild that is not byte-identical is one the source file laid out differently", () => {
+        // The builder writes the reference implementation's layout. Where a real file disagrees, the
+        // difference has to be the FILE's - so every non-identical rebuild is checked against the source's
+        // own ref offsets, and a file whose layout IS canonical must come back byte for byte.
+        const unexplained: string[] = [];
+        let identical = 0;
+
+        for (const file of files) {
+            const original = new Uint8Array(fs.readFileSync(file));
+            const rebuilt = buildDlg(toDlgBuildInput(original));
+            if (rebuilt.byteLength === original.byteLength && rebuilt.every((b, i) => b === original[i])) {
+                identical++;
+                continue;
+            }
+            if (isCanonicalLayout(original)) unexplained.push(path.basename(file));
+        }
+
+        expect(unexplained).toEqual([]);
+        // A floor on the population, so a corpus that stopped matching cannot pass by explaining everything.
+        expect(identical).toBeGreaterThan(files.length / 2);
     });
 
     test("every trigger and action string is printable ASCII", () => {

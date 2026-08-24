@@ -88,7 +88,8 @@ export { mapParser } from "./map";
 export { itmParser } from "./itm";
 export { splParser } from "./spl";
 export { effParser } from "./eff";
-export { dlgParser, readDlg, serializeDlg, DlgTransitionFlag } from "./dlg";
+export { buildDlg, dlgParser, readDlg, serializeDlg, toDlgBuildInput, DlgTransitionFlag } from "./dlg";
+export type { Dlg, DlgBuildInput, DlgState, DlgTransition } from "./dlg";
 export { creParser } from "./cre";
 
 // Pid -> subType resolution for MAP item / scenery decode. The default

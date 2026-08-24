@@ -7,8 +7,8 @@
  * compiler and no open install. Only the spoken text is external, held as strrefs into `dialog.tlk`.
  */
 
-import { BufferWriter } from "typed-binary";
 import { group, readerAt } from "../ie-common/parse-helpers";
+import { type DlgBuildInput, writeRecord } from "./build";
 import { encodeOpaqueRange } from "../opaque-range";
 import { walkStruct } from "../spec/walk-display";
 import type { BinaryParser, ParseOptions, ParseResult } from "../types";
@@ -357,13 +357,23 @@ export function serializeDlg(result: ParseResult): Uint8Array {
     return out;
 }
 
-function writeRecord<T>(
-    out: Uint8Array,
-    schema: { write: (writer: BufferWriter, value: T) => void },
-    offset: number,
-    value: T,
-): void {
-    schema.write(new BufferWriter(out.buffer, { byteOffset: out.byteOffset + offset }), value);
+/**
+ * A parsed file's content, ready to hand back to `buildDlg` - the seam an edit sits in. Everything the
+ * header derives from the content is dropped, so an edit cannot leave a count or offset behind.
+ */
+export function toDlgBuildInput(bytes: Uint8Array): DlgBuildInput {
+    const dlg = readDlg(bytes);
+    const { headerInterrupt } = readSections(bytes);
+    return {
+        states: dlg.states,
+        transitions: dlg.transitions,
+        stateTriggers: dlg.stateTriggers,
+        transitionTriggers: dlg.transitionTriggers,
+        actions: dlg.actions,
+        ...(headerInterrupt && { interrupt: headerInterrupt }),
+    };
 }
+
+export { buildDlg, type DlgBuildInput } from "./build";
 
 export const dlgParser = new DlgParser();

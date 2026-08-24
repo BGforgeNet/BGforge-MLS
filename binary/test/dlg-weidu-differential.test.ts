@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { readDlg } from "../src/dlg";
+import { buildDlg, readDlg, toDlgBuildInput } from "../src/dlg";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -82,17 +82,19 @@ describe.skipIf(!available)("readDlg - differential against WeiDU-compiled DLGs"
         if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
     });
 
+    const bytesOf = (name: string): Uint8Array => new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`)));
+
     function read(name: string) {
-        return readDlg(new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`))));
+        return readDlg(bytesOf(name));
     }
 
     test("compiles every fixture and reports counts for each", () => {
         // Guards the oracle itself: if WeiDU's output format changes, the regex silently matches nothing and
         // every count assertion below would compare undefined to undefined.
-        expect([...reported.keys()].sort()).toEqual(["EXTERND", "JOURNALD", "MINIMAL"]);
+        expect([...reported.keys()].sort()).toEqual(["EDITED", "EXTERND", "JOURNALD", "MINIMAL"]);
     });
 
-    test.each(["MINIMAL", "EXTERND", "JOURNALD"])("%s table counts match WeiDU's own accounting", (name) => {
+    test.each(["MINIMAL", "EXTERND", "JOURNALD", "EDITED"])("%s table counts match WeiDU's own accounting", (name) => {
         const dlg = read(name);
         const expected = reported.get(name)!;
 
@@ -136,5 +138,40 @@ describe.skipIf(!available)("readDlg - differential against WeiDU-compiled DLGs"
         expect(dlg.stateTriggers).toContain("NumTimesTalkedTo(0)");
         expect(dlg.transitionTriggers).toContain('Global("x","GLOBAL",1)');
         expect(dlg.actions).toContain('SetGlobal("x","GLOBAL",2)');
+    });
+
+    // `buildDlg` decides a layout rather than preserving one, so the question it has to answer is whose
+    // layout. These two tests answer it with the reference implementation's own output: the first says an
+    // untouched file rebuilds to the same bytes, the second says an edit no preserve-mode writer could make
+    // lands where WeiDU would have put it.
+    test.each(["MINIMAL", "EXTERND", "JOURNALD", "EDITED"])(
+        "%s rebuilt from its own content is byte-identical to WeiDU's",
+        (name) => {
+            const original = bytesOf(name);
+
+            const rebuilt = buildDlg(toDlgBuildInput(original));
+
+            expect([...rebuilt]).toEqual([...original]);
+        },
+    );
+
+    test("lengthening an action lands exactly where WeiDU puts it", () => {
+        // EDITED.dlg is MINIMAL.dlg with one action rewritten longer, so applying that edit to MINIMAL's
+        // content has to reproduce it byte for byte - text block, every offset after it, and the file size.
+        // The second edit is not cosmetic: WeiDU writes the CONTAINING dialog's own resref into a GOTO's
+        // nextDialog, so two files that differ only in name differ in that field too.
+        const input = toDlgBuildInput(bytesOf("MINIMAL"));
+
+        const edited = buildDlg({
+            ...input,
+            actions: input.actions.map((a) =>
+                a === 'SetGlobal("x","GLOBAL",2)' ? 'SetGlobal("x","GLOBAL",2)SetGlobal("y","GLOBAL",3)' : a,
+            ),
+            transitions: input.transitions.map((t) =>
+                t.nextDialog.startsWith("MINIMAL") ? { ...t, nextDialog: "EDITED\u0000\u0000" } : t,
+            ),
+        });
+
+        expect([...edited]).toEqual([...bytesOf("EDITED")]);
     });
 });

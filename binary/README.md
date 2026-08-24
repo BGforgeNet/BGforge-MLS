@@ -47,6 +47,10 @@ if (out) writeFileSync("scout-out.pro", out);
 The same pattern works for `.map`, `.itm`, `.spl`, `.eff`, `.cre`, and `.dlg`. To load a
 JSON snapshot directly from disk, use `loadBinaryJsonSnapshot(jsonText, options)`.
 
+`.dlg` additionally exposes `buildDlg(input)` and `toDlgBuildInput(bytes)`, which build a dialog from its
+content rather than re-emitting one over its own bytes - the path an edit that changes a trigger or action
+string has to take, since that moves every offset after it.
+
 Public exports also include parser types (`BinaryParser`, `ParseOptions`,
 `ParseResult`, `ParsedField`, `ParsedGroup`, `ParseOpaqueRange`),
 format-adapter registration, and presentation-schema lookups.
