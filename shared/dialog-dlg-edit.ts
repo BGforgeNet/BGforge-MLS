@@ -69,3 +69,43 @@ function ownStatesByIndex(model: DialogModel, ownResref: string): Map<number, Di
     }
     return own;
 }
+
+/** A reply this dialog holds, addressed the way the writer addresses one. */
+export interface DlgReplyRef {
+    readonly stateIndex: number;
+    readonly choiceIndex: number;
+}
+
+/**
+ * Detach a state: every reply in THIS dialog that led to it ends the conversation instead, and the state
+ * itself stays exactly where it was.
+ *
+ * Detaching rather than deleting is the whole point. A state's number is its position, and other dialogs -
+ * and WeiDU mod scripts, which address states by number at install time and cannot be seen from here at all -
+ * hold that number as an address. Removing the record would renumber every state above it and silently
+ * redirect all of them. So the record stays, its number stays, and only the local routing changes; a jump
+ * from another file still arrives, which is why this is a detachment and must be described as one.
+ *
+ * Returns the replies it changed, so the user can be shown precisely what this did to states they did not
+ * select.
+ */
+export function detachDlgState(
+    model: DialogModel,
+    ownResref: string,
+    stateIndex: number,
+): { model: DialogModel; cut: DlgReplyRef[] } {
+    const copy = structuredClone(model) as DialogModel;
+    const own = ownStatesByIndex(copy, ownResref);
+    const target = own.get(stateIndex);
+    if (!target) throw new Error(`detachDlgState: no state ${stateIndex} in ${ownResref}`);
+
+    const cut: DlgReplyRef[] = [];
+    for (const [index, state] of [...own.entries()].sort((a, b) => a[0] - b[0])) {
+        for (const [choiceIndex, choice] of state.choices.entries()) {
+            if (choice.target.kind !== "state" || choice.target.stateId !== target.id) continue;
+            choice.target = { kind: "exit" };
+            cut.push({ stateIndex: index, choiceIndex });
+        }
+    }
+    return { model: copy, cut };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { modelFromDlg, type DlgModelInput } from "../../shared/dialog-model-dlg";
-import { dlgAddress, setDlgLineText } from "../../shared/dialog-dlg-edit";
+import { detachDlgState, dlgAddress, setDlgLineText } from "../../shared/dialog-dlg-edit";
 import type { DialogModel } from "../../shared/dialog-model";
 
 /** Two states: the first says @10 and offers two replies, the second says @11 and ends. */
@@ -121,5 +121,59 @@ describe("setDlgLineText", () => {
     it("refuses an address the dialog does not hold", () => {
         expect(() => setDlgLineText(model(), "TEST", { stateIndex: 9 }, 1)).toThrow(/state/i);
         expect(() => setDlgLineText(model(), "TEST", { stateIndex: 0, choiceIndex: 7 }, 1)).toThrow(/reply/i);
+    });
+});
+
+describe("detachDlgState", () => {
+    it("keeps the state and its number, so nothing above it renumbers", () => {
+        const { model: after } = detachDlgState(model(), "TEST", 1);
+        const states = after.roots[0]!.states;
+
+        expect(states).toHaveLength(2);
+        expect(states[1]!.dlgIndex).toBe(1);
+        expect(states[1]!.text).toBe("@11");
+    });
+
+    it("turns every reply that led there into one that ends the conversation", () => {
+        const { model: after } = detachDlgState(model(), "TEST", 1);
+
+        // State 0's first reply pointed at state 1; it now ends the dialog instead.
+        expect(after.roots[0]!.states[0]!.choices[0]!.target).toEqual({ kind: "exit" });
+    });
+
+    it("reports exactly which replies it changed, so the user can be told", () => {
+        const { cut } = detachDlgState(model(), "TEST", 1);
+
+        expect(cut).toEqual([{ stateIndex: 0, choiceIndex: 0 }]);
+    });
+
+    it("leaves replies that pointed elsewhere alone", () => {
+        const before = model();
+        const { model: after } = detachDlgState(before, "TEST", 1);
+
+        // State 0's second reply already ended the dialog and is not part of this change.
+        expect(after.roots[0]!.states[0]!.choices[1]!.target).toEqual({ kind: "exit" });
+        expect(after.roots[0]!.states[1]!.choices).toHaveLength(1);
+    });
+
+    it("cuts a reply that led back into the detached state from itself", () => {
+        const selfish = structuredClone(model()) as DialogModel;
+        selfish.roots[0]!.states[1]!.choices[0]!.target = { kind: "state", stateId: selfish.roots[0]!.states[1]!.id };
+
+        const { model: after, cut } = detachDlgState(selfish, "TEST", 1);
+
+        expect(after.roots[0]!.states[1]!.choices[0]!.target).toEqual({ kind: "exit" });
+        expect(cut).toContainEqual({ stateIndex: 1, choiceIndex: 0 });
+    });
+
+    it("leaves the model it was given untouched", () => {
+        const before = model();
+        detachDlgState(before, "TEST", 1);
+
+        expect(before.roots[0]!.states[0]!.choices[0]!.target).toEqual({ kind: "state", stateId: "1" });
+    });
+
+    it("refuses a state the dialog does not hold", () => {
+        expect(() => detachDlgState(model(), "TEST", 9)).toThrow(/state/i);
     });
 });
