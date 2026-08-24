@@ -62,6 +62,8 @@ function dlgSourceFor(game: Game): DlgSource {
 export function registerIeResources(context: vscode.ExtensionContext): {
     /** Which replies lead into a dialog state; `undefined` until the game-wide scan has finished. */
     inbound: (resref: string, stateIndex: number) => InboundRef[] | undefined;
+    /** Which dialogs jump into this one at all; empty until the scan has finished, as `inbound` is. */
+    inboundDialogs: (resref: string) => string[];
     strref: StrrefResolver;
     /** Opens the string picker for a document, resolving to the chosen strref or undefined if dismissed. */
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
@@ -327,6 +329,9 @@ export function registerIeResources(context: vscode.ExtensionContext): {
          */
         inbound: (resref: string, stateIndex: number) =>
             references.ready ? references.inbound(resref, stateIndex) : undefined,
+        // Empty rather than undefined while the scan runs: this only decides which extra dialogs the tree
+        // shows, so an incomplete answer costs a branch, not a wrong statement about what reaches a state.
+        inboundDialogs: (resref: string) => (references.ready ? references.inboundDialogs(resref) : []),
         strref: strrefResolver,
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),

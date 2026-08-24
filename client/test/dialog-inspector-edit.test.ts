@@ -305,6 +305,23 @@ describe("textEditability (unified text gate - one decision both views consume)"
         expect(gate.reason).toMatch(/Change string/);
     });
 
+    it("does not point at a button a state from another dialog does not have", () => {
+        // The tree holds the dialogs this one hands off to. Their lines are locked for a different reason -
+        // the editor writes one file - and telling the reader to press "Change string..." is a dead end.
+        const gate = textEditability({
+            state: st(),
+            choice: null,
+            messages,
+            ssl: false,
+            textRO: false,
+            dlg: true,
+            foreign: true,
+        });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).not.toMatch(/Change string/);
+        expect(gate.reason).toMatch(/another dialog/i);
+    });
+
     it("leaves every other format alone", () => {
         expect(
             textEditability({ state: st(), choice: null, messages, ssl: false, textRO: false, dlg: false }).editable,

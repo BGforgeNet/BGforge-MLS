@@ -118,6 +118,14 @@ export const DLG_TEXT_LOCK_REASON =
     "A compiled dialog refers to the game's string table rather than holding text, so this line cannot be " +
     'typed into. Use "Change string..." to point it at a different entry.';
 
+/**
+ * Why a state belonging to a neighbouring dialog cannot be edited. Separate from `DLG_TEXT_LOCK_REASON`
+ * because that one directs the reader to a button this state does not offer.
+ */
+export const DLG_FOREIGN_TEXT_LOCK_REASON =
+    "This state belongs to another dialog, shown here so this conversation's hand-offs are visible. This " +
+    "editor saves only the file it opened - open that dialog to change it.";
+
 /** Read-only because the state is derived (CHAIN/INTERJECT/EXTEND) or the whole dialog is view-only. */
 export function stateReadOnlyReason(derivedFrom?: string): string {
     if (derivedFrom)
@@ -157,11 +165,12 @@ export function textLockReason(opts: {
     isNew?: boolean;
     derivedFrom?: string;
     dlg?: boolean;
+    foreign?: boolean;
 }): string {
     if (!textFieldLocked(opts)) return "";
-    const { text, ssl, textRO, derivedFrom, dlg } = opts;
+    const { text, ssl, textRO, derivedFrom, dlg, foreign } = opts;
     if (textRO) return stateReadOnlyReason(derivedFrom);
-    if (dlg) return DLG_TEXT_LOCK_REASON;
+    if (dlg) return foreign ? DLG_FOREIGN_TEXT_LOCK_REASON : DLG_TEXT_LOCK_REASON;
     const ref = msgRef(text);
     if (ref === null)
         // Only reachable for SSL (a D literal is editable): a literal/computed SSL line has no .msg entry.
@@ -195,11 +204,13 @@ export function textEditability(opts: {
     textRO: boolean;
     /** The dialog is a compiled `.dlg`: its lines are string-table references, not editable prose. */
     dlg?: boolean;
+    /** The state belongs to a neighbouring dialog drawn for context, not to the file being written. */
+    foreign?: boolean;
 }): { editable: boolean; reason: string } {
-    const { state, choice, messages, ssl, textRO, dlg } = opts;
+    const { state, choice, messages, ssl, textRO, dlg, foreign } = opts;
     const text = (choice ?? state).text;
     const isNew = choice ? isPendingChoice(choice) : npcLineAuthorable(state);
-    const base = { text, messages, ssl, textRO, isNew, dlg };
+    const base = { text, messages, ssl, textRO, isNew, dlg, foreign };
     const locked = textFieldLocked(base);
     return { editable: !locked, reason: locked ? textLockReason({ ...base, derivedFrom: state.derivedFrom }) : "" };
 }

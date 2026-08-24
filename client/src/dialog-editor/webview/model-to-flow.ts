@@ -162,6 +162,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     // the inspector and graph gate on, so the card can't be dragged when they say read-only - in
                     // particular an unfaithful TD state (faithful === false) is not drag-retargetable.
                     fieldEditable: nodeEditable(model, s),
+                    // This card belongs to a neighbouring file drawn for context, not to the file being
+                    // edited - the card says so, since nothing about its shape otherwise would.
+                    external: root.external === true,
                 },
             });
 

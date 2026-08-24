@@ -156,6 +156,8 @@ export async function activate(context: ExtensionContext) {
             strref: gameLookups.strref,
             pickStrref: gameLookups.pickStrref,
             inbound: gameLookups.inbound,
+            inboundDialogs: gameLookups.inboundDialogs,
+            resourceBytes: gameLookups.resourceBytes,
         }),
     );
 }

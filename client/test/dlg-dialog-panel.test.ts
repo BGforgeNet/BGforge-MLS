@@ -157,6 +157,11 @@ function harness(
     strref?: (uri: unknown, id: number) => string | undefined,
     pickStrref: () => Promise<number | undefined> = () => Promise.resolve(undefined),
     inbound?: (resref: string, state: number) => unknown[] | undefined,
+    /** The game side of loading the dialogs a conversation hands off to, absent unless a test wires it. */
+    neighbours: {
+        inboundDialogs?: (resref: string) => string[] | undefined;
+        resourceBytes?: (uri: unknown, resref: string, ext: string) => Uint8Array | undefined;
+    } = {},
 ) {
     const posted: Posted[] = [];
     let onMessage: ((raw: unknown) => void) | undefined;
@@ -184,7 +189,7 @@ function harness(
 
     const provider = new DlgDialogEditorProvider(
         { extensionUri: { path: "/ext" } } as unknown as vscode.ExtensionContext,
-        { strref, pickStrref, inbound } as never,
+        { strref, pickStrref, inbound, ...neighbours } as never,
     );
     const document = {
         uri: { path: "/game/SELFDLG.dlg", toString: () => "file:///game/SELFDLG.dlg" },
@@ -544,5 +549,89 @@ describe("DlgDialogEditorProvider, detaching a state", () => {
 
         expect(prompts[0]).toMatch(/not been checked/i);
         expect(prompts[0]).not.toMatch(/no other dialog/i);
+    });
+});
+
+describe("DlgDialogEditorProvider, the dialogs around this one", () => {
+    /** EDITDLG state 0's only reply hands off to OTHERDLG state 1 - the edge the tree should close up. */
+    function handoff(): Uint8Array {
+        return buildDlg({
+            states: [{ text: 100, firstTransition: 0, transitionCount: 1, triggerIndex: -1 }],
+            transitions: [
+                {
+                    flags: ["text"],
+                    text: 200,
+                    journalText: -1,
+                    triggerIndex: -1,
+                    actionIndex: -1,
+                    nextDialog: "OTHERDLG",
+                    nextState: 1,
+                },
+            ],
+            stateTriggers: [],
+            transitionTriggers: [],
+            actions: [],
+        });
+    }
+
+    /** A dialog with two states and no jumps of its own, standing in for whatever a neighbour holds. */
+    function plain(): Uint8Array {
+        return buildDlg({
+            states: [
+                { text: 300, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+                { text: 301, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+            ],
+            transitions: [],
+            stateTriggers: [],
+            transitionTriggers: [],
+            actions: [],
+        });
+    }
+
+    async function opened(neighbours: Parameters<typeof harness>[3], bytes = handoff()) {
+        const h = harness(undefined, () => Promise.resolve(undefined), undefined, neighbours);
+        files.set(DLG_URI, bytes);
+        const document = await h.provider.openCustomDocument(DLG_URI_VALUE as never, {} as never);
+        await h.provider.resolveCustomEditor(document, h.panel, {} as never);
+        h.ready();
+        return h;
+    }
+
+    test("loads the dialog this one hands off to, so the jump lands on a node", async () => {
+        const h = await opened({ resourceBytes: (_uri, resref) => (resref === "OTHERDLG" ? plain() : undefined) });
+
+        const model = h.model() as { roots: { label: string; external?: boolean }[] };
+        expect(model.roots.map((r) => r.label)).toEqual(["EDITDLG", "OTHERDLG"]);
+        expect(model.roots[1]!.external).toBe(true);
+    });
+
+    test("loads the dialogs that jump into this one, which the file itself cannot name", async () => {
+        const h = await opened({
+            inboundDialogs: () => ["CALLER"],
+            resourceBytes: (_uri, resref) => (resref === "CALLER" ? plain() : undefined),
+        });
+
+        const model = h.model() as { roots: { label: string }[] };
+        expect(model.roots.map((r) => r.label)).toContain("CALLER");
+    });
+
+    test("opens on its own when no game is behind the file", async () => {
+        const h = await opened({});
+
+        expect((h.model() as { roots: unknown[] }).roots).toHaveLength(1);
+    });
+
+    test("skips a neighbour the game cannot produce rather than failing to open", async () => {
+        const h = await opened({ resourceBytes: () => undefined });
+
+        expect((h.model() as { roots: unknown[] }).roots).toHaveLength(1);
+        expect(h.posted.some((p) => p.type === "error")).toBe(false);
+    });
+
+    test("skips a neighbour whose bytes will not parse", async () => {
+        const h = await opened({ resourceBytes: () => new Uint8Array([1, 2, 3]) });
+
+        expect((h.model() as { roots: unknown[] }).roots).toHaveLength(1);
+        expect(h.posted.some((p) => p.type === "error")).toBe(false);
     });
 });

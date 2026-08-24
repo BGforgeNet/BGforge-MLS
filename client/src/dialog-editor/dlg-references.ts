@@ -38,11 +38,43 @@ function yieldToHost(): Promise<void> {
 
 const key = (resref: string, state: number): string => `${resref.toUpperCase()}:${state}`;
 
+/**
+ * How many other dialogs are loaded alongside the one being edited. Measured against a full Baldur's Gate II
+ * install: most dialogs have no cross-file neighbour at all, about 97% have twelve or fewer, and the busiest
+ * hub has 179 - a tree nobody can read and a parse nobody asked for. The bound is on the tree's usefulness,
+ * not on the index, which holds the whole game either way.
+ */
+export const NEIGHBOUR_LIMIT = 12;
+
+/**
+ * The dialogs to load alongside `ownResref` so its conversation closes up: the ones it hands off to first,
+ * since those edges are visible in the file being edited, then the ones that hand off to it. Returns what was
+ * left out rather than truncating quietly - a tree missing a branch must not look like a complete one.
+ */
+export function neighbourDialogs(
+    outgoing: Iterable<string>,
+    incoming: Iterable<string>,
+    ownResref: string,
+): { load: string[]; omitted: number } {
+    const own = resrefName(ownResref);
+    const all: string[] = [];
+    const seen = new Set<string>([own]);
+    for (const raw of [...outgoing, ...incoming]) {
+        const name = resrefName(raw);
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        all.push(name);
+    }
+    return { load: all.slice(0, NEIGHBOUR_LIMIT), omitted: Math.max(0, all.length - NEIGHBOUR_LIMIT) };
+}
+
 export class DlgReferenceIndex {
     /** target `RESREF:state` -> the replies that lead there. */
     private targets = new Map<string, InboundRef[]>();
     /** Every edge a given dialog contributes, so re-reading one file can retract exactly its own. */
-    private bySource = new Map<string, { key: string; ref: InboundRef }[]>();
+    private bySource = new Map<string, { key: string; target: string; ref: InboundRef }[]>();
+    /** target dialog -> the dialogs holding a reply into it, for "what should be loaded alongside this one". */
+    private byTargetDialog = new Map<string, Set<string>>();
     private built = false;
 
     /** False until a build has completed. An unfinished index answers `inbound` with nothing - say so. */
@@ -56,12 +88,22 @@ export class DlgReferenceIndex {
     }
 
     /**
+     * The other dialogs that jump into `resref`, at any state. Kept as its own map rather than derived from
+     * `targets`, which is keyed per state and would have to be walked in full for every open.
+     */
+    inboundDialogs(resref: string): string[] {
+        const name = resrefName(resref);
+        return [...(this.byTargetDialog.get(name) ?? [])].filter((source) => source !== name);
+    }
+
+    /**
      * Scan every dialog. Yields between chunks so the host stays responsive, and abandons the whole build on
      * abort rather than leaving a half-scan that would look authoritative.
      */
     async build(source: DlgSource, signal?: AbortSignal): Promise<void> {
         this.targets = new Map();
         this.bySource = new Map();
+        this.byTargetDialog = new Map();
         this.built = false;
         const names = source.list();
         for (const [i, name] of names.entries()) {
@@ -84,12 +126,19 @@ export class DlgReferenceIndex {
 
     private retract(resref: string): void {
         const name = resref.toUpperCase();
-        for (const { key: target, ref } of this.bySource.get(name) ?? []) {
+        for (const { key: target, target: dialog, ref } of this.bySource.get(name) ?? []) {
             const list = this.targets.get(target);
-            if (!list) continue;
-            const remaining = list.filter((r) => r !== ref);
-            if (remaining.length === 0) this.targets.delete(target);
-            else this.targets.set(target, remaining);
+            if (list) {
+                const remaining = list.filter((r) => r !== ref);
+                if (remaining.length === 0) this.targets.delete(target);
+                else this.targets.set(target, remaining);
+            }
+            // Every edge this file contributes is retracted together, so removing it from each target it
+            // reached is exact - no other edge of its own can still be holding the entry open.
+            const sources = this.byTargetDialog.get(dialog);
+            if (!sources) continue;
+            sources.delete(name);
+            if (sources.size === 0) this.byTargetDialog.delete(dialog);
         }
         this.bySource.delete(name);
     }
@@ -106,7 +155,7 @@ export class DlgReferenceIndex {
             return;
         }
         const source = resref.toUpperCase();
-        const own: { key: string; ref: InboundRef }[] = [];
+        const own: { key: string; target: string; ref: InboundRef }[] = [];
 
         for (const [stateIndex, state] of dlg.states.entries()) {
             for (let i = 0; i < state.transitionCount; i++) {
@@ -117,12 +166,16 @@ export class DlgReferenceIndex {
                 const target = resrefName(transition.nextDialog) || source;
                 const entry = {
                     key: key(target, transition.nextState),
+                    target,
                     ref: { dialog: source, state: stateIndex, transition: i },
                 };
                 own.push(entry);
                 const list = this.targets.get(entry.key);
                 if (list) list.push(entry.ref);
                 else this.targets.set(entry.key, [entry.ref]);
+                const sources = this.byTargetDialog.get(target) ?? new Set<string>();
+                sources.add(source);
+                this.byTargetDialog.set(target, sources);
             }
         }
         this.bySource.set(source, own);

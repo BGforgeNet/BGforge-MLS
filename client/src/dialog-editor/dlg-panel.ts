@@ -14,10 +14,10 @@
 
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
-import { modelFromDlg } from "../../../shared/dialog-model-dlg";
+import { modelFromDlgs, resrefName, type DlgModelInput } from "../../../shared/dialog-model-dlg";
 import { detachDlgState, setDlgLineText } from "../../../shared/dialog-dlg-edit";
 import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
-import type { InboundRef } from "./dlg-references";
+import { neighbourDialogs, type InboundRef } from "./dlg-references";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
@@ -38,6 +38,10 @@ export interface DlgHostDeps {
      * which is NOT the same as finding none, and must never be presented as if it were.
      */
     inbound?: (resref: string, stateIndex: number) => InboundRef[] | undefined;
+    /** Which dialogs jump into this one at all, so the tree can show the conversations arriving here. */
+    inboundDialogs?: (resref: string) => string[] | undefined;
+    /** Reads another game resource, which is how a neighbouring dialog is loaded into the same tree. */
+    resourceBytes?: (uri: vscode.Uri, resref: string, ext: string) => Uint8Array | undefined;
 }
 
 /** Bytes to open: the hot-exit backup when one is readable, otherwise the file itself. */
@@ -130,9 +134,12 @@ function resolveMessages(strrefs: Iterable<number>, uri: vscode.Uri, resolve: Dl
     return messages;
 }
 
-/** The dialog's own resource name: a DLG does not record it, and a same-file jump is addressed by it. */
+/**
+ * The dialog's own resource name: a DLG does not record it, and a same-file jump is addressed by it.
+ * Normalised the way the model spells resrefs, so a file named in lower case still matches its own states.
+ */
 function resrefOf(uri: vscode.Uri): string {
-    return (uri.path.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+    return resrefName((uri.path.split("/").pop() ?? "").replace(/\.[^.]+$/, ""));
 }
 
 export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgDocument> {
@@ -306,18 +313,59 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         }
 
         const resref = resrefOf(document.uri);
-        const model = modelFromDlg({ ...dlg, resref });
+        const main: DlgModelInput = { ...dlg, resref };
+        const { load, omitted } = this.neighboursOf(main, resref);
+        const others = load
+            .map((name) => this.readNeighbour(document.uri, name))
+            .filter((input) => input !== undefined);
+        const model = modelFromDlgs(main, others);
 
         const strrefs = new Set<number>();
-        for (const state of dlg.states) strrefs.add(state.text);
-        for (const transition of dlg.transitions) {
-            if (transition.hasText) strrefs.add(transition.text);
-            if (transition.hasJournalEntry) strrefs.add(transition.journalText);
+        for (const input of [main, ...others]) {
+            for (const state of input.states) strrefs.add(state.text);
+            for (const transition of input.transitions) {
+                if (transition.hasText) strrefs.add(transition.text);
+                if (transition.hasJournalEntry) strrefs.add(transition.journalText);
+            }
         }
         const messages = resolveMessages(strrefs, document.uri, this.deps.strref);
 
         this.posted.set(document, model);
-        post({ type: "model", model: { ...model, messages, sourceName: resref }, ...echo });
+        post({
+            type: "model",
+            model: {
+                ...model,
+                messages,
+                sourceName: resref,
+                ...(omitted > 0 ? { dlgNeighboursOmitted: omitted } : {}),
+            },
+            ...echo,
+        });
+    }
+
+    /**
+     * Which other dialogs to show alongside this one: the dialogs it hands off to, read straight from its own
+     * replies, plus the dialogs that hand off to it, which only the game-wide index knows. An index still
+     * building simply contributes nothing here - the outgoing half is complete either way.
+     */
+    private neighboursOf(dlg: DlgModelInput, resref: string): { load: string[]; omitted: number } {
+        if (!this.deps.resourceBytes) return { load: [], omitted: 0 };
+        const outgoing = dlg.transitions.filter((t) => !t.terminatesDialog).map((t) => t.nextDialog);
+        return neighbourDialogs(outgoing, this.deps.inboundDialogs?.(resref) ?? [], resref);
+    }
+
+    /**
+     * One neighbouring dialog, or undefined if the game cannot produce it or it will not parse. A missing or
+     * unreadable neighbour costs the tree one branch; it must never stop the file in hand from opening.
+     */
+    private readNeighbour(uri: vscode.Uri, resref: string): DlgModelInput | undefined {
+        const bytes = this.deps.resourceBytes?.(uri, resref, "dlg");
+        if (!bytes) return undefined;
+        try {
+            return { ...readDlg(bytes), resref };
+        } catch {
+            return undefined;
+        }
     }
 
     async saveCustomDocument(document: DlgDocument, _token: vscode.CancellationToken): Promise<void> {

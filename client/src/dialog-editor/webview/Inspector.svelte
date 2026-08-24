@@ -143,6 +143,10 @@
     const ssl = $derived(format === "fallout-ssl");
     // A compiled dialog: its lines are string-table references, so they are chosen rather than typed.
     const dlg = $derived(sourceLang === "dlg");
+    // A state from a neighbouring dialog, drawn so the hand-offs of this conversation are visible. This editor
+    // saves the one file it opened, so nothing here can be changed - and it must not offer controls that
+    // would silently do nothing. `structuralEditable` is `nodeEditable`, which already says so for a DLG.
+    const foreign = $derived(dlg && !structuralEditable);
 
     // Which TextMate grammar colours every code field (trigger, condition, action), chosen by SOURCE language,
     // not render family: a D dialog's fields are BAF, an SSL condition is SSL, and a TD or TSSL dialog's fields
@@ -191,7 +195,7 @@
         // The inspector locks text only on a derived (no-own-source) state; a D-family literal otherwise stays
         // editable even when the STRUCTURE is read-only (a .tra edit is structure-independent - a typo in an
         // unfaithful TD state's line can still be fixed). SSL's own @N gate lives inside textEditability.
-        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom), dlg });
+        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom), dlg, foreign });
     }
 
 
@@ -328,6 +332,13 @@
             conditions) is read-only - this node is not simple enough to edit safely from the graph;
             edit the <b>source file</b> for that.
         </div>
+    {:else if foreign}
+        <!-- A state from a dialog this editor did not open. It is on screen so a hand-off leads somewhere
+             visible; every control that would write it is withheld rather than shown doing nothing. -->
+        <div class="ronote">
+            This state belongs to <b>{state.dlgResref}</b>, shown so this conversation's hand-offs are visible.
+            This editor saves only the file it opened - open <b>{state.dlgResref}</b> to change it.
+        </div>
     {:else if dlg}
         <!-- A compiled dialog. Its text is not prose the editor can write - it is a number pointing into the
              game's string table - so the wording names what CAN be done rather than the D-family's .tra story. -->
@@ -359,7 +370,7 @@
         {@const npc = textEdit(null)}
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
         <!-- A compiled dialog's line is a reference into the game's string table, so it is chosen, not typed. -->
-        {#if dlg}<button type="button" class="pickstr" onclick={() => actions.pickString(null)}>Change string...</button>{/if}
+        {#if dlg && !foreign}<button type="button" class="pickstr" onclick={() => actions.pickString(null)}>Change string...</button>{/if}
         <!-- Continuation lines of a multisay `SAY @a = @b = @c` monologue (line 1 is the field above): the NPC
              speaks several lines before the player replies. Each edits like the primary line - an @N line writes
              its .msg/.tra entry, a literal writes the .d source (setSayLine). Absent for a single-say state. -->
@@ -458,7 +469,7 @@
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
-            {#if dlg}<button type="button" class="pickstr" onclick={() => actions.pickString(c.id)}>Change string...</button>{/if}
+            {#if dlg && !foreign}<button type="button" class="pickstr" onclick={() => actions.pickString(c.id)}>Change string...</button>{/if}
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
@@ -691,7 +702,7 @@
             <button onclick={actions.duplicateState}>Duplicate state</button>
             {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
         </div>
-    {:else if dlg}
+    {:else if dlg && !foreign}
         <!-- A compiled dialog offers Detach, not Delete: the state's number is an address other dialogs hold,
              so the record stays and only the replies leading to it are cut. The host explains that and asks
              before doing it. Duplicate is not offered - the generic op clones a state's file position too,

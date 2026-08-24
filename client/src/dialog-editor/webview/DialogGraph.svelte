@@ -147,6 +147,16 @@
     let activeFile = $state<string>("");
     const tabs = $derived(editModel.roots.filter((r) => r.states.length > 0));
     const activeRoot = $derived(editModel.roots.find((r) => r.id === activeFile) ?? tabs[0] ?? null);
+    // A compiled dialog's roots are ONE conversation split across files - it hands off to a neighbour and is
+    // handed back - so the graph draws them together and a round trip closes up. Every other family's roots
+    // are independent dialogs that happen to share a file, which is what the tabs are for. The tree, the
+    // pickers and every edit still work on `activeRoot`: this editor writes the one file it opened.
+    const spansFiles = $derived(editModel.sourceLang === "dlg" && editModel.roots.length > 1);
+    const graphModel = $derived(
+        spansFiles ? editModel : activeRoot ? { ...editModel, roots: [activeRoot] } : editModel,
+    );
+    /** Which layout cache the graph's positions belong to. One shared key while the graph spans files. */
+    const graphKey = $derived(spansFiles ? "*" : (activeRoot?.id ?? ""));
 
     // Cross-file resolution: which root owns a given state id, and which root is a given
     // dialog file. Used to turn an external stub into a jump to the owning tab.
@@ -485,7 +495,9 @@
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
     function navigateToState(stateId: string): void {
         const rootId = stateToRoot.get(stateId);
-        if (rootId && rootId !== activeFile) switchTab(rootId, stateId);
+        // Not while the graph spans files: every root is already on screen, and switching would move the
+        // tree and the edit affordances onto a dialog this editor does not write.
+        if (!spansFiles && rootId && rootId !== activeFile) switchTab(rootId, stateId);
         selectTreeState(stateId);
     }
 
@@ -629,9 +641,8 @@
             tabPos.set(renderedFile, cur);
         }
 
-        const root = activeRoot;
-        const fileId = root?.id ?? "";
-        const g = modelToFlow(root ? { ...editModel, roots: [root] } : editModel);
+        const fileId = graphKey;
+        const g = modelToFlow(graphModel);
         attachJumpTargets(g);
         const cached = tabPos.get(fileId);
         const sameTab = renderedFile === fileId;
@@ -1351,7 +1362,7 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="dialog-graph">
-    {#if tabs.length > 1}
+    {#if tabs.length > 1 && !spansFiles}
         <div class="tabbar" role="tablist">
             {#each tabs as t (t.id)}
                 <button class="tab" class:active={t.id === activeFile} role="tab" aria-selected={t.id === activeFile} title={t.label} onclick={() => switchTab(t.id)}>
@@ -1359,6 +1370,14 @@
                     <span class="tcount">{t.states.length}</span>
                 </button>
             {/each}
+        </div>
+    {/if}
+    <!-- The tree holds a bounded number of neighbouring dialogs, so a busy hub shows some and not all. Say how
+         many were left out: a graph missing branches must not look like a complete one. -->
+    {#if editModel.dlgNeighboursOmitted}
+        <div class="omitnote">
+            Showing {editModel.roots.length - 1} of the {editModel.roots.length - 1 + editModel.dlgNeighboursOmitted}
+            dialogs connected to this one. Open one of the others directly to see its own conversation.
         </div>
     {/if}
     <!-- One docked toolbar header shared by BOTH views. Previously the graph floated its toolbar over the
@@ -1623,6 +1642,13 @@
 </div>
 
 <style>
+    /* A quiet strip above the canvas, for a fact about the graph itself rather than about any node. */
+    .omitnote {
+        padding: 2px 8px;
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+        background: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+    }
     /* Fill the host (body/#app), not the viewport: `100vw` ignores the scrollbar and,
        with the webview body's default margin, forces a constant horizontal scroll no
        matter the panel width. */
