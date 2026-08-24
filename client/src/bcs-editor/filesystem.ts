@@ -11,8 +11,13 @@ import * as vscode from "vscode";
 import type { BcsSymbols } from "../../../compilers/bcs/src/index";
 import { render, sourcePath } from "./document";
 
-/** Resolves the install's naming tables for a document, or undefined when it has no game behind it. */
-export type SymbolsFor = (uri: vscode.Uri) => BcsSymbols | undefined;
+/**
+ * Resolves the install's naming tables for a document, or undefined when it has no game behind it.
+ *
+ * Asked about the SOURCE file, never this view's own URI: which game a document belongs to is decided by its
+ * scheme, and a resolver that has never heard of `bgforge-bcs` answers "no game" for every script.
+ */
+export type SymbolsFor = (sourceFile: string) => BcsSymbols | undefined;
 
 export class BcsFileSystemProvider implements vscode.FileSystemProvider {
     private readonly changed = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -45,14 +50,15 @@ export class BcsFileSystemProvider implements vscode.FileSystemProvider {
             // The DECOMPILED length, not the file's: it is what the editor is about to read, and a script
             // expands severalfold, so reporting the stored size makes the large-file guard measure the
             // wrong text. Readonly rather than a permission bit, so the tab offers no save to refuse.
-            size: Buffer.byteLength(render(file, this.symbolsFor(uri)), "utf8"),
+            size: Buffer.byteLength(render(file, this.symbolsFor(file)), "utf8"),
             permissions: vscode.FilePermission.Readonly,
         };
     }
 
     readFile(uri: vscode.Uri): Uint8Array {
         try {
-            return Buffer.from(render(sourcePath(uri), this.symbolsFor(uri)), "utf8");
+            const file = sourcePath(uri);
+            return Buffer.from(render(file, this.symbolsFor(file)), "utf8");
         } catch (error) {
             if ((error as NodeJS.ErrnoException).code === "ENOENT") throw vscode.FileSystemError.FileNotFound(uri);
             throw error;

@@ -74,7 +74,7 @@ export async function activate(context: ExtensionContext) {
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context),
         registerIntEditor(context),
-        registerBcsEditor(gameLookups.bcsSymbols),
+        registerBcsEditor((file) => gameLookups.bcsSymbols(vscode.Uri.file(file))),
     );
 
     // If the extension is launched in debug mode then the debug server options are used
