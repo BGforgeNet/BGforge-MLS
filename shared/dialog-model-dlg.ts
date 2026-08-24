@@ -129,6 +129,9 @@ function stateFrom(
         id: dlgStateId(ownResref, index),
         dlgIndex: index,
         dlgResref: ownResref,
+        // A dialog file IS its speaker, and the header otherwise falls back to the model's `sourceName` -
+        // which would put the name of the file being EDITED on a neighbouring dialog's states.
+        speaker: ownResref,
         text: strrefText(state.text),
         ...(trigger !== undefined ? { trigger } : {}),
         choices: owned.map((t, i) => ({

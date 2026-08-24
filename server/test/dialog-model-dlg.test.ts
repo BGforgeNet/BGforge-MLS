@@ -10,6 +10,7 @@
 import { describe, expect, test } from "vitest";
 import { modelFromDlg, modelFromDlgs, type DlgModelInput } from "../../shared/dialog-model-dlg";
 import { nodeEditable } from "../../shared/dialog-editability";
+import { stateHeadLabel } from "../../shared/dialog-model";
 
 /** Two states: state 0 says @100 under a trigger and offers three replies; state 1 is a plain reply target. */
 function sampleDlg(): DlgModelInput {
@@ -230,6 +231,15 @@ describe("modelFromDlgs - one tree spanning several dialogs", () => {
             label: "OTHERDLG:4",
             resolved: false,
         });
+    });
+
+    test("labels each state with its own dialog, not with the file that happens to be open", () => {
+        // The header falls back to the model's `sourceName` when a state names no speaker, which would put
+        // the edited file's name on a neighbour's card - "MINSC - VICONIA:0", a speaker who is not speaking.
+        const model = tree();
+
+        expect(stateHeadLabel(model.roots[1]!.states[0]!, model.sourceName)).toBe("OTHERDLG - OTHERDLG:0");
+        expect(stateHeadLabel(model.roots[0]!.states[0]!, model.sourceName)).toBe("SELFDLG - SELFDLG:0");
     });
 
     test("names the dialog being written, so a state from another file is not treated as this file's", () => {
