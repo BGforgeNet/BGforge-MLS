@@ -26,10 +26,17 @@ export function parseIdsAll(bytes: Uint8Array): Map<number, string[]> {
     return table;
 }
 
-/** Parse an IDS resource into value -> identifier. Malformed rows are skipped rather than failing the table. */
+/**
+ * Parse an IDS resource into value -> identifier. Malformed rows are skipped rather than failing the table.
+ *
+ * Where a value is named twice the LAST row wins, and that is deliberate rather than incidental. Switching to
+ * the first row was considered and rejected: it changes the name of 8 values across the tables the specs
+ * declare - CLASS 202 reads `LONG_BOW` for an item and `MAGE_ALL` for a creature, KIT 16384 `TRUECLASS` or
+ * `MAGESCHOOL_GENERALIST` - and nothing in the format ranks the rows, so neither order is more correct than the
+ * other and flipping it would silently relabel shipped fields. A caller that must choose between rows that
+ * genuinely differ reads `parseIdsAll` and decides from the record it holds.
+ */
 export function parseIds(bytes: Uint8Array): Map<number, string> {
-    // Where a value is named twice, the last row wins. Nothing in the format ranks them; a caller that needs to
-    // choose between genuinely different rows reads `parseIdsAll` and decides from the record it holds.
     return new Map(idsRows(bytes));
 }
 
