@@ -40,7 +40,18 @@
   game's text rather than the text itself, so a line is changed by pointing it at a different entry:
   **Change string...** on the NPC line or on any reply opens the same search the insert command uses. Saving
   rewrites those numbers and leaves the rest of the file as it was, and undo behaves as it does anywhere
-  else. The dialog's structure - adding, removing or retargeting states and replies - stays read-only.
+  else.
+- A compiled dialog's structure can be edited too: replies can be added, removed and retargeted, and states
+  appended. What cannot change is a state's **number** - it is its position in the file, and other dialogs
+  and WeiDU mod scripts address it by that number - so states are never renamed or renumbered. To take one
+  out of play, **Detach state** points every reply that led to it at the end of the conversation instead;
+  the record stays where it is, nothing is renumbered, and the editor says up front which replies it will
+  change and which other dialogs still reach the state.
+- A conversation that hands off to another dialog now shows where it lands. The states another `.dlg`
+  reaches, and the states elsewhere that reach into this one, are drawn in the same graph, marked with the
+  dialog they belong to and read-only - so a hand-off that goes out and comes back closes up as one tree
+  instead of stopping at an address. Which dialogs reach a given state is answered by a scan of the open
+  game, run in the background when the game is opened.
 
 ## 3.14.0
 

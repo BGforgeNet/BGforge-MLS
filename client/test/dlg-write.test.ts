@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDlg, readDlg, type DlgBuildInput } from "@bgforge/binary";
 import { writeDlgFromModel } from "../src/dialog-editor/dlg-write";
-import { modelFromDlg, modelFromDlgs } from "../../shared/dialog-model-dlg";
+import { modelFromDlg, modelFromDlgs, resrefName } from "../../shared/dialog-model-dlg";
 import type { DialogModel } from "../../shared/dialog-model";
 
 /** Resrefs are fixed-width and NUL-padded on the wire, which is how the reader hands them back. */
@@ -211,5 +211,70 @@ describe("writeDlgFromModel, a tree holding more than one dialog", () => {
         // Resrefs are case-insensitive in the game's own resource lookup, and a file on disk may be named
         // either way; the model uppercases, so a raw file name would otherwise match nothing at all.
         expect(writeDlgFromModel(original(), sampleModel(), "test")).toEqual(original());
+    });
+});
+
+describe("writeDlgFromModel, what it refuses and what it appends", () => {
+    it("refuses a line that is not a game string reference, rather than storing a number it invented", () => {
+        // A compiled dialog has nowhere to put prose - the record holds a number into the game's text.
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.text = "Hello, sailor!";
+
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/string reference/i);
+    });
+
+    it("refuses a reply whose text is not a string reference either", () => {
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.choices[0]!.text = "Typed in by hand";
+
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/reply/i);
+    });
+
+    it("appends a new trigger to the table rather than renumbering the entries above it", () => {
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.trigger = 'Global("new","GLOBAL",1)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)', 'Global("new","GLOBAL",1)']);
+        expect(dlg.states[0]!.triggerIndex).toBe(1);
+    });
+
+    it("points a second user of one text at the entry that already holds it", () => {
+        const after = sampleModel();
+        // State 1 takes the trigger state 0 already carries; the table must not gain a duplicate.
+        after.roots[0]!.states[1]!.trigger = 'Global("x","GLOBAL",1)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)']);
+        expect(dlg.states[1]!.triggerIndex).toBe(0);
+    });
+
+    it("stores a reply pointing at a dialog the tree does not hold", () => {
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.choices[0]!.target = { kind: "external", label: "OTHER:7", resolved: false };
+
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(resrefName(dlg.transitions[0]!.nextDialog)).toBe("OTHER");
+        expect(dlg.transitions[0]!.nextState).toBe(7);
+        expect(dlg.transitions[0]!.terminatesDialog).toBe(false);
+    });
+
+    it("refuses an external target that does not name a dialog and a state", () => {
+        // Every other family's external label is free-form prose (a D `EXTERN` name, an SSL call). There is
+        // no field pair on the wire for that, so it is refused rather than stored as a guess.
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.choices[0]!.target = { kind: "external", label: "somewhere else", resolved: false };
+
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/cannot store the target/i);
+    });
+
+    it("refuses a reply pointing at a state of this dialog that is not there", () => {
+        const after = sampleModel();
+        after.roots[0]!.states[0]!.choices[0]!.target = { kind: "state", stateId: "TEST:9" };
+
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/no state/i);
     });
 });

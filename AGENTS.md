@@ -40,7 +40,7 @@ VSCode extension providing IDE features for niche scripting languages used in cl
 - **SCS SSL/SLB** - Sword Coast Stratagems scripting (Infinity Engine AI mods)
 - **Transpilers** - TypeScript-like languages compiling to the above: TBAF->BAF, TD->D. TSSL is a compiler: TypeScript straight to Fallout INT bytecode, with SSL as an optional output
 
-**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview; also opens compiled IE `.dlg`, whose lines are editable by repointing their strref while its structure is read-only), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
+**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview; also opens compiled IE `.dlg`, whose lines are editable by repointing their strref and whose replies and states are structurally editable except for state NUMBERING - a state is detached, never removed; the tree also draws the states of neighbouring dialogs this conversation reaches), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
 
 **How it works:**
 

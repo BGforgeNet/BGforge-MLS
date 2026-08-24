@@ -637,3 +637,51 @@ describe("DlgDialogEditorProvider, the dialogs around this one", () => {
         expect(h.posted.some((p) => p.type === "error")).toBe(false);
     });
 });
+
+describe("DlgDialogEditorProvider, what it refuses", () => {
+    const settle = (): Promise<void> =>
+        new Promise((resolve) => {
+            setTimeout(resolve, 0);
+        });
+
+    test("says so when the file cannot be read at all, instead of showing an empty dialog", async () => {
+        const h = harness();
+        files.set(DLG_URI, new Uint8Array([1, 2, 3, 4]));
+        const document = await h.provider.openCustomDocument(DLG_URI_VALUE as never, {} as never);
+
+        await h.provider.resolveCustomEditor(document, h.panel, {} as never);
+        h.ready();
+
+        expect(h.posted.find((p) => p.type === "error")?.message).toMatch(/could not read/i);
+        expect(h.posted.some((p) => p.type === "model")).toBe(false);
+    });
+
+    test("reports a detach of a state that is not there rather than dropping it", async () => {
+        prompts.length = 0;
+        const h = harness();
+        files.set(DLG_URI, buildLinkedDlgBytes());
+        const document = await h.provider.openCustomDocument(DLG_URI_VALUE as never, {} as never);
+        await h.provider.resolveCustomEditor(document, h.panel, {} as never);
+        h.ready();
+
+        h.send({ type: "detach", stateIndex: 9 });
+        await settle();
+
+        expect(h.posted.find((p) => p.type === "error")?.message).toMatch(/no state 9/i);
+        // Nothing was asked, because there was nothing to ask about.
+        expect(prompts).toHaveLength(0);
+    });
+
+    test("ignores a detach and a string pick before any model has been posted", async () => {
+        const h = harness();
+        files.set(DLG_URI, buildLinkedDlgBytes());
+        const document = await h.provider.openCustomDocument(DLG_URI_VALUE as never, {} as never);
+        await h.provider.resolveCustomEditor(document, h.panel, {} as never);
+
+        h.send({ type: "detach", stateIndex: 0 });
+        h.send({ type: "pickString", stateIndex: 0 });
+        await settle();
+
+        expect(h.posted).toHaveLength(0);
+    });
+});
