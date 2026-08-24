@@ -1,0 +1,35 @@
+{
+    "name": "@bgforge/bcs",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Infinity Engine BCS codec: reads a compiled script into a faithful tree and writes it back byte for byte.",
+    "keywords": [
+        "bcs",
+        "codec",
+        "infinity-engine",
+        "modding",
+        "weidu"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN ../../LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "compilers/bcs"
+    },
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "devDependencies": {
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

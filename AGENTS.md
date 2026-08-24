@@ -63,6 +63,7 @@ binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
+compilers/bcs/           # @bgforge/bcs package (private): Infinity Engine BCS codec - reads a compiled script into a tree, writes it back byte for byte
 compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "built-in" compiler
 compilers/tssl/          # @bgforge/tssl package: TypeScript -> INT compiler + the `tssl` CLI. Emits bytecode by default; `--transpile` also writes the readable SSL
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
@@ -202,6 +203,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Server npm package      | `server/README.md`                                                                                                         |
 | Image library           | `image/README.md`                                                                                                          |
 | SSL compiler + CLI      | `compilers/ssl/README.md` (CLI ships as `ssl` bin in the private `@bgforge/ssl`)                                           |
+| BCS codec               | `compilers/bcs/README.md` (library only; no CLI)                                                                           |
 | Data files              | `server/data/README.md`                                                                                                    |
 | Data pipeline           | `docs/data-pipeline.md`                                                                                                    |
 | Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |

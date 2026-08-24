@@ -144,6 +144,9 @@ const config: KnipConfig = {
         image: {
             entry: ["test/**/*.test.ts"],
         },
+        "compilers/bcs": {
+            entry: ["test/**/*.test.ts"],
+        },
         "compilers/ssl": {
             // Both suites, since the gcc differential runs from its own config in the close-out phase.
             // The `scripts/*.mts` probes are run by hand through the root scripts of the same name, so

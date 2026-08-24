@@ -5,6 +5,7 @@ packages:
   - format
   - image
   - server
+  - compilers/bcs
   - compilers/ssl
   - compilers/tssl
   - grammars/*
