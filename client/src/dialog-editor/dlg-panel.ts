@@ -14,10 +14,10 @@
 
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
-import { modelFromDlgs, resrefName, type DlgModelInput } from "../../../shared/dialog-model-dlg";
+import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "../../../shared/dialog-model-dlg";
 import { detachDlgState, setDlgLineText } from "../../../shared/dialog-dlg-edit";
 import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
-import { neighbourDialogs, type InboundRef } from "./dlg-references";
+import { neighbourStates, type InboundRef } from "./dlg-references";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
@@ -38,8 +38,8 @@ export interface DlgHostDeps {
      * which is NOT the same as finding none, and must never be presented as if it were.
      */
     inbound?: (resref: string, stateIndex: number) => InboundRef[] | undefined;
-    /** Which dialogs jump into this one at all, so the tree can show the conversations arriving here. */
-    inboundDialogs?: (resref: string) => string[] | undefined;
+    /** Every reply elsewhere that leads into this dialog, so the tree can show the conversations arriving. */
+    inboundToDialog?: (resref: string) => InboundRef[];
     /** Reads another game resource, which is how a neighbouring dialog is loaded into the same tree. */
     resourceBytes?: (uri: vscode.Uri, resref: string, ext: string) => Uint8Array | undefined;
 }
@@ -315,13 +315,15 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         const resref = resrefOf(document.uri);
         const main: DlgModelInput = { ...dlg, resref };
         const { load, omitted } = this.neighboursOf(main, resref);
-        const others = load
-            .map((name) => this.readNeighbour(document.uri, name))
-            .filter((input) => input !== undefined);
+        const others: DlgNeighbour[] = [];
+        for (const [name, include] of load) {
+            const neighbour = this.readNeighbour(document.uri, name);
+            if (neighbour) others.push({ dlg: neighbour, include });
+        }
         const model = modelFromDlgs(main, others);
 
         const strrefs = new Set<number>();
-        for (const input of [main, ...others]) {
+        for (const input of [main, ...others.map((o) => o.dlg)]) {
             for (const state of input.states) strrefs.add(state.text);
             for (const transition of input.transitions) {
                 if (transition.hasText) strrefs.add(transition.text);
@@ -344,14 +346,17 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
     }
 
     /**
-     * Which other dialogs to show alongside this one: the dialogs it hands off to, read straight from its own
-     * replies, plus the dialogs that hand off to it, which only the game-wide index knows. An index still
-     * building simply contributes nothing here - the outgoing half is complete either way.
+     * Which states of other dialogs to show alongside this one: the states it hands off to, read straight
+     * from its own replies, plus the states holding the replies that hand off to it, which only the
+     * game-wide index knows. An index still building simply contributes nothing here - the outgoing half is
+     * complete either way.
      */
-    private neighboursOf(dlg: DlgModelInput, resref: string): { load: string[]; omitted: number } {
-        if (!this.deps.resourceBytes) return { load: [], omitted: 0 };
-        const outgoing = dlg.transitions.filter((t) => !t.terminatesDialog).map((t) => t.nextDialog);
-        return neighbourDialogs(outgoing, this.deps.inboundDialogs?.(resref) ?? [], resref);
+    private neighboursOf(dlg: DlgModelInput, resref: string): { load: Map<string, number[]>; omitted: number } {
+        if (!this.deps.resourceBytes) return { load: new Map(), omitted: 0 };
+        const outgoing = dlg.transitions
+            .filter((t) => !t.terminatesDialog)
+            .map((t) => ({ dialog: resrefName(t.nextDialog) || resref, state: t.nextState }));
+        return neighbourStates(outgoing, this.deps.inboundToDialog?.(resref) ?? [], resref);
     }
 
     /**

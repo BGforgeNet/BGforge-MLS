@@ -192,10 +192,9 @@ describe("writeDlgFromModel, table entries", () => {
 describe("writeDlgFromModel, a tree holding more than one dialog", () => {
     /** What the tree looks like once the neighbours a conversation hands off to are loaded alongside it. */
     function withNeighbour(): DialogModel {
-        const model = modelFromDlgs({ ...readDlg(original()), resref: "TEST" }, [
-            { ...readDlg(original()), resref: "OTHER" },
+        return modelFromDlgs({ ...readDlg(original()), resref: "TEST" }, [
+            { dlg: { ...readDlg(original()), resref: "OTHER" }, include: [0, 1] },
         ]);
-        return model;
     }
 
     it("writes only the states of the file it was asked for", () => {

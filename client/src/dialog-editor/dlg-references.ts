@@ -39,33 +39,48 @@ function yieldToHost(): Promise<void> {
 const key = (resref: string, state: number): string => `${resref.toUpperCase()}:${state}`;
 
 /**
- * How many other dialogs are loaded alongside the one being edited. Measured against a full Baldur's Gate II
- * install: most dialogs have no cross-file neighbour at all, about 97% have twelve or fewer, and the busiest
- * hub has 179 - a tree nobody can read and a parse nobody asked for. The bound is on the tree's usefulness,
- * not on the index, which holds the whole game either way.
+ * How many states of OTHER dialogs are drawn alongside the one being edited. The bound is on the tree's
+ * usefulness: a companion's dialog runs to hundreds of states, and a busy hub is reached from dozens of
+ * files, so an unbounded neighbourhood buries the file being edited under context.
  */
-export const NEIGHBOUR_LIMIT = 12;
+export const NEIGHBOUR_STATE_LIMIT = 24;
+
+/** A jump this dialog makes into another file: which dialog, and which of its states it lands on. */
+export interface OutboundRef {
+    readonly dialog: string;
+    readonly state: number;
+}
 
 /**
- * The dialogs to load alongside `ownResref` so its conversation closes up: the ones it hands off to first,
- * since those edges are visible in the file being edited, then the ones that hand off to it. Returns what was
- * left out rather than truncating quietly - a tree missing a branch must not look like a complete one.
+ * The states of other dialogs to draw alongside `ownResref` so its conversation closes up: the states it
+ * hands off to first, since those edges are visible in the file being edited, then the states holding the
+ * replies that hand off to it. Returns what was left out rather than truncating quietly - a tree missing a
+ * branch must not look like a complete one.
  */
-export function neighbourDialogs(
-    outgoing: Iterable<string>,
-    incoming: Iterable<string>,
+export function neighbourStates(
+    outgoing: readonly OutboundRef[],
+    incoming: readonly InboundRef[],
     ownResref: string,
-): { load: string[]; omitted: number } {
+): { load: Map<string, number[]>; omitted: number } {
     const own = resrefName(ownResref);
-    const all: string[] = [];
-    const seen = new Set<string>([own]);
-    for (const raw of [...outgoing, ...incoming]) {
-        const name = resrefName(raw);
-        if (!name || seen.has(name)) continue;
-        seen.add(name);
-        all.push(name);
+    const load = new Map<string, number[]>();
+    const seen = new Set<string>();
+    let taken = 0;
+    let omitted = 0;
+    for (const ref of [...outgoing, ...incoming]) {
+        const name = resrefName(ref.dialog);
+        if (!name || name === own) continue;
+        const id = `${name}:${ref.state}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        if (taken >= NEIGHBOUR_STATE_LIMIT) {
+            omitted++;
+            continue;
+        }
+        taken++;
+        load.set(name, [...(load.get(name) ?? []), ref.state]);
     }
-    return { load: all.slice(0, NEIGHBOUR_LIMIT), omitted: Math.max(0, all.length - NEIGHBOUR_LIMIT) };
+    return { load, omitted };
 }
 
 export class DlgReferenceIndex {
@@ -73,8 +88,8 @@ export class DlgReferenceIndex {
     private targets = new Map<string, InboundRef[]>();
     /** Every edge a given dialog contributes, so re-reading one file can retract exactly its own. */
     private bySource = new Map<string, { key: string; target: string; ref: InboundRef }[]>();
-    /** target dialog -> the dialogs holding a reply into it, for "what should be loaded alongside this one". */
-    private byTargetDialog = new Map<string, Set<string>>();
+    /** target dialog -> every reply leading into it, for "what should be drawn alongside this one". */
+    private byTargetDialog = new Map<string, InboundRef[]>();
     private built = false;
 
     /** False until a build has completed. An unfinished index answers `inbound` with nothing - say so. */
@@ -88,12 +103,13 @@ export class DlgReferenceIndex {
     }
 
     /**
-     * The other dialogs that jump into `resref`, at any state. Kept as its own map rather than derived from
-     * `targets`, which is keyed per state and would have to be walked in full for every open.
+     * Every reply in ANOTHER dialog that leads into `resref`, at any state. Kept as its own map rather than
+     * derived from `targets`, which is keyed per state and would have to be walked in full for every open.
+     * A dialog's own internal jumps are excluded: those states are already in the tree.
      */
-    inboundDialogs(resref: string): string[] {
+    inboundToDialog(resref: string): InboundRef[] {
         const name = resrefName(resref);
-        return [...(this.byTargetDialog.get(name) ?? [])].filter((source) => source !== name);
+        return (this.byTargetDialog.get(name) ?? []).filter((ref) => ref.dialog !== name);
     }
 
     /**
@@ -135,10 +151,11 @@ export class DlgReferenceIndex {
             }
             // Every edge this file contributes is retracted together, so removing it from each target it
             // reached is exact - no other edge of its own can still be holding the entry open.
-            const sources = this.byTargetDialog.get(dialog);
-            if (!sources) continue;
-            sources.delete(name);
-            if (sources.size === 0) this.byTargetDialog.delete(dialog);
+            const arriving = this.byTargetDialog.get(dialog);
+            if (!arriving) continue;
+            const left = arriving.filter((r) => r !== ref);
+            if (left.length === 0) this.byTargetDialog.delete(dialog);
+            else this.byTargetDialog.set(dialog, left);
         }
         this.bySource.delete(name);
     }
@@ -173,9 +190,9 @@ export class DlgReferenceIndex {
                 const list = this.targets.get(entry.key);
                 if (list) list.push(entry.ref);
                 else this.targets.set(entry.key, [entry.ref]);
-                const sources = this.byTargetDialog.get(target) ?? new Set<string>();
-                sources.add(source);
-                this.byTargetDialog.set(target, sources);
+                const arriving = this.byTargetDialog.get(target) ?? [];
+                arriving.push(entry.ref);
+                this.byTargetDialog.set(target, arriving);
             }
         }
         this.bySource.set(source, own);

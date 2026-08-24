@@ -141,31 +141,51 @@ function stateFrom(
     };
 }
 
-function rootFrom(input: DlgModelInput, present: Present, external: boolean): DialogRoot {
+/**
+ * A neighbouring dialog and the states of it to bring in. Only the referenced states, never the whole file: a
+ * companion's dialog runs to hundreds of states, and pulling one in whole to close a single edge buries the
+ * file being edited under it. Indices out of range are dropped rather than faked.
+ */
+export interface DlgNeighbour {
+    dlg: DlgModelInput;
+    include: number[];
+}
+
+function rootFrom(input: DlgModelInput, present: Present, include?: number[]): DialogRoot {
     const ownResref = resrefName(input.resref);
+    const indices =
+        include === undefined
+            ? input.states.map((_s, i) => i)
+            : [...new Set(include)].sort((a, b) => a - b).filter((i) => input.states[i] !== undefined);
     return {
         id: `dialog:${ownResref}`,
         label: ownResref,
         kind: "dialog",
-        states: input.states.map((s, i) => stateFrom(s, i, input, ownResref, present)),
-        ...(external ? { external: true } : {}),
+        states: indices.map((i) => stateFrom(input.states[i]!, i, input, ownResref, present)),
+        ...(include === undefined ? {} : { external: true }),
     };
 }
 
 /**
- * One tree spanning several dialogs: the file being edited first, then every other dialog loaded alongside
- * it. Conversations routinely hand off to another file and hand back, so drawing only the opened file cuts
- * the graph exactly where the interesting edges are; with the neighbours present, a jump out and a jump back
- * resolve to nodes and the round trip closes. The others are marked external - they are context, not the
- * thing being written.
+ * One tree spanning several dialogs: the file being edited in full, then the individual states of other
+ * dialogs that this conversation reaches or is reached from. Conversations routinely hand off to another file
+ * and hand back, so drawing only the opened file cuts the graph exactly where the interesting edges are; with
+ * those states present, a jump out and a jump back resolve to nodes and the round trip closes. They are
+ * marked external - they are context, not the thing being written.
  */
-export function modelFromDlgs(main: DlgModelInput, others: DlgModelInput[]): DialogModel {
-    const loaded = new Map<string, number>();
-    for (const input of [main, ...others]) loaded.set(resrefName(input.resref), input.states.length);
-    const present: Present = (resref, stateIndex) => {
-        const count = loaded.get(resref);
-        return count !== undefined && stateIndex >= 0 && stateIndex < count;
-    };
+export function modelFromDlgs(main: DlgModelInput, others: DlgNeighbour[]): DialogModel {
+    const mainResref = resrefName(main.resref);
+    const loaded = new Map<string, Set<number>>();
+    for (const { dlg, include } of others) {
+        const name = resrefName(dlg.resref);
+        const set = loaded.get(name) ?? new Set<number>();
+        for (const i of include) if (dlg.states[i] !== undefined) set.add(i);
+        loaded.set(name, set);
+    }
+    const present: Present = (resref, stateIndex) =>
+        resref === mainResref
+            ? stateIndex >= 0 && stateIndex < main.states.length
+            : (loaded.get(resref)?.has(stateIndex) ?? false);
     return {
         sourceLang: "dlg",
         // Not blanket-editable: that flag means "every state, freely", the D family's contract, and drives
@@ -173,8 +193,8 @@ export function modelFromDlgs(main: DlgModelInput, others: DlgModelInput[]): Dia
         editable: false,
         // Set here rather than left to the host, as the other families do: with several dialogs in one tree
         // this is what says WHICH of them is being written, and `nodeEditable` reads it.
-        sourceName: resrefName(main.resref),
-        roots: [rootFrom(main, present, false), ...others.map((o) => rootFrom(o, present, true))],
+        sourceName: mainResref,
+        roots: [rootFrom(main, present), ...others.map((o) => rootFrom(o.dlg, present, o.include))],
     };
 }
 

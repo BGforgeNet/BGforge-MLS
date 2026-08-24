@@ -72,7 +72,7 @@ export interface DialogModel {
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
     messages?: DialogMessages;
     /**
-     * DLG only: how many neighbouring dialogs were left out of the tree because it holds a bounded number of
+     * DLG only: how many states of other dialogs were left out of the tree, which holds a bounded number of
      * them. Present only when some were, so the view can say so rather than looking complete. Set by the host.
      */
     dlgNeighboursOmitted?: number;

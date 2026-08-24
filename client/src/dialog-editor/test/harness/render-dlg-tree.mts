@@ -64,7 +64,7 @@ const neighbour: DlgModelInput = {
 };
 
 const model = {
-    ...modelFromDlgs(main, [neighbour]),
+    ...modelFromDlgs(main, [{ dlg: neighbour, include: [0] }]),
     messages: {
         "100": "Go for the eyes, Boo! GO FOR THE EYES!",
         "101": "Minsc will remember this.",

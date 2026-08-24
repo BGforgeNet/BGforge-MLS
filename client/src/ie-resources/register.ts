@@ -62,8 +62,8 @@ function dlgSourceFor(game: Game): DlgSource {
 export function registerIeResources(context: vscode.ExtensionContext): {
     /** Which replies lead into a dialog state; `undefined` until the game-wide scan has finished. */
     inbound: (resref: string, stateIndex: number) => InboundRef[] | undefined;
-    /** Which dialogs jump into this one at all; empty until the scan has finished, as `inbound` is. */
-    inboundDialogs: (resref: string) => string[];
+    /** Every reply elsewhere leading into this dialog; empty until the scan has finished, as `inbound` is. */
+    inboundToDialog: (resref: string) => InboundRef[];
     strref: StrrefResolver;
     /** Opens the string picker for a document, resolving to the chosen strref or undefined if dismissed. */
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
@@ -137,10 +137,21 @@ export function registerIeResources(context: vscode.ExtensionContext): {
      */
     const references = new DlgReferenceIndex();
     let referenceScan: AbortController | undefined;
+    /** Which game the current scan covers, so asking about it again does not restart it. */
+    let scannedDir: string | undefined;
     const scanReferences = (dir: string): void => {
+        if (dir === scannedDir) return;
         referenceScan?.abort();
-        const game = session.game(dir);
-        if (!game) return;
+        let game;
+        try {
+            // Opening, not just fetching: the scan can be the first thing to need this game, and a dialog
+            // opened straight from the explorer reaches it through the configured path rather than the view.
+            game = session.ensureOpen(dir);
+        } catch (error) {
+            conlog(`ieResources: no game to scan at ${dir}: ${error instanceof Error ? error.message : String(error)}`);
+            return;
+        }
+        scannedDir = dir;
         const controller = new AbortController();
         referenceScan = controller;
         // Deliberately not awaited: this returns to the caller immediately and the scan yields as it goes,
@@ -179,6 +190,18 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await setHasGame(true);
         tree.refresh();
         updateHeader();
+    };
+
+    /**
+     * Start the scan for whichever game is in play, if it has not run for that one yet. A game becomes
+     * available two ways: opened through the view, or resolved lazily from the configured path the first time
+     * something asks it for a string. Only the first calls `openGameDir`, so without this a `.dlg` opened
+     * straight from the explorer would have every strref resolved and still report that nothing had been
+     * checked - a scan tied to a view the user never opened.
+     */
+    const ensureScanned = (): void => {
+        const dir = fallbackGameDir();
+        if (dir !== undefined) scanReferences(dir);
     };
 
     const openGameFolder = async (): Promise<void> => {
@@ -327,11 +350,16 @@ export function registerIeResources(context: vscode.ExtensionContext): {
          * Replies leading into a dialog state. `undefined` while the scan is still running - the caller must
          * not present that as "nothing points here".
          */
-        inbound: (resref: string, stateIndex: number) =>
-            references.ready ? references.inbound(resref, stateIndex) : undefined,
-        // Empty rather than undefined while the scan runs: this only decides which extra dialogs the tree
+        inbound: (resref: string, stateIndex: number) => {
+            ensureScanned();
+            return references.ready ? references.inbound(resref, stateIndex) : undefined;
+        },
+        // Empty rather than undefined while the scan runs: this only decides which extra states the tree
         // shows, so an incomplete answer costs a branch, not a wrong statement about what reaches a state.
-        inboundDialogs: (resref: string) => (references.ready ? references.inboundDialogs(resref) : []),
+        inboundToDialog: (resref: string) => {
+            ensureScanned();
+            return references.ready ? references.inboundToDialog(resref) : [];
+        },
         strref: strrefResolver,
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),

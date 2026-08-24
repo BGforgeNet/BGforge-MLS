@@ -189,7 +189,9 @@ function otherDlg(): DlgModelInput {
 }
 
 describe("modelFromDlgs - one tree spanning several dialogs", () => {
-    const tree = () => modelFromDlgs(sampleDlg(), [otherDlg()]);
+    // Only the states actually referenced are pulled in. A companion's dialog runs to hundreds of states, and
+    // loading one whole to close a single edge buries the file being edited under it.
+    const tree = () => modelFromDlgs(sampleDlg(), [{ dlg: otherDlg(), include: [1, 4] }]);
 
     test("puts the dialog being edited first and each other dialog after it", () => {
         const model = tree();
@@ -210,7 +212,7 @@ describe("modelFromDlgs - one tree spanning several dialogs", () => {
     });
 
     test("closes an out-and-back jump onto the state it came from", () => {
-        const back = tree().roots[1]!.states[1]!.choices[0]!;
+        const back = tree().roots[1]!.states[0]!.choices[0]!;
 
         // OTHERDLG's reply points at SELFDLG:0, which is a node already in this tree.
         expect(back.target).toEqual({ kind: "state", stateId: "SELFDLG:0" });
@@ -220,7 +222,12 @@ describe("modelFromDlgs - one tree spanning several dialogs", () => {
         const model = tree();
 
         expect(new Set(model.roots[1]!.states.map((s) => s.dlgResref))).toEqual(new Set(["OTHERDLG"]));
-        expect(model.roots[1]!.states.map((s) => s.dlgIndex)).toEqual([0, 1, 2, 3, 4]);
+        // The numbers are the neighbour's own, not positions in the shortened list.
+        expect(model.roots[1]!.states.map((s) => s.dlgIndex)).toEqual([1, 4]);
+    });
+
+    test("brings in only the states that were asked for, not the whole neighbouring file", () => {
+        expect(tree().roots[1]!.states.map((s) => s.id)).toEqual(["OTHERDLG:1", "OTHERDLG:4"]);
     });
 
     test("leaves a jump into a dialog that was not loaded external", () => {
@@ -238,7 +245,7 @@ describe("modelFromDlgs - one tree spanning several dialogs", () => {
         // the edited file's name on a neighbour's card - "MINSC - VICONIA:0", a speaker who is not speaking.
         const model = tree();
 
-        expect(stateHeadLabel(model.roots[1]!.states[0]!, model.sourceName)).toBe("OTHERDLG - OTHERDLG:0");
+        expect(stateHeadLabel(model.roots[1]!.states[0]!, model.sourceName)).toBe("OTHERDLG - OTHERDLG:1");
         expect(stateHeadLabel(model.roots[0]!.states[0]!, model.sourceName)).toBe("SELFDLG - SELFDLG:0");
     });
 
@@ -249,16 +256,21 @@ describe("modelFromDlgs - one tree spanning several dialogs", () => {
         for (const state of tree().roots[1]!.states) expect(nodeEditable(tree(), state)).toBe(false);
     });
 
-    test("leaves a jump past the end of a loaded dialog external rather than pointing at nothing", () => {
-        // A mod that replaces a dialog with a shorter one leaves stale jumps behind. Resolving one would put
-        // an edge into the tree with no node on the far end.
-        const short = otherDlg();
-        short.states = short.states.slice(0, 2);
+    test("leaves a jump at a state that was not brought in external rather than pointing at nothing", () => {
+        // The bound on how many states are pulled in, and a mod that replaces a dialog with a shorter one,
+        // both land here: resolving would put an edge in the tree with no node on the far end.
+        const partial = modelFromDlgs(sampleDlg(), [{ dlg: otherDlg(), include: [1] }]);
 
-        expect(modelFromDlgs(sampleDlg(), [short]).roots[0]!.states[0]!.choices[2]!.target).toEqual({
+        expect(partial.roots[0]!.states[0]!.choices[2]!.target).toEqual({
             kind: "external",
             label: "OTHERDLG:4",
             resolved: false,
         });
+    });
+
+    test("ignores a state number the neighbouring file does not have", () => {
+        const model = modelFromDlgs(sampleDlg(), [{ dlg: otherDlg(), include: [4, 99] }]);
+
+        expect(model.roots[1]!.states.map((s) => s.dlgIndex)).toEqual([4]);
     });
 });

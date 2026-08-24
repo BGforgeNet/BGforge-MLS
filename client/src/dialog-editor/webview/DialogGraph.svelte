@@ -1372,12 +1372,12 @@
             {/each}
         </div>
     {/if}
-    <!-- The tree holds a bounded number of neighbouring dialogs, so a busy hub shows some and not all. Say how
-         many were left out: a graph missing branches must not look like a complete one. -->
+    <!-- The tree holds a bounded number of states from other dialogs, so a busy hub shows some and not all.
+         Say how many were left out: a graph missing branches must not look like a complete one. -->
     {#if editModel.dlgNeighboursOmitted}
         <div class="omitnote">
-            Showing {editModel.roots.length - 1} of the {editModel.roots.length - 1 + editModel.dlgNeighboursOmitted}
-            dialogs connected to this one. Open one of the others directly to see its own conversation.
+            {editModel.dlgNeighboursOmitted} more states in other dialogs connect to this one and are not shown.
+            Open those dialogs directly to see them.
         </div>
     {/if}
     <!-- One docked toolbar header shared by BOTH views. Previously the graph floated its toolbar over the

@@ -159,7 +159,7 @@ function harness(
     inbound?: (resref: string, state: number) => unknown[] | undefined,
     /** The game side of loading the dialogs a conversation hands off to, absent unless a test wires it. */
     neighbours: {
-        inboundDialogs?: (resref: string) => string[] | undefined;
+        inboundToDialog?: (resref: string) => { dialog: string; state: number; transition: number }[];
         resourceBytes?: (uri: unknown, resref: string, ext: string) => Uint8Array | undefined;
     } = {},
 ) {
@@ -600,14 +600,16 @@ describe("DlgDialogEditorProvider, the dialogs around this one", () => {
     test("loads the dialog this one hands off to, so the jump lands on a node", async () => {
         const h = await opened({ resourceBytes: (_uri, resref) => (resref === "OTHERDLG" ? plain() : undefined) });
 
-        const model = h.model() as { roots: { label: string; external?: boolean }[] };
+        const model = h.model() as { roots: { label: string; external?: boolean; states: { id: string }[] }[] };
         expect(model.roots.map((r) => r.label)).toEqual(["EDITDLG", "OTHERDLG"]);
         expect(model.roots[1]!.external).toBe(true);
+        // Only the state the reply lands on, not the whole neighbouring file.
+        expect(model.roots[1]!.states.map((s) => s.id)).toEqual(["OTHERDLG:1"]);
     });
 
     test("loads the dialogs that jump into this one, which the file itself cannot name", async () => {
         const h = await opened({
-            inboundDialogs: () => ["CALLER"],
+            inboundToDialog: () => [{ dialog: "CALLER", state: 1, transition: 0 }],
             resourceBytes: (_uri, resref) => (resref === "CALLER" ? plain() : undefined),
         });
 
