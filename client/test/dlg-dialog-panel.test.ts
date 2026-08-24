@@ -382,14 +382,14 @@ describe("DlgDialogEditorProvider, changing what a line says", () => {
         expect(storedStateText(document.bytes)).toBe(100);
     });
 
-    test("reports an edit this path cannot write rather than dropping it", async () => {
-        // The webview locks structure for a DLG, so this should be unreachable - but a dropped edit reads to
-        // the user as one that saved, which is the failure worth being loud about.
+    test("reports an edit that would drop a state rather than writing a shorter dialog", async () => {
+        // Removing a state renumbers every state above it, and those numbers are addresses other dialogs and
+        // mod scripts hold. Detaching is the supported way out; this must never be reached silently.
         const { h, document } = await editing();
 
         h.send({ type: "edit", model: { ...h.model(), roots: [] } });
 
-        expect(h.posted.find((p) => p.type === "error")?.message).toMatch(/structure/i);
+        expect(h.posted.find((p) => p.type === "error")?.message).toMatch(/missing|detach/i);
         expect(storedStateText(document.bytes)).toBe(100);
     });
 

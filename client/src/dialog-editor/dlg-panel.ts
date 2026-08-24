@@ -14,11 +14,11 @@
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
 import { modelFromDlg } from "../../../shared/dialog-model-dlg";
-import { dlgTextEdits, type DlgTextEdit } from "../../../shared/dialog-dlg-edit";
+import { setDlgLineText } from "../../../shared/dialog-dlg-edit";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
-import { applyDlgTextEdits } from "./dlg-write";
+import { writeDlgFromModel } from "./dlg-write";
 import { buildDialogHostHtml } from "./webview-host-html";
 
 /**
@@ -72,13 +72,15 @@ export class DlgDocument implements vscode.CustomDocument {
     }
 
     /**
-     * Apply string-reference edits, making the document dirty and undoable. Rewrites the whole file from its
-     * own parsed content, so anything the editor does not model is carried through untouched.
+     * Rewrite the file to match `model`, making the document dirty and undoable. Every change this editor
+     * makes comes through here, so there is one writer and one place the undo history is recorded.
      */
-    applyTextEdits(edits: readonly DlgTextEdit[], label: string): void {
-        if (edits.length === 0) return;
+    applyModel(model: DialogModel, label: string): void {
         const before = this.current;
-        const after = applyDlgTextEdits(before, edits);
+        const after = writeDlgFromModel(before, model, resrefOf(this.uri));
+        // A change that writes the same bytes is not a change; without this an edit that cancels itself out,
+        // or a model posted with nothing altered, would still dirty the tab and stack an empty undo step.
+        if (after.length === before.length && after.every((byte, i) => byte === before[i])) return;
         this.current = after;
         this._onDidChange.fire({
             document: this,
@@ -200,14 +202,15 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         stateIndex: unknown,
         choiceIndex: unknown,
     ): Promise<void> {
-        if (typeof stateIndex !== "number") return;
+        const shown = this.posted.get(document);
+        if (typeof stateIndex !== "number" || !shown) return;
         const what = typeof choiceIndex === "number" ? "reply" : "line";
         const strref = await this.deps.pickStrref(document.uri, `Choose the string for this ${what}`);
         if (strref === undefined) return;
-        const edit: DlgTextEdit =
-            typeof choiceIndex === "number" ? { stateIndex, choiceIndex, strref } : { stateIndex, strref };
+        const address = typeof choiceIndex === "number" ? { stateIndex, choiceIndex } : { stateIndex };
         try {
-            document.applyTextEdits([edit], `Change ${what} string`);
+            const edited = setDlgLineText(shown, resrefOf(document.uri), address, strref);
+            document.applyModel(edited, `Change ${what} string`);
         } catch (error) {
             post({ type: "error", message: String(error) });
             return;
@@ -216,16 +219,14 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
     }
 
     /**
-     * Apply an edited model posted by the webview. Anything this path cannot express is reported rather than
+     * Apply an edited model posted by the webview. Anything the writer refuses is reported rather than
      * dropped: a silently ignored edit reads to the user as one that was saved.
      */
     private applyModelEdit(document: DlgDocument, post: (msg: unknown) => void, incoming: unknown): void {
-        const original = this.posted.get(document);
-        if (!original || typeof incoming !== "object" || incoming === null) return;
+        if (typeof incoming !== "object" || incoming === null) return;
         try {
-            const edits = dlgTextEdits(original, incoming as DialogModel, resrefOf(document.uri));
-            document.applyTextEdits(edits, "Edit dialog");
-            if (edits.length > 0) this.postModel(document, post);
+            document.applyModel(incoming as DialogModel, "Edit dialog");
+            this.postModel(document, post);
         } catch (error) {
             post({ type: "error", message: String(error) });
         }

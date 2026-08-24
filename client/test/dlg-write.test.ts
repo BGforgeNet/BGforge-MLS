@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildDlg, readDlg, type DlgBuildInput } from "@bgforge/binary";
-import { applyDlgTextEdits } from "../src/dialog-editor/dlg-write";
+import { writeDlgFromModel } from "../src/dialog-editor/dlg-write";
+import { modelFromDlg } from "../../shared/dialog-model-dlg";
+import type { DialogModel } from "../../shared/dialog-model";
 
 /** Resrefs are fixed-width and NUL-padded on the wire, which is how the reader hands them back. */
 const resref = (name: string) => name.padEnd(8, "\u0000");
@@ -52,57 +54,137 @@ function sample(): DlgBuildInput {
 
 const original = () => buildDlg(sample());
 
-describe("applyDlgTextEdits", () => {
-    it("rewrites a state's line to the chosen string", () => {
-        const dlg = readDlg(applyDlgTextEdits(original(), [{ stateIndex: 1, strref: 99 }]));
-        expect(dlg.states[1]!.text).toBe(99);
+/** The model a freshly-opened `sample()` produces, which edits below mutate a clone of. */
+function sampleModel(): DialogModel {
+    return modelFromDlg({ ...readDlg(original()), resref: "TEST" });
+}
+
+function editedModel(mutate: (m: DialogModel) => void): DialogModel {
+    const copy = structuredClone(sampleModel()) as DialogModel;
+    mutate(copy);
+    return copy;
+}
+
+const statesOf = (m: DialogModel) => m.roots[0]!.states;
+
+describe("writeDlgFromModel", () => {
+    it("reproduces the file byte for byte when nothing changed", () => {
+        expect(writeDlgFromModel(original(), sampleModel(), "TEST")).toEqual(original());
+    });
+
+    it("shrinks a state's reply window when a reply is removed, and shifts the states after it", () => {
+        const after = editedModel((m) => {
+            statesOf(m)[0]!.choices.splice(0, 1);
+        });
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.states[0]!.transitionCount).toBe(1);
+        // State 1's single reply used to start at 2; with one gone above it, it starts at 1.
+        expect(dlg.states[1]!.firstTransition).toBe(1);
+        expect(dlg.states[1]!.transitionCount).toBe(1);
+        expect(dlg.transitions).toHaveLength(2);
+        // The surviving reply is the one that was second - carrying its journal entry with it.
+        expect(dlg.transitions[0]!.journalText).toBe(500);
+    });
+
+    it("appends a new state after the existing ones, leaving their indices alone", () => {
+        const after = editedModel((m) => {
+            statesOf(m).push({ id: "new", dlgResref: "TEST", text: "@42", choices: [] });
+        });
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.states).toHaveLength(3);
+        expect(dlg.states[2]!.text).toBe(42);
         expect(dlg.states[0]!.text).toBe(10);
+        expect(dlg.states[1]!.text).toBe(11);
     });
 
-    it("rewrites a reply, addressing it by its position within its state", () => {
-        // State 1's only reply is transition 2 - a position-within-state of 0, not a table index of 0.
-        const dlg = readDlg(applyDlgTextEdits(original(), [{ stateIndex: 1, choiceIndex: 0, strref: 98 }]));
-        expect(dlg.transitions[2]!.text).toBe(98);
-        expect(dlg.transitions[0]!.text).toBe(20);
+    it("extends a state's window when a reply is added, without disturbing its neighbours", () => {
+        const after = editedModel((m) => {
+            statesOf(m)[0]!.choices.push({ id: "0#2", text: "@77", target: { kind: "exit" } });
+        });
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.states[0]!.transitionCount).toBe(3);
+        expect(dlg.transitions[2]!.text).toBe(77);
+        expect(dlg.transitions[2]!.terminatesDialog).toBe(true);
+        expect(dlg.states[1]!.firstTransition).toBe(3);
     });
 
-    it("marks a reply as carrying text, so one that had none now shows it", () => {
-        // Transition 2 starts with no text flag; without setting it the strref is stored but never read.
-        const dlg = readDlg(applyDlgTextEdits(original(), [{ stateIndex: 1, choiceIndex: 0, strref: 98 }]));
-        expect(dlg.transitions[2]!.hasText).toBe(true);
+    it("rewrites a reply's target when it is pointed at another state", () => {
+        const after = editedModel((m) => {
+            // Reply 0 of state 0 goes to state 1; send it to state 0 instead.
+            statesOf(m)[0]!.choices[0]!.target = { kind: "state", stateId: statesOf(m)[0]!.id };
+        });
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
+
+        expect(dlg.transitions[0]!.nextState).toBe(0);
+        expect(dlg.transitions[0]!.terminatesDialog).toBe(false);
     });
 
-    it("applies every edit in one rewrite", () => {
-        const dlg = readDlg(
-            applyDlgTextEdits(original(), [
-                { stateIndex: 0, strref: 1 },
-                { stateIndex: 0, choiceIndex: 1, strref: 2 },
-            ]),
-        );
-        expect(dlg.states[0]!.text).toBe(1);
-        expect(dlg.transitions[1]!.text).toBe(2);
-    });
+    it("keeps the fields the model never carries", () => {
+        const after = editedModel((m) => {
+            statesOf(m)[0]!.text = "@1";
+        });
+        const dlg = readDlg(writeDlgFromModel(original(), after, "TEST"));
 
-    it("keeps everything the model does not carry - journal text, triggers, actions, targets", () => {
-        const dlg = readDlg(applyDlgTextEdits(original(), [{ stateIndex: 0, strref: 1 }]));
         expect(dlg.transitions[1]!.journalText).toBe(500);
         expect(dlg.transitions[1]!.hasJournalEntry).toBe(true);
-        expect(dlg.stateTriggers).toEqual(sample().stateTriggers);
-        expect(dlg.transitionTriggers).toEqual(sample().transitionTriggers);
-        expect(dlg.actions).toEqual(sample().actions);
-        expect(dlg.transitions[0]!.nextState).toBe(1);
         expect(dlg.states[0]!.triggerIndex).toBe(0);
+        expect(dlg.stateTriggers).toEqual(sample().stateTriggers);
     });
 
-    it("leaves the file unchanged when there is nothing to apply", () => {
-        expect(applyDlgTextEdits(original(), [])).toEqual(original());
+    // Removing a state is the one structural change that renumbers, and it is what detaching exists to
+    // avoid. A model that has simply lost one must not quietly write a shorter dialog.
+    it("refuses to write a file that has lost a state", () => {
+        const after = editedModel((m) => {
+            statesOf(m).pop();
+        });
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/missing|lost/i);
     });
 
-    it("refuses an edit that addresses a state the file does not have", () => {
-        expect(() => applyDlgTextEdits(original(), [{ stateIndex: 5, strref: 1 }])).toThrow(/state/i);
+    it("refuses to write a file with no states at all", () => {
+        const after = editedModel((m) => {
+            m.roots = [];
+        });
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/missing|lost/i);
     });
 
-    it("refuses an edit that addresses a reply the state does not have", () => {
-        expect(() => applyDlgTextEdits(original(), [{ stateIndex: 1, choiceIndex: 3, strref: 1 }])).toThrow(/reply/i);
+    // The whole safety story of this phase is that an existing state never moves. Rather than trust the
+    // emission order to keep that true, the writer checks it and refuses.
+    it("refuses to write a file in which an existing state would change index", () => {
+        const after = editedModel((m) => {
+            statesOf(m).reverse();
+        });
+        expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/index/i);
+    });
+});
+
+/**
+ * A file whose two states carry the SAME trigger text at two different table indices - which real files do,
+ * since the writer never dedups. Looking an entry up by text alone would collapse both onto the first.
+ */
+function duplicateTriggers(): DlgBuildInput {
+    return {
+        states: [
+            { text: 10, firstTransition: 0, transitionCount: 0, triggerIndex: 0 },
+            { text: 11, firstTransition: 0, transitionCount: 0, triggerIndex: 1 },
+        ],
+        transitions: [],
+        stateTriggers: ['Global("x","GLOBAL",1)', 'Global("x","GLOBAL",1)'],
+        transitionTriggers: [],
+        actions: [],
+    };
+}
+
+describe("writeDlgFromModel, table entries", () => {
+    it("keeps a state pointing at its own table entry when another holds the same text", () => {
+        const bytes = buildDlg(duplicateTriggers());
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "DUP" });
+
+        const dlg = readDlg(writeDlgFromModel(bytes, model, "DUP"));
+
+        expect(dlg.states[1]!.triggerIndex).toBe(1);
+        expect(writeDlgFromModel(bytes, model, "DUP")).toEqual(bytes);
     });
 });

@@ -1,35 +1,15 @@
 /**
- * What changed between a compiled dialog's model and an edited copy of it, as edits the DLG writer can apply.
+ * Addressing and model-level edits for a compiled dialog.
  *
- * The other families splice source text; a DLG has none, so an edit is a change to a record's fields instead.
- * Only the string references are editable: a DLG stores a number pointing into the game's string table, so
- * changing what a line SAYS means pointing it at a different entry, not writing new prose (that would mean
- * editing `dialog.tlk`, which is a different operation on a different file).
+ * A DLG stores a NUMBER pointing into the game's string table rather than text, so changing what a line says
+ * means pointing it at a different entry. These helpers say WHICH record a selection means and produce the
+ * edited model; turning that model back into bytes is the writer's job (`dlg-write.ts`), which is deliberately
+ * the only thing that touches records - one writer, so flag and table handling cannot drift between paths.
  *
- * Pure and structural, so it is unit-testable and carries no dependency on the binary reader; the caller maps
- * a state index and reply position onto the file's own state/transition tables.
+ * Pure and dependency-free, so it is unit-testable and `shared/` stays clear of the binary reader.
  */
 
 import type { DialogModel, DialogState } from "./dialog-model";
-
-/** One string reference to rewrite. `choiceIndex` absent means the state's own line. */
-export interface DlgTextEdit {
-    readonly stateIndex: number;
-    /** Position of the reply within its state, as the model lists them. */
-    readonly choiceIndex?: number;
-    readonly strref: number;
-}
-
-/** Model text for a compiled dialog is always `@<strref>`; anything else cannot be stored. */
-function strrefOf(text: string | undefined, where: string): number {
-    const match = /^@(\d+)$/.exec((text ?? "").trim());
-    if (!match) {
-        throw new Error(
-            `dlgTextEdits: ${where} must be a string reference from the game's table, not ${JSON.stringify(text)}`,
-        );
-    }
-    return Number(match[1]);
-}
 
 /**
  * Where a selected line lives in the file: a state's own line, or one of its replies by position. `choiceId`
@@ -49,6 +29,32 @@ export function dlgAddress(
 }
 
 /**
+ * A copy of `model` with the addressed line pointed at `strref`. The pick path runs through the model rather
+ * than editing records directly, so one writer produces every DLG this editor saves - a second record-level
+ * path would drift from it on flags and table indices, which is exactly where a silent corruption hides.
+ */
+export function setDlgLineText(
+    model: DialogModel,
+    ownResref: string,
+    address: { stateIndex: number; choiceIndex?: number },
+    strref: number,
+): DialogModel {
+    const copy = structuredClone(model) as DialogModel;
+    const state = ownStatesByIndex(copy, ownResref).get(address.stateIndex);
+    if (!state) throw new Error(`setDlgLineText: no state ${address.stateIndex} in ${ownResref}`);
+    if (address.choiceIndex === undefined) {
+        state.text = `@${strref}`;
+        return copy;
+    }
+    const choice = state.choices[address.choiceIndex];
+    if (!choice) {
+        throw new Error(`setDlgLineText: state ${address.stateIndex} has no reply ${address.choiceIndex}`);
+    }
+    choice.text = `@${strref}`;
+    return copy;
+}
+
+/**
  * The states this file owns, keyed by their position in its state table. A tree may also hold states pulled
  * in from other dialogs, so the flattened list is not the state table and its positions are not indices; a
  * foreign state is dropped here rather than written into the wrong file.
@@ -62,44 +68,4 @@ function ownStatesByIndex(model: DialogModel, ownResref: string): Map<number, Di
         }
     }
     return own;
-}
-
-const STRUCTURE_CHANGED = "dlgTextEdits: the dialog's structure changed, which this path cannot write";
-
-/**
- * The string-reference changes between `original` and `edited` for the dialog `ownResref` names, in file
- * order (each state's own line before its replies). Throws when the edit is one this path cannot express,
- * rather than dropping it: a silently ignored edit reads to the user as a save that worked.
- */
-export function dlgTextEdits(original: DialogModel, edited: DialogModel, ownResref: string): DlgTextEdit[] {
-    if (original.sourceLang !== "dlg" || edited.sourceLang !== "dlg") {
-        throw new Error("dlgTextEdits: both models must come from a compiled dlg");
-    }
-    const before = ownStatesByIndex(original, ownResref);
-    const after = ownStatesByIndex(edited, ownResref);
-    if (before.size !== after.size) throw new Error(STRUCTURE_CHANGED);
-
-    const edits: DlgTextEdit[] = [];
-    for (const stateIndex of [...before.keys()].sort((a, b) => a - b)) {
-        const originalState = before.get(stateIndex)!;
-        const editedState = after.get(stateIndex);
-        if (!editedState || originalState.choices.length !== editedState.choices.length) {
-            throw new Error(STRUCTURE_CHANGED);
-        }
-        if (editedState.text !== originalState.text) {
-            edits.push({ stateIndex, strref: strrefOf(editedState.text, `state ${stateIndex}`) });
-        }
-        // A reply is addressed by its position within its state, which is what the writer turns back into a
-        // transition index - the state owns a consecutive run of the table.
-        for (const [choiceIndex, originalChoice] of originalState.choices.entries()) {
-            const editedChoice = editedState.choices[choiceIndex]!;
-            if (editedChoice.text === originalChoice.text) continue;
-            edits.push({
-                stateIndex,
-                choiceIndex,
-                strref: strrefOf(editedChoice.text, `state ${stateIndex} reply ${choiceIndex}`),
-            });
-        }
-    }
-    return edits;
 }
