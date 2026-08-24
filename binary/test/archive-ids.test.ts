@@ -84,6 +84,23 @@ describe("parseIds", () => {
         expect(decimalTable.get(107)).toBe("Acid_Blob");
     });
 
+    /**
+     * The identifier column runs to the end of the line, spaces included. Two shipped tables need this and are
+     * read wrongly without it: MISSILE.IDS names projectiles in prose (`3 Arrow Exploding`), and TRIGGER.IDS
+     * writes a whole signature whose parameter names carry spaces. Both rows below are verbatim from BG2:ToB.
+     *
+     * A reader that takes only the first token after the value does not mis-name these - it drops them, which
+     * is the worse failure: 250 of MISSILE.IDS's rows and 9 of TRIGGER.IDS's vanish from a table that reports
+     * itself as read.
+     */
+    it("keeps an identifier that contains spaces", () => {
+        const missile = parseIds(idsBytes("IDS\r\n2 Arrow\r\n3 Arrow Exploding\r\n"));
+        const trigger = parseIds(idsBytes("0x4010 HP(O:Object*,I:Hit Points*)\r\n"));
+
+        expect(missile.get(3)).toBe("Arrow Exploding");
+        expect(trigger.get(0x4010)).toBe("HP(O:Object*,I:Hit Points*)");
+    });
+
     it("skips blank and malformed lines rather than failing the table", () => {
         const ids = parseIds(idsBytes("IDS V1.0\r\n\r\n0 MORALE\r\nnonsense\r\n\r\n1 HAPPY\r\n"));
 

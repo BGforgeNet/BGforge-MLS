@@ -198,8 +198,8 @@ export function createSlotLabelResolver(session: TlkSource, fallback?: GameDirFa
  * ships, in declaration order.
  *
  * Every present candidate rather than only the first, because two tables naming one value space are as often
- * complementary as rival - BG2 classic ships a 29-entry MISSILE.IDS beside a full PROJECTL.IDS, and stopping
- * at the first would leave most of a projectile field unnamed. Each is tagged with its own name so the caller
+ * complementary as rival - on BG2:ToB, MISSILE.IDS names 108 stored projectile values PROJECTL.IDS has no key
+ * for, so stopping at the first would leave those unnamed. Each is tagged with its own name so the caller
  * can apply the key encoding the ref declares for it and decide who wins a key both name; nothing is blended
  * here, so an entry always comes from a table this install holds.
  */

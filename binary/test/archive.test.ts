@@ -612,6 +612,22 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    /**
+     * The path the editor's naming-table resolver takes - install file through to `Game.ids` - over a table
+     * whose identifiers carry spaces. MISSILE.IDS is the shipped case: it names projectiles in prose, so a
+     * reader that stops at the first token drops 250 of BG2:ToB's 279 rows and the projectile dropdown loses
+     * them silently, the table still reporting itself as present.
+     */
+    it("reads a table whose identifiers contain spaces", () => {
+        const missile = new TextEncoder().encode("IDS\r\n2 Arrow\r\n3 Arrow Exploding\r\n");
+        const game = openGame(makeGameDir({ "override/missile.ids": missile }));
+        try {
+            expect(game.ids("MISSILE")?.get(3)).toBe("Arrow Exploding");
+        } finally {
+            game.close();
+        }
+    });
+
     it("reports an absent IDS table rather than throwing", () => {
         const game = openGame(makeGameDir());
         try {

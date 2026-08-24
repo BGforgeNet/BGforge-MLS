@@ -12,10 +12,12 @@ export function parseIds(bytes: Uint8Array): Map<number, string> {
     const text = decodeTextResource(bytes);
     const table = new Map<number, string>();
     for (const line of text.split(/\r?\n/)) {
-        // Two columns, value then identifier (IESDP ids.htm). The header lines - a file identifier such as
-        // "IDS V1.0" and an entry count - are both optional and both fail this shape, so neither needs a
-        // special case; the count line is documented as unreliable anyway.
-        const match = /^\s*(\S+)\s+(\S+)\s*$/.exec(line);
+        // Two columns, value then identifier (IESDP ids.htm), the identifier running to end of line: MISSILE.IDS
+        // names projectiles in prose ("3 Arrow Exploding") and TRIGGER.IDS writes signatures whose parameter
+        // names carry spaces, so a first-token-only read drops those rows instead of shortening them. The header
+        // lines - a file identifier such as "IDS V1.0" and an entry count - still fail this shape, the first on
+        // its non-numeric value and the second on having no second column.
+        const match = /^\s*(\S+)\s+(\S.*?)\s*$/.exec(line);
         const name = match?.[2];
         if (match === null || name === undefined) continue;
         const value = Number(match[1]);
