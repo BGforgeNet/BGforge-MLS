@@ -25,6 +25,7 @@ export default defineConfig({
             "binary-editor/vitest.config.ts",
             "format/vitest.config.ts",
             "image/vitest.config.ts",
+            "compilers/bcs/vitest.config.ts",
             "compilers/ssl/vitest.config.ts",
             "compilers/tssl/vitest.config.ts",
             "scripts/vitest.cli.config.ts",

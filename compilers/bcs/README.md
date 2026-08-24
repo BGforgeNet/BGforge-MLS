@@ -55,9 +55,11 @@ writeFileSync("aerie.bcs", writeBcs(script), "latin1");
   depends on the `TRIGGER.IDS` and `ACTION.IDS` the player's install ships - editions and mods both change
   them. Resolution belongs to a layer that holds a game; keeping it out is what lets this read a file with
   no install present.
-- **It does not name fields.** A record's field count is engine-dependent: an object carries 12 numbers on
-  one engine, 13 or 14 on another, and triggers and actions carry between two and eight. So a record holds
-  its numbers as a list. Naming them needs to know the engine, which the file does not say.
+- **It does not name fields.** The argument lists are fixed - a trigger takes 7 arguments and an action 10,
+  and an object is EA plus six enumerated fields plus a five-slot identifier chain - but which field a given
+  number is depends on the engine: Torment gives an object two more, and the spec places a coordinate pair
+  on every engine but BG1. So a record holds its numbers as a list, and naming them is left to a layer that
+  knows the engine, which the file itself does not say.
 
 ## The round trip
 
@@ -68,8 +70,31 @@ it is reproduced from each record's kind rather than carried on the tree, and an
 looking like one the game wrote.
 
 Two things the sweep found that a hand-built fixture would not: a script that is present but empty
-(`SC`/`SC`) is not the same as a file with no bytes in it, and the BG1-era writer omits a record's quoted
-fields entirely rather than writing a pair of empty ones.
+(`SC`/`SC`) is not the same as a file with no bytes in it, and an older writer omits a record's quoted fields
+entirely rather than writing a pair of empty ones.
+
+## Where a real install disagrees with the spec
+
+The format reference is [IESDP's bcs.htm](https://iesdp.bgforge.net/file_formats/ie_formats/bcs). Four places
+where a stock BG:EE plus BG2:ToB pair does not match what it says, each measured over the whole corpus:
+
+| Spec says                                                                            | The corpus has                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A trigger's seven arguments are "always specified ... even if they are not all used" | 59 triggers across 20 files stop after two numbers and write no strings; 51 actions across 22 files write their numbers and no strings. All are BG1-era generic AI scripts (`MONSTER`, `NPC`, `GANIMAL`, `R*`, `G*`, `D*`) that ship in BG2:ToB |
+| Object coordinates are present on every engine but BG1                               | No object carries any. All 393991 of them are exactly twelve numbers - EA, six enumerated fields, five identifier slots - with no `[x.y]` anywhere and not one negative value, where an unused coordinate is documented as `-1`                 |
+| A response is "the concatenation of a probability and an ACTION"                     | Responses hold 0 to 162 actions. Only 15402 of 35681 hold exactly one, and 28 files have a response with none                                                                                                                                   |
+| The response set block is written `RS`, responses, end                               | It closes with a second `RS`, which the spec's listing omits. Every file in the corpus does this                                                                                                                                                |
+
+Where the spec is right and the reader relies on it: the fixed argument lists, the block nesting, the
+string-concatenation rule for actions taking more than two strings (an `Area` of exactly six characters
+followed by a `Name`), and Torment's two extra object fields.
+
+## Known gap
+
+An object's coordinate field is written as a point - `[x.y]`, brackets and a dot, unlike the point inside an
+action which is two plain numbers. The reader refuses such a line by name rather than guessing at it, because
+nothing in a BG-family install has one to verify a reading against. If a Torment or Icewind Dale corpus turns
+up, that is the first thing to check.
 
 ## Tests
 

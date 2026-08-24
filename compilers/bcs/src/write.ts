@@ -2,10 +2,11 @@
  * Writes a BCS tree back out.
  *
  * A line is a run of fields followed by the marker that opens or closes the next block, with no separator.
- * The spacing inside that run is per record and not uniform - the eight shapes below are every one that
- * occurs across 1.46 million field lines in 4939 real scripts - so it is reproduced from the record's kind
- * rather than carried on the tree. That is what lets an edited script come back out looking like one the
- * game wrote.
+ * The spacing inside that run is per record and not uniform - an object writes a space before its quoted
+ * field and none after it, a trigger writes one on both sides of its pair, an action writes none before the
+ * first - so it is reproduced from the record's kind rather than carried on the tree. Those are every shape
+ * that occurs across 1.46 million field lines in 4939 real scripts, and reproducing them is what lets an
+ * edited script come back out looking like one the game wrote.
  */
 
 import type { BcsAction, BcsObject, BcsResponse, BcsScript, BcsTrigger } from "./types";

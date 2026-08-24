@@ -6,12 +6,17 @@ import { readBcs } from "@bgforge/bcs";
  * reader is deliberately name-agnostic - it reads the numbers a script stores and never resolves one to an
  * ACTION.IDS or TRIGGER.IDS name, because which table applies depends on the install rather than the file.
  *
- * Every shape below was measured over 4939 non-empty BCS files from a stock BG:EE plus BG2:ToB pair. The
- * nesting is rigid: SC holds condition-response blocks, each holds exactly one condition and one response
- * set, a trigger holds exactly one object and an action exactly three. Field ARITY is not: objects carry 12,
- * 13 or 14 numbers depending on the engine, and triggers and actions carry between two and eight. So the
- * records hold their numbers as a list rather than as named fields - naming them is a later layer's job,
- * and one that needs to know the engine.
+ * The argument list is fixed, and IESDP's bcs.htm gives it: a trigger takes 7 arguments (its id, an integer,
+ * a flags dword, an integer, an integer of unknown purpose, two strings, one object) and an action takes 10
+ * (its id, three objects, an integer, a point written as two integers, two integers, two strings). Both are
+ * meant to be written in full "even if they are not all used". Confirmed over 4939 non-empty files from a
+ * stock BG:EE plus BG2:ToB pair: 121376 of 121435 triggers and 90801 of 90852 actions carry exactly five
+ * numbers and two strings, every object carries twelve numbers, and the handful of exceptions all come from
+ * one older writer that stops early.
+ *
+ * The records still hold their numbers as a list rather than as named fields, because WHICH field a number
+ * is depends on the engine - the spec gives an object 12 numbers here, 14 on Torment, and a coordinate pair
+ * on everything but BG1. Naming them is a later layer's job, and one that needs to know the engine.
  */
 
 const MINIMAL = [
@@ -155,25 +160,19 @@ describe("readBcs - records with fields missing", () => {
     });
 });
 
-describe("readBcs - engine-dependent field counts", () => {
-    // An object carries 12 numbers on BG2, 13 or 14 elsewhere - PST adds a team and a faction, and other
-    // engines differ again. A reader that pinned the count would read most of one install and truncate the
-    // rest, so the count is whatever the record holds. Both wider forms occur in a stock BG:EE.
-    test.each([12, 13, 14])("reads an object carrying %i numbers", (arity) => {
-        const object = `${Array.from({ length: arity }, () => 0).join(" ")} ""OB`;
-        const text = ["SC", "CR", "CO", "TR", "16412 0OB", object, "TR", "CO", "RS", "RS", "CR", "SC", ""].join("\n");
-
-        expect(readBcs(text).blocks[0]!.triggers[0]!.object.ints).toHaveLength(arity);
-    });
-
-    test("reads a trigger carrying more numbers than the common form", () => {
+describe("readBcs - the older truncated form", () => {
+    // The spec says all seven of a trigger's arguments are written "even if they are not all used", and
+    // 121376 of 121435 real triggers do. 59 of them, across 20 BG1-era files, stop after two numbers and
+    // write no strings at all - and 51 actions across 22 files write their five numbers and no strings.
+    // Reading a missing field as a zero or an empty string would put it back on the way out.
+    test("reads a trigger that stops before its remaining fields", () => {
         const text = [
             "SC",
             "CR",
             "CO",
             "TR",
-            '16399 0 0 0 0 0 0 "a" "b" OB',
-            '0 0 0 0 0 0 0 0 0 0 0 0 ""OB',
+            "16412 0OB",
+            '2 1 0 1 0 0 0 0 0 0 0 0 ""OB',
             "TR",
             "CO",
             "RS",
@@ -183,7 +182,130 @@ describe("readBcs - engine-dependent field counts", () => {
             "",
         ].join("\n");
 
-        expect(readBcs(text).blocks[0]!.triggers[0]!.ints).toHaveLength(7);
+        const trigger = readBcs(text).blocks[0]!.triggers[0]!;
+
+        expect(trigger.ints).toEqual([16412, 0]);
+        expect(trigger.strings).toEqual([]);
+    });
+
+    test("reads an action that writes its numbers and no strings", () => {
+        const object = '0 0 0 0 0 0 0 0 0 0 0 0 ""OB';
+        const text = [
+            "SC",
+            "CR",
+            "CO",
+            "CO",
+            "RS",
+            "RE",
+            "100AC",
+            "29OB",
+            object,
+            "OB",
+            object,
+            "OB",
+            object,
+            "50 0 0 0 69AC",
+            "RE",
+            "RS",
+            "CR",
+            "SC",
+            "",
+        ].join("\n");
+
+        const action = readBcs(text).blocks[0]!.responses[0]!.actions[0]!;
+
+        expect(action.ints).toEqual([50, 0, 0, 0, 69]);
+        expect(action.strings).toEqual([]);
+    });
+});
+
+describe("readBcs - a digit inside a name is not a field", () => {
+    // The trap that a line-shaped reading falls straight into: an object's name is a quoted string, and
+    // plenty of real ones end in a digit (`"HOUSEN2"`, `"Druid3"`). Counting numbers across the whole line
+    // reads that digit as a thirteenth field, which is how a survey of this corpus can report objects of
+    // 12, 13 and 14 numbers when every one of them has 12.
+    test("reads an object whose name ends in a digit as twelve numbers", () => {
+        const text = [
+            "SC",
+            "CR",
+            "CO",
+            "TR",
+            '1 0 0 0 0 "" "" OB',
+            '0 0 0 0 0 0 0 0 0 0 0 0 "HOUSEN2"OB',
+            "TR",
+            "CO",
+            "RS",
+            "RS",
+            "CR",
+            "SC",
+            "",
+        ].join("\n");
+
+        const object = readBcs(text).blocks[0]!.triggers[0]!.object;
+
+        expect(object.ints).toHaveLength(12);
+        expect(object.string).toBe("HOUSEN2");
+    });
+
+    test("reads a name that is entirely digits as a string, not as fields", () => {
+        const text = [
+            "SC",
+            "CR",
+            "CO",
+            "TR",
+            '1 0 0 0 0 "12" "34" OB',
+            '0 0 0 0 0 0 0 0 0 0 0 0 "567"OB',
+            "TR",
+            "CO",
+            "RS",
+            "RS",
+            "CR",
+            "SC",
+            "",
+        ].join("\n");
+
+        const trigger = readBcs(text).blocks[0]!.triggers[0]!;
+
+        expect(trigger.ints).toEqual([1, 0, 0, 0, 0]);
+        expect(trigger.strings).toEqual(["12", "34"]);
+        expect(trigger.object.ints).toHaveLength(12);
+    });
+});
+
+describe("readBcs - engine variants", () => {
+    test("reads Torment's two extra object fields, which are just two more numbers", () => {
+        // The spec gives a Torment object a TEAM and a FACTION the other engines do not have. Nothing in
+        // the reader has to change for that: it is two more numbers in the same list.
+        const wide = `${Array.from({ length: 14 }, () => 0).join(" ")} ""OB`;
+        const text = ["SC", "CR", "CO", "TR", '1 0 0 0 0 "" "" OB', wide, "TR", "CO", "RS", "RS", "CR", "SC", ""].join(
+            "\n",
+        );
+
+        expect(readBcs(text).blocks[0]!.triggers[0]!.object.ints).toHaveLength(14);
+    });
+
+    test("refuses an object carrying coordinates, rather than mangling them", () => {
+        // The spec writes an object's coordinates as a point, `[x.y]` - brackets and a dot, not two plain
+        // numbers like the point inside an action. No file in a BG-family install has one, so there is
+        // nothing here to verify a reading against; refusing it names the gap instead of guessing at it.
+        const withPoint = '0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1] ""OB';
+        const text = [
+            "SC",
+            "CR",
+            "CO",
+            "TR",
+            '1 0 0 0 0 "" "" OB',
+            withPoint,
+            "TR",
+            "CO",
+            "RS",
+            "RS",
+            "CR",
+            "SC",
+            "",
+        ].join("\n");
+
+        expect(() => readBcs(text)).toThrow(/Unreadable BCS fields \(line 6\)/);
     });
 });
 

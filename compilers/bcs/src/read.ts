@@ -23,9 +23,11 @@ const MARKER_LINE = /^(.*?)(SC|CR|CO|TR|RS|RE|AC|OB)$/;
 const FIELDS = /(-?\d+)|"([^"]*)"/g;
 
 /**
- * Splits a line into its fields and its marker. The fields are read by pattern rather than by position,
- * because their count varies by engine and their spacing varies by record - the writer reproduces the
- * spacing from the record's kind, so it does not have to be carried here.
+ * Splits a line into its fields and its marker. Fields are matched as whole tokens - a number OR a quoted
+ * string, never digits scanned out of a line - because an object's name is a string that routinely ends in
+ * a digit (`"HOUSEN2"`, `"Druid3"`) and counting numbers across the line would read that digit as another
+ * field. Whatever a field pattern does not account for is a parse error rather than something to skip, so
+ * an unsupported construct (an object's `[x.y]` coordinate point) is refused by name.
  */
 function tokenize(text: string): Token[] {
     const tokens: Token[] = [];

@@ -1,11 +1,16 @@
 /**
  * The tree a BCS file holds.
  *
- * Numbers are kept as lists rather than as named fields, and deliberately: the arity is engine-dependent.
- * Across 4939 real scripts an object carries 12, 13 or 14 numbers - PST adds two, BG1 omits the
- * coordinates - and a trigger or action carries between two and eight. A codec that named them would have
- * to know the engine to read a file at all, which is exactly the thing a round-trip must not need. Naming
- * belongs to the layer that also resolves ids against an install's own ACTION.IDS and TRIGGER.IDS.
+ * The argument lists are FIXED, and IESDP's bcs.htm gives them: a trigger takes 7 arguments (id, integer,
+ * flags, integer, an integer of unknown purpose, two strings, one object) and an action takes 10 (id, three
+ * objects, integer, a point written as two integers, two integers, two strings). An object is EA plus six
+ * enumerated fields plus a five-slot identifier chain, and unused slots are written as zero.
+ *
+ * Numbers are still kept as lists rather than as named fields, because WHICH field a number is depends on
+ * the engine: Torment gives an object a TEAM and a FACTION the others lack, and the spec places a
+ * coordinate pair on every engine but BG1. A codec that named them would need to know the engine to read a
+ * file at all, which is the one thing a round-trip must not need. Naming belongs to the layer that also
+ * resolves ids against an install's own ACTION.IDS and TRIGGER.IDS.
  */
 
 /** The target of a trigger or action: `OB` ... `OB`. */

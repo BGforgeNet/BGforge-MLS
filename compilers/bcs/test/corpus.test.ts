@@ -115,4 +115,35 @@ describe.skipIf(files.length === 0)("BCS codec - real install corpus", () => {
         expect(triggers).toBeGreaterThan(0);
         expect(actions).toBeGreaterThan(0);
     });
+
+    test("no record carries more fields than its argument list has slots", () => {
+        // IESDP fixes the argument lists: a trigger takes five numbers and two strings, an action five and
+        // two, and an object twelve numbers before Torment's two extras. Truncation by an older writer can
+        // only take fields away, so anything OVER the ceiling means the reader split a line wrongly - which
+        // is exactly what counting numbers across a whole line does to an object named `"HOUSEN2"`.
+        const over: string[] = [];
+
+        for (const file of files) {
+            const name = path.basename(file);
+            const text = fs.readFileSync(file, "latin1");
+            if (text === "") continue;
+            const note = (what: string, ints: number, strings: number, maxInts: number, maxStrings: number): void => {
+                if (ints > maxInts || strings > maxStrings) over.push(`${name}: ${what} has ${ints}i ${strings}s`);
+            };
+            for (const block of readBcs(text).blocks) {
+                for (const trigger of block.triggers) {
+                    note("trigger", trigger.ints.length, trigger.strings.length, 5, 2);
+                    note("object", trigger.object.ints.length, 0, 14, 0);
+                }
+                for (const response of block.responses) {
+                    for (const action of response.actions) {
+                        note("action", action.ints.length, action.strings.length, 5, 2);
+                        for (const object of action.objects) note("object", object.ints.length, 0, 14, 0);
+                    }
+                }
+            }
+        }
+
+        expect(over).toEqual([]);
+    });
 });
