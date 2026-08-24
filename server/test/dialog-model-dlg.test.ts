@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { modelFromDlg, type DlgModelInput } from "../../shared/dialog-model-dlg";
+import { modelFromDlg, modelFromDlgs, type DlgModelInput } from "../../shared/dialog-model-dlg";
 import { nodeEditable } from "../../shared/dialog-editability";
 
 /** Two states: state 0 says @100 under a trigger and offers three replies; state 1 is a plain reply target. */
@@ -123,12 +123,19 @@ describe("modelFromDlg", () => {
         expect(choices[1]!.action).toBeUndefined();
     });
 
+    test("names every state by its dialog as well as its number, so two dialogs can share one tree", () => {
+        const model = modelFromDlg(sampleDlg());
+
+        expect(model.roots[0]!.states.map((s) => s.id)).toEqual(["SELFDLG:0", "SELFDLG:1"]);
+    });
+
     test("distinguishes an in-dialog jump, an exit, and a hand-off to another dialog", () => {
         const choices = modelFromDlg(sampleDlg()).roots[0]!.states[0]!.choices;
 
         // The NUL padding on the resref must not stop it matching this dialog's own name.
-        expect(choices[0]!.target).toEqual({ kind: "state", stateId: "1" });
+        expect(choices[0]!.target).toEqual({ kind: "state", stateId: "SELFDLG:1" });
         expect(choices[1]!.target).toEqual({ kind: "exit" });
+        // A dialog the model does not hold stays external - there is no node to point at.
         expect(choices[2]!.target).toEqual({ kind: "external", label: "OTHERDLG:4", resolved: false });
     });
 
@@ -142,5 +149,106 @@ describe("modelFromDlg", () => {
         for (const state of model.roots[0]!.states) {
             expect(nodeEditable(model, state)).toBe(true);
         }
+    });
+});
+
+/**
+ * A second dialog, deep enough to hold the state 4 that `sampleDlg` hands off to, and whose state 1 jumps
+ * back into SELFDLG state 0 - the out-and-back shape.
+ */
+function otherDlg(): DlgModelInput {
+    return {
+        resref: "OTHERDLG",
+        states: [
+            { text: 300, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+            { text: 301, firstTransition: 0, transitionCount: 1, triggerIndex: -1 },
+            { text: 302, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+            { text: 303, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+            { text: 304, firstTransition: 0, transitionCount: 0, triggerIndex: -1 },
+        ],
+        transitions: [
+            {
+                text: 400,
+                journalText: 0,
+                triggerIndex: -1,
+                actionIndex: -1,
+                nextDialog: "SELFDLG",
+                nextState: 0,
+                hasText: true,
+                hasTrigger: false,
+                hasAction: false,
+                hasJournalEntry: false,
+                terminatesDialog: false,
+            },
+        ],
+        stateTriggers: [],
+        transitionTriggers: [],
+        actions: [],
+    };
+}
+
+describe("modelFromDlgs - one tree spanning several dialogs", () => {
+    const tree = () => modelFromDlgs(sampleDlg(), [otherDlg()]);
+
+    test("puts the dialog being edited first and each other dialog after it", () => {
+        const model = tree();
+
+        expect(model.roots.map((r) => r.label)).toEqual(["SELFDLG", "OTHERDLG"]);
+        expect(model.roots[0]!.external).toBeFalsy();
+    });
+
+    test("marks the other dialogs as external, so the view can say these are not this file", () => {
+        expect(tree().roots[1]!.external).toBe(true);
+    });
+
+    test("resolves a jump into a loaded dialog into a real target, not an address string", () => {
+        // Unresolved it renders as a dead-end label; resolved it is a node the tree can actually draw.
+        const handOff = tree().roots[0]!.states[0]!.choices[2]!;
+
+        expect(handOff.target).toEqual({ kind: "state", stateId: "OTHERDLG:4" });
+    });
+
+    test("closes an out-and-back jump onto the state it came from", () => {
+        const back = tree().roots[1]!.states[1]!.choices[0]!;
+
+        // OTHERDLG's reply points at SELFDLG:0, which is a node already in this tree.
+        expect(back.target).toEqual({ kind: "state", stateId: "SELFDLG:0" });
+    });
+
+    test("keeps each state addressed to its own file, so a write cannot cross into the wrong one", () => {
+        const model = tree();
+
+        expect(new Set(model.roots[1]!.states.map((s) => s.dlgResref))).toEqual(new Set(["OTHERDLG"]));
+        expect(model.roots[1]!.states.map((s) => s.dlgIndex)).toEqual([0, 1, 2, 3, 4]);
+    });
+
+    test("leaves a jump into a dialog that was not loaded external", () => {
+        const model = modelFromDlgs(sampleDlg(), []);
+
+        expect(model.roots[0]!.states[0]!.choices[2]!.target).toEqual({
+            kind: "external",
+            label: "OTHERDLG:4",
+            resolved: false,
+        });
+    });
+
+    test("names the dialog being written, so a state from another file is not treated as this file's", () => {
+        // Every other family has the host set `sourceName` from the document; here it also decides which
+        // states are editable, so the adapter that knows which dialog is the main one sets it.
+        expect(tree().sourceName).toBe("SELFDLG");
+        for (const state of tree().roots[1]!.states) expect(nodeEditable(tree(), state)).toBe(false);
+    });
+
+    test("leaves a jump past the end of a loaded dialog external rather than pointing at nothing", () => {
+        // A mod that replaces a dialog with a shorter one leaves stale jumps behind. Resolving one would put
+        // an edge into the tree with no node on the far end.
+        const short = otherDlg();
+        short.states = short.states.slice(0, 2);
+
+        expect(modelFromDlgs(sampleDlg(), [short]).roots[0]!.states[0]!.choices[2]!.target).toEqual({
+            kind: "external",
+            label: "OTHERDLG:4",
+            resolved: false,
+        });
     });
 });

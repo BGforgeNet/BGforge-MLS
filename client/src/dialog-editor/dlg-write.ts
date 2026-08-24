@@ -14,6 +14,7 @@
 
 import { buildDlg, toDlgBuildInput, DlgTransitionFlag, type DlgBuildInput } from "@bgforge/binary";
 import type { DialogChoice, DialogModel, DialogState } from "../../../shared/dialog-model";
+import { parseDlgStateId, resrefName } from "../../../shared/dialog-model-dlg";
 
 type StateRecord = DlgBuildInput["states"][number];
 type TransitionRecord = DlgBuildInput["transitions"][number];
@@ -50,14 +51,19 @@ function targetFields(
     choice: DialogChoice,
     base: TransitionRecord | undefined,
     ownResref: string,
-    indexOfState: (stateId: string) => number,
+    checkLocalState: (stateId: string) => void,
 ): { nextDialog: string; nextState: number; terminates: boolean } {
     const target = choice.target;
     if (target.kind === "exit") {
         return { nextDialog: base?.nextDialog ?? resrefBytes(""), nextState: base?.nextState ?? 0, terminates: true };
     }
     if (target.kind === "state") {
-        return { nextDialog: resrefBytes(ownResref), nextState: indexOfState(target.stateId), terminates: false };
+        // The id IS the address - dialog and number - so a reply retargeted at another file's state writes
+        // that file's resref, not ours. A local target is checked against what is actually being written.
+        const parsed = parseDlgStateId(target.stateId);
+        if (!parsed) throw new Error(`writeDlgFromModel: cannot store the target ${JSON.stringify(target.stateId)}`);
+        if (parsed.resref === ownResref) checkLocalState(target.stateId);
+        return { nextDialog: resrefBytes(parsed.resref), nextState: parsed.index, terminates: false };
     }
     // An external target renders as `RESREF:state`; that is the only form this writer can put back on the wire.
     const match = /^(\w{1,8}):(\d+)$/.exec(target.label);
@@ -85,8 +91,8 @@ function flagsFor(choice: DialogChoice, base: TransitionRecord | undefined, term
 
 /**
  * The states this file owns, in the order they will be written. A state carrying another dialog's resref
- * belongs to a file we are not writing; one carrying neither a resref nor an index is a state the user just
- * added here.
+ * belongs to a file we are not writing - the tree also holds the neighbours a conversation hands off to;
+ * one carrying neither a resref nor an index is a state the user just added here.
  */
 function ownStates(model: DialogModel, ownResref: string): DialogState[] {
     return model.roots
@@ -108,7 +114,10 @@ export function writeDlgFromModel(bytes: Uint8Array, model: DialogModel, ownResr
     const transitionTriggers = [...input.transitionTriggers];
     const actions = [...input.actions];
 
-    const states = ownStates(model, ownResref);
+    // Resource names are case-insensitive to the game and a file on disk may be spelled either way, while
+    // the model always uppercases; normalise once here rather than at each comparison.
+    const own = resrefName(ownResref);
+    const states = ownStates(model, own);
     // Every state the file holds must still be here. A state index is an address other dialogs and mod
     // scripts hold, so dropping one renumbers the rest - the very thing detaching exists to avoid. A model
     // that has lost one is a bug upstream, not an instruction to shorten the file.
@@ -119,11 +128,9 @@ export function writeDlgFromModel(bytes: Uint8Array, model: DialogModel, ownResr
                 "from the model; detach a state rather than removing it",
         );
     }
-    const indexById = new Map(states.map((s, position) => [s.id, s.dlgIndex ?? position]));
-    const indexOfState = (stateId: string): number => {
-        const index = indexById.get(stateId);
-        if (index === undefined) throw new Error(`writeDlgFromModel: no state ${JSON.stringify(stateId)} to point at`);
-        return index;
+    const ids = new Set(states.map((s) => s.id));
+    const checkLocalState = (stateId: string): void => {
+        if (!ids.has(stateId)) throw new Error(`writeDlgFromModel: no state ${JSON.stringify(stateId)} to point at`);
     };
 
     const outStates: StateRecord[] = [];
@@ -141,7 +148,7 @@ export function writeDlgFromModel(bytes: Uint8Array, model: DialogModel, ownResr
 
         for (const choice of state.choices) {
             const tBase = choice.dlgTransition === undefined ? undefined : input.transitions[choice.dlgTransition];
-            const { nextDialog, nextState, terminates } = targetFields(choice, tBase, ownResref, indexOfState);
+            const { nextDialog, nextState, terminates } = targetFields(choice, tBase, own, checkLocalState);
             outTransitions.push({
                 ...(tBase ?? { journalText: -1 }),
                 flags: flagsFor(choice, tBase, terminates),

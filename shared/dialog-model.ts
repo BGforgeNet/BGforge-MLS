@@ -72,6 +72,11 @@ export interface DialogModel {
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
     messages?: DialogMessages;
     /**
+     * DLG only: how many neighbouring dialogs were left out of the tree because it holds a bounded number of
+     * them. Present only when some were, so the view can say so rather than looking complete. Set by the host.
+     */
+    dlgNeighboursOmitted?: number;
+    /**
      * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */
@@ -125,6 +130,12 @@ export interface DialogRoot {
     label: string;
     kind: DialogRootKind;
     states: DialogState[];
+    /**
+     * This root belongs to a different file than the one being edited - it is here so a conversation that
+     * leaves and comes back closes up as one tree. The view marks it, and nothing in it is editable, since
+     * the editor only writes the file it opened.
+     */
+    external?: boolean;
 }
 
 /**

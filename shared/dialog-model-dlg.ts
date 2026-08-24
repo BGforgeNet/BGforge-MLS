@@ -11,7 +11,7 @@
  * depend on and should not start to; `@bgforge/binary`'s `Dlg` satisfies it, pinned by a test.
  */
 
-import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
+import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
 
 export interface DlgModelState {
     /** Strref of the actor's line. */
@@ -60,22 +60,43 @@ function strrefText(strref: number): string {
     return `@${strref}`;
 }
 
-function targetOf(transition: DlgModelTransition, ownResref: string): DialogTarget {
+/** A state's id across the whole tree: its dialog and its number, since numbers repeat between files. */
+export function dlgStateId(resref: string, index: number): string {
+    return `${resref}:${index}`;
+}
+
+/** The address back out of an id. Null for anything not in that form - a state the user just added. */
+export function parseDlgStateId(id: string): { resref: string; index: number } | null {
+    const match = /^([^:]+):(\d+)$/.exec(id);
+    return match ? { resref: match[1]!.toUpperCase(), index: Number(match[2]) } : null;
+}
+
+/**
+ * Where a reply leads. A jump into a state the model HOLDS becomes a real state target, whichever file that
+ * is - which is what lets a conversation that leaves and comes back close up as one graph. Anything else
+ * stays external: there is no node to point at, so the view shows the address instead. `present` decides
+ * which, so resolution is a property of what was loaded rather than of the format. It is asked about the
+ * state, not just the file: a mod that replaces a dialog with a shorter one leaves jumps past the end behind,
+ * and resolving one would put an edge in the tree with no node on its far side.
+ */
+function targetOf(transition: DlgModelTransition, ownResref: string, present: Present): DialogTarget {
     if (transition.terminatesDialog) return { kind: "exit" };
-    const next = resrefName(transition.nextDialog);
     // WeiDU writes the owning dialog's own resref even for a jump inside the same file, so an internal jump
     // is "same resref", not "no resref".
-    if (next === "" || next === ownResref) return { kind: "state", stateId: String(transition.nextState) };
-    // Another dialog's state: the target is not in this model, so it stays unresolved and carries both halves
-    // of the address, which is what the view needs to show where the conversation goes.
+    const next = resrefName(transition.nextDialog) || ownResref;
+    if (present(next, transition.nextState)) return { kind: "state", stateId: dlgStateId(next, transition.nextState) };
     return { kind: "external", label: `${next}:${transition.nextState}`, resolved: false };
 }
+
+/** Whether the tree holds a given state, and so whether a jump to it can be drawn as an edge. */
+type Present = (resref: string, stateIndex: number) => boolean;
 
 function choiceFrom(
     transition: DlgModelTransition,
     index: number,
     input: DlgModelInput,
     ownResref: string,
+    present: Present,
 ): DialogChoice {
     // Every optional field is gated by its flag bit. An unset one still holds a stored value - commonly -1,
     // which would index the last entry of the table if read without checking the bit.
@@ -87,44 +108,73 @@ function choiceFrom(
         ...(transition.hasText ? { text: strrefText(transition.text) } : {}),
         ...(condition !== undefined ? { condition } : {}),
         ...(action !== undefined ? { action } : {}),
-        target: targetOf(transition, ownResref),
+        target: targetOf(transition, ownResref, present),
     };
 }
 
-function stateFrom(state: DlgModelState, index: number, input: DlgModelInput, ownResref: string): DialogState {
+function stateFrom(
+    state: DlgModelState,
+    index: number,
+    input: DlgModelInput,
+    ownResref: string,
+    present: Present,
+): DialogState {
     // A state owns the consecutive transition range [first, first + count).
     const owned = input.transitions.slice(state.firstTransition, state.firstTransition + state.transitionCount);
     const trigger = state.triggerIndex >= 0 ? input.stateTriggers[state.triggerIndex] : undefined;
     return {
         // States are addressed by position - the binary holds no labels, and inventing them is exactly the
-        // fidelity risk that keeps the decompiler off this path. The position is ALSO carried explicitly in
-        // `dlgIndex`, because the id has to survive a tree holding more than one dialog.
-        id: String(index),
+        // fidelity risk that keeps the decompiler off this path. The id qualifies that position by dialog,
+        // because a tree can hold several; `dlgIndex` carries the raw number the file uses.
+        id: dlgStateId(ownResref, index),
         dlgIndex: index,
         dlgResref: ownResref,
         text: strrefText(state.text),
         ...(trigger !== undefined ? { trigger } : {}),
         choices: owned.map((t, i) => ({
-            ...choiceFrom(t, state.firstTransition + i, input, ownResref),
-            id: `${index}#${i}`,
+            ...choiceFrom(t, state.firstTransition + i, input, ownResref, present),
+            id: `${ownResref}:${index}#${i}`,
         })),
     };
 }
 
-export function modelFromDlg(input: DlgModelInput): DialogModel {
+function rootFrom(input: DlgModelInput, present: Present, external: boolean): DialogRoot {
     const ownResref = resrefName(input.resref);
+    return {
+        id: `dialog:${ownResref}`,
+        label: ownResref,
+        kind: "dialog",
+        states: input.states.map((s, i) => stateFrom(s, i, input, ownResref, present)),
+        ...(external ? { external: true } : {}),
+    };
+}
+
+/**
+ * One tree spanning several dialogs: the file being edited first, then every other dialog loaded alongside
+ * it. Conversations routinely hand off to another file and hand back, so drawing only the opened file cuts
+ * the graph exactly where the interesting edges are; with the neighbours present, a jump out and a jump back
+ * resolve to nodes and the round trip closes. The others are marked external - they are context, not the
+ * thing being written.
+ */
+export function modelFromDlgs(main: DlgModelInput, others: DlgModelInput[]): DialogModel {
+    const loaded = new Map<string, number>();
+    for (const input of [main, ...others]) loaded.set(resrefName(input.resref), input.states.length);
+    const present: Present = (resref, stateIndex) => {
+        const count = loaded.get(resref);
+        return count !== undefined && stateIndex >= 0 && stateIndex < count;
+    };
     return {
         sourceLang: "dlg",
         // Not blanket-editable: that flag means "every state, freely", the D family's contract, and drives
         // the inspector's banner. A DLG is decided per node instead - see `nodeEditable`.
         editable: false,
-        roots: [
-            {
-                id: `dialog:${ownResref}`,
-                label: ownResref,
-                kind: "dialog",
-                states: input.states.map((s, i) => stateFrom(s, i, input, ownResref)),
-            },
-        ],
+        // Set here rather than left to the host, as the other families do: with several dialogs in one tree
+        // this is what says WHICH of them is being written, and `nodeEditable` reads it.
+        sourceName: resrefName(main.resref),
+        roots: [rootFrom(main, present, false), ...others.map((o) => rootFrom(o, present, true))],
     };
+}
+
+export function modelFromDlg(input: DlgModelInput): DialogModel {
+    return modelFromDlgs(input, []);
 }

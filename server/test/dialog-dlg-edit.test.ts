@@ -170,7 +170,7 @@ describe("detachDlgState", () => {
         const before = model();
         detachDlgState(before, "TEST", 1);
 
-        expect(before.roots[0]!.states[0]!.choices[0]!.target).toEqual({ kind: "state", stateId: "1" });
+        expect(before.roots[0]!.states[0]!.choices[0]!.target).toEqual({ kind: "state", stateId: "TEST:1" });
     });
 
     it("refuses a state the dialog does not hold", () => {

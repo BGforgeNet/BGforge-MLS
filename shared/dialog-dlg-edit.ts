@@ -6,10 +6,11 @@
  * edited model; turning that model back into bytes is the writer's job (`dlg-write.ts`), which is deliberately
  * the only thing that touches records - one writer, so flag and table handling cannot drift between paths.
  *
- * Pure and dependency-free, so it is unit-testable and `shared/` stays clear of the binary reader.
+ * Pure, so it is unit-testable and `shared/` stays clear of the binary reader.
  */
 
 import type { DialogModel, DialogState } from "./dialog-model";
+import { resrefName } from "./dialog-model-dlg";
 
 /**
  * Where a selected line lives in the file: a state's own line, or one of its replies by position. `choiceId`
@@ -59,7 +60,10 @@ export function setDlgLineText(
  * in from other dialogs, so the flattened list is not the state table and its positions are not indices; a
  * foreign state is dropped here rather than written into the wrong file.
  */
-function ownStatesByIndex(model: DialogModel, ownResref: string): Map<number, DialogState> {
+function ownStatesByIndex(model: DialogModel, rawResref: string): Map<number, DialogState> {
+    // Resource names are case-insensitive to the game and a file on disk may be spelled either way, while
+    // the model always uppercases.
+    const ownResref = resrefName(rawResref);
     const own = new Map<number, DialogState>();
     for (const root of model.roots) {
         for (const state of root.states) {

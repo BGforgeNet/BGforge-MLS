@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDlg, readDlg, type DlgBuildInput } from "@bgforge/binary";
 import { writeDlgFromModel } from "../src/dialog-editor/dlg-write";
-import { modelFromDlg } from "../../shared/dialog-model-dlg";
+import { modelFromDlg, modelFromDlgs } from "../../shared/dialog-model-dlg";
 import type { DialogModel } from "../../shared/dialog-model";
 
 /** Resrefs are fixed-width and NUL-padded on the wire, which is how the reader hands them back. */
@@ -186,5 +186,31 @@ describe("writeDlgFromModel, table entries", () => {
 
         expect(dlg.states[1]!.triggerIndex).toBe(1);
         expect(writeDlgFromModel(bytes, model, "DUP")).toEqual(bytes);
+    });
+});
+
+describe("writeDlgFromModel, a tree holding more than one dialog", () => {
+    /** What the tree looks like once the neighbours a conversation hands off to are loaded alongside it. */
+    function withNeighbour(): DialogModel {
+        const model = modelFromDlgs({ ...readDlg(original()), resref: "TEST" }, [
+            { ...readDlg(original()), resref: "OTHER" },
+        ]);
+        return model;
+    }
+
+    it("writes only the states of the file it was asked for", () => {
+        const dlg = readDlg(writeDlgFromModel(original(), withNeighbour(), "TEST"));
+
+        expect(dlg.states).toHaveLength(2);
+    });
+
+    it("leaves the neighbour's states out byte for byte, so loading context is not an edit", () => {
+        expect(writeDlgFromModel(original(), withNeighbour(), "TEST")).toEqual(original());
+    });
+
+    it("finds its own states when the file name is not spelled in caps", () => {
+        // Resrefs are case-insensitive in the game's own resource lookup, and a file on disk may be named
+        // either way; the model uppercases, so a raw file name would otherwise match nothing at all.
+        expect(writeDlgFromModel(original(), sampleModel(), "test")).toEqual(original());
     });
 });

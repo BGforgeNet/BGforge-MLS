@@ -83,22 +83,32 @@ describe("nodeDeletable - editable AND every inbound reference can be cleaned up
 describe("dlg - a compiled dialog's states are editable, but its numbering is not the user's", () => {
     const dlgState = (partial: Partial<DialogState> = {}) =>
         state({ id: "TEST:0", dlgIndex: 0, dlgResref: "TEST", ...partial });
+    /** `sourceName` says which file is being written, which is what makes a state this editor's to change. */
+    const dlgModel = (node: DialogState) => ({ ...model("dlg", node), sourceName: "TEST" });
 
     it("a state is editable: its replies can be added, removed and retargeted", () => {
-        expect(nodeEditable(model("dlg", dlgState()), dlgState())).toBe(true);
+        expect(nodeEditable(dlgModel(dlgState()), dlgState())).toBe(true);
+    });
+
+    it("a state from another dialog, loaded only for context, is not editable", () => {
+        // The tree pulls in the dialogs a conversation hands off to. This editor writes ONE file, so a state
+        // belonging to another one has nowhere for an edit to go.
+        const foreign = state({ id: "OTHER:2", dlgIndex: 2, dlgResref: "OTHER" });
+
+        expect(nodeEditable(dlgModel(foreign), foreign)).toBe(false);
     });
 
     it("a state cannot be renamed - its number is its position, not a label the user chooses", () => {
-        expect(nodeRenamable(model("dlg", dlgState()), dlgState())).toBe(false);
+        expect(nodeRenamable(dlgModel(dlgState()), dlgState())).toBe(false);
         // Every other family names its states, so renaming stays available there.
         expect(nodeRenamable(model("d", state({})), state({}))).toBe(true);
     });
 
     it("a state cannot be deleted - removing one renumbers every state above it", () => {
-        expect(nodeDeletable(model("dlg", dlgState()), dlgState())).toBe(false);
+        expect(nodeDeletable(dlgModel(dlgState()), dlgState())).toBe(false);
     });
 
     it("a state the user just added is editable before it has an index", () => {
-        expect(nodeEditable(model("dlg", state({ id: "new" })), state({ id: "new" }))).toBe(true);
+        expect(nodeEditable(dlgModel(state({ id: "new" })), state({ id: "new" }))).toBe(true);
     });
 });

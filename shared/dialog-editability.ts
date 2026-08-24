@@ -11,6 +11,7 @@
 
 import { renderFamily, type DialogModel, type DialogState } from "./dialog-model";
 import { eligibleToDelete, isLocalNewSSLNode } from "./dialog-ssl-edit";
+import { resrefName } from "./dialog-model-dlg";
 
 /**
  * Whether a node may be edited (its field AND structural edits both round-trip to source).
@@ -37,8 +38,12 @@ export function nodeEditable(model: DialogModel, state: DialogState | null): sta
     if (!state || state.derivedFrom) return false;
     // A DLG has no source text to splice, but it does not need any: the writer rebuilds the whole file from
     // the model, so every state is editable. What it may NOT do is change a state's number - see
-    // `nodeRenamable` and `nodeDeletable`, which is where that boundary lives.
-    if (model.sourceLang === "dlg") return true;
+    // `nodeRenamable` and `nodeDeletable`, which is where that boundary lives. The tree also holds the
+    // dialogs this one hands off to, purely as context; the editor writes ONE file, so a state belonging to
+    // another has nowhere for an edit to go. A state with no resref at all is one the user just added here.
+    if (model.sourceLang === "dlg") {
+        return state.dlgResref === undefined || state.dlgResref === resrefName(model.sourceName ?? "");
+    }
     if (renderFamily(model.sourceLang) === "weidu-d") {
         return state.faithful !== false;
     }
