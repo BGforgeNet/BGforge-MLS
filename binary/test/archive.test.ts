@@ -435,6 +435,71 @@ describe("TLK (dialog.tlk)", () => {
         expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow();
     });
 
+    describe("search", () => {
+        const SAMPLE = ["Sword of Chaos", "a sword +1", null, "Shield", "SWORDFISH", ""];
+
+        it("matches text case-insensitively, reporting each hit's strref", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("sword")).toEqual([
+                { strref: 0, text: "Sword of Chaos" },
+                { strref: 1, text: "a sword +1" },
+                { strref: 4, text: "SWORDFISH" },
+            ]);
+            tlk.close();
+        });
+
+        it("returns hits in strref order, which is the order the game numbers them", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("s").map((hit) => hit.strref)).toEqual([0, 1, 3, 4]);
+            tlk.close();
+        });
+
+        it("stops at the requested limit, so a common word cannot return the whole table", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("s", { limit: 2 }).map((hit) => hit.strref)).toEqual([0, 1]);
+            tlk.close();
+        });
+
+        it("skips entries the table holds no text for", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            // Index 2 is a no-text entry and index 5 an empty string; neither can match anything.
+            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(2);
+            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(5);
+            tlk.close();
+        });
+
+        it("finds nothing for a query no entry contains", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("halberd")).toEqual([]);
+            tlk.close();
+        });
+
+        it("decodes with the configured codepage, so a match is on the text the player sees", () => {
+            const tlk = parseTlk(buildTlk([Uint8Array.from([0xc0, 0x42])]), { encoding: "windows-1251" });
+            expect(tlk.search("\u0410B")).toEqual([{ strref: 0, text: "\u0410B" }]);
+            tlk.close();
+        });
+
+        it("reads the table once however many searches are run", () => {
+            const bytes = buildTlk(SAMPLE);
+            let reads = 0;
+            const counting: ByteSource = {
+                size: bytes.byteLength,
+                read(offset, length) {
+                    reads++;
+                    return bytes.subarray(offset, offset + length);
+                },
+                close() {},
+            };
+            const tlk = openTlk(counting);
+            tlk.search("sword");
+            const afterFirst = reads;
+            tlk.search("shield");
+            tlk.search("fish");
+            expect(reads).toBe(afterFirst);
+        });
+    });
+
     /**
      * A record's fields resolve one strref at a time and every message re-resolves them - a CRE alone carries
      * 100 sound-slot strrefs - so an uncached `get` turns one panel refresh into hundreds of positioned reads

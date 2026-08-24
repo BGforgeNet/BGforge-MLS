@@ -437,6 +437,11 @@
                 "command": "bgforge.ieResources.closeGame",
                 "title": "BGforge: Close IE Game",
                 "icon": "$(close)"
+            },
+            {
+                "command": "bgforge.ieResources.insertGameString",
+                "title": "BGforge: Insert Game String Reference...",
+                "icon": "$(symbol-string)"
             }
         ],
         "menus": {

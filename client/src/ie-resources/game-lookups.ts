@@ -13,6 +13,18 @@ import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
  */
 export type StrrefResolver = (uri: vscode.Uri, strref: number) => string | undefined;
 
+/** One string a search matched: the number to store, and the text that made it a hit. */
+export interface StrrefMatch {
+    readonly strref: number;
+    readonly text: string;
+}
+
+/**
+ * Finds strings by what they say, for choosing one without knowing its number. `limit` caps the hits, since a
+ * common word matches thousands in a real string table.
+ */
+export type StrrefSearch = (uri: vscode.Uri, query: string, limit?: number) => readonly StrrefMatch[];
+
 /** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
 export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
 
@@ -134,7 +146,12 @@ export function isGameDocument(uri: vscode.Uri, fallback?: GameDirFallback): boo
  *  on the whole session would drag its open/close lifecycle into every caller (and every test). */
 interface TlkSource {
     ensureOpen(dir: string): {
-        tlk(): { get(strref: number): string | undefined } | undefined;
+        tlk():
+            | {
+                  get(strref: number): string | undefined;
+                  search(query: string, options?: { limit?: number }): readonly StrrefMatch[];
+              }
+            | undefined;
         ids(resref: string): ReadonlyMap<number, string> | undefined;
         idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
@@ -147,6 +164,23 @@ interface TlkSource {
          * the same detection reports - the axis a compiled script's field naming turns on.
          */
         readonly identity: { readonly flavour: string; readonly scriptStyle: IeScriptStyle };
+    };
+}
+
+/** How many hits a search returns when the caller names no limit; a picker shows a page, not a whole table. */
+const DEFAULT_SEARCH_LIMIT = 100;
+
+export function createStrrefSearch(session: TlkSource, fallback?: GameDirFallback): StrrefSearch {
+    return (uri, query, limit = DEFAULT_SEARCH_LIMIT) => {
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return [];
+        try {
+            // ensureOpen and the male/default table, for the reasons given on the strref resolver below.
+            return session.ensureOpen(gameDir).tlk()?.search(query, { limit }) ?? [];
+        } catch {
+            // An unreadable game reads as "no matches" - the picker simply offers nothing to choose.
+            return [];
+        }
     };
 }
 

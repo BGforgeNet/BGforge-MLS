@@ -4,6 +4,10 @@
 
 ### Infinity Engine games
 
+- New command **BGforge: Insert Game String Reference...**, which searches the game's text and writes the
+  matching string's number at the cursor. A string reference is an opaque number, so the alternative was
+  knowing it in advance or looking it up in another tool. Typing a number instead of text offers that entry
+  directly. Needs `bgforge.weidu.gamePath` set to the install to search.
 - BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,
   `SetName`, `AddJournalEntry` and the rest - get an inline preview of the text beside the number, and
   hovering the number shows it in full, the same way `.tra` and `.msg` references already work. The text

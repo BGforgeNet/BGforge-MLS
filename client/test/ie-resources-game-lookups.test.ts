@@ -15,11 +15,22 @@ import {
     createResourceTypeResolver,
     createSlotLabelResolver,
     createStrrefResolver,
+    createStrrefSearch,
+    type StrrefMatch,
     isGameDocument,
 } from "../src/ie-resources/game-lookups";
 import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
+
+/** Stands in for a real dialog.tlk search: substring, case-insensitive, in strref order, capped at `limit`. */
+function searchLines(query: string, limit: number) {
+    return Object.entries(LINES)
+        .map(([strref, text]) => ({ strref: Number(strref), text }))
+        .filter((hit) => hit.text !== "" && hit.text.toLowerCase().includes(query.toLowerCase()))
+        .sort((a, b) => a.strref - b.strref)
+        .slice(0, limit);
+}
 
 const TABLES: Record<string, ReadonlyMap<number, string>> = {
     // The two a compiled script's every call is named through, plus one enumerated object field.
@@ -46,7 +57,12 @@ function session(
     } = {},
 ): {
     ensureOpen: (dir: string) => {
-        tlk: () => { get: (n: number) => string | undefined } | undefined;
+        tlk: () =>
+            | {
+                  get: (n: number) => string | undefined;
+                  search: (q: string, o?: { limit?: number }) => readonly StrrefMatch[];
+              }
+            | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
         idsAll: (resref: string) => ReadonlyMap<number, readonly string[]> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
@@ -61,7 +77,13 @@ function session(
         ensureOpen: (dir: string) => {
             if (overrides.throws === true) throw new Error(`no game at ${dir}`);
             return {
-                tlk: () => (overrides.noTlk === true ? undefined : { get: (n: number) => LINES[n] }),
+                tlk: () =>
+                    overrides.noTlk === true
+                        ? undefined
+                        : {
+                              get: (n: number) => LINES[n],
+                              search: (q: string, o?: { limit?: number }) => searchLines(q, o?.limit ?? 100),
+                          },
                 ids: (resref: string) =>
                     (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 // Every row per value, which is what a script decompiler reads. The fake tables hold one row
@@ -222,7 +244,7 @@ describe("createStrrefResolver", () => {
         const get = vi.fn();
         const spySession = {
             ensureOpen: () => ({
-                tlk: () => ({ get }),
+                tlk: () => ({ get, search: () => [] }),
                 ids: () => undefined,
                 idsAll: () => undefined,
                 twoDa: () => undefined,
@@ -257,6 +279,52 @@ describe("createStrrefResolver", () => {
     // An unreadable game must not fail the editor open - the field falls back to showing its number.
     it("swallows an unopenable game", () => {
         expect(createStrrefResolver(session({ throws: true }))(gameUri(), 6348)).toBeUndefined();
+    });
+});
+
+describe("createStrrefSearch", () => {
+    it("finds strings by what they say, against the game the URI names", () => {
+        expect(createStrrefSearch(session())(gameUri(), "protection")).toEqual([
+            { strref: 6348, text: "Ring of Protection +1" },
+        ]);
+    });
+
+    it("passes the caller's limit through, so a common word cannot flood a picker", () => {
+        const search = vi.fn(() => []);
+        const spySession = {
+            ensureOpen: () => ({
+                tlk: () => ({ get: () => undefined, search }),
+                ids: () => undefined,
+                idsAll: () => undefined,
+                twoDa: () => undefined,
+                twoDaTable: () => undefined,
+                canRead: () => false,
+                read: (): Uint8Array => {
+                    throw new Error("empty game");
+                },
+                list: () => [],
+                identity: { flavour: "bg2", scriptStyle: "bg2" as IeScriptStyle },
+            }),
+        };
+
+        createStrrefSearch(spySession)(gameUri(), "sword", 5);
+
+        expect(search).toHaveBeenCalledWith("sword", { limit: 5 });
+    });
+
+    it("finds nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
+
+        expect(createStrrefSearch(session())(fileUri, "protection")).toEqual([]);
+    });
+
+    it("finds nothing when the game has no string table", () => {
+        expect(createStrrefSearch(session({ noTlk: true }))(gameUri(), "protection")).toEqual([]);
+    });
+
+    // An unreadable game reads as "no matches", exactly as the strref resolver treats it as "no line".
+    it("finds nothing when the game cannot be opened", () => {
+        expect(createStrrefSearch(session({ throws: true }))(gameUri(), "protection")).toEqual([]);
     });
 });
 

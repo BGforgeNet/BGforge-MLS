@@ -16,6 +16,8 @@ function fakeTlk(strings: string[]): Tlk {
         count: strings.length,
         languageId: 0,
         get: (strref) => (strref >= 0 && strref < strings.length ? strings[strref] : undefined),
+        // Present to satisfy the reader's surface; strref resolution never searches.
+        search: () => [],
         close: () => undefined,
     };
 }

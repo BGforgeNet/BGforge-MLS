@@ -14,6 +14,7 @@ import {
     createFlagBitNamesResolver,
     createSlotLabelResolver,
     createStrrefResolver,
+    createStrrefSearch,
     gameDirOf,
     isGameDocument,
     type NamingTableResolver,
@@ -28,6 +29,7 @@ import {
     type BcsSymbolResolver,
 } from "./game-lookups";
 import { viewTypeForResource } from "./editor-routing";
+import { pickStrref } from "./strref-picker";
 import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
 
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
@@ -78,6 +80,11 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         return checkedValid ? dir : undefined;
     };
     const fallbackGameDir = (): string | undefined => configuredGameDir() ?? session.current?.dir;
+
+    // Built once and shared: the resolver is also the value this returns to the binary editor, and the picker
+    // needs both halves - search to find a string, resolve to show the one a typed number already names.
+    const strrefResolver = createStrrefResolver(session, fallbackGameDir);
+    const strrefSearch = createStrrefSearch(session, fallbackGameDir);
     const tree = new GameResourceTreeProvider(session);
     const fsProvider = new GameResourceFileSystemProvider(session);
     const treeView = vscode.window.createTreeView("bgforge.ieResources", {
@@ -189,6 +196,28 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await openRef(gameDir, arg.resref, arg.ext);
     };
 
+    /**
+     * Search the game's text for a string and write its number at the cursor. A strref is an opaque integer,
+     * so the alternative is knowing it beforehand or hunting for it in another tool.
+     */
+    const insertGameString = async (): Promise<void> => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) return;
+        const strref = await pickStrref(
+            strrefSearch,
+            (ref) => strrefResolver(editor.document.uri, ref),
+            editor.document.uri,
+            {
+                title: "Insert a game string's number",
+            },
+        );
+        if (strref === undefined) return;
+        // Replaces the selection where there is one, matching what typing the number would do.
+        await editor.edit((builder) => {
+            for (const selection of editor.selections) builder.replace(selection, String(strref));
+        });
+    };
+
     context.subscriptions.push(
         { dispose: () => session.dispose() },
         treeView,
@@ -214,6 +243,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         }),
         vscode.commands.registerCommand("bgforge.ieResources.open", openResource),
         vscode.commands.registerCommand("bgforge.ieResources.openRef", openRefFromDocument),
+        vscode.commands.registerCommand("bgforge.ieResources.insertGameString", insertGameString),
     );
 
     /**
@@ -244,7 +274,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     if (treeView.visible) void restoreGame();
 
     return {
-        strref: createStrrefResolver(session, fallbackGameDir),
+        strref: strrefResolver,
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),
         namingTable: createNamingTableResolver(session, fallbackGameDir),
         resourceType: createResourceTypeResolver(session, fallbackGameDir),
