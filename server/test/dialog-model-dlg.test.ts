@@ -90,6 +90,22 @@ describe("modelFromDlg", () => {
         expect(second!.choices).toHaveLength(0);
     });
 
+    test("carries each state's file position as an explicit key, not only as its id", () => {
+        // The id has to become dialog-qualified once a tree can hold states from more than one file, so the
+        // writer cannot keep reading the index back out of it. `dlgIndex` is that stable key, the way
+        // `sourceRange` is for a D state.
+        const states = modelFromDlg(sampleDlg()).roots[0]!.states;
+
+        expect(states.map((s) => s.dlgIndex)).toEqual([0, 1]);
+        expect(states.map((s) => s.dlgResref)).toEqual(["SELFDLG", "SELFDLG"]);
+    });
+
+    test("gives each choice the transition index it came from, so a reply maps back to its record", () => {
+        const choices = modelFromDlg(sampleDlg()).roots[0]!.states[0]!.choices;
+
+        expect(choices.map((c) => c.dlgTransition)).toEqual([0, 1, 2]);
+    });
+
     test("carries strrefs as @refs so they resolve through the same path as .msg and .tra", () => {
         const state = modelFromDlg(sampleDlg()).roots[0]!.states[0]!;
 

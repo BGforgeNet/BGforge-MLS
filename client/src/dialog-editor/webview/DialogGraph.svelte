@@ -31,6 +31,7 @@
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { hasSourceSpans, nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
+    import { dlgAddress } from "../../../../shared/dialog-dlg-edit";
     import { hasHost, postToHost } from "./host";
     import {
         renderFamily,
@@ -1075,15 +1076,12 @@
     }
 
     const actions: DialogActions = {
-        // A compiled dialog addresses its records by position: the state's model id IS its index, and a reply's
-        // is its position within the state. The host maps the pair back onto the file's own tables.
+        // A compiled dialog addresses its records by position. `dlgAddress` owns that mapping (and the cases
+        // where there is no record to address); the host turns the pair back into the file's own tables.
         pickString: (choiceId: string | null) => {
             if (!selected) return;
-            const stateIndex = Number(selected.id);
-            if (!Number.isInteger(stateIndex)) return;
-            const choiceIndex = choiceId === null ? undefined : selected.choices.findIndex((c) => c.id === choiceId);
-            if (choiceIndex === -1) return;
-            postToHost({ type: "pickString", stateIndex, ...(choiceIndex === undefined ? {} : { choiceIndex }) });
+            const address = dlgAddress(selected, choiceId);
+            if (address) postToHost({ type: "pickString", ...address });
         },
         rename: (newId: string) => {
             if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });

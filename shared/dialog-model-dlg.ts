@@ -83,6 +83,7 @@ function choiceFrom(
     const action = transition.hasAction ? input.actions[transition.actionIndex] : undefined;
     return {
         id: `#${index}`,
+        dlgTransition: index,
         ...(transition.hasText ? { text: strrefText(transition.text) } : {}),
         ...(condition !== undefined ? { condition } : {}),
         ...(action !== undefined ? { action } : {}),
@@ -96,8 +97,11 @@ function stateFrom(state: DlgModelState, index: number, input: DlgModelInput, ow
     const trigger = state.triggerIndex >= 0 ? input.stateTriggers[state.triggerIndex] : undefined;
     return {
         // States are addressed by position - the binary holds no labels, and inventing them is exactly the
-        // fidelity risk that keeps the decompiler off this path.
+        // fidelity risk that keeps the decompiler off this path. The position is ALSO carried explicitly in
+        // `dlgIndex`, because the id has to survive a tree holding more than one dialog.
         id: String(index),
+        dlgIndex: index,
+        dlgResref: ownResref,
         text: strrefText(state.text),
         ...(trigger !== undefined ? { trigger } : {}),
         choices: owned.map((t, i) => ({

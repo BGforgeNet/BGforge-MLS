@@ -314,6 +314,14 @@ export interface DialogState {
     block?: DialogBlock;
     /** SSL only: true when the flat projection is an approximation (see SSLDialogNode.approximate). Drives an "approximate - see source" signal. */
     approximate?: boolean;
+    /**
+     * DLG only: this state's position in its file's state table, and the dialog that holds it. Together they
+     * are the stable key mapping an edited state back to its record, the role `sourceRange` plays for D - the
+     * id cannot serve, because a tree holding states from several dialogs must qualify ids by file. Set by
+     * the DLG adapter. `dlgIndex` is absent on a state the user just added, which has no record yet.
+     */
+    dlgIndex?: number;
+    dlgResref?: string;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -340,6 +348,13 @@ export interface DialogChoice {
      * adapter; used by the per-field surgical edit to splice just this transition.
      */
     sourceRange?: { start: number; end: number };
+    /**
+     * DLG only: this reply's position in its file's transition table. Set by the DLG adapter; absent on a
+     * reply the user just added. The writer rebuilds every state's transition window from the model, so this
+     * is what carries the fields the model does not model (journal entry, quest and interrupt flags) across
+     * an edit - not an address the written file preserves.
+     */
+    dlgTransition?: number;
     /**
      * SSL only: byte span of the whole option call `NOption(...)` (used by reorder). Set by the SSL
      * adapter; absent for D, which uses `sourceRange` for its whole-transition span.

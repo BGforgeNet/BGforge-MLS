@@ -223,7 +223,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         const original = this.posted.get(document);
         if (!original || typeof incoming !== "object" || incoming === null) return;
         try {
-            const edits = dlgTextEdits(original, incoming as DialogModel);
+            const edits = dlgTextEdits(original, incoming as DialogModel, resrefOf(document.uri));
             document.applyTextEdits(edits, "Edit dialog");
             if (edits.length > 0) this.postModel(document, post);
         } catch (error) {
