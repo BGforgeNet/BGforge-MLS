@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Infinity Engine scripts
+
+- Compiled scripts (`.bcs`, and the `.bs` AI-selection scripts) open as readable BAF source instead of the
+  markers and bare numbers they are stored as. The tab is read-only and gets the full BAF treatment -
+  highlighting, outline, hover, completion - because it is a BAF document.
+- Every name in a compiled script is a number the install's own tables give a meaning to, so the view needs
+  a game open. With none, the tab explains that and says how to open one rather than showing the numbers.
+- Baldur's Gate, Icewind Dale, Icewind Dale II and Planescape: Torment scripts are all read. The game
+  decides what an object's fields mean, and the open install says which game it is.
+
 ### Dialog editor
 
 - Compiled Infinity Engine dialogs (`.dlg`) open in the dialog editor, read-only: the same tree and graph

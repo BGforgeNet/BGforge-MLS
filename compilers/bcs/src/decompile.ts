@@ -22,6 +22,15 @@
 import type { BcsAction, BcsObject, BcsScript, BcsTrigger } from "./types";
 
 /**
+ * Which game's script conventions to name a record by.
+ *
+ * The codec needs none of this - a file reads and writes byte-identically without it - but naming does: the
+ * same stored number is a different field, and looks up in a different table, depending on the engine. `bg`
+ * covers the Baldur's Gate family including the Enhanced Editions, whose scripts share one object layout.
+ */
+export type BcsEngine = "bg" | "iwd" | "iwd2" | "pst";
+
+/**
  * The install's own naming tables. A lookup that finds nothing leaves the value as a number.
  *
  * Signature lookups return EVERY row the table gives an id, because tables really do give one id several, and
@@ -52,11 +61,21 @@ const AREA_LENGTH = 6;
 const ANYONE = "ANYONE";
 
 /**
- * The object's enumerated fields, in stored order, with the table that names each. The five identifier slots
- * follow them and are resolved against OBJECT.IDS; a BG-family object carries no coordinates, which is why
- * twelve numbers is the whole of it.
+ * The object's enumerated fields, in stored order, with the table that names each - the one thing about an
+ * object that a record cannot tell you and only the engine can. The five identifier slots follow the fields and
+ * are always resolved against OBJECT.IDS.
+ *
+ * Torment inserts FACTION and TEAM straight after EA, so the same two stored numbers BG reads as GENERAL and
+ * RACE name entirely different tables there; Icewind Dale II appends SUBRACE, and then AVCLASS and CLASSMSK,
+ * which it stores AFTER the object's name while printing them in list position like any other field.
  */
-const OBJECT_FIELDS = ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGNMEN"] as const;
+const OBJECT_TARGETS = {
+    bg: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
+    iwd: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
+    pst: ["EA", "FACTION", "TEAM", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
+    iwd2: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGNMNT", "SUBRACE", "AVCLASS", "CLASSMSK"],
+} as const satisfies Record<BcsEngine, readonly string[]>;
+
 const IDENTIFIER_SLOTS = 5;
 
 const SIGNATURE = /^([^(]+)\((.*)\)$/s;
@@ -150,17 +169,31 @@ function selectSignature(candidates: readonly string[], strings: readonly string
     return (fitting.length > 0 ? fitting : candidates).at(-1);
 }
 
-function named(value: number, table: string | undefined, symbols: BcsSymbols): string {
-    if (table === undefined) return String(value);
+function lookup(value: number, table: string | undefined, symbols: BcsSymbols): string | undefined {
+    if (table === undefined) return undefined;
     const rows = symbols.ids(table);
     // A record stores a signed dword while a table may write the same bits unsigned - STATE.IDS spells
     // STATE_CONFUSED `0x80000000`, which arrives here as -2147483648. Both readings name one value.
     const unsigned = value < 0 ? value + 0x1_0000_0000 : value;
-    return rows?.get(value) ?? rows?.get(unsigned) ?? String(value);
+    return rows?.get(value) ?? rows?.get(unsigned);
+}
+
+function named(value: number, table: string | undefined, symbols: BcsSymbols): string {
+    return lookup(value, table, symbols) ?? String(value);
+}
+
+/** A rectangle of four -1s is the "unused" the engines that have the field store, so it is not a coordinate. */
+function isEmptyRegion(region: readonly number[] | undefined): boolean {
+    return region === undefined || region.every((side) => side === -1);
 }
 
 function isEmptyObject(object: BcsObject): boolean {
-    return object.string === "" && object.ints.every((value) => value === 0);
+    return (
+        object.string === "" &&
+        object.ints.every((value) => value === 0) &&
+        (object.trailingInts ?? []).every((value) => value === 0) &&
+        isEmptyRegion(object.region)
+    );
 }
 
 /**
@@ -168,43 +201,66 @@ function isEmptyObject(object: BcsObject): boolean {
  * `NearestEnemyOf` prints as `NearestEnemyOf(Myself)`. Trailing zeroes are dropped from the bracket list, so a
  * creature filtered only by allegiance reads `[PC]` rather than seven fields of nothing.
  */
-function renderObject(object: BcsObject, symbols: BcsSymbols): string {
-    const fields = object.ints.slice(0, OBJECT_FIELDS.length);
+function renderObject(object: BcsObject, symbols: BcsSymbols, engine: BcsEngine): string {
+    // The identifier chain is the five numbers immediately before the name, whatever an engine stores ahead of
+    // them, so the split is taken from the end rather than from a per-engine field count. Everything else is an
+    // enumerated field, including the two IWD2 keeps after the name.
+    const split = Math.max(0, object.ints.length - IDENTIFIER_SLOTS);
+    const fields = [...object.ints.slice(0, split), ...(object.trailingInts ?? [])];
     let last = fields.length;
     while (last > 0 && fields[last - 1] === 0) last--;
 
     let text = "";
     if (last > 0) {
+        const tables = OBJECT_TARGETS[engine];
         // A zero field is "unconstrained", not a value to look up, even where the table happens to name 0 -
         // GENERAL.IDS calls it GENERAL_ITEM, which would read as a filter the record does not apply.
         text = `[${fields
             .slice(0, last)
-            .map((value, index) => (value === 0 ? "0" : named(value, OBJECT_FIELDS[index], symbols)))
+            .map((value, index) => (value === 0 ? "0" : namedField(fields, index, tables, symbols)))
             .join(".")}]`;
     } else if (object.string !== "") {
         text = `"${object.string}"`;
     }
 
-    const identifiers = object.ints.slice(OBJECT_FIELDS.length, OBJECT_FIELDS.length + IDENTIFIER_SLOTS);
+    const identifiers = object.ints.slice(split);
     for (const slot of identifiers) {
         if (slot === 0) continue;
         const name = named(slot, "OBJECT", symbols);
         text = text === "" ? name : `${name}(${text})`;
     }
 
+    // The rectangle prints last, outside the identifier wrapping rather than inside the bracket list.
+    const rectangle = object.region;
+    const region = rectangle === undefined || isEmptyRegion(rectangle) ? "" : `[${rectangle.join(".")}]`;
+
     // An argument position the record left entirely blank still has to print something, and it means "no
     // constraint". No IDS table names it - EA.IDS starts at 1 - so the name is supplied here, which is the one
     // case a name may be, because it is a key the install's tables structurally cannot reach. A zero in the
     // MIDDLE of a bracket list is a different thing and keeps its number: dropping it would shift every later
     // field onto the wrong name.
-    return text === "" ? `[${ANYONE}]` : text;
+    return (text === "" ? `[${ANYONE}]` : text) + region;
+}
+
+/**
+ * One enumerated field's name. Only IWD2 needs more than the value: its SUBRACE numbers repeat across races and
+ * are keyed by the race packed into the high half, so the stored number alone names nothing. A combination the
+ * table does not carry falls back to the number the file holds, not to the key that was looked up.
+ */
+function namedField(fields: readonly number[], index: number, tables: readonly string[], symbols: BcsSymbols): string {
+    const value = fields[index]!;
+    const subrace = tables.indexOf("SUBRACE");
+    const race = subrace === -1 ? 0 : (fields[tables.indexOf("RACE")] ?? 0);
+    const key = index === subrace ? value | (race << 16) : value;
+    return lookup(key, tables[index], symbols) ?? String(value);
 }
 
 /** Draws each argument from the pool its type reads, in the order the signature lists them. */
 function renderCall(
     signature: string,
     symbols: BcsSymbols,
-    pools: { integers: number[]; strings: string[]; objects: BcsObject[]; point: [number, number] },
+    engine: BcsEngine,
+    pools: { integers: number[]; strings: string[]; objects: BcsObject[]; point: readonly number[] },
 ): string | undefined {
     const parsed = parseSignature(signature);
     if (parsed === undefined) return undefined;
@@ -224,9 +280,9 @@ function renderCall(
             case "S":
                 return `"${strings[string++] ?? ""}"`;
             case "O":
-                return renderObject(pools.objects[object++] ?? { ints: [], string: "" }, symbols);
+                return renderObject(pools.objects[object++] ?? { ints: [], string: "" }, symbols, engine);
             case "P":
-                return `[${pools.point[0]}.${pools.point[1]}]`;
+                return `[${pools.point[0] ?? 0}.${pools.point[1] ?? 0}]`;
             default:
                 // `A:` (an action argument) has no stored instance in the BG family to read a form off, so it
                 // is refused by name rather than guessed at - see the README's known gaps.
@@ -238,23 +294,45 @@ function renderCall(
 }
 
 /**
- * Stored trigger numbers are `[id, integer, flags, integer, unused]`, so its two integer arguments are not
+ * Stored trigger numbers are `[id, integer, flags, integer, integer]`, so its integer arguments are not
  * adjacent. Bit 0 of the flags negates the condition.
+ *
+ * The spec calls the last of those "an integer of unknown purpose", and it is a third integer ARGUMENT:
+ * `NearLocation(O:Object*,I:PointX*,I:PointY*,I:Range*)` takes three and a stock BG:EE stores its range there.
  */
-function renderTrigger(trigger: BcsTrigger, symbols: BcsSymbols): string {
+function renderTrigger(trigger: BcsTrigger, symbols: BcsSymbols, engine: BcsEngine, override?: BcsTrigger): string {
     const id = trigger.ints[0] ?? 0;
     const signature = selectSignature(symbols.trigger(id), trigger.strings);
     const call =
         signature === undefined
             ? undefined
-            : renderCall(signature, symbols, {
-                  integers: [trigger.ints[1] ?? 0, trigger.ints[3] ?? 0],
+            : renderCall(signature, symbols, engine, {
+                  integers: [trigger.ints[1] ?? 0, trigger.ints[3] ?? 0, trigger.ints[4] ?? 0],
                   strings: trigger.strings.length === 0 ? scavengedStrings([trigger.object]) : trigger.strings,
                   objects: [trigger.object],
-                  point: [0, 0],
+                  // Only Torment stores a trigger coordinate, and it is the trigger's own point argument.
+                  point: trigger.point ?? [],
               });
     const negated = ((trigger.ints[2] ?? 0) & 1) === 1;
-    return `${negated ? "!" : ""}${call ?? `UnknownTrigger${id}()`}`;
+    const text = call ?? `UnknownTrigger${id}()`;
+    // The negation belongs to the trigger being retargeted, so it prints outside the wrapper.
+    const retargeted =
+        override === undefined ? text : `TriggerOverride(${renderObject(override.object, symbols, engine)},${text})`;
+    return `${negated ? "!" : ""}${retargeted}`;
+}
+
+/**
+ * Whether this record is the stored half of a `TriggerOverride`.
+ *
+ * Unlike `ActionOverride`, that construct is built from a REAL trigger: a `NextTriggerObject` record standing
+ * in front of the trigger it retargets, which the two fold into one line. Matched on the name the install's
+ * table gives the id rather than on the id itself - BG2:ToB's TRIGGER.IDS carries no such row at all, so the
+ * fold never fires there, while a stock BG:EE stores 198 of them across 19 scripts.
+ */
+function isOverrideTrigger(trigger: BcsTrigger, symbols: BcsSymbols): boolean {
+    const signature = selectSignature(symbols.trigger(trigger.ints[0] ?? 0), trigger.strings);
+    const parsed = signature === undefined ? undefined : parseSignature(signature);
+    return parsed?.name === "NextTriggerObject" && parsed.parameters.length === 1 && parsed.parameters[0]?.type === "O";
 }
 
 /**
@@ -269,12 +347,12 @@ function scavengedStrings(objects: readonly BcsObject[]): string[] {
 }
 
 /** Stored action numbers are `[integer, pointX, pointY, integer, integer]`. */
-function renderAction(action: BcsAction, symbols: BcsSymbols): string {
+function renderAction(action: BcsAction, symbols: BcsSymbols, engine: BcsEngine): string {
     const signature = selectSignature(symbols.action(action.id), action.strings);
     const call =
         signature === undefined
             ? undefined
-            : renderCall(signature, symbols, {
+            : renderCall(signature, symbols, engine, {
                   integers: [action.ints[0] ?? 0, action.ints[3] ?? 0, action.ints[4] ?? 0],
                   strings: action.strings.length === 0 ? scavengedStrings(action.objects.slice(1)) : action.strings,
                   // The first stored object is the acting-object override, not an argument.
@@ -285,7 +363,7 @@ function renderAction(action: BcsAction, symbols: BcsSymbols): string {
 
     const acting = action.objects[0];
     if (acting === undefined || isEmptyObject(acting)) return text;
-    return `ActionOverride(${renderObject(acting, symbols)},${text})`;
+    return `ActionOverride(${renderObject(acting, symbols, engine)},${text})`;
 }
 
 /**
@@ -304,24 +382,34 @@ function orCount(trigger: BcsTrigger, symbols: BcsSymbols): number | undefined {
  * response set is absent - the file says the block is there, and a view that dropped it would misreport what
  * the install actually runs.
  */
-export function decompileBcs(script: BcsScript, symbols: BcsSymbols): string {
+export function decompileBcs(script: BcsScript, symbols: BcsSymbols, engine: BcsEngine = "bg"): string {
     const out: string[] = [];
     for (const block of script.blocks) {
         out.push("IF");
         // `OR(n)` turns the next n triggers into alternatives; indenting them is what shows where the group
-        // ends, since nothing closes it. A count running past the end of the condition simply stops there.
+        // ends, since nothing closes it. A count running past the end of the condition simply stops there. It
+        // counts LINES, so a folded override pair spends one slot rather than two.
         let grouped = 0;
+        let override: BcsTrigger | undefined;
         for (const trigger of block.triggers) {
+            if (override === undefined && isOverrideTrigger(trigger, symbols)) {
+                override = trigger;
+                continue;
+            }
             const indent = grouped > 0 ? "    " : "  ";
             if (grouped > 0) grouped--;
-            out.push(`${indent}${renderTrigger(trigger, symbols)}`);
+            out.push(`${indent}${renderTrigger(trigger, symbols, engine, override)}`);
+            override = undefined;
             const count = orCount(trigger, symbols);
             if (count !== undefined) grouped = count;
         }
+        // An override with nothing after it has nothing to fold into, so it prints as the table names it.
+        if (override !== undefined)
+            out.push(`${grouped > 0 ? "    " : "  "}${renderTrigger(override, symbols, engine)}`);
         out.push("THEN");
         for (const response of block.responses) {
             out.push(`  RESPONSE #${response.weight}`);
-            for (const action of response.actions) out.push(`    ${renderAction(action, symbols)}`);
+            for (const action of response.actions) out.push(`    ${renderAction(action, symbols, engine)}`);
         }
         out.push("END", "");
     }

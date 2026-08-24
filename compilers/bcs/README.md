@@ -96,11 +96,12 @@ above.
   has depends on the `TRIGGER.IDS` and `ACTION.IDS` the player's install ships - editions and mods both change
   them. Resolution belongs to a layer that holds a game; keeping it out is what lets this read a file with
   no install present, and `decompileBcs` above takes the tables as an argument for the same reason.
-- **It does not name fields.** The argument lists are fixed - a trigger takes 7 arguments and an action 10,
-  and an object is EA plus six enumerated fields plus a five-slot identifier chain - but which field a given
-  number is depends on the engine: Torment gives an object two more, and the spec places a coordinate pair
-  on every engine but BG1. So a record holds its numbers as a list, and naming them is left to a layer that
-  knows the engine, which the file itself does not say.
+- **It does not name fields.** The argument lists are fixed - a trigger takes 7 arguments and an action 10 -
+  but which field a given number is depends on the engine, and the file does not say which engine wrote it.
+  Torment inserts two fields after an object's `EA` and gives every trigger a coordinate; Icewind Dale II adds
+  one field before the identifier chain and two after the name; every engine but the BG family gives an object
+  a rectangle. So a record holds its numbers as a list, in stored order, and naming them is `decompileBcs`'s
+  job - see [Engines](#engines).
 
 ## The round trip
 
@@ -119,27 +120,69 @@ entirely rather than writing a pair of empty ones.
 The format reference is [IESDP's bcs.htm](https://iesdp.bgforge.net/file_formats/ie_formats/bcs). Four places
 where a stock BG:EE plus BG2:ToB pair does not match what it says, each measured over the whole corpus:
 
-| Spec says                                                                            | The corpus has                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A trigger's seven arguments are "always specified ... even if they are not all used" | 59 triggers across 20 files stop after two numbers and write no strings; 51 actions across 22 files write their numbers and no strings. All are BG1-era generic AI scripts (`MONSTER`, `NPC`, `GANIMAL`, `R*`, `G*`, `D*`) that ship in BG2:ToB |
-| Object coordinates are present on every engine but BG1                               | No object carries any. All 393991 of them are exactly twelve numbers - EA, six enumerated fields, five identifier slots - with no `[x.y]` anywhere and not one negative value, where an unused coordinate is documented as `-1`                 |
-| A response is "the concatenation of a probability and an ACTION"                     | Responses hold 0 to 162 actions. Only 15402 of 35681 hold exactly one, and 28 files have a response with none                                                                                                                                   |
-| The response set block is written `RS`, responses, end                               | It closes with a second `RS`, which the spec's listing omits. Every file in the corpus does this                                                                                                                                                |
+| Spec says                                                                            | The corpus has                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A trigger's seven arguments are "always specified ... even if they are not all used" | 59 triggers across 20 files stop after two numbers and write no strings; 51 actions across 22 files write their numbers and no strings. All are BG1-era generic AI scripts (`MONSTER`, `NPC`, `GANIMAL`, `R*`, `G*`, `D*`) that ship in BG2:ToB                                                                                                                                          |
+| An object carries a coordinate on every engine but BG1                               | No object in either game carries one. All 393991 are exactly twelve numbers - EA, six enumerated fields, five identifier slots - with no bracketed field anywhere and not one negative value, where "unused" is documented as `-1`. The field is absent from the whole BG family, Enhanced Editions included, not from BG1 alone; and where it does exist it is a rectangle, not a point |
+| A response is "the concatenation of a probability and an ACTION"                     | Responses hold 0 to 162 actions. Only 15402 of 35681 hold exactly one, and 28 files have a response with none                                                                                                                                                                                                                                                                            |
+| The response set block is written `RS`, responses, end                               | It closes with a second `RS`, which the spec's listing omits. Every file in the corpus does this                                                                                                                                                                                                                                                                                         |
 
 Where the spec is right and the reader relies on it: the fixed argument lists, the block nesting, the
 string-concatenation rule for actions taking more than two strings (an `Area` of exactly six characters
 followed by a `Name`), and Torment's two extra object fields.
 
-## Known gap
+## Engines
 
-An object's coordinate field is written as a point - `[x.y]`, brackets and a dot, unlike the point inside an
-action which is two plain numbers. The reader refuses such a line by name rather than guessing at it, because
-nothing in a BG-family install has one to verify a reading against. If a Torment or Icewind Dale corpus turns
-up, that is the first thing to check.
+Reading and writing need no engine: the codec finds an object's identifier chain by position - the five
+numbers immediately before the rectangle, or before the name where an engine stores no rectangle - so one
+reader serves every game and the round trip is gated on byte-identity with nothing told to it about which
+install a file came from. `readBcs` therefore keeps a rectangle and any numbers stored past a name as their
+own fields rather than folding them into the list.
 
-An `A:` parameter - an action taken as an argument, which `ActionOverride` declares - is refused by name for
-the same reason: the spec says outright that it does not know how one is stored, and no stored record in the
-corpus carries the id, so there is nothing to read a form off.
+Naming does need one, and `decompileBcs(script, symbols, engine)` takes it: `"bg"` (the default, covering the
+Baldur's Gate family and the Enhanced Editions), `"iwd"`, `"iwd2"` or `"pst"`. What it changes:
+
+| Engine | An object's enumerated fields                                             | Stored extras                                        |
+| ------ | ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `bg`   | `EA GENERAL RACE CLASS SPECIFIC GENDER ALIGN`                             | none                                                 |
+| `iwd`  | `EA GENERAL RACE CLASS SPECIFIC GENDER ALIGN`                             | a rectangle                                          |
+| `pst`  | `EA FACTION TEAM GENERAL RACE CLASS SPECIFIC GENDER ALIGN`                | a rectangle; every trigger also carries a coordinate |
+| `iwd2` | `EA GENERAL RACE CLASS SPECIFIC GENDER ALIGNMNT SUBRACE AVCLASS CLASSMSK` | a rectangle; the last two fields sit past the name   |
+
+Two details that do not follow from the table. A rectangle prints last, outside the identifier wrapping rather
+than inside the bracket list - `Myself([PC])[10.20.30.40]`. And IWD2 keys `SUBRACE` by the race it belongs to,
+packing the `RACE` value into the high half of the lookup, so the stored subrace number names nothing on its
+own; a combination the table does not carry falls back to the number the file holds.
+
+What it deliberately does NOT change is which calls pack an `Area` in front of a `Name`. The reference
+implementation keeps a per-engine list of ids for that - six on BG1, eleven more by the Enhanced Editions,
+fifteen on IWD2, twenty-one on Torment - but every entry on every one of those lists is a global-variable call
+whose signature declares the `S:Name*,S:Area*` pair outright. The shortfall between a signature's string
+parameters and the slots the record filled locates the packing from the record itself, so it carries across
+engines by construction and there is no list to keep current. Verified against the BG-family lists; the other
+three are covered by the same derivation rather than by measurement.
+
+Only `bg` is corpus-gated. The other three are implemented from the reference implementation's own per-engine
+layouts, because no Torment or Icewind Dale install is available here to differential against - so they are
+spec-faithful rather than measured, and `test/engines.test.ts` says so at the top. What the round-trip sweep
+does establish for all four is that the codec reads and rewrites each shape byte for byte.
+
+## The one argument type it refuses
+
+`A:Action*` - an action passed as an argument to another action. The spec says outright that it does not know
+how such an argument is stored, so a call carrying one falls back to `UnknownAction<id>()` rather than
+guessing at a layout. Nothing in a real file takes that path; see below.
+
+`ActionOverride` is often assumed to be that case, and is not - it is fully supported both ways. It reads as a nested action in source
+(`ActionOverride("DRUNK2",DisplayStringHead(Myself,4592))`), but nothing nested is ever stored: the compiler
+writes the INNER action's record and puts the override target in its first object slot, which is where the
+decompiler reads the wrapper back from. Compiling that line with the reference produces action id 269
+(`DisplayStringHead`), not id 1.
+
+That is why the `A:Action*` parameter `ACTION.IDS` gives `ActionOverride` never reaches storage, and why the
+codec's refusal of an `A:` argument is unreachable defensive code rather than a limitation - id 1 appears on 0
+of the corpus's 90852 stored actions. It stays because refusing beats inventing a layout the spec itself says
+it cannot describe, but nothing a real file contains takes that path.
 
 ## Tests
 

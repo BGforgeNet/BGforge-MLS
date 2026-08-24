@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 
 // Imported after vi.mock so the mocked vscode is in place.
-import type { TwoDaTable } from "@bgforge/binary";
+import type { IeScriptStyle, TwoDaTable } from "@bgforge/binary";
 import {
     createFlagBitNamesResolver,
     createNamingTableResolver,
@@ -36,6 +36,7 @@ function session(
         twoDa?: string[];
         resources?: string[];
         flavour?: string;
+        scriptStyle?: IeScriptStyle;
         kitlist?: TwoDaTable;
     } = {},
 ): {
@@ -48,7 +49,7 @@ function session(
         canRead: (resref: string, type: string) => boolean;
         read: (resref: string, type: string) => Uint8Array;
         list: () => { resref: string; ext: string | undefined }[];
-        identity: { flavour: string };
+        identity: { flavour: string; scriptStyle: IeScriptStyle };
     };
 } {
     return {
@@ -88,7 +89,7 @@ function session(
                         const dot = name.lastIndexOf(".");
                         return { resref: name.slice(0, dot).toUpperCase(), ext: name.slice(dot + 1) };
                     }),
-                identity: { flavour: overrides.flavour ?? "tob" },
+                identity: { flavour: overrides.flavour ?? "tob", scriptStyle: overrides.scriptStyle ?? "bg2" },
             };
         },
     };
@@ -226,7 +227,7 @@ describe("createStrrefResolver", () => {
                     throw new Error("empty game");
                 },
                 list: () => [],
-                identity: { flavour: "tob" },
+                identity: { flavour: "tob", scriptStyle: "bg2" as const },
             }),
         };
 

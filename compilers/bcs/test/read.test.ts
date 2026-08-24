@@ -284,18 +284,18 @@ describe("readBcs - engine variants", () => {
         expect(readBcs(text).blocks[0]!.triggers[0]!.object.ints).toHaveLength(14);
     });
 
-    test("refuses an object carrying coordinates, rather than mangling them", () => {
-        // The spec writes an object's coordinates as a point, `[x.y]` - brackets and a dot, not two plain
-        // numbers like the point inside an action. No file in a BG-family install has one, so there is
-        // nothing here to verify a reading against; refusing it names the gap instead of guessing at it.
-        const withPoint = '0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1] ""OB';
+    test("reads an object's rectangle as its own field rather than as more numbers", () => {
+        // Engines other than BG store a rectangle between an object's numbers and its name. Folding it into
+        // `ints` would shift the identifier chain, which is read as the last five numbers before it - so it
+        // gets its own slot, and a BG object (which has no such field) keeps `region` undefined.
+        const withRect = '0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1.-1.-1] ""OB';
         const text = [
             "SC",
             "CR",
             "CO",
             "TR",
             '1 0 0 0 0 "" "" OB',
-            withPoint,
+            withRect,
             "TR",
             "CO",
             "RS",
@@ -304,6 +304,20 @@ describe("readBcs - engine variants", () => {
             "SC",
             "",
         ].join("\n");
+
+        const object = readBcs(text).blocks[0]!.triggers[0]!.object;
+
+        expect(object.ints).toHaveLength(12);
+        expect(object.region).toEqual([-1, -1, -1, -1]);
+    });
+
+    test("still refuses a field shape it does not model, rather than skipping it", () => {
+        // The guard that made the case above an error has to keep working for genuinely unreadable input,
+        // or a malformed line becomes a silently truncated record.
+        const bad = '0 0 0 0 0 0 0 0 0 0 0 0 <nonsense> ""OB';
+        const text = ["SC", "CR", "CO", "TR", '1 0 0 0 0 "" "" OB', bad, "TR", "CO", "RS", "RS", "CR", "SC", ""].join(
+            "\n",
+        );
 
         expect(() => readBcs(text)).toThrow(/Unreadable BCS fields \(line 6\)/);
     });

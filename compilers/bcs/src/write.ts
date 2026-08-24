@@ -11,9 +11,19 @@
 
 import type { BcsAction, BcsObject, BcsResponse, BcsScript, BcsTrigger } from "./types";
 
-/** `<ints> "<string>"` then the marker, with no space before it. */
+/**
+ * `<ints> [<rect>] "<string>" <ints>` then the marker.
+ *
+ * Only the parts the record carries are written, so a BG object - which has no rectangle and nothing after
+ * its name - comes out exactly as before. The trailing space after IWD2's extra numbers is not a stray: the
+ * writer puts one after every field and drops it only when a quoted string is last, which for IWD2 it is not.
+ */
 function objectFields(object: BcsObject): string {
-    return `${object.ints.join(" ")} ${quote(object.string)}`;
+    const parts = [object.ints.join(" ")];
+    if (object.region !== undefined) parts.push(`[${object.region.join(".")}]`);
+    parts.push(quote(object.string));
+    const trailing = object.trailingInts ?? [];
+    return trailing.length === 0 ? parts.join(" ") : `${parts.join(" ")} ${trailing.join(" ")} `;
 }
 
 /** `"a" "b" ` - a trigger writes a space on both sides of its pair, an action only after. */
@@ -55,7 +65,10 @@ function writeObject(writer: Writer, object: BcsObject): void {
 function writeTrigger(writer: Writer, trigger: BcsTrigger): void {
     writer.marker("TR");
     // The trigger's own fields ride on its object's opening marker, which is why `16412 0OB` is one line.
-    writer.fields(`${trigger.ints.join(" ")}${quotedPair(trigger.strings, true)}`);
+    // A PST point sits between the numbers and the strings, comma-separated where an object's rectangle
+    // uses dots.
+    const point = trigger.point === undefined ? "" : ` [${trigger.point.join(",")}]`;
+    writer.fields(`${trigger.ints.join(" ")}${point}${quotedPair(trigger.strings, true)}`);
     writeObject(writer, trigger.object);
     writer.marker("TR");
 }

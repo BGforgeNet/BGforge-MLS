@@ -11,7 +11,37 @@
  */
 
 import * as fs from "fs";
-import { decompileBcs, readBcs, type BcsSymbols } from "../../../compilers/bcs/src/index";
+import type { IeScriptStyle } from "../../../binary/src/index";
+import { decompileBcs, readBcs, type BcsEngine, type BcsSymbols } from "../../../compilers/bcs/src/index";
+
+/**
+ * Everything the install decides about how a script reads: the tables that give its numbers names, and the
+ * engine that says which field each number is. Both come from one open game, so they travel together.
+ */
+export interface BcsNaming {
+    readonly symbols: BcsSymbols;
+    readonly engine: BcsEngine;
+}
+
+/**
+ * The BCS engine a detected script style names.
+ *
+ * The detector already reports the axis the decompiler needs - it is how the games themselves are told apart -
+ * so this is a total mapping with no fallback. The two Baldur's Gate styles collapse because they share an
+ * object layout and their naming differences live in the install's own tables, which are read either way.
+ */
+export function bcsEngineForScriptStyle(style: IeScriptStyle): BcsEngine {
+    switch (style) {
+        case "iwd1":
+            return "iwd";
+        case "iwd2":
+            return "iwd2";
+        case "pst":
+            return "pst";
+        default:
+            return "bg";
+    }
+}
 
 export const BCS_SCHEME = "bgforge-bcs";
 
@@ -53,11 +83,11 @@ function noGameNotice(file: string): string {
 }
 
 /** The document body for a compiled script: its BAF source, or why there is none to show. */
-export function render(file: string, symbols: BcsSymbols | undefined): string {
+export function render(file: string, naming: BcsNaming | undefined): string {
     const text = fs.readFileSync(file, "latin1");
-    if (symbols === undefined) return noGameNotice(file);
+    if (naming === undefined) return noGameNotice(file);
     // An empty file is a real thing an install ships, and it is not a script with no blocks - the reader
     // refuses it, and a comment saying so is more use than an empty tab.
     if (text === "") return `// ${file} is empty - it holds no script at all.\n`;
-    return decompileBcs(readBcs(text), symbols);
+    return decompileBcs(readBcs(text), naming.symbols, naming.engine);
 }

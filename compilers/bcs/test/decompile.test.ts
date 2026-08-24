@@ -162,3 +162,87 @@ describe("decompileBcs", () => {
         expect(baf).toBe(["IF", '  Global("","",0)', "THEN", "END", ""].join("\n"));
     });
 });
+
+/**
+ * `TriggerOverride` is an artificial construct, and unlike `ActionOverride` it is built from a REAL stored
+ * trigger: a `NextTriggerObject(O:Object*)` record standing in front of the trigger it retargets. The pair
+ * folds into one line, and 198 stored records across 19 of a stock BG:EE's scripts do this.
+ *
+ * Matched on the name the install's table gives the id rather than on the id, which is what makes it engine
+ * independent - BG2:ToB's TRIGGER.IDS carries no such row at all, so the fold simply never fires there.
+ */
+describe("TriggerOverride", () => {
+    const NEXT_TRIGGER_OBJECT = 0x40e0;
+    const FALSE = 0x4030;
+    const OR = 0x4089;
+
+    const ROWS = new Map([
+        [NEXT_TRIGGER_OBJECT, "NextTriggerObject(O:Object*)"],
+        [FALSE, "False()"],
+        [OR, "OR(I:OrCount*)"],
+    ]);
+    const symbols: BcsSymbols = { ...SYMBOLS, trigger: (id) => rows(ROWS.get(id)) };
+
+    function trigger(id: number, options: { negated?: boolean; ea?: number; count?: number } = {}): BcsTrigger {
+        const ints = Array.from({ length: 12 }, () => 0);
+        ints[0] = options.ea ?? 0;
+        return {
+            ints: [id, options.count ?? 0, options.negated === true ? 1 : 0, 0, 0],
+            strings: ["", ""],
+            object: { ints, string: "" },
+        };
+    }
+
+    const decompile = (triggers: BcsTrigger[]): string[] =>
+        decompileBcs({ blocks: [{ triggers, responses: [] }] }, symbols).split("\n");
+
+    // The negation belongs to the trigger being retargeted, so it prints outside the wrapper.
+    test("folds a NextTriggerObject into the trigger that follows it", () => {
+        const lines = decompile([trigger(NEXT_TRIGGER_OBJECT, { ea: 2 }), trigger(FALSE, { negated: true })]);
+
+        expect(lines).toEqual(["IF", "  !TriggerOverride([PC],False())", "THEN", "END", ""]);
+    });
+
+    // Two stored records, one condition: an `OR` counts the line, not the records behind it.
+    test("a folded pair counts as one trigger toward an enclosing OR", () => {
+        const lines = decompile([
+            trigger(OR, { count: 2 }),
+            trigger(NEXT_TRIGGER_OBJECT, { ea: 2 }),
+            trigger(FALSE),
+            trigger(FALSE),
+        ]);
+
+        expect(lines).toEqual(["IF", "  OR(2)", "    TriggerOverride([PC],False())", "    False()", "THEN", "END", ""]);
+    });
+
+    // Nothing follows it, so there is nothing to fold into and the record prints as the table names it.
+    test("emits a trailing NextTriggerObject on its own", () => {
+        const lines = decompile([trigger(FALSE), trigger(NEXT_TRIGGER_OBJECT, { ea: 2 })]);
+
+        expect(lines).toEqual(["IF", "  False()", "  NextTriggerObject([PC])", "THEN", "END", ""]);
+    });
+});
+
+/**
+ * The spec calls a trigger's fifth stored number "an integer of unknown purpose". It is a third integer
+ * ARGUMENT: `NearLocation(O:Object*,I:PointX*,I:PointY*,I:Range*)` takes three, and a stock BG:EE stores
+ * `16611 423 0 290 7` for one - the range in the slot the spec says nothing uses. Four of its scripts diverge
+ * from the reference implementation without this, each printing a range of 0 for a real one.
+ */
+test("a trigger's third integer argument comes from its fifth stored number", () => {
+    const script = {
+        blocks: [
+            {
+                triggers: [{ ints: [0x40e3, 423, 0, 290, 7], strings: ["", ""], object: { ints: [], string: "" } }],
+                responses: [],
+            },
+        ],
+    };
+
+    const baf = decompileBcs(script, {
+        ...SYMBOLS,
+        trigger: (id) => rows(id === 0x40e3 ? "NearLocation(O:Object*,I:PointX*,I:PointY*,I:Range*)" : undefined),
+    });
+
+    expect(baf.split("\n")[1]).toBe("  NearLocation([ANYONE],423,290,7)");
+});

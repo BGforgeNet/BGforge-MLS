@@ -118,9 +118,11 @@ describe.skipIf(files.length === 0)("BCS codec - real install corpus", () => {
 
     test("no record carries more fields than its argument list has slots", () => {
         // IESDP fixes the argument lists: a trigger takes five numbers and two strings, an action five and
-        // two, and an object twelve numbers before Torment's two extras. Truncation by an older writer can
-        // only take fields away, so anything OVER the ceiling means the reader split a line wrongly - which
-        // is exactly what counting numbers across a whole line does to an object named `"HOUSEN2"`.
+        // two, and an object twelve numbers before Torment's two extras - fourteen, the most any engine
+        // stores ahead of a name, since Icewind Dale II keeps its own last two behind one. Truncation by an
+        // older writer can only take fields away, so anything OVER the ceiling means the reader split a line
+        // wrongly - which is exactly what counting numbers across a whole line does to an object named
+        // `"HOUSEN2"`.
         const over: string[] = [];
 
         for (const file of files) {

@@ -1,6 +1,6 @@
 import type * as vscode from "vscode";
-import { engineForFlavour, type TwoDaTable } from "@bgforge/binary";
-import type { BcsSymbols } from "../../../compilers/bcs/src/index";
+import { engineForFlavour, type IeScriptStyle, type TwoDaTable } from "@bgforge/binary";
+import { bcsEngineForScriptStyle, type BcsNaming } from "../bcs-editor/document";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 
@@ -142,8 +142,11 @@ interface TlkSource {
         canRead(resref: string, type: string): boolean;
         read(resref: string, type: string): Uint8Array;
         list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
-        /** WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override. */
-        readonly identity: { readonly flavour: string };
+        /**
+         * WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override, and the coarser script style
+         * the same detection reports - the axis a compiled script's field naming turns on.
+         */
+        readonly identity: { readonly flavour: string; readonly scriptStyle: IeScriptStyle };
     };
 }
 
@@ -225,8 +228,8 @@ export function createNamingTableResolver(session: TlkSource, fallback?: GameDir
     };
 }
 
-/** The install's naming tables for a compiled script, or undefined when the document has no game. */
-export type BcsSymbolResolver = (uri: vscode.Uri) => BcsSymbols | undefined;
+/** How a compiled script reads under its install, or undefined when the document has no game. */
+export type BcsSymbolResolver = (uri: vscode.Uri) => BcsNaming | undefined;
 
 /**
  * Resolves the tables a compiled script decompiles against.
@@ -241,18 +244,23 @@ export function createBcsSymbolResolver(session: TlkSource, fallback?: GameDirFa
         if (gameDir === undefined) return;
         // Accumulated rather than returned from inside the try, so the catch can simply swallow - the same
         // shape the resolvers above use.
-        let symbols: BcsSymbols | undefined;
+        let naming: BcsNaming | undefined;
         try {
             const game = session.ensureOpen(gameDir);
-            symbols = {
-                trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
-                action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
-                ids: (table) => game.ids(table),
+            naming = {
+                symbols: {
+                    trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
+                    action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
+                    ids: (table) => game.ids(table),
+                },
+                // The engine the install was detected as: it decides which table names each object field, and
+                // no part of a script says which game wrote it.
+                engine: bcsEngineForScriptStyle(game.identity.scriptStyle),
             };
         } catch {
             // Unreadable game - the script reads as "no game behind this document", as it does outside one.
         }
-        return symbols;
+        return naming;
     };
 }
 

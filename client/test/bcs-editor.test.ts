@@ -117,6 +117,8 @@ const SYMBOLS: BcsSymbols = {
     ids: () => undefined,
 };
 
+const NAMING = { symbols: SYMBOLS, engine: "bg" } as const;
+
 /** A `.bcs` on disk plus the view URI that renders it. The fake Uri stands in for vscode's, as next door. */
 function script(): { file: string; view: never } {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-view-"));
@@ -128,7 +130,7 @@ function script(): { file: string; view: never } {
 describe("the .bcs custom editor", () => {
     it("reads a compiled script as decompiled source", () => {
         const { view } = script();
-        const provider = new BcsFileSystemProvider(() => SYMBOLS);
+        const provider = new BcsFileSystemProvider(() => NAMING);
 
         const text = Buffer.from(provider.readFile(view)).toString("utf8");
 
@@ -141,7 +143,7 @@ describe("the .bcs custom editor", () => {
      */
     it("reports the decompiled size and marks the document readonly", () => {
         const { file, view } = script();
-        const provider = new BcsFileSystemProvider(() => SYMBOLS);
+        const provider = new BcsFileSystemProvider(() => NAMING);
 
         const stat = provider.stat(view);
 
@@ -151,7 +153,7 @@ describe("the .bcs custom editor", () => {
     });
 
     it("reports a missing script as not found rather than throwing a read error", () => {
-        const provider = new BcsFileSystemProvider(() => SYMBOLS);
+        const provider = new BcsFileSystemProvider(() => NAMING);
 
         expect(() => provider.stat(new h.FakeUri(BCS_SCHEME, "/nowhere/MISSING.bcs.baf") as never)).toThrow(
             /not found/,
@@ -161,7 +163,7 @@ describe("the .bcs custom editor", () => {
     // Every mutating entry point refuses: the view is a rendering, and BAF cannot be compiled back here.
     it("refuses every write path with a reason", () => {
         const { view } = script();
-        const provider = new BcsFileSystemProvider(() => SYMBOLS);
+        const provider = new BcsFileSystemProvider(() => NAMING);
 
         expect(() => provider.writeFile(view)).toThrow(/cannot be compiled back/);
         expect(() => provider.delete(view)).toThrow(/delete .* in the explorer/);
@@ -176,7 +178,7 @@ describe("the .bcs custom editor", () => {
         h.languages.splice(0);
         h.shownIn.splice(0);
         h.disposedPanels = 0;
-        registerBcsEditor(() => SYMBOLS);
+        registerBcsEditor(() => NAMING);
         const provider = h.editor.provider;
         expect(provider, "the custom editor did not register").toBeDefined();
 
@@ -199,7 +201,7 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.unopenable.add(`${file}.baf`);
         h.disposedPanels = 0;
-        registerBcsEditor(() => SYMBOLS);
+        registerBcsEditor(() => NAMING);
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);

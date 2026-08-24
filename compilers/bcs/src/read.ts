@@ -12,22 +12,30 @@ import type { BcsAction, BcsBlock, BcsObject, BcsResponse, BcsScript, BcsTrigger
 const MARKERS = ["SC", "CR", "CO", "TR", "RS", "RE", "AC", "OB"] as const;
 type Marker = (typeof MARKERS)[number];
 
+/** One field of a line: a number, a quoted string, or a bracketed group of numbers. */
+type Field = { kind: "int"; value: number } | { kind: "string"; value: string } | { kind: "group"; values: number[] };
+
 interface Token {
     marker: Marker;
+    /** Every field in stored order. Order matters: IWD2 puts numbers on both sides of an object's name. */
+    fields: Field[];
     ints: number[];
     strings: string[];
     line: number;
 }
 
 const MARKER_LINE = /^(.*?)(SC|CR|CO|TR|RS|RE|AC|OB)$/;
-const FIELDS = /(-?\d+)|"([^"]*)"/g;
+const FIELDS = /(-?\d+)|"([^"]*)"|\[([^\]]*)\]/g;
 
 /**
- * Splits a line into its fields and its marker. Fields are matched as whole tokens - a number OR a quoted
- * string, never digits scanned out of a line - because an object's name is a string that routinely ends in
- * a digit (`"HOUSEN2"`, `"Druid3"`) and counting numbers across the line would read that digit as another
- * field. Whatever a field pattern does not account for is a parse error rather than something to skip, so
- * an unsupported construct (an object's `[x.y]` coordinate point) is refused by name.
+ * Splits a line into its fields and its marker. Fields are matched as whole tokens - a number, a quoted
+ * string, or a bracketed group - never digits scanned out of a line, because an object's name is a string
+ * that routinely ends in a digit (`"HOUSEN2"`, `"Druid3"`) and counting numbers across the line would read
+ * that digit as another field. Whatever no field pattern accounts for is a parse error rather than something
+ * to skip, so a construct this does not model is refused by name instead of silently misread.
+ *
+ * A bracketed group is an object's rectangle (`[x.y.w.h]`) or a PST trigger's point (`[x,y]`); both split on
+ * either separator, and which one a record carries follows from where it sits rather than from its spelling.
  */
 function tokenize(text: string): Token[] {
     const tokens: Token[] = [];
@@ -38,20 +46,28 @@ function tokenize(text: string): Token[] {
         const match = MARKER_LINE.exec(line);
         if (!match) throw new Error(`Not a BCS line (line ${index + 1}): ${JSON.stringify(line.slice(0, 60))}`);
         const [, content, marker] = match;
-        const ints: number[] = [];
-        const strings: string[] = [];
+        const fields: Field[] = [];
         let consumed = 0;
+        let spacesInFields = 0;
         FIELDS.lastIndex = 0;
         for (let field = FIELDS.exec(content!); field; field = FIELDS.exec(content!)) {
-            if (field[1] !== undefined) ints.push(Number(field[1]));
-            else strings.push(field[2]!);
+            if (field[1] !== undefined) fields.push({ kind: "int", value: Number(field[1]) });
+            else if (field[2] !== undefined) fields.push({ kind: "string", value: field[2] });
+            else fields.push({ kind: "group", values: field[3]!.split(/[.,]/).map(Number) });
             consumed += field[0].length;
+            spacesInFields += countSpaces(field[0]);
         }
         // Everything the fields did not account for has to be the separators the writer puts back.
-        if (content!.replaceAll(/\s/g, "").length !== consumed - strings.reduce((n, s) => n + countSpaces(s), 0)) {
+        if (content!.replaceAll(/\s/g, "").length !== consumed - spacesInFields) {
             throw new Error(`Unreadable BCS fields (line ${index + 1}): ${JSON.stringify(line.slice(0, 60))}`);
         }
-        tokens.push({ marker: marker as Marker, ints, strings, line: index + 1 });
+        tokens.push({
+            marker: marker as Marker,
+            fields,
+            ints: fields.flatMap((f) => (f.kind === "int" ? [f.value] : [])),
+            strings: fields.flatMap((f) => (f.kind === "string" ? [f.value] : [])),
+            line: index + 1,
+        });
     }
     return tokens;
 }
@@ -88,10 +104,37 @@ class Cursor {
     }
 }
 
+/**
+ * Splits an object's fields into their parts by POSITION, which is what lets one reader serve every engine.
+ * Numbers before the rectangle-or-name are the targets and identifier chain; the chain is always the last
+ * five of them, so nothing here has to know which game produced the file. IWD2 puts two more numbers after
+ * the name, and those keep their own slot rather than being folded in front.
+ */
+function objectFromFields(fields: readonly Field[]): BcsObject {
+    const ints: number[] = [];
+    const trailingInts: number[] = [];
+    let region: number[] | undefined;
+    let text = "";
+    let named = false;
+    for (const field of fields) {
+        if (field.kind === "group") region = field.values;
+        else if (field.kind === "string") {
+            text = field.value;
+            named = true;
+        } else (named ? trailingInts : ints).push(field.value);
+    }
+    return {
+        ints,
+        ...(region === undefined ? {} : { region }),
+        string: text,
+        ...(trailingInts.length === 0 ? {} : { trailingInts }),
+    };
+}
+
 function readObject(cursor: Cursor): BcsObject {
     cursor.take("OB");
     const close = cursor.take("OB");
-    return { ints: close.ints, string: close.strings[0] ?? "" };
+    return objectFromFields(close.fields);
 }
 
 function readTrigger(cursor: Cursor): BcsTrigger {
@@ -103,10 +146,13 @@ function readTrigger(cursor: Cursor): BcsTrigger {
     cursor.take("OB");
     const close = cursor.take("OB");
     cursor.take("TR");
+    // A PST trigger carries a point among its numbers; every other engine's has none.
+    const point = head.fields.find((f) => f.kind === "group");
     return {
         ints: head.ints,
+        ...(point === undefined ? {} : { point: point.values }),
         strings: head.strings,
-        object: { ints: close.ints, string: close.strings[0] ?? "" },
+        object: objectFromFields(close.fields),
     };
 }
 
@@ -116,7 +162,7 @@ function readAction(cursor: Cursor): BcsAction {
     if (!idToken || idToken.marker !== "OB") throw new Error(`Expected an action id at line ${idToken?.line ?? "end"}`);
     cursor.take("OB");
     const first = cursor.take("OB");
-    const objects: BcsObject[] = [{ ints: first.ints, string: first.strings[0] ?? "" }];
+    const objects: BcsObject[] = [objectFromFields(first.fields)];
     while (cursor.peek()?.marker === "OB") objects.push(readObject(cursor));
     const tail = cursor.take("AC");
     return {

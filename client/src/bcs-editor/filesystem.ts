@@ -8,16 +8,15 @@
 
 import * as fs from "fs";
 import * as vscode from "vscode";
-import type { BcsSymbols } from "../../../compilers/bcs/src/index";
-import { render, sourcePath } from "./document";
+import { render, sourcePath, type BcsNaming } from "./document";
 
 /**
- * Resolves the install's naming tables for a document, or undefined when it has no game behind it.
+ * Resolves the install's naming tables and engine for a document, or undefined when it has no game behind it.
  *
  * Asked about the SOURCE file, never this view's own URI: which game a document belongs to is decided by its
  * scheme, and a resolver that has never heard of `bgforge-bcs` answers "no game" for every script.
  */
-export type SymbolsFor = (sourceFile: string) => BcsSymbols | undefined;
+export type SymbolsFor = (sourceFile: string) => BcsNaming | undefined;
 
 export class BcsFileSystemProvider implements vscode.FileSystemProvider {
     private readonly changed = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
