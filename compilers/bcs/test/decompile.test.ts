@@ -120,6 +120,37 @@ describe("decompileBcs", () => {
         expect(baf).toBe(["IF", "  OR(2)", "    False()", "    False()", "  False()", "THEN", "END", ""].join("\n"));
     });
 
+    /**
+     * The two degradation paths, neither of which a corpus differential reaches: an id the install's tables do
+     * not name (a script from a newer edition), and an `A:` parameter - an action passed as an argument, whose
+     * storage the spec says outright it does not know, and which no stored record in the corpus carries.
+     *
+     * Both keep the file readable rather than failing it. The reference implementation refuses the whole script
+     * on an unknown id, which is the wrong trade for a viewer: one unnamed call should not hide the other
+     * ninety.
+     */
+    test("names what it can and marks what it cannot, rather than failing the script", () => {
+        const trigger = (id: number): BcsTrigger => ({
+            ints: [id, 0, 0, 0, 0],
+            strings: ["", ""],
+            object: { ints: Array.from({ length: 12 }, () => 0), string: "" },
+        });
+        const script = { blocks: [{ triggers: [trigger(0x4030), trigger(0x40e2), trigger(0x4099)], responses: [] }] };
+
+        const baf = decompileBcs(script, {
+            ...SYMBOLS,
+            // 0x4030 is named, 0x40e2 is not, and 0x4099 takes an argument this cannot render.
+            trigger: (id) => (id === 0x4030 ? ["False()"] : id === 0x4099 ? ["ActionListEmpty(A:Action*)"] : []),
+        });
+
+        expect(baf.split("\n").slice(0, 4)).toEqual([
+            "IF",
+            "  False()",
+            "  UnknownTrigger16610()",
+            "  UnknownTrigger16537()",
+        ]);
+    });
+
     test("emits nothing for a script with no blocks", () => {
         expect(decompileBcs(readBcs(fixture("blockless")), SYMBOLS)).toBe("");
     });
