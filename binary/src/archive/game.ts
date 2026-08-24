@@ -17,7 +17,7 @@ import { atomicWriteFileSync, fileSource } from "./byte-source";
 import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game-type";
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
-import { parseIds } from "./ids";
+import { parseIds, parseIdsAll } from "./ids";
 import { parse2daRowNames, parse2daTable, type TwoDaTable } from "./two-da";
 import { openTlk, type Tlk } from "./tlk";
 
@@ -90,6 +90,13 @@ export interface Game {
      * SOUNDOFF.IDS and BG2's SNDSLOT.IDS disagree on most sound slots, and mods extend these tables.
      */
     ids(resref: string): ReadonlyMap<number, string> | undefined;
+
+    /**
+     * Every row of an IDS table, keyed by value. Tables name one value more than once - BG2:ToB's ACTION.IDS
+     * does it 32 times, and id 160's two rows take different argument types - so a caller that must choose
+     * between them reads this and decides from the record it holds. `ids` keeps one row and cannot serve that.
+     */
+    idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
     /**
      * A 2DA table from THIS install as row index -> row NAME (e.g. `twoDa("MSCHOOL")`). Undefined when the game
      * has no such table - `itemtype.2da` ships only with the Enhanced Editions, for instance. Read from the game
@@ -320,6 +327,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
     const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
+    const idsAllCache = new Map<string, ReadonlyMap<number, readonly string[]> | null>();
     const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
     const twoDaTableCache = new Map<string, TwoDaTable | null>();
 
@@ -600,6 +608,21 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     // Resource not found, or unreadable - reported as "no table" by the null above.
                 }
                 idsCache.set(cacheKey, entry);
+            }
+            return entry ?? undefined;
+        },
+        idsAll(resref) {
+            const cacheKey = resref.toLowerCase();
+            let entry = idsAllCache.get(cacheKey);
+            if (entry === undefined) {
+                // Absent is normal, and caches as null rather than re-reading on each lookup, exactly as `ids`.
+                entry = null;
+                try {
+                    entry = parseIdsAll(readResource(resref, IDS_RESTYPE));
+                } catch {
+                    // Resource not found, or unreadable - reported as "no table" by the null above.
+                }
+                idsAllCache.set(cacheKey, entry);
             }
             return entry ?? undefined;
         },

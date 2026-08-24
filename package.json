@@ -494,6 +494,16 @@
                 "priority": "default"
             },
             {
+                "viewType": "bgforge.bcsEditor",
+                "displayName": "Infinity Engine script (decompiled)",
+                "selector": [
+                    {
+                        "filenamePattern": "*.bcs"
+                    }
+                ],
+                "priority": "default"
+            },
+            {
                 "viewType": "bgforge.binaryEditor",
                 "displayName": "BGforge Binary Editor",
                 "selector": [

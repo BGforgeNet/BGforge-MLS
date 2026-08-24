@@ -24,6 +24,7 @@ import { registerImageEditor } from "./image-editor/register";
 import { routeCompile } from "./int-editor/compile-command";
 import { INT_SCHEME } from "./int-editor/document";
 import { registerIntEditor } from "./int-editor/register";
+import { registerBcsEditor } from "./bcs-editor/register";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
 
@@ -73,6 +74,7 @@ export async function activate(context: ExtensionContext) {
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context),
         registerIntEditor(context),
+        registerBcsEditor(gameLookups.bcsSymbols),
     );
 
     // If the extension is launched in debug mode then the debug server options are used

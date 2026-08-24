@@ -280,7 +280,11 @@
         {
             // The filesystem providers follow the same VS Code editor idioms: `_onDidX` EventEmitters, and
             // `vscode.FileSystemError.FileNotFound(...)` factory calls (uppercase names called without `new`).
-            "files": ["client/src/ie-resources/**/*.ts", "client/src/int-editor/**/*.ts"],
+            "files": [
+                "client/src/ie-resources/**/*.ts",
+                "client/src/int-editor/**/*.ts",
+                "client/src/bcs-editor/**/*.ts"
+            ],
             "rules": {
                 "no-underscore-dangle": "off",
                 "new-cap": "off"

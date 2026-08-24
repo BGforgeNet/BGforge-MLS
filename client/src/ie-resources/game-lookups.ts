@@ -1,5 +1,6 @@
 import type * as vscode from "vscode";
 import { engineForFlavour, type TwoDaTable } from "@bgforge/binary";
+import type { BcsSymbols } from "../../../compilers/bcs/src/index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 
@@ -135,6 +136,7 @@ interface TlkSource {
     ensureOpen(dir: string): {
         tlk(): { get(strref: number): string | undefined } | undefined;
         ids(resref: string): ReadonlyMap<number, string> | undefined;
+        idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
         twoDa(resref: string): ReadonlyMap<number, string> | undefined;
         twoDaTable(resref: string): TwoDaTable | undefined;
         canRead(resref: string, type: string): boolean;
@@ -220,6 +222,37 @@ export function createNamingTableResolver(session: TlkSource, fallback?: GameDir
         // Undefined rather than an empty list when the install ships none: the caller reads a table's presence
         // as "the game names this field", and an empty list would turn a plain number into an empty dropdown.
         return found.length === 0 ? undefined : found;
+    };
+}
+
+/** The install's naming tables for a compiled script, or undefined when the document has no game. */
+export type BcsSymbolResolver = (uri: vscode.Uri) => BcsSymbols | undefined;
+
+/**
+ * Resolves the tables a compiled script decompiles against.
+ *
+ * Signatures come through `idsAll` rather than `ids`: ACTION.IDS names one id twice 32 times over, and id 160's
+ * two rows take different argument types, so the decompiler picks from the record it holds. Everything else -
+ * object fields, enumerated arguments - wants one name per value and reads `ids`.
+ */
+export function createBcsSymbolResolver(session: TlkSource, fallback?: GameDirFallback): BcsSymbolResolver {
+    return (uri) => {
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return;
+        // Accumulated rather than returned from inside the try, so the catch can simply swallow - the same
+        // shape the resolvers above use.
+        let symbols: BcsSymbols | undefined;
+        try {
+            const game = session.ensureOpen(gameDir);
+            symbols = {
+                trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
+                action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
+                ids: (table) => game.ids(table),
+            };
+        } catch {
+            // Unreadable game - the script reads as "no game behind this document", as it does outside one.
+        }
+        return symbols;
     };
 }
 

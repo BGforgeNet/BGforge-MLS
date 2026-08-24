@@ -628,6 +628,21 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    /**
+     * A script decompiler cannot use `ids`: BG2:ToB's ACTION.IDS names 32 ids twice, and id 160's two rows take
+     * different argument types, so the record decides which was meant. One row per value cannot express that.
+     */
+    it("reads every row for a value, not just the winning one", () => {
+        const action = new TextEncoder().encode("IDS V1.0\r\n8 Dialogue(O:Object*)\r\n8 Dialog(O:Object*)\r\n");
+        const game = openGame(makeGameDir({ "override/action.ids": action }));
+        try {
+            expect(game.ids("ACTION")?.get(8)).toBe("Dialog(O:Object*)");
+            expect(game.idsAll("ACTION")?.get(8)).toEqual(["Dialogue(O:Object*)", "Dialog(O:Object*)"]);
+        } finally {
+            game.close();
+        }
+    });
+
     it("reports an absent IDS table rather than throwing", () => {
         const game = openGame(makeGameDir());
         try {

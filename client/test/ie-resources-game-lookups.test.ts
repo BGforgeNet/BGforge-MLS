@@ -42,6 +42,7 @@ function session(
     ensureOpen: (dir: string) => {
         tlk: () => { get: (n: number) => string | undefined } | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
+        idsAll: (resref: string) => ReadonlyMap<number, readonly string[]> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDaTable: (resref: string) => TwoDaTable | undefined;
         canRead: (resref: string, type: string) => boolean;
@@ -57,6 +58,16 @@ function session(
                 tlk: () => (overrides.noTlk === true ? undefined : { get: (n: number) => LINES[n] }),
                 ids: (resref: string) =>
                     (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
+                // Every row per value, which is what a script decompiler reads. The fake tables hold one row
+                // each, so this is the same content in the shape `idsAll` promises.
+                idsAll: (resref: string) => {
+                    const table = (overrides.tables ?? []).includes(resref.toLowerCase())
+                        ? TABLES[resref.toLowerCase()]
+                        : undefined;
+                    return table === undefined
+                        ? undefined
+                        : new Map([...table].map(([value, name]) => [value, [name]]));
+                },
                 twoDa: (resref: string) =>
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 twoDaTable: (resref: string) => (resref.toLowerCase() === "kitlist" ? overrides.kitlist : undefined),
@@ -207,6 +218,7 @@ describe("createStrrefResolver", () => {
             ensureOpen: () => ({
                 tlk: () => ({ get }),
                 ids: () => undefined,
+                idsAll: () => undefined,
                 twoDa: () => undefined,
                 twoDaTable: () => undefined,
                 canRead: () => false,

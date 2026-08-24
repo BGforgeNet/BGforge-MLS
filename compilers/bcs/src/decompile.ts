@@ -35,7 +35,7 @@ export interface BcsSymbols {
     /** Every ACTION.IDS row for an id. */
     action(id: number): readonly string[];
     /** An IDS table by name, without the extension, for enumerated arguments and object fields. */
-    ids(table: string): Map<number, string> | undefined;
+    ids(table: string): ReadonlyMap<number, string> | undefined;
 }
 
 /** One parameter of an IDS signature: `I:Value*Table` is type `I` tagged `Value` naming `Table`. */

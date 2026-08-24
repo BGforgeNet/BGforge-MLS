@@ -24,6 +24,8 @@ import {
     type FlagBitNamesResolver,
     type SlotLabelResolver,
     type StrrefResolver,
+    createBcsSymbolResolver,
+    type BcsSymbolResolver,
 } from "./game-lookups";
 import { viewTypeForResource } from "./editor-routing";
 import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
@@ -44,6 +46,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     resourceList: ResourceListResolver;
     resourceBytes: ResourceBytesResolver;
     engine: EngineResolver;
+    bcsSymbols: BcsSymbolResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
 } {
     const session = new GameSession();
@@ -244,6 +247,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         resourceList: createResourceListResolver(session, fallbackGameDir),
         resourceBytes: createResourceBytesResolver(session, fallbackGameDir),
         engine: createEngineResolver(session, fallbackGameDir),
+        bcsSymbols: createBcsSymbolResolver(session, fallbackGameDir),
         isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),
     };
 }
