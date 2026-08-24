@@ -107,6 +107,8 @@ function buildDlgBytes(): Uint8Array {
 
 interface Posted {
     type: string;
+    reparse?: boolean;
+    seq?: number;
     model?: { sourceLang: string; editable: boolean; messages?: Record<string, string>; roots: unknown[] };
     message?: string;
 }
@@ -380,6 +382,28 @@ describe("DlgDialogEditorProvider, changing what a line says", () => {
         await h.provider.revertCustomDocument(document, {} as never);
 
         expect(storedStateText(document.bytes)).toBe(100);
+    });
+
+    // A plain `{type:"model"}` post RESETS the webview's view (see reduceDialogView). After the webview
+    // itself posted the edit, that would throw away the user's selection and any inline edit in flight - so
+    // the echo has to come back as a re-parse stamped with the emit's own seq, which is what the graph's
+    // adopt path expects and what every other family's host already sends.
+    test("echoes a webview edit back as a re-parse stamped with the emit's seq", async () => {
+        const { h } = await editing();
+        const edit = structuredClone(h.model()) as { roots: { states: { text: string }[] }[] };
+        edit.roots[0]!.states[0]!.text = "@300";
+
+        h.send({ type: "edit", model: edit, seq: 7 });
+
+        const echo = h.posted.toReversed().find((p) => p.type === "model")!;
+        expect(echo.reparse).toBe(true);
+        expect(echo.seq).toBe(7);
+    });
+
+    test("posts the initial model plainly, so the view builds itself from it", async () => {
+        const { h } = await editing();
+        // The `ready` handshake is not a re-parse: there is no in-flight edit to preserve.
+        expect(h.posted.find((p) => p.type === "model")!.reparse).toBeUndefined();
     });
 
     test("reports an edit that would drop a state rather than writing a shorter dialog", async () => {

@@ -3,8 +3,8 @@
  *
  * A DLG holds what a `.d` file holds - states with text and a trigger, transitions with a reply, a condition,
  * an action and a target - so it produces the same model D does rather than a parallel one, and renders
- * through the same graph. What it does NOT have is source text: there are no byte ranges to anchor an edit
- * to, which is why the model comes back read-only for now.
+ * through the same graph. What it does NOT have is source text - so instead of anchoring edits to byte
+ * ranges, the model carries each state's and reply's file position, and the writer rebuilds the file.
  */
 
 import { describe, expect, test } from "vitest";
@@ -132,12 +132,15 @@ describe("modelFromDlg", () => {
         expect(choices[2]!.target).toEqual({ kind: "external", label: "OTHERDLG:4", resolved: false });
     });
 
-    test("is read-only: a DLG has no source text to anchor an edit to", () => {
+    test("is not blanket-editable, but every state is editable through the shared gate", () => {
+        // `editable` is the D-family's "every state, freely" flag and drives the inspector's read-only
+        // banner; a DLG stays off it and is decided per node instead. The gate now says yes, because the
+        // writer rebuilds the whole file from the model rather than splicing source text.
         const model = modelFromDlg(sampleDlg());
 
         expect(model.editable).toBe(false);
         for (const state of model.roots[0]!.states) {
-            expect(nodeEditable(model, state)).toBe(false);
+            expect(nodeEditable(model, state)).toBe(true);
         }
     });
 });

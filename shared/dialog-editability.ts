@@ -35,14 +35,24 @@ export function hasSourceSpans(model: DialogModel): boolean {
 
 export function nodeEditable(model: DialogModel, state: DialogState | null): state is DialogState {
     if (!state || state.derivedFrom) return false;
-    // A DLG carries no source text, so there is no span for a surgical edit to splice; a line is changed by
-    // repointing its strref instead, a path that never consults this predicate, and structure has no writer.
-    // Gated here rather than by marking every state `faithful: false`, which would misstate what it recovered.
-    if (model.sourceLang === "dlg") return false;
+    // A DLG has no source text to splice, but it does not need any: the writer rebuilds the whole file from
+    // the model, so every state is editable. What it may NOT do is change a state's number - see
+    // `nodeRenamable` and `nodeDeletable`, which is where that boundary lives.
+    if (model.sourceLang === "dlg") return true;
     if (renderFamily(model.sourceLang) === "weidu-d") {
         return state.faithful !== false;
     }
     return state.faithful === true || state.bundleFaithful === true || isLocalNewSSLNode(state);
+}
+
+/**
+ * Whether a node's own name may be changed. Everywhere but a compiled dialog this is just editability: a
+ * state is identified by a label its author chose. A DLG state is identified by its POSITION, which other
+ * dialogs and WeiDU mod scripts address by number - so it has no name to change, and renumbering it would
+ * silently redirect references this editor cannot see.
+ */
+export function nodeRenamable(model: DialogModel, state: DialogState | null): state is DialogState {
+    return nodeEditable(model, state) && model.sourceLang !== "dlg";
 }
 
 /**
@@ -51,5 +61,9 @@ export function nodeEditable(model: DialogModel, state: DialogState | null): sta
  * option in a node whose source can't be rewritten). D-family states pass `eligibleToDelete` by their own rules.
  */
 export function nodeDeletable(model: DialogModel, state: DialogState | null): state is DialogState {
+    // A DLG state is never deleted: removing one renumbers every state above it, and those numbers are
+    // addresses other dialogs and mod scripts hold. It is detached instead - its record stays, its number
+    // stays, and the replies that led to it stop doing so.
+    if (model.sourceLang === "dlg") return false;
     return nodeEditable(model, state) && eligibleToDelete(model, state.id);
 }

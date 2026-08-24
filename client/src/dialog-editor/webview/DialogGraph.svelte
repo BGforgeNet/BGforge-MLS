@@ -30,7 +30,7 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
-    import { hasSourceSpans, nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
+    import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "../../../../shared/dialog-editability";
     import { dlgAddress } from "../../../../shared/dialog-dlg-edit";
     import { hasHost, postToHost } from "./host";
     import {
@@ -459,7 +459,7 @@
     // inspector's rename field and the tree's own F2 gate (a read-only/derived node cannot be renamed).
     function beginRenameState(stateId: string): void {
         const s = findState(stateId);
-        if (structEditable(s)) select({ on: "rename", state: s });
+        if (renamable(s)) select({ on: "rename", state: s });
     }
     // Commit an inline rename: renameState moves the label and every GOTO/EXTERN reference with it (see the op).
     // A rejected id (empty, unchanged, or a duplicate) leaves the model as-is and the row reverts to the old id
@@ -467,7 +467,9 @@
     function commitRenameState(stateId: string, value: string): void {
         if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         const s = findState(stateId);
-        if (s && ops.renameState(editModel, s, value)) {
+        // Gated here as well as at the entry into rename mode: two entry points reach `renameState`, and a
+        // compiled dialog has no name to change at either.
+        if (renamable(s) && ops.renameState(editModel, s, value)) {
             select({ on: "state", state: s }); // keep the just-renamed node selected (its id changed)
             void rebuild({ frame: "none" });
         } else if (selected) {
@@ -949,6 +951,9 @@
     // there is one predicate, not the former structEditable/fieldEditable pair. These thin closures bind the model
     // and preserve the `s is DialogState` narrowing the template filters and handlers rely on.
     const structEditable = (s: DialogState | null): s is DialogState => nodeEditable(editModel, s);
+    // A compiled dialog's state has no name to change - its number is its position. Everywhere else
+    // renaming is just editability.
+    const renamable = (s: DialogState | null): s is DialogState => nodeRenamable(editModel, s);
     const canDelete = (s: DialogState | null): s is DialogState => nodeDeletable(editModel, s);
 
     // Ids of the active root's structurally-editable states, for the tree's inline add/remove-option
@@ -1084,7 +1089,7 @@
             if (address) postToHost({ type: "pickString", ...address });
         },
         rename: (newId: string) => {
-            if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
+            if (renamable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
         addReply: () => {
             if (structEditable(selected)) addOptionAndEdit(selected); // Tier 2 add option: D or faithful SSL

@@ -6,9 +6,10 @@
  * Everything downstream is shared - the same webview, the same `model` message - so the webview cannot tell
  * which producer fed it.
  *
- * What can be edited is narrow, and the narrowness is the format's: a DLG holds a NUMBER pointing into the
- * game's string table, not text, so a line is changed by pointing it at a different entry. Structure (adding
- * or removing states and replies) has no write path yet and stays locked - see `nodeEditable`.
+ * What can be edited is shaped by the format: a DLG holds a NUMBER pointing into the game's string table
+ * rather than text, so a line is changed by pointing it at a different entry. Replies can be added, removed
+ * and retargeted, and states appended. What a state's NUMBER means is not ours to change - it is the address
+ * other dialogs and mod scripts hold - so states are never renamed or removed; see `dialog-editability.ts`.
  */
 
 import * as vscode from "vscode";
@@ -167,7 +168,13 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         panel.webview.onDidReceiveMessage((raw: unknown) => {
             // Same reject-and-ignore posture as the other editors: an unrecognized message changes nothing.
             if (typeof raw !== "object" || raw === null || !("type" in raw)) return;
-            const message = raw as { type: unknown; model?: unknown; stateIndex?: unknown; choiceIndex?: unknown };
+            const message = raw as {
+                type: unknown;
+                model?: unknown;
+                seq?: unknown;
+                stateIndex?: unknown;
+                choiceIndex?: unknown;
+            };
             switch (message.type) {
                 case "ready":
                     this.postModel(document, post);
@@ -181,7 +188,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                     void this.changeString(document, post, message.stateIndex, message.choiceIndex);
                     break;
                 case "edit":
-                    this.applyModelEdit(document, post, message.model);
+                    this.applyModelEdit(document, post, message.model, message.seq);
                     break;
                 default:
                     break;
@@ -222,17 +229,24 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
      * Apply an edited model posted by the webview. Anything the writer refuses is reported rather than
      * dropped: a silently ignored edit reads to the user as one that was saved.
      */
-    private applyModelEdit(document: DlgDocument, post: (msg: unknown) => void, incoming: unknown): void {
+    private applyModelEdit(document: DlgDocument, post: (msg: unknown) => void, incoming: unknown, seq: unknown): void {
         if (typeof incoming !== "object" || incoming === null) return;
         try {
             document.applyModel(incoming as DialogModel, "Edit dialog");
-            this.postModel(document, post);
+            // Echoed as a re-parse, not a plain model: the webview posted this edit, so it has a selection
+            // and possibly an open inline edit to keep. A plain post would reset its whole view. The seq
+            // comes back untouched - the graph drops an echo that is not for its latest emit.
+            this.postModel(document, post, { reparse: true, seq });
         } catch (error) {
             post({ type: "error", message: String(error) });
         }
     }
 
-    private postModel(document: DlgDocument, post: (msg: unknown) => void): void {
+    private postModel(
+        document: DlgDocument,
+        post: (msg: unknown) => void,
+        echo?: { reparse: true; seq: unknown },
+    ): void {
         let dlg;
         try {
             dlg = readDlg(document.bytes);
@@ -260,7 +274,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         const messages = resolveMessages(strrefs, document.uri, this.deps.strref);
 
         this.posted.set(document, model);
-        post({ type: "model", model: { ...model, messages, sourceName: resref } });
+        post({ type: "model", model: { ...model, messages, sourceName: resref }, ...echo });
     }
 
     async saveCustomDocument(document: DlgDocument, _token: vscode.CancellationToken): Promise<void> {

@@ -333,8 +333,9 @@
              game's string table - so the wording names what CAN be done rather than the D-family's .tra story. -->
         <div class="ronote">
             Each line refers to a string in the game's <b>dialog.tlk</b>; <b>Change string...</b> points it at a
-            different entry and saves into this <b>.dlg</b>. The dialog <b>structure</b> - adding, removing or
-            retargeting states and replies - is read-only here.
+            different entry. Replies can be added, removed and retargeted, and states added. A state's
+            <b>number</b> is its position in the file, which other dialogs point at - so it cannot be renamed or
+            removed.
         </div>
     {:else if !structuralEditable}
         <!-- D-family (D/TD) node the parser could not fully model (an inner if/else it can't round-trip), so its
