@@ -35,9 +35,9 @@ export function hasSourceSpans(model: DialogModel): boolean {
 
 export function nodeEditable(model: DialogModel, state: DialogState | null): state is DialogState {
     if (!state || state.derivedFrom) return false;
-    // A DLG carries no source text, so there are no byte ranges for a surgical edit to splice and nothing
-    // for the D-family rule below to reason about. Read-only until the DLG write path lands; gating here
-    // rather than by marking every state `faithful: false`, which would misstate what the parser recovered.
+    // A DLG carries no source text, so there is no span for a surgical edit to splice; a line is changed by
+    // repointing its strref instead, a path that never consults this predicate, and structure has no writer.
+    // Gated here rather than by marking every state `faithful: false`, which would misstate what it recovered.
     if (model.sourceLang === "dlg") return false;
     if (renderFamily(model.sourceLang) === "weidu-d") {
         return state.faithful !== false;

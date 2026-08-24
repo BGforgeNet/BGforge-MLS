@@ -235,7 +235,7 @@ export function buildConversationTree(
         action: c.action,
         reaction: c.reaction,
         lowIq: c.lowIq,
-        textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO }).editable,
+        textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO, dlg: sourceless }).editable,
         ...(!sourceless && isPendingChoice(c) ? { pending: true } : {}),
         target: buildTarget(c),
         // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
@@ -335,7 +335,7 @@ export function buildConversationTree(
             ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
             ...(!sourceless && isPendingState(s) ? { pending: true } : {}),
-            textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO }).editable,
+            textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO, dlg: sourceless }).editable,
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };
     }

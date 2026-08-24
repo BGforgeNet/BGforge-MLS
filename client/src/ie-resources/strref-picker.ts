@@ -60,23 +60,32 @@ export interface PickStrrefOptions {
  * Show the picker and resolve to the chosen strref, or undefined if it was dismissed. Results are fetched per
  * keystroke rather than up front: a real `dialog.tlk` holds six figures of strings.
  */
-export function pickStrref(
+export async function pickStrref(
     search: StrrefSearch,
     lookup: (strref: number) => string | undefined,
     uri: vscode.Uri,
     options: PickStrrefOptions = {},
 ): Promise<number | undefined> {
+    const opening = strrefPickItems("", search(uri, "", PAGE_SIZE), lookup);
+    // Nothing at all for the empty query means there is no string table to search - an open game answers it
+    // with its first entries. Say so before opening anything, rather than showing a picker that reports "no
+    // matching results" and so blames the query for a missing game.
+    if (opening.length === 0) {
+        void vscode.window.showWarningMessage("Open a game first - its dialog.tlk is where the strings come from.");
+        return undefined;
+    }
+
     const quickPick = vscode.window.createQuickPick<StrrefPickItem>();
     quickPick.title = options.title ?? "Choose a game string";
     quickPick.placeholder = "Search the game's text, or type a string number";
     // The search does its own matching, so the client must not filter the results again.
     quickPick.matchOnDescription = false;
     quickPick.matchOnDetail = false;
+    quickPick.items = opening;
 
     const refresh = (query: string): void => {
         quickPick.items = strrefPickItems(query, search(uri, query, PAGE_SIZE), lookup);
     };
-    refresh("");
 
     return new Promise<number | undefined>((resolve) => {
         let picked: number | undefined;

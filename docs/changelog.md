@@ -32,10 +32,15 @@
 
 ### Dialog editor
 
-- Compiled Infinity Engine dialogs (`.dlg`) open in the dialog editor, read-only: the same tree and graph
-  views a `.d` source gets, showing the states, transitions, triggers and actions the file stores.
-  Spoken text lives in the game's `dialog.tlk`, so it resolves once a game is open - with none open the
-  editor shows the raw string references and a button to open one.
+- Compiled Infinity Engine dialogs (`.dlg`) open in the dialog editor: the same tree and graph views a `.d`
+  source gets, showing the states, transitions, triggers and actions the file stores. Spoken text lives in
+  the game's `dialog.tlk`, so it resolves once a game is open - with none open the editor shows the raw
+  string references and a button to open one.
+- What a line in a compiled dialog says can be changed and saved. A `.dlg` stores a number pointing into the
+  game's text rather than the text itself, so a line is changed by pointing it at a different entry:
+  **Change string...** on the NPC line or on any reply opens the same search the insert command uses. Saving
+  rewrites those numbers and leaves the rest of the file as it was, and undo behaves as it does anywhere
+  else. The dialog's structure - adding, removing or retargeting states and replies - stays read-only.
 
 ## 3.14.0
 

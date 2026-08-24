@@ -271,6 +271,7 @@
             "files": [
                 "client/src/editors/binaryEditor*.ts",
                 "client/src/binary-editor/**/*.ts",
+                "client/src/dialog-editor/**/*.ts",
                 "client/src/image-editor/**/*.ts"
             ],
             "rules": {

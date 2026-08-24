@@ -1075,6 +1075,16 @@
     }
 
     const actions: DialogActions = {
+        // A compiled dialog addresses its records by position: the state's model id IS its index, and a reply's
+        // is its position within the state. The host maps the pair back onto the file's own tables.
+        pickString: (choiceId: string | null) => {
+            if (!selected) return;
+            const stateIndex = Number(selected.id);
+            if (!Number.isInteger(stateIndex)) return;
+            const choiceIndex = choiceId === null ? undefined : selected.choices.findIndex((c) => c.id === choiceId);
+            if (choiceIndex === -1) return;
+            postToHost({ type: "pickString", stateIndex, ...(choiceIndex === undefined ? {} : { choiceIndex }) });
+        },
         rename: (newId: string) => {
             if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },

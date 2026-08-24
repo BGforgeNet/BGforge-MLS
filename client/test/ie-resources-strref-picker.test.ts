@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
-/** Only `window.createQuickPick` is reached; the fake below stands in for the widget. */
+/** Only `window.createQuickPick` and the warning are reached; the fake below stands in for the widget. */
 const created: FakeQuickPick[] = [];
+const warned: string[] = [];
 vi.mock("vscode", () => ({
     window: {
         createQuickPick: () => {
             const pick = makeFakeQuickPick();
             created.push(pick);
             return pick;
+        },
+        showWarningMessage: (message: string) => {
+            warned.push(message);
         },
     },
 }));
@@ -127,9 +131,22 @@ describe("pickStrref", () => {
 
     function open() {
         created.length = 0;
+        warned.length = 0;
         const result = pickStrref(search as never, lookup, uri);
         return { result, pick: created[0]! };
     }
+
+    it("says no game is open rather than showing an empty list that blames the query", async () => {
+        created.length = 0;
+        warned.length = 0;
+        // What a closed game answers with: no strings for any query, the empty one included.
+        const result = await pickStrref((() => []) as never, () => undefined, uri);
+        expect(result).toBeUndefined();
+        expect(warned).toHaveLength(1);
+        expect(warned[0]).toMatch(/game/i);
+        // No widget is created at all, so there is nothing on screen for the user to dismiss.
+        expect(created).toHaveLength(0);
+    });
 
     it("resolves to the chosen string's number", async () => {
         const { result, pick } = open();

@@ -4,7 +4,8 @@
  * A DLG is the compiled form of what a `.d` file describes, so it produces the same model D does and renders
  * through the same graph rather than getting a parallel one of its own. The differences are all absences:
  * states have indices instead of labels, spoken text is a strref rather than inline, and there is no source
- * text - hence no byte ranges, and hence read-only (see `nodeEditable`).
+ * text - hence no byte ranges. A line is therefore changed by repointing its strref, not by editing text;
+ * structure (adding, removing or retargeting states and replies) stays read-only (see `nodeEditable`).
  *
  * The input is declared structurally rather than imported from `@bgforge/binary`, which `shared/` does not
  * depend on and should not start to; `@bgforge/binary`'s `Dlg` satisfies it, pinned by a test.
@@ -111,6 +112,7 @@ export function modelFromDlg(input: DlgModelInput): DialogModel {
     return {
         sourceLang: "dlg",
         // Not blanket-editable, and `nodeEditable` refuses per node too - a DLG has no source text to splice.
+        // Repointing a line's strref is a separate write path that consults neither flag.
         editable: false,
         roots: [
             {

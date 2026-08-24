@@ -113,7 +113,7 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 
 Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
 
-Compiled Infinity Engine `.dlg` files open in the same editor, read-only: the states, transitions, triggers and actions the file stores. Spoken text lives in the game's `dialog.tlk`, so it resolves once a game is open - the editor offers a button to open one when there is none.
+Compiled Infinity Engine `.dlg` files open in the same editor: the states, transitions, triggers and actions the file stores. Spoken text lives in the game's `dialog.tlk`, so it resolves once a game is open - the editor offers a button to open one when there is none. What a line says can be changed and saved, by pointing it at a different entry in the game's text; the dialog's structure is read-only.
 
 ![dialog editor example](docs/dialog_editor.png)
 

@@ -41,6 +41,8 @@ const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
  */
 export function registerIeResources(context: vscode.ExtensionContext): {
     strref: StrrefResolver;
+    /** Opens the string picker for a document, resolving to the chosen strref or undefined if dismissed. */
+    pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     resourceType: ResourceTypeResolver;
@@ -275,6 +277,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
 
     return {
         strref: strrefResolver,
+        pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),
         namingTable: createNamingTableResolver(session, fallbackGameDir),
         resourceType: createResourceTypeResolver(session, fallbackGameDir),

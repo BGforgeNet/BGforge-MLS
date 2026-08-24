@@ -141,6 +141,8 @@
     // SSL is a full scripting language with no surgical write-back, so its detail panel is
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
+    // A compiled dialog: its lines are string-table references, so they are chosen rather than typed.
+    const dlg = $derived(sourceLang === "dlg");
 
     // Which TextMate grammar colours every code field (trigger, condition, action), chosen by SOURCE language,
     // not render family: a D dialog's fields are BAF, an SSL condition is SSL, and a TD or TSSL dialog's fields
@@ -189,7 +191,7 @@
         // The inspector locks text only on a derived (no-own-source) state; a D-family literal otherwise stays
         // editable even when the STRUCTURE is read-only (a .tra edit is structure-independent - a typo in an
         // unfaithful TD state's line can still be fixed). SSL's own @N gate lives inside textEditability.
-        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom) });
+        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom), dlg });
     }
 
 
@@ -326,6 +328,14 @@
             conditions) is read-only - this node is not simple enough to edit safely from the graph;
             edit the <b>source file</b> for that.
         </div>
+    {:else if dlg}
+        <!-- A compiled dialog. Its text is not prose the editor can write - it is a number pointing into the
+             game's string table - so the wording names what CAN be done rather than the D-family's .tra story. -->
+        <div class="ronote">
+            Each line refers to a string in the game's <b>dialog.tlk</b>; <b>Change string...</b> points it at a
+            different entry and saves into this <b>.dlg</b>. The dialog <b>structure</b> - adding, removing or
+            retargeting states and replies - is read-only here.
+        </div>
     {:else if !structuralEditable}
         <!-- D-family (D/TD) node the parser could not fully model (an inner if/else it can't round-trip), so its
              structure is read-only. Text still saves (a .tra edit is structure-independent). -->
@@ -347,6 +357,8 @@
         <div class="ik">NPC line</div>
         {@const npc = textEdit(null)}
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+        <!-- A compiled dialog's line is a reference into the game's string table, so it is chosen, not typed. -->
+        {#if dlg}<button type="button" class="pickstr" onclick={() => actions.pickString(null)}>Change string...</button>{/if}
         <!-- Continuation lines of a multisay `SAY @a = @b = @c` monologue (line 1 is the field above): the NPC
              speaks several lines before the player replies. Each edits like the primary line - an @N line writes
              its .msg/.tra entry, a literal writes the .d source (setSayLine). Absent for a single-say state. -->
@@ -445,6 +457,7 @@
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+            {#if dlg}<button type="button" class="pickstr" onclick={() => actions.pickString(c.id)}>Change string...</button>{/if}
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
@@ -904,6 +917,26 @@
     }
     /* NPC line = blue (charts-blue), matching the graph card and tree; player option text = the default
        foreground, overridden to green/red by the per-option reaction chip. */
+    /* Sits under the line it changes, reading as an action on that field rather than a form control. */
+    .pickstr {
+        /* The inspector lays its fields out as blocks, and an option box stretches its children - so the size
+           is stated here rather than inherited, keeping the button identical under a line and under a reply. */
+        display: inline-block;
+        width: auto;
+        margin: 2px 0 4px;
+        padding: 2px 8px;
+        font: inherit;
+        font-size: 0.9em;
+        color: var(--vscode-button-secondaryForeground, inherit);
+        background: var(--vscode-button-secondaryBackground, transparent);
+        border: 1px solid var(--vscode-contrastBorder, transparent);
+        border-radius: 2px;
+        cursor: pointer;
+    }
+    .pickstr:hover {
+        background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+    }
+
     .iv.npc {
         color: var(--vscode-charts-blue);
     }

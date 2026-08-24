@@ -88,9 +88,13 @@ export function textFieldLocked(opts: {
     ssl: boolean;
     textRO: boolean;
     isNew?: boolean;
+    dlg?: boolean;
 }): boolean {
-    const { text, messages, ssl, textRO, isNew } = opts;
+    const { text, messages, ssl, textRO, isNew, dlg } = opts;
     if (textRO) return true;
+    // A compiled dialog stores a number pointing into the game's string table, so it has nowhere to put prose
+    // typed here - changing what a line says means pointing it at a different entry (see the reason below).
+    if (dlg) return true;
     if (isNew) return false;
     const ref = msgRef(text);
     if (ref === null) return ssl; // literal: SSL can't persist it (locked); D splices it into the .d (editable)
@@ -105,6 +109,14 @@ export function textFieldLocked(opts: {
 // single source of that wording so the same gate reads identically everywhere (and stays unit-testable). Each
 // returns "" when the control is in fact editable (the caller can then fall back to an action tooltip).
 // -----------------------------------------------------------------------------
+
+/**
+ * Why a compiled dialog's line cannot be typed into. It is not read-only - the line can be pointed at a
+ * different entry - so the wording names the action rather than saying the dialog is locked.
+ */
+export const DLG_TEXT_LOCK_REASON =
+    "A compiled dialog refers to the game's string table rather than holding text, so this line cannot be " +
+    'typed into. Use "Change string..." to point it at a different entry.';
 
 /** Read-only because the state is derived (CHAIN/INTERJECT/EXTEND) or the whole dialog is view-only. */
 export function stateReadOnlyReason(derivedFrom?: string): string {
@@ -144,10 +156,12 @@ export function textLockReason(opts: {
     textRO: boolean;
     isNew?: boolean;
     derivedFrom?: string;
+    dlg?: boolean;
 }): string {
     if (!textFieldLocked(opts)) return "";
-    const { text, ssl, textRO, derivedFrom } = opts;
+    const { text, ssl, textRO, derivedFrom, dlg } = opts;
     if (textRO) return stateReadOnlyReason(derivedFrom);
+    if (dlg) return DLG_TEXT_LOCK_REASON;
     const ref = msgRef(text);
     if (ref === null)
         // Only reachable for SSL (a D literal is editable): a literal/computed SSL line has no .msg entry.
@@ -179,11 +193,13 @@ export function textEditability(opts: {
     messages: DialogMessages | undefined;
     ssl: boolean;
     textRO: boolean;
+    /** The dialog is a compiled `.dlg`: its lines are string-table references, not editable prose. */
+    dlg?: boolean;
 }): { editable: boolean; reason: string } {
-    const { state, choice, messages, ssl, textRO } = opts;
+    const { state, choice, messages, ssl, textRO, dlg } = opts;
     const text = (choice ?? state).text;
     const isNew = choice ? isPendingChoice(choice) : npcLineAuthorable(state);
-    const base = { text, messages, ssl, textRO, isNew };
+    const base = { text, messages, ssl, textRO, isNew, dlg };
     const locked = textFieldLocked(base);
     return { editable: !locked, reason: locked ? textLockReason({ ...base, derivedFrom: state.derivedFrom }) : "" };
 }

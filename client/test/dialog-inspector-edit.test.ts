@@ -284,6 +284,33 @@ describe("textEditability (unified text gate - one decision both views consume)"
         expect(literal.reason).toMatch(/no plain @N/);
     });
 
+    // A DLG holds a number pointing into the game's string table, so there is nowhere to put typed prose. It
+    // used to read as editable whenever the string resolved, and the host then dropped the edit in silence.
+    it("locks a compiled dialog's line even when its string resolved", () => {
+        const gate = textEditability({ state: st(), choice: null, messages, ssl: false, textRO: false, dlg: true });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).toMatch(/Change string/);
+    });
+
+    it("locks a compiled dialog's reply text for the same reason", () => {
+        const gate = textEditability({
+            state: st(),
+            choice: ch({ text: "@200" }),
+            messages,
+            ssl: false,
+            textRO: false,
+            dlg: true,
+        });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).toMatch(/Change string/);
+    });
+
+    it("leaves every other format alone", () => {
+        expect(
+            textEditability({ state: st(), choice: null, messages, ssl: false, textRO: false, dlg: false }).editable,
+        ).toBe(true);
+    });
+
     it("NPC line of a faithful reply-less adopted SSL node is editable (the +State regression, decided in one place)", () => {
         const state = st({ text: "", procRange: { start: 0, end: 9 }, replyless: true });
         expect(textEditability({ state, choice: null, messages, ssl: true, textRO: false })).toEqual({
