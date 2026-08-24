@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Infinity Engine games
+
+- New `bgforge.weidu.tlkEncoding` setting, for classic installs whose text shows as garbled characters.
+  A classic game records its text encoding nowhere, so it was always read as windows-1252 - right for
+  English, French, German, Italian, Spanish and the other Western languages, wrong for Russian, Polish,
+  Czech, Hungarian, Turkish, Japanese, Korean and Chinese. Enhanced Editions are always UTF-8 and are
+  unaffected. The setting is read each time a game is opened, so correcting it does not need a reload.
+
 ### Infinity Engine scripts
 
 - Compiled scripts (`.bcs`, and the `.bs` AI-selection scripts) open as readable BAF source instead of the

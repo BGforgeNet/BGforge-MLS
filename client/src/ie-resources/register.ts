@@ -49,7 +49,12 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     bcsSymbols: BcsSymbolResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
 } {
-    const session = new GameSession();
+    // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
+    // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
+    const session = new GameSession(() => {
+        const encoding = vscode.workspace.getConfiguration("bgforge").get<string>("weidu.tlkEncoding", "");
+        return encoding === "" ? undefined : encoding;
+    });
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured

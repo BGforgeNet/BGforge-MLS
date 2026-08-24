@@ -7,11 +7,33 @@ import { openGame, type Game } from "@bgforge/binary";
 export class GameSession {
     private readonly games = new Map<string, Game>();
     private currentDir: string | undefined;
+    private readonly tlkEncoding: (() => string | undefined) | undefined;
+
+    /**
+     * `tlkEncoding` supplies the codepage the game's string table is written in, or undefined to let the
+     * library decide (UTF-8 for Enhanced Editions, windows-1252 otherwise).
+     *
+     * A getter rather than a value because it is read on every open, so correcting the setting takes effect on
+     * the next open instead of needing the window reloaded. Injected rather than read here, which is what keeps
+     * this module free of `vscode` and directly unit-testable.
+     */
+    constructor(tlkEncoding?: () => string | undefined) {
+        this.tlkEncoding = tlkEncoding;
+    }
+
+    /**
+     * The one place a game is opened. Both entry points route through it so the options cannot drift - a
+     * setting honoured by only one of them is a setting that works intermittently.
+     */
+    private openAt(dir: string): Game {
+        const encoding = this.tlkEncoding?.();
+        return openGame(dir, { mode: "engine", ...(encoding === undefined ? {} : { encoding }) });
+    }
 
     /** Open (or re-open) a game at `dir` and make it current. Throws if `dir` has no chitin.key. */
     open(dir: string): Game {
         this.close(dir);
-        const game = openGame(dir, { mode: "engine" });
+        const game = this.openAt(dir);
         this.games.set(dir, game);
         this.currentDir = dir;
         return game;
@@ -36,7 +58,7 @@ export class GameSession {
     ensureOpen(dir: string): Game {
         const existing = this.games.get(dir);
         if (existing) return existing;
-        const game = openGame(dir, { mode: "engine" });
+        const game = this.openAt(dir);
         this.games.set(dir, game);
         this.currentDir ??= dir;
         return game;
