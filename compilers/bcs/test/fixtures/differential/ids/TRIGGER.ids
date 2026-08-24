@@ -1,0 +1,9 @@
+IDS V1.0
+0x400F Global(S:Name*,S:Area*,I:Value*)
+0x4011 HPGT(O:Object*,I:Hit Points*)
+0x4018 Range(O:Object*,I:Range*)
+0x401C See(O:Object*)
+0x4030 False()
+0x4089 OR(I:OrCount*)
+0x40E0 NextTriggerObject(O:Object*)
+0x40E3 NearLocation(O:Object*,I:PointX*,I:PointY*,I:Range*)

@@ -1,0 +1,10 @@
+IF
+	See([PC.0.ELF])
+	HPGT([ANYONE],1)
+	Range(NearestEnemyOf(LastSeenBy),5)
+THEN
+	RESPONSE #100
+		Attack([ENEMY.HUMANOID.HUMAN.MAGE.NONE.MALE.LAWFUL_GOOD])
+		Attack("Druid3")
+		PlaySound("BELLS")
+END

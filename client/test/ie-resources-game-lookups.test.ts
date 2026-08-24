@@ -7,6 +7,7 @@ vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 // Imported after vi.mock so the mocked vscode is in place.
 import type { IeScriptStyle, TwoDaTable } from "@bgforge/binary";
 import {
+    createBcsSymbolResolver,
     createFlagBitNamesResolver,
     createNamingTableResolver,
     createResourceListResolver,
@@ -21,6 +22,10 @@ import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
 
 const TABLES: Record<string, ReadonlyMap<number, string>> = {
+    // The two a compiled script's every call is named through, plus one enumerated object field.
+    trigger: new Map([[0x4030, "False()"]]),
+    action: new Map([[36, "Continue()"]]),
+    ea: new Map([[2, "PC"]]),
     sndslot: new Map([[21, "AREA_FOREST"]]),
     soundoff: new Map([
         [21, "AREA_FOREST_BG1"],
@@ -522,5 +527,52 @@ describe("createFlagBitNamesResolver", () => {
         const resolve = createFlagBitNamesResolver(session({ throws: true, kitlist: KITLIST }));
 
         expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toBeUndefined();
+    });
+});
+
+/**
+ * How a compiled script reads under its install: the tables that name its numbers, and the engine that says
+ * which field each number is. Both come from one open game, so the resolver hands back one record.
+ */
+describe("createBcsSymbolResolver", () => {
+    const naming = (overrides: Parameters<typeof session>[0] = {}) =>
+        createBcsSymbolResolver(session({ tables: ["trigger", "action", "ea"], ...overrides }))(gameUri());
+
+    it("names triggers and actions from the install's own tables", () => {
+        const resolved = naming();
+
+        expect(resolved?.symbols.trigger(0x4030)).toEqual(["False()"]);
+        expect(resolved?.symbols.action(36)).toEqual(["Continue()"]);
+        expect(resolved?.symbols.ids("EA")?.get(2)).toBe("PC");
+    });
+
+    // Signatures come through `idsAll`, so an id the table never names is an empty list, not undefined - the
+    // decompiler reads "no row for this id" and degrades to `UnknownTrigger<id>()` rather than failing.
+    it("reports no rows for an id the install does not name", () => {
+        const resolved = naming();
+
+        expect(resolved?.symbols.trigger(0x9999)).toEqual([]);
+        expect(resolved?.symbols.action(9999)).toEqual([]);
+    });
+
+    it("reports no table the install does not ship", () => {
+        expect(naming()?.symbols.ids("SUBRACE")).toBeUndefined();
+    });
+
+    // The engine decides which table names each object field, and nothing in a script says which game wrote it.
+    it("takes the engine from the game's detected script style", () => {
+        expect(naming()?.engine).toBe("bg");
+        expect(naming({ scriptStyle: "pst" })?.engine).toBe("pst");
+        expect(naming({ scriptStyle: "iwd1" })?.engine).toBe("iwd");
+        expect(naming({ scriptStyle: "iwd2" })?.engine).toBe("iwd2");
+    });
+
+    it("resolves nothing for a document with no game behind it", () => {
+        expect(createBcsSymbolResolver(session())({ scheme: "file", path: "/mod/a.bcs" } as never)).toBeUndefined();
+    });
+
+    // An unreadable game reads as "no game", exactly as a document outside one does.
+    it("resolves nothing when the game cannot be opened", () => {
+        expect(naming({ throws: true })).toBeUndefined();
     });
 });

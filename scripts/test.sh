@@ -34,6 +34,14 @@ step "Resetting External Repos"
 step "Building transpile library bundle"
 pnpm build:transpile
 
+# Four suites drive the real WeiDU as their authority and SKIP without one, so resolve it BEFORE Phase 1
+# rather than letting one quietly drop itself. Three (the BCS and DLG differentials, and the DLG parser's
+# compiled fixtures) run in the unit phase, so resolving this at Phase 3 - where only the TP2 grammar
+# differential needed it - left them skipping on any host without a WeiDU already on PATH. Cached after
+# the first run.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
+
 # --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
 # Coverage runs are deliberately NOT in this block - see Phase 1.5 for why.
 # The webview Playwright harnesses are typechecked now that playwright is a pinned devDep (it resolves in
@@ -131,11 +139,6 @@ if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
     timing_summary "Phases 1-2 passed (build-only mode)"
     exit 0
 fi
-
-# The differential inside the integration suite uses the real WeiDU as its authority and SKIPS without
-# one, so resolve it here rather than letting the suite quietly drop itself. Cached after the first run.
-WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
-export WEIDU_BIN
 
 # --- Phase 3: Tests that need builds (all in parallel) ---
 # Every category the close-out gate covers is represented here at dev-loop depth: grammars whole, server

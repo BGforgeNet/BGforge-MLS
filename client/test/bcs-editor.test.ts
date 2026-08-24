@@ -38,6 +38,8 @@ const h = vi.hoisted(() => {
         FileSystemError,
         opened: [] as string[],
         unopenable: new Set<string>(),
+        /** Paths the fake host rejects for, mapped to the reason - which is not always an `Error`. */
+        rejectWith: new Map<string, unknown>(),
         languages: [] as string[],
         shownIn: [] as (number | undefined)[],
         errors: [] as string[],
@@ -82,6 +84,10 @@ vi.mock("vscode", () => ({
     workspace: {
         registerFileSystemProvider: () => ({}),
         openTextDocument: (uri: { path: string }) => {
+            // Held as data rather than written inline: a host can reject with something that is not an
+            // Error, and the reason has to reach the user either way, so the tests supply both shapes.
+            const reason = h.rejectWith.get(uri.path);
+            if (reason !== undefined) return Promise.reject(reason);
             if (h.unopenable.has(uri.path)) return Promise.reject(new Error("file not found"));
             h.opened.push(uri.path);
             return Promise.resolve({ uri });
@@ -172,6 +178,35 @@ describe("the .bcs custom editor", () => {
         expect(() => provider.createDirectory()).toThrow(/not a directory/);
     });
 
+    // A missing file reaches readFile as an ENOENT from the read itself, where stat rejects it up front.
+    it("reports a missing script as not found on read too", () => {
+        const provider = new BcsFileSystemProvider(() => NAMING);
+
+        expect(() => provider.readFile(new h.FakeUri(BCS_SCHEME, "/nowhere/MISSING.bcs.baf") as never)).toThrow(
+            /not found/,
+        );
+    });
+
+    // Anything that is not a missing file propagates: a decompiler that refuses a script must not read as
+    // "no such file", which would send the user looking for the wrong problem.
+    it("propagates a failure that is not a missing file", () => {
+        const { view } = script();
+        const provider = new BcsFileSystemProvider(() => {
+            throw new Error("tables unreadable");
+        });
+
+        expect(() => provider.readFile(view)).toThrow(/tables unreadable/);
+    });
+
+    // Nothing is watched, so both lifecycle hooks are no-ops that still have to be callable: VS Code disposes
+    // the provider on shutdown and subscribes a watcher on every open.
+    it("has disposable lifecycle hooks even though it watches nothing", () => {
+        const provider = new BcsFileSystemProvider(() => NAMING);
+
+        expect(() => provider.watch().dispose()).not.toThrow();
+        expect(() => provider.dispose()).not.toThrow();
+    });
+
     it("opens the file as BAF source in the group it was opened from, then closes its own panel", async () => {
         const { file } = script();
         h.opened.splice(0);
@@ -216,5 +251,22 @@ describe("the .bcs custom editor", () => {
         // The panel still closes, so a failed open does not strand an empty custom-editor tab.
         expect(h.disposedPanels).toBe(1);
         h.unopenable.clear();
+    });
+
+    // Not everything thrown across a host API boundary is an Error, and the reason still has to reach the user.
+    it("reports a failure that was not thrown as an Error", async () => {
+        const { file } = script();
+        h.errors.splice(0);
+        h.rejectWith.set(`${file}.baf`, "host said no");
+        h.disposedPanels = 0;
+        registerBcsEditor(() => NAMING);
+        const provider = h.editor.provider!;
+
+        const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
+        await provider.resolveCustomEditor(document, { viewColumn: 1, dispose: () => h.disposedPanels++ });
+
+        expect(h.errors[0]).toContain("host said no");
+        expect(h.disposedPanels).toBe(1);
+        h.rejectWith.clear();
     });
 });

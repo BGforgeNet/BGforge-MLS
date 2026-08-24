@@ -69,14 +69,19 @@ are not synonyms - BG2:ToB reads action 160 as both `ApplySpell(O:Target,I:Spell
 `ApplySpellRES(S:RES*,O:Target)`. Only the stored record says which was written, and reading the second as the
 first drops the resref.
 
-Output is gated against the reference implementation: **4741 of 4741 scripts from a stock BG:EE plus BG2:ToB
-pair decompile to exactly what WeiDU emits**, comments aside. Three rules that gate found, none of them in the
-spec:
+Output is gated against the reference implementation: **4939 of 4939 scripts from a stock BG:EE plus BG2:ToB
+pair decompile to exactly what WeiDU emits**, comments aside, with nothing skipped - each game resolved
+against its OWN IDS tables, since resolving one edition's scripts against another's makes the reference refuse
+files that are perfectly good. Four rules that gate found, none of them in the spec:
 
 - An action's stored FIRST object is not an argument but an acting-object override, printing as an
   `ActionOverride(...)` wrapper - so its own object arguments start at the second slot. `ACTION.IDS` does list
   an `ActionOverride` id, but no stored action carries it (0 of 90852): it is a source-level spelling the
   compiler resolves into that slot.
+- `TriggerOverride` is the same construct for triggers and is NOT the same mechanism: a real stored
+  `NextTriggerObject` record folds into the trigger that follows it, and the pair spends ONE slot of an
+  enclosing `OR(n)` rather than two. A stock BG:EE stores 198 of them across 19 scripts; BG2:ToB's table has
+  no such row at all, so the fold simply never fires there.
 - A zero enumerated field in an object prints as `0`, not as whatever the table names 0 - `GENERAL.IDS` calls
   it `GENERAL_ITEM`, which would read as a filter the record does not apply. An object with nothing set at all
   prints `[ANYONE]`, a name no IDS table carries.
@@ -87,8 +92,12 @@ spec:
 
 Where the tables lack an id the call prints as `UnknownTrigger<id>()` or `UnknownAction<id>()` rather than
 failing the file, so a script from a newer edition still reads. The reference implementation refuses the whole
-file instead - which is what the other 198 BG:EE scripts in that corpus do, and why they are outside the count
-above.
+file instead, which is the wrong trade for a viewer: one unnamed call should not hide the other ninety.
+
+That sweep needs two installs, so it cannot run in CI. `test/weidu-differential.test.ts` is the reproducible
+form of it: WeiDU compiles the committed `.baf` sources under `test/fixtures/differential/` against the IDS
+tables beside them, decompiles its own output, and the result is compared with ours. The fixtures exist to
+carry the rules above, and the suite fails if one stops carrying its rule.
 
 ## What it deliberately does not do
 
@@ -191,4 +200,8 @@ pnpm exec vitest run --config compilers/bcs/vitest.config.ts
 
 # The install sweep, which needs a game to point at - see test/corpus.test.ts
 BGFORGE_BCS_CORPUS=/path/to/game pnpm exec vitest run --config compilers/bcs/vitest.config.ts corpus
+
+# The differential needs a WeiDU; scripts/ensure-weidu.sh prints one, downloading a pinned build if the
+# host has none. `pnpm test` resolves it before the unit phase, so it only has to be done by hand here.
+WEIDU_BIN="$(scripts/ensure-weidu.sh)" pnpm exec vitest run --config compilers/bcs/vitest.config.ts weidu
 ```

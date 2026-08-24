@@ -1,0 +1,21 @@
+IF
+	NextTriggerObject([PC.HUMANOID.ELF])
+	Range(NearestEnemyOf(Myself),15)
+	!HPGT(LastSeenBy,20)
+THEN
+	RESPONSE #100
+		ActionOverride(Player1,Attack([ENEMY]))
+		DisplayStringHead(Myself,4592)
+END
+
+IF
+	OR(3)
+	NextTriggerObject(Player1)
+	See([ENEMY])
+	False()
+	False()
+	Global("hostile","GLOBAL",1)
+THEN
+	RESPONSE #50
+		Continue()
+END

@@ -31,7 +31,8 @@ TEST_STOP_AFTER_BUILD=1 TEST_COVERAGE=1 "$SCRIPT_DIR/test.sh"
 # its own redundant reset (the export inside test.sh doesn't survive the subprocess).
 export EXTERNAL_REPOS_CLEAN=1
 
-# test.sh exported this for its own Phase 3, which the line above skipped, so resolve it again here.
+# test.sh resolves this before its own Phase 1, but that export dies with the subprocess above, and the
+# suites below need it too - so resolve it again here. Cached, so the second call costs nothing.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
 export WEIDU_BIN
 
