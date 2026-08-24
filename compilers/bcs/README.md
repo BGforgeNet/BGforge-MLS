@@ -49,12 +49,53 @@ script.blocks[0].responses[0].weight = 50;
 writeFileSync("aerie.bcs", writeBcs(script), "latin1");
 ```
 
+## Decompiling to BAF
+
+`decompileBcs(script, symbols)` emits BAF source. It resolves nothing itself - the caller passes the install's
+own tables, so the codec keeps working with no game present:
+
+```ts
+import { decompileBcs, readBcs } from "@bgforge/bcs";
+
+const baf = decompileBcs(readBcs(readFileSync("aerie.bcs", "latin1")), {
+  trigger: (id) => triggerRows.get(id) ?? [], // every TRIGGER.IDS row for the id
+  action: (id) => actionRows.get(id) ?? [], // every ACTION.IDS row for the id
+  ids: (table) => tables.get(table),
+});
+```
+
+Signature lookups return every row rather than one, because a table really does give one id several and they
+are not synonyms - BG2:ToB reads action 160 as both `ApplySpell(O:Target,I:Spell*Spell)` and
+`ApplySpellRES(S:RES*,O:Target)`. Only the stored record says which was written, and reading the second as the
+first drops the resref.
+
+Output is gated against the reference implementation: **4741 of 4741 scripts from a stock BG:EE plus BG2:ToB
+pair decompile to exactly what WeiDU emits**, comments aside. Three rules that gate found, none of them in the
+spec:
+
+- An action's stored FIRST object is not an argument but an acting-object override, printing as an
+  `ActionOverride(...)` wrapper - so its own object arguments start at the second slot. `ACTION.IDS` does list
+  an `ActionOverride` id, but no stored action carries it (0 of 90852): it is a source-level spelling the
+  compiler resolves into that slot.
+- A zero enumerated field in an object prints as `0`, not as whatever the table names 0 - `GENERAL.IDS` calls
+  it `GENERAL_ITEM`, which would read as a filter the record does not apply. An object with nothing set at all
+  prints `[ANYONE]`, a name no IDS table carries.
+- Which string parameters pack an `Area` in front of a `Name` cannot be read off the signature, though the
+  spec says to hardcode a list of ids. `Global` and `LeaveAreaLUAPanicEntry` both declare an `S:Area*` and only
+  the first packs. The shortfall between a signature's string parameters and the slots the record filled counts
+  the packing exactly, and needs no list.
+
+Where the tables lack an id the call prints as `UnknownTrigger<id>()` or `UnknownAction<id>()` rather than
+failing the file, so a script from a newer edition still reads. The reference implementation refuses the whole
+file instead - which is what the other 198 BG:EE scripts in that corpus do, and why they are outside the count
+above.
+
 ## What it deliberately does not do
 
-- **It does not resolve names.** A trigger or action is stored as a number, and which name that number has
-  depends on the `TRIGGER.IDS` and `ACTION.IDS` the player's install ships - editions and mods both change
+- **The codec does not resolve names.** A trigger or action is stored as a number, and which name that number
+  has depends on the `TRIGGER.IDS` and `ACTION.IDS` the player's install ships - editions and mods both change
   them. Resolution belongs to a layer that holds a game; keeping it out is what lets this read a file with
-  no install present.
+  no install present, and `decompileBcs` above takes the tables as an argument for the same reason.
 - **It does not name fields.** The argument lists are fixed - a trigger takes 7 arguments and an action 10,
   and an object is EA plus six enumerated fields plus a five-slot identifier chain - but which field a given
   number is depends on the engine: Torment gives an object two more, and the spec places a coordinate pair
@@ -95,6 +136,10 @@ An object's coordinate field is written as a point - `[x.y]`, brackets and a dot
 action which is two plain numbers. The reader refuses such a line by name rather than guessing at it, because
 nothing in a BG-family install has one to verify a reading against. If a Torment or Icewind Dale corpus turns
 up, that is the first thing to check.
+
+An `A:` parameter - an action taken as an argument, which `ActionOverride` declares - is refused by name for
+the same reason: the spec says outright that it does not know how one is stored, and no stored record in the
+corpus carries the id, so there is nothing to read a form off.
 
 ## Tests
 

@@ -7,10 +7,34 @@
 
 import { decodeTextResource } from "./text-resource";
 
+/**
+ * Every row of an IDS resource, keyed by value, in file order.
+ *
+ * Real tables name one value more than once - BG2:ToB's ACTION.IDS does it 32 times, where id 8 is both
+ * `Dialogue` and `Dialog` and id 160 is `ApplySpell(O:Target,I:Spell*Spell)` beside
+ * `ApplySpellRES(S:RES*,O:Target)`. Those two are not spellings of one thing: they take different argument
+ * types, and only the stored record says which was meant, so a caller that has the record picks. `parseIds`
+ * keeps one row per value and cannot serve that.
+ */
+export function parseIdsAll(bytes: Uint8Array): Map<number, string[]> {
+    const table = new Map<number, string[]>();
+    for (const [value, name] of idsRows(bytes)) {
+        const rows = table.get(value);
+        if (rows === undefined) table.set(value, [name]);
+        else rows.push(name);
+    }
+    return table;
+}
+
 /** Parse an IDS resource into value -> identifier. Malformed rows are skipped rather than failing the table. */
 export function parseIds(bytes: Uint8Array): Map<number, string> {
+    // Where a value is named twice, the last row wins. Nothing in the format ranks them; a caller that needs to
+    // choose between genuinely different rows reads `parseIdsAll` and decides from the record it holds.
+    return new Map(idsRows(bytes));
+}
+
+function* idsRows(bytes: Uint8Array): Generator<[number, string]> {
     const text = decodeTextResource(bytes);
-    const table = new Map<number, string>();
     for (const line of text.split(/\r?\n/)) {
         // Two columns, value then identifier (IESDP ids.htm), the identifier running to end of line: MISSILE.IDS
         // names projectiles in prose ("3 Arrow Exploding") and TRIGGER.IDS writes signatures whose parameter
@@ -22,7 +46,6 @@ export function parseIds(bytes: Uint8Array): Map<number, string> {
         if (match === null || name === undefined) continue;
         const value = Number(match[1]);
         if (!Number.isInteger(value)) continue;
-        table.set(value, name);
+        yield [value, name];
     }
-    return table;
 }

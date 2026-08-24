@@ -8,4 +8,6 @@
 
 export { readBcs } from "./read";
 export { writeBcs } from "./write";
+export { decompileBcs } from "./decompile";
+export type { BcsSymbols } from "./decompile";
 export type { BcsAction, BcsBlock, BcsObject, BcsResponse, BcsScript, BcsTrigger } from "./types";
