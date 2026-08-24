@@ -14,6 +14,11 @@ export interface DialogActions {
      * own line, a choice id one of its replies.
      */
     pickString: (choiceId: string | null) => void;
+    /**
+     * Ask the host to detach the selected state: the replies leading to it stop doing so, but the state and
+     * its number stay, because other dialogs address it by number. Compiled dialogs only.
+     */
+    detachState: () => void;
     rename: (newId: string) => void;
     addReply: () => void;
     removeReply: (choiceId: string) => void;

@@ -691,6 +691,14 @@
             <button onclick={actions.duplicateState}>Duplicate state</button>
             {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
         </div>
+    {:else if dlg}
+        <!-- A compiled dialog offers Detach, not Delete: the state's number is an address other dialogs hold,
+             so the record stays and only the replies leading to it are cut. The host explains that and asks
+             before doing it. Duplicate is not offered - the generic op clones a state's file position too,
+             which a compiled dialog cannot hold twice. -->
+        <div class="stateops">
+            <button class="del" onclick={actions.detachState}>Detach state</button>
+        </div>
     {:else if ssl && structuralEditable}
         <!-- A faithful SSL node: Duplicate clones the procedure (sharing the source's @N refs, like D) and
              is always offered. Delete is offered only when every inbound reference can be cleaned up on save

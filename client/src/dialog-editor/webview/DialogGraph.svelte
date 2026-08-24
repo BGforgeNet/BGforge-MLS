@@ -1088,6 +1088,12 @@
             const address = dlgAddress(selected, choiceId);
             if (address) postToHost({ type: "pickString", ...address });
         },
+        // The host owns detaching: it has the game-wide reference index, and it must ask before doing
+        // anything, so the webview only names the state.
+        detachState: () => {
+            const address = selected && dlgAddress(selected, null);
+            if (address) postToHost({ type: "detach", ...address });
+        },
         rename: (newId: string) => {
             if (renamable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },

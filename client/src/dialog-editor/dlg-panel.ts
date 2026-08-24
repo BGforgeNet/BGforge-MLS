@@ -15,7 +15,9 @@
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
 import { modelFromDlg } from "../../../shared/dialog-model-dlg";
-import { setDlgLineText } from "../../../shared/dialog-dlg-edit";
+import { detachDlgState, setDlgLineText } from "../../../shared/dialog-dlg-edit";
+import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
+import type { InboundRef } from "./dlg-references";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
@@ -31,6 +33,11 @@ import { buildDialogHostHtml } from "./webview-host-html";
 export interface DlgHostDeps {
     strref?: StrrefResolver;
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
+    /**
+     * Which replies elsewhere lead into a state. `undefined` means the game-wide scan has not answered -
+     * which is NOT the same as finding none, and must never be presented as if it were.
+     */
+    inbound?: (resref: string, stateIndex: number) => InboundRef[] | undefined;
 }
 
 /** Bytes to open: the hot-exit backup when one is readable, otherwise the file itself. */
@@ -187,6 +194,9 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 case "pickString":
                     void this.changeString(document, post, message.stateIndex, message.choiceIndex);
                     break;
+                case "detach":
+                    void this.detachState(document, post, message.stateIndex);
+                    break;
                 case "edit":
                     this.applyModelEdit(document, post, message.model, message.seq);
                     break;
@@ -223,6 +233,39 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
             return;
         }
         this.postModel(document, post);
+    }
+
+    /**
+     * Detach a state, after telling the user exactly what it will do. The state is never removed - its
+     * number is an address other dialogs and mod scripts hold - so the confirm has to be honest that a jump
+     * from another file will still arrive.
+     */
+    private async detachState(document: DlgDocument, post: (msg: unknown) => void, stateIndex: unknown): Promise<void> {
+        const shown = this.posted.get(document);
+        if (typeof stateIndex !== "number" || !shown) return;
+        const resref = resrefOf(document.uri);
+
+        let preview;
+        try {
+            preview = detachDlgState(shown, resref, stateIndex);
+        } catch (error) {
+            post({ type: "error", message: String(error) });
+            return;
+        }
+        // Only references from OTHER files are the user's problem here: the ones in this dialog are what the
+        // detach is about to cut, and are listed separately.
+        const external = this.deps.inbound?.(resref, stateIndex)?.filter((ref) => ref.dialog !== resref.toUpperCase());
+
+        const choice = await vscode.window.showWarningMessage(
+            detachConfirmMessage({ resref, stateIndex, local: preview.cut, external }),
+            { modal: true },
+            "Detach",
+        );
+        if (choice !== "Detach") return;
+
+        document.applyModel(preview.model, `Detach state ${stateIndex}`);
+        this.postModel(document, post);
+        void vscode.window.showInformationMessage(detachResultMessage(stateIndex, preview.cut));
     }
 
     /**

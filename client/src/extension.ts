@@ -152,7 +152,11 @@ export async function activate(context: ExtensionContext) {
         registerDialogEditor(context, client),
         // Compiled dialogs get their own viewType: `.dlg` is binary, and `bgforge.dialogEditor` is a
         // CustomTextEditorProvider. Both feed the same webview, so the two are one editor to a reader.
-        registerDlgDialogEditor(context, { strref: gameLookups.strref, pickStrref: gameLookups.pickStrref }),
+        registerDlgDialogEditor(context, {
+            strref: gameLookups.strref,
+            pickStrref: gameLookups.pickStrref,
+            inbound: gameLookups.inbound,
+        }),
     );
 }
 

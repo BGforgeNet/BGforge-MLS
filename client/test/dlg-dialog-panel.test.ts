@@ -17,6 +17,10 @@ import type * as vscode from "vscode";
 const executeCommandMock = vi.hoisted(() => vi.fn());
 /** Stands in for the workspace filesystem, so a save can be read back. */
 const files = vi.hoisted(() => new Map<string, Uint8Array>());
+/** Modal prompts raised, what the user answers, and what they are told afterwards. */
+const prompts = vi.hoisted(() => [] as string[]);
+const told = vi.hoisted(() => [] as string[]);
+const answer = vi.hoisted(() => ({ value: undefined as string | undefined }));
 
 vi.mock("vscode", () => ({
     Uri: {
@@ -39,8 +43,14 @@ vi.mock("vscode", () => ({
     },
     window: {
         showErrorMessage: vi.fn(),
-        showWarningMessage: vi.fn(),
-        showInformationMessage: vi.fn(),
+        showWarningMessage: (message: string, ..._rest: unknown[]) => {
+            prompts.push(message);
+            return Promise.resolve(answer.value);
+        },
+        showInformationMessage: (message: string) => {
+            told.push(message);
+            return Promise.resolve(undefined);
+        },
     },
     commands: { executeCommand: executeCommandMock },
     workspace: {
@@ -59,6 +69,7 @@ vi.mock("vscode", () => ({
 }));
 vi.mock("../src/dialog-editor/webview-host-html", () => ({ buildDialogHostHtml: () => "<html></html>" }));
 
+import { buildDlg } from "@bgforge/binary";
 import { DlgDialogEditorProvider, type DlgDocument } from "../src/dialog-editor/dlg-panel";
 
 /** A DLG with one state saying strref 100, gated by a trigger, whose single reply exits. */
@@ -105,6 +116,35 @@ function buildDlgBytes(): Uint8Array {
     return bytes;
 }
 
+/**
+ * Two states: state 0's single reply leads to state 1, which offers nothing. Built with the real writer
+ * rather than by hand - detaching needs a reply that actually points somewhere, which the hand-built
+ * fixture above (one state, one terminating reply) does not have.
+ */
+function buildLinkedDlgBytes(): Uint8Array {
+    return buildDlg({
+        states: [
+            { text: 100, firstTransition: 0, transitionCount: 1, triggerIndex: -1 },
+            { text: 101, firstTransition: 1, transitionCount: 0, triggerIndex: -1 },
+        ],
+        transitions: [
+            {
+                flags: ["text"],
+                text: 200,
+                journalText: -1,
+                triggerIndex: -1,
+                actionIndex: -1,
+                // Empty resref: a jump inside this same dialog, whatever the file is called.
+                nextDialog: "\u0000".repeat(8),
+                nextState: 1,
+            },
+        ],
+        stateTriggers: [],
+        transitionTriggers: [],
+        actions: [],
+    });
+}
+
 interface Posted {
     type: string;
     reparse?: boolean;
@@ -116,6 +156,7 @@ interface Posted {
 function harness(
     strref?: (uri: unknown, id: number) => string | undefined,
     pickStrref: () => Promise<number | undefined> = () => Promise.resolve(undefined),
+    inbound?: (resref: string, state: number) => unknown[] | undefined,
 ) {
     const posted: Posted[] = [];
     let onMessage: ((raw: unknown) => void) | undefined;
@@ -143,7 +184,7 @@ function harness(
 
     const provider = new DlgDialogEditorProvider(
         { extensionUri: { path: "/ext" } } as unknown as vscode.ExtensionContext,
-        { strref, pickStrref } as never,
+        { strref, pickStrref, inbound } as never,
     );
     const document = {
         uri: { path: "/game/SELFDLG.dlg", toString: () => "file:///game/SELFDLG.dlg" },
@@ -427,5 +468,81 @@ describe("DlgDialogEditorProvider, changing what a line says", () => {
         edits[0]!.undo();
 
         expect(h.posted).toHaveLength(before);
+    });
+});
+
+describe("DlgDialogEditorProvider, detaching a state", () => {
+    const settle = (): Promise<void> =>
+        new Promise((resolve) => {
+            setTimeout(resolve, 0);
+        });
+
+    /** State 1 of the fixture is reached by state 0's only reply, so detaching it cuts exactly that reply. */
+    async function detaching(inbound?: (resref: string, state: number) => unknown[] | undefined) {
+        prompts.length = 0;
+        told.length = 0;
+        answer.value = undefined;
+        const h = harness(undefined, () => Promise.resolve(undefined), inbound);
+        files.set(DLG_URI, buildLinkedDlgBytes());
+        const edits: unknown[] = [];
+        h.provider.onDidChangeCustomDocument((event) => edits.push(event));
+        const document = await h.provider.openCustomDocument(DLG_URI_VALUE as never, {} as never);
+        await h.provider.resolveCustomEditor(document, h.panel, {} as never);
+        h.ready();
+        return { h, document, edits };
+    }
+
+    /** The reply's target strref field doubles as the tell: a cut reply gets the terminate flag. */
+    function firstReplyTerminates(bytes: Uint8Array): boolean {
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        return (view.getUint32(view.getUint32(0x14, true), true) & 0x008) !== 0;
+    }
+
+    test("asks before changing anything, naming what will be cut and what still reaches the state", async () => {
+        const { h, document } = await detaching(() => [{ dialog: "OTHER", state: 2, transition: 0 }]);
+
+        h.send({ type: "detach", stateIndex: 1 });
+        await settle();
+
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]).toMatch(/state 1/i);
+        expect(prompts[0]).toMatch(/OTHER/);
+        expect(prompts[0]).toMatch(/remains in the file/i);
+        // Nothing applied while the question is unanswered.
+        expect(firstReplyTerminates(document.bytes)).toBe(false);
+    });
+
+    test("changes nothing when the user declines", async () => {
+        const { h, document, edits } = await detaching(() => []);
+        answer.value = undefined;
+
+        h.send({ type: "detach", stateIndex: 1 });
+        await settle();
+
+        expect(edits).toHaveLength(0);
+        expect(firstReplyTerminates(document.bytes)).toBe(false);
+    });
+
+    test("cuts the replies that led there once confirmed, and says which changed", async () => {
+        const { h, document, edits } = await detaching(() => []);
+        answer.value = "Detach";
+
+        h.send({ type: "detach", stateIndex: 1 });
+        await settle();
+
+        expect(firstReplyTerminates(document.bytes)).toBe(true);
+        expect(edits).toHaveLength(1);
+        expect(told.join(" ")).toMatch(/state 0, reply 1/i);
+    });
+
+    test("says the other dialogs were not checked when no index has answered", async () => {
+        // Distinguishing this from "nothing points here" is the whole reason the index reports readiness.
+        const { h } = await detaching(() => undefined);
+
+        h.send({ type: "detach", stateIndex: 1 });
+        await settle();
+
+        expect(prompts[0]).toMatch(/not been checked/i);
+        expect(prompts[0]).not.toMatch(/no other dialog/i);
     });
 });

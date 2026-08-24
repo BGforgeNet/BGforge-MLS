@@ -31,8 +31,28 @@ import {
 import { viewTypeForResource } from "./editor-routing";
 import { pickStrref } from "./strref-picker";
 import { GAME_RESOURCE_SCHEME, resourceUri } from "./uri";
+import { resourceTypeCode, type Game } from "@bgforge/binary";
+import { DlgReferenceIndex, type DlgSource, type InboundRef } from "../dialog-editor/dlg-references";
 
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
+
+/**
+ * The game's dialogs, for the cross-reference scan. Built in the BACKGROUND when a game opens: the scan is
+ * proportional to the install, and `openGame` is already the expensive step that was deliberately kept off
+ * the activation path - so this must not sit on it either. The previous scan is abandoned when a new game
+ * opens, rather than left to finish into a session nobody is looking at.
+ */
+function dlgSourceFor(game: Game): DlgSource {
+    const dlgType = resourceTypeCode("dlg");
+    return {
+        list: () =>
+            game
+                .list()
+                .filter((resource) => resource.type === dlgType)
+                .map((resource) => resource.resref),
+        read: (resref) => game.read(resref, dlgType),
+    };
+}
 
 /**
  * Wire up the IE game resource viewer: the sidebar tree, the game-resource FS provider, and its commands.
@@ -40,6 +60,8 @@ const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
  * its IDS name without reaching for a `Game` of its own.
  */
 export function registerIeResources(context: vscode.ExtensionContext): {
+    /** Which replies lead into a dialog state; `undefined` until the game-wide scan has finished. */
+    inbound: (resref: string, stateIndex: number) => InboundRef[] | undefined;
     strref: StrrefResolver;
     /** Opens the string picker for a document, resolving to the chosen strref or undefined if dismissed. */
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
@@ -107,6 +129,27 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         treeView.message = current?.dir;
     };
 
+    /**
+     * The cross-dialog reference index, and the scan that fills it. Kept per-session rather than per-editor:
+     * every open `.dlg` asks the same question, and the scan is far too big to repeat per tab.
+     */
+    const references = new DlgReferenceIndex();
+    let referenceScan: AbortController | undefined;
+    const scanReferences = (dir: string): void => {
+        referenceScan?.abort();
+        const game = session.game(dir);
+        if (!game) return;
+        const controller = new AbortController();
+        referenceScan = controller;
+        // Deliberately not awaited: this returns to the caller immediately and the scan yields as it goes,
+        // so opening a game costs exactly what it did before.
+        void references.build(dlgSourceFor(game), controller.signal).catch((error: unknown) => {
+            conlog(
+                `ieResources: dialog reference scan failed: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        });
+    };
+
     const openGameDir = async (dir: string): Promise<void> => {
         try {
             session.open(dir);
@@ -130,6 +173,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             await config.update("weidu.gamePath", dir, target);
         }
         fsProvider.clearCache(); // a reopened dir must re-read, not serve a prior session's bytes
+        scanReferences(dir);
         await setHasGame(true);
         tree.refresh();
         updateHeader();
@@ -222,6 +266,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
 
     context.subscriptions.push(
         { dispose: () => session.dispose() },
+        { dispose: () => referenceScan?.abort() },
         treeView,
         vscode.workspace.registerFileSystemProvider(GAME_RESOURCE_SCHEME, fsProvider, {
             isReadonly: false,
@@ -276,6 +321,12 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     if (treeView.visible) void restoreGame();
 
     return {
+        /**
+         * Replies leading into a dialog state. `undefined` while the scan is still running - the caller must
+         * not present that as "nothing points here".
+         */
+        inbound: (resref: string, stateIndex: number) =>
+            references.ready ? references.inbound(resref, stateIndex) : undefined,
         strref: strrefResolver,
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(session, fallbackGameDir),
