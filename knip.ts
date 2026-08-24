@@ -140,10 +140,6 @@ const config: KnipConfig = {
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
-            // weidu compiles the DLG suites' .d fixtures. Like gcc for the SSL differential it is an
-            // environment prerequisite those suites skip without, resolved via WEIDU_BIN or PATH by
-            // scripts/ensure-weidu.sh, not a dependency this package can declare.
-            ignoreBinaries: ["weidu"],
         },
         image: {
             entry: ["test/**/*.test.ts"],
