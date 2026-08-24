@@ -22,7 +22,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { parserRegistry } from "../src/index";
+import { buildDlg, parserRegistry } from "../src/index";
 import { REPO_ROOT } from "./repo-root";
 import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
@@ -50,6 +50,16 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
         stderr: result.stderr ?? "",
     };
 }
+
+/** A whole DLG, built rather than committed: every real one lives inside a game's BIF archives. */
+const MINIMAL_DLG = buildDlg({
+    states: [{ text: 1, firstTransition: 0, transitionCount: 0, triggerIndex: 0 }],
+    transitions: [],
+    stateTriggers: ['Dead("x")'],
+    transitionTriggers: [],
+    actions: ["Wait(1)"],
+    interrupt: { interruptFlags: [] },
+});
 
 describe("bin CLI integration", () => {
     const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-bin");
@@ -413,6 +423,20 @@ describe("bin CLI integration", () => {
             expect(original.equals(recreated)).toBe(true);
         });
 
+        it("round-trips a DLG, whose snapshot carries its text block as an opaque range", () => {
+            // The one format whose snapshot is not reconstructible from the canonical document alone, so
+            // `--load` is where that design either holds or silently drops the file's whole text block.
+            const dlgFile = path.join(tmpDir, "round.dlg");
+            fs.writeFileSync(dlgFile, Buffer.from(MINIMAL_DLG));
+            expect(run(dlgFile, "--save").code).toBe(0);
+            fs.rmSync(dlgFile);
+
+            const { code } = run(path.join(tmpDir, "round.dlg.json"), "--load");
+
+            expect(code).toBe(0);
+            expect(Buffer.from(MINIMAL_DLG).equals(fs.readFileSync(dlgFile))).toBe(true);
+        });
+
         it("round-trips all fixture types via JSON", () => {
             const dirs = ["misc", "walls", "tiles", "critters", "scenery", "items"];
             for (const dir of dirs) {
@@ -546,6 +570,17 @@ describe("bin CLI integration", () => {
             const { code, stderr } = run(tmpDir);
             expect(code).toBe(1);
             expect(stderr).toContain("Use -r for recursive");
+        });
+
+        it("names the file kind by what the CLI reads, not by one of its formats", () => {
+            // The scan message is the first thing a directory run prints, and it used to say ".pro binary"
+            // for every format the registry claims - a DLG or CRE sweep reported itself as a PRO sweep.
+            fs.writeFileSync(path.join(tmpDir, "a.dlg"), Buffer.from(MINIMAL_DLG));
+
+            const { stdout } = run(tmpDir, "-r", "--save");
+
+            expect(stdout).toContain("Found 1 binary files");
+            expect(stdout).not.toContain(".pro binary");
         });
 
         it("check mode exits 1 when any snapshot is stale", () => {
