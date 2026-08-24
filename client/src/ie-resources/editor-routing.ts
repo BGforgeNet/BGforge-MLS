@@ -4,7 +4,7 @@
  * Its own module so it is testable without the vscode-heavy registration around it.
  */
 
-import { parserRegistry } from "@bgforge/binary";
+import { formatAdapterRegistry, parserRegistry } from "@bgforge/binary";
 
 /**
  * Whether the binary editor can read this extension AS AN INFINITY ENGINE RECORD - the one question both the
@@ -16,7 +16,14 @@ import { parserRegistry } from "@bgforge/binary";
  * itself the moment it registers, where the hand-kept extension list this replaced could silently omit it.
  */
 export function isIeBinaryRecord(ext: string): boolean {
-    return parserRegistry.getByExtension(ext, "infinity-engine") !== undefined;
+    const parser = parserRegistry.getByExtension(ext, "infinity-engine");
+    if (!parser) return false;
+    // A parser alone is not enough: the binary editor renders a format through its declarative `layout`, and a
+    // result with no matching layout reaches the webview's error banner rather than a form. DLG is the case
+    // that forced this - it parses as an IE record but is authored in the dialog editor's graph, so its
+    // adapter declares no layout on purpose. Asking for the layout keeps the "a new parser routes itself"
+    // property for formats the binary editor can actually draw.
+    return formatAdapterRegistry.get(parser.id)?.layout !== undefined;
 }
 
 /**
@@ -58,6 +65,9 @@ const BUILTIN_VIEWS = new Map([
 export function viewTypeForResource(ext: string): string {
     if (isIeBinaryRecord(ext)) return "bgforge.binaryEditor";
     if (isIeAnimation(ext)) return "bgforge.animationEditor";
+    // A compiled dialog is a graph, not a record form, so it goes to the dialog webview rather than the
+    // binary editor - which is also why its adapter declares no layout for `isIeBinaryRecord` to find.
+    if (ext.toLowerCase() === "dlg") return "bgforge.dlgViewer";
     return BUILTIN_VIEWS.get(ext.toLowerCase()) ?? "default";
 }
 

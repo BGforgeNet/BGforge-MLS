@@ -19,6 +19,7 @@ import {
 } from "../../shared/protocol";
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
+import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";
 import { registerImageEditor } from "./image-editor/register";
 import { routeCompile } from "./int-editor/compile-command";
 import { INT_SCHEME } from "./int-editor/document";
@@ -145,7 +146,12 @@ export async function activate(context: ExtensionContext) {
     await client.start();
     conlog("BGforge MLS client started");
 
-    context.subscriptions.push(registerDialogEditor(context, client));
+    context.subscriptions.push(
+        registerDialogEditor(context, client),
+        // Compiled dialogs get their own viewType: `.dlg` is binary, and `bgforge.dialogEditor` is a
+        // CustomTextEditorProvider. Both feed the same webview, so the two are one editor to a reader.
+        registerDlgDialogEditor(context, { strref: gameLookups.strref }),
+    );
 }
 
 export async function deactivate(): Promise<void> {

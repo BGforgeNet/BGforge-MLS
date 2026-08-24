@@ -8,8 +8,12 @@
  * files stay well below these (largest published Fallout MAPs are ~250 KB;
  * ITM/SPL/EFF are in the low KB range; CRE embeds inventory/spell/effect
  * lists so it runs larger but stays in the low tens of KB; PRO has a 1 KB
- * hard limit enforced inside its parser). Every registry extension must have
- * an entry here.
+ * hard limit enforced inside its parser; the largest DLG across a vanilla
+ * BG:EE and BG2:ToB install - 4286 files - is 74 KB, and a heavily modded
+ * one accumulates every mod's added states into a single file). Every
+ * registry extension must have an entry here, enforced by
+ * `test/max-file-sizes.test.ts`: the CLI skips the check outright when an
+ * entry is missing rather than falling back to a default.
  *
  * Snapshot-load path (`json-snapshot.ts`'s per-format writers): the same
  * budget also bounds the buffer a canonical writer allocates when
@@ -31,4 +35,5 @@ export const MAX_FILE_SIZES: Record<string, number> = {
     spl: 256 * 1024,
     eff: 64 * 1024,
     cre: 256 * 1024,
+    dlg: 1024 * 1024,
 };

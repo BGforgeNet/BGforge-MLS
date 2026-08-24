@@ -2,6 +2,7 @@ import type { ExternalRef, FlagsRef } from "./spec/external-ref";
 import type { CreCanonicalDocument } from "./cre/canonical";
 import type { EffCanonicalDocument } from "./eff/canonical";
 import type { ItmCanonicalDocument } from "./itm/canonical";
+import type { DlgCanonicalDocument } from "./dlg/canonical-schemas";
 import type { MapCanonicalDocument } from "./map/canonical";
 import type { ProCanonicalDocument } from "./pro/canonical";
 import type { SplCanonicalDocument } from "./spl/canonical";
@@ -14,7 +15,8 @@ type BinaryCanonicalDocument =
     | ItmCanonicalDocument
     | SplCanonicalDocument
     | EffCanonicalDocument
-    | CreCanonicalDocument;
+    | CreCanonicalDocument
+    | DlgCanonicalDocument;
 
 export type ParsedFieldType =
     | "enum"

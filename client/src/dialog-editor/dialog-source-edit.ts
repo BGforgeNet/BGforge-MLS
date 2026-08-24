@@ -82,6 +82,11 @@ export function computeDialogSourceEdit(
         case "ssl":
             spliced = original ? applySSLDialogEdits(text, edited, original) : text;
             break;
+        case "dlg":
+            // A DLG is binary: there is no source text to splice, which is why `nodeEditable` refuses every
+            // DLG node. Reaching here means an edit escaped that gate, so fail loud rather than return the
+            // text unchanged and let the caller believe the edit was applied.
+            throw new Error("computeDialogSourceEdit: a DLG has no source text to edit");
         default: {
             const unhandled: never = edited.sourceLang;
             throw new Error(`computeDialogSourceEdit: unhandled sourceLang ${String(unhandled)}`);

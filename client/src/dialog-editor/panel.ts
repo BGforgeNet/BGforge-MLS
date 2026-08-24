@@ -21,9 +21,8 @@ import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import type { DialogMessages } from "../../../shared/dialog-model";
-import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
-import { buildDialogWebviewHtml } from "./dialog-webview-html";
+import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { isWebviewToHost } from "./webview/messages";
 
@@ -35,21 +34,6 @@ const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d"]);
 /** Whether a document is an editable dialog file: a real dialog language, or a `.td`/`.tssl` (languageId typescript). */
 function isDialogDocument(doc: vscode.TextDocument): boolean {
     return DIALOG_LANGS.has(doc.languageId) || (doc.languageId === "typescript" && /\.(tssl|td)$/i.test(doc.uri.path));
-}
-
-function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-    // Resolve the vscode/webview-bound inputs here; the pure HTML assembly (CSP shape +
-    // verbatim inline of the bundle) lives in buildDialogWebviewHtml, which is unit-tested
-    // without the vscode runtime (dialog-panel-html.test.ts).
-    const base = vscode.Uri.joinPath(extensionUri, "client", "out", "dialog-editor", "webview");
-    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.css")).toString();
-    const nonce = generateNonce();
-    const scriptBody = getCachedJsAsset(
-        "dialog-editor",
-        extensionUri.fsPath,
-        "client/out/dialog-editor/webview/main.js",
-    );
-    return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce, scriptBody });
 }
 
 // Exported for the integration test (client/test/dialog-panel.test.ts), which drives resolveCustomTextEditor
@@ -74,7 +58,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             enableScripts: true,
             localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "client", "out")],
         };
-        panel.webview.html = buildHtml(panel.webview, this.context.extensionUri);
+        panel.webview.html = buildDialogHostHtml(panel.webview, this.context.extensionUri);
 
         const io: DialogHostIO = {
             getText: () => document.getText(),

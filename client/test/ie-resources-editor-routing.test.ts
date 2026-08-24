@@ -3,7 +3,7 @@
  * shipped as a live defect ("Unknown object type: 80" when following a projectile reference).
  */
 import { describe, expect, it } from "vitest";
-import { parserRegistry, type BinaryParser } from "@bgforge/binary";
+import { formatAdapterRegistry, parserRegistry, type BinaryParser } from "@bgforge/binary";
 import pkg from "../../package.json";
 import { isIeBinaryRecord, hasViewerFor, viewTypeForResource } from "../src/ie-resources/editor-routing";
 
@@ -46,7 +46,12 @@ describe("viewTypeForResource", () => {
     // unnamed `vscode.open` resolves to it anyway. A named view is what actually routes these elsewhere.
     it("names a concrete view for a format it cannot parse, rather than leaving it unset", () => {
         expect(viewTypeForResource("bcs")).toBe("default");
-        expect(viewTypeForResource("dlg")).toBe("default");
+    });
+
+    it("sends a compiled dialog to the dialog webview, not the binary editor", () => {
+        // A DLG is a graph, not a record form. It reaches an editor of its own rather than the record form
+        // it would otherwise fall into by virtue of being a parsed IE format.
+        expect(viewTypeForResource("dlg")).toBe("bgforge.dlgViewer");
     });
 
     /**
@@ -65,19 +70,45 @@ describe("viewTypeForResource", () => {
      * remembered to list it here, and no test could catch the omission because the registry could not be asked
      * which game a parser serves. It can now, so registration IS the wiring.
      */
-    it("routes a newly registered IE format without being told about it", () => {
-        const added: BinaryParser = {
-            id: "routing-test-ie",
-            name: "routing-test-ie",
-            extensions: ["rtie"],
+    function testParser(id: string, ext: string): BinaryParser {
+        return {
+            id,
+            name: id,
+            extensions: [ext],
             family: "infinity-engine",
             parse: () => ({ fields: [] }) as unknown as ReturnType<BinaryParser["parse"]>,
         };
+    }
+
+    it("routes a newly registered IE format without being told about it", () => {
+        // No hand-kept extension list: registering the format is what routes it. The adapter's layout is
+        // part of that registration, because the layout is what the binary editor renders through.
         expect(viewTypeForResource("rtie")).toBe("default");
 
-        parserRegistry.register(added);
+        parserRegistry.register(testParser("routing-test-ie", "rtie"));
+        formatAdapterRegistry.register({
+            formatId: "routing-test-ie",
+            documentCacheStrategy: "clear",
+            layout: { variants: [] } as never,
+            createJsonSnapshot: () => "",
+            loadJsonSnapshot: () => ({ parseResult: {} as never }),
+            rebuildCanonicalDocument: () => undefined,
+            toSemanticFieldKey: () => undefined,
+        });
 
         expect(viewTypeForResource("rtie")).toBe("bgforge.binaryEditor");
+    });
+
+    it("leaves an IE format the binary editor cannot draw on the text editor", () => {
+        // DLG is the shipped case: it parses as an IE record but is authored in the dialog editor's graph,
+        // so its adapter declares no layout. Routing it to the binary editor would reach the webview's
+        // error banner instead of a form, which is worse than the plain editor.
+        parserRegistry.register(testParser("routing-test-nolayout", "rtnl"));
+
+        expect(viewTypeForResource("rtnl")).toBe("default");
+        // DLG is the shipped instance: it parses as an IE record but must not reach the record form.
+        expect(isIeBinaryRecord("dlg")).toBe(false);
+        expect(viewTypeForResource("dlg")).not.toBe("bgforge.binaryEditor");
     });
 });
 
@@ -142,9 +173,11 @@ describe("hasViewerFor", () => {
         for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP"]) {
             expect(hasViewerFor(ext)).toBe(true);
         }
-        for (const ext of ["BCS", "DLG", "PRO"]) {
+        for (const ext of ["BCS", "PRO"]) {
             expect(hasViewerFor(ext)).toBe(false);
         }
+        // DLG gained a viewer of its own; the point of the check is that the answer tracks the view choice.
+        expect(hasViewerFor("DLG")).toBe(true);
     });
 
     // A creature's portraits are the reason this covers more than our own editors: they were withheld with the

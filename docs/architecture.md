@@ -374,7 +374,7 @@ The per-format editor UI can be described by **data** rather than by the parser'
 
 When an adapter declares a `layout` and the parse result reports a matching `variantId`, `binary-editor/buildLayout` returns a `ResolvedLayout` (the variant's rows + a `FieldRef -> Row` map) and the webview renders it via `LayoutRenderer` (`webview/components/LayoutRenderer.svelte` + the per-block components) - a single dense page, no section tabs. Otherwise the legacy depth-0-groups-as-tabs path renders unchanged. The two paths coexist; `App.svelte` branches on `open.layout.layout`.
 
-**PRO critters** were the first format migrated: a critter's ~90 fields render as a single page (Header + flag columns, Demographics, Final, a Stats matrix, a Skills grid) instead of 13 tabs. A `layout-schema.ts` is now authored for all six formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`). Within PRO, only the critter variant is authored - other PRO object/sub types report a `variantId` with no matching variant and fall back to the tabs path. The parser stays a faithful bytes<->model mapping; all grouping/placement is presentation data in `<format>/layout-schema.ts`.
+**PRO critters** were the first format migrated: a critter's ~90 fields render as a single page (Header + flag columns, Demographics, Final, a Stats matrix, a Skills grid) instead of 13 tabs. A `layout-schema.ts` is now authored for the six field-form formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`); DLG has none, since it renders in the dialog editor rather than the field form. Within PRO, only the critter variant is authored - other PRO object/sub types report a `variantId` with no matching variant and fall back to the tabs path. The parser stays a faithful bytes<->model mapping; all grouping/placement is presentation data in `<format>/layout-schema.ts`.
 
 - MAP JSON snapshots remain fidelity snapshots. Any MAP region the editor intentionally omits from the visible tree, such as tiles or opaque tails, is still carried in the canonical snapshot so JSON round-trips remain byte-preserving.
 - That byte preservation applies to omitted MAP regions and preserved fixed-width source bytes such as filename slots. Once a field is modeled and changed through the canonical document, JSON load/save treats the parsed value as authoritative and rewrites that field in canonical form.
@@ -528,13 +528,13 @@ Reports orphan warnings for TD files.
 ### Binary CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|file.dlg|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
 ```
 
 Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsdown to `binary/out/cli.js`).
 
-Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
-Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`.
+Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), `.cre` (v1), and `.dlg` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
+Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`, `file.dlg.json`.
 
 ### SSL CLI
 

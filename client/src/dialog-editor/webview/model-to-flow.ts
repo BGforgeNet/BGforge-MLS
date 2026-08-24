@@ -7,7 +7,7 @@
  * nodes so no edge dangles.
  */
 
-import { nodeEditable } from "../../../../shared/dialog-editability";
+import { hasSourceSpans, nodeEditable } from "../../../../shared/dialog-editability";
 import {
     isFlaggedNode,
     renderFamily,
@@ -148,6 +148,8 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                 // CSS class - no model-to-flow rebuild on toggle.
                 data: {
                     state: s,
+                    // A compiled format has no spans, so a missing one never means "newly added".
+                    sourceless: !hasSourceSpans(model),
                     // File base name -> speaker fallback for the card header (see stateHeadLabel).
                     sourceName: model.sourceName,
                     messages,

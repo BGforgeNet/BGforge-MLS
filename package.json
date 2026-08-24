@@ -567,6 +567,16 @@
                     }
                 ],
                 "priority": "option"
+            },
+            {
+                "viewType": "bgforge.dlgViewer",
+                "displayName": "BGforge Dialog Viewer",
+                "selector": [
+                    {
+                        "filenamePattern": "*.dlg"
+                    }
+                ],
+                "priority": "default"
             }
         ],
         "grammars": [

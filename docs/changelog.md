@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Dialog editor
+
+- Compiled Infinity Engine dialogs (`.dlg`) open in the dialog editor, read-only: the same tree and graph
+  views a `.d` source gets, showing the states, transitions, triggers and actions the file stores.
+  Spoken text lives in the game's `dialog.tlk`, so it resolves once a game is open - with none open the
+  editor shows the raw string references and a button to open one.
+
 ## 3.14.0
 
 ### Fallout SSL

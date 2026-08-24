@@ -65,7 +65,7 @@ The bundled CLIs (`fgbin`, `fgfmt`, `fgtp`) ship from the same package as
 their library and therefore share its version; their flag and exit-code
 contracts are covered by `pnpm test:cli` integration tests.
 
-The on-disk shape of `*.{pro,map,itm,spl,eff}.json` snapshots is its own
+The on-disk shape of `*.{pro,map,itm,spl,eff,cre,dlg}.json` snapshots is its own
 consumer-facing contract (committed snapshots, [`actions/binary`](actions/binary/README.md) CI checks)
 and moves with `@bgforge/binary`. A versioned consumer-facing specification
 is queued in [docs/todo.md](docs/todo.md); until that lands, treat any

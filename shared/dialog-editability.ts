@@ -21,8 +21,24 @@ import { eligibleToDelete, isLocalNewSSLNode } from "./dialog-ssl-edit";
  *    (a body conditional the flat transition list can't round-trip - read-only). Keyed off the render family, not
  *    the model-level `editable` flag, which the two D-family variants set inconsistently (D true, TD false).
  */
+/**
+ * Whether this model's format carries source spans at all.
+ *
+ * The pending/"unsaved draft" inference reads a missing span as "the user just added this node", which holds
+ * only where spans otherwise exist. A compiled DLG has none for anything, so without this every node reads as
+ * an unsaved draft - which is what a live drive showed. One definition because three consumers ask (the tree
+ * builder, the graph card, and the flow-node projection) and they must not drift.
+ */
+export function hasSourceSpans(model: DialogModel): boolean {
+    return model.sourceLang !== "dlg";
+}
+
 export function nodeEditable(model: DialogModel, state: DialogState | null): state is DialogState {
     if (!state || state.derivedFrom) return false;
+    // A DLG carries no source text, so there are no byte ranges for a surgical edit to splice and nothing
+    // for the D-family rule below to reason about. Read-only until the DLG write path lands; gating here
+    // rather than by marking every state `faithful: false`, which would misstate what the parser recovered.
+    if (model.sourceLang === "dlg") return false;
     if (renderFamily(model.sourceLang) === "weidu-d") {
         return state.faithful !== false;
     }

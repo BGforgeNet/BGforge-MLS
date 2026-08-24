@@ -30,7 +30,7 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
-    import { nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
+    import { hasSourceSpans, nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
     import { hasHost, postToHost } from "./host";
     import {
         renderFamily,
@@ -268,6 +268,7 @@
                   // The SAME per-state predicate the graph/inspector gate on, so the tree's text lock matches
                   // the inspector (a .td state is field-editable even though editModel.editable is false).
                   fieldEditable: (s) => structEditable(s),
+                  sourceless: !hasSourceSpans(editModel),
               })
             : { roots: [] },
     );
@@ -1449,8 +1450,16 @@
              leaving the whole conversation unreadable with no explanation. -->
         <div class="untra" role="status">
             <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
-            Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
-            or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
+            {#if editModel.sourceLang === "dlg"}
+                <!-- A compiled dialog holds strrefs into the game's dialog.tlk, not a .tra path, and it is
+                     binary so it has no first line to annotate. The tra advice below would send a reader
+                     after a file that does not exist for this format. -->
+                Its text lives in the game's <b>dialog.tlk</b>.
+                <button type="button" class="opengame" onclick={() => postToHost({ type: "openGame" })}>Open game...</button>
+            {:else}
+                Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
+                or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
+            {/if}
         </div>
     {/if}
     <div class="body">
@@ -1848,6 +1857,19 @@
     }
     /* Unresolved-translations banner: a full-width amber notice below the toolbar, matching the
        inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
+    .untra .opengame {
+        margin-left: 0.5em;
+        padding: 0 0.6em;
+        font: inherit;
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+    }
+    .untra .opengame:hover {
+        background: var(--vscode-button-hoverBackground);
+    }
     .untra {
         flex: 0 0 auto;
         background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));

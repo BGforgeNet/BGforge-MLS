@@ -40,7 +40,7 @@ VSCode extension providing IDE features for niche scripting languages used in cl
 - **SCS SSL/SLB** - Sword Coast Stratagems scripting (Infinity Engine AI mods)
 - **Transpilers** - TypeScript-like languages compiling to the above: TBAF->BAF, TD->D. TSSL is a compiler: TypeScript straight to Fallout INT bytecode, with SSL as an optional output
 
-**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
+**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog editor (webview; also opens compiled IE `.dlg` read-only), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl` / `.eff` / `.cre`), animation editor (Fallout `.frm`, IE `.bam`).
 
 **How it works:**
 
@@ -59,7 +59,7 @@ server/                  # LSP server (providers, symbol system, compilation, di
   data/                  # YAML engine definitions (functions, actions, triggers)
 shared/                  # Shared pure TypeScript helpers used by runtime and build-time code
 grammars/                # Tree-sitter grammars (6 dirs: 4 LSP + 2 parsed for diagnostics/highlighting only: msg, tra)
-binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE parser)
+binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE/DLG parser)
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor

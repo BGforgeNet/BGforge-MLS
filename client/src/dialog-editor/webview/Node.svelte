@@ -24,6 +24,8 @@
             sharedText?: boolean;
             /** Per-node FIELD editability (superset incl. faithful/bundle TSSL). Gates drag-to-retarget. */
             fieldEditable?: boolean;
+            /** The format carries no source spans at all (a compiled DLG), so a missing one is not "new". */
+            sourceless?: boolean;
         };
         type: string;
     } = $props();
@@ -32,7 +34,7 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    {@const pending = isPendingState(data.state)}
+    {@const pending = !data.sourceless && isPendingState(data.state)}
     <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged} class:pending>
         <Handle type="target" position={Position.Left} />
         <div class="hd">

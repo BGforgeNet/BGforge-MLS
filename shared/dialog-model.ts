@@ -20,7 +20,7 @@ import type {
 } from "./dialog-types";
 
 /** The source language a dialog model was parsed from - the single discriminant on `DialogModel`. */
-export type SourceLang = "d" | "ssl" | "td" | "tssl";
+export type SourceLang = "d" | "ssl" | "td" | "tssl" | "dlg";
 
 /** The target-language family a source language renders as (D-family vs SSL-family conventions). */
 export type RenderFamily = "weidu-d" | "fallout-ssl";
@@ -34,6 +34,9 @@ export function renderFamily(lang: SourceLang): RenderFamily {
     switch (lang) {
         case "d":
         case "td":
+        case "dlg":
+            // A DLG is the compiled form of what a .d describes - the same trigger and action fragments, the
+            // same state/transition shape - so it renders by D-family conventions rather than earning a family.
             return "weidu-d";
         case "ssl":
         case "tssl":

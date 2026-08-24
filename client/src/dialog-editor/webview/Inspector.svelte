@@ -147,7 +147,10 @@
     // are TypeScript source (the model stores the raw `cond.getText()` / action expression). The field's
     // language is its source language uniformly - a `.td` action is TypeScript the same as its condition, even
     // though the emitted D action is BAF.
-    const codeLang = $derived<"baf" | "ssl" | "ts">(sourceLang === "d" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts");
+    // A DLG stores the same trigger and action fragments a `.d` wraps in tildes, so it highlights as BAF too.
+    const codeLang = $derived<"baf" | "ssl" | "ts">(
+        sourceLang === "d" || sourceLang === "dlg" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts",
+    );
 
     // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
     // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
