@@ -8,7 +8,7 @@ import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 /**
  * Resolves a `dialog.tlk` string reference for a document, or undefined when there is nothing to resolve.
  *
- * Handed to consumers that must not reach into the game session themselves (the binary editor lives in its own
+ * Handed to consumers that must not reach into the open game themselves (the binary editor lives in its own
  * subsystem and has no business owning a `Game`). The document URI is the parameter rather than a game
  * directory because only the URI says which game - or whether the record came from a game at all.
  */
@@ -110,7 +110,7 @@ const NO_STRING = -1;
 
 /**
  * The game a plain `file:` document resolves against, when any. Supplied by the caller that owns the policy
- * (the configured game path, the open game) - this module only knows URIs, not settings or sessions.
+ * (the configured game path, the open game) - this module only knows URIs, not settings or installs.
  */
 export type GameDirFallback = () => string | undefined;
 
@@ -143,41 +143,47 @@ export function isGameDocument(uri: vscode.Uri, fallback?: GameDirFallback): boo
     return gameDirOf(uri, fallback) !== undefined;
 }
 
-/** The slice of GameSession this needs. Narrow on purpose: the resolver only ever reads a line, and depending
- *  on the whole session would drag its open/close lifecycle into every caller (and every test). */
-interface TlkSource {
-    ensureOpen(dir: string): {
-        tlk():
-            | {
-                  get(strref: number): string | undefined;
-                  search(query: string, options?: { limit?: number }): readonly StrrefMatch[];
-              }
-            | undefined;
-        ids(resref: string): ReadonlyMap<number, string> | undefined;
-        idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
-        twoDa(resref: string): ReadonlyMap<number, string> | undefined;
-        twoDaTable(resref: string): TwoDaTable | undefined;
-        canRead(resref: string, type: string): boolean;
-        read(resref: string, type: string): Uint8Array;
-        list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
-        /**
-         * WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override, and the coarser script style
-         * the same detection reports - the axis a compiled script's field naming turns on.
-         */
-        readonly identity: { readonly flavour: string; readonly scriptStyle: IeScriptStyle };
-    };
+/** The slice of CurrentGame these need. Narrow on purpose: a resolver only ever reads from an open game, and
+ *  depending on the whole holder would drag its open/close lifecycle into every caller (and every test). */
+interface GameSource {
+    /**
+     * Undefined when `dir` names an install other than the open one, which every resolver here treats as
+     * "no game" - see `CurrentGame.gameAt`.
+     */
+    gameAt(dir: string):
+        | {
+              tlk():
+                  | {
+                        get(strref: number): string | undefined;
+                        search(query: string, options?: { limit?: number }): readonly StrrefMatch[];
+                    }
+                  | undefined;
+              ids(resref: string): ReadonlyMap<number, string> | undefined;
+              idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
+              twoDa(resref: string): ReadonlyMap<number, string> | undefined;
+              twoDaTable(resref: string): TwoDaTable | undefined;
+              canRead(resref: string, type: string): boolean;
+              read(resref: string, type: string): Uint8Array;
+              list(): readonly { readonly resref: string; readonly ext: string | undefined }[];
+              /**
+               * WeiDU's GAME_IS flavour, which is what selects a `byFlavour` override, and the coarser script
+               * style the same detection reports - the axis a compiled script's field naming turns on.
+               */
+              readonly identity: { readonly flavour: string; readonly scriptStyle: IeScriptStyle };
+          }
+        | undefined;
 }
 
 /** How many hits a search returns when the caller names no limit; a picker shows a page, not a whole table. */
 const DEFAULT_SEARCH_LIMIT = 100;
 
-export function createStrrefSearch(session: TlkSource, fallback?: GameDirFallback): StrrefSearch {
+export function createStrrefSearch(currentGame: GameSource, fallback?: GameDirFallback): StrrefSearch {
     return (uri, query, limit = DEFAULT_SEARCH_LIMIT) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return [];
         try {
-            // ensureOpen and the male/default table, for the reasons given on the strref resolver below.
-            return session.ensureOpen(gameDir).tlk()?.search(query, { limit }) ?? [];
+            // gameAt and the male/default table, for the reasons given on the strref resolver below.
+            return currentGame.gameAt(gameDir)?.tlk()?.search(query, { limit }) ?? [];
         } catch {
             // An unreadable game reads as "no matches" - the picker simply offers nothing to choose.
             return [];
@@ -185,20 +191,20 @@ export function createStrrefSearch(session: TlkSource, fallback?: GameDirFallbac
     };
 }
 
-export function createStrrefResolver(session: TlkSource, fallback?: GameDirFallback): StrrefResolver {
+export function createStrrefResolver(currentGame: GameSource, fallback?: GameDirFallback): StrrefResolver {
     return (uri, strref) => {
         if (strref === NO_STRING || strref < 0) return;
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let line: string | undefined;
         try {
-            // ensureOpen, not game(): an editor VS Code restored across a reload can outlive the session's
-            // knowledge of its game, exactly as the FS provider's read path handles.
+            // gameAt, which opens the configured game when nothing is open yet: an editor VS Code restored
+            // across a reload asks before the view has re-opened anything, as the FS provider's read path does.
             //
             // Always the male/default `dialog.tlk`, though `Game.tlk` can open `dialogF.tlk` too: a record has
             // no player gender, so there is nothing to select on, and the two tables differ for only a handful
             // of strings. Making it selectable needs a user-facing control, not a default guess here.
-            line = session.ensureOpen(gameDir).tlk()?.get(strref);
+            line = currentGame.gameAt(gameDir)?.tlk()?.get(strref);
         } catch {
             // A missing game directory or an unreadable TLK is not worth failing an open over - the field
             // simply shows its number, which is what a record outside a game does anyway.
@@ -215,17 +221,18 @@ export function createStrrefResolver(session: TlkSource, fallback?: GameDirFallb
  * SOUNDOFF.IDS, and an install can have both with different meanings at the same index, so preference order
  * decides rather than a merge.
  */
-export function createSlotLabelResolver(session: TlkSource, fallback?: GameDirFallback): SlotLabelResolver {
+export function createSlotLabelResolver(currentGame: GameSource, fallback?: GameDirFallback): SlotLabelResolver {
     return (uri, tables, index) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let identifier: string | undefined;
         try {
-            const game = session.ensureOpen(gameDir);
-            for (const table of tables) {
-                identifier = game.ids(table)?.get(index);
-                if (identifier !== undefined) break;
-            }
+            const game = currentGame.gameAt(gameDir);
+            if (game !== undefined)
+                for (const table of tables) {
+                    identifier = game.ids(table)?.get(index);
+                    if (identifier !== undefined) break;
+                }
         } catch {
             // Unreadable game - the slot keeps its generic label, as it does outside a game.
         }
@@ -243,17 +250,18 @@ export function createSlotLabelResolver(session: TlkSource, fallback?: GameDirFa
  * can apply the key encoding the ref declares for it and decide who wins a key both name; nothing is blended
  * here, so an entry always comes from a table this install holds.
  */
-export function createNamingTableResolver(session: TlkSource, fallback?: GameDirFallback): NamingTableResolver {
+export function createNamingTableResolver(currentGame: GameSource, fallback?: GameDirFallback): NamingTableResolver {
     return (uri, kind, tables) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         const found: NamedTable[] = [];
         try {
-            const game = session.ensureOpen(gameDir);
-            for (const table of tables) {
-                const entries = kind === "2da" ? game.twoDa(table) : game.ids(table);
-                if (entries !== undefined) found.push({ table, entries });
-            }
+            const game = currentGame.gameAt(gameDir);
+            if (game !== undefined)
+                for (const table of tables) {
+                    const entries = kind === "2da" ? game.twoDa(table) : game.ids(table);
+                    if (entries !== undefined) found.push({ table, entries });
+                }
         } catch {
             // Unreadable game - the field falls back to its vendored table, as it does outside a game.
         }
@@ -291,7 +299,7 @@ function signaturesByName(rows: ReadonlyMap<number, readonly string[]> | undefin
  * two rows take different argument types, so the decompiler picks from the record it holds. Everything else -
  * object fields, enumerated arguments - wants one name per value and reads `ids`.
  */
-export function createBcsSymbolResolver(session: TlkSource, fallback?: GameDirFallback): BcsSymbolResolver {
+export function createBcsSymbolResolver(currentGame: GameSource, fallback?: GameDirFallback): BcsSymbolResolver {
     return (uri) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
@@ -299,28 +307,30 @@ export function createBcsSymbolResolver(session: TlkSource, fallback?: GameDirFa
         // shape the resolvers above use.
         let naming: BcsNaming | undefined;
         try {
-            const game = session.ensureOpen(gameDir);
-            // Built once per resolve and captured, because compiling looks a name up per call and rebuilding
-            // the index for each would re-walk the whole table thousands of times in one save.
-            const triggersByName = signaturesByName(game.idsAll("TRIGGER"));
-            const actionsByName = signaturesByName(game.idsAll("ACTION"));
-            naming = {
-                symbols: {
-                    trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
-                    action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
-                    ids: (table) => game.ids(table),
-                },
-                // The same tables read the other way, from the same open game: a save must not resolve names
-                // against one install while the view that produced them resolved against another.
-                compileSymbols: {
-                    triggerByName: (name) => triggersByName.get(name.toLowerCase()) ?? [],
-                    actionByName: (name) => actionsByName.get(name.toLowerCase()) ?? [],
-                    ids: (table) => game.ids(table),
-                },
-                // The engine the install was detected as: it decides which table names each object field, and
-                // no part of a script says which game wrote it.
-                engine: bcsEngineForScriptStyle(game.identity.scriptStyle),
-            };
+            const game = currentGame.gameAt(gameDir);
+            if (game !== undefined) {
+                // Built once per resolve and captured, because compiling looks a name up per call and rebuilding
+                // the index for each would re-walk the whole table thousands of times in one save.
+                const triggersByName = signaturesByName(game.idsAll("TRIGGER"));
+                const actionsByName = signaturesByName(game.idsAll("ACTION"));
+                naming = {
+                    symbols: {
+                        trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
+                        action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
+                        ids: (table) => game.ids(table),
+                    },
+                    // The same tables read the other way, from the same open game: a save must not resolve names
+                    // against one install while the view that produced them resolved against another.
+                    compileSymbols: {
+                        triggerByName: (name) => triggersByName.get(name.toLowerCase()) ?? [],
+                        actionByName: (name) => actionsByName.get(name.toLowerCase()) ?? [],
+                        ids: (table) => game.ids(table),
+                    },
+                    // The engine the install was detected as: it decides which table names each object field, and
+                    // no part of a script says which game wrote it.
+                    engine: bcsEngineForScriptStyle(game.identity.scriptStyle),
+                };
+            }
         } catch {
             // Unreadable game - the script reads as "no game behind this document", as it does outside one.
         }
@@ -335,7 +345,7 @@ export function createBcsSymbolResolver(session: TlkSource, fallback?: GameDirFa
  * Enhanced Edition kits share `0x00004000`. The presentation decides what to do with a multi-kit bit; this only
  * reports what the install says. A bit the table says nothing about is absent, so the vendored flag label stands.
  */
-export function createFlagBitNamesResolver(session: TlkSource, fallback?: GameDirFallback): FlagBitNamesResolver {
+export function createFlagBitNamesResolver(currentGame: GameSource, fallback?: GameDirFallback): FlagBitNamesResolver {
     return (uri, ref) => {
         if (ref.kind !== "itmKitUsability") return;
         const byte = ref.byte;
@@ -346,9 +356,9 @@ export function createFlagBitNamesResolver(session: TlkSource, fallback?: GameDi
         // the naming-table resolver above.
         let byBit: Readonly<Record<string, readonly string[]>> = {};
         try {
-            const game = session.ensureOpen(gameDir);
-            const table = game.twoDaTable("KITLIST");
-            const tlk = table === undefined ? undefined : game.tlk();
+            const game = currentGame.gameAt(gameDir);
+            const table = game?.twoDaTable("KITLIST");
+            const tlk = table === undefined ? undefined : game?.tlk();
             if (table !== undefined)
                 byBit = kitNamesByBit(
                     kitsByUsabilityMask(table, (id) => tlk?.get(id)),
@@ -373,15 +383,17 @@ export function createFlagBitNamesResolver(session: TlkSource, fallback?: GameDi
  * `present: false`, which withholds the open affordance and nothing more, because a mod record legitimately
  * references what a later install step creates.
  */
-export function createResourceTypeResolver(session: TlkSource, fallback?: GameDirFallback): ResourceTypeResolver {
+export function createResourceTypeResolver(currentGame: GameSource, fallback?: GameDirFallback): ResourceTypeResolver {
     return (uri, decl, resref) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let found: ResolvedResourceRef | undefined;
         try {
-            const game = session.ensureOpen(gameDir);
-            const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
-            found = { type, present: resref !== "" && game.canRead(resref, type) };
+            const game = currentGame.gameAt(gameDir);
+            if (game !== undefined) {
+                const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
+                found = { type, present: resref !== "" && game.canRead(resref, type) };
+            }
         } catch {
             // Unreadable game - no affordance, exactly as outside a game.
         }
@@ -397,16 +409,16 @@ export function createResourceTypeResolver(session: TlkSource, fallback?: GameDi
  * Uncached, because the caller asks once per type and holds the answer; caching here would need invalidation
  * on every write into `override/`.
  */
-export function createResourceListResolver(session: TlkSource, fallback?: GameDirFallback): ResourceListResolver {
+export function createResourceListResolver(currentGame: GameSource, fallback?: GameDirFallback): ResourceListResolver {
     return (uri, ext) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         const want = ext.toLowerCase();
         let resrefs: string[] | undefined;
         try {
-            resrefs = session
-                .ensureOpen(gameDir)
-                .list()
+            resrefs = currentGame
+                .gameAt(gameDir)
+                ?.list()
                 .filter((r) => r.ext?.toLowerCase() === want)
                 .map((r) => r.resref)
                 .sort((a, b) => a.localeCompare(b));
@@ -423,13 +435,16 @@ export function createResourceListResolver(session: TlkSource, fallback?: GameDi
  * Uncached, like the resource list: the caller asks once per distinct resource and holds what it makes of the
  * bytes, and caching here would need invalidating on every write into `override/`.
  */
-export function createResourceBytesResolver(session: TlkSource, fallback?: GameDirFallback): ResourceBytesResolver {
+export function createResourceBytesResolver(
+    currentGame: GameSource,
+    fallback?: GameDirFallback,
+): ResourceBytesResolver {
     return (uri, resref, ext) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let bytes: Uint8Array | undefined;
         try {
-            bytes = session.ensureOpen(gameDir).read(resref, ext);
+            bytes = currentGame.gameAt(gameDir)?.read(resref, ext);
         } catch {
             // Every miss lands here, including the ordinary one: `read` throws for an absent resource, and a
             // resref naming what a later install step creates is normal rather than an error. Deliberately not
@@ -444,13 +459,14 @@ export function createResourceBytesResolver(session: TlkSource, fallback?: GameD
  * Maps the open game's detected flavour to the engine whose opcode readings apply. Returns undefined for a
  * record not from a game, which leaves the editor on its preferred reading.
  */
-export function createEngineResolver(session: TlkSource, fallback?: GameDirFallback): EngineResolver {
+export function createEngineResolver(currentGame: GameSource, fallback?: GameDirFallback): EngineResolver {
     return (uri) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         let engine: string | undefined;
         try {
-            engine = engineForFlavour(session.ensureOpen(gameDir).identity.flavour);
+            const game = currentGame.gameAt(gameDir);
+            if (game !== undefined) engine = engineForFlavour(game.identity.flavour);
         } catch {
             // Unreadable game - no engine, exactly as outside a game.
         }

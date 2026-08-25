@@ -2,9 +2,9 @@ import { describe, it, expect, afterEach } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { GameSession } from "../src/ie-resources/session";
+import { CurrentGame } from "../src/ie-resources/current-game";
 
-// GameSession has no vscode dependency (it wraps @bgforge/binary's openGame), so it is unit-testable directly.
+// CurrentGame has no vscode dependency (it wraps @bgforge/binary's openGame), so it is unit-testable directly.
 // Write a minimal valid chitin.key (header + 1 BIF entry + 2 resource entries + name) to a temp dir.
 function writeMinimalGame(dir: string): void {
     const RES: [string, number, number][] = [
@@ -63,7 +63,7 @@ function writeTlk(dir: string, text: string, encoding: BufferEncoding | "cp1251"
     fs.writeFileSync(path.join(dir, "dialog.tlk"), buf);
 }
 
-describe("GameSession", () => {
+describe("CurrentGame", () => {
     const dirs: string[] = [];
     afterEach(() => {
         for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
@@ -75,65 +75,105 @@ describe("GameSession", () => {
         return dir;
     }
 
-    it("opens a game, exposes it as current, and resolves it by dir", () => {
-        const session = new GameSession();
+    it("opens a game and exposes it as current", () => {
+        const currentGame = new CurrentGame();
         const dir = tmpGame();
-        const game = session.open(dir);
-        expect(session.current?.dir).toBe(dir);
-        expect(session.current?.game).toBe(game);
-        expect(session.game(dir)).toBe(game);
+        const game = currentGame.open(dir);
+        expect(currentGame.current?.dir).toBe(dir);
+        expect(currentGame.current?.game).toBe(game);
+        expect(currentGame.gameAt(dir)).toBe(game);
         expect(
             game
                 .list()
                 .map((r) => r.resref)
                 .sort(),
         ).toEqual(["SPWI304", "SW1H01"]);
-        session.dispose();
+        currentGame.dispose();
     });
 
-    it("close clears current and forgets the game; reopen restores it", () => {
-        const session = new GameSession();
+    it("close clears current; reopen restores it", () => {
+        const currentGame = new CurrentGame();
         const dir = tmpGame();
-        session.open(dir);
-        session.close();
-        expect(session.current).toBeUndefined();
-        expect(session.game(dir)).toBeUndefined();
-        session.open(dir); // reopen the same dir
-        expect(session.current?.dir).toBe(dir);
-        session.dispose();
+        currentGame.open(dir);
+        currentGame.close();
+        expect(currentGame.current).toBeUndefined();
+        currentGame.open(dir); // reopen the same dir
+        expect(currentGame.current?.dir).toBe(dir);
+        currentGame.dispose();
     });
 
     it("throws opening a dir without a chitin.key", () => {
-        const session = new GameSession();
+        const currentGame = new CurrentGame();
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ie-empty-"));
         dirs.push(dir);
-        expect(() => session.open(dir)).toThrow(/chitin\.key/);
-        session.dispose();
+        expect(() => currentGame.open(dir)).toThrow(/chitin\.key/);
+        currentGame.dispose();
     });
 
-    it("ensureOpen opens a game on demand, is idempotent, and adopts current only when nothing is open", () => {
-        const session = new GameSession();
+    /**
+     * The whole point of the single-game rule: a mod targets one install, so opening another replaces it
+     * rather than leaving two open for a later lookup to answer from whichever it happens to reach.
+     *
+     * Through the opener seam because `close()` releases BIF descriptors and leaves the KEY index in memory,
+     * so a closed `Game` still answers `list()` and nothing on its surface reports the release.
+     */
+    it("opening a second game closes the first", () => {
+        const closed: string[] = [];
+        const currentGame = new CurrentGame(undefined, (dir) => ({ close: () => closed.push(dir) }) as never);
+
+        currentGame.open("/games/a");
+        expect(closed).toEqual([]);
+        currentGame.open("/games/b");
+
+        expect(closed).toEqual(["/games/a"]);
+        expect(currentGame.current?.dir).toBe("/games/b");
+        currentGame.dispose();
+        expect(closed).toEqual(["/games/a", "/games/b"]);
+    });
+
+    // A resource tab left over from the previous game must not resurrect its install to serve itself.
+    it("gameAt refuses a dir other than the open one", () => {
+        const currentGame = new CurrentGame();
         const a = tmpGame();
         const b = tmpGame();
-        // First game opened via the view; it is current.
-        const gameA = session.open(a);
-        // ensureOpen on a DIFFERENT dir (as an FS-provider readback would after restore) opens it but must not
-        // steal current from the already-open game.
-        const gameB = session.ensureOpen(b);
-        expect(session.game(b)).toBe(gameB);
-        expect(session.current?.dir).toBe(a);
-        // Idempotent: a second ensureOpen returns the same instance, no reopen.
-        expect(session.ensureOpen(b)).toBe(gameB);
-        expect(session.ensureOpen(a)).toBe(gameA);
-        session.dispose();
+        currentGame.open(a);
+        expect(currentGame.gameAt(b)).toBeUndefined();
+        // Refusing is not switching: the open game is untouched.
+        expect(currentGame.current?.dir).toBe(a);
+        currentGame.dispose();
     });
 
-    it("ensureOpen adopts the game as current when the session has none open", () => {
-        const session = new GameSession();
+    // The reload path: VS Code restores a resource editor before the view has re-opened anything.
+    it("gameAt opens and adopts the game when none is open", () => {
+        const currentGame = new CurrentGame();
         const dir = tmpGame();
-        const game = session.ensureOpen(dir);
-        expect(session.current).toEqual({ dir, game });
-        session.dispose();
+        const game = currentGame.gameAt(dir);
+        expect(currentGame.current).toEqual({ dir, game });
+        // Idempotent once adopted - no reopen on the second ask.
+        expect(currentGame.gameAt(dir)).toBe(game);
+        currentGame.dispose();
+    });
+
+    // Distinct from the refusal above: a broken install is a failure to report, not a stale tab to ignore.
+    it("gameAt throws when nothing is open and the dir has no chitin.key", () => {
+        const currentGame = new CurrentGame();
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ie-empty-"));
+        dirs.push(dir);
+        expect(() => currentGame.gameAt(dir)).toThrow(/chitin\.key/);
+        currentGame.dispose();
+    });
+
+    // A failed open must not take the working game down with it - it is opened before the old one is closed.
+    it("keeps the open game when opening a bad dir throws", () => {
+        const currentGame = new CurrentGame();
+        const dir = tmpGame();
+        const bad = fs.mkdtempSync(path.join(os.tmpdir(), "ie-empty-"));
+        dirs.push(bad);
+        const game = currentGame.open(dir);
+        expect(() => currentGame.open(bad)).toThrow(/chitin\.key/);
+        expect(currentGame.current).toEqual({ dir, game });
+        expect(game.list()).toHaveLength(2);
+        currentGame.dispose();
     });
     /**
      * A classic install records its codepage nowhere: the TLK header's language id is meaningless (0 in every
@@ -145,9 +185,9 @@ describe("GameSession", () => {
         const dir = tmpGame();
         writeTlk(dir, "\u041F\u0440", "cp1251");
 
-        const session = new GameSession(() => "windows-1251");
+        const currentGame = new CurrentGame(() => "windows-1251");
 
-        expect(session.open(dir).tlk()?.get(0)).toBe("\u041F\u0440");
+        expect(currentGame.open(dir).tlk()?.get(0)).toBe("\u041F\u0440");
     });
 
     // The default has to stay exactly what it was, or every Western classic install changes meaning at once.
@@ -155,20 +195,20 @@ describe("GameSession", () => {
         const dir = tmpGame();
         writeTlk(dir, "\u041F\u0440", "cp1251");
 
-        const session = new GameSession();
+        const currentGame = new CurrentGame();
 
         // cp1252 reads those two bytes as different characters - wrong, but unchanged from before the setting.
-        expect(session.open(dir).tlk()?.get(0)).toBe("\u00CF\u00F0");
+        expect(currentGame.open(dir).tlk()?.get(0)).toBe("\u00CF\u00F0");
     });
 
     // Both entry points open games, so a setting honoured by only one is a setting that works intermittently.
-    it("applies the configured encoding through ensureOpen as well as open", () => {
+    it("applies the configured encoding through gameAt as well as open", () => {
         const dir = tmpGame();
         writeTlk(dir, "\u041F\u0440", "cp1251");
 
-        const session = new GameSession(() => "windows-1251");
+        const currentGame = new CurrentGame(() => "windows-1251");
 
-        expect(session.ensureOpen(dir).tlk()?.get(0)).toBe("\u041F\u0440");
+        expect(currentGame.gameAt(dir)?.tlk()?.get(0)).toBe("\u041F\u0440");
     });
 
     // Read per open, not captured once, so fixing the setting does not need a window reload.
@@ -176,13 +216,13 @@ describe("GameSession", () => {
         const dir = tmpGame();
         writeTlk(dir, "\u041F\u0440", "cp1251");
         const configured: { value: string | undefined } = { value: undefined };
-        const session = new GameSession(() => configured.value);
+        const currentGame = new CurrentGame(() => configured.value);
 
-        expect(session.open(dir).tlk()?.get(0)).toBe("\u00CF\u00F0");
+        expect(currentGame.open(dir).tlk()?.get(0)).toBe("\u00CF\u00F0");
         configured.value = "windows-1251";
-        session.close(dir);
+        currentGame.close();
 
-        expect(session.open(dir).tlk()?.get(0)).toBe("\u041F\u0440");
+        expect(currentGame.open(dir).tlk()?.get(0)).toBe("\u041F\u0440");
     });
 });
 

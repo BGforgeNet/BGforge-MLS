@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { conlog } from "../logging";
-import { type GameSession } from "./session";
+import { type CurrentGame } from "./current-game";
 import { parseResourceUri } from "./uri";
 
 /**
@@ -37,13 +37,13 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
     // CACHE_LIMIT entries, least-recently-used first - a Map iterates in insertion order, so re-inserting on
     // every hit keeps the oldest key at the front.
     private readonly cache = new Map<string, Uint8Array>();
-    private readonly session: GameSession;
+    private readonly currentGame: CurrentGame;
 
-    constructor(session: GameSession) {
-        this.session = session;
+    constructor(currentGame: CurrentGame) {
+        this.currentGame = currentGame;
     }
 
-    /** Drop cached bytes; call when the open game set changes so a reopened game re-reads from disk. */
+    /** Drop cached bytes; call when the open game changes so a reopened game re-reads from disk. */
     clearCache(): void {
         this.cache.clear();
     }
@@ -72,15 +72,22 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
     private resolve(uri: vscode.Uri): { game: Game; resref: string; ext: string; type: number | undefined } {
         const { gameDir, resref, ext } = parseResourceUri(uri);
         // Open the game on demand from the URI's own gameDir: a reload restores the editor (and this provider)
-        // before the view re-opens the game, so `game(gameDir)` would be empty and readback would fail.
-        let game: Game;
+        // before the view re-opens the game, so asking for the current game alone would fail the readback.
+        let game: Game | undefined;
         try {
-            game = this.session.ensureOpen(gameDir);
+            game = this.currentGame.gameAt(gameDir);
         } catch (error) {
             // VS Code only understands FileNotFound here, which collapses "no such game", "corrupt chitin.key"
             // and "resource absent" into one indistinguishable failure. Log the real cause first so the output
             // channel can tell them apart; the thrown error stays the one the API expects.
             logResourceFailure(uri, error);
+            throw vscode.FileSystemError.FileNotFound(uri);
+        }
+        if (game === undefined) {
+            // A tab left over from a game that has since been replaced. Only one install is open at a time, so
+            // its bytes are genuinely unreachable - and re-opening that install to serve them would undo the
+            // switch. Logged by name because FileNotFound alone would read as a corrupt archive.
+            conlog(`ieResources: ${uri.toString()} belongs to ${gameDir}, which is no longer the open game`);
             throw vscode.FileSystemError.FileNotFound(uri);
         }
         return { game, resref, ext, type: resourceTypeCode(ext) };
