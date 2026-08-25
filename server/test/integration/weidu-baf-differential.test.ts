@@ -88,12 +88,9 @@ describe.skipIf(files.length === 0 || !GAME || !available)("built-in BAF compile
         expect(selfContained.length).toBeGreaterThan(300);
     });
 
-    // The synchronous WeiDU spawns (~0.15s each) genuinely run past the file's 60s testTimeout on their
-    // own (measured ~90s alone), before any contention; a synchronous loop cannot yield for vitest's timeout
-    // to interrupt it early, so a shared default just makes the failure mode a flaky "timed out" instead of
-    // a clean bound. The full gate ran this alongside the other integration suites at 130s, so 120000 is
-    // already a stopwatch, not a hang detector - raised with real headroom over measured contention rather
-    // than tuned to the last contended run, per the config's own testTimeout reasoning.
+    // A synchronous WeiDU spawn per file cannot yield for vitest's timeout, and the default is already
+    // too tight for it - measured ~90s alone, ~130s contended in the full gate - so 300000 here is a
+    // hang detector, not a stopwatch.
     it(`agrees with the reference on every self-contained file (${selfContained.length} files)`, () => {
         const disagreements: string[] = [];
         // Refusals both sides agree on, grouped by the IDS table WeiDU's own message names: a bare count
