@@ -37,8 +37,7 @@ function refusals(text: string): { line: number; column: number; message: string
     const found: { line: number; column: number; message: string }[] = [];
     text.split("\n").forEach((lineText, index) => {
         for (const { pattern, explain } of REFUSALS) {
-            // Reset because the patterns are module-level and sticky under the `g` flag; without this a
-            // second document would start scanning wherever the previous one stopped.
+            // Reset the index as a guard: the patterns are module-level and reused across documents.
             pattern.lastIndex = 0;
             let match = pattern.exec(lineText);
             while (match !== null) {
@@ -53,8 +52,9 @@ function refusals(text: string): { line: number; column: number; message: string
 /**
  * Compiles `text` and reports what it found.
  *
- * Refusals are collected before the compile rather than after: the codec has no reading for a tp2 variable,
- * so it would report a resolution failure whose message describes the symptom rather than the cause.
+ * Refusals are collected before the compile so the codec's symptom messages can be suppressed where a
+ * refusal already names the cause; this prevents "cannot resolve %px%" from duplicating "%px% is assigned
+ * during installation" on the same span.
  */
 export function compileBafText(options: {
     text: string;
@@ -77,16 +77,19 @@ export function compileBafText(options: {
     };
 
     const refused = refusals(text);
-    if (refused.length > 0) {
-        refused.forEach((item) => add(item));
-        return { errors, warnings: [] };
-    }
+    refused.forEach((item) => add(item));
 
     try {
         compileBaf(parser, text, symbols, engine);
     } catch (error) {
         if (error instanceof BcsCompileError) {
-            error.diagnostics.forEach((diagnostic) => add(diagnostic));
+            const refusalSpans = new Set(refused.map((r) => `${r.line}:${r.column}`));
+            error.diagnostics.forEach((diagnostic) => {
+                // Suppress compile diagnostics where a refusal already covers the same span.
+                if (!refusalSpans.has(`${diagnostic.line}:${diagnostic.column}`)) {
+                    add(diagnostic);
+                }
+            });
         } else {
             // Not a fault in the script - report it at the top of the file rather than pinned to a line.
             add({ line: 1, column: 1, message: error instanceof Error ? error.message : String(error) });

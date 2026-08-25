@@ -73,10 +73,25 @@ describe("compileBafText refusals", () => {
 
     it("refuses a tra reference rather than compiling it as its own number", () => {
         const result = compile(
-            'IF\n  Global("x","GLOBAL",1)\nTHEN\n  RESPONSE #100\n    DisplayString(Myself,@123)\nEND\n',
+            'IF\n  Global("x","GLOBAL",@123)\nTHEN\n  RESPONSE #100\n    MoveToPoint([100.100])\nEND\n',
         );
 
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]!.message).toContain("@123");
+    });
+
+    // A genuine syntax error elsewhere in the document must not be silently dropped because a refusal is
+    // present. The refusal is reported with its cause message, the syntax error with the codec's complaint.
+    it("reports both syntax errors and refusals in the same document", () => {
+        const result = compile(
+            'IF\n  Global("x","GLOBAL",1\nTHEN\n  RESPONSE #100\n    MoveToPoint([%px%.100])\nEND\n',
+        );
+
+        expect(result.errors).toHaveLength(2);
+        const syntaxError = result.errors.find((e) => e.line === 2);
+        const refusalError = result.errors.find((e) => e.line === 5);
+        expect(syntaxError).toBeDefined();
+        expect(refusalError).toBeDefined();
+        expect(refusalError!.message).toContain("%px%");
     });
 });
