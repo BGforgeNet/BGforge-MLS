@@ -388,3 +388,53 @@ describe("the .bcs custom editor", () => {
         h.rejectWith.clear();
     });
 });
+
+/**
+ * Properties of the shared script-view provider, exercised through the `.bcs` view that uses it. The `.int`
+ * view is the other user and gets them from the same code.
+ */
+describe("the shared script view", () => {
+    it("gives each provider its own diagnostics, so disposing one does not silence the other", () => {
+        const { view } = script();
+        const first = newProvider();
+        const second = newProvider();
+
+        first.dispose();
+
+        // The surviving provider must still be able to report. A collection created at module scope and
+        // disposed from an instance method would already be dead here.
+        expect(() => second.readFile(view)).not.toThrow();
+        second.dispose();
+    });
+
+    it("renders once for a stat-then-read, not once per call", () => {
+        // `stat` needs the RENDERED length and `readFile` produces the identical string moments later; VS Code
+        // calls stat on open, save, revert and focus, so rendering per call decompiles the script every time.
+        //
+        // Counted through the naming lookup, which a render performs exactly once. `stat` asks twice - once
+        // for the render, once for `refuseFile` deciding the readonly flag - and a cached `readFile` asks not
+        // at all, so a cache HIT totals 2 and a miss would total 3.
+        const { view } = script();
+        const symbolsFor = vi.fn((_file: string) => NAMING);
+        const provider = new BcsFileSystemProvider(symbolsFor, REPO_ROOT);
+
+        provider.stat(view);
+        provider.readFile(view);
+
+        expect(symbolsFor).toHaveBeenCalledTimes(2);
+        provider.dispose();
+    });
+
+    it("re-renders after a save, rather than serving the replaced file's text", async () => {
+        const { view } = script();
+        const provider = newProvider();
+        const before = Buffer.from(provider.readFile(view)).toString("utf8");
+        expect(before).toContain("RESPONSE #100");
+
+        await provider.writeFile(view, Buffer.from(before.replace("RESPONSE #100", "RESPONSE #50"), "utf8"));
+
+        // The cache is keyed by mtime and cleared on write, so this must reflect the bytes just written.
+        expect(Buffer.from(provider.readFile(view)).toString("utf8")).toContain("RESPONSE #50");
+        provider.dispose();
+    });
+});

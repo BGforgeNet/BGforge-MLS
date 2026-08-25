@@ -284,7 +284,8 @@
             "files": [
                 "client/src/ie-resources/**/*.ts",
                 "client/src/int-editor/**/*.ts",
-                "client/src/bcs-editor/**/*.ts"
+                "client/src/bcs-editor/**/*.ts",
+                "client/src/script-view/**/*.ts"
             ],
             "rules": {
                 "no-underscore-dangle": "off",
