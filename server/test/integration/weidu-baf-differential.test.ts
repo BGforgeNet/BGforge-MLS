@@ -89,8 +89,11 @@ describe.skipIf(files.length === 0 || !GAME || !available)("built-in BAF compile
     });
 
     // The synchronous WeiDU spawns (~0.15s each) genuinely run past the file's 60s testTimeout on their
-    // own, before any contention; a synchronous loop cannot yield for vitest's timeout to interrupt it
-    // early, so a shared default just makes the failure mode a flaky "timed out" instead of a clean bound.
+    // own (measured ~90s alone), before any contention; a synchronous loop cannot yield for vitest's timeout
+    // to interrupt it early, so a shared default just makes the failure mode a flaky "timed out" instead of
+    // a clean bound. The full gate ran this alongside the other integration suites at 130s, so 120000 is
+    // already a stopwatch, not a hang detector - raised with real headroom over measured contention rather
+    // than tuned to the last contended run, per the config's own testTimeout reasoning.
     it(`agrees with the reference on every self-contained file (${selfContained.length} files)`, () => {
         const disagreements: string[] = [];
         // Refusals both sides agree on, grouped by the IDS table WeiDU's own message names: a bare count
@@ -117,11 +120,13 @@ describe.skipIf(files.length === 0 || !GAME || !available)("built-in BAF compile
         );
         // Not a quality bar: a sanity floor that catches the gate collapsing into mutual silence (e.g. every
         // file wrongly landing in the install-gated partition), where neither side is actually being tested.
+        // Measured 15/450 (3.3%) on one install and 51/450 (11.3%) on another, same code and corpus - a
+        // tighter floor would fail a perfectly good install just for lacking a different edition's tables.
         expect(bothRefused).toBeLessThan(selfContained.length / 3);
         // The whole list, not the first: fixing these one compile-and-read cycle at a time is the cost this
         // avoids, and the shape of the set is what says whether it is one bug or many.
         expect(disagreements).toEqual([]);
-    }, 120000);
+    }, 300000);
 
     /**
      * The other half of the gate. A compiler that ACCEPTS what it cannot resolve is the worse of the two

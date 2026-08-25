@@ -114,6 +114,17 @@ describe("compileBaf - what a record holds", () => {
         expect(compiled.blocks[0]!.triggers[0]!.ints[1]).toBe(-2147483648);
     });
 
+    // Real scripts bracket an enumerated value the same way they bracket an object ([NEUTRAL] in
+    // `Allegiance(Myself,[NEUTRAL])`, from BGT-WeiDU's alarys.baf) - WeiDU's grammar does not tell the two
+    // apart until the parameter's own type does, so a single-name bracket around an I:-typed argument must
+    // compile identically to the bare identifier.
+    test("a bracketed enumerated value compiles the same as its bare form", () => {
+        const bracketed = compile(script("False()", ["ApplySpell([ANYONE],[WIZARD_MAGIC_MISSILE])"]));
+        const bare = compile(script("False()", ["ApplySpell([ANYONE],WIZARD_MAGIC_MISSILE)"]));
+
+        expect(bracketed).toBe(bare);
+    });
+
     test("a call with no name in the tables keeps the id the decompiler printed", () => {
         const compiled = compileBaf(parser, script("False()", ["UnknownAction812()"]), COMPILE_SYMBOLS);
 
@@ -362,9 +373,14 @@ describe("compileSymbolsFrom", () => {
 
     test("indexes triggers from TRIGGER.IDS and passes plain tables straight through", () => {
         const race = new Map([[1, "HUMAN"]]);
+        const scroll = new Map([[4, ["VERY_FAST", "BD_NORMAL"]]]);
         const game = {
             idsAll: (resref: string) =>
-                resref === "TRIGGER" ? new Map([[16395, ["Global(S:Name*,S:Area*,I:Value*)"]]]) : undefined,
+                resref === "TRIGGER"
+                    ? new Map([[16395, ["Global(S:Name*,S:Area*,I:Value*)"]]])
+                    : resref === "SCROLL"
+                      ? scroll
+                      : undefined,
             ids: (table: string) => (table === "RACE" ? race : undefined),
         };
 
@@ -373,6 +389,10 @@ describe("compileSymbolsFrom", () => {
         expect(symbols.triggerByName("global")).toEqual([{ id: 16395, signature: "Global(S:Name*,S:Area*,I:Value*)" }]);
         expect(symbols.ids("RACE")).toBe(race);
         expect(symbols.ids("MISSING")).toBeUndefined();
+        // idsAll is a separate forwarder from ids (compile.ts:107) - every alias a value has, not the one
+        // canonical name ids() singles out, so it needs its own passthrough check.
+        expect(symbols.idsAll("SCROLL")).toBe(scroll);
+        expect(symbols.idsAll("MISSING")).toBeUndefined();
     });
 
     // An install with no such table must read as "no rows", not throw - it is how a partial install behaves.
