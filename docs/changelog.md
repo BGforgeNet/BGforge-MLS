@@ -4,10 +4,6 @@
 
 ### Infinity Engine games
 
-- New command **BGforge: Insert Game String Reference...**, which searches the game's text and writes the
-  matching string's number at the cursor. A string reference is an opaque number, so the alternative was
-  knowing it in advance or looking it up in another tool. Typing a number instead of text offers that entry
-  directly. Needs `bgforge.weidu.gamePath` set to the install to search.
 - BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,
   `SetName`, `AddJournalEntry` and the rest - get an inline preview of the text beside the number, and
   hovering the number shows it in full, the same way `.tra` and `.msg` references already work. The text
@@ -38,7 +34,7 @@
   string references and a button to open one.
 - What a line in a compiled dialog says can be changed and saved. A `.dlg` stores a number pointing into the
   game's text rather than the text itself, so a line is changed by pointing it at a different entry:
-  **Change string...** on the NPC line or on any reply opens the same search the insert command uses. Saving
+  **Change string...** on the NPC line or on any reply searches the game's text for the entry to point at. Saving
   rewrites those numbers and leaves the rest of the file as it was, and undo behaves as it does anywhere
   else.
 - A compiled dialog's structure can be edited too: replies can be added, removed and retargeted, and states

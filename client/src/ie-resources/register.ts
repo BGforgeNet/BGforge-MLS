@@ -267,28 +267,6 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await openRef(gameDir, arg.resref, arg.ext);
     };
 
-    /**
-     * Search the game's text for a string and write its number at the cursor. A strref is an opaque integer,
-     * so the alternative is knowing it beforehand or hunting for it in another tool.
-     */
-    const insertGameString = async (): Promise<void> => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) return;
-        const strref = await pickStrref(
-            strrefSearch,
-            (ref) => strrefResolver(editor.document.uri, ref),
-            editor.document.uri,
-            {
-                title: "Insert a game string's number",
-            },
-        );
-        if (strref === undefined) return;
-        // Replaces the selection where there is one, matching what typing the number would do.
-        await editor.edit((builder) => {
-            for (const selection of editor.selections) builder.replace(selection, String(strref));
-        });
-    };
-
     context.subscriptions.push(
         { dispose: () => session.dispose() },
         { dispose: () => referenceScan?.abort() },
@@ -315,7 +293,6 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         }),
         vscode.commands.registerCommand("bgforge.ieResources.open", openResource),
         vscode.commands.registerCommand("bgforge.ieResources.openRef", openRefFromDocument),
-        vscode.commands.registerCommand("bgforge.ieResources.insertGameString", insertGameString),
     );
 
     /**
