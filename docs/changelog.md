@@ -42,7 +42,7 @@
   and WeiDU mod scripts address it by that number - so states are never renamed or renumbered. To take one
   out of play, **Detach state** points every reply that led to it at the end of the conversation instead;
   the record stays where it is, nothing is renumbered, and the editor says up front which replies it will
-  change and which other dialogs still reach the state.
+  change, and which replies in other dialogs still reach it - each named by its dialog, state and reply.
 - A conversation that hands off to another dialog now shows where it lands. The states another `.dlg`
   reaches, and the states elsewhere that reach into this one, are drawn in the same graph, marked with the
   dialog they belong to and read-only - so a hand-off that goes out and comes back closes up as one tree

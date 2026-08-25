@@ -26,6 +26,17 @@ const count = (n: number, singular: string, plural: string): string => `${n} ${n
 /** Replies are shown 1-based; a state's number is the file's own and stays as it is. */
 const replyAt = (ref: DlgReplyRef): string => `state ${ref.stateIndex}, reply ${ref.choiceIndex + 1}`;
 
+/** The same coordinates for a reply in another file, which needs its dialog named before it can be found. */
+const inboundAt = (ref: InboundRef): string =>
+    `${ref.dialog} ${replyAt({ stateIndex: ref.state, choiceIndex: ref.transition })}`;
+
+/**
+ * How many inbound replies are named before the rest are only counted. Almost every state is reached from a
+ * handful of places, so this lists them all in practice; the busiest hubs run into the hundreds, which no
+ * prompt can usefully show.
+ */
+const MAX_LISTED_SITES = 12;
+
 export function detachConfirmMessage(summary: DetachSummary): string {
     const local =
         summary.local.length === 0
@@ -38,9 +49,15 @@ export function detachConfirmMessage(summary: DetachSummary): string {
     } else if (summary.external.length === 0) {
         lines.push("No other dialog reaches this state.");
     } else {
-        const files = [...new Set(summary.external.map((ref) => ref.dialog))].sort();
+        // Sorted so the sites read grouped by file and in file order, whatever order the index found them in.
+        const sites = [...summary.external].sort(
+            (a, b) => a.dialog.localeCompare(b.dialog) || a.state - b.state || a.transition - b.transition,
+        );
+        const files = new Set(sites.map((ref) => ref.dialog));
+        const listed = sites.slice(0, MAX_LISTED_SITES).map((ref) => inboundAt(ref));
+        const rest = sites.length - listed.length;
         lines.push(
-            `${count(summary.external.length, "reply", "replies")} in ${count(files.length, "other dialog", "other dialogs")} will still reach it: ${files.join(", ")}. Those files are not changed.`,
+            `${count(sites.length, "reply", "replies")} in ${count(files.size, "other dialog", "other dialogs")} will still reach it: ${listed.join("; ")}${rest === 0 ? "" : `; and ${rest} more`}. Those files are not changed.`,
         );
     }
 
