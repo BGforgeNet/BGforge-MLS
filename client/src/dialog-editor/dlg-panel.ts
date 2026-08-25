@@ -138,6 +138,14 @@ function resolveMessages(strrefs: Iterable<number>, uri: vscode.Uri, resolve: Dl
  * The dialog's own resource name: a DLG does not record it, and a same-file jump is addressed by it.
  * Normalised the way the model spells resrefs, so a file named in lower case still matches its own states.
  */
+/**
+ * What to show the user when an edit or a read threw. `String(error)` on an `Error` renders the class name
+ * in front of the sentence, so the message the throw site wrote is what reaches the webview instead.
+ */
+function reasonOf(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
 function resrefOf(uri: vscode.Uri): string {
     return resrefName((uri.path.split("/").pop() ?? "").replace(/\.[^.]+$/, ""));
 }
@@ -247,7 +255,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
             const edited = setDlgLineText(shown, resrefOf(document.uri), address, strref);
             document.applyModel(edited, `Change ${what} string`);
         } catch (error) {
-            post({ type: "error", message: String(error) });
+            post({ type: "error", message: reasonOf(error) });
             return;
         }
         this.postModel(document, post);
@@ -267,7 +275,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         try {
             preview = detachDlgState(shown, resref, stateIndex);
         } catch (error) {
-            post({ type: "error", message: String(error) });
+            post({ type: "error", message: reasonOf(error) });
             return;
         }
         // Only references from OTHER files are the user's problem here: the ones in this dialog are what the
@@ -299,7 +307,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
             // comes back untouched - the graph drops an echo that is not for its latest emit.
             this.postModel(document, post, { reparse: true, seq });
         } catch (error) {
-            post({ type: "error", message: String(error) });
+            post({ type: "error", message: reasonOf(error) });
         }
     }
 
@@ -312,7 +320,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         try {
             dlg = readDlg(document.bytes);
         } catch (error) {
-            post({ type: "error", message: `Could not read this DLG: ${String(error)}` });
+            post({ type: "error", message: `Could not read this DLG: ${reasonOf(error)}` });
             return;
         }
         if (dlg.signature !== "DLG " || dlg.version !== "V1.0") {
