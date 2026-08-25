@@ -3,7 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { decompileBcs, readBcs, writeBcs, type BcsSymbols } from "@bgforge/bcs";
+import type { Parser } from "web-tree-sitter";
+import { compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
+import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { COMPILE_SYMBOLS, FIXTURE_DIR, IDS_DIR, SYMBOLS } from "./fixture-symbols";
 
 /**
  * Differential against the reference implementation, reproducible on any checkout.
@@ -21,8 +24,6 @@ import { decompileBcs, readBcs, writeBcs, type BcsSymbols } from "@bgforge/bcs";
  * The fixtures exist to carry the rules the install sweep found and the format spec does not state, listed
  * in `coverage` below. Losing one has to fail rather than quietly shrink the differential.
  */
-const FIXTURE_DIR = path.join(__dirname, "fixtures", "differential");
-const IDS_DIR = path.join(FIXTURE_DIR, "ids");
 const WEIDU_TIMEOUT_MS = 60_000;
 
 /**
@@ -49,47 +50,6 @@ const SOURCES = fs
     .filter((name) => name.endsWith(".baf"))
     .sort();
 
-/**
- * The fixture tables, parsed here rather than through the reader in `@bgforge/binary`.
- *
- * The codec package depends on nothing on purpose, and these files are a handful of plain LF rows - none of
- * what that reader exists for (encryption, CRLF, malformed rows, a table shipped by a mod) is in play. A
- * misparse here cannot hide a defect either: it would feed OUR side alone and show up as a divergence.
- */
-function readTable(name: string): string[][] {
-    // Upper-cased because a signature spells its table however it likes - `I:Spell*Spell` names SPELL.IDS -
-    // and a real install resolves a resource by name without regard to case.
-    const file = path.join(IDS_DIR, `${name.toUpperCase()}.ids`);
-    if (!fs.existsSync(file)) return [];
-    return fs
-        .readFileSync(file, "utf8")
-        .split("\n")
-        .map((line) => /^\s*(\S+)\s+(\S.*?)\s*$/.exec(line))
-        .filter((match): match is RegExpExecArray => match !== null && Number.isInteger(Number(match[1])))
-        .map((match) => [match[1]!, match[2]!]);
-}
-
-function rowsById(name: string): Map<number, string[]> {
-    const table = new Map<number, string[]>();
-    for (const [value, identifier] of readTable(name)) {
-        const key = Number(value);
-        table.set(key, [...(table.get(key) ?? []), identifier!]);
-    }
-    return table;
-}
-
-const TRIGGERS = rowsById("TRIGGER");
-const ACTIONS = rowsById("ACTION");
-
-const SYMBOLS: BcsSymbols = {
-    trigger: (id) => TRIGGERS.get(id) ?? [],
-    action: (id) => ACTIONS.get(id) ?? [],
-    ids: (table) => {
-        const rows = readTable(table);
-        return rows.length === 0 ? undefined : new Map(rows.map(([value, name]) => [Number(value), name!]));
-    },
-};
-
 /** WeiDU appends `// <strref text>` and resref echoes; the emitter deliberately emits none. */
 function significantLines(text: string): string[] {
     return text
@@ -111,8 +71,13 @@ function runWeidu(dir: string, extension: string): void {
     });
 }
 
-describe.skipIf(!available)("decompileBcs - differential against the reference implementation", () => {
-    beforeAll(() => {
+let parser: Parser;
+
+describe.skipIf(!available)("BCS - differential against the reference implementation", () => {
+    beforeAll(async () => {
+        await initParser();
+        parser = getParser();
+
         compiled = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-diff-"));
         for (const name of SOURCES) fs.copyFileSync(path.join(FIXTURE_DIR, name), path.join(compiled, name));
         runWeidu(compiled, ".baf");
@@ -146,6 +111,27 @@ describe.skipIf(!available)("decompileBcs - differential against the reference i
         const text = stored(name);
 
         expect(writeBcs(readBcs(text))).toBe(text);
+    });
+
+    // The other direction, against the same output: what the reference built from this source is what the
+    // compiler has to build from it. Byte-identity rather than a tree comparison, because the bytes are what
+    // the game reads and what a save writes - and the reference is an independent producer of them.
+    test.each(SOURCES)("%s compiles to exactly what the reference produces", (name) => {
+        const source = fs.readFileSync(path.join(FIXTURE_DIR, name), "utf8");
+
+        const ours = writeBcs(compileBaf(parser, source, COMPILE_SYMBOLS));
+
+        expect(ours).toBe(stored(name));
+    });
+
+    // The save path a compiled script's editable view takes, end to end: what was decompiled for the editor
+    // has to compile back to the file it came from when nothing was edited.
+    test.each(SOURCES)("%s survives decompiling and compiling back", (name) => {
+        const text = stored(name);
+
+        const round = writeBcs(compileBaf(parser, decompileBcs(readBcs(text), SYMBOLS), COMPILE_SYMBOLS));
+
+        expect(round).toBe(text);
     });
 
     /**

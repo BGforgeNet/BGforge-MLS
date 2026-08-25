@@ -237,6 +237,10 @@ importers:
         version: 13.0.6
 
   compilers/bcs:
+    dependencies:
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.26.10
     devDependencies:
       vitest:
         specifier: 'catalog:'

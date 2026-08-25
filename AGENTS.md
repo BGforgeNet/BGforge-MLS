@@ -63,7 +63,7 @@ binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 image/                   # @bgforge/image package: animation library (Fallout FRM, IE BAM, PNG/APNG conversions), backs the client's animation editor
-compilers/bcs/           # @bgforge/bcs package (private): Infinity Engine BCS codec - reads a compiled script into a tree, writes it back byte for byte
+compilers/bcs/           # @bgforge/bcs package (private): Infinity Engine BCS codec - reads a compiled script into a tree, writes it back byte for byte, and decompiles to / compiles from BAF
 compilers/ssl/           # @bgforge/ssl package (private): Fallout SSL -> INT compiler + the `ssl` CLI, backs the server's "built-in" compiler
 compilers/tssl/          # @bgforge/tssl package: TypeScript -> INT compiler + the `tssl` CLI. Emits bytecode by default; `--transpile` also writes the readable SSL
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
@@ -185,37 +185,37 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 ## Documentation Index
 
-| Area                    | Key Files                                                                                                                  |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `binary/INTERNALS.md`                                                       |
-| Contributing            | `CONTRIBUTING.md`                                                                                                          |
-| Settings                | `docs/settings.md`                                                                                                         |
-| Changelog               | `docs/changelog.md`                                                                                                        |
-| User docs (misc)        | `docs/README.md`, `docs/file_associations.md`, `docs/theme.md`, `docs/icon-theme.md`, `docs/lsp-api.md`                    |
-| Editor setup            | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)     |
-| TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
-| Transpile library       | `transpilers/README.md`                                                                                                    |
-| Transpiler guides       | `transpilers/{tbaf,td}/docs/` (each has README + writing guide)                                                            |
-| Compilers overview      | `compilers/README.md` (what each compiler is; the differentials live in `compilers/ssl/AGENTS.md`)                         |
-| TSSL compiler + CLI     | `compilers/tssl/README.md` and `compilers/tssl/docs/` (CLI ships as `tssl` bin in `@bgforge/tssl`)                         |
-| TSSL <-> folib contract | `compilers/tssl/AGENTS.md` (what each owes the other, and why the compiler reads folib's source)                           |
-| Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
-| Server npm package      | `server/README.md`                                                                                                         |
-| Image library           | `image/README.md`                                                                                                          |
-| SSL compiler + CLI      | `compilers/ssl/README.md` (CLI ships as `ssl` bin in the private `@bgforge/ssl`)                                           |
-| BCS codec               | `compilers/bcs/README.md` (library only; no CLI)                                                                           |
-| Data files              | `server/data/README.md`                                                                                                    |
-| Data pipeline           | `docs/data-pipeline.md`                                                                                                    |
-| Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |
-| Syntaxes                | `syntaxes/README.md`                                                                                                       |
-| Themes (source)         | `themes/README.md`                                                                                                         |
-| Language configurations | `language-configurations/README.md`                                                                                        |
-| Build scripts           | `scripts/README.md`                                                                                                        |
-| Dev (VS Code web)       | `scripts/dev-web.md`                                                                                                       |
-| Reusable GH Actions     | `actions/README.md` (shared contract) + `actions/{binary,format,transpile,tssl}/README.md`                                 |
-| Packaging               | `docs/ignore-files.md`                                                                                                     |
-| Releasing               | `docs/releasing.md`                                                                                                        |
-| Supply chain            | `docs/supply-chain.md` (SBOM/SLSA, CodeQL + Scorecard, and the two deliberate non-additions)                               |
-| Roadmap                 | `docs/todo.md`                                                                                                             |
-| Binary editor UI        | `binary-editor/AGENTS.md`                                                                                                  |
-| Dependencies            | `docs/dependencies.md`                                                                                                     |
+| Area                     | Key Files                                                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Architecture             | `docs/architecture.md`, `server/INTERNALS.md`, `binary/INTERNALS.md`                                                       |
+| Contributing             | `CONTRIBUTING.md`                                                                                                          |
+| Settings                 | `docs/settings.md`                                                                                                         |
+| Changelog                | `docs/changelog.md`                                                                                                        |
+| User docs (misc)         | `docs/README.md`, `docs/file_associations.md`, `docs/theme.md`, `docs/icon-theme.md`, `docs/lsp-api.md`                    |
+| Editor setup             | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)     |
+| TS plugins               | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
+| Transpile library        | `transpilers/README.md`                                                                                                    |
+| Transpiler guides        | `transpilers/{tbaf,td}/docs/` (each has README + writing guide)                                                            |
+| Compilers overview       | `compilers/README.md` (what each compiler is; the differentials live in `compilers/ssl/AGENTS.md`)                         |
+| TSSL compiler + CLI      | `compilers/tssl/README.md` and `compilers/tssl/docs/` (CLI ships as `tssl` bin in `@bgforge/tssl`)                         |
+| TSSL <-> folib contract  | `compilers/tssl/AGENTS.md` (what each owes the other, and why the compiler reads folib's source)                           |
+| Transpile CLI            | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
+| Server npm package       | `server/README.md`                                                                                                         |
+| Image library            | `image/README.md`                                                                                                          |
+| SSL compiler + CLI       | `compilers/ssl/README.md` (CLI ships as `ssl` bin in the private `@bgforge/ssl`)                                           |
+| BCS codec + BAF compiler | `compilers/bcs/README.md` (library only; no CLI)                                                                           |
+| Data files               | `server/data/README.md`                                                                                                    |
+| Data pipeline            | `docs/data-pipeline.md`                                                                                                    |
+| Grammars                 | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |
+| Syntaxes                 | `syntaxes/README.md`                                                                                                       |
+| Themes (source)          | `themes/README.md`                                                                                                         |
+| Language configurations  | `language-configurations/README.md`                                                                                        |
+| Build scripts            | `scripts/README.md`                                                                                                        |
+| Dev (VS Code web)        | `scripts/dev-web.md`                                                                                                       |
+| Reusable GH Actions      | `actions/README.md` (shared contract) + `actions/{binary,format,transpile,tssl}/README.md`                                 |
+| Packaging                | `docs/ignore-files.md`                                                                                                     |
+| Releasing                | `docs/releasing.md`                                                                                                        |
+| Supply chain             | `docs/supply-chain.md` (SBOM/SLSA, CodeQL + Scorecard, and the two deliberate non-additions)                               |
+| Roadmap                  | `docs/todo.md`                                                                                                             |
+| Binary editor UI         | `binary-editor/AGENTS.md`                                                                                                  |
+| Dependencies             | `docs/dependencies.md`                                                                                                     |

@@ -19,16 +19,18 @@
  * every later field in a bracket list onto the wrong name, and a number is still a true reading of the file.
  */
 
+import {
+    ANYONE,
+    AREA_LENGTH,
+    IDENTIFIER_SLOTS,
+    isAreaTag,
+    OBJECT_TARGETS,
+    parseSignature,
+    type BcsEngine,
+} from "./signature";
 import type { BcsAction, BcsObject, BcsScript, BcsTrigger } from "./types";
 
-/**
- * Which game's script conventions to name a record by.
- *
- * The codec needs none of this - a file reads and writes byte-identically without it - but naming does: the
- * same stored number is a different field, and looks up in a different table, depending on the engine. `bg`
- * covers the Baldur's Gate family including the Enhanced Editions, whose scripts share one object layout.
- */
-export type BcsEngine = "bg" | "iwd" | "iwd2" | "pst";
+export type { BcsEngine } from "./signature";
 
 /**
  * The install's own naming tables. A lookup that finds nothing leaves the value as a number.
@@ -47,64 +49,8 @@ export interface BcsSymbols {
     ids(table: string): ReadonlyMap<number, string> | undefined;
 }
 
-/** One parameter of an IDS signature: `I:Value*Table` is type `I` tagged `Value` naming `Table`. */
-interface Parameter {
-    type: string;
-    tag: string;
-    table: string | undefined;
-}
-
-/** An `Area` is stored in front of its `Name` inside one string, and is always exactly this long. */
-const AREA_LENGTH = 6;
-
-/** What an unconstrained object is called. Not an IDS entry; see `renderObject`. */
-const ANYONE = "ANYONE";
-
-/**
- * The object's enumerated fields, in stored order, with the table that names each - the one thing about an
- * object that a record cannot tell you and only the engine can. The five identifier slots follow the fields and
- * are always resolved against OBJECT.IDS.
- *
- * Torment inserts FACTION and TEAM straight after EA, so the same two stored numbers BG reads as GENERAL and
- * RACE name entirely different tables there; Icewind Dale II appends SUBRACE, and then AVCLASS and CLASSMSK,
- * which it stores AFTER the object's name while printing them in list position like any other field.
- */
-const OBJECT_TARGETS = {
-    bg: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
-    iwd: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
-    pst: ["EA", "FACTION", "TEAM", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGN"],
-    iwd2: ["EA", "GENERAL", "RACE", "CLASS", "SPECIFIC", "GENDER", "ALIGNMNT", "SUBRACE", "AVCLASS", "CLASSMSK"],
-} as const satisfies Record<BcsEngine, readonly string[]>;
-
-const IDENTIFIER_SLOTS = 5;
-
-const SIGNATURE = /^([^(]+)\((.*)\)$/s;
-
 /** Marks an argument this cannot render, so the whole call falls back to its id. */
 const UNREADABLE = "\u0000unreadable";
-
-function parseSignature(text: string): { name: string; parameters: Parameter[] } | undefined {
-    const match = SIGNATURE.exec(text.trim());
-    if (match === null) return undefined;
-    const body = match[2]!.trim();
-    const parameters = body === "" ? [] : body.split(",").map((part) => parseParameter(part));
-    return { name: match[1]!.trim(), parameters };
-}
-
-function parseParameter(text: string): Parameter {
-    const trimmed = text.trim();
-    // The tag between `:` and `*` carries spaces in real tables ("Hit Points"), and the trailing `*` is not
-    // always written - ACTION.IDS spells one parameter `O:Target` with no asterisk at all.
-    const star = trimmed.indexOf("*");
-    const colon = trimmed.indexOf(":");
-    const tagEnd = star === -1 ? trimmed.length : star;
-    const table = star === -1 ? "" : trimmed.slice(star + 1).trim();
-    return {
-        type: trimmed.slice(0, 1),
-        tag: colon === -1 ? "" : trimmed.slice(colon + 1, tagEnd).trim(),
-        table: table === "" ? undefined : table,
-    };
-}
 
 /**
  * The values for a signature's string parameters, in signature order.
@@ -115,8 +61,6 @@ function parseParameter(text: string): Parameter {
  * so that is what selects the split rather than a list of ids transcribed by hand.
  */
 function stringArguments(tags: string[], stored: string[]): string[] {
-    const isArea = (tag: string): boolean => tag.toLowerCase() === "area";
-
     // How many pairs must be packed: every parameter the record has no slot for. The tag alone cannot say -
     // `Global` and `LeaveAreaLUAPanicEntry` both name an `Area` and only the first packs - and neither can "is
     // the partner slot empty", which `CreateCreatureAtLocation(S:GLOBAL*,S:Area*,S:ResRef*)` breaks by fitting
@@ -131,14 +75,14 @@ function stringArguments(tags: string[], stored: string[]): string[] {
         const packs =
             packsLeft > 0 &&
             next !== undefined &&
-            (isArea(tags[i]!) || isArea(next)) &&
+            (isAreaTag(tags[i]) || isAreaTag(next)) &&
             // An area is exactly six bytes, so a string no longer than that has nothing packed behind it.
             first.length > AREA_LENGTH;
         if (packs) {
             packsLeft--;
             const area = first.slice(0, AREA_LENGTH);
             const name = first.slice(AREA_LENGTH);
-            values.push(isArea(tags[i]!) ? area : name, isArea(next) ? area : name);
+            values.push(isAreaTag(tags[i]) ? area : name, isAreaTag(next) ? area : name);
             slot += 1;
             i += 2;
         } else {

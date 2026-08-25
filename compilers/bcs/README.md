@@ -3,7 +3,8 @@
 A codec for Infinity Engine compiled scripts (`.bcs`, and the `.bs` AI-selection scripts, which are the same
 format). Reads one into a tree and writes it back byte for byte.
 
-Workspace-internal and unpublished: it exists to be built on, by the script view and by a BAF back end.
+Workspace-internal and unpublished: it backs the extension's editable view of a compiled script, which
+decompiles one to BAF on open and compiles it back on save.
 
 ## BCS is not bytecode
 
@@ -176,6 +177,54 @@ layouts, because no Torment or Icewind Dale install is available here to differe
 spec-faithful rather than measured, and `test/engines.test.ts` says so at the top. What the round-trip sweep
 does establish for all four is that the codec reads and rewrites each shape byte for byte.
 
+## Compiling BAF back
+
+`compileBaf(parser, source, symbols, engine)` is the inverse, and it is what makes the script view editable
+rather than a viewer. The caller supplies the parser, exactly as the SSL compiler takes one: the source is
+read with the tree-sitter BAF grammar the language server and formatter already use, so the compiler cannot
+disagree with the editor about what `[10.10]` means.
+
+```ts
+import { compileBaf, writeBcs } from "@bgforge/bcs";
+
+const script = compileBaf(parser, source, {
+  triggerByName: (name) => triggerRows.get(name.toLowerCase()) ?? [], // every row whose call is spelled so
+  actionByName: (name) => actionRows.get(name.toLowerCase()) ?? [],
+  ids: (table) => tables.get(table), // the SAME accessor decompiling uses
+});
+writeFileSync("aerie.bcs", writeBcs(script), "latin1");
+```
+
+Measured over a stock BG:EE plus BG2:ToB pair: **all 4939 scripts decompile and compile back with nothing
+refused**, and 4904 of them come back byte for byte. The other 35 hold something BAF has no way to say, and
+the reference implementation loses exactly the same bytes on the same round trip - which is what says these
+are the source form's limit rather than the compiler's:
+
+- **A record an early writer stopped short of finishing.** 22 files carry one. BAF has no spelling for "this
+  record ends here", so it comes back in the full form - which is what the reference writes for the same
+  source, and what the engine reads either way.
+- **A number in a slot no signature names.** 13 files carry one, left over in a call that takes no such
+  argument. Nothing prints it, so nothing can put it back.
+
+The degradation happens ONCE: compiling a script that went through it again produces the same bytes. That is
+what a save path needs, and it is gated over the whole corpus rather than inferred.
+
+Two source-level spellings are resolved rather than emitted, being the same constructs decompiling folds:
+`ActionOverride` writes the inner action's record with the override in its first object slot, and
+`TriggerOverride` writes a real `NextTriggerObject` record in front of the trigger it retargets.
+
+### The one list in the codec
+
+Which calls pack an `Area` in front of its partner inside one stored slot. Decompiling needs no list - it
+counts the shortfall between a signature's string parameters and the slots the record filled - but a compiler
+has no record to count against, so it decides from the name.
+
+The list is measured, not transcribed: every signature taking two or more strings in both installs' tables
+was compiled by the reference with distinguishable arguments, and the ones whose output held a pair in one
+slot are the list. Nothing about a signature predicts it - `Global(S:Name*,S:Area*,I:Value*)` packs and
+`GlobalTimerExpired(S:Name*,S:Area*)` does not, though the two declare the same pair. Both editions had to be
+measured: BG:EE names six calls BG2:ToB has no row for, and spells one of them differently.
+
 ## The one argument type it refuses
 
 `A:Action*` - an action passed as an argument to another action. The spec says outright that it does not know
@@ -198,7 +247,9 @@ it cannot describe, but nothing a real file contains takes that path.
 ```bash
 pnpm exec vitest run --config compilers/bcs/vitest.config.ts
 
-# The install sweep, which needs a game to point at - see test/corpus.test.ts
+# The install sweep, which needs a game to point at - see test/corpus.test.ts. Add BGFORGE_BCS_IDS, pointing
+# at that install's IDS tables, and the sweep also compiles every script back and checks the round trip is
+# stable.
 BGFORGE_BCS_CORPUS=/path/to/game pnpm exec vitest run --config compilers/bcs/vitest.config.ts corpus
 
 # The differential needs a WeiDU; scripts/ensure-weidu.sh prints one, downloading a pinned build if the

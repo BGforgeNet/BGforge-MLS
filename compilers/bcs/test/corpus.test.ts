@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
-import { readBcs, writeBcs } from "@bgforge/bcs";
+import { beforeAll, describe, expect, test } from "vitest";
+import type { Parser } from "web-tree-sitter";
+import { BcsCompileError, compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
+import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { readIdsTables } from "./ids-tables";
 
 /**
  * Round-trip byte-identity over a real install's compiled scripts.
@@ -35,6 +38,19 @@ function findBcsFiles(root: string): string[] {
 }
 
 const files = CORPUS_ROOT ? findBcsFiles(CORPUS_ROOT) : [];
+
+/**
+ * The install's own IDS tables, which naming needs and the round trip above does not.
+ *
+ * A separate variable because the two sweeps answer different questions: the codec's round trip is gated on
+ * the files alone, while compiling back needs the same tables the game resolves names against. Point it at
+ * the directory holding TRIGGER.IDS, ACTION.IDS and friends - a game's `scripts/`, or wherever they were
+ * extracted to:
+ *
+ *   BGFORGE_BCS_IDS=/path/to/ids BGFORGE_BCS_CORPUS=/path/to/scripts pnpm exec vitest run \
+ *     --config compilers/bcs/vitest.config.ts corpus
+ */
+const IDS_ROOT = process.env.BGFORGE_BCS_IDS;
 
 /**
  * The mod trees under `external/` are gitignored but reproducible (`pnpm test:external`), so the handful of
@@ -147,5 +163,68 @@ describe.skipIf(files.length === 0)("BCS codec - real install corpus", () => {
         }
 
         expect(over).toEqual([]);
+    });
+});
+
+describe.skipIf(files.length === 0 || IDS_ROOT === undefined)("BCS compiler - real install corpus", () => {
+    const tables = readIdsTables(IDS_ROOT ?? "");
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await initParser();
+        parser = getParser();
+    });
+
+    const roundTrip = (text: string): string =>
+        writeBcs(compileBaf(parser, decompileBcs(readBcs(text), tables.symbols), tables.compileSymbols));
+
+    /**
+     * The save path a compiled script's editable view takes, over a whole install.
+     *
+     * Byte-identity is NOT the gate, and cannot be: two things a stored record can hold have no spelling in
+     * BAF - a record the BG1-era writer stopped short of finishing, and a number sitting in a slot no
+     * signature names - so a script carrying either compiles back to the full, clean form instead. The
+     * reference implementation loses exactly the same bytes on the same round trip, which is what says this
+     * is the source form's limit rather than the compiler's.
+     *
+     * What IS gated is that the loss happens ONCE. A view that degraded a script a little further on every
+     * save would be unusable, and idempotence is the property that rules it out - measured against the whole
+     * install rather than the three fixtures a checkout can compile.
+     */
+    test("every script compiles back, and saving it again changes nothing", () => {
+        const drifted: string[] = [];
+        // Refusals are tallied by reason rather than swallowed: a sweep that quietly stopped judging most of
+        // the corpus would otherwise report the same green as one that judged all of it.
+        const refused = new Map<string, number>();
+        let judged = 0;
+        let identical = 0;
+
+        for (const file of files) {
+            const original = fs.readFileSync(file, "latin1");
+            if (original === "") continue;
+            let once: string;
+            try {
+                once = roundTrip(original);
+            } catch (error) {
+                const reason =
+                    error instanceof BcsCompileError ? (error.diagnostics[0]?.message ?? error.message) : String(error);
+                refused.set(reason, (refused.get(reason) ?? 0) + 1);
+                continue;
+            }
+            judged++;
+            if (once === original) identical++;
+            else if (roundTrip(once) !== once) drifted.push(path.basename(file));
+        }
+
+        const skipped = [...refused.values()].reduce((total, count) => total + count, 0);
+        console.log(
+            `BCS compiler: ${judged} scripts compiled back (${identical} byte-identical, ` +
+                `${judged - identical} through a form BAF cannot spell), ${skipped} refused`,
+        );
+        for (const [reason, count] of refused) console.log(`  refused ${count}: ${reason}`);
+        expect(drifted).toEqual([]);
+        expect(refused.size).toBe(0);
+        // A floor on the population, so a corpus that resolved to nothing cannot pass vacuously.
+        expect(judged).toBeGreaterThan(0);
     });
 });

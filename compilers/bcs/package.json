@@ -26,6 +26,9 @@
     "scripts": {
         "test": "vitest run --config vitest.config.ts"
     },
+    "dependencies": {
+        "web-tree-sitter": "catalog:"
+    },
     "devDependencies": {
         "vitest": "catalog:"
     },
