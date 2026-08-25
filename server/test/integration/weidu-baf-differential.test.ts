@@ -44,19 +44,25 @@ const WEIDU_TIMEOUT_MS = 15000;
 /** A `%variable%` (assigned by a tp2 during install) or an `@strref` (allocated when a translation is added). */
 const SUBSTITUTION = /%[A-Za-z_][A-Za-z0-9_]*%|@\d+/;
 
+/** Mirrors `compilers/bcs/test/weidu-differential.test.ts`'s own guard: skip cleanly, never fail confusingly. */
+function weiduAvailable(): boolean {
+    try {
+        execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const available = weiduAvailable();
 const files = fg.sync("**/*.baf", { cwd: IE_FIXTURES, absolute: true, caseSensitiveMatch: false }).sort();
 const selfContained = files.filter((f) => !SUBSTITUTION.test(fs.readFileSync(f, "utf8")));
 const needsInstall = files.filter((f) => SUBSTITUTION.test(fs.readFileSync(f, "utf8")));
 
-describe.skipIf(files.length === 0 || !GAME)("built-in BAF compiler vs the reference", () => {
+describe.skipIf(files.length === 0 || !GAME || !available)("built-in BAF compiler vs the reference", () => {
     let opts: (file: string) => Parameters<typeof compileBafText>[0];
 
     beforeAll(async () => {
-        // The denominator is printed, not assumed: a collapsed corpus must be visible in a green run, or a
-        // shrunken gate reads exactly like a clean one.
-        console.log(
-            `baf corpus: ${files.length} files, ${selfContained.length} self-contained, ${needsInstall.length} install-gated`,
-        );
         await initParser();
         const parser = getParser();
         // Built ONCE from the same install WeiDU reads, not per file: a `Game` opens archives and caches
@@ -73,16 +79,18 @@ describe.skipIf(files.length === 0 || !GAME)("built-in BAF compiler vs the refer
         });
     });
 
-    // A floor on the population, so a corpus that silently collapses to a handful cannot pass vacuously.
-    it("draws a corpus large enough to mean something", () => {
+    // A floor on the population, so a corpus that silently collapses to a handful cannot pass vacuously. The
+    // counts are IN THE NAME, not a console.log: only the name survives under the default reporter and in a
+    // failure line, so it is the only place a shrunken corpus reads differently from a clean one.
+    it(`draws a corpus large enough to mean something (${files.length} files, ${selfContained.length} self-contained, ${needsInstall.length} install-gated)`, () => {
         expect(files.length).toBeGreaterThan(500);
         expect(selfContained.length).toBeGreaterThan(300);
     });
 
-    // 450 synchronous WeiDU spawns at ~0.15s each genuinely run past the file's 60s testTimeout on their
+    // The synchronous WeiDU spawns (~0.15s each) genuinely run past the file's 60s testTimeout on their
     // own, before any contention; a synchronous loop cannot yield for vitest's timeout to interrupt it
     // early, so a shared default just makes the failure mode a flaky "timed out" instead of a clean bound.
-    it("agrees with the reference on every self-contained file", () => {
+    it(`agrees with the reference on every self-contained file (${selfContained.length} files)`, () => {
         const disagreements: string[] = [];
         // Refusals both sides agree on, grouped by the IDS table WeiDU's own message names: a bare count
         // cannot say whether a change in it is a real regression or just a different install's edition gaps.
