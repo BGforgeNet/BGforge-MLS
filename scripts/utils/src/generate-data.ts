@@ -128,10 +128,6 @@ function isWeiduFormat(item: DataItem): boolean {
 const COMPLETION_TAG_DEPRECATED = 1;
 
 /**
- * Validates that parsed YAML data conforms to the DataFile structure.
- * Checks that each stanza has a numeric type and an items array.
- */
-/**
  * A signature whose parameter list is never closed reads as a no-argument value to anything parsing it,
  * so the truncation is invisible downstream: hover renders the half-signature verbatim and an argument
  * count derived from it comes back as zero. Three entries were in that state when this check landed.
@@ -146,6 +142,10 @@ function assertBalancedDetail(item: DataItem, stanza: string, source: string): v
     }
 }
 
+/**
+ * Validates that parsed YAML data conforms to the DataFile structure.
+ * Checks that each stanza has a numeric type and an items array.
+ */
 function validateDataFile(data: unknown, source: string): DataFile {
     if (typeof data !== "object" || data === null) {
         throw new Error(`Expected object in ${source}, got ${data === null ? "null" : typeof data}`);
