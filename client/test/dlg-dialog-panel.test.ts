@@ -607,6 +607,38 @@ describe("DlgDialogEditorProvider, the dialogs around this one", () => {
         expect(model.roots[1]!.states.map((s) => s.id)).toEqual(["OTHERDLG:1"]);
     });
 
+    test("reads each neighbour once, however many times the model is reposted", async () => {
+        // postModel runs after every edit, and nothing below this caches resource bytes - so without a cache
+        // here every edit re-reads and re-parses each neighbour out of the game archive.
+        const reads: string[] = [];
+        const h = await opened({
+            resourceBytes: (_uri, resref) => {
+                reads.push(resref);
+                return resref === "OTHERDLG" ? plain() : undefined;
+            },
+        });
+
+        h.ready();
+        h.ready();
+
+        expect(reads.filter((r) => r === "OTHERDLG")).toEqual(["OTHERDLG"]);
+    });
+
+    test("does not retry a neighbour the game could not produce", async () => {
+        // A miss is recorded too, or an absent neighbour is the one case that keeps costing a lookup per post.
+        const reads: string[] = [];
+        const h = await opened({
+            resourceBytes: (_uri, resref) => {
+                reads.push(resref);
+                return undefined;
+            },
+        });
+
+        h.ready();
+
+        expect(new Set(reads).size).toBe(reads.length);
+    });
+
     test("loads the dialogs that jump into this one, which the file itself cannot name", async () => {
         const h = await opened({
             inboundToDialog: () => [{ dialog: "CALLER", state: 1, transition: 0 }],

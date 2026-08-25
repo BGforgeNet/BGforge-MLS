@@ -147,6 +147,17 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
     private readonly deps: DlgHostDeps;
     /** The model last posted per document, which an incoming edit is diffed against. */
     private readonly posted = new WeakMap<DlgDocument, DialogModel>();
+    /**
+     * Neighbouring dialogs already read for this document, keyed by resref; `null` records one the game could
+     * not produce, so a miss is not retried on every post.
+     *
+     * `postModel` runs after every edit and reads up to `NEIGHBOUR_STATE_LIMIT` of them, and nothing below
+     * caches resource bytes - `Game` memoizes its TLK, IDS, 2DA and BIF handles but not the resources it
+     * serves. Held for the document's lifetime rather than invalidated per edit: our own edits change WHICH
+     * neighbours are wanted, never their contents, and a neighbour changing underneath us is the same
+     * snapshot the cross-reference index already takes at game-open. Both refresh on reopen.
+     */
+    private readonly neighbours = new WeakMap<DlgDocument, Map<string, DlgModelInput | null>>();
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
         vscode.CustomDocumentEditEvent<DlgDocument>
@@ -317,7 +328,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         const { load, omitted } = this.neighboursOf(main, resref);
         const others: DlgNeighbour[] = [];
         for (const [name, include] of load) {
-            const neighbour = this.readNeighbour(document.uri, name);
+            const neighbour = this.readNeighbour(document, name);
             if (neighbour) others.push({ dlg: neighbour, include });
         }
         const model = modelFromDlgs(main, others);
@@ -363,14 +374,28 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
      * One neighbouring dialog, or undefined if the game cannot produce it or it will not parse. A missing or
      * unreadable neighbour costs the tree one branch; it must never stop the file in hand from opening.
      */
-    private readNeighbour(uri: vscode.Uri, resref: string): DlgModelInput | undefined {
-        const bytes = this.deps.resourceBytes?.(uri, resref, "dlg");
-        if (!bytes) return undefined;
-        try {
-            return { ...readDlg(bytes), resref };
-        } catch {
-            return undefined;
+    private readNeighbour(document: DlgDocument, resref: string): DlgModelInput | undefined {
+        let cache = this.neighbours.get(document);
+        if (!cache) {
+            cache = new Map();
+            this.neighbours.set(document, cache);
         }
+        const cached = cache.get(resref);
+        // `null` is a recorded miss, so `undefined` alone means "not looked at yet".
+        if (cached !== undefined) return cached ?? undefined;
+
+        const read = (): DlgModelInput | null => {
+            const bytes = this.deps.resourceBytes?.(document.uri, resref, "dlg");
+            if (!bytes) return null;
+            try {
+                return { ...readDlg(bytes), resref };
+            } catch {
+                return null;
+            }
+        };
+        const neighbour = read();
+        cache.set(resref, neighbour);
+        return neighbour ?? undefined;
     }
 
     async saveCustomDocument(document: DlgDocument, _token: vscode.CancellationToken): Promise<void> {
