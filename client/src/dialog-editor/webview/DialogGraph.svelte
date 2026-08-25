@@ -185,8 +185,14 @@
     // Target-picker id list. On SSL the reserved terminals (Node998/Node999) are presented as the Combat/Exit
     // picker entries, not raw ids, so drop them here (they would otherwise appear as `-> Node998` in the menus).
     const isSSL = $derived(renderFamily(editModel.sourceLang) === "fallout-ssl");
+    // Scoped to the active root, because a jump resolves per-dialogue everywhere a file holds several. A
+    // compiled dialog's tree is the exception: its roots are separate FILES drawn as one conversation, its ids
+    // carry the dialog name, and the writer stores a cross-file target as that file's resref plus the state
+    // number - so a hand-off must be listed, or it renders as an empty selection.
     const stateIds = $derived(
-        distinctStateIds(activeRoot?.states ?? []).filter((id) => !isSSL || !sslTerminalKind(id)),
+        distinctStateIds(spansFiles ? editModel.roots.flatMap((r) => r.states) : (activeRoot?.states ?? [])).filter(
+            (id) => !isSSL || !sslTerminalKind(id),
+        ),
     );
     // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
     // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.

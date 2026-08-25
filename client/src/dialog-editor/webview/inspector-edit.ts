@@ -126,6 +126,43 @@ export const DLG_FOREIGN_TEXT_LOCK_REASON =
     "This state belongs to another dialog, shown here so this conversation's hand-offs are visible. This " +
     "editor saves only the file it opened - open that dialog to change it.";
 
+/**
+ * Why a compiled dialog's state cannot be renamed. Its number is its address - other dialogs and mod scripts
+ * point at it - so unlike every other family the name is not the author's to choose.
+ */
+export function dlgRenameLockReason(): string {
+    return "A compiled dialog's state is identified by its number, which other dialogs and mod scripts point at, so it has no name to change.";
+}
+
+/**
+ * Whether the code fields - state trigger, reply condition, reply action - accept typing. A compiled dialog
+ * holds these as text, the same fragments a `.d` wraps in tildes, and the save path puts an edited one back
+ * into the file's own table, so only a state belonging to ANOTHER dialog locks them. Every other family
+ * follows the file-wide flag, which for a DLG says only that its lines are strrefs rather than prose.
+ */
+export function codeFieldEditable(opts: {
+    dlg: boolean;
+    foreign: boolean;
+    editable: boolean;
+    derivedFrom?: string;
+}): boolean {
+    if (opts.derivedFrom) return false;
+    return opts.dlg ? !opts.foreign : opts.editable;
+}
+
+/** Why a code field is locked, mirroring `codeFieldEditable`. Returns "" when editable. */
+export function codeLockReason(opts: {
+    dlg: boolean;
+    foreign: boolean;
+    editable: boolean;
+    derivedFrom?: string;
+}): string {
+    if (codeFieldEditable(opts)) return "";
+    // The only locked DLG state is a foreign one; a compiled dialog has no derived states.
+    if (opts.dlg) return DLG_FOREIGN_TEXT_LOCK_REASON;
+    return stateReadOnlyReason(opts.derivedFrom);
+}
+
 /** Read-only because the state is derived (CHAIN/INTERJECT/EXTEND) or the whole dialog is view-only. */
 export function stateReadOnlyReason(derivedFrom?: string): string {
     if (derivedFrom)

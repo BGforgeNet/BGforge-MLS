@@ -14,7 +14,10 @@
     } from "../../../../shared/dialog-model";
     import type { DialogActions } from "./dialog-actions";
     import {
+        codeFieldEditable,
+        codeLockReason,
         conditionLockReason,
+        dlgRenameLockReason,
         optionRemoveLockReason,
         sayLineEditability,
         stateReadOnlyReason,
@@ -171,6 +174,11 @@
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
     const structReason = $derived(structuralLockReason(state, ssl, editable));
     const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
+    // Trigger, condition and action are TEXT in a compiled dialog, and the save path writes an edited one back
+    // into its table - so they follow their own predicate rather than `readOnly`, whose `editable` flag says
+    // only that a DLG line is a strref instead of prose.
+    const codeEditable = $derived(codeFieldEditable({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
+    const codeReason = $derived(codeLockReason({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
 
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
     // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
@@ -359,9 +367,11 @@
     {/if}
 
     <!-- Read-only label only when the id input actually IS read-only (same condition as its `disabled` below):
-         a structurally-editable node (D, or a faithful td/tssl node) can be renamed, so it is a jump target. -->
-    <div class="ik">{ssl ? "State" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} title={!structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
+         a structurally-editable node (D, or a faithful td/tssl node) can be renamed, so it is a jump target.
+         A compiled dialog's state has no name at all - its number is its address - so the field is locked for
+         it whatever its structural editability, matching the `nodeRenamable` gate the commit path applies. -->
+    <div class="ik">{ssl ? "State" : dlg ? "State number" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
+    <input class="iv code" value={state.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? dlgRenameLockReason() : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches && !state.block}
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
@@ -411,12 +421,16 @@
                 <!-- The D family reaches this branch: a D trigger is BAF, a TD trigger is TypeScript source (the
                      enclosing `if (...)` condition) - codeLang picks the grammar. CodeField's textarea wraps a
                      long trigger into view instead of scrolling it out of sight. -->
-                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
+                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={!codeEditable} title={codeReason} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
-            <div class="wcol">
-                <div class="ik">Weight</div>
-                <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
-            </div>
+            <!-- Weight is a `.d` construct (IF WEIGHT #n): a compiled dialog has no such field, so showing an
+                 always-empty box would invite an edit with nowhere to go. -->
+            {#if !dlg}
+                <div class="wcol">
+                    <div class="ik">Weight</div>
+                    <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+                </div>
+            {/if}
         </div>
     {/if}
 
@@ -455,7 +469,10 @@
                                 <button title={i === 0 ? "Already the first option" : "Move up"} disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                                 <button title={i === state.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                             {/if}
-                            {#if !readOnly}
+                            <!-- `dlg` joins the plain-Remove arm: a compiled reply is removed by rebuilding its
+                                 state's transition list, which its trigger does not affect - the SSL arm below
+                                 would disable it for carrying one, and say so in SSL's terms. -->
+                            {#if !readOnly || dlg}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {:else if structuralEditable && !state.branches}
                                 <!-- Faithful SSL/TSSL and every TD node: remove writes back to source. A conditional
@@ -487,7 +504,7 @@
                     <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {:else}
                     <!-- D-family condition: BAF for D, TypeScript source for TD - codeLang picks the grammar. -->
-                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!codeEditable} title={codeReason} placeholder={!codeEditable ? "(none)" : dlg ? "(no condition)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
@@ -503,7 +520,7 @@
                      BAF for a D dialog, TypeScript for a TD one (its source is TypeScript, even though the D it
                      emits is BAF). The BAF grammar reads a name as an action or trigger by its IDS list, so no
                      per-field "kind" hint is needed. -->
-                <CodeField lang={codeLang} value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
+                <CodeField lang={codeLang} value={c.action ?? ""} disabled={!codeEditable} title={codeReason} placeholder={!codeEditable ? "(none)" : dlg ? "(no action)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->

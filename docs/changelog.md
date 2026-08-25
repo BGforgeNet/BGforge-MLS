@@ -43,6 +43,12 @@
   out of play, **Detach state** points every reply that led to it at the end of the conversation instead;
   the record stays where it is, nothing is renumbered, and the editor says up front which replies it will
   change, and which replies in other dialogs still reach it - each named by its dialog, state and reply.
+- The trigger on a state, and the condition and action on a reply, can be edited in a compiled dialog. A
+  `.dlg` stores these as script text - the same fragments a `.d` source wraps in tildes - and saving writes
+  an edited one back into the file's own table, leaving every entry that was already there at its index. They
+  were previously shown locked, on the same flag that says a line's text is a string number rather than
+  prose. A reply's target may now point into another dialog in the tree as well, which is how the file
+  already addresses a hand-off.
 - A conversation that hands off to another dialog now shows where it lands. The states another `.dlg`
   reaches, and the states elsewhere that reach into this one, are drawn in the same graph, marked with the
   dialog they belong to and read-only - so a hand-off that goes out and comes back closes up as one tree

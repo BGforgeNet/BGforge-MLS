@@ -278,3 +278,74 @@ describe("writeDlgFromModel, what it refuses and what it appends", () => {
         expect(() => writeDlgFromModel(original(), after, "TEST")).toThrow(/no state/i);
     });
 });
+
+/**
+ * The trigger, condition and action fields are text a DLG stores in its own tables. The editor kept them
+ * locked, so nothing exercised the save path for an edited one - these cover it now that it is reachable.
+ */
+describe("writeDlgFromModel (edited trigger, condition and action)", () => {
+    it("appends an edited state trigger rather than overwriting the entry it shared", () => {
+        const model = sampleModel();
+        const states = model.roots[0]!.states;
+        states[0]!.trigger = 'Global("x","GLOBAL",9)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        // Appended, because another entry may point at index 0 and inserting would renumber the table.
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)', 'Global("x","GLOBAL",9)']);
+        expect(dlg.stateTriggers[dlg.states[0]!.triggerIndex]).toBe('Global("x","GLOBAL",9)');
+    });
+
+    it("keeps an untouched trigger at its original index", () => {
+        const dlg = readDlg(writeDlgFromModel(original(), sampleModel(), "TEST"));
+
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)']);
+        expect(dlg.states[0]!.triggerIndex).toBe(0);
+    });
+
+    it("writes an edited reply condition into the transition trigger table", () => {
+        const model = sampleModel();
+        const choice = model.roots[0]!.states[0]!.choices[1]!;
+        choice.condition = 'Global("y","GLOBAL",7)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.transitionTriggers).toEqual(['Global("y","GLOBAL",2)', 'Global("y","GLOBAL",7)']);
+        expect(dlg.transitionTriggers[dlg.transitions[1]!.triggerIndex]).toBe('Global("y","GLOBAL",7)');
+        expect(dlg.transitions[1]!.flags).toContain("trigger");
+    });
+
+    it("writes an edited reply action into the action table", () => {
+        const model = sampleModel();
+        model.roots[0]!.states[0]!.choices[1]!.action = 'SetGlobal("z","GLOBAL",8)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.actions).toEqual(['SetGlobal("z","GLOBAL",3)', 'SetGlobal("z","GLOBAL",8)']);
+        expect(dlg.actions[dlg.transitions[1]!.actionIndex]).toBe('SetGlobal("z","GLOBAL",8)');
+        expect(dlg.transitions[1]!.flags).toContain("action");
+    });
+
+    it("clears the flag when a condition or action is emptied", () => {
+        const model = sampleModel();
+        const choice = model.roots[0]!.states[0]!.choices[1]!;
+        choice.condition = undefined;
+        choice.action = undefined;
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.transitions[1]!.flags).not.toContain("trigger");
+        expect(dlg.transitions[1]!.flags).not.toContain("action");
+        expect(dlg.transitions[1]!.triggerIndex).toBe(-1);
+        expect(dlg.transitions[1]!.actionIndex).toBe(-1);
+    });
+
+    it("gives a new trigger to a state that had none", () => {
+        const model = sampleModel();
+        model.roots[0]!.states[1]!.trigger = 'Global("new","GLOBAL",1)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.stateTriggers[dlg.states[1]!.triggerIndex]).toBe('Global("new","GLOBAL",1)');
+    });
+});

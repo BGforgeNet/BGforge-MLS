@@ -47,10 +47,13 @@ const main: DlgModelInput = {
         { text: 100, firstTransition: 0, transitionCount: 2, triggerIndex: 0 },
         { text: 101, firstTransition: 2, transitionCount: 0, triggerIndex: -1 },
     ],
-    transitions: [reply(200, "", 1), reply(201, "VICONIA", 0)],
+    transitions: [
+        { ...reply(200, "", 1), triggerIndex: 0, hasTrigger: true, actionIndex: 0, hasAction: true },
+        reply(201, "VICONIA", 0),
+    ],
     stateTriggers: ["NumTimesTalkedTo(0)"],
-    transitionTriggers: [],
-    actions: [],
+    transitionTriggers: ['Global("boo","GLOBAL",1)'],
+    actions: ['SetGlobal("boo","GLOBAL",2)'],
 };
 
 /** The neighbour, whose own reply goes back into MINSC - the out-and-back shape. */
@@ -116,6 +119,16 @@ check("no string picker or detach on a foreign state", pick === 0 && detach === 
 const tgt = page.locator("select.tgt").first();
 check("the foreign state's reply cannot be retargeted", await tgt.isDisabled(), "target select enabled");
 
+// The code fields on a state this editor cannot write stay locked, and say why in the right terms.
+const foreignTrigger = page.locator(".inspector textarea.ta").first();
+check("a foreign state's trigger is locked", await foreignTrigger.isDisabled(), "foreign trigger enabled");
+const foreignReason = (await foreignTrigger.getAttribute("title")) ?? "";
+check(
+    "and the reason names the other dialog rather than read-only",
+    /another dialog/i.test(foreignReason) && !/read-only/i.test(foreignReason),
+    JSON.stringify(foreignReason),
+);
+
 const heads = await page.locator(".svelte-flow__node .card .who").allTextContents();
 check(
     "each card is headed by its own dialog, not by the file that is open",
@@ -123,6 +136,59 @@ check(
     JSON.stringify(heads),
 );
 
+// A compiled dialog holds its trigger, condition and action as TEXT and the save path writes an edited one
+// back, so the file-wide "not free text" flag - which is about its LINES being strrefs - must not lock them.
+await page.locator(".svelte-flow__node .card:not(.foreign)").first().click({ force: true });
+
+const stateTrigger = page.locator(".inspector textarea.ta").first();
+check("a compiled state's own trigger can be typed into", await stateTrigger.isEnabled(), "trigger disabled");
+check(
+    "the trigger shows the text the file holds",
+    (await stateTrigger.inputValue()) === "NumTimesTalkedTo(0)",
+    JSON.stringify(await stateTrigger.inputValue()),
+);
+
+const codeFields = await page.locator(".inspector textarea.ta").all();
+const codeStates = await Promise.all(codeFields.map((f) => f.isEnabled()));
+check(
+    "its replies' conditions and actions are editable too",
+    codeFields.length >= 3 && codeStates.every(Boolean),
+    `fields=${codeFields.length} enabled=${codeStates.filter(Boolean).length}`,
+);
+
+// The number IS the address other dialogs hold, so this field must refuse rather than silently drop the edit.
+const idField = page.locator(".inspector input.iv.code").first();
+check("a compiled state's number cannot be renamed", await idField.isDisabled(), "id field enabled");
+const idReason = (await idField.getAttribute("title")) ?? "";
+check(
+    "and it says the number is the address, not that the file is read-only",
+    /number/i.test(idReason) && !/read-only/i.test(idReason),
+    JSON.stringify(idReason),
+);
+
+// Weight is a `.d` construct; an always-empty box invites an edit with nowhere to go.
+const weight = await page.locator(".inspector .wcol").count();
+check("no weight field on a compiled dialog", weight === 0, `wcol=${weight}`);
+
+// The second reply hands off to VICONIA:0, which the tree holds and the writer can store (it writes that
+// file's resref). A picker listing only the open file's states shows the hand-off as an EMPTY selection.
+const handoff = page.locator(".inspector select.tgt").nth(1);
+check(
+    "a reply into another dialog shows that dialog's state as its target",
+    (await handoff.inputValue()) === "state:VICONIA:0",
+    JSON.stringify(await handoff.inputValue()),
+);
+const targetOptions = await handoff.locator("option").allTextContents();
+check(
+    "and the picker offers the states of every dialog in the tree",
+    targetOptions.some((t) => t.includes("VICONIA:0")) && targetOptions.some((t) => t.includes("MINSC:1")),
+    JSON.stringify(targetOptions),
+);
+
+const removes = await page.locator(".inspector .trbtns button.del").count();
+check("a reply carrying a trigger can still be removed", removes === 2, `removes=${removes}`);
+
+await page.locator(".svelte-flow__node .card:not(.foreign)").first().click({ force: true });
 await page.screenshot({ path: shot, fullPage: false });
 console.log(`screenshot: ${shot}`);
 

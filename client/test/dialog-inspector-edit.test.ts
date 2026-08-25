@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+    codeFieldEditable,
+    codeLockReason,
+    dlgRenameLockReason,
     conditionLockReason,
     isPendingChoice,
     isPendingState,
@@ -527,4 +530,52 @@ it("derives conditionEditable from ifPure (gates the option alone) and absence o
     expect(choices[2]!.conditionEditable).toBe(false); // shared/impure if
     expect(choices[1]!.condRange).toEqual({ start: 0, end: 3 });
     expect(choices[1]!.ifRange).toEqual({ start: 0, end: 9 });
+});
+
+describe("codeFieldEditable (trigger / condition / action)", () => {
+    it("lets a compiled dialog's own state take a trigger, condition or action", () => {
+        // A DLG stores these as text in its own tables and the writer puts an edited one back, so the
+        // file-wide `editable` flag - false because a DLG line is a strref, not prose - must not lock them.
+        expect(codeFieldEditable({ dlg: true, foreign: false, editable: false })).toBe(true);
+    });
+
+    it("locks them on a state belonging to another dialog", () => {
+        expect(codeFieldEditable({ dlg: true, foreign: true, editable: false })).toBe(false);
+    });
+
+    it("leaves the D family on the file's own edit flag", () => {
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: true })).toBe(true);
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: false })).toBe(false);
+    });
+
+    it("locks a derived state whatever the family", () => {
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: true, derivedFrom: "CHAIN" })).toBe(false);
+    });
+});
+
+describe("codeLockReason", () => {
+    it("says nothing when the field is editable", () => {
+        expect(codeLockReason({ dlg: true, foreign: false, editable: false })).toBe("");
+    });
+
+    it("explains a foreign compiled state by the file it belongs to, not by read-only", () => {
+        const reason = codeLockReason({ dlg: true, foreign: true, editable: false });
+
+        expect(reason).toMatch(/another dialog/i);
+        expect(reason).not.toMatch(/read-only/i);
+    });
+
+    it("keeps the read-only wording for the D family", () => {
+        expect(codeLockReason({ dlg: false, foreign: false, editable: false })).toMatch(/read-only/i);
+    });
+});
+
+describe("dlgRenameLockReason", () => {
+    it("says the number is the address, not that the file is read-only", () => {
+        const reason = dlgRenameLockReason();
+
+        // The rename field used to be ENABLED on a DLG state and silently drop what was typed.
+        expect(reason).toMatch(/number/i);
+        expect(reason).not.toMatch(/read-only/i);
+    });
 });
