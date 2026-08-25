@@ -65,7 +65,7 @@ function latin1Bytes(text: string, where: string): Uint8Array {
     return out;
 }
 
-function resrefBytes(text: string, where: string): void {
+function assertResrefSize(text: string, where: string): void {
     if (text.length !== RESREF_SIZE) {
         throw new Error(`Cannot store ${where}: a resref is ${RESREF_SIZE} bytes, got ${text.length}`);
     }
@@ -78,7 +78,7 @@ export function buildDlg(input: DlgBuildInput): Uint8Array {
         ...input.transitionTriggers.map((s, i) => latin1Bytes(s, `transitionTriggers[${i}]`)),
         ...input.actions.map((s, i) => latin1Bytes(s, `actions[${i}]`)),
     ];
-    input.transitions.forEach((t, i) => resrefBytes(t.nextDialog, `transitions[${i}].nextDialog`));
+    input.transitions.forEach((t, i) => assertResrefSize(t.nextDialog, `transitions[${i}].nextDialog`));
 
     const stateTableOffset = headerSize;
     const transitionTableOffset = stateTableOffset + input.states.length * DLG_STATE_SIZE;
