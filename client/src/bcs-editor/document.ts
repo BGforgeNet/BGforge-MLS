@@ -66,10 +66,6 @@ export function viewPath(sourceFile: string): string {
     return `${sourceFile}${VIEW_SUFFIX}`;
 }
 
-export function sourcePath(view: { path: string }): string {
-    return view.path.replace(/\.baf$/, "");
-}
-
 /**
  * Why a script cannot be shown without a game, as a BAF comment.
  *

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
-import { bcsEngineForScriptStyle, render, sourcePath } from "../src/bcs-editor/document";
+import { bcsEngineForScriptStyle, render } from "../src/bcs-editor/document";
 
 /**
  * What a `.bcs` tab shows.
@@ -71,10 +71,6 @@ describe("the decompiled view of a .bcs", () => {
     // An empty script really ships, and the reader refuses it rather than calling it a script with no blocks.
     it("says so for an empty file rather than failing the open", () => {
         expect(render(bcsFile(""), NAMING)).toContain("is empty");
-    });
-
-    it("maps the view document back to the file it renders", () => {
-        expect(sourcePath({ path: "/games/bg2/data/AERIE.bcs.baf" })).toBe("/games/bg2/data/AERIE.bcs");
     });
 
     /**
