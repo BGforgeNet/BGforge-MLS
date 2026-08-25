@@ -157,8 +157,19 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         // Deliberately not awaited: this returns to the caller immediately and the scan yields as it goes,
         // so opening a game costs exactly what it did before.
         void references.build(dlgSourceFor(game), controller.signal).catch((error: unknown) => {
-            conlog(
-                `ieResources: dialog reference scan failed: ${error instanceof Error ? error.message : String(error)}`,
+            // Release the dir so a later open retries it. Without this a failed scan is indistinguishable
+            // from one still running, permanently: `references.ready` stays false, `inbound` keeps answering
+            // undefined, and every detach prompt reports "the reference scan is still building" for the rest
+            // of the session - a scan that will never run again described as one about to finish.
+            if (scannedDir === dir) scannedDir = undefined;
+            const reason = error instanceof Error ? error.message : String(error);
+            conlog(`ieResources: dialog reference scan failed: ${reason}`);
+            // Said out loud, not only logged: the editor keeps working, but every detach prompt is now
+            // reporting an unknown rather than a checked "nothing else reaches this state", and that
+            // difference is the whole reason the scan exists.
+            void vscode.window.showWarningMessage(
+                `Could not scan ${dir} for dialog cross-references, so this session cannot say which other ` +
+                    `dialogs reach a state. ${reason}`,
             );
         });
     };
