@@ -539,3 +539,70 @@ describe("writeDlgFromModel (leaving untouched content alone)", () => {
         expect(Buffer.from(writeDlgFromModel(bytes, model, "TEST"))).toEqual(Buffer.from(bytes));
     });
 });
+
+/**
+ * Successive saves, which is how the editor actually uses this.
+ *
+ * Every case above starts from the pristine `original()`. Production does not: `DlgDocument.applyModel` writes
+ * against the bytes the LAST save produced, and `postModel` re-reads them into the model the next edit is made
+ * on. So the second save is the first one made against this writer's own output rather than `buildDlg`'s, and
+ * it is the first to meet a table that already holds what the previous save appended - neither of which a
+ * single clean invocation can reach.
+ */
+describe("writeDlgFromModel (across successive saves)", () => {
+    /** The model the editor would hold after re-reading a save, which is what the next edit mutates. */
+    const reopen = (bytes: Uint8Array): DialogModel => modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+    const withTrigger = (bytes: Uint8Array, trigger: string): Uint8Array => {
+        const model = reopen(bytes);
+        model.roots[0]!.states[0]!.trigger = trigger;
+        return writeDlgFromModel(bytes, model, "TEST");
+    };
+
+    it("accepts a save made against the previous save's bytes", () => {
+        const first = withTrigger(original(), "A()");
+
+        const second = withTrigger(first, "B()");
+
+        const dlg = readDlg(second);
+        expect(dlg.stateTriggers[dlg.states[0]!.triggerIndex]).toBe("B()");
+    });
+
+    it("preserves every state's index across a chain of saves", () => {
+        // The invariant the writer throws on. It has only ever been checked against buildDlg's own layout;
+        // this is the first time it is checked against bytes this writer produced.
+        const third = withTrigger(withTrigger(withTrigger(original(), "A()"), "B()"), "C()");
+
+        const dlg = readDlg(third);
+        expect(dlg.states).toHaveLength(2);
+        expect(dlg.states.map((s) => s.text)).toEqual([10, 11]);
+        expect(dlg.transitions).toHaveLength(3);
+    });
+
+    it("writes the same bytes again when the second save changed nothing", () => {
+        // Idempotence: without it the file drifts a little on every save, which is exactly what a user who
+        // opens and closes a dialog repeatedly would hit.
+        const first = withTrigger(original(), "A()");
+
+        const second = writeDlgFromModel(first, reopen(first), "TEST");
+
+        expect(Buffer.from(second)).toEqual(Buffer.from(first));
+    });
+
+    it("appends one superseded entry per edit, and no more", () => {
+        // The documented cost of never renumbering: a replaced entry stays. What must NOT happen is a table
+        // growing by more than the edits made, which is what a re-append of an unchanged entry would look like.
+        const third = withTrigger(withTrigger(withTrigger(original(), "A()"), "B()"), "C()");
+
+        // The fixture ships one trigger; three edits add three.
+        expect(readDlg(third).stateTriggers).toEqual(['Global("x","GLOBAL",1)', "A()", "B()", "C()"]);
+    });
+
+    it("reuses an existing entry when an edit returns to a value the table already holds", () => {
+        const back = withTrigger(withTrigger(withTrigger(original(), "A()"), "B()"), "A()");
+
+        const dlg = readDlg(back);
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)', "A()", "B()"]);
+        expect(dlg.states[0]!.triggerIndex).toBe(1);
+    });
+});
