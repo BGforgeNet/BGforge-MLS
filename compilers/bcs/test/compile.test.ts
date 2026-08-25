@@ -184,6 +184,7 @@ function symbolsWith(rows: { triggers?: BcsSignatureRow[]; actions?: BcsSignatur
         triggerByName: (name) => [...COMPILE_SYMBOLS.triggerByName(name), ...named(rows.triggers, name)],
         actionByName: (name) => [...COMPILE_SYMBOLS.actionByName(name), ...named(rows.actions, name)],
         ids: COMPILE_SYMBOLS.ids,
+        idsAll: COMPILE_SYMBOLS.idsAll,
     };
 }
 
@@ -194,6 +195,7 @@ function symbolsWithout(missing: string): BcsCompileSymbols {
         triggerByName: (name) => (gone(name) ? [] : COMPILE_SYMBOLS.triggerByName(name)),
         actionByName: COMPILE_SYMBOLS.actionByName,
         ids: COMPILE_SYMBOLS.ids,
+        idsAll: COMPILE_SYMBOLS.idsAll,
     };
 }
 

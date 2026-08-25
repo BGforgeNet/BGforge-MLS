@@ -61,6 +61,12 @@ export interface BcsCompileSymbols {
     actionByName(name: string): readonly BcsSignatureRow[];
     /** An IDS table by name, without the extension, for enumerated arguments and object fields. */
     ids(table: string): ReadonlyMap<number, string> | undefined;
+    /**
+     * The same table, every alias a value has rather than the one `ids` singles out as canonical - a real
+     * script can spell any of them (SCROLL.IDS 4 is `BD_NORMAL` to `ids`, but `VERY_FAST` names it too), so
+     * the compile direction resolves against all of them while the decompile direction still picks one.
+     */
+    idsAll(table: string): ReadonlyMap<number, readonly string[]> | undefined;
 }
 
 /**
@@ -98,6 +104,7 @@ export function compileSymbolsFrom(game: BcsTableSource): BcsCompileSymbols {
         triggerByName: (name) => triggers.get(name.toLowerCase()) ?? [],
         actionByName: (name) => actions.get(name.toLowerCase()) ?? [],
         ids: (table) => game.ids(table),
+        idsAll: (table) => game.idsAll(table),
     };
 }
 
@@ -533,9 +540,17 @@ class Compiler {
         return coordinates;
     }
 
-    /** An integer argument: a literal, or a name the parameter's own table gives a value. */
+    /** An integer argument: a literal, a name the parameter's own table gives a value, or either bracketed. */
     private enumerated(node: SyntaxNode, parameter: Parameter): number {
         if (node.type === SyntaxType.Number) return this.integer(node);
+        if (node.type === SyntaxType.ObjectRef) {
+            // The object-ref bracket syntax ([NEUTRAL], [3]) also appears on plain enumerated arguments in
+            // real scripts (e.g. `Allegiance(Myself,[NEUTRAL])`) - WeiDU's grammar doesn't distinguish an
+            // object specifier from a bracketed enum value until the parameter's own type does, so a single
+            // unwrapped component is read the same as if the brackets were absent.
+            const components = items(node);
+            if (components.length === 1) return this.enumerated(components[0]!, parameter);
+        }
         if (node.type !== SyntaxType.Identifier) {
             this.fail(node, `expected a number, not ${node.text}`);
             return 0;
@@ -572,10 +587,14 @@ class Compiler {
         let inverted = this.byName.get(key);
         if (inverted === undefined) {
             const built = new Map<string, number>();
-            // The FIRST name wins where a table spells one twice, which is the row a reader meets first.
-            for (const [value, entry] of this.symbols.ids(table) ?? []) {
-                const lowered = entry.toLowerCase();
-                if (!built.has(lowered)) built.set(lowered, int32(value));
+            // idsAll, not ids: a real script can spell any alias a value has, not only the one `ids()`
+            // singles out as canonical (SCROLL.IDS 4 is `BD_NORMAL` to `ids()`, but `VERY_FAST` names it
+            // too). The FIRST name wins where two values spell the same name, which is the row met first.
+            for (const [value, entries] of this.symbols.idsAll(table) ?? []) {
+                for (const entry of entries) {
+                    const lowered = entry.toLowerCase();
+                    if (!built.has(lowered)) built.set(lowered, int32(value));
+                }
             }
             inverted = built;
             this.byName.set(key, inverted);

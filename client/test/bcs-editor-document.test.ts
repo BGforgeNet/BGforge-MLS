@@ -39,7 +39,12 @@ const SYMBOLS: BcsSymbols = {
 };
 
 /** Nothing here compiles, so the write-side tables stay empty - `render` never reads them. */
-const NO_COMPILE_SYMBOLS: BcsCompileSymbols = { triggerByName: () => [], actionByName: () => [], ids: () => undefined };
+const NO_COMPILE_SYMBOLS: BcsCompileSymbols = {
+    triggerByName: () => [],
+    actionByName: () => [],
+    ids: () => undefined,
+    idsAll: () => undefined,
+};
 
 const NAMING = { symbols: SYMBOLS, compileSymbols: NO_COMPILE_SYMBOLS, engine: "bg" } as const;
 

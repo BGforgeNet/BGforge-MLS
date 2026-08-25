@@ -77,6 +77,16 @@ export function readIdsTables(dir: string): IdsTables {
         }
         return enumerated.get(key);
     };
+    const enumeratedAll = new Map<string, ReadonlyMap<number, readonly string[]> | undefined>();
+    const idsAll = (table: string): ReadonlyMap<number, readonly string[]> | undefined => {
+        const key = table.toUpperCase();
+        if (!enumeratedAll.has(key)) {
+            const grouped = new Map<number, string[]>();
+            for (const [id, name] of readTable(dir, table)) grouped.set(id, [...(grouped.get(id) ?? []), name]);
+            enumeratedAll.set(key, grouped.size === 0 ? undefined : grouped);
+        }
+        return enumeratedAll.get(key);
+    };
 
     return {
         symbols: {
@@ -87,6 +97,7 @@ export function readIdsTables(dir: string): IdsTables {
         compileSymbols: {
             triggerByName: (name) => triggersByName.get(name.toLowerCase()) ?? [],
             actionByName: (name) => actionsByName.get(name.toLowerCase()) ?? [],
+            idsAll,
             ids,
         },
     };

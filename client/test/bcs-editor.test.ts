@@ -155,6 +155,7 @@ const COMPILE_SYMBOLS: BcsCompileSymbols = {
     triggerByName: (name) => (name.toLowerCase() === "false" ? [{ id: 16432, signature: "False()" }] : []),
     actionByName: (name) => (name.toLowerCase() === "continue" ? [{ id: 36, signature: "Continue()" }] : []),
     ids: () => undefined,
+    idsAll: () => undefined,
 };
 
 const NAMING = { symbols: SYMBOLS, compileSymbols: COMPILE_SYMBOLS, engine: "bg" } as const;
