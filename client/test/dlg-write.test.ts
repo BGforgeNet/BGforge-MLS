@@ -336,8 +336,7 @@ describe("writeDlgFromModel (edited trigger, condition and action)", () => {
 
         expect(dlg.transitions[1]!.flags).not.toContain("trigger");
         expect(dlg.transitions[1]!.flags).not.toContain("action");
-        expect(dlg.transitions[1]!.triggerIndex).toBe(-1);
-        expect(dlg.transitions[1]!.actionIndex).toBe(-1);
+        // The now-unread slots keep the values the file had; see the unused-index-slot tests below.
     });
 
     it("gives a new trigger to a state that had none", () => {
@@ -397,5 +396,146 @@ describe("writeDlgFromModel (line endings in script text)", () => {
 
         expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)\r\nTrue()']);
         expect(dlg.states[0]!.triggerIndex).toBe(0);
+    });
+});
+
+/**
+ * A reply with no trigger still has a trigger-index slot, and the shipped files disagree about what goes in
+ * it - 22950 transitions in Throne of Bhaal hold 0, 27778 hold -1, 113 hold something else. The engine reads
+ * it only when the flag is set, so the value is free; rewriting it is not, because it makes an untouched
+ * open-and-save differ from the file it came from.
+ */
+describe("writeDlgFromModel (unused index slots)", () => {
+    const withStaleSlots = () =>
+        buildDlg({
+            ...sample(),
+            transitions: [
+                // Flags say no trigger and no action, but the slots hold live-looking values.
+                {
+                    flags: ["text"],
+                    text: 20,
+                    journalText: -1,
+                    triggerIndex: 0,
+                    actionIndex: 0,
+                    nextDialog: resref("TEST"),
+                    nextState: 1,
+                },
+                ...sample().transitions.slice(1),
+            ],
+        });
+
+    it("leaves an unused trigger slot exactly as the file had it", () => {
+        const bytes = withStaleSlots();
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+        const dlg = readDlg(writeDlgFromModel(bytes, model, "TEST"));
+
+        expect(dlg.transitions[0]!.hasTrigger).toBe(false);
+        expect(dlg.transitions[0]!.triggerIndex).toBe(0);
+        expect(dlg.transitions[0]!.actionIndex).toBe(0);
+    });
+
+    it("round-trips such a file byte for byte", () => {
+        const bytes = withStaleSlots();
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+        expect(Buffer.from(writeDlgFromModel(bytes, model, "TEST"))).toEqual(Buffer.from(bytes));
+    });
+
+    it("still clears the flag when a condition is removed, without inventing an index", () => {
+        const model = sampleModel();
+        // The second reply of state 0 carries a trigger in the fixture.
+        model.roots[0]!.states[0]!.choices[1]!.condition = undefined;
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.transitions[1]!.hasTrigger).toBe(false);
+        expect(dlg.transitions[1]!.triggerIndex).toBe(0); // the slot it already had, now unread
+    });
+});
+
+/**
+ * Resource names are case-insensitive to the game and real files spell them however the author typed them
+ * (`AmMonk02`, `SenMonk`). The model uppercases for comparison, so a reply that still points where it did
+ * must keep the file's own spelling rather than having the normalized form written back over it.
+ */
+describe("writeDlgFromModel (resref spelling)", () => {
+    const mixedCase = () =>
+        buildDlg({
+            ...sample(),
+            transitions: [
+                { ...sample().transitions[0]!, nextDialog: resref("AmMonk02"), nextState: 1 },
+                ...sample().transitions.slice(1),
+            ],
+        });
+
+    it("keeps the spelling a reply's target already had", () => {
+        const bytes = mixedCase();
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+        const dlg = readDlg(writeDlgFromModel(bytes, model, "TEST"));
+
+        expect(dlg.transitions[0]!.nextDialog).toBe(resref("AmMonk02"));
+    });
+
+    it("round-trips such a file byte for byte", () => {
+        const bytes = mixedCase();
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+        expect(Buffer.from(writeDlgFromModel(bytes, model, "TEST"))).toEqual(Buffer.from(bytes));
+    });
+
+    it("writes the model's own form when the reply is pointed somewhere else", () => {
+        const bytes = mixedCase();
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+        model.roots[0]!.states[0]!.choices[0]!.target = { kind: "state", stateId: "OTHER:3" };
+
+        const dlg = readDlg(writeDlgFromModel(bytes, model, "TEST"));
+
+        expect(dlg.transitions[0]!.nextDialog).toBe(resref("OTHER"));
+        expect(dlg.transitions[0]!.nextState).toBe(3);
+    });
+});
+
+/**
+ * Normalizing belongs to text the user typed, never to text the file already held. A handful of shipped
+ * dialogs store their triggers with bare LF, and an empty target resref means "this dialog"; rewriting
+ * either turns an untouched save into a modified file.
+ */
+describe("writeDlgFromModel (leaving untouched content alone)", () => {
+    it("keeps an LF-separated trigger the file already had, at its own index", () => {
+        const lf = buildDlg({ ...sample(), stateTriggers: ["A()\nB()"] });
+        const model = modelFromDlg({ ...readDlg(lf), resref: "TEST" });
+
+        const dlg = readDlg(writeDlgFromModel(lf, model, "TEST"));
+
+        expect(dlg.stateTriggers).toEqual(["A()\nB()"]);
+        expect(dlg.states[0]!.triggerIndex).toBe(0);
+    });
+
+    it("still writes CRLF once that trigger is actually edited", () => {
+        const lf = buildDlg({ ...sample(), stateTriggers: ["A()\nB()"] });
+        const model = modelFromDlg({ ...readDlg(lf), resref: "TEST" });
+        model.roots[0]!.states[0]!.trigger = "A()\nC()";
+
+        const dlg = readDlg(writeDlgFromModel(lf, model, "TEST"));
+
+        expect(dlg.stateTriggers[dlg.states[0]!.triggerIndex]).toBe("A()\r\nC()");
+    });
+
+    it("keeps an empty target resref, which already means this dialog", () => {
+        const bytes = buildDlg({
+            ...sample(),
+            transitions: [
+                { ...sample().transitions[0]!, nextDialog: resref(""), nextState: 1 },
+                ...sample().transitions.slice(1),
+            ],
+        });
+        const model = modelFromDlg({ ...readDlg(bytes), resref: "TEST" });
+
+        const dlg = readDlg(writeDlgFromModel(bytes, model, "TEST"));
+
+        expect(dlg.transitions[0]!.nextDialog).toBe(resref(""));
+        expect(Buffer.from(writeDlgFromModel(bytes, model, "TEST"))).toEqual(Buffer.from(bytes));
     });
 });

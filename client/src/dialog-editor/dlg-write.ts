@@ -48,7 +48,12 @@ const crlf = (text: string): string => text.replaceAll(/\r\n|\r|\n/g, "\r\n");
  */
 function tableIndex(table: string[], originalIndex: number | undefined, raw: string): number {
     const text = crlf(raw);
-    if (originalIndex !== undefined && originalIndex >= 0 && table[originalIndex] === text) return originalIndex;
+    // Compared after normalizing BOTH sides, so an entry the file stores with bare LF - a handful of shipped
+    // dialogs do - counts as unchanged and keeps its own bytes. Normalizing is for text the user typed.
+    if (originalIndex !== undefined && originalIndex >= 0) {
+        const original = table[originalIndex];
+        if (original !== undefined && crlf(original) === text) return originalIndex;
+    }
     const existing = table.indexOf(text);
     if (existing !== -1) return existing;
     table.push(text);
@@ -72,14 +77,36 @@ function targetFields(
         const parsed = parseDlgStateId(target.stateId);
         if (!parsed) throw new Error(`writeDlgFromModel: cannot store the target ${JSON.stringify(target.stateId)}`);
         if (parsed.resref === ownResref) checkLocalState(target.stateId);
-        return { nextDialog: resrefBytes(parsed.resref), nextState: parsed.index, terminates: false };
+        return {
+            nextDialog: dialogBytes(base, parsed.resref, parsed.index, ownResref),
+            nextState: parsed.index,
+            terminates: false,
+        };
     }
     // An external target renders as `RESREF:state`; that is the only form this writer can put back on the wire.
     const match = /^(\w{1,8}):(\d+)$/.exec(target.label);
     if (!match) {
         throw new Error(`writeDlgFromModel: cannot store the target ${JSON.stringify(target.label)}`);
     }
-    return { nextDialog: resrefBytes(match[1]!.toUpperCase()), nextState: Number(match[2]), terminates: false };
+    const resref = match[1]!.toUpperCase();
+    const index = Number(match[2]);
+    return { nextDialog: dialogBytes(base, resref, index, ownResref), nextState: index, terminates: false };
+}
+
+/**
+ * The resref field for a reply pointing at `resref`:`index`. A destination the reply already had keeps the
+ * file's own spelling - resrefs are case-insensitive to the game and authors mix case (`AmMonk02`) where the
+ * model uppercases to compare, so normalizing it would rewrite bytes on a save that changed nothing.
+ */
+function dialogBytes(base: TransitionRecord | undefined, resref: string, index: number, ownResref: string): string {
+    // An empty resref on the wire already means this dialog, which is how the model read it - so it is the
+    // same destination, not a missing one, and writing our name over it would be a change nobody asked for.
+    const unchanged =
+        base !== undefined &&
+        !base.flags.includes(DlgTransitionFlag.TerminatesDialog) &&
+        base.nextState === index &&
+        (resrefName(base.nextDialog) || ownResref) === resref;
+    return unchanged ? base.nextDialog : resrefBytes(resref);
 }
 
 /** Flags rebuilt from what this reply now carries, keeping every bit the model does not speak for. */
@@ -162,11 +189,17 @@ export function writeDlgFromModel(bytes: Uint8Array, model: DialogModel, ownResr
                 ...(tBase ?? { journalText: -1 }),
                 flags: flagsFor(choice, tBase, terminates),
                 text: choice.text === undefined ? (tBase?.text ?? -1) : strrefOf(choice.text, `reply ${choice.id}`),
+                // An unused slot keeps whatever the file had in it. The flag is what the engine reads, and the
+                // shipped files fill the slot both ways, so rewriting it would change bytes nobody asked to
+                // change - an untouched open-and-save must come back as the file it opened.
                 triggerIndex:
                     choice.condition === undefined
-                        ? -1
+                        ? (tBase?.triggerIndex ?? -1)
                         : tableIndex(transitionTriggers, tBase?.triggerIndex, choice.condition),
-                actionIndex: choice.action === undefined ? -1 : tableIndex(actions, tBase?.actionIndex, choice.action),
+                actionIndex:
+                    choice.action === undefined
+                        ? (tBase?.actionIndex ?? -1)
+                        : tableIndex(actions, tBase?.actionIndex, choice.action),
                 nextDialog,
                 nextState,
             });
@@ -178,7 +211,9 @@ export function writeDlgFromModel(bytes: Uint8Array, model: DialogModel, ownResr
             firstTransition,
             transitionCount: state.choices.length,
             triggerIndex:
-                state.trigger === undefined ? -1 : tableIndex(stateTriggers, base?.triggerIndex, state.trigger),
+                state.trigger === undefined
+                    ? (base?.triggerIndex ?? -1)
+                    : tableIndex(stateTriggers, base?.triggerIndex, state.trigger),
         });
     }
 
