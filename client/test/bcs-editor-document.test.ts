@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
-import { render } from "../src/bcs-editor/document";
 import { bcsEngineForScriptStyle } from "../../shared/bcs-engine";
 
 /**
@@ -11,8 +10,26 @@ import { bcsEngineForScriptStyle } from "../../shared/bcs-engine";
  *
  * The install-gating is the part worth pinning: a script's every name is a number the game's own IDS tables
  * resolve, so without a game the only faithful rendering is bare numbers - and the view says so instead.
+ *
+ * `render` reads its source through `vscode.workspace.fs`, so the module needs a minimal `vscode` - just the
+ * one method it calls, bridged to real node `fs` so the round trip still runs against a real temp file.
  */
+vi.mock("vscode", () => ({
+    workspace: {
+        fs: {
+            readFile: (uri: { path: string }) => Promise.resolve(new Uint8Array(fs.readFileSync(uri.path))),
+        },
+    },
+}));
+
+import { render } from "../src/bcs-editor/document";
+
 const written: string[] = [];
+
+/** A fake source URI standing in for `vscode.Uri.file`: only `.path`/`.fsPath` are read by anything under test. */
+function sourceOf(file: string): { path: string; fsPath: string } {
+    return { path: file, fsPath: file };
+}
 
 function bcsFile(body: string): string {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-"));
@@ -48,8 +65,8 @@ const NO_COMPILE_SYMBOLS: BcsCompileSymbols = {
 const NAMING = { symbols: SYMBOLS, compileSymbols: NO_COMPILE_SYMBOLS, engine: "bg" } as const;
 
 describe("the decompiled view of a .bcs", () => {
-    it("decompiles the script when the document has a game behind it", () => {
-        const text = render(bcsFile(SCRIPT), NAMING);
+    it("decompiles the script when the document has a game behind it", async () => {
+        const text = await render(sourceOf(bcsFile(SCRIPT)) as never, NAMING);
 
         expect(text).toBe(["IF", "  False()", "THEN", "  RESPONSE #100", "    Continue()", "END", ""].join("\n"));
     });
@@ -58,8 +75,8 @@ describe("the decompiled view of a .bcs", () => {
      * Without a game the numbers cannot be named, and printing them would look like a decompilation that had
      * simply lost every name. The notice has to say what to do about it, so it names both ways to open a game.
      */
-    it("explains itself rather than printing bare numbers when there is no game", () => {
-        const text = render(bcsFile(SCRIPT), undefined);
+    it("explains itself rather than printing bare numbers when there is no game", async () => {
+        const text = await render(sourceOf(bcsFile(SCRIPT)) as never, undefined);
 
         expect(text).toContain("needs the game it belongs to");
         expect(text).toContain("bgforge.weidu.gamePath");
@@ -74,15 +91,15 @@ describe("the decompiled view of a .bcs", () => {
     });
 
     // An empty script really ships, and the reader refuses it rather than calling it a script with no blocks.
-    it("says so for an empty file rather than failing the open", () => {
-        expect(render(bcsFile(""), NAMING)).toContain("is empty");
+    it("says so for an empty file rather than failing the open", async () => {
+        expect(await render(sourceOf(bcsFile("")) as never, NAMING)).toContain("is empty");
     });
 
     /**
      * The engine decides which IDS table names each of an object's enumerated fields, so the same stored
      * record reads differently per game. Torment's second field is FACTION where the BG family's is GENERAL.
      */
-    it("names an object's fields by the open game's engine", () => {
+    it("names an object's fields by the open game's engine", async () => {
         const script =
             'SC\nCR\nCO\nTR\n16412 0 0 0 0"" ""OB\n0 5 0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1.-1.-1] ""OB\nTR\nCO\nRS\nRS\nCR\nSC\n';
         const symbols: BcsSymbols = {
@@ -91,7 +108,11 @@ describe("the decompiled view of a .bcs", () => {
             ids: (table) => (table === "FACTION" ? new Map([[5, "FACTION_MERCYKILLER"]]) : undefined),
         };
 
-        const text = render(bcsFile(script), { symbols, compileSymbols: NO_COMPILE_SYMBOLS, engine: "pst" });
+        const text = await render(sourceOf(bcsFile(script)) as never, {
+            symbols,
+            compileSymbols: NO_COMPILE_SYMBOLS,
+            engine: "pst",
+        });
 
         expect(text.split("\n")[1]).toBe("  See([0.FACTION_MERCYKILLER])");
     });

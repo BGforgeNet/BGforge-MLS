@@ -11,9 +11,13 @@
  *
  * The write target is the compiled file itself. Nothing is written beside it and no intermediate source file is
  * created: the rendered text is a rendering of the file, not a second copy of it that could drift.
+ *
+ * The source is addressed by `vscode.Uri`, not by path, and every read/write goes through `vscode.workspace.fs`.
+ * That routes each source to whichever provider owns it - the real filesystem for `file:`, the game archive
+ * bridge for `bgforge-ie-resource:` - with no branching here: a compiled script living inside a BIF is served
+ * exactly like one on disk.
  */
 
-import * as fs from "fs";
 import * as vscode from "vscode";
 
 /** One located complaint from a failed compile, in the shape the Problems panel needs. */
@@ -31,29 +35,50 @@ export interface ScriptView {
     /** Names the diagnostic collection a refused save reports through. */
     readonly diagnostics: string;
     /**
-     * Appended to the compiled file's path to name the view document, so the tab reads as source and every
+     * Appended to the source's URI path to name the view document, so the tab reads as source and every
      * language feature keyed on the extension applies. Both directions come from this one value.
      */
     readonly viewSuffix: string;
-    /** The document body: the file rendered as source, or why there is none to show. */
-    render(file: string): string;
-    /** Compiles edited text into the bytes that replace the file. */
-    compile(file: string, text: string): Promise<Uint8Array>;
+    /** The document body: the source rendered as source, or why there is none to show. */
+    render(source: vscode.Uri): Promise<string>;
+    /** Compiles edited text into the bytes that replace the source. */
+    compile(source: vscode.Uri, text: string): Promise<Uint8Array>;
     /** The located problems inside a failed compile; empty when it carries none. */
     problemsOf(error: unknown): readonly ScriptViewProblem[];
     /**
-     * Why this file cannot be saved back AT ALL, or undefined when it can - a property of the file, so it is
-     * also what marks the tab read-only before an edit is attempted. Views whose every document is writable
+     * Why this source cannot be saved back AT ALL, or undefined when it can - a property of the source, so it
+     * is also what marks the tab read-only before an edit is attempted. Views whose every document is writable
      * omit it.
      */
-    refuseFile?(file: string): string | undefined;
+    refuseFile?(source: vscode.Uri): Promise<string | undefined>;
     /**
      * Why this TEXT cannot be compiled back, or undefined - a property of what the buffer now holds, which
      * only a save can know. Views whose rendering is always source omit it.
      */
-    refuseText?(file: string, text: string): string | undefined;
+    refuseText?(source: vscode.Uri, text: string): string | undefined;
     /** Extra detail for the failure sentence when a compile error carries no located problems. */
     detailOf?(error: unknown): string;
+}
+
+/**
+ * The view URI for a source: named `<source path><viewSuffix>` so the tab reads as source, carrying the
+ * source's own URI in a `src` query so `sourceUriOf` can recover it. The path alone cannot express the source,
+ * since a source is not always a file: a tree-opened script's source is a `bgforge-ie-resource:` URI, which
+ * `.path` names but which no other view URI's path could stand in for.
+ */
+export function buildViewUri(scheme: string, viewSuffix: string, source: vscode.Uri): vscode.Uri {
+    return vscode.Uri.from({
+        scheme,
+        path: `${source.path}${viewSuffix}`,
+        query: `src=${encodeURIComponent(source.toString())}`,
+    });
+}
+
+/** The source a view URI stands for - the inverse of `buildViewUri`, read the same way on both sides. */
+export function sourceUriOf(view: vscode.Uri): vscode.Uri {
+    const src = new URLSearchParams(view.query).get("src");
+    if (src === null) throw new Error(`${view.toString()} carries no source`);
+    return vscode.Uri.parse(src);
 }
 
 export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
@@ -67,28 +92,38 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
      */
     private readonly problems: vscode.DiagnosticCollection;
     /**
-     * The last render of a file, keyed by path and mtime. `stat` has to report the RENDERED length (it is the
-     * text VS Code is about to read, and the stored size would make its large-file guard measure the wrong
+     * The last render of a source, keyed by its URI and mtime. `stat` has to report the RENDERED length (it is
+     * the text VS Code is about to read, and the stored size would make its large-file guard measure the wrong
      * thing), and `readFile` then produces the identical string moments later - so without this, opening or
      * saving a document renders it twice, and VS Code calls `stat` more often than that.
      */
-    private rendered: { file: string; mtimeMs: number; text: string } | undefined;
+    private rendered: { uri: string; mtimeMs: number; text: string } | undefined;
 
     constructor(view: ScriptView) {
         this.view = view;
         this.problems = vscode.languages.createDiagnosticCollection(view.diagnostics);
     }
 
-    /** The compiled file a view URI stands for. */
-    private sourcePath(uri: vscode.Uri): string {
-        return uri.path.endsWith(this.view.viewSuffix) ? uri.path.slice(0, -this.view.viewSuffix.length) : uri.path;
+    /** The source a view URI stands for. */
+    private sourceUri(uri: vscode.Uri): vscode.Uri {
+        return sourceUriOf(uri);
     }
 
-    private renderCached(file: string, mtimeMs: number): string {
+    /** `vscode.workspace.fs.stat`, reporting a missing or unreadable source as the VIEW URI's FileNotFound. */
+    private async statSource(source: vscode.Uri, viewUri: vscode.Uri): Promise<vscode.FileStat> {
+        try {
+            return await vscode.workspace.fs.stat(source);
+        } catch {
+            throw vscode.FileSystemError.FileNotFound(viewUri);
+        }
+    }
+
+    private async renderCached(source: vscode.Uri, mtimeMs: number): Promise<string> {
+        const key = source.toString();
         const hit = this.rendered;
-        if (hit && hit.file === file && hit.mtimeMs === mtimeMs) return hit.text;
-        const text = this.view.render(file);
-        this.rendered = { file, mtimeMs, text };
+        if (hit && hit.uri === key && hit.mtimeMs === mtimeMs) return hit.text;
+        const text = await this.view.render(source);
+        this.rendered = { uri: key, mtimeMs, text };
         return text;
     }
 
@@ -99,55 +134,50 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         });
     }
 
-    stat(uri: vscode.Uri): vscode.FileStat {
-        const file = this.sourcePath(uri);
-        let stats: fs.Stats;
-        try {
-            stats = fs.statSync(file);
-        } catch {
-            throw vscode.FileSystemError.FileNotFound(uri);
-        }
+    async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
+        const source = this.sourceUri(uri);
+        const stats = await this.statSource(source, uri);
+        const text = await this.renderCached(source, stats.mtime);
         return {
             type: vscode.FileType.File,
-            ctime: stats.ctimeMs,
-            mtime: stats.mtimeMs,
-            size: Buffer.byteLength(this.renderCached(file, stats.mtimeMs), "utf8"),
+            ctime: stats.ctime,
+            mtime: stats.mtime,
+            size: Buffer.byteLength(text, "utf8"),
             // A document that cannot be written back offers no save to refuse, rather than refusing one at
             // the end of the gesture.
-            ...(this.view.refuseFile?.(file) === undefined ? {} : { permissions: vscode.FilePermission.Readonly }),
+            ...((await this.view.refuseFile?.(source)) === undefined
+                ? {}
+                : { permissions: vscode.FilePermission.Readonly }),
         };
     }
 
-    readFile(uri: vscode.Uri): Uint8Array {
-        // Reading is also the REVERT path, and what it produces is the file on disk - which compiles by
-        // construction, since it came out of a compiled file. Whatever a refused save left in the Problems
+    async readFile(uri: vscode.Uri): Promise<Uint8Array> {
+        // Reading is also the REVERT path, and what it produces is the source - which compiles by
+        // construction, since it came out of a compiled source. Whatever a refused save left in the Problems
         // panel describes text that no longer exists.
         this.problems.delete(uri);
-        try {
-            const file = this.sourcePath(uri);
-            return Buffer.from(this.renderCached(file, fs.statSync(file).mtimeMs), "utf8");
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === "ENOENT") throw vscode.FileSystemError.FileNotFound(uri);
-            throw error;
-        }
+        const source = this.sourceUri(uri);
+        const stats = await this.statSource(source, uri);
+        const text = await this.renderCached(source, stats.mtime);
+        return Buffer.from(text, "utf8");
     }
 
     async writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void> {
-        const file = this.sourcePath(uri);
+        const source = this.sourceUri(uri);
         const text = Buffer.from(content).toString("utf8");
-        const refused = this.view.refuseFile?.(file) ?? this.view.refuseText?.(file, text);
+        const refused = (await this.view.refuseFile?.(source)) ?? this.view.refuseText?.(source, text);
         if (refused !== undefined) throw new Error(refused);
 
         let compiled: Uint8Array;
         try {
-            compiled = await this.view.compile(file, text);
+            compiled = await this.view.compile(source, text);
         } catch (error) {
             // Every refusal is reported the same way rather than only the ones this knows by class: a compiler
-            // throws a different error type per stage, and a save must not write the file on any of them.
-            throw new Error(this.reportRefusal(uri, file, error), { cause: error });
+            // throws a different error type per stage, and a save must not write the source on any of them.
+            throw new Error(this.reportRefusal(uri, source, error), { cause: error });
         }
         this.problems.delete(uri);
-        fs.writeFileSync(file, compiled);
+        await vscode.workspace.fs.writeFile(source, compiled);
         // The rendering this cached describes the bytes that were just replaced.
         this.rendered = undefined;
         this.changed.fire([{ type: vscode.FileChangeType.Changed, uri }]);
@@ -158,7 +188,7 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
      * the same list of problems, so the tab's message and the Problems panel cannot disagree about what went
      * wrong.
      */
-    private reportRefusal(uri: vscode.Uri, file: string, error: unknown): string {
+    private reportRefusal(uri: vscode.Uri, source: vscode.Uri, error: unknown): string {
         const found = this.view.problemsOf(error);
         this.problems.set(
             uri,
@@ -177,9 +207,9 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         const first = found[0];
         const rest = found.length > 1 ? ` (and ${found.length - 1} more)` : "";
         if (first)
-            return `${file} was not saved - it does not compile. ${first.line}:${first.column}: ${first.message}${rest}`;
+            return `${source.fsPath} was not saved - it does not compile. ${first.line}:${first.column}: ${first.message}${rest}`;
         const detail = this.view.detailOf?.(error);
-        return `${file} was not saved - it does not compile.${detail === undefined ? "" : ` ${detail}`}`;
+        return `${source.fsPath} was not saved - it does not compile.${detail === undefined ? "" : ` ${detail}`}`;
     }
 
     readDirectory(): [string, vscode.FileType][] {
@@ -192,13 +222,13 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
 
     delete(uri: vscode.Uri): void {
         throw vscode.FileSystemError.NoPermissions(
-            `delete ${this.sourcePath(uri)} in the explorer; this view is a rendering of it`,
+            `delete ${this.sourceUri(uri).fsPath} in the explorer; this view is a rendering of it`,
         );
     }
 
     rename(oldUri: vscode.Uri): void {
         throw vscode.FileSystemError.NoPermissions(
-            `rename ${this.sourcePath(oldUri)} in the explorer; this view is a rendering of it`,
+            `rename ${this.sourceUri(oldUri).fsPath} in the explorer; this view is a rendering of it`,
         );
     }
 

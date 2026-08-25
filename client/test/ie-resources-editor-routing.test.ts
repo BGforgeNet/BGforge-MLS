@@ -44,8 +44,10 @@ describe("viewTypeForResource", () => {
 
     // Never left to file association: the binary editor is registered for `*.pro` at DEFAULT priority, so an
     // unnamed `vscode.open` resolves to it anyway. A named view is what actually routes these elsewhere.
-    it("names a concrete view for a format it cannot parse, rather than leaving it unset", () => {
-        expect(viewTypeForResource("bcs")).toBe("default");
+    it("sends a compiled script to its decompiled-source view, which the parser registry cannot name", () => {
+        // A `.bcs` is not a record the binary editor's registry parses - it is decompiled to BAF, so nothing
+        // there could ever answer this. Only the extension map routes it, same as a compiled dialog.
+        expect(viewTypeForResource("bcs")).toBe("bgforge.bcsEditor");
     });
 
     it("sends a compiled dialog to the dialog webview, not the binary editor", () => {
@@ -170,20 +172,18 @@ describe("hasViewerFor", () => {
     // (`ref: { kind: "resource", type: "ITM" }`), where the tree passes a filename's lowercase extension. A
     // case-sensitive lookup here would withhold the chip from every field that currently has one.
     it("answers the same for a declared ref type as for a filename extension", () => {
-        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP"]) {
+        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP", "BCS"]) {
             expect(hasViewerFor(ext)).toBe(true);
         }
-        for (const ext of ["BCS", "PRO"]) {
-            expect(hasViewerFor(ext)).toBe(false);
-        }
+        expect(hasViewerFor("PRO")).toBe(false);
         // DLG gained a viewer of its own; the point of the check is that the answer tracks the view choice.
         expect(hasViewerFor("DLG")).toBe(true);
     });
 
-    // A creature's portraits are the reason this covers more than our own editors: they were withheld with the
-    // scripts, though only the scripts are genuinely unviewable.
+    // A creature's portraits are the reason this covers more than our own editors: a portrait's viewer is
+    // VS Code's own previewer, not one of ours - and a compiled script now has one too.
     it("covers a portrait, which only VS Code's previewer can show", () => {
         expect(hasViewerFor("BMP")).toBe(true);
-        expect(hasViewerFor("BCS")).toBe(false);
+        expect(hasViewerFor("BCS")).toBe(true);
     });
 });

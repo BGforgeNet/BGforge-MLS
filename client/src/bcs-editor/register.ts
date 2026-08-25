@@ -10,7 +10,7 @@
  */
 
 import * as vscode from "vscode";
-import { BCS_SCHEME, viewPath } from "./document";
+import { BCS_SCHEME, viewUri } from "./document";
 import { BcsFileSystemProvider, type SymbolsFor } from "./filesystem";
 
 /** Opens the file as source, then disposes itself so no empty custom-editor tab is left behind. */
@@ -28,7 +28,7 @@ class BcsEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
     async resolveCustomEditor(document: vscode.CustomDocument, panel: vscode.WebviewPanel): Promise<void> {
         try {
-            const view = vscode.Uri.from({ scheme: BCS_SCHEME, path: viewPath(document.uri.fsPath) });
+            const view = viewUri(document.uri);
             const text = await vscode.workspace.openTextDocument(view);
             await vscode.languages.setTextDocumentLanguage(text, "weidu-baf");
             // Into the group this panel occupies, so the source lands where the file was opened rather than

@@ -41,9 +41,10 @@ function isIeAnimation(ext: string): boolean {
  * Formats routed by extension rather than by what a registry can answer, mapped to the view that reads them.
  * Two kinds sit here for the same reason - neither is discoverable from a parser or adapter:
  *
- * - Ours, where the format IS a record the library parses but the binary editor is the wrong surface for it.
- *   A compiled dialog is a graph, not a record form, which is also why its adapter declares no layout for
- *   `isIeBinaryRecord` to find.
+ * - Ours, where nothing in the binary-record registry could ever name the view. A compiled dialog IS a record
+ *   the library parses, but as a graph rather than a record form, which is also why its adapter declares no
+ *   layout for `isIeBinaryRecord` to find. A compiled script is not parsed by that registry at all - it is
+ *   decompiled through the separate `.bcs`/`.int` script view, the same machinery a script on disk gets.
  * - VS Code's own bundled previewers. These need naming for a reason that is easy to miss: `"default"` is
  *   documented as the plain TEXT editor, not "pick a suitable editor", so a portrait routed there renders as
  *   bytes even though the image preview claims `.bmp` at builtin priority and would have shown it.
@@ -52,6 +53,7 @@ function isIeAnimation(ext: string): boolean {
  */
 const VIEWS_BY_EXTENSION = new Map([
     ["dlg", "bgforge.dlgViewer"],
+    ["bcs", "bgforge.bcsEditor"],
     ["bmp", "imagePreview.previewEditor"],
     ["wav", "vscode.audioPreview"],
 ]);

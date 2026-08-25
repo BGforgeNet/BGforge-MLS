@@ -12,14 +12,14 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { INT_SCHEME, sourcePath } from "./document";
+import { INT_SCHEME, sourceUri } from "./document";
 
 export async function routeCompile(document: vscode.TextDocument, toServer: () => Promise<void>): Promise<void> {
     if (document.uri.scheme !== INT_SCHEME) {
         await toServer();
         return;
     }
-    const name = path.basename(sourcePath(document.uri));
+    const name = path.basename(sourceUri(document.uri).fsPath);
     // Not a rewrite of identical bytes: an unedited document already matches the file, and rewriting
     // would move its timestamp and wake every watcher for nothing. Saying so is the useful part.
     if (!document.isDirty) {

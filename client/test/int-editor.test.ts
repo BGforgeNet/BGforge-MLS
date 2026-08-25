@@ -7,6 +7,12 @@
  * The redirect that opens a `.int` as source is covered only as far as the calls it makes - which
  * document it asks for, which language it sets, which group it shows it in, and that it closes its own
  * panel. What those calls DO is VS Code's, and that half is verified by driving the real editor.
+ *
+ * The provider now reads and writes through `vscode.workspace.fs` rather than a bare fs path, so it can serve
+ * a source living inside a game archive as well as one on disk. The mock below bridges `workspace.fs` to real
+ * node `fs` for `file:` sources - the only kind these tests need - so the same real-bytes round trip still
+ * runs; routing a `bgforge-ie-resource:` source to the archive bridge is VS Code's own contract, already
+ * established elsewhere, not something this suite re-proves.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -21,12 +27,24 @@ const h = vi.hoisted(() => {
     class FakeUri {
         readonly scheme: string;
         readonly path: string;
-        constructor(scheme: string, uriPath: string) {
+        readonly query: string;
+        constructor(scheme: string, uriPath: string, query = "") {
             this.scheme = scheme;
             this.path = uriPath;
+            this.query = query;
         }
         get fsPath() {
             return this.path;
+        }
+        toString() {
+            return this.query ? `${this.scheme}:${this.path}?${this.query}` : `${this.scheme}:${this.path}`;
+        }
+        static parse(s: string): FakeUri {
+            const q = s.indexOf("?");
+            const withoutQuery = q === -1 ? s : s.slice(0, q);
+            const query = q === -1 ? "" : s.slice(q + 1);
+            const colon = withoutQuery.indexOf(":");
+            return new FakeUri(withoutQuery.slice(0, colon), withoutQuery.slice(colon + 1), query);
         }
     }
     class FileSystemError extends Error {
@@ -64,8 +82,11 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("vscode", () => ({
+    // FakeUri already carries a static `parse`; assigning `from` onto the same class object is enough to make
+    // both reachable as `Uri.from`/`Uri.parse` without shadowing `parse` with a wrapper that calls itself.
     Uri: Object.assign(h.FakeUri, {
-        from: (parts: { scheme: string; path: string }) => new h.FakeUri(parts.scheme, parts.path),
+        from: (parts: { scheme: string; path: string; query?: string }) =>
+            new h.FakeUri(parts.scheme, parts.path, parts.query ?? ""),
     }),
     EventEmitter: class {
         event = () => undefined;
@@ -101,6 +122,19 @@ vi.mock("vscode", () => ({
     },
     workspace: {
         registerFileSystemProvider: () => ({}),
+        // Bridges to real node fs for `file:` sources, the only kind these tests write - the same real bytes
+        // a `.int` on disk holds, reached the way VS Code itself reaches them rather than a bare fs path.
+        fs: {
+            stat: (uri: { path: string }) => {
+                const stats = fs.statSync(uri.path);
+                return Promise.resolve({ type: 1, ctime: stats.ctimeMs, mtime: stats.mtimeMs, size: stats.size });
+            },
+            readFile: (uri: { path: string }) => Promise.resolve(new Uint8Array(fs.readFileSync(uri.path))),
+            writeFile: (uri: { path: string }, content: Uint8Array) => {
+                fs.writeFileSync(uri.path, content);
+                return Promise.resolve();
+            },
+        },
         openTextDocument: (uri: { path: string }) => {
             if (h.unopenable.has(uri.path)) return Promise.reject(new Error("file not found"));
             h.opened.push(uri.path);
@@ -121,7 +155,7 @@ vi.mock("vscode", () => ({
     },
 }));
 
-import { INT_SCHEME, LISTING_MARKER, render, sourcePath, viewUri } from "../src/int-editor/document";
+import { INT_SCHEME, LISTING_MARKER, render, sourceUri, viewUri } from "../src/int-editor/document";
 import { routeCompile } from "../src/int-editor/compile-command";
 import { IntFileSystemProvider } from "../src/int-editor/filesystem";
 import { registerIntEditor } from "../src/int-editor/register";
@@ -154,12 +188,14 @@ function compiled(): string {
     return file;
 }
 
-const view = (file: string) => new h.FakeUri("bgforge-int", `${file}.ssl`) as never;
+/** A fake source URI standing in for `vscode.Uri.file`: only `.path`/`.fsPath` are read by anything under test. */
+const source = (file: string) => new h.FakeUri("file", file) as never;
+const view = (file: string) => viewUri(source(file)) as never;
 
 describe("the decompiled document", () => {
-    it("renders a compiled script as source", () => {
+    it("renders a compiled script as source", async () => {
         const file = compiled();
-        const text = render(file);
+        const text = await render(source(file));
 
         expect(text).toContain(`// Decompiled from ${file}.`);
         expect(text).toContain("variable counter := 2;");
@@ -167,7 +203,7 @@ describe("the decompiled document", () => {
         expect(text).toContain("counter := 5;");
     });
 
-    it("falls back to a commented listing when the source cannot be recovered", () => {
+    it("falls back to a commented listing when the source cannot be recovered", async () => {
         const file = compiled();
         const bytes = new Uint8Array(fs.readFileSync(file));
         // An opcode belonging to no engine function stops the decompiler but not the disassembler.
@@ -175,7 +211,7 @@ describe("the decompiled document", () => {
         bytes[bytes.length - 1] = 0xff;
         fs.writeFileSync(file, bytes);
 
-        const text = render(file);
+        const text = await render(source(file));
 
         expect(text).toContain("could not be reconstructed as source");
         expect(text).toContain(LISTING_MARKER);
@@ -185,27 +221,30 @@ describe("the decompiled document", () => {
     });
 
     it("maps a script to its view and back", () => {
+        const src = source("/mods/a.int");
+        const viewed = viewUri(src);
+
         // The `.ssl` suffix is what makes the tab read as source rather than as the compiled file.
-        expect(viewUri(new h.FakeUri("file", "/mods/a.int") as never).path).toBe("/mods/a.int.ssl");
-        expect(sourcePath({ path: "/mods/a.int.ssl" } as never)).toBe("/mods/a.int");
+        expect(viewed.path).toBe("/mods/a.int.ssl");
+        expect(sourceUri(viewed).path).toBe("/mods/a.int");
     });
 });
 
 describe("the compiled-script filesystem", () => {
     const files = () => new IntFileSystemProvider(REPO_ROOT);
 
-    it("reports the length of the text it will serve, not of the compiled file", () => {
+    it("reports the length of the text it will serve, not of the compiled file", async () => {
         const file = compiled();
-        const stat = files().stat(view(file));
+        const stat = await files().stat(view(file));
 
-        expect(stat.size).toBe(Buffer.byteLength(render(file), "utf8"));
+        expect(stat.size).toBe(Buffer.byteLength(await render(source(file)), "utf8"));
         expect(stat.size).not.toBe(fs.statSync(file).size);
     });
 
-    it("serves the decompiled source", () => {
+    it("serves the decompiled source", async () => {
         const file = compiled();
 
-        expect(Buffer.from(files().readFile(view(file))).toString("utf8")).toContain("procedure start begin");
+        expect(Buffer.from(await files().readFile(view(file))).toString("utf8")).toContain("procedure start begin");
     });
 
     it("saving an unedited script reproduces it byte for byte", async () => {
@@ -213,7 +252,7 @@ describe("the compiled-script filesystem", () => {
         const before = new Uint8Array(fs.readFileSync(file));
         const provider = files();
 
-        await provider.writeFile(view(file), provider.readFile(view(file)));
+        await provider.writeFile(view(file), await provider.readFile(view(file)));
 
         expect(new Uint8Array(fs.readFileSync(file))).toEqual(before);
     });
@@ -221,13 +260,13 @@ describe("the compiled-script filesystem", () => {
     it("saving an edit compiles it over the script", async () => {
         const file = compiled();
         const provider = files();
-        const edited = Buffer.from(provider.readFile(view(file)))
+        const edited = Buffer.from(await provider.readFile(view(file)))
             .toString("utf8")
             .replace("counter := 5;", "counter := 9;");
 
         await provider.writeFile(view(file), Buffer.from(edited, "utf8"));
 
-        expect(render(file)).toContain("counter := 9;");
+        expect(await render(source(file))).toContain("counter := 9;");
     });
 
     // Both refusals, because the front end throws a DIFFERENT error type per stage and an editor written
@@ -236,12 +275,12 @@ describe("the compiled-script filesystem", () => {
     it.each([
         ["parsing", "procedure start begin", /does not compile\. 1:22: missing end/],
         ["lowering", "procedure start begin\n display_msg();\nend\n", /does not compile\. 2:2: 'display_msg' takes 1/],
-    ])("refuses a save the compiler rejects while %s, and leaves the script alone", async (_stage, source, said) => {
+    ])("refuses a save the compiler rejects while %s, and leaves the script alone", async (_stage, text, said) => {
         const file = compiled();
         const before = new Uint8Array(fs.readFileSync(file));
         const provider = files();
 
-        await expect(provider.writeFile(view(file), Buffer.from(source, "utf8"))).rejects.toThrow(said);
+        await expect(provider.writeFile(view(file), Buffer.from(text, "utf8"))).rejects.toThrow(said);
         expect(new Uint8Array(fs.readFileSync(file))).toEqual(before);
     });
 
@@ -254,9 +293,9 @@ describe("the compiled-script filesystem", () => {
         );
     });
 
-    it("reports a missing script rather than throwing whatever the filesystem said", () => {
-        expect(() => files().stat(view("/nowhere/absent.int"))).toThrow(h.FileSystemError);
-        expect(() => files().readFile(view("/nowhere/absent.int"))).toThrow(h.FileSystemError);
+    it("reports a missing script rather than throwing whatever the filesystem said", async () => {
+        await expect(files().stat(view("/nowhere/absent.int"))).rejects.toThrow(h.FileSystemError);
+        await expect(files().readFile(view("/nowhere/absent.int"))).rejects.toThrow(h.FileSystemError);
     });
 
     // A compiled script is one file, and this view is a rendering of it - so the operations that would
@@ -280,14 +319,14 @@ describe("the compiled-script filesystem", () => {
     it("compiles over bytes it cannot decompile, having no previous layout to match", async () => {
         const file = compiled();
         const provider = files();
-        const source = Buffer.from(provider.readFile(view(file)));
+        const text = Buffer.from(await provider.readFile(view(file)));
         fs.writeFileSync(file, Uint8Array.from([1, 2, 3]));
 
-        await provider.writeFile(view(file), source);
+        await provider.writeFile(view(file), text);
 
         // Not a comparison against the original bytes: the point is that an unreadable previous file is
         // not an error, only the absence of an ordering to preserve.
-        expect(render(file)).toContain("procedure start begin");
+        expect(await render(source(file))).toContain("procedure start begin");
     });
 });
 
@@ -296,7 +335,7 @@ describe("compiling from the editor command", () => {
     const fake = (scheme: string, { dirty = true, writes = true } = {}) => {
         const saved: true[] = [];
         const document = {
-            uri: new h.FakeUri(scheme, "/mods/a.int.ssl"),
+            uri: scheme === INT_SCHEME ? view("/mods/a.int") : (new h.FakeUri(scheme, "/mods/a.int.ssl") as never),
             isDirty: dirty,
             save: () => {
                 saved.push(true);
