@@ -14,7 +14,7 @@
 
 import { buildDlg, toDlgBuildInput, DlgTransitionFlag, type DlgBuildInput } from "@bgforge/binary";
 import type { DialogChoice, DialogModel, DialogState } from "../../../shared/dialog-model";
-import { parseDlgStateId, resrefName } from "../../../shared/dialog-model-dlg";
+import { parseDlgStateId, resrefName, strrefValue } from "../../../shared/dialog-model-dlg";
 
 type StateRecord = DlgBuildInput["states"][number];
 type TransitionRecord = DlgBuildInput["transitions"][number];
@@ -25,11 +25,11 @@ const resrefBytes = (name: string): string => name.slice(0, RESREF_SIZE).padEnd(
 
 /** Model text for a compiled dialog is always `@<strref>`; anything else has nowhere to be stored. */
 function strrefOf(text: string, where: string): number {
-    const match = /^@(\d+)$/.exec(text.trim());
-    if (!match) {
+    const strref = strrefValue(text);
+    if (strref === null) {
         throw new Error(`writeDlgFromModel: ${where} must be a game string reference, not ${JSON.stringify(text)}`);
     }
-    return Number(match[1]);
+    return strref;
 }
 
 /**

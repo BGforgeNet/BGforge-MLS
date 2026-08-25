@@ -10,7 +10,7 @@
  */
 
 import type { DialogModel, DialogState } from "./dialog-model";
-import { resrefName } from "./dialog-model-dlg";
+import { resrefName, strrefText } from "./dialog-model-dlg";
 
 /**
  * Where a selected line lives in the file: a state's own line, or one of its replies by position. `choiceId`
@@ -40,18 +40,18 @@ export function setDlgLineText(
     address: { stateIndex: number; choiceIndex?: number },
     strref: number,
 ): DialogModel {
-    const copy = structuredClone(model) as DialogModel;
+    const copy = structuredClone(model);
     const state = ownStatesByIndex(copy, ownResref).get(address.stateIndex);
     if (!state) throw new Error(`setDlgLineText: no state ${address.stateIndex} in ${ownResref}`);
     if (address.choiceIndex === undefined) {
-        state.text = `@${strref}`;
+        state.text = strrefText(strref);
         return copy;
     }
     const choice = state.choices[address.choiceIndex];
     if (!choice) {
         throw new Error(`setDlgLineText: state ${address.stateIndex} has no reply ${address.choiceIndex}`);
     }
-    choice.text = `@${strref}`;
+    choice.text = strrefText(strref);
     return copy;
 }
 
@@ -98,7 +98,7 @@ export function detachDlgState(
     ownResref: string,
     stateIndex: number,
 ): { model: DialogModel; cut: DlgReplyRef[] } {
-    const copy = structuredClone(model) as DialogModel;
+    const copy = structuredClone(model);
     const own = ownStatesByIndex(copy, ownResref);
     const target = own.get(stateIndex);
     if (!target) throw new Error(`detachDlgState: no state ${stateIndex} in ${ownResref}`);

@@ -56,8 +56,18 @@ export function resrefName(raw: string): string {
  * reaches the view through one resolution path rather than a second one. The tlk lookup happens where a game
  * is open; with no game the ref renders as-is.
  */
-function strrefText(strref: number): string {
+export function strrefText(strref: number): string {
     return `@${strref}`;
+}
+
+/**
+ * The strref back out of that text, or null when the text is not one. Paired with `strrefText` so the writer
+ * recognises exactly the forms the reader produces - a second spelling of the pattern would let the editor
+ * render text it then refuses to save.
+ */
+export function strrefValue(text: string): number | null {
+    const match = /^@(\d+)$/.exec(text.trim());
+    return match ? Number(match[1]) : null;
 }
 
 /** A state's id across the whole tree: its dialog and its number, since numbers repeat between files. */
