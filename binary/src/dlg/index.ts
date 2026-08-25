@@ -175,24 +175,8 @@ function readSections(bytes: Uint8Array): DlgSections {
     };
 }
 
-/**
- * First byte of the trailing text block: the lowest offset any text ref points at. Everything from there to
- * EOF is text plus whatever slack the producer left - a 4286-file corpus has none, but the range is taken to
- * EOF rather than to the last ref so that any would survive. With no refs at all there is no text block and
- * the file ends after its tables.
- */
+/** First byte past every decoded section, which is where a file with no text block ends. */
 export function sectionsEnd(sections: DlgSections): number {
-    return sectionsEndImpl(sections);
-}
-
-export function textBlockStart(sections: DlgSections): number {
-    const offsets = [...sections.stateTriggerRefs, ...sections.transitionTriggerRefs, ...sections.actionRefs].map(
-        (r) => r.offset,
-    );
-    return offsets.length ? Math.min(...offsets) : sectionsEndImpl(sections);
-}
-
-function sectionsEndImpl(sections: DlgSections): number {
     const h = sections.header;
     return Math.max(
         sections.headerInterrupt ? DLG_HEADER_WITH_INTERRUPT_SIZE : DLG_HEADER_SIZE,
@@ -202,6 +186,19 @@ function sectionsEndImpl(sections: DlgSections): number {
         h.transitionTriggerTableOffset + h.transitionTriggerCount * DLG_TEXT_REF_SIZE,
         h.actionTableOffset + h.actionCount * DLG_TEXT_REF_SIZE,
     );
+}
+
+/**
+ * First byte of the trailing text block: the lowest offset any text ref points at. Everything from there to
+ * EOF is text plus whatever slack the producer left - a 4286-file corpus has none, but the range is taken to
+ * EOF rather than to the last ref so that any would survive. With no refs at all there is no text block and
+ * the file ends after its tables.
+ */
+function textBlockStart(sections: DlgSections): number {
+    const offsets = [...sections.stateTriggerRefs, ...sections.transitionTriggerRefs, ...sections.actionRefs].map(
+        (r) => r.offset,
+    );
+    return offsets.length ? Math.min(...offsets) : sectionsEnd(sections);
 }
 
 /**
