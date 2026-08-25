@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BcsSymbols } from "../../compilers/bcs/src/index";
+import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
 import { bcsEngineForScriptStyle, render, sourcePath } from "../src/bcs-editor/document";
 
 /**
@@ -37,7 +37,10 @@ const SYMBOLS: BcsSymbols = {
     ids: () => undefined,
 };
 
-const NAMING = { symbols: SYMBOLS, engine: "bg" } as const;
+/** Nothing here compiles, so the write-side tables stay empty - `render` never reads them. */
+const NO_COMPILE_SYMBOLS: BcsCompileSymbols = { triggerByName: () => [], actionByName: () => [], ids: () => undefined };
+
+const NAMING = { symbols: SYMBOLS, compileSymbols: NO_COMPILE_SYMBOLS, engine: "bg" } as const;
 
 describe("the decompiled view of a .bcs", () => {
     it("decompiles the script when the document has a game behind it", () => {
@@ -87,7 +90,7 @@ describe("the decompiled view of a .bcs", () => {
             ids: (table) => (table === "FACTION" ? new Map([[5, "FACTION_MERCYKILLER"]]) : undefined),
         };
 
-        const text = render(bcsFile(script), { symbols, engine: "pst" });
+        const text = render(bcsFile(script), { symbols, compileSymbols: NO_COMPILE_SYMBOLS, engine: "pst" });
 
         expect(text.split("\n")[1]).toBe("  See([0.FACTION_MERCYKILLER])");
     });

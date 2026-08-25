@@ -43,11 +43,13 @@ class BcsEditorProvider implements vscode.CustomReadonlyEditorProvider {
     }
 }
 
-export function registerBcsEditor(symbolsFor: SymbolsFor): vscode.Disposable {
-    const files = new BcsFileSystemProvider(symbolsFor);
+export function registerBcsEditor(context: vscode.ExtensionContext, symbolsFor: SymbolsFor): vscode.Disposable {
+    const files = new BcsFileSystemProvider(symbolsFor, context.extensionPath);
     return vscode.Disposable.from(
         files,
-        vscode.workspace.registerFileSystemProvider(BCS_SCHEME, files, { isCaseSensitive: true, isReadonly: true }),
+        // Not `isReadonly`: a script with a game behind it saves back over itself, and one without says so
+        // per document through `stat` instead - the scheme itself is writable either way.
+        vscode.workspace.registerFileSystemProvider(BCS_SCHEME, files, { isCaseSensitive: true }),
         vscode.window.registerCustomEditorProvider(BcsEditorProvider.viewType, new BcsEditorProvider(), {
             supportsMultipleEditorsPerDocument: false,
         }),

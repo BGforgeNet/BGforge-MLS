@@ -19,12 +19,21 @@
 ### Infinity Engine scripts
 
 - Compiled scripts (`.bcs`, and the `.bs` AI-selection scripts) open as readable BAF source instead of the
-  markers and bare numbers they are stored as. The tab is read-only and gets the full BAF treatment -
-  highlighting, outline, hover, completion - because it is a BAF document.
+  markers and bare numbers they are stored as, and get the full BAF treatment - highlighting, outline,
+  hover, completion - because the tab is a BAF document.
+- **Editing a compiled script and saving it writes it back compiled**, over the same file. A script opened
+  and saved without a change comes back byte for byte; a save that does not compile is refused with the
+  problems listed where every other one is, and the file is left as it was. Two things a compiled script
+  can hold have no spelling in BAF - a record an early Baldur's Gate writer stopped short of finishing, and
+  a number left in a slot no signature names - so a script carrying either is written out in the full,
+  clean form the reference compiler produces from the same source.
 - Every name in a compiled script is a number the install's own tables give a meaning to, so the view needs
-  a game open. With none, the tab explains that and says how to open one rather than showing the numbers.
+  a game open. With none, the tab explains that and says how to open one rather than showing the numbers,
+  and stays read-only - there would be nothing to compile names against either.
 - Baldur's Gate, Icewind Dale, Icewind Dale II and Planescape: Torment scripts are all read. The game
   decides what an object's fields mean, and the open install says which game it is.
+- A `RESPONSE` with no actions is now accepted in `.baf` sources too. Real compiled scripts carry them and
+  the reference compiler takes them, but highlighting and the outline read one as a syntax error.
 
 ### Dialog editor
 

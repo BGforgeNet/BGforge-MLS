@@ -1,9 +1,10 @@
 /**
  * The compiled-Infinity-Engine-script editor, exercised against real stored bytes.
  *
- * Reading runs for real: a `.bcs` is written to a temp directory and the provider decompiles it. Writing is
- * refused at every entry point, which is the property worth pinning - the view is a rendering, and BAF cannot
- * be compiled back here.
+ * Both directions run for real: a `.bcs` is written to a temp directory, the provider decompiles it, and a
+ * save compiles the source back over it with the same grammar and tables the extension ships. What is pinned
+ * is that an untouched script saves as itself, that an edit reaches the stored bytes, and that a script with
+ * no game behind it is left alone rather than written from a notice.
  *
  * The redirect that opens a `.bcs` as source is covered as far as the calls it makes: which document it asks
  * for, which language it sets, which group it shows it in, and that it closes its own panel. What those calls
@@ -43,6 +44,7 @@ const h = vi.hoisted(() => {
         languages: [] as string[],
         shownIn: [] as (number | undefined)[],
         errors: [] as string[],
+        diagnostics: [] as { message: string }[],
         disposedPanels: 0,
         editor: {
             provider: undefined as
@@ -80,7 +82,31 @@ vi.mock("vscode", () => ({
             h.languages.push(language);
             return Promise.resolve({});
         },
+        createDiagnosticCollection: () => ({
+            set: (_uri: unknown, found: { message: string }[]) => {
+                h.diagnostics.length = 0;
+                h.diagnostics.push(...found);
+            },
+            delete: () => {
+                h.diagnostics.length = 0;
+            },
+            dispose: () => undefined,
+        }),
     },
+    // Only the message is read back, so a position and a range need carry nothing but their arguments.
+    Position: function (this: Record<string, unknown>, line: number, character: number) {
+        Object.assign(this, { line, character });
+    },
+    Range: function (this: Record<string, unknown>, start: unknown, end: unknown) {
+        Object.assign(this, { start, end });
+    },
+    Diagnostic: class {
+        message: string;
+        constructor(_range: unknown, message: string) {
+            this.message = message;
+        }
+    },
+    DiagnosticSeverity: { Error: 0 },
     workspace: {
         registerFileSystemProvider: () => ({}),
         openTextDocument: (uri: { path: string }) => {
@@ -106,7 +132,8 @@ vi.mock("vscode", () => ({
     },
 }));
 
-import type { BcsSymbols } from "../../compilers/bcs/src/index";
+import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
+import { REPO_ROOT } from "./repo-root";
 import { BCS_SCHEME } from "../src/bcs-editor/document";
 import { BcsFileSystemProvider } from "../src/bcs-editor/filesystem";
 import { registerBcsEditor } from "../src/bcs-editor/register";
@@ -123,7 +150,18 @@ const SYMBOLS: BcsSymbols = {
     ids: () => undefined,
 };
 
-const NAMING = { symbols: SYMBOLS, engine: "bg" } as const;
+/** The same two rows read the other way, as an open game supplies them. */
+const COMPILE_SYMBOLS: BcsCompileSymbols = {
+    triggerByName: (name) => (name.toLowerCase() === "false" ? [{ id: 16432, signature: "False()" }] : []),
+    actionByName: (name) => (name.toLowerCase() === "continue" ? [{ id: 36, signature: "Continue()" }] : []),
+    ids: () => undefined,
+};
+
+const NAMING = { symbols: SYMBOLS, compileSymbols: COMPILE_SYMBOLS, engine: "bg" } as const;
+
+/** The grammar the compiler loads ships in the server's build output, which the repo root holds. */
+const newProvider = (naming: () => typeof NAMING | undefined = () => NAMING): BcsFileSystemProvider =>
+    new BcsFileSystemProvider(naming, REPO_ROOT);
 
 /** A `.bcs` on disk plus the view URI that renders it. The fake Uri stands in for vscode's, as next door. */
 function script(): { file: string; view: never } {
@@ -136,7 +174,7 @@ function script(): { file: string; view: never } {
 describe("the .bcs custom editor", () => {
     it("reads a compiled script as decompiled source", () => {
         const { view } = script();
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
 
         const text = Buffer.from(provider.readFile(view)).toString("utf8");
 
@@ -147,31 +185,111 @@ describe("the .bcs custom editor", () => {
      * The size has to be the DECOMPILED length: it is the text the editor is about to read, and a script
      * expands severalfold, so reporting the stored size makes the large-file guard measure the wrong thing.
      */
-    it("reports the decompiled size and marks the document readonly", () => {
+    it("reports the decompiled size rather than the stored one", () => {
         const { file, view } = script();
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
 
         const stat = provider.stat(view);
 
         expect(stat.size).toBe(Buffer.byteLength(Buffer.from(provider.readFile(view)).toString("utf8"), "utf8"));
         expect(stat.size).not.toBe(fs.statSync(file).size);
+    });
+
+    it("is editable with a game behind it and readonly without one", () => {
+        const { view } = script();
+
+        expect(newProvider().stat(view).permissions).toBeUndefined();
+        // What the tab shows with no game is a notice, not source, so it offers no save to refuse.
+        expect(newProvider(() => undefined).stat(view).permissions).toBe(1);
+    });
+
+    it("leaves a file holding no script readonly, notice and all", () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-empty-"));
+        const file = path.join(dir, "EMPTY.bcs");
+        fs.writeFileSync(file, "");
+
+        const stat = newProvider().stat(new h.FakeUri(BCS_SCHEME, `${file}.baf`) as never);
+
         expect(stat.permissions).toBe(1);
     });
 
     it("reports a missing script as not found rather than throwing a read error", () => {
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
 
         expect(() => provider.stat(new h.FakeUri(BCS_SCHEME, "/nowhere/MISSING.bcs.baf") as never)).toThrow(
             /not found/,
         );
     });
 
-    // Every mutating entry point refuses: the view is a rendering, and BAF cannot be compiled back here.
-    it("refuses every write path with a reason", () => {
+    // The whole point of the editable view: an untouched script has to save as itself.
+    it("saves an untouched script back to the same source", async () => {
         const { view } = script();
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
+        const before = Buffer.from(provider.readFile(view)).toString("utf8");
 
-        expect(() => provider.writeFile(view)).toThrow(/cannot be compiled back/);
+        await provider.writeFile(view, Buffer.from(before, "utf8"));
+
+        expect(Buffer.from(provider.readFile(view)).toString("utf8")).toBe(before);
+    });
+
+    it("writes an edit through to the stored bytes", async () => {
+        const { file, view } = script();
+        const provider = newProvider();
+        const source = Buffer.from(provider.readFile(view)).toString("utf8");
+
+        await provider.writeFile(view, Buffer.from(source.replace("#100", "#50"), "utf8"));
+
+        // The weight rides on its first action's opening marker, which is what makes it `50AC`.
+        expect(fs.readFileSync(file, "latin1")).toContain("50AC");
+    });
+
+    it("refuses a save that does not compile, and says where", async () => {
+        const { file, view } = script();
+        const provider = newProvider();
+        const stored = fs.readFileSync(file, "latin1");
+        h.diagnostics.splice(0);
+
+        await expect(
+            provider.writeFile(view, Buffer.from("IF\n  NoSuchTrigger()\nTHEN\n  RESPONSE #100\nEND\n", "utf8")),
+        ).rejects.toThrow(/was not saved/);
+
+        expect(fs.readFileSync(file, "latin1")).toBe(stored);
+        expect(h.diagnostics[0]?.message).toContain("NoSuchTrigger");
+    });
+
+    // With no game the tab holds a notice rather than source, and compiling that would write a script with
+    // no blocks over the file.
+    it("refuses a save into a file holding no script", async () => {
+        // The tab shows a notice for one of these, and compiling a notice would write a two-marker script
+        // over a file the install ships empty.
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-empty-"));
+        const file = path.join(dir, "EMPTY.bcs");
+        fs.writeFileSync(file, "");
+        const view = new h.FakeUri(BCS_SCHEME, `${file}.baf`) as never;
+
+        await expect(newProvider().writeFile(view, Buffer.from("IF\nTHEN\nEND\n", "utf8"))).rejects.toThrow(
+            /holds no script/,
+        );
+
+        expect(fs.statSync(file).size).toBe(0);
+    });
+
+    it("refuses a save with no game behind the document", async () => {
+        const { file, view } = script();
+        const stored = fs.readFileSync(file, "latin1");
+
+        await expect(
+            newProvider(() => undefined).writeFile(view, Buffer.from("IF\nTHEN\nEND\n", "utf8")),
+        ).rejects.toThrow(/without the game it belongs to/);
+
+        expect(fs.readFileSync(file, "latin1")).toBe(stored);
+    });
+
+    // The view is a rendering of one file, so the paths that would move or restructure it still refuse.
+    it("refuses every path that is not a write to the script itself", () => {
+        const { view } = script();
+        const provider = newProvider();
+
         expect(() => provider.delete(view)).toThrow(/delete .* in the explorer/);
         expect(() => provider.rename(view)).toThrow(/rename .* in the explorer/);
         expect(() => provider.readDirectory()).toThrow(/not a directory/);
@@ -180,7 +298,7 @@ describe("the .bcs custom editor", () => {
 
     // A missing file reaches readFile as an ENOENT from the read itself, where stat rejects it up front.
     it("reports a missing script as not found on read too", () => {
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
 
         expect(() => provider.readFile(new h.FakeUri(BCS_SCHEME, "/nowhere/MISSING.bcs.baf") as never)).toThrow(
             /not found/,
@@ -191,17 +309,17 @@ describe("the .bcs custom editor", () => {
     // "no such file", which would send the user looking for the wrong problem.
     it("propagates a failure that is not a missing file", () => {
         const { view } = script();
-        const provider = new BcsFileSystemProvider(() => {
+        const files = newProvider(() => {
             throw new Error("tables unreadable");
         });
 
-        expect(() => provider.readFile(view)).toThrow(/tables unreadable/);
+        expect(() => files.readFile(view)).toThrow(/tables unreadable/);
     });
 
     // Nothing is watched, so both lifecycle hooks are no-ops that still have to be callable: VS Code disposes
     // the provider on shutdown and subscribes a watcher on every open.
     it("has disposable lifecycle hooks even though it watches nothing", () => {
-        const provider = new BcsFileSystemProvider(() => NAMING);
+        const provider = newProvider();
 
         expect(() => provider.watch().dispose()).not.toThrow();
         expect(() => provider.dispose()).not.toThrow();
@@ -213,7 +331,7 @@ describe("the .bcs custom editor", () => {
         h.languages.splice(0);
         h.shownIn.splice(0);
         h.disposedPanels = 0;
-        registerBcsEditor(() => NAMING);
+        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider;
         expect(provider, "the custom editor did not register").toBeDefined();
 
@@ -236,7 +354,7 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.unopenable.add(`${file}.baf`);
         h.disposedPanels = 0;
-        registerBcsEditor(() => NAMING);
+        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
@@ -259,7 +377,7 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.rejectWith.set(`${file}.baf`, "host said no");
         h.disposedPanels = 0;
-        registerBcsEditor(() => NAMING);
+        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);

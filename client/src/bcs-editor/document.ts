@@ -5,21 +5,30 @@
  * says nothing. Decompiling it into a document named `<file>.baf` means the tab reads as script source and
  * every language feature keyed on the extension comes from the weidu-baf support that already exists.
  *
- * The view is READ-ONLY, unlike the `.int` one beside it. That is not a gap: recovering source from a `.bcs`
- * is a format read, but compiling BAF back is a compiler this repo does not have, and an editable buffer that
- * cannot be saved is worse than an honest viewer.
+ * The view is EDITABLE, like the `.int` one beside it: saving compiles the source back over the file it came
+ * from. With no game open it stays read-only, because there is then nothing to resolve names against in
+ * either direction - the tab shows why instead of the script.
  */
 
 import * as fs from "fs";
 import type { IeScriptStyle } from "../../../binary/src/index";
-import { decompileBcs, readBcs, type BcsEngine, type BcsSymbols } from "../../../compilers/bcs/src/index";
+import {
+    decompileBcs,
+    readBcs,
+    type BcsCompileSymbols,
+    type BcsEngine,
+    type BcsSymbols,
+} from "../../../compilers/bcs/src/index";
 
 /**
- * Everything the install decides about how a script reads: the tables that give its numbers names, and the
- * engine that says which field each number is. Both come from one open game, so they travel together.
+ * Everything the install decides about how a script reads and writes: the tables that give its numbers names,
+ * the same tables read the other way for compiling, and the engine that says which field each number is. All
+ * come from one open game, so they travel together - and resolving both directions from one game is what
+ * stops a save from writing names a different install gave the numbers.
  */
 export interface BcsNaming {
     readonly symbols: BcsSymbols;
+    readonly compileSymbols: BcsCompileSymbols;
     readonly engine: BcsEngine;
 }
 

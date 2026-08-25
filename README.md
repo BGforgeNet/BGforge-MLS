@@ -44,6 +44,8 @@ Originally a VS Code extension, it now also works with various other editors. Se
 
 Compiled Fallout `.int` scripts open as editable SSL - highlighting, outline and search - and save back over the `.int` in place. Local and argument names are not stored in a compiled script, so those are generated; a script that cannot be structured back opens as a read-only instruction listing.
 
+Compiled Infinity Engine `.bcs` scripts open the same way, as editable BAF, and save back over the `.bcs` in place. Every name in one is a number the install's own tables give a meaning to, so this needs a game open; without one the tab says so and stays read-only.
+
 ## TypeScript-based languages
 
 These are TypeScript-like language subsets for writing mods. TSSL compiles straight to Fallout bytecode; TBAF and TD generate WeiDU source, which WeiDU then installs.
