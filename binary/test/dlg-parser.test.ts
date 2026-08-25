@@ -103,6 +103,80 @@ describe("serializeDlg - a document that does not fit its bytes", () => {
     });
 });
 
+describe("dlgParser.parse - a header addressing bytes the file does not have", () => {
+    // The READ side of the same condition the writer refuses above. Before these, an overrunning count threw
+    // a bare `RangeError: Offset is outside the bounds of the DataView` out of the record reader - naming
+    // neither the file nor the section, and bypassing `ParseResult.errors` entirely, which is where every
+    // other malformed-DLG refusal is reported.
+    const source = (): Uint8Array =>
+        buildDlg({
+            states: [{ text: 1, firstTransition: 0, transitionCount: 0, triggerIndex: 0 }],
+            transitions: [],
+            stateTriggers: ['Dead("x")'],
+            transitionTriggers: [],
+            actions: [],
+        });
+
+    /** Overwrite one little-endian dword of a built file. */
+    function corrupt(bytes: Uint8Array, at: number, value: number): Uint8Array {
+        const copy = new Uint8Array(bytes);
+        new DataView(copy.buffer).setUint32(at, value, true);
+        return copy;
+    }
+
+    const STATE_COUNT_AT = 0x08;
+    const STATE_TABLE_OFFSET_AT = 0x0c;
+    const STATE_TRIGGER_TABLE_OFFSET_AT = 0x18;
+    const STATE_SIZE = 16;
+
+    /** The largest state count whose table still ends inside the file - the last value that must be accepted. */
+    function widestFittingStateCount(bytes: Uint8Array): number {
+        const at = new DataView(bytes.buffer).getUint32(STATE_TABLE_OFFSET_AT, true);
+        return Math.floor((bytes.byteLength - at) / STATE_SIZE);
+    }
+
+    test.each([
+        ["far past the end", () => 0xffff_ffff],
+        // The boundary itself: one record more than the file can hold. A check written as `>=` rather than
+        // `>` would refuse the fitting count below instead, and only this pair separates the two.
+        ["one record past the end", (bytes: Uint8Array) => widestFittingStateCount(bytes) + 1],
+    ])("reports a state count %s through errors rather than throwing", (_name, count) => {
+        const bytes = source();
+
+        const result = dlgParser.parse(corrupt(bytes, STATE_COUNT_AT, count(bytes)));
+
+        expect(result.errors?.[0]).toMatch(/^Truncated DLG: state table does not fit - /);
+        expect(result.document).toBeUndefined();
+    });
+
+    test("accepts the widest state count that still fits", () => {
+        const bytes = source();
+
+        const result = dlgParser.parse(corrupt(bytes, STATE_COUNT_AT, widestFittingStateCount(bytes)));
+
+        expect(result.errors ?? []).toEqual([]);
+    });
+
+    test("reports a text ref reaching past the end", () => {
+        const bytes = source();
+        // The state-trigger table's first entry is `[offset, length]`; push its length past EOF so the ref
+        // check - which can only run once the tables are decoded - is the one that fires.
+        const table = new DataView(bytes.buffer).getUint32(STATE_TRIGGER_TABLE_OFFSET_AT, true);
+
+        const result = dlgParser.parse(corrupt(bytes, table + 4, 5000));
+
+        expect(result.errors?.[0]).toMatch(/^Truncated DLG: state trigger 0 does not fit - /);
+    });
+
+    test("accepts the file it was given untouched", () => {
+        // Negative control: the guard must stay silent on a file that is correct, or it is refusing real input.
+        const result = dlgParser.parse(source());
+
+        expect(result.errors ?? []).toEqual([]);
+        expect(result.document).toBeDefined();
+    });
+});
+
 function weiduAvailable(): boolean {
     try {
         execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });

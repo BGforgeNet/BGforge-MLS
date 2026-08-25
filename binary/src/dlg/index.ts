@@ -254,10 +254,26 @@ class DlgParser implements BinaryParser {
             return this.fail(`Unsupported DLG version: ${JSON.stringify(version)} (only V1.0 is supported)`);
         }
 
+        // Bounds BEFORE decoding. Reading a table the header addresses past EOF throws a bare RangeError out
+        // of the DataView, which names neither the file nor the section; checking first turns the same
+        // condition into the sentence the write path already reports, through the same `fail` as the two
+        // checks above.
+        const header: DlgHeaderData = dlgHeaderSchema.read(readerAt(data, 0));
+        const tablesOverrun = firstOverrun(
+            headerSections(header, headerSizeOf(data, header) === DLG_HEADER_WITH_INTERRUPT_SIZE),
+            data.byteLength,
+        );
+        if (tablesOverrun !== undefined) return this.fail(`Truncated DLG: ${tablesOverrun}`);
+
         // The two header lengths are both normal - 1002 of the 4286 DLGs in a stock BG:EE plus BG2:ToB pair
         // carry the shorter one - so the variant is recorded on the document (`headerInterrupt` absent) and
         // not warned about. A writer reads it there; re-emitting the field would move every table.
         const sections = readSections(data);
+
+        // The text refs can only be checked once the tables are decoded, and `readDlg` reads every one of
+        // them - so an out-of-range ref is refused here rather than throwing out of the string reader.
+        const refsOverrun = firstOverrun(refSections(sections), data.byteLength);
+        if (refsOverrun !== undefined) return this.fail(`Truncated DLG: ${refsOverrun}`);
 
         const document: DlgCanonicalDocument = sections;
         const h = sections.header;
@@ -324,34 +340,54 @@ class DlgParser implements BinaryParser {
  * produces a DLG that overruns in every reader - so it is refused rather than written.
  */
 function assertFits(document: DlgCanonicalDocument, size: number): void {
-    const h = document.header;
-    const sections: [string, number, number][] = [
-        ["header", 0, document.headerInterrupt ? DLG_HEADER_WITH_INTERRUPT_SIZE : DLG_HEADER_SIZE],
-        ["state table", h.stateTableOffset, h.stateCount * DLG_STATE_SIZE],
-        ["transition table", h.transitionTableOffset, h.transitionCount * DLG_TRANSITION_SIZE],
-        ["state trigger table", h.stateTriggerTableOffset, h.stateTriggerCount * DLG_TEXT_REF_SIZE],
-        ["transition trigger table", h.transitionTriggerTableOffset, h.transitionTriggerCount * DLG_TEXT_REF_SIZE],
-        ["action table", h.actionTableOffset, h.actionCount * DLG_TEXT_REF_SIZE],
+    const overrun =
+        firstOverrun(headerSections(document.header, document.headerInterrupt !== undefined), size) ??
+        firstOverrun(refSections(document), size);
+    if (overrun !== undefined) throw new Error(`Cannot serialize DLG: ${overrun}`);
+}
+
+/**
+ * Every span the header addresses, as `[what, offset, length]`.
+ *
+ * Shared by the parse-time refusal and the write-time one so a file refused on open cannot be a file accepted
+ * on save. The header itself is included: a BG1-era file whose first table starts at 0x30 has no room for the
+ * interrupt dword, and a document claiming both is describing bytes that overlap.
+ */
+function headerSections(header: DlgHeaderData, hasInterrupt: boolean): [string, number, number][] {
+    return [
+        ["header", 0, hasInterrupt ? DLG_HEADER_WITH_INTERRUPT_SIZE : DLG_HEADER_SIZE],
+        ["state table", header.stateTableOffset, header.stateCount * DLG_STATE_SIZE],
+        ["transition table", header.transitionTableOffset, header.transitionCount * DLG_TRANSITION_SIZE],
+        ["state trigger table", header.stateTriggerTableOffset, header.stateTriggerCount * DLG_TEXT_REF_SIZE],
+        [
+            "transition trigger table",
+            header.transitionTriggerTableOffset,
+            header.transitionTriggerCount * DLG_TEXT_REF_SIZE,
+        ],
+        ["action table", header.actionTableOffset, header.actionCount * DLG_TEXT_REF_SIZE],
     ];
-    for (const [name, offset, length] of sections) {
-        if (offset < 0 || offset + length > size) {
-            throw new Error(`Cannot serialize DLG: ${name} does not fit - ${offset}+${length} in ${size} bytes`);
-        }
-    }
-    const refs: [string, DlgTextRefData[]][] = [
+}
+
+/** Every span the text refs address, which only a file whose tables have already been read can supply. */
+function refSections(document: DlgCanonicalDocument): [string, number, number][] {
+    const lists: [string, DlgTextRefData[]][] = [
         ["state trigger", document.stateTriggerRefs],
         ["transition trigger", document.transitionTriggerRefs],
         ["action", document.actionRefs],
     ];
-    for (const [name, list] of refs) {
-        list.forEach((ref, i) => {
-            if (ref.offset + ref.length > size) {
-                throw new Error(
-                    `Cannot serialize DLG: ${name} ${i} does not fit - ${ref.offset}+${ref.length} in ${size} bytes`,
-                );
-            }
-        });
+    return lists.flatMap(([name, list]) =>
+        list.map((ref, i): [string, number, number] => [`${name} ${i}`, ref.offset, ref.length]),
+    );
+}
+
+/** The first span that does not lie inside `size`, as the sentence to report it with. */
+function firstOverrun(sections: readonly [string, number, number][], size: number): string | undefined {
+    for (const [name, offset, length] of sections) {
+        if (offset < 0 || length < 0 || offset + length > size) {
+            return `${name} does not fit - ${offset}+${length} in ${size} bytes`;
+        }
     }
+    return undefined;
 }
 
 /**
