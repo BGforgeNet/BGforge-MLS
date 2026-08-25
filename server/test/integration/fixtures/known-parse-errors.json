@@ -223,7 +223,7 @@
         "files": ["BG1NPC/bg1npc/core/tpa/a64_beregost.tpa"]
     },
     "weidu-tra": {
-        "reason": "worldmap.tra files use non-numeric `@BGT_781001` keys, which are not standard WeiDU tra - the tra lexer (WeiDUorg/weidu src/tlexer.in) only accepts `@['-']?['0'-'9']+`. These are preprocessed by BGT, not parsed directly; a grammar fix is not appropriate. The charset, two-sound, and percent-string gaps that previously errored here are now fixed.",
+        "reason": "worldmap.tra files use non-numeric `@BGT_781001` keys, which standard WeiDU tra does not accept - a tra key is a number. These are preprocessed by BGT, not parsed directly; a grammar fix is not appropriate. The charset, two-sound, and percent-string gaps that previously errored here are now fixed.",
         "files": [
             "BGT-WeiDU/bgt/worldmap/czech/worldmap.tra",
             "BGT-WeiDU/bgt/worldmap/english/worldmap.tra",
