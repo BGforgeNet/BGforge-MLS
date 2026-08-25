@@ -27,7 +27,7 @@ import { initServerContext } from "../../src/server-context";
 import { initSettingsService } from "../../src/settings-service";
 import type { HandlerContext } from "../../src/handlers/context";
 import { defaultSettings, type ProjectSettings } from "../../src/settings";
-import { GameStrings } from "../../src/ie-resources/game-strings";
+import { ConfiguredGame } from "../../src/ie-resources/configured-game";
 import type { Translation } from "../../src/translation";
 
 import * as completion from "../../src/handlers/completion";
@@ -135,7 +135,7 @@ beforeAll(() => {
         projectSettings: {} as ProjectSettings,
         settings: { ...defaultSettings, debug: false },
         translation: translationStub,
-        gameStrings: new GameStrings(),
+        configuredGame: new ConfiguredGame(),
     });
 });
 

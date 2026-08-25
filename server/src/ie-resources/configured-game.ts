@@ -1,14 +1,15 @@
 /**
- * Resolves TLK string references ("strrefs") against the configured Infinity Engine install, so features that
- * show what a strref means - inlay hints and hover on a BAF `DisplayString`, the dialog editor's line text -
- * all read one string table.
+ * Resolves both TLK string references ("strrefs") and IDS naming tables against the configured Infinity Engine
+ * install, so features that show what a strref means (inlay hints and hover on a BAF `DisplayString`, the
+ * dialog editor's line text) and features that name an opcode/action/trigger by ID all read one opened game.
  *
  * The server opens its own game rather than asking the client for the text: `weidu.gamePath` arrives through
- * standard `workspace/configuration`, so strref resolution works in any LSP client, where a custom
- * server-to-client request would confine it to the VS Code extension.
+ * standard `workspace/configuration`, so resolution works in any LSP client, where a custom server-to-client
+ * request would confine it to the VS Code extension.
  */
 
-import { openGame, type Game } from "@bgforge/binary/archive";
+import { openGame, type Game, type IeScriptStyle } from "@bgforge/binary/archive";
+import type { BcsTableSource } from "../../../compilers/bcs/src/index";
 import { errorMessage } from "../diagnostics";
 import { conlog } from "../logger";
 import type { WeiDUsettings } from "../settings";
@@ -23,7 +24,7 @@ const defaultOpener: GameOpener = (dir, encoding) =>
 /** The settings that decide which string table is read; a change to either re-opens the game. */
 type GameConfig = Pick<WeiDUsettings, "gamePath" | "tlkEncoding">;
 
-export class GameStrings {
+export class ConfiguredGame {
     private readonly opener: GameOpener;
     private open: { key: string; game: Game } | undefined;
     private failedKey: string | undefined;
@@ -39,6 +40,21 @@ export class GameStrings {
      */
     resolve(strref: number, weidu: GameConfig): string | undefined {
         return this.game(weidu)?.tlk()?.get(strref);
+    }
+
+    /**
+     * The configured install's naming tables, or undefined when there is no game or it cannot be read.
+     *
+     * The same opened install the string table comes from: a compile that resolved names against a different
+     * game than a hover read is the disagreement this class exists to prevent.
+     */
+    tables(weidu: GameConfig): BcsTableSource | undefined {
+        return this.game(weidu);
+    }
+
+    /** The install's detected script style, which decides which table names each of an object's fields. */
+    scriptStyle(weidu: GameConfig): IeScriptStyle | undefined {
+        return this.game(weidu)?.identity.scriptStyle;
     }
 
     private game(weidu: GameConfig): Game | undefined {

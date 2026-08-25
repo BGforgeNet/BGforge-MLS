@@ -23,7 +23,11 @@ export function register(ctx: HandlerContext): void {
             // different installs, and the session copy is still at its defaults until the client answers the
             // global configuration request - which can land after the first request for a document.
             const { weidu } = await getDocumentSettings(uri);
-            strRefs = strRefInlayHints(sites, (strref) => serverCtx.gameStrings.resolve(strref, weidu), params.range);
+            strRefs = strRefInlayHints(
+                sites,
+                (strref) => serverCtx.configuredGame.resolve(strref, weidu),
+                params.range,
+            );
         }
 
         // The three sources annotate different references in the same file - a BAF line can hold both a `@100`

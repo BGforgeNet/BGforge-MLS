@@ -1,6 +1,6 @@
 /**
  * Locates TLK string references in a parsed script: which argument of which call is a strref, and where the
- * number sits. Resolving those to text is `./game-strings`; this module only says where to look.
+ * number sits. Resolving those to text is `./configured-game`; this module only says where to look.
  *
  * The strref slots come from a map generated from the engine data's own signatures, so a data update moves the
  * hints with it and no list of action names lives in code.

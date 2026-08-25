@@ -48,7 +48,7 @@ export function register(ctx: HandlerContext): void {
                     const { weidu } = await getDocumentSettings(uri);
                     const strRef = strRefHover(
                         strRefSites,
-                        (ref) => serverCtx.gameStrings.resolve(ref, weidu),
+                        (ref) => serverCtx.configuredGame.resolve(ref, weidu),
                         textDocumentPosition.position,
                     );
                     if (strRef) {

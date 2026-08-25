@@ -1,7 +1,7 @@
 import { openGame, type Game } from "@bgforge/binary";
 
 /**
- * The install-opening seam, as `server/src/ie-resources/game-strings.ts` has one. Injected in tests, where
+ * The install-opening seam, as `server/src/ie-resources/configured-game.ts` has one. Injected in tests, where
  * closing is otherwise unobservable: `Game.close()` releases BIF file descriptors and leaves the in-memory
  * KEY index intact, so nothing on the public surface distinguishes a closed game from an open one.
  */

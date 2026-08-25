@@ -22,7 +22,7 @@
 import { conlog, setDebugLogging } from "./logger";
 import type { MLSsettings, ProjectSettings } from "./settings";
 import type { Translation } from "./translation";
-import type { GameStrings } from "./ie-resources/game-strings";
+import type { ConfiguredGame } from "./ie-resources/configured-game";
 
 /**
  * Threshold after which the init watchdog reports "ServerContext never
@@ -49,8 +49,8 @@ interface ServerContext {
     readonly projectSettings: ProjectSettings;
     settings: MLSsettings;
     readonly translation: Translation;
-    /** Resolves TLK strrefs against the configured game install. */
-    readonly gameStrings: GameStrings;
+    /** Resolves TLK strrefs and IDS naming tables against the configured game install. */
+    readonly configuredGame: ConfiguredGame;
 }
 
 let ctx: ServerContext | undefined;

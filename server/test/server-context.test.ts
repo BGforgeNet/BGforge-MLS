@@ -8,7 +8,7 @@
 import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import type { MLSsettings, ProjectSettings } from "../src/settings";
 import type { Translation } from "../src/translation";
-import { GameStrings } from "../src/ie-resources/game-strings";
+import { ConfiguredGame } from "../src/ie-resources/configured-game";
 
 const { mockConlog } = vi.hoisted(() => ({ mockConlog: vi.fn() }));
 vi.mock("../src/logger", () => ({
@@ -24,7 +24,7 @@ function makeStubContext() {
         projectSettings: {} as ProjectSettings,
         settings: {} as MLSsettings,
         translation: {} as Translation,
-        gameStrings: new GameStrings(),
+        configuredGame: new ConfiguredGame(),
     };
 }
 
