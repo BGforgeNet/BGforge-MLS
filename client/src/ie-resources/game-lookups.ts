@@ -1,7 +1,7 @@
 import type * as vscode from "vscode";
 import { engineForFlavour, type IeScriptStyle, type TwoDaTable } from "@bgforge/binary";
 import { bcsEngineForScriptStyle, type BcsNaming } from "../bcs-editor/document";
-import type { BcsSignatureRow } from "../../../compilers/bcs/src/index";
+import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 
@@ -275,24 +275,6 @@ export function createNamingTableResolver(currentGame: GameSource, fallback?: Ga
 export type BcsSymbolResolver = (uri: vscode.Uri) => BcsNaming | undefined;
 
 /**
- * A signature table indexed by the call it declares, which is the key compiling looks a name up by.
- *
- * Every row is kept rather than one per name, for the same reason `idsAll` exists: one name can appear more
- * than once, and only the call site says which row was meant.
- */
-function signaturesByName(rows: ReadonlyMap<number, readonly string[]> | undefined): Map<string, BcsSignatureRow[]> {
-    const index = new Map<string, BcsSignatureRow[]>();
-    for (const [id, signatures] of rows ?? []) {
-        for (const signature of signatures) {
-            const open = signature.indexOf("(");
-            const name = (open === -1 ? signature : signature.slice(0, open)).trim().toLowerCase();
-            index.set(name, [...(index.get(name) ?? []), { id, signature }]);
-        }
-    }
-    return index;
-}
-
-/**
  * Resolves the tables a compiled script decompiles against.
  *
  * Signatures come through `idsAll` rather than `ids`: ACTION.IDS names one id twice 32 times over, and id 160's
@@ -309,23 +291,18 @@ export function createBcsSymbolResolver(currentGame: GameSource, fallback?: Game
         try {
             const game = currentGame.gameAt(gameDir);
             if (game !== undefined) {
-                // Built once per resolve and captured, because compiling looks a name up per call and rebuilding
-                // the index for each would re-walk the whole table thousands of times in one save.
-                const triggersByName = signaturesByName(game.idsAll("TRIGGER"));
-                const actionsByName = signaturesByName(game.idsAll("ACTION"));
                 naming = {
                     symbols: {
                         trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
                         action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
                         ids: (table) => game.ids(table),
                     },
+                    // Built once per resolve and captured, because compiling looks a name up per call and
+                    // rebuilding the index for each would re-walk the whole table thousands of times in one save.
+                    //
                     // The same tables read the other way, from the same open game: a save must not resolve names
                     // against one install while the view that produced them resolved against another.
-                    compileSymbols: {
-                        triggerByName: (name) => triggersByName.get(name.toLowerCase()) ?? [],
-                        actionByName: (name) => actionsByName.get(name.toLowerCase()) ?? [],
-                        ids: (table) => game.ids(table),
-                    },
+                    compileSymbols: compileSymbolsFrom(game),
                     // The engine the install was detected as: it decides which table names each object field, and
                     // no part of a script says which game wrote it.
                     engine: bcsEngineForScriptStyle(game.identity.scriptStyle),

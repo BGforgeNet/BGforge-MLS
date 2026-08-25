@@ -3,6 +3,7 @@ import type { Parser } from "web-tree-sitter";
 import {
     BcsCompileError,
     compileBaf,
+    compileSymbolsFrom,
     decompileBcs,
     readBcs,
     writeBcs,
@@ -329,6 +330,55 @@ describe("compileBaf - what it will not guess at", () => {
         expect(problemsOf(() => compile(script("False()", ["ActionOverride(Myself)"])))[0]).toContain(
             "ActionOverride takes",
         );
+    });
+});
+
+describe("compileSymbolsFrom", () => {
+    // ACTION.IDS names one id twice 32 times over on a real install, so the index is many-rows-per-name
+    // and the inversion must keep every row rather than letting a later one win.
+    test("indexes every row that spells the same call, keyed case-insensitively", () => {
+        const game = {
+            idsAll: (resref: string) =>
+                resref === "ACTION"
+                    ? new Map([
+                          [30, ["MoveToPoint(P:Point*)"]],
+                          [160, ["DisplayString(O:Object*,I:StrRef*)", "displaystring(S:Text*)"]],
+                      ])
+                    : undefined,
+            ids: () => undefined,
+        };
+
+        const symbols = compileSymbolsFrom(game);
+
+        expect(symbols.actionByName("MOVETOPOINT")).toEqual([{ id: 30, signature: "MoveToPoint(P:Point*)" }]);
+        expect(symbols.actionByName("DisplayString")).toEqual([
+            { id: 160, signature: "DisplayString(O:Object*,I:StrRef*)" },
+            { id: 160, signature: "displaystring(S:Text*)" },
+        ]);
+        expect(symbols.actionByName("nosuchaction")).toEqual([]);
+    });
+
+    test("indexes triggers from TRIGGER.IDS and passes plain tables straight through", () => {
+        const race = new Map([[1, "HUMAN"]]);
+        const game = {
+            idsAll: (resref: string) =>
+                resref === "TRIGGER" ? new Map([[16395, ["Global(S:Name*,S:Area*,I:Value*)"]]]) : undefined,
+            ids: (table: string) => (table === "RACE" ? race : undefined),
+        };
+
+        const symbols = compileSymbolsFrom(game);
+
+        expect(symbols.triggerByName("global")).toEqual([{ id: 16395, signature: "Global(S:Name*,S:Area*,I:Value*)" }]);
+        expect(symbols.ids("RACE")).toBe(race);
+        expect(symbols.ids("MISSING")).toBeUndefined();
+    });
+
+    // An install with no such table must read as "no rows", not throw - it is how a partial install behaves.
+    test("reports no rows when the install has no such table", () => {
+        const symbols = compileSymbolsFrom({ idsAll: () => undefined, ids: () => undefined });
+
+        expect(symbols.actionByName("MoveToPoint")).toEqual([]);
+        expect(symbols.triggerByName("Global")).toEqual([]);
     });
 });
 

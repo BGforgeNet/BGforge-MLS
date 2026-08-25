@@ -63,6 +63,44 @@ export interface BcsCompileSymbols {
     ids(table: string): ReadonlyMap<number, string> | undefined;
 }
 
+/**
+ * The two table accessors the inversion reads. Narrower than `Game` so a caller can satisfy it without
+ * opening an install, which is what lets this be tested and reused on both sides of the extension.
+ */
+export interface BcsTableSource {
+    idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
+    ids(table: string): ReadonlyMap<number, string> | undefined;
+}
+
+/**
+ * Builds the compile-direction symbols from an install's tables.
+ *
+ * The index is built once per call rather than per lookup: compiling asks for a name per call, and rebuilding
+ * it each time would re-walk a table of hundreds of rows thousands of times in one compile. A name is keyed
+ * lower-case and keeps EVERY row that spells it, because ACTION.IDS names one id twice over and only the call
+ * site's argument shape says which row was meant.
+ */
+export function compileSymbolsFrom(game: BcsTableSource): BcsCompileSymbols {
+    const index = (resref: string): Map<string, BcsSignatureRow[]> => {
+        const byName = new Map<string, BcsSignatureRow[]>();
+        for (const [id, signatures] of game.idsAll(resref) ?? []) {
+            for (const signature of signatures) {
+                const open = signature.indexOf("(");
+                const name = (open === -1 ? signature : signature.slice(0, open)).trim().toLowerCase();
+                byName.set(name, [...(byName.get(name) ?? []), { id, signature }]);
+            }
+        }
+        return byName;
+    };
+    const triggers = index("TRIGGER");
+    const actions = index("ACTION");
+    return {
+        triggerByName: (name) => triggers.get(name.toLowerCase()) ?? [],
+        actionByName: (name) => actions.get(name.toLowerCase()) ?? [],
+        ids: (table) => game.ids(table),
+    };
+}
+
 /** One located complaint, so a caller can place it without parsing the message back apart. */
 export interface BcsCompileDiagnostic {
     /** 1-based, as an editor counts them. */
