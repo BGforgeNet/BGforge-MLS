@@ -125,6 +125,18 @@ describe("compileBaf - what a record holds", () => {
         expect(bracketed).toBe(bare);
     });
 
+    // A real name can alias a value: BG2/BGEE's CLASS.IDS spells 202 both LONG_BOW and MAGE_ALL (the fixture
+    // copies both rows verbatim). Both must resolve to the same field value, proving the compiler inverts
+    // idsAll (every alias) rather than ids (the one name a value is canonical under).
+    test("an aliased IDS name compiles to the same value as its alias", () => {
+        const longBow = compile(script("See([0.0.0.LONG_BOW])"));
+        const mageAll = compile(script("See([0.0.0.MAGE_ALL])"));
+
+        expect(longBow).toBe(mageAll);
+        const compiled = compileBaf(parser, script("See([0.0.0.LONG_BOW])"), COMPILE_SYMBOLS);
+        expect(compiled.blocks[0]!.triggers[0]!.object.ints[3]).toBe(202);
+    });
+
     test("a call with no name in the tables keeps the id the decompiler printed", () => {
         const compiled = compileBaf(parser, script("False()", ["UnknownAction812()"]), COMPILE_SYMBOLS);
 
@@ -194,7 +206,6 @@ function symbolsWith(rows: { triggers?: BcsSignatureRow[]; actions?: BcsSignatur
     return {
         triggerByName: (name) => [...COMPILE_SYMBOLS.triggerByName(name), ...named(rows.triggers, name)],
         actionByName: (name) => [...COMPILE_SYMBOLS.actionByName(name), ...named(rows.actions, name)],
-        ids: COMPILE_SYMBOLS.ids,
         idsAll: COMPILE_SYMBOLS.idsAll,
     };
 }
@@ -205,7 +216,6 @@ function symbolsWithout(missing: string): BcsCompileSymbols {
     return {
         triggerByName: (name) => (gone(name) ? [] : COMPILE_SYMBOLS.triggerByName(name)),
         actionByName: COMPILE_SYMBOLS.actionByName,
-        ids: COMPILE_SYMBOLS.ids,
         idsAll: COMPILE_SYMBOLS.idsAll,
     };
 }
@@ -358,7 +368,6 @@ describe("compileSymbolsFrom", () => {
                           [160, ["DisplayString(O:Object*,I:StrRef*)", "displaystring(S:Text*)"]],
                       ])
                     : undefined,
-            ids: () => undefined,
         };
 
         const symbols = compileSymbolsFrom(game);
@@ -371,8 +380,7 @@ describe("compileSymbolsFrom", () => {
         expect(symbols.actionByName("nosuchaction")).toEqual([]);
     });
 
-    test("indexes triggers from TRIGGER.IDS and passes plain tables straight through", () => {
-        const race = new Map([[1, "HUMAN"]]);
+    test("indexes triggers from TRIGGER.IDS and passes idsAll straight through", () => {
         const scroll = new Map([[4, ["VERY_FAST", "BD_NORMAL"]]]);
         const game = {
             idsAll: (resref: string) =>
@@ -381,23 +389,18 @@ describe("compileSymbolsFrom", () => {
                     : resref === "SCROLL"
                       ? scroll
                       : undefined,
-            ids: (table: string) => (table === "RACE" ? race : undefined),
         };
 
         const symbols = compileSymbolsFrom(game);
 
         expect(symbols.triggerByName("global")).toEqual([{ id: 16395, signature: "Global(S:Name*,S:Area*,I:Value*)" }]);
-        expect(symbols.ids("RACE")).toBe(race);
-        expect(symbols.ids("MISSING")).toBeUndefined();
-        // idsAll is a separate forwarder from ids (compile.ts:107) - every alias a value has, not the one
-        // canonical name ids() singles out, so it needs its own passthrough check.
         expect(symbols.idsAll("SCROLL")).toBe(scroll);
         expect(symbols.idsAll("MISSING")).toBeUndefined();
     });
 
     // An install with no such table must read as "no rows", not throw - it is how a partial install behaves.
     test("reports no rows when the install has no such table", () => {
-        const symbols = compileSymbolsFrom({ idsAll: () => undefined, ids: () => undefined });
+        const symbols = compileSymbolsFrom({ idsAll: () => undefined });
 
         expect(symbols.actionByName("MoveToPoint")).toEqual([]);
         expect(symbols.triggerByName("Global")).toEqual([]);

@@ -9,17 +9,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { BcsCompileSymbols, BcsSignatureRow, BcsSymbols } from "@bgforge/bcs";
+import { compileSymbolsFrom, type BcsCompileSymbols, type BcsSymbols } from "@bgforge/bcs";
 
 /** A table row's value: `0x400F` and `30` both occur, in the same file. */
 function value(text: string): number {
     return /^-?0x/i.test(text) ? Number.parseInt(text, 16) : Number(text);
-}
-
-/** The call a signature declares, which is the key a compiler looks a name up by. */
-function callName(signature: string): string {
-    const open = signature.indexOf("(");
-    return (open === -1 ? signature : signature.slice(0, open)).trim().toLowerCase();
 }
 
 /**
@@ -51,19 +45,9 @@ export function readIdsTables(dir: string): IdsTables {
         for (const [id, signature] of readTable(dir, name)) rows.set(id, [...(rows.get(id) ?? []), signature]);
         return rows;
     };
-    const byName = (name: string): Map<string, BcsSignatureRow[]> => {
-        const rows = new Map<string, BcsSignatureRow[]>();
-        for (const [id, signature] of readTable(dir, name)) {
-            const key = callName(signature);
-            rows.set(key, [...(rows.get(key) ?? []), { id, signature }]);
-        }
-        return rows;
-    };
 
     const triggers = byId("TRIGGER");
     const actions = byId("ACTION");
-    const triggersByName = byName("TRIGGER");
-    const actionsByName = byName("ACTION");
     // Each enumerated table read once. A script resolves the same handful of them thousands of times.
     const enumerated = new Map<string, ReadonlyMap<number, string> | undefined>();
 
@@ -94,11 +78,8 @@ export function readIdsTables(dir: string): IdsTables {
             action: (id) => actions.get(id) ?? [],
             ids,
         },
-        compileSymbols: {
-            triggerByName: (name) => triggersByName.get(name.toLowerCase()) ?? [],
-            actionByName: (name) => actionsByName.get(name.toLowerCase()) ?? [],
-            idsAll,
-            ids,
-        },
+        // The codec's own grouping, not a second hand-rolled name index - compileSymbolsFrom already turns
+        // idsAll into triggerByName/actionByName, and re-deriving that here risked disagreeing with it.
+        compileSymbols: compileSymbolsFrom({ idsAll }),
     };
 }

@@ -22,7 +22,6 @@ const SYMBOLS = compileSymbolsFrom({
             : resref === "ACTION"
               ? new Map([[30, ["MoveToPoint(P:Point*)"]]])
               : undefined,
-    ids: () => undefined,
 });
 
 function compile(text: string) {

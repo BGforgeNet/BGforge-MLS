@@ -157,10 +157,10 @@ describe("ConfiguredGame", () => {
 
 describe("ConfiguredGame.tables", () => {
     it("exposes the configured install's IDS tables", () => {
-        const race = new Map([[1, "HUMAN"]]);
-        const game = new ConfiguredGame(openerFor({ ids: (t: string) => (t === "RACE" ? race : undefined) }));
+        const race = new Map([[1, ["HUMAN"]]]);
+        const game = new ConfiguredGame(openerFor({ idsAll: (t: string) => (t === "RACE" ? race : undefined) }));
 
-        expect(game.tables({ gamePath: "/games/tob", tlkEncoding: "" })?.ids("RACE")).toBe(race);
+        expect(game.tables({ gamePath: "/games/tob", tlkEncoding: "" })?.idsAll("RACE")).toBe(race);
     });
 
     // No game configured is not an error - every consumer treats it as "nothing to resolve against".

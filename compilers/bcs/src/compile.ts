@@ -49,33 +49,26 @@ export interface BcsSignatureRow {
  * Named apart from `BcsSymbols`'s id-keyed `trigger`/`action` so one object can satisfy both interfaces - a
  * caller holding a game resolves in both directions from the same tables, and making it hold two objects
  * would invite the two to be built from different reads of one file.
- *
- * `ids` is the SAME accessor the decompiler uses, value-keyed. Inverting it is this module's job: a table
- * naming two values alike is a table property, and the two directions must not disagree about which name
- * won.
  */
 export interface BcsCompileSymbols {
     /** Every TRIGGER.IDS row whose call is spelled `name`, case-insensitively. */
     triggerByName(name: string): readonly BcsSignatureRow[];
     /** Every ACTION.IDS row whose call is spelled `name`. */
     actionByName(name: string): readonly BcsSignatureRow[];
-    /** An IDS table by name, without the extension, for enumerated arguments and object fields. */
-    ids(table: string): ReadonlyMap<number, string> | undefined;
     /**
-     * The same table, every alias a value has rather than the one `ids` singles out as canonical - a real
-     * script can spell any of them (SCROLL.IDS 4 is `BD_NORMAL` to `ids`, but `VERY_FAST` names it too), so
-     * the compile direction resolves against all of them while the decompile direction still picks one.
+     * An IDS table by name, without the extension, for enumerated arguments and object fields - every alias a
+     * value has, not just the one `BcsSymbols.ids` singles out as canonical: a real script can spell any of
+     * them (CLASS.IDS 202 is both `LONG_BOW` and `MAGE_ALL` on a stock install).
      */
     idsAll(table: string): ReadonlyMap<number, readonly string[]> | undefined;
 }
 
 /**
- * The two table accessors the inversion reads. Narrower than `Game` so a caller can satisfy it without
- * opening an install, which is what lets this be tested and reused on both sides of the extension.
+ * The one table accessor the inversion reads. Narrower than `Game` so a caller can satisfy it without opening
+ * an install, which is what lets this be tested and reused on both sides of the extension.
  */
 export interface BcsTableSource {
     idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
-    ids(table: string): ReadonlyMap<number, string> | undefined;
 }
 
 /**
@@ -103,7 +96,6 @@ export function compileSymbolsFrom(game: BcsTableSource): BcsCompileSymbols {
     return {
         triggerByName: (name) => triggers.get(name.toLowerCase()) ?? [],
         actionByName: (name) => actions.get(name.toLowerCase()) ?? [],
-        ids: (table) => game.ids(table),
         idsAll: (table) => game.idsAll(table),
     };
 }
@@ -587,9 +579,9 @@ class Compiler {
         let inverted = this.byName.get(key);
         if (inverted === undefined) {
             const built = new Map<string, number>();
-            // idsAll, not ids: a real script can spell any alias a value has, not only the one `ids()`
-            // singles out as canonical (SCROLL.IDS 4 is `BD_NORMAL` to `ids()`, but `VERY_FAST` names it
-            // too). The FIRST name wins where two values spell the same name, which is the row met first.
+            // idsAll, not the decompiler's single-name `BcsSymbols.ids`: a real script can spell any alias a
+            // value has, not only the canonical one (SCROLL.IDS 4 is `BD_NORMAL` there, but `VERY_FAST` names
+            // it too). The FIRST name wins where two values spell the same name, which is the row met first.
             for (const [value, entries] of this.symbols.idsAll(table) ?? []) {
                 for (const entry of entries) {
                     const lowered = entry.toLowerCase();

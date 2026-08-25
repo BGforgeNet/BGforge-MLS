@@ -42,7 +42,6 @@ const SYMBOLS: BcsSymbols = {
 const NO_COMPILE_SYMBOLS: BcsCompileSymbols = {
     triggerByName: () => [],
     actionByName: () => [],
-    ids: () => undefined,
     idsAll: () => undefined,
 };
 
