@@ -14,7 +14,8 @@
  * edition lacks is refused by both sides - agreement, not a false disagreement.
  *
  * Skips cleanly when WeiDU or a game install is unavailable, the way the corpus suites skip on an
- * unchecked-out external/.
+ * unchecked-out external/. This never runs in CI: game data is not redistributable, so there is no install
+ * to point BGFORGE_IE_GAME at there. Set it to a local install to run this suite.
  */
 
 import { execFileSync } from "child_process";

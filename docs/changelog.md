@@ -34,6 +34,13 @@
   decides what an object's fields mean, and the open install says which game it is.
 - A `RESPONSE` with no actions is now accepted in `.baf` sources too. Real compiled scripts carry them and
   the reference compiler takes them, but highlighting and the outline read one as a syntax error.
+- BAF diagnostics get a second, built-in compiler alongside the existing WeiDU one. Enable with
+  `bgforge.weidu.compiler: built-in`. It needs no WeiDU binary and reports every problem in a file at once,
+  but it only compiles self-contained BAF: a file using a `%variable%` (assigned by a tp2 during install) or
+  an `@strref` (allocated when a translation is added) is refused with a diagnostic naming the construct,
+  since neither value exists before an install runs. Checked against WeiDU itself over the real corpus: of
+  741 `.baf` files, 450 are self-contained and compile identically on both sides, and the remaining 291 are
+  refused by the built-in compiler for exactly this reason.
 
 ### Dialog editor
 
