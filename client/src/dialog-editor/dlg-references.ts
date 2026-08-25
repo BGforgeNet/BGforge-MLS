@@ -142,12 +142,12 @@ export class DlgReferenceIndex {
 
     private retract(resref: string): void {
         const name = resref.toUpperCase();
-        for (const { key: target, target: dialog, ref } of this.bySource.get(name) ?? []) {
-            const list = this.targets.get(target);
+        for (const { key: stateKey, target: dialog, ref } of this.bySource.get(name) ?? []) {
+            const list = this.targets.get(stateKey);
             if (list) {
                 const remaining = list.filter((r) => r !== ref);
-                if (remaining.length === 0) this.targets.delete(target);
-                else this.targets.set(target, remaining);
+                if (remaining.length === 0) this.targets.delete(stateKey);
+                else this.targets.set(stateKey, remaining);
             }
             // Every edge this file contributes is retracted together, so removing it from each target it
             // reached is exact - no other edge of its own can still be holding the entry open.
