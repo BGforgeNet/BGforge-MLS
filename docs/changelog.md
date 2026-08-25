@@ -45,7 +45,8 @@
   change, and which replies in other dialogs still reach it - each named by its dialog, state and reply.
 - The trigger on a state, and the condition and action on a reply, can be edited in a compiled dialog. A
   `.dlg` stores these as script text - the same fragments a `.d` source wraps in tildes - and saving writes
-  an edited one back into the file's own table, leaving every entry that was already there at its index. They
+  an edited one back into the file's own table - with the CRLF line breaks the format uses - and leaves every
+  entry that was already there at its index. They
   were previously shown locked, on the same flag that says a line's text is a string number rather than
   prose. A reply's target may now point into another dialog in the tree as well, which is how the file
   already addresses a hand-off.

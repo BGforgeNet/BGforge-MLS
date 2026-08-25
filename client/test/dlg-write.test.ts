@@ -349,3 +349,53 @@ describe("writeDlgFromModel (edited trigger, condition and action)", () => {
         expect(dlg.stateTriggers[dlg.states[1]!.triggerIndex]).toBe('Global("new","GLOBAL",1)');
     });
 });
+
+/**
+ * Script text in a DLG is CRLF-separated: that is what the shipped files hold (in Throne of Bhaal, 23041
+ * multi-line entries against 6 with bare LF) and what WeiDU writes even from an LF-only source. A textarea
+ * hands back LF, so the writer normalizes rather than leaving the editor as the one producer that differs.
+ */
+describe("writeDlgFromModel (line endings in script text)", () => {
+    it("stores an edited trigger with CRLF line endings", () => {
+        const model = sampleModel();
+        model.roots[0]!.states[0]!.trigger = 'Global("a","GLOBAL",1)\nGlobal("b","GLOBAL",2)';
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.stateTriggers[dlg.states[0]!.triggerIndex]).toBe('Global("a","GLOBAL",1)\r\nGlobal("b","GLOBAL",2)');
+    });
+
+    it("normalizes a condition and an action too", () => {
+        const model = sampleModel();
+        const choice = model.roots[0]!.states[0]!.choices[1]!;
+        choice.condition = "A()\nB()";
+        choice.action = "C()\nD()";
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.transitionTriggers[dlg.transitions[1]!.triggerIndex]).toBe("A()\r\nB()");
+        expect(dlg.actions[dlg.transitions[1]!.actionIndex]).toBe("C()\r\nD()");
+    });
+
+    it("leaves an already-CRLF entry exactly as it is", () => {
+        const model = sampleModel();
+        model.roots[0]!.states[0]!.trigger = "A()\r\nB()";
+
+        const dlg = readDlg(writeDlgFromModel(original(), model, "TEST"));
+
+        expect(dlg.stateTriggers[dlg.states[0]!.triggerIndex]).toBe("A()\r\nB()");
+    });
+
+    it("keeps a CRLF entry at its index when the editor hands the same text back as LF", () => {
+        // The textarea normalizes what it displays, so retyping an unchanged trigger must not append a
+        // near-duplicate entry that differs only in its line endings.
+        const crlf = buildDlg({ ...sample(), stateTriggers: ['Global("x","GLOBAL",1)\r\nTrue()'] });
+        const model = modelFromDlg({ ...readDlg(crlf), resref: "TEST" });
+        model.roots[0]!.states[0]!.trigger = 'Global("x","GLOBAL",1)\nTrue()';
+
+        const dlg = readDlg(writeDlgFromModel(crlf, model, "TEST"));
+
+        expect(dlg.stateTriggers).toEqual(['Global("x","GLOBAL",1)\r\nTrue()']);
+        expect(dlg.states[0]!.triggerIndex).toBe(0);
+    });
+});

@@ -33,12 +33,21 @@ function strrefOf(text: string, where: string): number {
 }
 
 /**
+ * Script text as a dialog stores it: CRLF-separated, which is what the shipped files hold and what WeiDU
+ * writes even from an LF-only source. Editing it as LF and storing it as CRLF is what the established
+ * dialog editors do too, so normalizing here - the one place text enters a table - both matches them and
+ * keeps a retyped-but-unchanged entry at its own index instead of appending a copy.
+ */
+const crlf = (text: string): string => text.replaceAll(/\r\n|\r|\n/g, "\r\n");
+
+/**
  * The index `text` should have in `table`. An entry whose text is unchanged keeps its original index, so a
  * file nobody edited comes back with its tables exactly as they were; anything new is appended rather than
  * inserted, because inserting would renumber every entry above it. A superseded entry is left in place -
  * orphaned, harmless, and cheaper than a compaction pass that would renumber.
  */
-function tableIndex(table: string[], originalIndex: number | undefined, text: string): number {
+function tableIndex(table: string[], originalIndex: number | undefined, raw: string): number {
+    const text = crlf(raw);
     if (originalIndex !== undefined && originalIndex >= 0 && table[originalIndex] === text) return originalIndex;
     const existing = table.indexOf(text);
     if (existing !== -1) return existing;
