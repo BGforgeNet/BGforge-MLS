@@ -25,6 +25,7 @@ import { tbafWithSourceMap, td, outputPathFor, TranspileError } from "../../tran
 import { compileTsslToInt } from "./tssl/compile-int";
 import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
+import { runBafDiagnostics } from "./weidu-baf/diagnostics";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
 
 /**
@@ -125,10 +126,9 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 if (interactive) {
                     showInfo(`Transpiled to ${bafName}`);
                 }
-                // Chain BAF compilation if weidu and game path are configured.
-                if (settings.weidu.path && settings.weidu.gamePath) {
-                    const bafUri = pathToUri(bafPath);
-                    await weidu.compile(bafUri, settings.weidu, interactive, output);
+                // Chain BAF diagnostics with whichever compiler bgforge.weidu.compiler selects.
+                const bafUri = pathToUri(bafPath);
+                if (await runBafDiagnostics(bafUri, output, settings, interactive)) {
                     relocateGeneratedDiagnostics(bafUri, sourceMap);
                 }
             } catch (error) {

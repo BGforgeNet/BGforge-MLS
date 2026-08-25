@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
-import { bcsEngineForScriptStyle, render } from "../src/bcs-editor/document";
+import { render } from "../src/bcs-editor/document";
+import { bcsEngineForScriptStyle } from "../../shared/bcs-engine";
 
 /**
  * What a `.bcs` tab shows.

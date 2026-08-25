@@ -11,7 +11,6 @@
  */
 
 import * as fs from "fs";
-import type { IeScriptStyle } from "../../../binary/src/index";
 import {
     decompileBcs,
     readBcs,
@@ -30,26 +29,6 @@ export interface BcsNaming {
     readonly symbols: BcsSymbols;
     readonly compileSymbols: BcsCompileSymbols;
     readonly engine: BcsEngine;
-}
-
-/**
- * The BCS engine a detected script style names.
- *
- * The detector already reports the axis the decompiler needs - it is how the games themselves are told apart -
- * so this is a total mapping with no fallback. The two Baldur's Gate styles collapse because they share an
- * object layout and their naming differences live in the install's own tables, which are read either way.
- */
-export function bcsEngineForScriptStyle(style: IeScriptStyle): BcsEngine {
-    switch (style) {
-        case "iwd1":
-            return "iwd";
-        case "iwd2":
-            return "iwd2";
-        case "pst":
-            return "pst";
-        default:
-            return "bg";
-    }
 }
 
 export const BCS_SCHEME = "bgforge-bcs";

@@ -31,7 +31,7 @@ import { stripCommentsWeidu, formatWeiduBaf as formatAst } from "@bgforge/format
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-baf";
-import { compile as weiduCompile } from "../weidu-compile";
+import { runBafDiagnostics } from "./diagnostics";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
@@ -135,7 +135,7 @@ class WeiduBafProvider
             conlog("WeiDU BAF provider not initialized, cannot compile");
             return;
         }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await runBafDiagnostics(uri, text, this.storedContext.settings, interactive);
     }
 }
 

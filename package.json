@@ -793,6 +793,19 @@
                     ],
                     "markdownDescription": "Character encoding of a **classic** game's `dialog.tlk`. Leave empty unless text from the game shows as garbled characters.\n\nA classic install records its encoding nowhere, so the default assumes windows-1252 - correct for English, French, German, Italian, Spanish and the other Western languages, and wrong for the rest. Enhanced Editions are always UTF-8 and ignore this setting."
                 },
+                "bgforge.weidu.compiler": {
+                    "type": "string",
+                    "enum": [
+                        "weidu",
+                        "built-in"
+                    ],
+                    "enumDescriptions": [
+                        "The WeiDU binary at bgforge.weidu.path. The reference implementation: it resolves the %variable% substitutions and translation references that only exist once a mod is being installed.",
+                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and reports every problem at once - but refuses a file using %variable% or @strref, which it cannot resolve outside an installation."
+                    ],
+                    "default": "weidu",
+                    "description": "Which compiler produces diagnostics for BAF files. Both need bgforge.weidu.gamePath; only the WeiDU one needs a WeiDU binary."
+                },
                 "bgforge.validate": {
                     "type": "string",
                     "default": "saveAndType",

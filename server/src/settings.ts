@@ -35,6 +35,8 @@ export interface WeiDUsettings {
      * windows-1252 otherwise). Only classic non-Western installs need it: they record their encoding nowhere.
      */
     tlkEncoding: string;
+    /** Which compiler produces BAF diagnostics. The external binary is the reference and stays the default. */
+    compiler: "weidu" | "built-in";
 }
 
 type ValidationMode = "manual" | "save" | "type" | "saveAndType";
@@ -65,7 +67,7 @@ export const defaultSettings: MLSsettings = {
         compiler: "wasm",
     },
     tssl: { emitSsl: false },
-    weidu: { path: "weidu", gamePath: "", tlkEncoding: "" },
+    weidu: { path: "weidu", gamePath: "", tlkEncoding: "", compiler: "weidu" },
     validate: "saveAndType",
     diagnostics: true,
     debug: false,
@@ -95,6 +97,10 @@ export function normalizeSettings(value: unknown): MLSsettings {
         weidu: {
             ...defaultSettings.weidu,
             ...raw.weidu,
+            // Only the recognised opt-in value switches compilers; anything else - unset, or an unrecognised
+            // string from a stale config - falls back to the reference binary, same as falloutSSL.compiler's
+            // "built-in" check downstream.
+            compiler: raw.weidu?.compiler === "built-in" ? "built-in" : defaultSettings.weidu.compiler,
         },
         validate: raw.validate ?? defaultSettings.validate,
         diagnostics: raw.diagnostics ?? defaultSettings.diagnostics,
