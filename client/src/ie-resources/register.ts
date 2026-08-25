@@ -405,6 +405,11 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             // Not showing: close rather than open. Opening parses `chitin.key` and indexes every resource it
             // names, and the view is deliberately the only thing that pays that - the next lookup opens the
             // newly configured game lazily through `gameAt`.
+            //
+            // Also un-latch the restore guard: this close was the setting's doing, not the user's, so the
+            // view must pick the new game back up on its next show rather than staying blank because an
+            // earlier restore already ran. An explicit Close Game leaves `restored` alone - that one should.
+            restored = false;
             void closeCurrentGame();
         }),
     );
