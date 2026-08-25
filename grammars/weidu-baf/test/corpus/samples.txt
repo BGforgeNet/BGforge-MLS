@@ -1920,3 +1920,28 @@ END
         (action
           call: (call_expr
             func: (identifier)))))))
+
+================================================================================
+response with no actions
+================================================================================
+
+IF
+  Global("done","GLOBAL",1)
+THEN
+  RESPONSE #100
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (string)
+          args: (string)
+          args: (number))))
+    then: (then_clause
+      (response
+        weight: (number)))))
