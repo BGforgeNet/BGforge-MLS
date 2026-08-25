@@ -17,7 +17,7 @@
         codeFieldEditable,
         codeLockReason,
         conditionLockReason,
-        dlgRenameLockReason,
+        DLG_RENAME_LOCK_REASON,
         optionRemoveLockReason,
         sayLineEditability,
         stateReadOnlyReason,
@@ -371,7 +371,7 @@
          A compiled dialog's state has no name at all - its number is its address - so the field is locked for
          it whatever its structural editability, matching the `nodeRenamable` gate the commit path applies. -->
     <div class="ik">{ssl ? "State" : dlg ? "State number" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? dlgRenameLockReason() : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
+    <input class="iv code" value={state.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? DLG_RENAME_LOCK_REASON : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches && !state.block}
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level

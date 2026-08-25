@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     codeFieldEditable,
     codeLockReason,
-    dlgRenameLockReason,
+    DLG_RENAME_LOCK_REASON,
     conditionLockReason,
     isPendingChoice,
     isPendingState,
@@ -570,9 +570,9 @@ describe("codeLockReason", () => {
     });
 });
 
-describe("dlgRenameLockReason", () => {
+describe("DLG_RENAME_LOCK_REASON", () => {
     it("says the number is the address, not that the file is read-only", () => {
-        const reason = dlgRenameLockReason();
+        const reason = DLG_RENAME_LOCK_REASON;
 
         // The rename field used to be ENABLED on a DLG state and silently drop what was typed.
         expect(reason).toMatch(/number/i);

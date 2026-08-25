@@ -130,9 +130,9 @@ export const DLG_FOREIGN_TEXT_LOCK_REASON =
  * Why a compiled dialog's state cannot be renamed. Its number is its address - other dialogs and mod scripts
  * point at it - so unlike every other family the name is not the author's to choose.
  */
-export function dlgRenameLockReason(): string {
-    return "A compiled dialog's state is identified by its number, which other dialogs and mod scripts point at, so it has no name to change.";
-}
+export const DLG_RENAME_LOCK_REASON =
+    "A compiled dialog's state is identified by its number, which other dialogs and mod scripts point at, so " +
+    "it has no name to change.";
 
 /**
  * Whether the code fields - state trigger, reply condition, reply action - accept typing. A compiled dialog
