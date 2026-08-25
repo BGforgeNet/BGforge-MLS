@@ -15,13 +15,18 @@ import type { BcsEngine } from "../compilers/bcs/src/index";
  */
 export function bcsEngineForScriptStyle(style: IeScriptStyle): BcsEngine {
     switch (style) {
+        case "bg1":
+        case "bg2":
+            return "bg";
         case "iwd1":
             return "iwd";
         case "iwd2":
             return "iwd2";
         case "pst":
             return "pst";
-        default:
-            return "bg";
+        default: {
+            const exhaustiveCheck: never = style;
+            return exhaustiveCheck;
+        }
     }
 }
