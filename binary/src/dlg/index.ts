@@ -322,14 +322,6 @@ class DlgParser implements BinaryParser {
 }
 
 /**
- * Re-emits the decoded structures over a copy of the source bytes, each section written at its own stored
- * offset. Anything not covered by a decoded section - the text block above all - is preserved exactly.
- *
- * This cannot grow the file, so it serves editing decoded fields and not yet inserting states. Building a
- * DLG from nothing is the construction API's job and needs a layout policy this deliberately does not
- * invent.
- */
-/**
  * Every section a write would touch has to lie inside the file. The JSON-snapshot path can arrive with a
  * hand-edited document (`fgbin --load`), and a header whose counts or refs address bytes that are not there
  * produces a DLG that overruns in every reader - so it is refused rather than written.
@@ -365,6 +357,14 @@ function assertFits(document: DlgCanonicalDocument, size: number): void {
     }
 }
 
+/**
+ * Re-emits the decoded structures over a copy of the source bytes, each section written at its own stored
+ * offset. Anything not covered by a decoded section - the text block above all - is preserved exactly.
+ *
+ * This cannot grow the file, so it serves editing decoded fields and not yet inserting states. Building a
+ * DLG from nothing is the construction API's job and needs a layout policy this deliberately does not
+ * invent.
+ */
 export function serializeDlg(result: ParseResult): Uint8Array {
     const document = result.document as DlgCanonicalDocument | undefined;
     if (!document) throw new Error("Cannot serialize DLG: parse result carries no canonical document");
