@@ -133,6 +133,11 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
     // keystroke and rebuilding would re-read and re-decode the whole table every time. Entries with no text are
     // undefined, so they can never match.
     let allText: (string | undefined)[] | undefined;
+    // The same entries lower-cased once, which is what a case-insensitive match actually compares against. A
+    // real dialog.tlk holds six figures of strings and the picker searches on every keystroke, so folding case
+    // per search means re-lowering the whole table per keystroke; doing it here costs one more pass over a
+    // table already in memory.
+    let allLower: (string | undefined)[] | undefined;
 
     function readAllText(): (string | undefined)[] {
         // Two bulk reads rather than two per entry: a real dialog.tlk holds six figures of strings, and the
@@ -160,14 +165,15 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
         languageId: header.languageId,
         search(query, searchOptions = {}) {
             const limit = searchOptions.limit ?? DEFAULT_SEARCH_LIMIT;
-            allText ??= readAllText();
+            const text = (allText ??= readAllText());
+            const lower = (allLower ??= text.map((entry) => entry?.toLowerCase()));
             const needle = query.toLowerCase();
             const hits: TlkMatch[] = [];
             for (let strref = 0; strref < count && hits.length < limit; strref++) {
-                const text = allText[strref];
                 // An empty entry is not a hit even for an empty query: there is nothing there to choose.
-                if (text === undefined || text === "") continue;
-                if (text.toLowerCase().includes(needle)) hits.push({ strref, text });
+                const folded = lower[strref];
+                if (folded === undefined || folded === "") continue;
+                if (folded.includes(needle)) hits.push({ strref, text: text[strref]! });
             }
             return hits;
         },
