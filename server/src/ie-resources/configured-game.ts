@@ -75,7 +75,9 @@ export class ConfiguredGame {
             return game;
         } catch (error) {
             this.failedKey = key;
-            conlog(`Cannot read game strings from ${gamePath}: ${errorMessage(error)}`, "warn");
+            // Also the only trace a silently-skipped built-in BAF diagnostic leaves, so this names the game,
+            // not just the string table this class started out resolving alone.
+            conlog(`Cannot open the configured IE game at ${gamePath}: ${errorMessage(error)}`, "warn");
             return undefined;
         }
     }

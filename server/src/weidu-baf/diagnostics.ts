@@ -46,7 +46,14 @@ export async function runBafDiagnostics(
         const { configuredGame } = await getServerContext();
         const tables = configuredGame.tables(settings.weidu);
         const style = configuredGame.scriptStyle(settings.weidu);
-        if (tables === undefined || style === undefined) return false;
+        if (tables === undefined || style === undefined) {
+            if (interactive) {
+                showWarning(
+                    `Cannot open IE game at "${settings.weidu.gamePath}", can't parse BAF with the built-in compiler!`,
+                );
+            }
+            return false;
+        }
         const result = compileBafText({
             text,
             uri,
