@@ -464,6 +464,24 @@ describe("the shared script view", () => {
         provider.dispose();
     });
 
+    it("caches per document, so two open views do not evict each other", async () => {
+        // The counts above, doubled: two documents, each stat-then-read, is 2 naming calls per document.
+        // A single-slot cache makes every read a miss - the other document's stat replaced the entry - so
+        // this totals 6 rather than 4, and the cache stops doing anything the moment a second view opens.
+        const a = script();
+        const b = script();
+        const symbolsFor = vi.fn(() => NAMING);
+        const provider = bcsProvider(symbolsFor);
+
+        await provider.stat(a.view);
+        await provider.stat(b.view);
+        await provider.readFile(a.view);
+        await provider.readFile(b.view);
+
+        expect(symbolsFor).toHaveBeenCalledTimes(4);
+        provider.dispose();
+    });
+
     it("re-renders after a save, rather than serving the replaced file's text", async () => {
         const { view } = script();
         const provider = newProvider();

@@ -24,6 +24,9 @@
 import * as vscode from "vscode";
 import { SCRIPT_VIEW_SCHEME, scriptFormatForPath } from "./formats";
 
+/** How many rendered views to keep. The population is the script views open at once, not the session's files. */
+const RENDER_CACHE_LIMIT = 8;
+
 /** One located complaint from a failed compile, in the shape the Problems panel needs. */
 export interface ScriptViewProblem {
     /** 1-based, as a compiler counts them. */
@@ -102,7 +105,7 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
      * thing), and `readFile` then produces the identical string moments later - so without this, opening or
      * saving a document renders it twice, and VS Code calls `stat` more often than that.
      */
-    private rendered: { uri: string; mtimeMs: number; text: string } | undefined;
+    private readonly rendered = new Map<string, { mtimeMs: number; text: string }>();
 
     constructor(views: ReadonlyMap<string, ScriptView>) {
         this.views = views;
@@ -139,10 +142,19 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
 
     private async renderCached(view: ScriptView, source: vscode.Uri, mtimeMs: number): Promise<string> {
         const key = source.toString();
-        const hit = this.rendered;
-        if (hit && hit.uri === key && hit.mtimeMs === mtimeMs) return hit.text;
+        const hit = this.rendered.get(key);
+        if (hit && hit.mtimeMs === mtimeMs) return hit.text;
         const text = await view.render(source);
-        this.rendered = { uri: key, mtimeMs, text };
+        // Least-recently-used, as `ie-resources/fs-provider.ts` caches resource bytes: a single slot meant two
+        // open views evicted each other on every call, so the cache did nothing exactly when more than one
+        // document was open. The bound is small because the population is the views a user has open at once.
+        this.rendered.delete(key);
+        this.rendered.set(key, { mtimeMs, text });
+        while (this.rendered.size > RENDER_CACHE_LIMIT) {
+            const oldest = this.rendered.keys().next();
+            if (oldest.done === true) break;
+            this.rendered.delete(oldest.value);
+        }
         return text;
     }
 
@@ -198,8 +210,9 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         }
         this.problems.delete(uri);
         await vscode.workspace.fs.writeFile(source, compiled);
-        // The rendering this cached describes the bytes that were just replaced.
-        this.rendered = undefined;
+        // The rendering this cached describes the bytes that were just replaced. Only this document's entry:
+        // another open view's rendering is still current, and dropping it would re-decompile it for nothing.
+        this.rendered.delete(source.toString());
         this.changed.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     }
 
