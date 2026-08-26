@@ -4,7 +4,7 @@
  * so the oracle is WeiDU's own accept/refuse verdict, and the corpus is partitioned by what each half can
  * prove:
  *   - self-contained files: both compilers see everything they need, so a disagreement is a real defect.
- *   - install-gated files (a `%variable%` or `@strref` only a tp2 install resolves): the built-in compiler
+ *   - install-gated files (a `%variable%` or `@123` only a tp2 install resolves): the built-in compiler
  *     is expected to refuse, naming the construct - see `REFUSALS` in `../../src/weidu-baf/compiler.ts`.
  *
  * The oracle needs a real installed game rather than `--nogame`: measured across 40 self-contained corpus
@@ -42,7 +42,14 @@ const WEIDU_PARSE_ERROR = 4;
 /** A synchronous spawn without an explicit timeout cannot be interrupted by vitest's own timeout. */
 const WEIDU_TIMEOUT_MS = 15000;
 
-/** A `%variable%` (assigned by a tp2 during install) or an `@strref` (allocated when a translation is added). */
+/**
+ * A `%variable%` (assigned by a tp2 during install) or a `@123` translation reference (whose number the
+ * installing tp2 works out).
+ *
+ * Deliberately raw, unlike the compiler, which ignores an occurrence inside a comment: this is the corpus's
+ * own reading of which files carry the construct, kept independent of the thing under test. A file whose
+ * matches all sat in comments would land in the install-gated partition without being refused - 0 of 741.
+ */
 const SUBSTITUTION = /%[A-Za-z_][A-Za-z0-9_]*%|@\d+/;
 
 /** Mirrors `compilers/bcs/test/weidu-differential.test.ts`'s own guard: skip cleanly, never fail confusingly. */

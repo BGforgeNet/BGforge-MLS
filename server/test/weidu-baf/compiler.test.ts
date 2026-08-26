@@ -94,3 +94,53 @@ describe("compileBafText refusals", () => {
         expect(refusalError!.message).toContain("%px%");
     });
 });
+
+/**
+ * A refusal that fires on correct input trains its audience to ignore it. The scan reads raw text, so a
+ * construct merely written about in a comment used to be refused; real corpus files do exactly that.
+ */
+describe("compileBafText refusals and comments", () => {
+    it("does not refuse a construct inside a line comment", () => {
+        const result = compile(
+            'IF\n  Global("x","GLOBAL",1)\nTHEN\n  RESPONSE #100\n' +
+                '    //PartyHasItem("%tutu_var%MISC78")\n    MoveToPoint([100.100])\nEND\n',
+        );
+
+        expect(result).toEqual({ errors: [], warnings: [] });
+    });
+
+    it("does not refuse constructs inside a block comment spanning lines", () => {
+        const result = compile(
+            '/* was:\n     MoveToPoint([%px%.100])\n     Global("x","GLOBAL",@123)\n*/\n' +
+                'IF\n  Global("x","GLOBAL",1)\nTHEN\n  RESPONSE #100\n    MoveToPoint([100.100])\nEND\n',
+        );
+
+        expect(result).toEqual({ errors: [], warnings: [] });
+    });
+
+    /**
+     * The load-bearing half: a tp2 substitutes into string arguments, and the grammar reads `%prefix%`
+     * inside a string as part of the string token. Refusing only what the grammar names a `variable_ref`
+     * would compile this as a literal name - the silent wrong-script failure the refusals exist to prevent.
+     */
+    it("still refuses a tp2 variable inside a string argument", () => {
+        const result = compile(
+            'IF\n  Global("%prefix%x","GLOBAL",1)\nTHEN\n  RESPONSE #100\n    MoveToPoint([100.100])\nEND\n',
+        );
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]!.line).toBe(2);
+        expect(result.errors[0]!.message).toContain("%prefix%");
+    });
+
+    it("still refuses a construct in code when another is quoted in a comment", () => {
+        const result = compile(
+            'IF\n  Global("x","GLOBAL",1)\nTHEN\n  RESPONSE #100\n' +
+                "    // MoveToPoint([%px%.100])\n    MoveToPoint([%py%.100])\nEND\n",
+        );
+
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]!.line).toBe(6);
+        expect(result.errors[0]!.message).toContain("%py%");
+    });
+});

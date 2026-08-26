@@ -50,10 +50,11 @@
 - BAF diagnostics get a second, built-in compiler alongside the existing WeiDU one. Enable with
   `bgforge.weidu.compiler: built-in`. It needs no WeiDU binary and reports every problem in a file at once,
   but it only compiles self-contained BAF: a file using a `%variable%` (assigned by a tp2 during install) or
-  an `@strref` (allocated when a translation is added) is refused with a diagnostic naming the construct,
-  since neither value exists before an install runs. Checked against WeiDU itself over the real corpus: of
-  741 `.baf` files, 450 are self-contained, and the built-in compiler agrees with WeiDU on whether each one
-  compiles; the remaining 291 are refused by the built-in compiler for exactly this reason.
+  a `@123` translation reference (whose number the installing tp2 works out) is refused with a diagnostic
+  naming the construct, since neither value exists before an install runs. Checked against WeiDU itself over
+  the real corpus: of 741 `.baf` files, 450 are self-contained, and the built-in compiler agrees with WeiDU
+  on whether each one compiles; the remaining 291 are refused by the built-in compiler for exactly this
+  reason.
 
 ### Dialog editor
 

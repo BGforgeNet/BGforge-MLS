@@ -797,7 +797,7 @@
                     ],
                     "enumDescriptions": [
                         "The WeiDU binary at bgforge.weidu.path. The reference implementation: it resolves the %variable% substitutions and translation references that only exist once a mod is being installed.",
-                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and reports every problem at once - but refuses a file using %variable% or @strref, which it cannot resolve outside an installation."
+                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and reports every problem at once - but refuses a file using %variable% or a @123 translation reference, which it cannot resolve outside an installation."
                     ],
                     "default": "weidu",
                     "description": "Which compiler produces diagnostics for BAF files. Both need bgforge.weidu.gamePath; only the WeiDU one needs a WeiDU binary."
