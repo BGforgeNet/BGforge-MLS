@@ -136,8 +136,8 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
                 surfaceWebviewRuntimeError({
-                    label: `Animation editor for ${file}`,
-                    userFacingFile: file,
+                    editor: "Animation editor",
+                    file,
                     message: message.message,
                     stack: message.stack,
                 });

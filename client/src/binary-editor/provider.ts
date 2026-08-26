@@ -324,8 +324,8 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
                 surfaceWebviewRuntimeError({
-                    label: `Binary editor for ${file}`,
-                    userFacingFile: file,
+                    editor: "Binary editor",
+                    file,
                     message: message.message,
                     stack: message.stack,
                 });

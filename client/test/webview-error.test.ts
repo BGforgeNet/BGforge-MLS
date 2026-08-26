@@ -36,8 +36,8 @@ describe("surfaceWebviewRuntimeError", () => {
 
     test("logs the runtime error to the conlog output channel at error level", () => {
         surfaceWebviewRuntimeError({
-            label: "Binary editor for foo.pro",
-            userFacingFile: "foo.pro",
+            editor: "Binary editor",
+            file: "foo.pro",
             message: "boom",
             stack: "at line 42",
         });
@@ -49,8 +49,8 @@ describe("surfaceWebviewRuntimeError", () => {
 
     test("logs to console.error with stack for Developer Tools", () => {
         surfaceWebviewRuntimeError({
-            label: "Dialog editor for x.ssl",
-            userFacingFile: "x.ssl",
+            editor: "Dialog editor",
+            file: "x.ssl",
             message: "oops",
             stack: "stack trace",
         });
@@ -60,22 +60,24 @@ describe("surfaceWebviewRuntimeError", () => {
 
     test("calls showErrorMessage with the user-facing filename and the error message", () => {
         surfaceWebviewRuntimeError({
-            label: "Binary editor for foo.pro",
-            userFacingFile: "foo.pro",
+            editor: "Binary editor",
+            file: "foo.pro",
             message: "kaput",
         });
 
         expect(showErrorMessage).toHaveBeenCalledTimes(1);
         const arg = showErrorMessage.mock.calls[0]?.[0] as string;
-        expect(arg).toContain("foo.pro");
-        expect(arg).toContain("kaput");
+        expect(arg).toBe("Binary editor failed for foo.pro: kaput");
+        // The file appears ONCE. It was in the toast twice while callers folded it into the label as well,
+        // which is what splitting the two fields is for.
+        expect(arg.split("foo.pro")).toHaveLength(2);
     });
 
     test("tolerates undefined stack", () => {
         expect(() =>
             surfaceWebviewRuntimeError({
-                label: "Binary editor for foo.pro",
-                userFacingFile: "foo.pro",
+                editor: "Binary editor",
+                file: "foo.pro",
                 message: "boom",
             }),
         ).not.toThrow();

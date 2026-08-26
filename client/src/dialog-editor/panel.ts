@@ -119,8 +119,8 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 case "runtimeError": {
                     const file = path.basename(document.uri.fsPath);
                     surfaceWebviewRuntimeError({
-                        label: `Dialog editor for ${file}`,
-                        userFacingFile: file,
+                        editor: "Dialog editor",
+                        file,
                         message: raw.message,
                         stack: raw.stack,
                     });

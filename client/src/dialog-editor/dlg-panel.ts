@@ -230,8 +230,8 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 case "runtimeError": {
                     const file = path.basename(document.uri.path);
                     surfaceWebviewRuntimeError({
-                        label: `Dialog editor for ${file}`,
-                        userFacingFile: file,
+                        editor: "Dialog editor",
+                        file,
                         message: raw.message,
                         stack: raw.stack,
                     });
