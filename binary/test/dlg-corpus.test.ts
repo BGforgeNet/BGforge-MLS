@@ -73,7 +73,7 @@ function isCanonicalLayout(bytes: Uint8Array): boolean {
     return at === bytes.byteLength;
 }
 
-describe.skipIf(files.length === 0)("readDlg - real install corpus", () => {
+describe.skipIf(files.length === 0)(`readDlg - real install corpus (${files.length} dialogs)`, () => {
     test("every DLG parses with a V1 header and in-bounds table indices", () => {
         const failures: string[] = [];
         let states = 0;

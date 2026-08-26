@@ -44,134 +44,140 @@ function weiduAvailable(): boolean {
 }
 
 const available = weiduAvailable();
+/** The `.d` sources this suite compiles and reads back; named so the gate can report the population. */
+const FIXTURES = ["MINIMAL", "EXTERND", "JOURNALD", "EDITED"] as const;
 
 let workDir = "";
 let reported: Map<string, Counts>;
 
-describe.skipIf(!available)("readDlg - differential against WeiDU-compiled DLGs", () => {
-    beforeAll(() => {
-        workDir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-dlg-"));
-        const sources = fs
-            .readdirSync(FIXTURE_DIR)
-            .filter((f) => f.endsWith(".d"))
-            .sort();
-        for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
+describe.skipIf(!available)(
+    `readDlg - differential against WeiDU-compiled DLGs (WeiDU ${available ? "present" : "absent"}, ${FIXTURES.length} dialogs)`,
+    () => {
+        beforeAll(() => {
+            workDir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-dlg-"));
+            const sources = fs
+                .readdirSync(FIXTURE_DIR)
+                .filter((f) => f.endsWith(".d"))
+                .sort();
+            for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
 
-        // One invocation for all fixtures: extern.d's EXTERN label only resolves when its target dialog is
-        // compiled in the same run. WeiDU writes its own placeholder DIALOG.TLK into the output dir too.
-        const stdout = execFileSync(WEIDU, ["--nogame", "--out", ".", ...sources], {
-            cwd: workDir,
-            timeout: WEIDU_TIMEOUT_MS,
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        reported = new Map();
-        for (const m of stdout.matchAll(SAVED_LINE)) {
-            reported.set(m[1]!, {
-                states: Number(m[2]),
-                transitions: Number(m[3]),
-                stateTriggers: Number(m[4]),
-                transitionTriggers: Number(m[5]),
-                actions: Number(m[6]),
+            // One invocation for all fixtures: extern.d's EXTERN label only resolves when its target dialog is
+            // compiled in the same run. WeiDU writes its own placeholder DIALOG.TLK into the output dir too.
+            const stdout = execFileSync(WEIDU, ["--nogame", "--out", ".", ...sources], {
+                cwd: workDir,
+                timeout: WEIDU_TIMEOUT_MS,
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "pipe"],
             });
-        }
-    });
 
-    afterAll(() => {
-        if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
-    });
-
-    const bytesOf = (name: string): Uint8Array => new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`)));
-
-    function read(name: string) {
-        return readDlg(bytesOf(name));
-    }
-
-    test("compiles every fixture and reports counts for each", () => {
-        // Guards the oracle itself: if WeiDU's output format changes, the regex silently matches nothing and
-        // every count assertion below would compare undefined to undefined.
-        expect([...reported.keys()].sort()).toEqual(["EDITED", "EXTERND", "JOURNALD", "MINIMAL"]);
-    });
-
-    test.each(["MINIMAL", "EXTERND", "JOURNALD", "EDITED"])("%s table counts match WeiDU's own accounting", (name) => {
-        const dlg = read(name);
-        const expected = reported.get(name)!;
-
-        expect({
-            states: dlg.states.length,
-            transitions: dlg.transitions.length,
-            stateTriggers: dlg.stateTriggers.length,
-            transitionTriggers: dlg.transitionTriggers.length,
-            actions: dlg.actions.length,
-        }).toEqual(expected);
-    });
-
-    test("a GOTO carries a trigger and an action but no reply text", () => {
-        const first = read("MINIMAL").transitions[0]!;
-
-        expect(first.hasTrigger).toBe(true);
-        expect(first.hasAction).toBe(true);
-        expect(first.hasText).toBe(false);
-        expect(first.terminatesDialog).toBe(false);
-    });
-
-    test("an EXTERN transition names the target dialog and state", () => {
-        const transition = read("EXTERND").transitions[0]!;
-
-        expect(transition.terminatesDialog).toBe(false);
-        // Resrefs are 8 bytes NUL-padded; the reader keeps them verbatim so the bytes round-trip.
-        expect(transition.nextDialog.split("\u0000")[0]).toBe("MINIMAL");
-        expect(transition.nextState).toBe(1);
-    });
-
-    test("a JOURNAL entry sets the journal bit alongside the terminate bit", () => {
-        const transition = read("JOURNALD").transitions[0]!;
-
-        expect(transition.hasJournalEntry).toBe(true);
-        expect(transition.terminatesDialog).toBe(true);
-    });
-
-    test("trigger and action text survives the round trip through WeiDU verbatim", () => {
-        const dlg = read("MINIMAL");
-
-        expect(dlg.stateTriggers).toContain("NumTimesTalkedTo(0)");
-        expect(dlg.transitionTriggers).toContain('Global("x","GLOBAL",1)');
-        expect(dlg.actions).toContain('SetGlobal("x","GLOBAL",2)');
-    });
-
-    // `buildDlg` decides a layout rather than preserving one, so the question it has to answer is whose
-    // layout. These two tests answer it with the reference implementation's own output: the first says an
-    // untouched file rebuilds to the same bytes, the second says an edit no preserve-mode writer could make
-    // lands where WeiDU would have put it.
-    test.each(["MINIMAL", "EXTERND", "JOURNALD", "EDITED"])(
-        "%s rebuilt from its own content is byte-identical to WeiDU's",
-        (name) => {
-            const original = bytesOf(name);
-
-            const rebuilt = buildDlg(toDlgBuildInput(original));
-
-            expect([...rebuilt]).toEqual([...original]);
-        },
-    );
-
-    test("lengthening an action lands exactly where WeiDU puts it", () => {
-        // EDITED.dlg is MINIMAL.dlg with one action rewritten longer, so applying that edit to MINIMAL's
-        // content has to reproduce it byte for byte - text block, every offset after it, and the file size.
-        // The second edit is not cosmetic: WeiDU writes the CONTAINING dialog's own resref into a GOTO's
-        // nextDialog, so two files that differ only in name differ in that field too.
-        const input = toDlgBuildInput(bytesOf("MINIMAL"));
-
-        const edited = buildDlg({
-            ...input,
-            actions: input.actions.map((a) =>
-                a === 'SetGlobal("x","GLOBAL",2)' ? 'SetGlobal("x","GLOBAL",2)SetGlobal("y","GLOBAL",3)' : a,
-            ),
-            transitions: input.transitions.map((t) =>
-                t.nextDialog.startsWith("MINIMAL") ? { ...t, nextDialog: "EDITED\u0000\u0000" } : t,
-            ),
+            reported = new Map();
+            for (const m of stdout.matchAll(SAVED_LINE)) {
+                reported.set(m[1]!, {
+                    states: Number(m[2]),
+                    transitions: Number(m[3]),
+                    stateTriggers: Number(m[4]),
+                    transitionTriggers: Number(m[5]),
+                    actions: Number(m[6]),
+                });
+            }
         });
 
-        expect([...edited]).toEqual([...bytesOf("EDITED")]);
-    });
-});
+        afterAll(() => {
+            if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
+        });
+
+        const bytesOf = (name: string): Uint8Array =>
+            new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`)));
+
+        function read(name: string) {
+            return readDlg(bytesOf(name));
+        }
+
+        test("compiles every fixture and reports counts for each", () => {
+            // Guards the oracle itself: if WeiDU's output format changes, the regex silently matches nothing and
+            // every count assertion below would compare undefined to undefined.
+            expect([...reported.keys()].sort()).toEqual(["EDITED", "EXTERND", "JOURNALD", "MINIMAL"]);
+        });
+
+        test.each(FIXTURES)("%s table counts match WeiDU's own accounting", (name) => {
+            const dlg = read(name);
+            const expected = reported.get(name)!;
+
+            expect({
+                states: dlg.states.length,
+                transitions: dlg.transitions.length,
+                stateTriggers: dlg.stateTriggers.length,
+                transitionTriggers: dlg.transitionTriggers.length,
+                actions: dlg.actions.length,
+            }).toEqual(expected);
+        });
+
+        test("a GOTO carries a trigger and an action but no reply text", () => {
+            const first = read("MINIMAL").transitions[0]!;
+
+            expect(first.hasTrigger).toBe(true);
+            expect(first.hasAction).toBe(true);
+            expect(first.hasText).toBe(false);
+            expect(first.terminatesDialog).toBe(false);
+        });
+
+        test("an EXTERN transition names the target dialog and state", () => {
+            const transition = read("EXTERND").transitions[0]!;
+
+            expect(transition.terminatesDialog).toBe(false);
+            // Resrefs are 8 bytes NUL-padded; the reader keeps them verbatim so the bytes round-trip.
+            expect(transition.nextDialog.split("\u0000")[0]).toBe("MINIMAL");
+            expect(transition.nextState).toBe(1);
+        });
+
+        test("a JOURNAL entry sets the journal bit alongside the terminate bit", () => {
+            const transition = read("JOURNALD").transitions[0]!;
+
+            expect(transition.hasJournalEntry).toBe(true);
+            expect(transition.terminatesDialog).toBe(true);
+        });
+
+        test("trigger and action text survives the round trip through WeiDU verbatim", () => {
+            const dlg = read("MINIMAL");
+
+            expect(dlg.stateTriggers).toContain("NumTimesTalkedTo(0)");
+            expect(dlg.transitionTriggers).toContain('Global("x","GLOBAL",1)');
+            expect(dlg.actions).toContain('SetGlobal("x","GLOBAL",2)');
+        });
+
+        // `buildDlg` decides a layout rather than preserving one, so the question it has to answer is whose
+        // layout. These two tests answer it with the reference implementation's own output: the first says an
+        // untouched file rebuilds to the same bytes, the second says an edit no preserve-mode writer could make
+        // lands where WeiDU would have put it.
+        test.each(["MINIMAL", "EXTERND", "JOURNALD", "EDITED"])(
+            "%s rebuilt from its own content is byte-identical to WeiDU's",
+            (name) => {
+                const original = bytesOf(name);
+
+                const rebuilt = buildDlg(toDlgBuildInput(original));
+
+                expect([...rebuilt]).toEqual([...original]);
+            },
+        );
+
+        test("lengthening an action lands exactly where WeiDU puts it", () => {
+            // EDITED.dlg is MINIMAL.dlg with one action rewritten longer, so applying that edit to MINIMAL's
+            // content has to reproduce it byte for byte - text block, every offset after it, and the file size.
+            // The second edit is not cosmetic: WeiDU writes the CONTAINING dialog's own resref into a GOTO's
+            // nextDialog, so two files that differ only in name differ in that field too.
+            const input = toDlgBuildInput(bytesOf("MINIMAL"));
+
+            const edited = buildDlg({
+                ...input,
+                actions: input.actions.map((a) =>
+                    a === 'SetGlobal("x","GLOBAL",2)' ? 'SetGlobal("x","GLOBAL",2)SetGlobal("y","GLOBAL",3)' : a,
+                ),
+                transitions: input.transitions.map((t) =>
+                    t.nextDialog.startsWith("MINIMAL") ? { ...t, nextDialog: "EDITED\u0000\u0000" } : t,
+                ),
+            });
+
+            expect([...edited]).toEqual([...bytesOf("EDITED")]);
+        });
+    },
+);

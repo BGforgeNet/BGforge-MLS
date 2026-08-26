@@ -60,21 +60,24 @@ const IDS_ROOT = process.env.BGFORGE_BCS_IDS;
  */
 const EXTERNAL_FILES = findBcsFiles(path.resolve(__dirname, "../../../external"));
 
-describe.skipIf(EXTERNAL_FILES.length === 0)("BCS codec - mod scripts from external/", () => {
-    test("every script re-emits byte-identically", () => {
-        const mismatched: string[] = [];
+describe.skipIf(EXTERNAL_FILES.length === 0)(
+    `BCS codec - mod scripts from external/ (${EXTERNAL_FILES.length} scripts)`,
+    () => {
+        test("every script re-emits byte-identically", () => {
+            const mismatched: string[] = [];
 
-        for (const file of EXTERNAL_FILES) {
-            const original = fs.readFileSync(file, "latin1");
-            if (original === "") continue;
-            if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
-        }
+            for (const file of EXTERNAL_FILES) {
+                const original = fs.readFileSync(file, "latin1");
+                if (original === "") continue;
+                if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
+            }
 
-        expect(mismatched).toEqual([]);
-    });
-});
+            expect(mismatched).toEqual([]);
+        });
+    },
+);
 
-describe.skipIf(files.length === 0)("BCS codec - real install corpus", () => {
+describe.skipIf(files.length === 0)(`BCS codec - real install corpus (${files.length} scripts)`, () => {
     test("every script re-emits byte-identically", () => {
         const mismatched: string[] = [];
         const empty: string[] = [];
@@ -166,65 +169,70 @@ describe.skipIf(files.length === 0)("BCS codec - real install corpus", () => {
     });
 });
 
-describe.skipIf(files.length === 0 || IDS_ROOT === undefined)("BCS compiler - real install corpus", () => {
-    const tables = readIdsTables(IDS_ROOT ?? "");
-    let parser: Parser;
+describe.skipIf(files.length === 0 || IDS_ROOT === undefined)(
+    `BCS compiler - real install corpus (${files.length} scripts, IDS tables ${IDS_ROOT === undefined ? "absent" : "present"})`,
+    () => {
+        const tables = readIdsTables(IDS_ROOT ?? "");
+        let parser: Parser;
 
-    beforeAll(async () => {
-        await initParser();
-        parser = getParser();
-    });
+        beforeAll(async () => {
+            await initParser();
+            parser = getParser();
+        });
 
-    const roundTrip = (text: string): string =>
-        writeBcs(compileBaf(parser, decompileBcs(readBcs(text), tables.symbols), tables.compileSymbols));
+        const roundTrip = (text: string): string =>
+            writeBcs(compileBaf(parser, decompileBcs(readBcs(text), tables.symbols), tables.compileSymbols));
 
-    /**
-     * The save path a compiled script's editable view takes, over a whole install.
-     *
-     * Byte-identity is NOT the gate, and cannot be: two things a stored record can hold have no spelling in
-     * BAF - a record the BG1-era writer stopped short of finishing, and a number sitting in a slot no
-     * signature names - so a script carrying either compiles back to the full, clean form instead. The
-     * reference implementation loses exactly the same bytes on the same round trip, which is what says this
-     * is the source form's limit rather than the compiler's.
-     *
-     * What IS gated is that the loss happens ONCE. A view that degraded a script a little further on every
-     * save would be unusable, and idempotence is the property that rules it out - measured against the whole
-     * install rather than the three fixtures a checkout can compile.
-     */
-    test("every script compiles back, and saving it again changes nothing", () => {
-        const drifted: string[] = [];
-        // Refusals are tallied by reason rather than swallowed: a sweep that quietly stopped judging most of
-        // the corpus would otherwise report the same green as one that judged all of it.
-        const refused = new Map<string, number>();
-        let judged = 0;
-        let identical = 0;
+        /**
+         * The save path a compiled script's editable view takes, over a whole install.
+         *
+         * Byte-identity is NOT the gate, and cannot be: two things a stored record can hold have no spelling in
+         * BAF - a record the BG1-era writer stopped short of finishing, and a number sitting in a slot no
+         * signature names - so a script carrying either compiles back to the full, clean form instead. The
+         * reference implementation loses exactly the same bytes on the same round trip, which is what says this
+         * is the source form's limit rather than the compiler's.
+         *
+         * What IS gated is that the loss happens ONCE. A view that degraded a script a little further on every
+         * save would be unusable, and idempotence is the property that rules it out - measured against the whole
+         * install rather than the three fixtures a checkout can compile.
+         */
+        test("every script compiles back, and saving it again changes nothing", () => {
+            const drifted: string[] = [];
+            // Refusals are tallied by reason rather than swallowed: a sweep that quietly stopped judging most of
+            // the corpus would otherwise report the same green as one that judged all of it.
+            const refused = new Map<string, number>();
+            let judged = 0;
+            let identical = 0;
 
-        for (const file of files) {
-            const original = fs.readFileSync(file, "latin1");
-            if (original === "") continue;
-            let once: string;
-            try {
-                once = roundTrip(original);
-            } catch (error) {
-                const reason =
-                    error instanceof BcsCompileError ? (error.diagnostics[0]?.message ?? error.message) : String(error);
-                refused.set(reason, (refused.get(reason) ?? 0) + 1);
-                continue;
+            for (const file of files) {
+                const original = fs.readFileSync(file, "latin1");
+                if (original === "") continue;
+                let once: string;
+                try {
+                    once = roundTrip(original);
+                } catch (error) {
+                    const reason =
+                        error instanceof BcsCompileError
+                            ? (error.diagnostics[0]?.message ?? error.message)
+                            : String(error);
+                    refused.set(reason, (refused.get(reason) ?? 0) + 1);
+                    continue;
+                }
+                judged++;
+                if (once === original) identical++;
+                else if (roundTrip(once) !== once) drifted.push(path.basename(file));
             }
-            judged++;
-            if (once === original) identical++;
-            else if (roundTrip(once) !== once) drifted.push(path.basename(file));
-        }
 
-        const skipped = [...refused.values()].reduce((total, count) => total + count, 0);
-        console.log(
-            `BCS compiler: ${judged} scripts compiled back (${identical} byte-identical, ` +
-                `${judged - identical} through a form BAF cannot spell), ${skipped} refused`,
-        );
-        for (const [reason, count] of refused) console.log(`  refused ${count}: ${reason}`);
-        expect(drifted).toEqual([]);
-        expect(refused.size).toBe(0);
-        // A floor on the population, so a corpus that resolved to nothing cannot pass vacuously.
-        expect(judged).toBeGreaterThan(0);
-    });
-});
+            const skipped = [...refused.values()].reduce((total, count) => total + count, 0);
+            console.log(
+                `BCS compiler: ${judged} scripts compiled back (${identical} byte-identical, ` +
+                    `${judged - identical} through a form BAF cannot spell), ${skipped} refused`,
+            );
+            for (const [reason, count] of refused) console.log(`  refused ${count}: ${reason}`);
+            expect(drifted).toEqual([]);
+            expect(refused.size).toBe(0);
+            // A floor on the population, so a corpus that resolved to nothing cannot pass vacuously.
+            expect(judged).toBeGreaterThan(0);
+        });
+    },
+);

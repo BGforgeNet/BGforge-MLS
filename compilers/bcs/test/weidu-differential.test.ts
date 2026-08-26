@@ -73,108 +73,112 @@ function runWeidu(dir: string, extension: string): void {
 
 let parser: Parser;
 
-describe.skipIf(!available)("BCS - differential against the reference implementation", () => {
-    beforeAll(async () => {
-        await initParser();
-        parser = getParser();
+describe.skipIf(!available)(
+    `BCS - differential against the reference implementation (WeiDU ${available ? "present" : "absent"}, ${SOURCES.length} sources)`,
+    () => {
+        beforeAll(async () => {
+            await initParser();
+            parser = getParser();
 
-        compiled = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-diff-"));
-        for (const name of SOURCES) fs.copyFileSync(path.join(FIXTURE_DIR, name), path.join(compiled, name));
-        runWeidu(compiled, ".baf");
+            compiled = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-diff-"));
+            for (const name of SOURCES) fs.copyFileSync(path.join(FIXTURE_DIR, name), path.join(compiled, name));
+            runWeidu(compiled, ".baf");
 
-        // A second directory, because decompiling writes `<name>.baf` over the source it was built from.
-        decompiled = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-diff-"));
-        for (const name of SOURCES) {
-            const script = name.replace(/\.baf$/, ".bcs");
-            fs.copyFileSync(path.join(compiled, script), path.join(decompiled, script));
-        }
-        runWeidu(decompiled, ".bcs");
-    });
+            // A second directory, because decompiling writes `<name>.baf` over the source it was built from.
+            decompiled = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-diff-"));
+            for (const name of SOURCES) {
+                const script = name.replace(/\.baf$/, ".bcs");
+                fs.copyFileSync(path.join(compiled, script), path.join(decompiled, script));
+            }
+            runWeidu(decompiled, ".bcs");
+        });
 
-    afterAll(() => {
-        for (const dir of [compiled, decompiled]) if (dir) fs.rmSync(dir, { recursive: true, force: true });
-    });
+        afterAll(() => {
+            for (const dir of [compiled, decompiled]) if (dir) fs.rmSync(dir, { recursive: true, force: true });
+        });
 
-    const stored = (name: string): string =>
-        fs.readFileSync(path.join(compiled, name.replace(/\.baf$/, ".bcs")), "latin1");
+        const stored = (name: string): string =>
+            fs.readFileSync(path.join(compiled, name.replace(/\.baf$/, ".bcs")), "latin1");
 
-    test.each(SOURCES)("%s decompiles to exactly what the reference emits", (name) => {
-        const reference = fs.readFileSync(path.join(decompiled, name), "latin1");
+        test.each(SOURCES)("%s decompiles to exactly what the reference emits", (name) => {
+            const reference = fs.readFileSync(path.join(decompiled, name), "latin1");
 
-        const ours = decompileBcs(readBcs(stored(name)), SYMBOLS);
+            const ours = decompileBcs(readBcs(stored(name)), SYMBOLS);
 
-        expect(significantLines(ours)).toEqual(significantLines(reference));
-    });
+            expect(significantLines(ours)).toEqual(significantLines(reference));
+        });
 
-    // The reference's own output is an independent producer, so this is not the codec agreeing with itself.
-    test.each(SOURCES)("%s re-emits byte-identically", (name) => {
-        const text = stored(name);
+        // The reference's own output is an independent producer, so this is not the codec agreeing with itself.
+        test.each(SOURCES)("%s re-emits byte-identically", (name) => {
+            const text = stored(name);
 
-        expect(writeBcs(readBcs(text))).toBe(text);
-    });
+            expect(writeBcs(readBcs(text))).toBe(text);
+        });
 
-    // The other direction, against the same output: what the reference built from this source is what the
-    // compiler has to build from it. Byte-identity rather than a tree comparison, because the bytes are what
-    // the game reads and what a save writes - and the reference is an independent producer of them.
-    test.each(SOURCES)("%s compiles to exactly what the reference produces", (name) => {
-        const source = fs.readFileSync(path.join(FIXTURE_DIR, name), "utf8");
+        // The other direction, against the same output: what the reference built from this source is what the
+        // compiler has to build from it. Byte-identity rather than a tree comparison, because the bytes are what
+        // the game reads and what a save writes - and the reference is an independent producer of them.
+        test.each(SOURCES)("%s compiles to exactly what the reference produces", (name) => {
+            const source = fs.readFileSync(path.join(FIXTURE_DIR, name), "utf8");
 
-        const ours = writeBcs(compileBaf(parser, source, COMPILE_SYMBOLS));
+            const ours = writeBcs(compileBaf(parser, source, COMPILE_SYMBOLS));
 
-        expect(ours).toBe(stored(name));
-    });
+            expect(ours).toBe(stored(name));
+        });
 
-    // The save path a compiled script's editable view takes, end to end: what was decompiled for the editor
-    // has to compile back to the file it came from when nothing was edited.
-    test.each(SOURCES)("%s survives decompiling and compiling back", (name) => {
-        const text = stored(name);
+        // The save path a compiled script's editable view takes, end to end: what was decompiled for the editor
+        // has to compile back to the file it came from when nothing was edited.
+        test.each(SOURCES)("%s survives decompiling and compiling back", (name) => {
+            const text = stored(name);
 
-        const round = writeBcs(compileBaf(parser, decompileBcs(readBcs(text), SYMBOLS), COMPILE_SYMBOLS));
+            const round = writeBcs(compileBaf(parser, decompileBcs(readBcs(text), SYMBOLS), COMPILE_SYMBOLS));
 
-        expect(round).toBe(text);
-    });
+            expect(round).toBe(text);
+        });
 
-    /**
-     * What the fixtures are for. Each entry is a rule the corpus differential established that the format
-     * spec does not state, so a fixture edited until it no longer carries its rule has to fail here rather
-     * than leave the rule unguarded.
-     */
-    test("the fixtures still carry every rule this differential exists to guard", () => {
-        const emitted = SOURCES.map((name) => decompileBcs(readBcs(stored(name)), SYMBOLS)).join("\n");
+        /**
+         * What the fixtures are for. Each entry is a rule the corpus differential established that the format
+         * spec does not state, so a fixture edited until it no longer carries its rule has to fail here rather
+         * than leave the rule unguarded.
+         */
+        test("the fixtures still carry every rule this differential exists to guard", () => {
+            const emitted = SOURCES.map((name) => decompileBcs(readBcs(stored(name)), SYMBOLS)).join("\n");
 
-        const coverage = {
-            // An action's stored first object is an acting-object override, not an argument.
-            actionOverride: /ActionOverride\(/.test(emitted),
-            // A `NextTriggerObject` record folds into the trigger after it...
-            triggerOverride: /TriggerOverride\(/.test(emitted),
-            // ...and the folded pair spends ONE slot of an enclosing OR, which is what puts three lines
-            // under `OR(3)` when four records precede them.
-            triggerOverrideInsideOr: /OR\(3\)\n {4}TriggerOverride\(.*\n {4}False\(\)\n {4}False\(\)/.test(emitted),
-            // A zero enumerated field prints as `0`, never as whatever the table happens to name 0.
-            zeroEnumeratedField: /\[PC\.0\.ELF\]/.test(emitted),
-            // An object with nothing set at all, which no IDS table has a key for.
-            anyone: /\[ANYONE\]/.test(emitted),
-            // Identifier slots wrap outward, and they nest.
-            nestedIdentifiers: /NearestEnemyOf\(LastSeenBy\)/.test(emitted),
-            // The fifth stored number of a trigger is a third integer argument, not "unknown".
-            thirdIntegerArgument: /NearLocation\(Player1,610,223,20\)/.test(emitted),
-            // Two strings packed into one stored slot, an `Area` of six characters then a `Name`.
-            packedAreaAndName: /Global\("chapter","GLOBAL",3\)/.test(emitted),
-            // One id, two rows taking different argument types; the record decides which was written.
-            signatureChosenByRecord: /ApplySpellRES\("SPWI112",Myself\)/.test(emitted) && /ApplySpell\(/.test(emitted),
-            // An enumerated argument named through the table its signature points at.
-            enumeratedArgument: /WIZARD_MAGIC_MISSILE/.test(emitted),
-            // A point argument, which an action stores as two of its plain numbers.
-            pointArgument: /MoveToPoint\(\[640\.480\]\)/.test(emitted),
-            // An object named by its script name alone, which is how most records name a specific creature.
-            objectNamedByString: /Attack\("Druid3"\)/.test(emitted),
-            negatedTrigger: /^\s*!HPGT\(/m.test(emitted),
-        };
+            const coverage = {
+                // An action's stored first object is an acting-object override, not an argument.
+                actionOverride: /ActionOverride\(/.test(emitted),
+                // A `NextTriggerObject` record folds into the trigger after it...
+                triggerOverride: /TriggerOverride\(/.test(emitted),
+                // ...and the folded pair spends ONE slot of an enclosing OR, which is what puts three lines
+                // under `OR(3)` when four records precede them.
+                triggerOverrideInsideOr: /OR\(3\)\n {4}TriggerOverride\(.*\n {4}False\(\)\n {4}False\(\)/.test(emitted),
+                // A zero enumerated field prints as `0`, never as whatever the table happens to name 0.
+                zeroEnumeratedField: /\[PC\.0\.ELF\]/.test(emitted),
+                // An object with nothing set at all, which no IDS table has a key for.
+                anyone: /\[ANYONE\]/.test(emitted),
+                // Identifier slots wrap outward, and they nest.
+                nestedIdentifiers: /NearestEnemyOf\(LastSeenBy\)/.test(emitted),
+                // The fifth stored number of a trigger is a third integer argument, not "unknown".
+                thirdIntegerArgument: /NearLocation\(Player1,610,223,20\)/.test(emitted),
+                // Two strings packed into one stored slot, an `Area` of six characters then a `Name`.
+                packedAreaAndName: /Global\("chapter","GLOBAL",3\)/.test(emitted),
+                // One id, two rows taking different argument types; the record decides which was written.
+                signatureChosenByRecord:
+                    /ApplySpellRES\("SPWI112",Myself\)/.test(emitted) && /ApplySpell\(/.test(emitted),
+                // An enumerated argument named through the table its signature points at.
+                enumeratedArgument: /WIZARD_MAGIC_MISSILE/.test(emitted),
+                // A point argument, which an action stores as two of its plain numbers.
+                pointArgument: /MoveToPoint\(\[640\.480\]\)/.test(emitted),
+                // An object named by its script name alone, which is how most records name a specific creature.
+                objectNamedByString: /Attack\("Druid3"\)/.test(emitted),
+                negatedTrigger: /^\s*!HPGT\(/m.test(emitted),
+            };
 
-        expect(
-            Object.entries(coverage)
-                .filter(([, covered]) => !covered)
-                .map(([rule]) => rule),
-        ).toEqual([]);
-    });
-});
+            expect(
+                Object.entries(coverage)
+                    .filter(([, covered]) => !covered)
+                    .map(([rule]) => rule),
+            ).toEqual([]);
+        });
+    },
+);
