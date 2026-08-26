@@ -134,13 +134,26 @@ export function headerSizeOf(bytes: Uint8Array, header: DlgHeaderData): number {
     return Math.min(...offsets) < DLG_HEADER_WITH_INTERRUPT_SIZE ? DLG_HEADER_SIZE : DLG_HEADER_WITH_INTERRUPT_SIZE;
 }
 
+/**
+ * Decodes every section a DLG addresses, refusing one that does not fit before reading any of it.
+ *
+ * The bounds live here rather than at a caller because an overrunning offset or count otherwise surfaces as a
+ * bare `RangeError` out of the DataView, naming neither the file nor the section - so `readDlg` and the
+ * parser cannot give different answers about the same file.
+ */
 function readSections(bytes: Uint8Array): DlgSections {
+    if (bytes.byteLength < DLG_HEADER_SIZE) {
+        throw new Error(`Truncated DLG: ${bytes.byteLength} bytes, need at least ${DLG_HEADER_SIZE}`);
+    }
     const header: DlgHeaderData = dlgHeaderSchema.read(readerAt(bytes, 0));
-    const headerInterrupt =
-        headerSizeOf(bytes, header) === DLG_HEADER_WITH_INTERRUPT_SIZE
-            ? (dlgHeaderInterruptSchema.read(readerAt(bytes, DLG_HEADER_SIZE)) as DlgHeaderInterruptData)
-            : undefined;
-    return {
+    const hasInterrupt = headerSizeOf(bytes, header) === DLG_HEADER_WITH_INTERRUPT_SIZE;
+    const tablesOverrun = firstOverrun(headerSections(header, hasInterrupt), bytes.byteLength);
+    if (tablesOverrun !== undefined) throw new Error(`Truncated DLG: ${tablesOverrun}`);
+
+    const headerInterrupt = hasInterrupt
+        ? (dlgHeaderInterruptSchema.read(readerAt(bytes, DLG_HEADER_SIZE)) as DlgHeaderInterruptData)
+        : undefined;
+    const sections: DlgSections = {
         header,
         ...(headerInterrupt && { headerInterrupt }),
         states: readRecords(bytes, dlgStateSchema, header.stateTableOffset, header.stateCount, DLG_STATE_SIZE),
@@ -173,6 +186,10 @@ function readSections(bytes: Uint8Array): DlgSections {
             DLG_TEXT_REF_SIZE,
         ),
     };
+    // The text refs address bytes the tables name, so they can only be checked once the tables are decoded.
+    const refsOverrun = firstOverrun(refSections(sections), bytes.byteLength);
+    if (refsOverrun !== undefined) throw new Error(`Truncated DLG: ${refsOverrun}`);
+    return sections;
 }
 
 /** First byte past every decoded section, which is where a file with no text block ends. */
@@ -254,26 +271,16 @@ class DlgParser implements BinaryParser {
             return this.fail(`Unsupported DLG version: ${JSON.stringify(version)} (only V1.0 is supported)`);
         }
 
-        // Bounds BEFORE decoding. Reading a table the header addresses past EOF throws a bare RangeError out
-        // of the DataView, which names neither the file nor the section; checking first turns the same
-        // condition into the sentence the write path already reports, through the same `fail` as the two
-        // checks above.
-        const header: DlgHeaderData = dlgHeaderSchema.read(readerAt(data, 0));
-        const tablesOverrun = firstOverrun(
-            headerSections(header, headerSizeOf(data, header) === DLG_HEADER_WITH_INTERRUPT_SIZE),
-            data.byteLength,
-        );
-        if (tablesOverrun !== undefined) return this.fail(`Truncated DLG: ${tablesOverrun}`);
-
         // The two header lengths are both normal - 1002 of the 4286 DLGs in a stock BG:EE plus BG2:ToB pair
         // carry the shorter one - so the variant is recorded on the document (`headerInterrupt` absent) and
         // not warned about. A writer reads it there; re-emitting the field would move every table.
-        const sections = readSections(data);
-
-        // The text refs can only be checked once the tables are decoded, and `readDlg` reads every one of
-        // them - so an out-of-range ref is refused here rather than throwing out of the string reader.
-        const refsOverrun = firstOverrun(refSections(sections), data.byteLength);
-        if (refsOverrun !== undefined) return this.fail(`Truncated DLG: ${refsOverrun}`);
+        // `readSections` owns the bounds, so a file this reports on is exactly a file `readDlg` refuses.
+        let sections: DlgSections;
+        try {
+            sections = readSections(data);
+        } catch (error) {
+            return this.fail(error instanceof Error ? error.message : String(error));
+        }
 
         const document: DlgCanonicalDocument = sections;
         const h = sections.header;
