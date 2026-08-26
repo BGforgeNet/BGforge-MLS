@@ -341,6 +341,33 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
     const twoDaTableCache = new Map<string, TwoDaTable | null>();
 
+    /**
+     * One resource-backed lookup table, parsed on first use and cached by resref.
+     *
+     * An absent table is a normal answer - not every game ships every IDS, and `itemtype.2da` is
+     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. Shared by the
+     * four table accessors below, which otherwise differ only in their cache, parser and resource type.
+     */
+    function cachedTable<T>(
+        cache: Map<string, T | null>,
+        resref: string,
+        resType: number,
+        parse: (bytes: Uint8Array) => T,
+    ): T | undefined {
+        const cacheKey = resref.toLowerCase();
+        let entry = cache.get(cacheKey);
+        if (entry === undefined) {
+            entry = null;
+            try {
+                entry = parse(readResource(resref, resType));
+            } catch {
+                // Resource not found, or unreadable - reported as "no table" by the null above.
+            }
+            cache.set(cacheKey, entry);
+        }
+        return entry ?? undefined;
+    }
+
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
     // the folder is taken from weidu.conf (or the sorted-first lang subdir that has a dialog.tlk). Classic games
     // keep it at the root -> undefined. Feeds both the TLK lookup and the EE-only lang/<lang>/{movies,sounds}.
@@ -633,66 +660,16 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return entry ?? undefined;
         },
         ids(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = idsCache.get(cacheKey);
-            if (entry === undefined) {
-                // An absent table is normal (not every game ships every IDS), so it caches as null rather than
-                // re-reading on each lookup.
-                entry = null;
-                try {
-                    entry = parseIds(readResource(resref, IDS_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                idsCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(idsCache, resref, IDS_RESTYPE, parseIds);
         },
         idsAll(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = idsAllCache.get(cacheKey);
-            if (entry === undefined) {
-                // Absent is normal, and caches as null rather than re-reading on each lookup, exactly as `ids`.
-                entry = null;
-                try {
-                    entry = parseIdsAll(readResource(resref, IDS_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                idsAllCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(idsAllCache, resref, IDS_RESTYPE, parseIdsAll);
         },
         twoDa(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = twoDaCache.get(cacheKey);
-            if (entry === undefined) {
-                // Absent is normal - itemtype.2da is Enhanced-Edition-only - so it caches as null rather than
-                // re-reading on each lookup, exactly as `ids` above.
-                entry = null;
-                try {
-                    entry = parse2daRowNames(readResource(resref, TWO_DA_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                twoDaCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(twoDaCache, resref, TWO_DA_RESTYPE, parse2daRowNames);
         },
         twoDaTable(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = twoDaTableCache.get(cacheKey);
-            if (entry === undefined) {
-                // Absent caches as null, same as `twoDa` above: a missing table is a normal answer, not an error.
-                entry = null;
-                try {
-                    entry = parse2daTable(readResource(resref, TWO_DA_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                twoDaTableCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(twoDaTableCache, resref, TWO_DA_RESTYPE, parse2daTable);
         },
         close() {
             for (const archive of openBifs.values()) archive.close();
