@@ -946,6 +946,59 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    it("looseFile() names the file a write would replace, and nothing before one exists", () => {
+        const dir = makeGameDir();
+        const game = openGame(dir);
+        try {
+            // item01 is biffed only: a write would CREATE an override copy, destroying nothing.
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+            game.write("item01", "itm", Uint8Array.from([1, 2]));
+            expect(game.looseFile("item01", "itm")).toBe(path.join(dir, "override", "item01.itm"));
+            // The answer tracks the file, not the write: removing it makes a write creative again.
+            game.remove("item01", "itm");
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+        } finally {
+            game.close();
+        }
+    });
+
+    it("looseFile() reports the path write would reuse, preserving the on-disk case another tool chose", () => {
+        // The point of asking the game rather than building `<resref>.<ext>`: a mod's installer writes
+        // whatever case it likes, and a confirmation naming a path that does not exist is worse than none.
+        const game = openGame(makeGameDir({ "override/Item01.ITM": Uint8Array.from([7]) }));
+        try {
+            expect(game.looseFile("item01", "itm")).toMatch(/Item01\.ITM$/);
+        } finally {
+            game.close();
+        }
+    });
+
+    it("looseFile() answers per override folder, and rejects one outside the stack", () => {
+        const game = openGame(makeGameDir({ "characters/item01.itm": Uint8Array.from([5]) }), { mode: "engine" });
+        try {
+            // The characters/ copy is the winner, but a write to override/ would not touch it.
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+            expect(game.looseFile("item01", "itm", { folder: "characters" })).toMatch(/item01\.itm$/);
+            expect(() => game.looseFile("item01", "itm", { folder: "nowhere" })).toThrow(
+                /not one of the override folders/,
+            );
+        } finally {
+            game.close();
+        }
+    });
+
+    it("auxFile() names an existing sidecar and nothing when there is none", () => {
+        const dir = makeGameDir();
+        const game = openGame(dir);
+        try {
+            expect(game.auxFile("item01.json")).toBeUndefined();
+            game.writeAuxFile("item01.json", Uint8Array.from([0x7b, 0x7d]));
+            expect(game.auxFile("item01.json")).toBe(path.join(dir, "override", "item01.json"));
+        } finally {
+            game.close();
+        }
+    });
+
     it("write() rejects a folder outside the configured override stack", () => {
         const game = openGame(makeGameDir()); // default stack is [override] only
         try {

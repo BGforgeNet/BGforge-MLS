@@ -483,7 +483,10 @@ the `BinaryParser` / `BinaryFormatAdapter` editor path. Formats: IESDP `key_v1.h
   content is read-only. The tree is the source of truth after open, so externally-written files (outside this
   API) are not seen until re-open. `writeAuxFile` / `readAuxFile` round-trip a non-resource loose file (e.g. a
   `<resref>.<ext>.json` snapshot sidecar) in `override` under an exact name; it is not indexed and the open scan
-  skips it (its extension has no resType), so it never appears in `list()`.
+  skips it (its extension has no resType), so it never appears in `list()`. `looseFile(resref, type, {folder})`
+  and `auxFile(fileName)` name the file each write would REPLACE, or `undefined` when it would create one - the
+  same lookup `write` uses to pick its target, so a caller confirming a destructive overwrite reads the path
+  that will actually be written, on-disk case included, rather than rebuilding the naming rule.
 
 - **`tlk.ts`** - `openTlk(source, {encoding?})` / `parseTlk(bytes, {encoding?}): Tlk`, the `dialog.tlk` string
   table (IESDP `tlk_v1.htm`). Records reference strings by strref; `Tlk.get(strref)` resolves one to text

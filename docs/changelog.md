@@ -11,6 +11,10 @@
   from the resource tree is treated as the table it is: zebra-grid column highlighting, and the
   column-aligning formatter. Both previously worked only on a file on disk.
 - The `.bs` AI-selection scripts now open as decompiled BAF, like the `.bcs` scripts beside them.
+- Saving an edited game resource asks first when it would replace a file already in the game's `override`
+  folder - one an installed mod or another tool put there, whose contents nothing can bring back. Creating a
+  new override file is silent, as is re-saving a file you have already edited, and the confirmation covers
+  every format the editors write.
 - Compiling a decompiled script with the compile command works for every compiled format, not just
   Fallout's `.int`; it previously did nothing at all on an Infinity Engine script.
 - BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,

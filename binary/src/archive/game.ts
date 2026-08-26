@@ -71,11 +71,21 @@ export interface Game {
      */
     rescan(): void;
     /**
+     * The loose file a `write` to this folder would REPLACE, or undefined when it would create a new one.
+     *
+     * Asks the same question `write` answers for itself when it reuses an existing file's path, so a caller
+     * that must confirm a destructive overwrite decides from the same fact rather than from its own guess at
+     * the naming and casing rules.
+     */
+    looseFile(resref: string, type: number | string, options?: { folder?: string }): string | undefined;
+    /**
      * Write an auxiliary loose file (e.g. a JSON snapshot sidecar) into the `override` folder under the given
      * name. Unlike `write`, this is NOT a game resource: it is not indexed, and the open-time scan ignores it
      * because its extension has no resType, so it never appears in `list()`. Returns the written path.
      */
     writeAuxFile(fileName: string, bytes: Uint8Array): string;
+    /** The path an auxiliary loose file already occupies (see `writeAuxFile`), or undefined if absent. */
+    auxFile(fileName: string): string | undefined;
     /** Read an auxiliary loose file from the `override` folder (see `writeAuxFile`), or undefined if absent. */
     readAuxFile(fileName: string): Uint8Array | undefined;
     /**
@@ -472,6 +482,29 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         return rank;
     }
 
+    /** Where an auxiliary loose file sits in `override`, or undefined when there is none. */
+    function auxFilePath(fileName: string): string | undefined {
+        return resolveGamePath(gameDir, `override/${fileName}`);
+    }
+
+    /**
+     * The loose file this folder already holds for a resource, or undefined.
+     *
+     * One definition, read by `write` to reuse an existing file's on-disk case, by `remove` to find what to
+     * delete, and by `looseFile` to tell a caller whether a write would replace something. Three answers from
+     * one lookup, so a confirmation prompt cannot disagree with the write it is guarding.
+     */
+    function looseSourceIn(
+        resref: string,
+        typeCode: number,
+        folder: string,
+    ): Extract<Source, { kind: "file" }> | undefined {
+        const entry = tree.get(keyOf(resref, typeCode));
+        return entry?.sources.find(
+            (s): s is Extract<Source, { kind: "file" }> => s.kind === "file" && s.folder === folder,
+        );
+    }
+
     // Shared by the `read` method and the `ids`/`twoDa` table readers. A closure rather than `this.read`, so
     // every member of the returned object reaches its state the same way and none of them depends on being
     // called as a method.
@@ -528,9 +561,9 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
 
             // Reuse the existing loose file's path (preserving its on-disk case) if this folder already holds
             // one for this key; otherwise create a fresh lowercase filename in the (created-if-absent) folder.
-            const existing = entry.sources.find((s) => s.kind === "file" && s.folder === folder);
+            const existing = looseSourceIn(resref, typeCode, folder);
             const targetPath =
-                existing && existing.kind === "file"
+                existing !== undefined
                     ? existing.path
                     : path.join(ensureFolder(gameDir, folder), `${resref.toLowerCase()}.${ext}`);
 
@@ -549,9 +582,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             folderRankOf(folder); // validates the folder even when nothing is tracked
             const k = keyOf(resref, typeCode);
             const entry = tree.get(k);
-            const source = entry?.sources.find(
-                (s): s is Extract<Source, { kind: "file" }> => s.kind === "file" && s.folder === folder,
-            );
+            const source = looseSourceIn(resref, typeCode, folder);
             if (!entry || !source) return false;
             fs.rmSync(source.path, { force: true });
             entry.sources = entry.sources.filter((s) => s !== source);
@@ -570,13 +601,19 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             scanOverrideFolders();
             sortSources();
         },
+        looseFile(resref, type, lookupOptions) {
+            const folder = lookupOptions?.folder ?? "override";
+            folderRankOf(folder); // validates the folder even when nothing is tracked
+            return looseSourceIn(resref, typeCodeOf(type), folder)?.path;
+        },
         writeAuxFile(fileName, bytes) {
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());
             atomicWriteFileSync(target, bytes);
             return target;
         },
+        auxFile: auxFilePath,
         readAuxFile(fileName) {
-            const resolved = resolveGamePath(gameDir, `override/${fileName}`);
+            const resolved = auxFilePath(fileName);
             return resolved ? fs.readFileSync(resolved) : undefined;
         },
         tlk(variant = "male") {
