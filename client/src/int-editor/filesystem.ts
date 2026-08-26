@@ -7,15 +7,12 @@
 
 import * as vscode from "vscode";
 import { problemsOf } from "../../../compilers/ssl/src/problems";
-import { ScriptViewFileSystemProvider, type ScriptView } from "../script-view/filesystem";
+import type { ScriptView } from "../script-view/filesystem";
 import { compileForSave } from "./compiler";
-import { INT_SCHEME, LISTING_MARKER, VIEW_SUFFIX, render } from "./document";
+import { LISTING_MARKER, render } from "./document";
 
 export function intScriptView(extensionPath: string): ScriptView {
     return {
-        scheme: INT_SCHEME,
-        diagnostics: "bgforge-int",
-        viewSuffix: VIEW_SUFFIX,
         render,
         problemsOf,
         // A listing describes the code, it is not the code - so compiling the comments back would write an
@@ -29,10 +26,4 @@ export function intScriptView(extensionPath: string): ScriptView {
         compile: async (source, text) =>
             compileForSave(extensionPath, text, await vscode.workspace.fs.readFile(source)),
     };
-}
-
-export class IntFileSystemProvider extends ScriptViewFileSystemProvider {
-    constructor(extensionPath: string) {
-        super(intScriptView(extensionPath));
-    }
 }

@@ -22,7 +22,7 @@ describe("uriToPath", () => {
     // Not a file on disk, so nothing may be read from it - but the caller finds that out from the
     // failed read, not from an exception that unwinds past every handler and exits the process.
     it("returns the path portion of a non-file URI instead of throwing", () => {
-        expect(uriToPath("bgforge-int:/mods/a.int.ssl")).toBe("/mods/a.int.ssl");
+        expect(uriToPath("bgforge-script:/mods/a.int.ssl")).toBe("/mods/a.int.ssl");
     });
 
     it("round-trips a path through pathToUri", () => {

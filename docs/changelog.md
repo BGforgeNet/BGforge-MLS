@@ -4,6 +4,15 @@
 
 ### Infinity Engine games
 
+- Compiled scripts opened from the game-resources tree now get the full language support their tab
+  promises - completion, hover, outline, signature help and string-reference previews - instead of
+  highlighting alone.
+- Text served straight out of a game archive reaches the language server as well, so a `.2da` opened
+  from the resource tree is treated as the table it is: zebra-grid column highlighting, and the
+  column-aligning formatter. Both previously worked only on a file on disk.
+- The `.bs` AI-selection scripts now open as decompiled BAF, like the `.bcs` scripts beside them.
+- Compiling a decompiled script with the compile command works for every compiled format, not just
+  Fallout's `.int`; it previously did nothing at all on an Infinity Engine script.
 - BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,
   `SetName`, `AddJournalEntry` and the rest - get an inline preview of the text beside the number, and
   hovering the number shows it in full, the same way `.tra` and `.msg` references already work. The text

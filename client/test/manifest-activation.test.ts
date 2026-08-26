@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import pkg from "../../package.json";
+import { SCRIPT_EDITOR_VIEW_TYPE, SCRIPT_FORMATS } from "../src/script-view/formats";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -54,7 +55,21 @@ describe("the extension manifest", () => {
             .map(({ scheme, file }) => `${scheme} (${file})`);
 
         expect(missing).toEqual([]);
-        expect(schemes.length).toBeGreaterThanOrEqual(3);
+        // Two: the game-resource bridge and the one every decompiled script is served on.
+        expect(schemes.length).toBeGreaterThanOrEqual(2);
+    });
+
+    // The manifest cannot read the format registry - VS Code reads it before any code runs - so this is where
+    // the two are held together. A format listed in the registry but not claimed here never reaches the view:
+    // VS Code resolves the file to the plain text editor and nothing reports it.
+    test("claims every compiled format the script registry serves", () => {
+        const editor = editors.find((candidate) => candidate.viewType === SCRIPT_EDITOR_VIEW_TYPE);
+        expect(editor, `${SCRIPT_EDITOR_VIEW_TYPE} is not in the manifest`).toBeDefined();
+
+        const claimed = new Set(editor!.selector.map((one) => one.filenamePattern));
+        const missing = SCRIPT_FORMATS.filter((format) => !claimed.has(`*.${format.ext}`)).map((f) => f.ext);
+
+        expect(missing).toEqual([]);
     });
 
     // Every editor has to claim something, or it is dead weight that reads as wired.

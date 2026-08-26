@@ -21,7 +21,6 @@ import {
     type BcsEngine,
     type BcsSymbols,
 } from "../../../compilers/bcs/src/index";
-import { buildViewUri } from "../script-view/filesystem";
 
 /**
  * Everything the install decides about how a script reads and writes: the tables that give its numbers names,
@@ -33,16 +32,6 @@ export interface BcsNaming {
     readonly symbols: BcsSymbols;
     readonly compileSymbols: BcsCompileSymbols;
     readonly engine: BcsEngine;
-}
-
-export const BCS_SCHEME = "bgforge-bcs";
-
-/** The suffix that makes the view document read as script source. */
-export const VIEW_SUFFIX = ".baf";
-
-/** The document for a compiled script, named so the tab reads as source and carrying its own source URI. */
-export function viewUri(source: vscode.Uri): vscode.Uri {
-    return buildViewUri(BCS_SCHEME, VIEW_SUFFIX, source);
 }
 
 /**

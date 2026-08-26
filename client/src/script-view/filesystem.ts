@@ -1,9 +1,12 @@
 /**
  * Serves a compiled file as editable text: reading renders it as source, writing compiles it back.
  *
- * One provider for every such view. A `.int` shown as SSL and a `.bcs` shown as BAF differ only in what
+ * ONE provider for every compiled format. A `.int` shown as SSL and a `.bcs` shown as BAF differ only in what
  * "render" and "compile" mean - the rest (dirty state, revert, the refusal path, the Problems entries, the
- * directory operations a single file has no answer for) is one mechanism, and was two copies of it.
+ * directory operations a single file has no answer for) is one mechanism, and the format is chosen per
+ * document from the source's extension. Serving each format from its own scheme instead left every consumer
+ * that has to recognise a script view - the language client, the compile command - enumerating schemes by
+ * hand, and each list was one format behind.
  *
  * A filesystem provider rather than a content provider, because a content provider is read-only and a compiled
  * script is worth editing - the whole point of showing it as source. VS Code drives its own dirty state, undo
@@ -19,6 +22,7 @@
  */
 
 import * as vscode from "vscode";
+import { SCRIPT_VIEW_SCHEME, scriptFormatForPath } from "./formats";
 
 /** One located complaint from a failed compile, in the shape the Problems panel needs. */
 export interface ScriptViewProblem {
@@ -28,17 +32,12 @@ export interface ScriptViewProblem {
     readonly message: string;
 }
 
-/** What makes one script view differ from another. Everything else is shared. */
+/**
+ * What makes one script format differ from another. Everything else is shared, including the scheme it is
+ * served on, the suffix that names its view document and the diagnostic collection a refused save reports
+ * through - those are properties of the view as a whole, and live in `formats.ts`.
+ */
 export interface ScriptView {
-    /** The custom URI scheme this view is served on. */
-    readonly scheme: string;
-    /** Names the diagnostic collection a refused save reports through. */
-    readonly diagnostics: string;
-    /**
-     * Appended to the source's URI path to name the view document, so the tab reads as source and every
-     * language feature keyed on the extension applies. Both directions come from this one value.
-     */
-    readonly viewSuffix: string;
     /** The document body: the source rendered as source, or why there is none to show. */
     render(source: vscode.Uri): Promise<string>;
     /** Compiles edited text into the bytes that replace the source. */
@@ -65,11 +64,16 @@ export interface ScriptView {
  * source's own URI in a `src` query so `sourceUriOf` can recover it. The path alone cannot express the source,
  * since a source is not always a file: a tree-opened script's source is a `bgforge-ie-resource:` URI, which
  * `.path` names but which no other view URI's path could stand in for.
+ *
+ * Throws on a source no format claims: reaching here means something routed a file to this view that the
+ * registry never listed, and a URI built from a guessed suffix would open a tab nothing can read or save.
  */
-export function buildViewUri(scheme: string, viewSuffix: string, source: vscode.Uri): vscode.Uri {
+export function scriptViewUri(source: vscode.Uri): vscode.Uri {
+    const format = scriptFormatForPath(source.path);
+    if (format === undefined) throw new Error(`${source.toString()} is not a compiled script this view serves`);
     return vscode.Uri.from({
-        scheme,
-        path: `${source.path}${viewSuffix}`,
+        scheme: SCRIPT_VIEW_SCHEME,
+        path: `${source.path}${format.viewSuffix}`,
         query: `src=${encodeURIComponent(source.toString())}`,
     });
 }
@@ -84,7 +88,8 @@ export function sourceUriOf(view: vscode.Uri): vscode.Uri {
 export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
     private readonly changed = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
     readonly onDidChangeFile = this.changed.event;
-    private readonly view: ScriptView;
+    /** The per-format half of the view, by source extension. */
+    private readonly views: ReadonlyMap<string, ScriptView>;
     /**
      * Owned by the provider, not the module: a collection created at import time and disposed from an instance
      * method leaves a second provider - a reactivation, or a test constructing two - writing into a disposed
@@ -99,14 +104,28 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
      */
     private rendered: { uri: string; mtimeMs: number; text: string } | undefined;
 
-    constructor(view: ScriptView) {
-        this.view = view;
-        this.problems = vscode.languages.createDiagnosticCollection(view.diagnostics);
+    constructor(views: ReadonlyMap<string, ScriptView>) {
+        this.views = views;
+        this.problems = vscode.languages.createDiagnosticCollection("bgforge-script");
     }
 
     /** The source a view URI stands for. */
     private sourceUri(uri: vscode.Uri): vscode.Uri {
         return sourceUriOf(uri);
+    }
+
+    /**
+     * How this source is rendered and compiled.
+     *
+     * A view URI can only be built for a listed format, so an unlisted one here means the scheme was reached
+     * some other way - a hand-typed URI, a restored tab from an older layout. Reported as the view URI not
+     * existing, which is what it amounts to, rather than as a crash inside a read.
+     */
+    private viewFor(source: vscode.Uri, uri: vscode.Uri): ScriptView {
+        const format = scriptFormatForPath(source.path);
+        const view = format === undefined ? undefined : this.views.get(format.ext);
+        if (view === undefined) throw vscode.FileSystemError.FileNotFound(uri);
+        return view;
     }
 
     /** `vscode.workspace.fs.stat`, reporting a missing or unreadable source as the VIEW URI's FileNotFound. */
@@ -118,16 +137,16 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         }
     }
 
-    private async renderCached(source: vscode.Uri, mtimeMs: number): Promise<string> {
+    private async renderCached(view: ScriptView, source: vscode.Uri, mtimeMs: number): Promise<string> {
         const key = source.toString();
         const hit = this.rendered;
         if (hit && hit.uri === key && hit.mtimeMs === mtimeMs) return hit.text;
-        const text = await this.view.render(source);
+        const text = await view.render(source);
         this.rendered = { uri: key, mtimeMs, text };
         return text;
     }
 
-    /** The `.int` / `.bcs` is watched by the workspace already; nothing here needs a second watcher. */
+    /** The compiled file is watched by the workspace already; nothing here needs a second watcher. */
     watch(): vscode.Disposable {
         return new vscode.Disposable(() => {
             /* nothing is watched, so nothing needs releasing */
@@ -136,8 +155,9 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
 
     async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
         const source = this.sourceUri(uri);
+        const view = this.viewFor(source, uri);
         const stats = await this.statSource(source, uri);
-        const text = await this.renderCached(source, stats.mtime);
+        const text = await this.renderCached(view, source, stats.mtime);
         return {
             type: vscode.FileType.File,
             ctime: stats.ctime,
@@ -145,9 +165,7 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
             size: Buffer.byteLength(text, "utf8"),
             // A document that cannot be written back offers no save to refuse, rather than refusing one at
             // the end of the gesture.
-            ...((await this.view.refuseFile?.(source)) === undefined
-                ? {}
-                : { permissions: vscode.FilePermission.Readonly }),
+            ...((await view.refuseFile?.(source)) === undefined ? {} : { permissions: vscode.FilePermission.Readonly }),
         };
     }
 
@@ -157,24 +175,26 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         // panel describes text that no longer exists.
         this.problems.delete(uri);
         const source = this.sourceUri(uri);
+        const view = this.viewFor(source, uri);
         const stats = await this.statSource(source, uri);
-        const text = await this.renderCached(source, stats.mtime);
+        const text = await this.renderCached(view, source, stats.mtime);
         return Buffer.from(text, "utf8");
     }
 
     async writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void> {
         const source = this.sourceUri(uri);
+        const view = this.viewFor(source, uri);
         const text = Buffer.from(content).toString("utf8");
-        const refused = (await this.view.refuseFile?.(source)) ?? this.view.refuseText?.(source, text);
+        const refused = (await view.refuseFile?.(source)) ?? view.refuseText?.(source, text);
         if (refused !== undefined) throw new Error(refused);
 
         let compiled: Uint8Array;
         try {
-            compiled = await this.view.compile(source, text);
+            compiled = await view.compile(source, text);
         } catch (error) {
             // Every refusal is reported the same way rather than only the ones this knows by class: a compiler
             // throws a different error type per stage, and a save must not write the source on any of them.
-            throw new Error(this.reportRefusal(uri, source, error), { cause: error });
+            throw new Error(this.reportRefusal(view, uri, source, error), { cause: error });
         }
         this.problems.delete(uri);
         await vscode.workspace.fs.writeFile(source, compiled);
@@ -188,8 +208,8 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
      * the same list of problems, so the tab's message and the Problems panel cannot disagree about what went
      * wrong.
      */
-    private reportRefusal(uri: vscode.Uri, source: vscode.Uri, error: unknown): string {
-        const found = this.view.problemsOf(error);
+    private reportRefusal(view: ScriptView, uri: vscode.Uri, source: vscode.Uri, error: unknown): string {
+        const found = view.problemsOf(error);
         this.problems.set(
             uri,
             found.map((problem) => {
@@ -208,7 +228,7 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         const rest = found.length > 1 ? ` (and ${found.length - 1} more)` : "";
         if (first)
             return `${source.fsPath} was not saved - it does not compile. ${first.line}:${first.column}: ${first.message}${rest}`;
-        const detail = this.view.detailOf?.(error);
+        const detail = view.detailOf?.(error);
         return `${source.fsPath} was not saved - it does not compile.${detail === undefined ? "" : ` ${detail}`}`;
     }
 

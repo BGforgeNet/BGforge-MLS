@@ -7,9 +7,9 @@
 
 import * as vscode from "vscode";
 import { BcsCompileError } from "../../../compilers/bcs/src/index";
-import { ScriptViewFileSystemProvider, type ScriptView, type ScriptViewProblem } from "../script-view/filesystem";
+import type { ScriptView, ScriptViewProblem } from "../script-view/filesystem";
 import { compileForSave } from "./compiler";
-import { BCS_SCHEME, VIEW_SUFFIX, render, type BcsNaming } from "./document";
+import { render, type BcsNaming } from "./document";
 
 /**
  * Resolves the install's naming tables and engine for a document, or undefined when it has no game behind it.
@@ -42,9 +42,6 @@ export function bcsScriptView(symbolsFor: SymbolsFor, extensionPath: string): Sc
     };
 
     return {
-        scheme: BCS_SCHEME,
-        diagnostics: "bgforge-bcs",
-        viewSuffix: VIEW_SUFFIX,
         render: (source) => render(source, symbolsFor(source)),
         refuseFile,
         problemsOf: (error): readonly ScriptViewProblem[] =>
@@ -54,10 +51,4 @@ export function bcsScriptView(symbolsFor: SymbolsFor, extensionPath: string): Sc
         // reports a document with no game.
         compile: (source, text) => compileForSave(extensionPath, text, symbolsFor(source)!),
     };
-}
-
-export class BcsFileSystemProvider extends ScriptViewFileSystemProvider {
-    constructor(symbolsFor: SymbolsFor, extensionPath: string) {
-        super(bcsScriptView(symbolsFor, extensionPath));
-    }
 }

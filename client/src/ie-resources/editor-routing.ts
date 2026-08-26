@@ -5,6 +5,7 @@
  */
 
 import { formatAdapterRegistry, parserRegistry } from "@bgforge/binary";
+import { SCRIPT_EDITOR_VIEW_TYPE, scriptFormatForExtension } from "../script-view/formats";
 
 /**
  * Whether the binary editor can read this extension AS AN INFINITY ENGINE RECORD - the one question both the
@@ -43,17 +44,17 @@ function isIeAnimation(ext: string): boolean {
  *
  * - Ours, where nothing in the binary-record registry could ever name the view. A compiled dialog IS a record
  *   the library parses, but as a graph rather than a record form, which is also why its adapter declares no
- *   layout for `isIeBinaryRecord` to find. A compiled script is not parsed by that registry at all - it is
- *   decompiled through the separate `.bcs`/`.int` script view, the same machinery a script on disk gets.
+ *   layout for `isIeBinaryRecord` to find.
  * - VS Code's own bundled previewers. These need naming for a reason that is easy to miss: `"default"` is
  *   documented as the plain TEXT editor, not "pick a suitable editor", so a portrait routed there renders as
  *   bytes even though the image preview claims `.bmp` at builtin priority and would have shown it.
  *
- * Only the formats a game archive actually serves are listed; the previewers cover more.
+ * Only the formats a game archive actually serves are listed; the previewers cover more. Compiled scripts are
+ * NOT here: they have their own registry, and asking it is what makes a format added there open from the tree
+ * without a second entry to remember.
  */
 const VIEWS_BY_EXTENSION = new Map([
     ["dlg", "bgforge.dlgViewer"],
-    ["bcs", "bgforge.bcsEditor"],
     ["bmp", "imagePreview.previewEditor"],
     ["wav", "vscode.audioPreview"],
 ]);
@@ -63,10 +64,11 @@ const VIEWS_BY_EXTENSION = new Map([
  * The binary editor is registered for `*.pro` at DEFAULT priority, so a plain `vscode.open` resolves a `.pro`
  * to it regardless of what this decided; naming a view is what actually routes a format elsewhere.
  *
- * Three sources are asked, in the order a format can only answer one of: a record goes to the binary editor, an
- * animation to the animation editor, and the rest to whatever the extension map names - our own graph editor
- * for a compiled dialog, a bundled previewer where VS Code ships one. Asking only the first sent every BAM to
- * the text editor, which showed it as an undisplayable binary file.
+ * Four sources are asked, in the order a format can only answer one of: a record goes to the binary editor, an
+ * animation to the animation editor, a compiled script to the script view, and the rest to whatever the
+ * extension map names - our own graph editor for a compiled dialog, a bundled previewer where VS Code ships
+ * one. Asking only the first sent every BAM to the text editor, which showed it as an undisplayable binary
+ * file.
  *
  * `"default"` is the last resort and means the plain TEXT editor - the right answer only for a format nothing
  * can render, which is why the previewer map above exists rather than falling through to it.
@@ -74,6 +76,7 @@ const VIEWS_BY_EXTENSION = new Map([
 export function viewTypeForResource(ext: string): string {
     if (isIeBinaryRecord(ext)) return "bgforge.binaryEditor";
     if (isIeAnimation(ext)) return "bgforge.animationEditor";
+    if (scriptFormatForExtension(ext)) return SCRIPT_EDITOR_VIEW_TYPE;
     return VIEWS_BY_EXTENSION.get(ext.toLowerCase()) ?? "default";
 }
 

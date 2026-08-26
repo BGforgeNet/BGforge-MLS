@@ -21,9 +21,8 @@ import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";
 import { registerImageEditor } from "./image-editor/register";
-import { routeCompile } from "./int-editor/compile-command";
-import { registerIntEditor } from "./int-editor/register";
-import { registerBcsEditor } from "./bcs-editor/register";
+import { routeCompile } from "./script-view/compile-command";
+import { registerScriptViews } from "./script-view/register";
 import { LSP_DOCUMENT_SELECTOR } from "./document-selector";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
@@ -73,8 +72,7 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context),
-        registerIntEditor(context),
-        registerBcsEditor(context, gameLookups.bcsSymbols),
+        registerScriptViews(context, gameLookups.bcsSymbols),
     );
 
     // If the extension is launched in debug mode then the debug server options are used

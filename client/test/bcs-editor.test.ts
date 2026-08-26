@@ -168,9 +168,9 @@ vi.mock("vscode", () => ({
 
 import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
 import { REPO_ROOT } from "./repo-root";
-import { viewUri } from "../src/bcs-editor/document";
-import { BcsFileSystemProvider } from "../src/bcs-editor/filesystem";
-import { registerBcsEditor } from "../src/bcs-editor/register";
+import { bcsScriptView, type SymbolsFor } from "../src/bcs-editor/filesystem";
+import { ScriptViewFileSystemProvider, scriptViewUri } from "../src/script-view/filesystem";
+import { registerScriptViews } from "../src/script-view/register";
 
 // One block: a False() condition and a Continue() response, in the marker form a real file uses.
 const SCRIPT =
@@ -194,15 +194,18 @@ const COMPILE_SYMBOLS: BcsCompileSymbols = {
 const NAMING = { symbols: SYMBOLS, compileSymbols: COMPILE_SYMBOLS, engine: "bg" } as const;
 
 /** The grammar the compiler loads ships in the server's build output, which the repo root holds. */
-const newProvider = (naming: () => typeof NAMING | undefined = () => NAMING): BcsFileSystemProvider =>
-    new BcsFileSystemProvider(naming, REPO_ROOT);
+const bcsProvider = (symbolsFor: SymbolsFor): ScriptViewFileSystemProvider =>
+    new ScriptViewFileSystemProvider(new Map([["bcs", bcsScriptView(symbolsFor, REPO_ROOT)]]));
+
+const newProvider = (naming: () => typeof NAMING | undefined = () => NAMING): ScriptViewFileSystemProvider =>
+    bcsProvider(naming as SymbolsFor);
 
 /** A `.bcs` on disk plus the view URI that renders it, built the same way production does. */
 function script(): { file: string; view: never } {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-view-"));
     const file = path.join(dir, "AERIE.bcs");
     fs.writeFileSync(file, SCRIPT, "latin1");
-    return { file, view: viewUri(new h.FakeUri("file", file) as never) as never };
+    return { file, view: scriptViewUri(new h.FakeUri("file", file) as never) as never };
 }
 
 describe("the .bcs custom editor", () => {
@@ -244,7 +247,7 @@ describe("the .bcs custom editor", () => {
         const file = path.join(dir, "EMPTY.bcs");
         fs.writeFileSync(file, "");
 
-        const stat = await newProvider().stat(viewUri(new h.FakeUri("file", file) as never) as never);
+        const stat = await newProvider().stat(scriptViewUri(new h.FakeUri("file", file) as never) as never);
 
         expect(stat.permissions).toBe(1);
     });
@@ -253,7 +256,7 @@ describe("the .bcs custom editor", () => {
         const provider = newProvider();
 
         await expect(
-            provider.stat(viewUri(new h.FakeUri("file", "/nowhere/MISSING.bcs") as never) as never),
+            provider.stat(scriptViewUri(new h.FakeUri("file", "/nowhere/MISSING.bcs") as never) as never),
         ).rejects.toThrow(/not found/);
     });
 
@@ -301,7 +304,7 @@ describe("the .bcs custom editor", () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bcs-empty-"));
         const file = path.join(dir, "EMPTY.bcs");
         fs.writeFileSync(file, "");
-        const view = viewUri(new h.FakeUri("file", file) as never) as never;
+        const view = scriptViewUri(new h.FakeUri("file", file) as never) as never;
 
         await expect(newProvider().writeFile(view, Buffer.from("IF\nTHEN\nEND\n", "utf8"))).rejects.toThrow(
             /holds no script/,
@@ -337,7 +340,7 @@ describe("the .bcs custom editor", () => {
         const provider = newProvider();
 
         await expect(
-            provider.readFile(viewUri(new h.FakeUri("file", "/nowhere/MISSING.bcs") as never) as never),
+            provider.readFile(scriptViewUri(new h.FakeUri("file", "/nowhere/MISSING.bcs") as never) as never),
         ).rejects.toThrow(/not found/);
     });
 
@@ -367,7 +370,7 @@ describe("the .bcs custom editor", () => {
         h.languages.splice(0);
         h.shownIn.splice(0);
         h.disposedPanels = 0;
-        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider;
         expect(provider, "the custom editor did not register").toBeDefined();
 
@@ -390,7 +393,7 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.unopenable.add(`${file}.baf`);
         h.disposedPanels = 0;
-        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
@@ -413,7 +416,7 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.rejectWith.set(`${file}.baf`, "host said no");
         h.disposedPanels = 0;
-        registerBcsEditor({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
@@ -452,7 +455,7 @@ describe("the shared script view", () => {
         // at all, so a cache HIT totals 2 and a miss would total 3.
         const { view } = script();
         const symbolsFor = vi.fn(() => NAMING);
-        const provider = new BcsFileSystemProvider(symbolsFor, REPO_ROOT);
+        const provider = bcsProvider(symbolsFor);
 
         await provider.stat(view);
         await provider.readFile(view);

@@ -155,10 +155,12 @@ vi.mock("vscode", () => ({
     },
 }));
 
-import { INT_SCHEME, LISTING_MARKER, render, sourceUri, viewUri } from "../src/int-editor/document";
-import { routeCompile } from "../src/int-editor/compile-command";
-import { IntFileSystemProvider } from "../src/int-editor/filesystem";
-import { registerIntEditor } from "../src/int-editor/register";
+import { LISTING_MARKER, render } from "../src/int-editor/document";
+import { intScriptView } from "../src/int-editor/filesystem";
+import { routeCompile } from "../src/script-view/compile-command";
+import { ScriptViewFileSystemProvider, scriptViewUri, sourceUriOf } from "../src/script-view/filesystem";
+import { SCRIPT_VIEW_SCHEME } from "../src/script-view/formats";
+import { registerScriptViews } from "../src/script-view/register";
 import { emitInt } from "../../compilers/ssl/src/int/emit";
 
 function compiled(): string {
@@ -190,7 +192,7 @@ function compiled(): string {
 
 /** A fake source URI standing in for `vscode.Uri.file`: only `.path`/`.fsPath` are read by anything under test. */
 const source = (file: string) => new h.FakeUri("file", file) as never;
-const view = (file: string) => viewUri(source(file)) as never;
+const view = (file: string) => scriptViewUri(source(file)) as never;
 
 describe("the decompiled document", () => {
     it("renders a compiled script as source", async () => {
@@ -222,16 +224,16 @@ describe("the decompiled document", () => {
 
     it("maps a script to its view and back", () => {
         const src = source("/mods/a.int");
-        const viewed = viewUri(src);
+        const viewed = scriptViewUri(src);
 
         // The `.ssl` suffix is what makes the tab read as source rather than as the compiled file.
         expect(viewed.path).toBe("/mods/a.int.ssl");
-        expect(sourceUri(viewed).path).toBe("/mods/a.int");
+        expect(sourceUriOf(viewed).path).toBe("/mods/a.int");
     });
 });
 
 describe("the compiled-script filesystem", () => {
-    const files = () => new IntFileSystemProvider(REPO_ROOT);
+    const files = () => new ScriptViewFileSystemProvider(new Map([["int", intScriptView(REPO_ROOT)]]));
 
     it("reports the length of the text it will serve, not of the compiled file", async () => {
         const file = compiled();
@@ -335,7 +337,10 @@ describe("compiling from the editor command", () => {
     const fake = (scheme: string, { dirty = true, writes = true } = {}) => {
         const saved: true[] = [];
         const document = {
-            uri: scheme === INT_SCHEME ? view("/mods/a.int") : (new h.FakeUri(scheme, "/mods/a.int.ssl") as never),
+            uri:
+                scheme === SCRIPT_VIEW_SCHEME
+                    ? view("/mods/a.int")
+                    : (new h.FakeUri(scheme, "/mods/a.int.ssl") as never),
             isDirty: dirty,
             save: () => {
                 saved.push(true);
@@ -357,7 +362,7 @@ describe("compiling from the editor command", () => {
     // Each case asserts the path NOT taken as well: a router that did both would satisfy either
     // assertion alone, and doing both means compiling the same text twice down two different paths.
     it("compiles a decompiled script by saving it, which writes the .int in place", async () => {
-        const { document, saved } = fake(INT_SCHEME);
+        const { document, saved } = fake(SCRIPT_VIEW_SCHEME);
 
         const sent = await run(document);
 
@@ -366,7 +371,7 @@ describe("compiling from the editor command", () => {
     });
 
     it("says what it wrote, because a silent command is indistinguishable from a broken one", async () => {
-        const { document } = fake(INT_SCHEME);
+        const { document } = fake(SCRIPT_VIEW_SCHEME);
 
         await run(document);
 
@@ -376,7 +381,7 @@ describe("compiling from the editor command", () => {
     // The command reports the state either way rather than quietly doing nothing, which is what an
     // unedited document looked like before: the bytes on disk already match, and that is worth saying.
     it("reports an unedited script as already current, and does not rewrite it", async () => {
-        const { document, saved } = fake(INT_SCHEME, { dirty: false });
+        const { document, saved } = fake(SCRIPT_VIEW_SCHEME, { dirty: false });
 
         await run(document);
 
@@ -385,7 +390,7 @@ describe("compiling from the editor command", () => {
     });
 
     it("claims nothing when the save was refused, leaving the refusal as the only message", async () => {
-        const { document, saved } = fake(INT_SCHEME, { writes: false });
+        const { document, saved } = fake(SCRIPT_VIEW_SCHEME, { writes: false });
 
         await run(document);
 
@@ -407,7 +412,7 @@ describe("compiling from the editor command", () => {
 describe("opening a compiled script", () => {
     const open = async (file: string): Promise<void> => {
         const context = { extensionPath: REPO_ROOT } as never;
-        registerIntEditor(context);
+        registerScriptViews(context, () => undefined);
         const provider = h.editor.provider!;
         const document = provider.openCustomDocument(new h.FakeUri("file", file));
         await provider.resolveCustomEditor(document, { viewColumn: 2, dispose: () => disposed.push(true) });

@@ -484,21 +484,17 @@
         ],
         "customEditors": [
             {
-                "viewType": "bgforge.intEditor",
-                "displayName": "Fallout Script (decompiled)",
+                "viewType": "bgforge.scriptEditor",
+                "displayName": "Compiled Script (decompiled)",
                 "selector": [
                     {
                         "filenamePattern": "*.int"
-                    }
-                ],
-                "priority": "default"
-            },
-            {
-                "viewType": "bgforge.bcsEditor",
-                "displayName": "Infinity Engine script (decompiled)",
-                "selector": [
+                    },
                     {
                         "filenamePattern": "*.bcs"
+                    },
+                    {
+                        "filenamePattern": "*.bs"
                     }
                 ],
                 "priority": "default"
@@ -863,14 +859,12 @@
     },
     "activationEvents": [
         "onCustomEditor:bgforge.animationEditor",
-        "onCustomEditor:bgforge.bcsEditor",
         "onCustomEditor:bgforge.binaryEditor",
         "onCustomEditor:bgforge.dialogEditor",
         "onCustomEditor:bgforge.dlgViewer",
-        "onCustomEditor:bgforge.intEditor",
-        "onFileSystem:bgforge-bcs",
+        "onCustomEditor:bgforge.scriptEditor",
         "onFileSystem:bgforge-ie-resource",
-        "onFileSystem:bgforge-int",
+        "onFileSystem:bgforge-script",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",

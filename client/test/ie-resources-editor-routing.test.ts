@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry, parserRegistry, type BinaryParser } from "@bgforge/binary";
 import pkg from "../../package.json";
 import { isIeBinaryRecord, hasViewerFor, viewTypeForResource } from "../src/ie-resources/editor-routing";
+import { SCRIPT_EDITOR_VIEW_TYPE, SCRIPT_FORMATS } from "../src/script-view/formats";
 
 describe("viewTypeForResource", () => {
     it("sends the four parsed IE formats to the binary editor", () => {
@@ -44,11 +45,17 @@ describe("viewTypeForResource", () => {
 
     // Never left to file association: the binary editor is registered for `*.pro` at DEFAULT priority, so an
     // unnamed `vscode.open` resolves to it anyway. A named view is what actually routes these elsewhere.
-    it("sends a compiled script to its decompiled-source view, which the parser registry cannot name", () => {
-        // A `.bcs` is not a record the binary editor's registry parses - it is decompiled to BAF, so nothing
-        // there could ever answer this. Only the extension map routes it, same as a compiled dialog.
-        expect(viewTypeForResource("bcs")).toBe("bgforge.bcsEditor");
-    });
+    // Written per CLASS: a format added to the script registry is meant to open from the tree with no second
+    // entry to remember, and pinning `.bcs` alone is exactly what let `.bs` sit in the tree as raw markers.
+    it.each(SCRIPT_FORMATS.map((format) => [format.ext]))(
+        "sends a compiled .%s to its decompiled-source view, which the parser registry cannot name",
+        (ext) => {
+            // A compiled script is not a record the binary editor's registry parses - it is decompiled to
+            // source, so nothing there could ever answer this.
+            expect(viewTypeForResource(ext)).toBe(SCRIPT_EDITOR_VIEW_TYPE);
+            expect(viewTypeForResource(ext.toUpperCase())).toBe(SCRIPT_EDITOR_VIEW_TYPE);
+        },
+    );
 
     it("sends a compiled dialog to the dialog webview, not the binary editor", () => {
         // A DLG is a graph, not a record form. It reaches an editor of its own rather than the record form

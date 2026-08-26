@@ -1,36 +1,61 @@
 /**
  * The language client's document selector.
  *
- * A script view renders a compiled file as source on its own URI scheme, and the server's features reach it
- * only if that scheme is selected here. Nothing else fails when it is missing: the tab still opens, still
- * highlights and still saves, so the gap shows up as "the server does nothing for this file" - which is why
- * it is worth pinning rather than leaving to the next reader of the selector list.
+ * A document the client does not select still opens, still highlights and still saves - it just gets nothing
+ * from the server, which reads as the server being broken rather than as the document never being selected.
+ * Nothing else fails, so the property is worth pinning.
  *
- * One row per script view. A new one adds a row here, and the source of truth for its scheme is the view's
- * own module rather than a string repeated in the test.
+ * Two derivations are pinned, because both were once hand-listed and both were one entry short: a language is
+ * selected on every scheme a document of ours can arrive on, and the decompiled-script scheme is selected for
+ * every language the format registry names.
  */
 
 import { describe, expect, it, vi } from "vitest";
 
-// The view modules reach vscode for `Uri` alone; the scheme constants they export need none of it.
+// `ie-resources/uri` reaches vscode for `Uri`; the scheme constant it exports needs none of it.
 vi.mock("vscode", () => ({ Uri: { from: () => undefined, parse: () => undefined } }));
 
 const { LSP_DOCUMENT_SELECTOR } = await import("../src/document-selector");
-const { BCS_SCHEME } = await import("../src/bcs-editor/document");
-const { INT_SCHEME } = await import("../src/int-editor/document");
+const { GAME_RESOURCE_SCHEME } = await import("../src/ie-resources/uri");
+const { SCRIPT_FORMATS, SCRIPT_VIEW_SCHEME } = await import("../src/script-view/formats");
 
-describe("LSP document selector", () => {
-    it.each([
-        ["compiled Infinity Engine script", BCS_SCHEME, "weidu-baf"],
-        ["compiled Fallout script", INT_SCHEME, "fallout-ssl"],
-    ])("selects the %s view's scheme for its source language", (_view, scheme, language) => {
-        expect(LSP_DOCUMENT_SELECTOR).toContainEqual({ scheme, language });
+describe("the LSP document selector", () => {
+    it.each(SCRIPT_FORMATS.map((format) => [format.ext, format.language]))(
+        "selects a decompiled .%s as %s",
+        (_ext, language) => {
+            expect(LSP_DOCUMENT_SELECTOR).toContainEqual({ scheme: SCRIPT_VIEW_SCHEME, language });
+        },
+    );
+
+    it("selects the same languages on disk, where they are ordinary source", () => {
+        // The view scheme is an ADDITION, never a replacement: a `.baf` or `.ssl` already on disk is the
+        // ordinary case, and a selector that lost it would still satisfy the rows above.
+        for (const { language } of SCRIPT_FORMATS) {
+            expect(LSP_DOCUMENT_SELECTOR).toContainEqual({ scheme: "file", language });
+        }
     });
 
-    it("selects each script view's language on disk as well", () => {
-        // The view scheme is an ADDITION, never a replacement: a `.baf` or `.ssl` that is already source on
-        // disk is the ordinary case, and a selector that lost it would still pass the rows above.
-        expect(LSP_DOCUMENT_SELECTOR).toContainEqual({ scheme: "file", language: "weidu-baf" });
-        expect(LSP_DOCUMENT_SELECTOR).toContainEqual({ scheme: "file", language: "fallout-ssl" });
+    it("selects every language it selects on disk on the game-resource scheme too", () => {
+        // A game archive serves 2DA tables and the like as text that never touches disk. Selecting `file:`
+        // alone left those tabs with highlighting and no server features at all.
+        const onScheme = (scheme: string): string[] =>
+            LSP_DOCUMENT_SELECTOR.filter((filter) => "scheme" in filter && filter.scheme === scheme)
+                .map((filter) => ("language" in filter ? filter.language : undefined))
+                .filter((language): language is string => language !== undefined);
+
+        const onDisk = onScheme("file");
+        const inArchive = new Set(onScheme(GAME_RESOURCE_SCHEME));
+
+        expect(onDisk.filter((language) => !inArchive.has(language))).toEqual([]);
+        expect(inArchive.has("infinity-2da")).toBe(true);
+    });
+
+    it("carries no filter naming neither a language nor a pattern", () => {
+        // Such a filter matches every document on its scheme, which would attach the client to files no
+        // provider answers for.
+        for (const filter of LSP_DOCUMENT_SELECTOR) {
+            const named = ("language" in filter && filter.language) || ("pattern" in filter && filter.pattern);
+            expect(named, JSON.stringify(filter)).toBeTruthy();
+        }
     });
 });

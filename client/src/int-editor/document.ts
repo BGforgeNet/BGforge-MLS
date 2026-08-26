@@ -22,23 +22,9 @@ import { printProgram } from "../../../compilers/ssl/src/int/print";
 import { formatDisassembly } from "../../../compilers/ssl/src/int/disasm";
 import { readInt } from "../../../compilers/ssl/src/int/read";
 import { conlog } from "../logging";
-import { buildViewUri } from "../script-view/filesystem";
-
-export const INT_SCHEME = "bgforge-int";
 
 /** Marks a rendering that is a listing rather than source, so a save can be refused with the reason. */
 export const LISTING_MARKER = "// This is a disassembly listing, not source, and cannot be saved back.";
-
-/** The suffix that makes the view document read as source. Both directions below derive from it. */
-export const VIEW_SUFFIX = ".ssl";
-
-/** The document for a compiled script, named so the tab reads as source and carrying its own source URI. */
-export function viewUri(source: vscode.Uri): vscode.Uri {
-    return buildViewUri(INT_SCHEME, VIEW_SUFFIX, source);
-}
-
-/** The source a view URI stands for. */
-export { sourceUriOf as sourceUri } from "../script-view/filesystem";
 
 /** The document body for a compiled script: its source, or a listing when that cannot be recovered. */
 export async function render(source: vscode.Uri): Promise<string> {
