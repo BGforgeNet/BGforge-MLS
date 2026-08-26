@@ -38,9 +38,11 @@ export interface DlgHostDeps {
     /**
      * Whether the document's game has a `dialog.tlk` at all. A strref that did not resolve means two
      * different things either side of this - no table to look in, or a line the table lacks - and the view
-     * gives opposite advice for each, so it must not have to guess from the counts.
+     * gives opposite advice for each, so it must not have to guess from the counts. Required for the same
+     * reason `pickStrref` is: an absent one would read as "no game open" and send the reader to open the
+     * game they already have.
      */
-    hasStrings?: (uri: vscode.Uri) => boolean;
+    hasStrings: (uri: vscode.Uri) => boolean;
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     /**
      * Which replies elsewhere lead into a state. `undefined` means the game-wide scan has not answered -
@@ -382,7 +384,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 ...model,
                 messages,
                 sourceName: resref,
-                dlgGameOpen: this.deps.hasStrings?.(document.uri) ?? false,
+                dlgGameOpen: this.deps.hasStrings(document.uri),
                 dlgUnresolvedStrrefs: unresolved,
                 ...(omitted > 0 ? { dlgNeighboursOmitted: omitted } : {}),
             },
