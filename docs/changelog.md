@@ -28,6 +28,10 @@
   English, French, German, Italian, Spanish and the other Western languages, wrong for Russian, Polish,
   Czech, Hungarian, Turkish, Japanese, Korean and Chinese. Enhanced Editions are always UTF-8 and are
   unaffected. The setting is read each time a game is opened, so correcting it does not need a reload.
+- The BGforge file icon theme now covers the compiled formats, which had no icon of their own: `.bcs` and
+  `.bs` take the `.baf` letter in red, `.dlg` takes the `.d` letter in blue, and `.int` takes the `.ssl`
+  trefoil in red, so a compiled file reads as a recoloured counterpart of its source. The icons apply
+  wherever a file is listed, the game-resources tree included.
 
 ### Infinity Engine scripts
 

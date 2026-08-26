@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   viewBox="-300 -300 600 600"
+   version="1.1">
+  <!-- Compiled Fallout script: the .ssl trefoil in red, so source and compiled read as one pair. -->
+  <g>
+    <path
+       d="m 260.00483,-108.8803 c 58.31766,144.003774 -10.12766,308.25839 -153.21332,367.66797 -143.085667,59.40959 -307.09553,-8.31997 -367.12769,-151.60392 -60.03216,-143.283953 6.44635,-308.3557 148.80657,-369.48773 142.360221,-61.13203 307.17422,4.62354 368.9081,147.17618"
+       style="fill:#000000;fill-rule:evenodd;stroke:#000000;stroke-width:20.3991375;stroke-linecap:round;stroke-linejoin:round" />
+    <path
+       d="m 49.16929,-0.064907 a 49.1825,48.6565 0 1 0 -98.365,0 49.1825,48.6565 0 1 0 98.365,0"
+       style="fill:#cc3e44;stroke-width:0.97837585" />
+    <path
+       id="a"
+       d="M 73.76054,-0.064907 A 73.77375,72.98475 0 0 0 36.873665,-63.271647 L 122.94304,-210.7495 A 245.9125,243.2825 0 0 1 245.89929,-0.05712196 Z"
+       style="fill:#cc3e44;stroke-width:0.97837585" />
+    <use
+       transform="matrix(-0.5,0.85676339,-0.87538755,-0.5,-0.07663378,-0.08604265)"
+       xlink:href="#a"
+       style="fill:#cc3e44" />
+    <use
+       transform="matrix(-0.5,-0.85676339,0.87538755,-0.5,0.03700378,-0.10867835)"
+       xlink:href="#a"
+       style="fill:#cc3e44" />
+  </g>
+</svg>

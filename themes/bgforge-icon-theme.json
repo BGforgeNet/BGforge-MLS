@@ -28,6 +28,12 @@
 		"fallout-pro": {
 			"iconPath": "./icons/fallout-pro.svg"
 		},
+		"fallout-int": {
+			"iconPath": "./icons/fallout-int.svg"
+		},
+		"weidu-bcs": {
+			"iconPath": "./icons/weidu-bcs.png"
+		},
 		"fallout-map": {
 			"iconPath": "./icons/fallout-map.svg"
 		},
@@ -334,9 +340,17 @@
 			"fontCharacter": "\\E020",
 			"fontColor": "#b8383d"
 		},
+		"weidu-dlg_light": {
+			"fontCharacter": "\\E020",
+			"fontColor": "#498ba7"
+		},
 		"_d": {
 			"fontCharacter": "\\E020",
 			"fontColor": "#cc3e44"
+		},
+		"weidu-dlg": {
+			"fontCharacter": "\\E020",
+			"fontColor": "#519aba"
 		},
 		"_dart_light": {
 			"fontCharacter": "\\E021",
@@ -1602,6 +1616,9 @@
 		"fr4": "frm-bam",
 		"fr5": "frm-bam",
 		"bam": "frm-bam",
+		"bcs": "weidu-bcs",
+		"bs": "weidu-bcs",
+		"int": "fallout-int",
 		"itm": "infinity-itm",
 		"spl": "infinity-spl",
 		"eff": "infinity-eff",
@@ -1648,6 +1665,7 @@
 		"cake": "_cake",
 		"ctp": "_cake_php",
 		"d": "_d",
+		"dlg": "weidu-dlg",
 		"doc": "_word",
 		"docx": "_word",
 		"ejs": "_ejs",
@@ -2052,6 +2070,9 @@
 			"fr4": "frm-bam",
 			"fr5": "frm-bam",
 			"bam": "frm-bam",
+			"bcs": "weidu-bcs",
+			"bs": "weidu-bcs",
+			"int": "fallout-int",
 			"itm": "infinity-itm",
 			"spl": "infinity-spl",
 			"eff": "infinity-eff",
@@ -2098,6 +2119,7 @@
 			"cake": "_cake_light",
 			"ctp": "_cake_php_light",
 			"d": "_d_light",
+			"dlg": "weidu-dlg_light",
 			"doc": "_word_light",
 			"docx": "_word_light",
 			"ejs": "_ejs_light",
