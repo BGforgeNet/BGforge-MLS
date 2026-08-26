@@ -74,14 +74,17 @@ describe("surfaceWebviewRuntimeError", () => {
     });
 
     test("tolerates undefined stack", () => {
-        expect(() =>
-            surfaceWebviewRuntimeError({
-                editor: "Binary editor",
-                file: "foo.pro",
-                message: "boom",
-            }),
-        ).not.toThrow();
-        expect(consoleErrorSpy).toHaveBeenCalled();
-        expect(conlogSpy).toHaveBeenCalled();
+        // Both surfaces still name the editor, the file and the message - a bare "was called" would pass on
+        // a log that dropped all three, which is the failure a missing stack is most likely to cause.
+        surfaceWebviewRuntimeError({
+            editor: "Binary editor",
+            file: "foo.pro",
+            message: "boom",
+        });
+
+        expect(conlogSpy.mock.calls[0]?.[0]).toContain("Binary editor for foo.pro");
+        expect(conlogSpy.mock.calls[0]?.[0]).toContain("boom");
+        expect(consoleErrorSpy.mock.calls[0]?.[0]).toContain("Binary editor for foo.pro");
+        expect(consoleErrorSpy.mock.calls[0]?.[0]).toContain("boom");
     });
 });

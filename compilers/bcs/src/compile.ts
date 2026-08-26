@@ -315,7 +315,8 @@ class Compiler {
      *
      * A name almost always has one row; where it has several they differ in argument count, so the count
      * settles it. Falling back to the last rather than refusing keeps a script compiling against a table
-     * whose row this build does not understand, and the argument binding below reports what it could not fill.
+     * whose row this build does not understand; the binding then refuses a call whose argument count the
+     * chosen row cannot take.
      */
     private select(rows: readonly BcsSignatureRow[], count: number): BcsSignatureRow | undefined {
         if (rows.length <= 1) return rows[0];

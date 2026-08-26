@@ -232,7 +232,20 @@ function problemsOf(run: () => unknown): string[] {
 
 describe("compileBaf - refusals", () => {
     test("a source the grammar cannot read is refused, with every error located", () => {
-        expect(() => compile("IF\n  See(\nTHEN\n")).toThrow(BcsCompileError);
+        // The class alone passes on any refusal, including one raised for an unrelated reason; the sibling
+        // tests below pin the sentence, and this one owes its own name a located diagnostic too.
+        let refusal: BcsCompileError | undefined;
+        try {
+            compile("IF\n  See(\nTHEN\n");
+        } catch (error) {
+            refusal = error instanceof BcsCompileError ? error : undefined;
+        }
+
+        expect(refusal?.diagnostics.map((problem) => problem.message)).toEqual(["syntax error"]);
+        // Located within the source, not pinned to a line: the parser reports the start of the region it
+        // could not close (here line 1, where the IF opens) rather than the token that broke it.
+        expect(refusal?.diagnostics[0]?.line).toBeGreaterThanOrEqual(1);
+        expect(refusal?.diagnostics[0]?.line).toBeLessThanOrEqual(3);
     });
 
     test("a name no table gives is refused rather than compiled to an invented id", () => {
