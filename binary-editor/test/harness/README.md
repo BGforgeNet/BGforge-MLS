@@ -138,6 +138,13 @@ Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PAS
 summary for the other drivers), exit 0. Any assertion failure prints `FAIL  <label>  <detail>` and exits
 non-zero.
 
+## Where these run in CI
+
+The drivers run as a regression suite in the separate `Harness` workflow, via `scripts/test-harness.sh` (which
+covers both editors' harnesses). They are deliberately excluded from `pnpm test` and `pnpm test:all`, which run
+browserless - so a green `pnpm test:all` says nothing about these gates, and a change to the render layer needs
+a driver run of its own.
+
 ## Gitignored outputs
 
 `app.html` and `*.png` screenshots are regenerated on every run and are listed in `.gitignore` in this

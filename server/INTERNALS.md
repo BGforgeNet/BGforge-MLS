@@ -536,6 +536,20 @@ This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax
 | infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |        Y        |
 | scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |                 |
 
+### Deliberate N/A
+
+These features are absent because they do not apply to the language, not because they are unimplemented:
+
+- **BAF Symbols / Definition / Rename** - BAF files are flat sequences of IF/THEN/RESPONSE blocks with no named
+  procedures, functions, or reusable constructs to navigate to or rename.
+- **BAF JSDoc** - no user-defined constructs to document.
+- **Worldmap** - a simple key-value config file, no programming constructs.
+- **TP2 Signature Help** - TP2 calls take named keyword parameters (`INT_VAR`/`STR_VAR`/`RET` blocks), not positional
+  arguments, and signature help is built to track positional ones. Parameter documentation is surfaced via hover and
+  completion instead.
+- **TP2 Parameter Inlay Hints** - parameters are already named explicitly in the source (`INT_VAR foo = 0`) and
+  documented via hover and completion. There is nothing implicit to annotate.
+
 ## Request Routing
 
 1. `server.ts` receives LSP request (e.g., `connection.onHover`)
@@ -614,6 +628,12 @@ onDidSave / onDidChangeContent / manual command
 **Diagnostics**: Compiler output parsed via regex into `ParseResult { errors, warnings }`. `sendParseResult()` aggregates by URI and sends LSP diagnostics. Both compilers always send diagnostics (even on success) to clear stale errors from previous runs. Multi-file error reporting supported (SSL includes can fail in header files). WeiDU deduplicates errors by location since WeiDU emits both `PARSE ERROR` and `ERROR` for the same location. WeiDU error messages include up to 4 detail lines from WeiDU output verbatim. When a compiler fails but output isn't parseable (e.g., binary not found, unexpected output format), both compilers use `addFallbackDiagnostic()` instead of silently clearing diagnostics. WeiDU shows an actionable `showError` when the binary is not found (ENOENT). All transpiler branches (TD, TBAF, TSSL) clear diagnostics before compilation.
 
 **SSL dual-mode**: Built-in sslc-emscripten (WASM, forked process) or external compile.exe. Falls back to built-in if external unavailable. When user declines the fallback prompt, compilation returns early without attempting the failed external compiler.
+
+**BAF dual back end**: `bgforge.weidu.compiler` selects between the WeiDU binary (the reference, and the default) and
+the extension's own built-in compiler. Dispatch is in `weidu-baf/diagnostics.ts`, covering both the `.baf` and `.tbaf`
+entry points. The built-in compiles the editor's text directly and needs no WeiDU binary, but it handles only
+self-contained BAF: it refuses a file using `%variable%` or a `@123` translation reference, since those values exist
+only once a mod is being installed.
 
 ## Translation Service
 

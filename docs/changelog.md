@@ -2,91 +2,16 @@
 
 ## Unreleased
 
-### Infinity Engine games
+### Infinity Engine
 
-- Compiled scripts opened from the game-resources tree now get the full language support their tab
-  promises - completion, hover, outline, signature help and string-reference previews - instead of
-  highlighting alone.
-- Text served straight out of a game archive reaches the language server as well, so a `.2da` opened
-  from the resource tree is treated as the table it is: zebra-grid column highlighting, and the
-  column-aligning formatter. Both previously worked only on a file on disk.
-- The `.bs` AI-selection scripts now open as decompiled BAF, like the `.bcs` scripts beside them.
-- Saving an edited game resource asks first when it would replace a file already in the game's `override`
-  folder - one an installed mod or another tool put there, whose contents nothing can bring back. Creating a
-  new override file is silent, as is re-saving a file you have already edited, and the confirmation covers
-  every format the editors write.
-- Compiling a decompiled script with the compile command works for every compiled format, not just
-  Fallout's `.int`; it previously did nothing at all on an Infinity Engine script.
-- BAF scripts now show what a string reference says. Actions that take a strref - `DisplayString`,
-  `SetName`, `AddJournalEntry` and the rest - get an inline preview of the text beside the number, and
-  hovering the number shows it in full, the same way `.tra` and `.msg` references already work. The text
-  comes from the `dialog.tlk` of the install at `bgforge.weidu.gamePath`; without one configured, nothing
-  is shown. Which arguments are string references is taken from each action's own signature in the engine
-  data, so the list follows the data rather than being fixed in code.
-- New `bgforge.weidu.tlkEncoding` setting, for classic installs whose text shows as garbled characters.
-  A classic game records its text encoding nowhere, so it was always read as windows-1252 - right for
-  English, French, German, Italian, Spanish and the other Western languages, wrong for Russian, Polish,
-  Czech, Hungarian, Turkish, Japanese, Korean and Chinese. Enhanced Editions are always UTF-8 and are
-  unaffected. The setting is read each time a game is opened, so correcting it does not need a reload.
-- The BGforge file icon theme now covers the compiled formats, which had no icon of their own: `.bcs` and
-  `.bs` take the `.baf` letter in red, `.dlg` takes the `.d` letter in blue, and `.int` takes the `.ssl`
-  trefoil in red, so a compiled file reads as a recoloured counterpart of its source. The icons apply
-  wherever a file is listed, the game-resources tree included.
-
-### Infinity Engine scripts
-
-- Compiled scripts (`.bcs`, and the `.bs` AI-selection scripts) open as readable BAF source instead of the
-  markers and bare numbers they are stored as, and get the full BAF treatment - highlighting, outline,
-  hover, completion - because the tab is a BAF document.
-- **Editing a compiled script and saving it writes it back compiled**, over the same file. A script opened
-  and saved without a change comes back byte for byte; a save that does not compile is refused with the
-  problems listed where every other one is, and the file is left as it was. Two things a compiled script
-  can hold have no spelling in BAF - a record an early Baldur's Gate writer stopped short of finishing, and
-  a number left in a slot no signature names - so a script carrying either is written out in the full,
-  clean form the reference compiler produces from the same source.
-- Every name in a compiled script is a number the install's own tables give a meaning to, so the view needs
-  a game open. With none, the tab explains that and says how to open one rather than showing the numbers,
-  and stays read-only - there would be nothing to compile names against either.
-- Baldur's Gate, Icewind Dale, Icewind Dale II and Planescape: Torment scripts are all read. The game
-  decides what an object's fields mean, and the open install says which game it is.
-- A `RESPONSE` with no actions is now accepted in `.baf` sources too. Real compiled scripts carry them and
-  the reference compiler takes them, but highlighting and the outline read one as a syntax error.
-- BAF diagnostics get a second, built-in compiler alongside the existing WeiDU one. Enable with
+- DLG, BCS and BS get first-class IDE experience. They are automatically decoded on click and presented for
+  editing, and compiled back on save. That includes both standalone files and those in IE game view. Of course,
+  both cases require an IE game open.
+- All these also got theme icons.
+- New `bgforge.weidu.tlkEncoding` setting, for Classic installs with non-cp1252 encoding.
+- BAF diagnostics get an alternative compiler alongside the existing WeiDU one. Enable with
   `bgforge.weidu.compiler: built-in`. It needs no WeiDU binary and reports every problem in a file at once,
-  but it only compiles self-contained BAF: a file using a `%variable%` (assigned by a tp2 during install) or
-  a `@123` translation reference (whose number the installing tp2 works out) is refused with a diagnostic
-  naming the construct, since neither value exists before an install runs. Checked against WeiDU itself over
-  the real corpus: of 741 `.baf` files, 450 are self-contained, and the built-in compiler agrees with WeiDU
-  on whether each one compiles; the remaining 291 are refused by the built-in compiler for exactly this
-  reason.
-
-### Dialog editor
-
-- Compiled Infinity Engine dialogs (`.dlg`) open in the dialog editor: the same tree and graph views a `.d`
-  source gets, showing the states, transitions, triggers and actions the file stores. Spoken text lives in
-  the game's `dialog.tlk`, so it resolves once a game is open - with none open the editor shows the raw
-  string references and a button to open one.
-- What a line in a compiled dialog says can be changed and saved. A `.dlg` stores a number pointing into the
-  game's text rather than the text itself, so a line is changed by pointing it at a different entry:
-  **Change string...** on the NPC line or on any reply searches the game's text for the entry to point at. Saving
-  rewrites those numbers and leaves the rest of the file as it was, and undo behaves as it does anywhere
-  else.
-- A compiled dialog's structure can be edited too: replies can be added, removed and retargeted, and states
-  appended. What cannot change is a state's **number** - it is its position in the file, and other dialogs
-  and WeiDU mod scripts address it by that number - so states are never renamed or renumbered. To take one
-  out of play, **Detach state** points every reply that led to it at the end of the conversation instead;
-  the record stays where it is, nothing is renumbered, and the editor says up front which replies it will
-  change, and which replies in other dialogs still reach it - each named by its dialog, state and reply.
-- The trigger on a state, and the condition and action on a reply, can be edited in a compiled dialog. A
-  `.dlg` stores these as script text - the same fragments a `.d` source wraps in tildes - and saving writes an
-  edited one back into the file's own table, with the CRLF line breaks the format uses, leaving every entry
-  that was already there at its index. A reply's target may point into another dialog in the tree as well,
-  which is how the file already addresses a hand-off.
-- A conversation that hands off to another dialog now shows where it lands. The states another `.dlg`
-  reaches, and the states elsewhere that reach into this one, are drawn in the same graph, marked with the
-  dialog they belong to and read-only - so a hand-off that goes out and comes back closes up as one tree
-  instead of stopping at an address. Which dialogs reach a given state is answered by a scan of the open
-  game, run in the background when the game is opened.
+  but cannot resolve variables nor TRA references for now.
 
 ## 3.14.0
 

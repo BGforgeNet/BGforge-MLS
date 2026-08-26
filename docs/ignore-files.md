@@ -1,6 +1,6 @@
 # Ignore Files
 
-This project uses five ignore mechanisms. Each serves a different purpose: what goes into git, what ships in the VSIX, what gets linted, and what gets formatted.
+This project uses six ignore mechanisms. Each serves a different purpose: what goes into git, what ships in the VSIX, what gets linted, and what gets formatted.
 
 ## .gitignore
 
@@ -64,7 +64,7 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 | `.oxlintrc.json`                                | Linting configuration                           |
 | `.github/`                                      | CI workflows                                    |
 | `.reports/`, `.vscode/`, `.vscode-test/`        | Dev/test directories                            |
-| `CLAUDE.md`, `CONTRIBUTING.md`                  | Dev documentation                               |
+| `CONTRIBUTING.md`, agent instruction files      | Dev documentation                               |
 | `knip.ts`, `tsconfig.json`                      | Linting and build config                        |
 | `pnpm-lock.yaml`, `pnpm-workspace.yaml`         | Package manager files                           |
 | `dist/`                                         | Build artifact directory (VSIX, editor bundles) |
@@ -145,6 +145,29 @@ Oxfmt (and VSCode) use `.editorconfig` for formatting.
 | ------------------- | ------------------------------------------------------------------ |
 | `[*]`               | `indent_style = space`, `indent_size = 4`, `max_line_length = 120` |
 | `[*.{yml,yaml,md}]` | `indent_size = 2`                                                  |
+
+## .oxfmtrc.json
+
+Oxfmt configuration. `overrides` set the indent width per file type: 2-space for YAML and Markdown, 4-space for JSON
+and TypeScript. Line width comes from `.editorconfig` above.
+
+`ignorePatterns` is the authoritative list of files excluded from formatting. It holds the repo's generated artifacts,
+so their canonical format stays whatever their generator emits - running `oxfmt` over them would only be undone on the
+next regeneration. Generated source and data files carry an `Auto-generated ... Do not hand-edit` marker on their first
+line.
+
+Two guards keep the list honest:
+
+| Guard                                                   | Checks                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `scripts/utils/test/oxfmt-generated-exclusions.test.ts` | Every marker-carrying file stays excluded, so the list cannot drift |
+| `scripts/utils/test/data-json-well-formed.test.ts`      | Every committed data JSON parses, the oxfmt-excluded ones included  |
+
+### The oxfmt/oxlint exclusion asymmetry is deliberate
+
+`.oxlintrc.json` `ignorePatterns` is a much smaller set and deliberately does **not** mirror the one above. Generated
+files stay linted: a linter catches real generator bugs, whereas a formatter only fights the generator. Do not "align"
+the two lists.
 
 ## .oxlintrc.json
 

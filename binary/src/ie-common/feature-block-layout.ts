@@ -50,7 +50,12 @@ const FEATURE_BLOCK_FIELDS: readonly EffectLayoutField[] = [
     { flags: "saveType" },
 ];
 
-/** The feature-block rows for any field-ref prefix. All scalars pack into ONE flat 3-column grid (column-major,
+/** The ONE shared fragment for the 48-byte feature block - ITM effects, SPL effects and a CRE's
+ *  `effStructureVersion`-0 effects all render through it, so the same record looks identical everywhere. Do not
+ *  add a second 48-byte effect spec or fragment for a new format; pass a prefix to this one. (A CRE-local
+ *  `creEffectV1Spec` was exactly that duplication and has been collapsed into the shared `effectSpec`.)
+ *
+ *  The feature-block rows for any field-ref prefix. All scalars pack into ONE flat 3-column grid (column-major,
  *  reading down each column) so the detail fills the width as one area; the Resistance and Save Type flag boxes
  *  then sit side by side in one row at the end (Resistance single-column beside the wider Save Type). Only the
  *  probability range folds; the 0x1c/0x20 pair (maxLevel/minLevel) renders as two standalone fields,

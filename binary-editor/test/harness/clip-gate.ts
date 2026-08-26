@@ -2,7 +2,7 @@
  * Shared value-control clipping gate for the headless harness drivers.
  *
  * A value control whose box is narrower than the text it shows clips that text - a sizing defect, never a
- * finished state (see binary-editor/AGENTS.md "Truncated text is a sizing defect"). This gate is
+ * finished state (see docs/binary-editor-ui.md, "Reviewing a rendered screenshot"). This gate is
  * the format-agnostic net for that whole class: it does not care WHY a control is too narrow (a missing width
  * class, a too-small dd cap, a CSS regression), only that the rendered result clips.
  *

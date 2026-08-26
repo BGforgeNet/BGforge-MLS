@@ -91,7 +91,13 @@ export const PROBABILITY_JOIN: EffectJoin = {
 };
 
 /**
- * Build the detail rows for an effect record. A run of plain fields becomes one full-width 2-column panel;
+ * Build the detail rows for an effect record.
+ *
+ * Fields stay in ON-DISK BYTE ORDER, matching the spec, and the panel carries NO semantic titles - do not
+ * regroup by meaning or add headings. The record is read against a byte layout, so its order is the useful
+ * one; the foldings and boxes below are the only structure imposed on it, and each is deliberate.
+ *
+ * A run of plain fields becomes one full-width 2-column panel;
  * each bitfield (`{ flags }`) and each labelled subgroup (`{ group }`) becomes its own content-width (`fit`)
  * box at its byte position - so it hugs its content rather than claiming a full-width row. Each join in
  * `joins` folds its fields into one cell within whichever run holds them all (a group carries its own joins).

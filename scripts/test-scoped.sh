@@ -3,7 +3,7 @@
 # Run the test suites relevant to a set of changed paths, so a local edit doesn't require the
 # full pnpm test run to get feedback. Suite triggers mirror the cross-package import graph
 # lefthook.yml's pre-commit typechecks encode (see its header comment) plus the close-out
-# scoping guidance in AGENTS.md.
+# scoping guidance in CONTRIBUTING.md.
 #
 # Usage: scripts/test-scoped.sh [--dry-run] [--full] [paths...]
 #   --dry-run  print the suite plan without running anything

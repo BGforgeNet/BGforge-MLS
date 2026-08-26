@@ -177,7 +177,7 @@ export const PROJECTILE_REF = {
  *
  * Both read `None` because that is what each is: the value prefix the dropdown renders (`0 None` / `1 None`)
  * keeps them apart. `None` is the editor's own word for unset, as in `Schools` - not an invented identifier,
- * which the vendored-mirror rule forbids (`binary/src/AGENTS.md`).
+ * which the vendored-mirror rule forbids (`docs/binary-editor-ui.md`, Schema layer).
  */
 export const AbilityProjectileNone: Readonly<Record<number, string>> = {
     0: "None",

@@ -178,7 +178,7 @@ vscode-mls/
 +-- themes/                 Color theme (BGforge Monokai) + icon theme
 +-- snippets/               Code snippets (SSL, BAF, TP2)
 +-- scripts/                Build, test, data generation scripts
-+-- actions/                Reusable composite GitHub Actions (binary, format, transpile) + _shared/ scripts
++-- actions/                Reusable composite GitHub Actions (binary, format, transpile, tssl) + _shared/ scripts
 +-- transpilers/            Transpiler implementations + user documentation
 |   +-- common/                 Shared utilities (@bgforge/transpiler-common, workspace-internal)
 |   +-- tbaf/                   @bgforge/tbaf: TypeScript to WeiDU BAF
@@ -188,6 +188,10 @@ vscode-mls/
 +-- resources/              Extension icon
 +-- docs/                   Documentation
 ```
+
+`transpilers/common/` predates the repo-wide use of "shared" for this role (`shared/` now holds the helpers used by
+both runtime and build-time code). The name stays: renaming it would churn roughly 40 files plus the
+`@bgforge/transpiler-common` package name for no functional gain.
 
 ## Build System
 
