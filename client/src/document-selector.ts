@@ -11,28 +11,44 @@
  */
 
 import type { TextDocumentFilter } from "vscode-languageclient/node";
+import {
+    LANG_FALLOUT_MSG,
+    LANG_FALLOUT_SCRIPTS_LST,
+    LANG_FALLOUT_SSL,
+    LANG_FALLOUT_WORLDMAP_TXT,
+    LANG_INFINITY_2DA,
+    LANG_WEIDU_BAF,
+    LANG_WEIDU_D,
+    LANG_WEIDU_LOG,
+    LANG_WEIDU_SLB,
+    LANG_WEIDU_SSL,
+    LANG_WEIDU_TP2,
+    LANG_WEIDU_TRA,
+} from "../../shared/languages";
 import { GAME_RESOURCE_SCHEME } from "./ie-resources/uri";
 import { SCRIPT_FORMATS, SCRIPT_VIEW_SCHEME } from "./script-view/formats";
 
 /**
  * The languages this extension's server answers for.
  *
- * The transpiler sources are absent because they are TypeScript documents: their language id says nothing
- * about which of them a file is, so they are selected by pattern below.
+ * Named from the shared registry the server and the format package read, so client and server cannot disagree
+ * about an id; the guard test then holds this list against the manifest's `onLanguage:` activation events,
+ * which is the other copy of it. The transpiler sources are absent because they are TypeScript documents:
+ * their language id says nothing about which of them a file is, so they are selected by pattern below.
  */
 const LANGUAGES: readonly string[] = [
-    "infinity-2da",
-    "fallout-msg",
-    "fallout-scripts-lst",
-    "fallout-ssl",
-    "fallout-worldmap-txt",
-    "weidu-tp2",
-    "weidu-baf",
-    "weidu-d",
-    "weidu-ssl",
-    "weidu-slb",
-    "weidu-tra",
-    "weidu-log",
+    LANG_INFINITY_2DA,
+    LANG_FALLOUT_MSG,
+    LANG_FALLOUT_SCRIPTS_LST,
+    LANG_FALLOUT_SSL,
+    LANG_FALLOUT_WORLDMAP_TXT,
+    LANG_WEIDU_TP2,
+    LANG_WEIDU_BAF,
+    LANG_WEIDU_D,
+    LANG_WEIDU_SSL,
+    LANG_WEIDU_SLB,
+    LANG_WEIDU_TRA,
+    LANG_WEIDU_LOG,
 ];
 
 /**

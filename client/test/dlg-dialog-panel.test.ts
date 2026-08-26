@@ -21,6 +21,8 @@ const files = vi.hoisted(() => new Map<string, Uint8Array>());
 const prompts = vi.hoisted(() => [] as string[]);
 const told = vi.hoisted(() => [] as string[]);
 const answer = vi.hoisted(() => ({ value: undefined as string | undefined }));
+/** Error toasts raised; the runtimeError path is asserted through this. */
+const showErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("vscode", () => ({
     Uri: {
@@ -42,7 +44,7 @@ vi.mock("vscode", () => ({
         dispose() {}
     },
     window: {
-        showErrorMessage: vi.fn(),
+        showErrorMessage: showErrorMock,
         showWarningMessage: (message: string, ..._rest: unknown[]) => {
             prompts.push(message);
             return Promise.resolve(answer.value);
@@ -273,6 +275,37 @@ describe("DlgDialogEditorProvider", () => {
         h.send({ type: "openGame" });
 
         expect(executeCommandMock).toHaveBeenCalledWith("bgforge.ieResources.openGame");
+    });
+
+    test("surfaces a webview runtimeError instead of leaving a blank panel", async () => {
+        // The same webview bundle backs both dialog hosts, so it can post a fatal error to either. This host
+        // had no branch for it at all - the message fell through `default` and the panel just sat there, while
+        // the source editor and the binary editor both reported the identical error.
+        const h = harness();
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        showErrorMock.mockClear();
+
+        h.send({ type: "runtimeError", message: "boom", stack: "Error: boom\n  at x.ts:1:1" });
+
+        expect(showErrorMock).toHaveBeenCalledTimes(1);
+        const toast = showErrorMock.mock.calls[0]?.[0] as string;
+        expect(toast).toContain("boom");
+        expect(toast).toContain("SELFDLG.dlg");
+    });
+
+    test("ignores a message that does not match the webview protocol", async () => {
+        // The shared guard replaced a local cast: a malformed message must change nothing rather than reach a
+        // handler with fields it never checked.
+        const h = harness();
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        executeCommandMock.mockClear();
+
+        h.send({ type: "openGame", extra: 1 } as never);
+        h.send({ type: "detach" } as never); // no stateIndex
+        h.send({ nonsense: true } as never);
+
+        // The well-formed one still went through; the two malformed ones did not reach a handler.
+        expect(executeCommandMock).toHaveBeenCalledTimes(1);
     });
 
     test("reports a file that is not a DLG rather than posting an empty graph", async () => {

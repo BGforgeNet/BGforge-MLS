@@ -72,6 +72,32 @@ describe("the extension manifest", () => {
         expect(missing).toEqual([]);
     });
 
+    // The same manifest-versus-registry bind as the script formats above, for the other editor whose formats
+    // come from a registry. A parser that registers a layout routes itself from the game-resource tree with no
+    // code change, but a file on DISK reaches the editor only through a pattern here - so the two lists drift
+    // silently, and the format works from the tree and opens as bytes from the explorer.
+    test("claims every format the binary editor can draw", async () => {
+        const { parserRegistry, formatAdapterRegistry } = await import("@bgforge/binary");
+        const editor = editors.find((candidate) => candidate.viewType === "bgforge.binaryEditor");
+        expect(editor, "bgforge.binaryEditor is not in the manifest").toBeDefined();
+
+        const claimed = new Set(editor!.selector.map((one) => one.filenamePattern));
+        // A layout is what the editor draws a record THROUGH; a parser without one (DLG, authored in the
+        // dialog graph instead) is deliberately not this editor's, which is the same test `isIeBinaryRecord`
+        // applies when routing from the tree.
+        const drawable = parserRegistry
+            .getAllParsers()
+            .filter((parser) => formatAdapterRegistry.get(parser.id)?.layout !== undefined);
+        const missing = drawable.flatMap((parser) =>
+            parser.extensions
+                .filter((ext) => !claimed.has(`*.${ext.toLowerCase()}`))
+                .map((ext) => `${parser.id}:${ext}`),
+        );
+
+        expect(missing).toEqual([]);
+        expect(drawable.length, "no drawable parsers - the guard would pass over an empty list").toBeGreaterThan(0);
+    });
+
     // Every editor has to claim something, or it is dead weight that reads as wired.
     test("gives every custom editor at least one file pattern", () => {
         for (const editor of editors) {

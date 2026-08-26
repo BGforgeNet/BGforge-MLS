@@ -10,6 +10,8 @@
  * machinery around them - the same reason `ie-resources/editor-routing.ts` is its own module.
  */
 
+import { LANG_FALLOUT_SSL, LANG_WEIDU_BAF } from "../../../shared/languages";
+
 /** The custom URI scheme every compiled script is served on, whatever it decompiles into. */
 export const SCRIPT_VIEW_SCHEME = "bgforge-script";
 
@@ -37,11 +39,11 @@ export interface ScriptFormat {
 }
 
 export const SCRIPT_FORMATS: readonly ScriptFormat[] = [
-    { ext: "int", language: "fallout-ssl", viewSuffix: ".ssl", kind: "fallout-int" },
-    { ext: "bcs", language: "weidu-baf", viewSuffix: ".baf", kind: "infinity-bcs" },
+    { ext: "int", language: LANG_FALLOUT_SSL, viewSuffix: ".ssl", kind: "fallout-int" },
+    { ext: "bcs", language: LANG_WEIDU_BAF, viewSuffix: ".baf", kind: "infinity-bcs" },
     // The AI-selection scripts an Infinity Engine game ships beside its area and creature scripts. Same
     // format, same tables, different extension.
-    { ext: "bs", language: "weidu-baf", viewSuffix: ".baf", kind: "infinity-bcs" },
+    { ext: "bs", language: LANG_WEIDU_BAF, viewSuffix: ".baf", kind: "infinity-bcs" },
 ];
 
 /** The extension of a path, lowercased and without the dot; empty when it has none. */

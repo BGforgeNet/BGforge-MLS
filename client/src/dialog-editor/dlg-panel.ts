@@ -12,6 +12,7 @@
  * other dialogs and mod scripts hold - so states are never renamed or removed; see `dialog-editability.ts`.
  */
 
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
 import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "../../../shared/dialog-model-dlg";
@@ -20,6 +21,8 @@ import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
 import { neighbourStates, type InboundRef } from "./dlg-references";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
+import { surfaceWebviewRuntimeError } from "../webview-error";
+import { isWebviewToHost } from "./webview/messages";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
 import { writeDlgFromModel } from "./dlg-write";
 import { buildDialogHostHtml } from "./webview-host-html";
@@ -200,15 +203,10 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
 
         panel.webview.onDidReceiveMessage((raw: unknown) => {
             // Same reject-and-ignore posture as the other editors: an unrecognized message changes nothing.
-            if (typeof raw !== "object" || raw === null || !("type" in raw)) return;
-            const message = raw as {
-                type: unknown;
-                model?: unknown;
-                seq?: unknown;
-                stateIndex?: unknown;
-                choiceIndex?: unknown;
-            };
-            switch (message.type) {
+            // The shared guard rather than a local cast, so this host and the source one agree on what the
+            // one webview may send - and gain a branch together when it learns to send something new.
+            if (!isWebviewToHost(raw)) return;
+            switch (raw.type) {
                 case "ready":
                     this.postModel(document, post);
                     break;
@@ -218,14 +216,27 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                     void vscode.commands.executeCommand("bgforge.ieResources.openGame");
                     break;
                 case "pickString":
-                    void this.changeString(document, post, message.stateIndex, message.choiceIndex);
+                    void this.changeString(document, post, raw.stateIndex, raw.choiceIndex);
                     break;
                 case "detach":
-                    void this.detachState(document, post, message.stateIndex);
+                    void this.detachState(document, post, raw.stateIndex);
                     break;
                 case "edit":
-                    this.applyModelEdit(document, post, message.model, message.seq);
+                    this.applyModelEdit(document, post, raw.model, raw.seq);
                     break;
+                // A fatal error caught by the webview's installFatalErrorHandler (see webview/main.ts).
+                // Parity with the source dialog editor and the binary editor: reported through the same
+                // channels rather than leaving a blank panel with nothing said.
+                case "runtimeError": {
+                    const file = path.basename(document.uri.path);
+                    surfaceWebviewRuntimeError({
+                        label: `Dialog editor for ${file}`,
+                        userFacingFile: file,
+                        message: raw.message,
+                        stack: raw.stack,
+                    });
+                    break;
+                }
                 default:
                     break;
             }

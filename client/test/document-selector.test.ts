@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
+import pkg from "../../package.json";
 
 // `ie-resources/uri` reaches vscode for `Uri`; the scheme constant it exports needs none of it.
 vi.mock("vscode", () => ({ Uri: { from: () => undefined, parse: () => undefined } }));
@@ -48,6 +49,26 @@ describe("the LSP document selector", () => {
 
         expect(onDisk.filter((language) => !inArchive.has(language))).toEqual([]);
         expect(inArchive.has("infinity-2da")).toBe(true);
+    });
+
+    it("selects exactly the languages the manifest starts the extension for", () => {
+        // Two copies of one list: without an `onLanguage:` event the extension never starts, and without a
+        // selector entry it starts and then ignores the file. Neither failure says anything at runtime, and
+        // the manifest cannot read this module - VS Code reads it before any code runs - so they are held
+        // together here instead.
+        const activated = pkg.activationEvents
+            .filter((event) => event.startsWith("onLanguage:"))
+            .map((event) => event.slice("onLanguage:".length))
+            .sort();
+        const selected = [
+            ...new Set(
+                LSP_DOCUMENT_SELECTOR.filter((filter) => "language" in filter && filter.language !== undefined).map(
+                    (filter) => (filter as { language: string }).language,
+                ),
+            ),
+        ].sort();
+
+        expect(selected).toEqual(activated);
     });
 
     it("carries no filter naming neither a language nor a pattern", () => {
