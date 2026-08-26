@@ -14,6 +14,7 @@ import {
     createFlagBitNamesResolver,
     createSlotLabelResolver,
     createStrrefResolver,
+    createStringTableProbe,
     createStrrefSearch,
     gameDirOf,
     isGameDocument,
@@ -102,6 +103,8 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     /** Every reply elsewhere leading into this dialog; empty until the scan has finished, as `inbound` is. */
     inboundToDialog: (resref: string) => InboundRef[];
     strref: StrrefResolver;
+    /** Whether the document's game has a `dialog.tlk` to resolve strrefs against at all. */
+    hasStrings: (uri: vscode.Uri) => boolean;
     /** Opens the string picker for a document, resolving to the chosen strref or undefined if dismissed. */
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     slotLabel: SlotLabelResolver;
@@ -432,6 +435,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             return references.ready ? references.inboundToDialog(resref) : [];
         },
         strref: strrefResolver,
+        hasStrings: createStringTableProbe(currentGame, fallbackGameDir),
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(currentGame, fallbackGameDir),
         namingTable: createNamingTableResolver(currentGame, fallbackGameDir),

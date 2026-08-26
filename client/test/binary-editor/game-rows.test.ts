@@ -69,6 +69,16 @@ describe("withGameContext", () => {
         expect(out.rows[0]).not.toHaveProperty("strrefText");
     });
 
+    // A CRE's unused sound slots point at an entry that exists and is blank. The resolver reports it as the
+    // empty string it is; the field wants its number, not a trailing space and an empty tooltip.
+    it("leaves a strref whose TLK entry is blank untouched", () => {
+        const blank = { ...lookups, strref: (): string => "" };
+
+        const out = withGameContext({ rows: [strrefRow] }, blank);
+
+        expect(out.rows[0]).not.toHaveProperty("strrefText");
+    });
+
     // Structural sharing is what keeps this affordable at the post choke point: a record with no game behind it
     // resolves nothing, and must not pay a deep clone of every message.
     it("returns the identical object when nothing resolved", () => {

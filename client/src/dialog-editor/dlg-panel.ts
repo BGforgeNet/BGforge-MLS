@@ -35,6 +35,12 @@ import { buildDialogHostHtml } from "./webview-host-html";
  */
 export interface DlgHostDeps {
     strref?: StrrefResolver;
+    /**
+     * Whether the document's game has a `dialog.tlk` at all. A strref that did not resolve means two
+     * different things either side of this - no table to look in, or a line the table lacks - and the view
+     * gives opposite advice for each, so it must not have to guess from the counts.
+     */
+    hasStrings?: (uri: vscode.Uri) => boolean;
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     /**
      * Which replies elsewhere lead into a state. `undefined` means the game-wide scan has not answered -
@@ -124,17 +130,24 @@ export class DlgDocument implements vscode.CustomDocument {
 
 /**
  * Collect every strref the model references and resolve what the game can name, keyed by the `@N` id space
- * the renderer already uses for `.msg` and `.tra`. An unresolvable id is simply absent, so the view falls
- * back to showing the bare ref rather than inventing text for it.
+ * the renderer already uses for `.msg` and `.tra`. A strref the game cannot name gets `#N` as its text - the
+ * spelling a strref has everywhere else in the editor - so the view never shows a compiled dialog's line as
+ * the `@N` traref it is not. That leaves no ref for the renderer's own unresolved count to see, so the count
+ * is returned here instead, from the one place that knows which lookups failed.
  */
-function resolveMessages(strrefs: Iterable<number>, uri: vscode.Uri, resolve: DlgHostDeps["strref"]): DialogMessages {
+function resolveMessages(
+    strrefs: Iterable<number>,
+    uri: vscode.Uri,
+    resolve: DlgHostDeps["strref"],
+): { messages: DialogMessages; unresolved: number } {
     const messages: DialogMessages = {};
-    if (!resolve) return messages;
+    let unresolved = 0;
     for (const id of strrefs) {
-        const text = resolve(uri, id);
-        if (text !== undefined) messages[String(id)] = text;
+        const text = resolve?.(uri, id);
+        if (text === undefined) unresolved++;
+        messages[String(id)] = text ?? `#${id}`;
     }
-    return messages;
+    return { messages, unresolved };
 }
 
 /**
@@ -360,7 +373,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 if (transition.hasJournalEntry) strrefs.add(transition.journalText);
             }
         }
-        const messages = resolveMessages(strrefs, document.uri, this.deps.strref);
+        const { messages, unresolved } = resolveMessages(strrefs, document.uri, this.deps.strref);
 
         this.posted.set(document, model);
         post({
@@ -369,6 +382,8 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 ...model,
                 messages,
                 sourceName: resref,
+                dlgGameOpen: this.deps.hasStrings?.(document.uri) ?? false,
+                dlgUnresolvedStrrefs: unresolved,
                 ...(omitted > 0 ? { dlgNeighboursOmitted: omitted } : {}),
             },
             ...echo,

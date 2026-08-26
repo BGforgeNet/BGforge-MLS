@@ -14,6 +14,7 @@ import {
     createResourceBytesResolver,
     createResourceTypeResolver,
     createSlotLabelResolver,
+    createStringTableProbe,
     createStrrefResolver,
     createStrrefSearch,
     type StrrefMatch,
@@ -262,10 +263,11 @@ describe("createStrrefResolver", () => {
         expect(get).not.toHaveBeenCalled();
     });
 
-    // A CRE leaves unused sound slots pointing at an empty entry; showing it would render a trailing space in
-    // the field and a blank tooltip.
-    it("treats an empty TLK line as unresolved", () => {
-        expect(createStrrefResolver(gameSource())(gameUri(), 72909)).toBeUndefined();
+    // An entry that exists and is blank IS resolved - a DLG state whose line is empty is real text, and
+    // reporting it as unresolved had the dialog editor warn that a line was missing from the TLK. Whether a
+    // blank line is worth showing is the consuming field's call (`game-rows.ts`), not the resolver's.
+    it("returns an empty TLK line as the empty string rather than as unresolved", () => {
+        expect(createStrrefResolver(gameSource())(gameUri(), 72909)).toBe("");
     });
 
     it("resolves nothing when the strref is absent from the TLK", () => {
@@ -290,6 +292,29 @@ describe("createStrrefResolver", () => {
         const otherGame = { gameAt: () => undefined };
 
         expect(createStrrefResolver(otherGame)(gameUri(), 6348)).toBeUndefined();
+    });
+});
+
+/**
+ * The banner over a compiled dialog reads its advice off this: with no table there is a game to open, with a
+ * table the strref is simply one the game does not have. Getting it wrong tells a reader to open the game
+ * they already have open.
+ */
+describe("createStringTableProbe", () => {
+    it("finds the game's string table", () => {
+        expect(createStringTableProbe(gameSource())(gameUri())).toBe(true);
+    });
+
+    it("answers no for a game with no TLK", () => {
+        expect(createStringTableProbe(gameSource({ noTlk: true }))(gameUri())).toBe(false);
+    });
+
+    it("answers no for an unopenable game rather than throwing", () => {
+        expect(createStringTableProbe(gameSource({ throws: true }))(gameUri())).toBe(false);
+    });
+
+    it("answers no for a document that names no game at all", () => {
+        expect(createStringTableProbe(gameSource())({ scheme: "file", path: "/mod/x.dlg" } as never)).toBe(false);
     });
 });
 

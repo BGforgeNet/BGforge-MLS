@@ -77,6 +77,18 @@ export interface DialogModel {
      */
     dlgNeighboursOmitted?: number;
     /**
+     * DLG only: whether the document was opened from a game whose `dialog.tlk` was available. A strref that
+     * did not resolve means two different things either side of this - no string table to look in, or a line
+     * the table genuinely lacks - and the two need opposite advice. Set by the host.
+     */
+    dlgGameOpen?: boolean;
+    /**
+     * DLG only: how many of the dialog's strrefs the game could not name. Counted by the host, which is the
+     * only side that sees a failed lookup: an unnamed strref still gets `#N` as its text so the view can
+     * show it as the strref it is, and that leaves nothing for `unresolvedRefCount` to find.
+     */
+    dlgUnresolvedStrrefs?: number;
+    /**
      * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */

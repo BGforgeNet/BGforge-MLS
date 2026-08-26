@@ -15,6 +15,10 @@ import type { DialogModel } from "../../../../shared/dialog-model";
 /**
  * How many `@N` refs (NPC lines and option text) the model could not resolve to real message text.
  *
+ * The `.msg`/`.tra` families only. A compiled DLG resolves strrefs against the game's `dialog.tlk` and its
+ * host fills in `#N` for the ones it could not name, so nothing is left here to count and the view reads
+ * `dlgUnresolvedStrrefs` instead.
+ *
  * Only a BARE `@N` counts (a literal line is not a ref). A just-added state/option needs no special case:
  * until save allocates its `@N` its text is empty or a literal (so `msgRef` is null and it is not counted),
  * and once allocated the entry is in `messages` (so it resolves). Do NOT gate on `isPendingState`/procRange

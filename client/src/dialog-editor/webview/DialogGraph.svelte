@@ -194,9 +194,14 @@
             (id) => !isSSL || !sslTerminalKind(id),
         ),
     );
-    // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
-    // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.
-    const unresolvedRefs = $derived(unresolvedRefCount(editModel));
+    // How many refs failed to resolve to real text. Drives the banner below - otherwise a misconfigured
+    // translation dir silently renders every line as its raw @N ref. A compiled dialog resolves against the
+    // game's dialog.tlk rather than a tra/msg path, and its host substitutes `#N` for what it could not name,
+    // so its count comes from the host instead of from the model's text.
+    const isDlg = $derived(editModel.sourceLang === "dlg");
+    const unresolvedRefs = $derived(isDlg ? (editModel.dlgUnresolvedStrrefs ?? 0) : unresolvedRefCount(editModel));
+    // The banner counts things, so its nouns and verbs both have to agree with the count.
+    const manyRefs = $derived(unresolvedRefs !== 1);
     // Family-specific words for the unresolved-refs banner (Fallout SSL `.msg` vs WeiDU D `.tra`).
     const traHint = $derived(translationHint(isSSL));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
@@ -1491,16 +1496,21 @@
     {#if unresolvedRefs > 0}
         <!-- Make a silent resolution failure legible: without a resolvable tra/msg path, getMessages returns
              nothing and every line renders as its raw @N. Tell the author how to point the path rather than
-             leaving the whole conversation unreadable with no explanation. -->
+             leaving the whole conversation unreadable with no explanation. A compiled dialog fails for an
+             unrelated reason and gets its own wording: it holds strrefs into the game's dialog.tlk, not
+             trarefs into a .tra, and being binary it has no first line to annotate either. Which of its two
+             cases applies - no table to look in, or a line the table lacks - decides the advice, so it is
+             read from the host's flag rather than guessed from the counts. -->
         <div class="untra" role="status">
-            <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
-            {#if editModel.sourceLang === "dlg"}
-                <!-- A compiled dialog holds strrefs into the game's dialog.tlk, not a .tra path, and it is
-                     binary so it has no first line to annotate. The tra advice below would send a reader
-                     after a file that does not exist for this format. -->
-                Its text lives in the game's <b>dialog.tlk</b>.
+            {#if isDlg && !editModel.dlgGameOpen}
+                <b>{unresolvedRefs}</b> line{manyRefs ? "s" : ""} {manyRefs ? "show" : "shows"} as <code>#N</code> - a compiled dialog
+                keeps its text in the game's <b>dialog.tlk</b>, and no open game supplies one to read it from.
                 <button type="button" class="opengame" onclick={() => postToHost({ type: "openGame" })}>Open game...</button>
+            {:else if isDlg}
+                <b>{unresolvedRefs}</b> line{manyRefs ? "s" : ""} {manyRefs ? "name" : "names"} a strref the open game's
+                <b>dialog.tlk</b> has no entry for, so {manyRefs ? "they show" : "it shows"} as <code>#N</code>.
             {:else}
+                <b>{unresolvedRefs}</b> message ref{manyRefs ? "s" : ""} {manyRefs ? "show" : "shows"} as <code>@N</code> - translations aren't resolved.
                 Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
                 or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
             {/if}

@@ -192,6 +192,25 @@ export function createStrrefSearch(currentGame: GameSource, fallback?: GameDirFa
     };
 }
 
+/** Whether a document's game has a string table at all. An unresolved strref means two different things
+ *  either side of this - no `dialog.tlk` to look in, or a line the table genuinely lacks - so a view that
+ *  advises the user on one has to know which it is. Same male/default table the resolver reads. */
+export function createStringTableProbe(
+    currentGame: GameSource,
+    fallback?: GameDirFallback,
+): (uri: vscode.Uri) => boolean {
+    return (uri) => {
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return false;
+        try {
+            return currentGame.gameAt(gameDir)?.tlk() !== undefined;
+        } catch {
+            // Same posture as the resolver: an unreadable game is "no table", not an error to surface here.
+            return false;
+        }
+    };
+}
+
 export function createStrrefResolver(currentGame: GameSource, fallback?: GameDirFallback): StrrefResolver {
     return (uri, strref) => {
         if (strref === NO_STRING || strref < 0) return;
@@ -210,10 +229,11 @@ export function createStrrefResolver(currentGame: GameSource, fallback?: GameDir
             // A missing game directory or an unreadable TLK is not worth failing an open over - the field
             // simply shows its number, which is what a record outside a game does anyway.
         }
-        // A TLK entry can exist but be empty - common for the unused sound slots a CRE leaves pointing at one.
-        // An empty line is nothing to show, so it reads as unresolved rather than rendering a trailing space
-        // in the field and a blank tooltip.
-        return line === "" ? undefined : line;
+        // Returned verbatim, "" included: a TLK entry that exists and is empty IS resolved, and only the
+        // consumer knows whether a blank line is worth showing. Collapsing it here made the dialog editor
+        // report a real line as an unresolved strref; `game-rows.ts` makes that display call for the fields
+        // that want it.
+        return line;
     };
 }
 

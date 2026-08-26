@@ -123,6 +123,7 @@ export async function activate(context: ExtensionContext) {
         // CustomTextEditorProvider. Both feed the same webview, so the two are one editor to a reader.
         registerDlgDialogEditor(context, {
             strref: gameLookups.strref,
+            hasStrings: gameLookups.hasStrings,
             pickStrref: gameLookups.pickStrref,
             inbound: gameLookups.inbound,
             inboundToDialog: gameLookups.inboundToDialog,

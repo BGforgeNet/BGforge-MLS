@@ -151,7 +151,14 @@ interface Posted {
     type: string;
     reparse?: boolean;
     seq?: number;
-    model?: { sourceLang: string; editable: boolean; messages?: Record<string, string>; roots: unknown[] };
+    model?: {
+        sourceLang: string;
+        editable: boolean;
+        messages?: Record<string, string>;
+        dlgGameOpen?: boolean;
+        dlgUnresolvedStrrefs?: number;
+        roots: unknown[];
+    };
     message?: string;
 }
 
@@ -191,7 +198,9 @@ function harness(
 
     const provider = new DlgDialogEditorProvider(
         { extensionUri: { path: "/ext" } } as unknown as vscode.ExtensionContext,
-        { strref, pickStrref, inbound, ...neighbours } as never,
+        // `hasStrings` tracks whether the test wired a resolver at all, which is what "a game is open" means
+        // here: the view tells a reader to open one only when there is none.
+        { strref, hasStrings: () => strref !== undefined, pickStrref, inbound, ...neighbours } as never,
     );
     const document = {
         uri: { path: "/game/SELFDLG.dlg", toString: () => "file:///game/SELFDLG.dlg" },
@@ -253,6 +262,33 @@ describe("DlgDialogEditorProvider", () => {
         });
     });
 
+    // A blank TLK entry is a resolved line, not a missing one. It reached the view as an unresolved strref
+    // for as long as the resolver collapsed "" to undefined, and a real BG2 dialog tripped it.
+    test("counts a strref whose line is empty as resolved", async () => {
+        const h = harness((_uri, id) => (id === 100 ? "" : "Goodbye."));
+
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        h.ready();
+
+        const model = h.posted.find((p) => p.type === "model")?.model;
+        expect(model?.messages).toMatchObject({ "100": "", "200": "Goodbye." });
+        expect(model?.dlgUnresolvedStrrefs).toBe(0);
+    });
+
+    // Shown as the strref it is: a compiled dialog holds strrefs into dialog.tlk, and rendering one as the
+    // `@N` traref the .msg/.tra families use names the wrong thing entirely.
+    test("shows a strref the game cannot name as #N, and says how many", async () => {
+        const h = harness((_uri, id) => (id === 100 ? "Hello, sailor!" : undefined));
+
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        h.ready();
+
+        const model = h.posted.find((p) => p.type === "model")?.model;
+        expect(model?.messages).toMatchObject({ "100": "Hello, sailor!", "200": "#200" });
+        expect(model?.dlgUnresolvedStrrefs).toBe(1);
+        expect(model?.dlgGameOpen).toBe(true);
+    });
+
     test("without a game the dialog still opens, with the strrefs left unresolved", async () => {
         // Decision: structure is readable without an install; only the spoken text needs one. Refusing to
         // open would hide the triggers, actions and shape that are right there in the file.
@@ -263,7 +299,11 @@ describe("DlgDialogEditorProvider", () => {
 
         const model = h.posted.find((p) => p.type === "model")?.model;
         expect(model).toBeDefined();
-        expect(model?.messages ?? {}).toEqual({});
+        // Every strref stands as itself, and the flag is what separates this from a game that is open but
+        // missing the line - the two need opposite advice.
+        expect(model?.messages).toEqual({ "100": "#100", "200": "#200" });
+        expect(model?.dlgUnresolvedStrrefs).toBe(2);
+        expect(model?.dlgGameOpen).toBe(false);
     });
 
     test("the webview's open-game button runs the command that opens one", async () => {

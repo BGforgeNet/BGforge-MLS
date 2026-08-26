@@ -279,7 +279,10 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     let row = value;
     if (isValueRefRow(row) && row.ref.kind === "strref") {
         const text = lookups.strref(row.rawValue);
-        if (text !== undefined) row = { ...row, strrefText: text };
+        // Empty rather than absent: a TLK entry can exist and be blank - common for the unused sound slots a
+        // CRE leaves pointing at one - and a blank line is nothing to show, so the field keeps its number
+        // instead of rendering a trailing space and an empty tooltip.
+        if (text !== undefined && text !== "") row = { ...row, strrefText: text };
     }
     if (isValueRefRow(row) && NAMING_KINDS.has(row.ref.kind) && row.ref.tables !== undefined) {
         const tables = lookups.namingTable(row.ref.kind, row.ref.tables);
