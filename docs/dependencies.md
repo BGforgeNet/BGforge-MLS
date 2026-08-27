@@ -3,6 +3,31 @@
 Each entry below documents why a dependency is held at a specific version or range rather than left to float.
 Consult this list before any dependency bump.
 
+## After a bump, read the output - a green gate is not the check
+
+Tools announce their own changes through build and test output: a deprecation, a default they plan to adopt in the
+next major, a hint that some config now wants stating explicitly. None of it fails a build, so "it still builds"
+reports nothing about it.
+
+`scripts/test.sh` used to make that invisible by design - each parallel job writes to `tmp/test-logs/`, and a
+successful run printed only `ok <label>`. Four notices accumulated unread that way: Vite's plan to load configs
+natively, rolldown's plugin-timing advisory, tsdown's `deps.onlyBundle` hint, and zizmor's offline notice. The Vite
+one described a future hard failure across all twenty vitest configs.
+
+The runner now scans each job's log for warning markers and reports them even when the job passes. It reports
+rather than fails, deliberately: an upstream advisory lands on someone else's schedule and should not block
+unrelated work. Acting on it is still this list's job, not a later one's.
+
+So, per bump:
+
+1. Read the release notes for every version crossed, not just the newest, and reconsider existing code against
+   them.
+2. Run `pnpm build:all` and read its output. Builds are where tsdown, rolldown and esbuild speak, and none of that
+   reaches the test gate.
+3. Run the gate and act on whatever its warning report names.
+
+## Per-dependency holds
+
 - The five lockstep groups (LSP triplet, `ts-morph`, `typescript`, `vitest`, `@types/node`) are defined once in the `catalog:` map in `pnpm-workspace.yaml` and referenced as `"catalog:"` from every member `package.json`. This makes lockstep mechanical rather than convention-only: editing a version means editing the catalog entry, and a manifest that drifts to a literal out-of-lockstep range fails `pnpm install` instead of silently diverging. The hold rationale for the LSP triplet, `ts-morph`/`typescript`, and `@types/node` still lives in the bullets below - the catalog only centralizes the version string. The catalog also carries single-version entries for deps that several packages declare independently (`cac`, `diff`, `esbuild-wasm`, `fast-check`, `quick-lru`, `tsdown`, `web-tree-sitter`); those are not lockstep groups, just one bump site each.
 - The LSP triplet is current at `vscode-languageclient` / `vscode-languageserver` `10.1.0` and `vscode-languageserver-protocol` `3.18.2` (both `10.1.0` packages pin protocol `3.18.2`, so the three stay aligned). The rule stands: the client/server/protocol triplet moves TOGETHER, never independently - bumping the protocol patch alone breaks the `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads. The `10.x` move raised the minimum supported VS Code from `^1.73.0` to `^1.91.0` (`engines.vscode` in the root `package.json` and `client/package.json`, plus `@types/vscode`); the `9.x` line stalled at `9.0.1` and was skipped. On the next LSP major, move all three in lockstep and re-check the `engines.vscode` floor.
 - The three `pnpm.overrides` entries (`mocha>diff`, `mocha>serialize-javascript`, `qs`) exist for security-advisory reasons; the per-advisory rationale and the drop policy live in the comment block above `overrides:` in `pnpm-workspace.yaml`. Revisit only when the underlying advisories are closed.
