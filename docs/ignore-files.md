@@ -211,6 +211,20 @@ A program that fails to construct reports zero findings, not an error per file: 
 state until their `rootDir` was made explicit, and read as clean while nothing had been analysed. Treat a sudden
 drop to zero findings as a config failure until the run's `tsconfig-error` count is confirmed to be zero.
 
+### The test-lint pass, and the two rules it leaves out
+
+`pnpm lint:tests` runs the vitest plugin with a named allowlist - committed `.only`, duplicate titles, duplicate
+and misordered hooks, and the two structural checks. The plugin is not enabled wholesale: with the repo's
+categories, its full set produces roughly 16000 findings, nearly all style (`prefer-expect-assertions` alone is
+7559).
+
+Two rules were measured and deliberately left out, so nobody has to re-derive them:
+
+| Rule                           | Findings | Why not enabled                                                                                                                                                                                                                                                                         |
+| ------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vitest/expect-expect`         | 154      | False positives. Assertions in this suite routinely sit in a per-file helper (`expectSite(...)`), which the rule cannot follow, so it reports the calling test as assertion-free.                                                                                                       |
+| `vitest/no-conditional-expect` | 98       | Real, but not a config change. Most sites are an `if` that re-checks something an earlier `expect` already established, purely to narrow the type; a few have no such guard and would pass asserting nothing. Clearing them means replacing ~98 narrowings by hand, one judgement each. |
+
 ### Tree-sitter globals
 
 Grammar files (`grammars/**/*.js`) need these globals: `grammar`, `seq`, `choice`, `repeat`, `repeat1`, `optional`, `prec`, `token`, `field`, `alias`, `LANGUAGE`, `LRULE`.

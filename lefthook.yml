@@ -49,6 +49,14 @@ pre-commit:
       # syntax-only oxlint run above cannot see. Whole-tree rather than {staged_files} - the rules need a
       # complete program, not a file list - which costs a few seconds.
       run: pnpm lint:types
+    lint-tests:
+      glob:
+        - "*.test.ts"
+        - "*/test/**"
+      # Vitest-plugin pass: committed `.only`, duplicate titles, duplicate or misordered hooks. Only the
+      # rules that are clean and false-positive-free here are enabled - `expect-expect` is not among them,
+      # since assertions in this suite routinely live in a per-file helper it cannot see.
+      run: pnpm lint:tests
     oxfmt-check:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,json,md,yml,yaml}"

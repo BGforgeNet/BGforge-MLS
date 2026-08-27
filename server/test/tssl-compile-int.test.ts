@@ -7,7 +7,7 @@
  * checks against a real mod at every optimisation level.
  */
 
-import { describe, expect, it, beforeEach, afterAll, vi } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -42,12 +42,15 @@ const SOURCE = "function start() {\n    let n = 1;\n    n = n + 1;\n}\n";
 let tmpDir: string;
 let caseSeq = 0;
 
-afterAll(() => {
-    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+// One directory for the file, not one per case: `afterAll` can only remove the last value `tmpDir` held,
+// so a per-case `beforeEach` left every earlier directory behind. Cases stay isolated through the
+// `case<n>` subdirectory that writeSource mints below.
+beforeAll(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tssl-compile-"));
 });
 
-beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tssl-compile-"));
+afterAll(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
 /** A source file in its own directory, so one case's output cannot be mistaken for another's. */

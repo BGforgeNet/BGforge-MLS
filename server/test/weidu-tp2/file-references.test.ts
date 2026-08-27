@@ -200,6 +200,8 @@ describe("TP2 definition: a %LANGUAGE% translation path resolves through the con
         fs.mkdirSync(path.dirname(tp2Path), { recursive: true });
         fs.writeFileSync(tp2Path, "// mod");
         tp2Uri = pathToFileURL(tp2Path).toString();
+        write("mymod/tra/english/x#npc.tra", "@1 = ~hello~");
+        write("mymod/tra/french/x#npc.tra", "@1 = ~bonjour~");
     });
 
     afterEach(() => {
@@ -218,11 +220,6 @@ describe("TP2 definition: a %LANGUAGE% translation path resolves through the con
         classify(getDefinition(text, tp2Uri, at(text, needle), undefined, traDir), tp2Uri);
 
     const TEXT = `COMPILE ~mymod/dlg/x#npc.d~ USING ~mymod/tra/%LANGUAGE%/x#npc.tra~`;
-
-    beforeEach(() => {
-        write("mymod/tra/english/x#npc.tra", "@1 = ~hello~");
-        write("mymod/tra/french/x#npc.tra", "@1 = ~bonjour~");
-    });
 
     it("jumps into the configured language directory", () => {
         const result = getDefinition(TEXT, tp2Uri, at(TEXT, "x#npc.tra"), undefined, englishDir());
