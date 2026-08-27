@@ -173,12 +173,18 @@ the two lists.
 
 Oxlint configuration.
 
-| Field            | Purpose                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| `rules`          | Categories: `correctness`, `suspicious`, `pedantic`, `perf`, `style` (all set to `warn`) |
-| `overrides`      | Grammar files get tree-sitter globals; server gets custom `no-showmessage` rule          |
-| `ignorePatterns` | Excludes: `node_modules`, `out`, `*.d.ts`, `user-messages.ts`                            |
-| `jsPlugins`      | Custom plugin for banning direct LSP showMessage calls                                   |
+| Field            | Purpose                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `categories`     | `correctness`, `suspicious`, `pedantic`, `perf`, `style`, all set to `error`          |
+| `rules`          | Per-rule severity and the disabled set, each entry carrying its reason inline         |
+| `overrides`      | Grammar globals, the custom `no-showmessage` rule, and per-directory idiom exemptions |
+| `ignorePatterns` | Excludes: `node_modules`, `out`, `*.d.ts`, and both webview render harnesses          |
+| `jsPlugins`      | Custom plugin for banning direct LSP showMessage calls                                |
+
+A rule that must be relaxed for one file gets an `overrides` entry naming that rule, never an `ignorePatterns`
+entry: the latter drops the file from every enabled rule to silence one. `server/src/user-messages.ts` is the worked
+example - it is the wrapper the `no-showmessage` rule points callers at, so that single rule is switched off for
+it there.
 
 ### Tree-sitter globals
 

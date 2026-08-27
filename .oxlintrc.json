@@ -295,6 +295,15 @@
             }
         },
         {
+            // The wrapper the rule points everyone at: it is the one place the raw
+            // `connection.window.show*Message` calls are allowed to live. Scoped to that rule so the
+            // file keeps every other check - an `ignorePatterns` entry would have excluded them all.
+            "files": ["server/src/user-messages.ts"],
+            "rules": {
+                "bgforge-mls/no-showmessage": "off"
+            }
+        },
+        {
             // VS Code idiom: a private `_onDidX` EventEmitter exposes its
             // public `.event` as `onDidX`. The pattern is used by `vscode.d.ts`
             // itself; renaming would diverge from the host API style.
@@ -438,7 +447,6 @@
         "**/node_modules/**",
         "**/out/**",
         "**/*.d.ts",
-        "server/src/user-messages.ts",
         "binary-editor/test/harness/**",
         "client/src/dialog-editor/test/harness/**"
     ]
