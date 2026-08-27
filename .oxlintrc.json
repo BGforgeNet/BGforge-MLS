@@ -1,5 +1,17 @@
 {
     "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs"],
+
+    // All five categories at `error`. That is what makes the disabled list below long, and the trade has
+    // been measured rather than assumed: 331 rules are enforced, 236 of them come from `pedantic` and
+    // `style`, and 177 of those 236 are enforced and clean. Only THREE of the disabled entries are
+    // rules from the defect-facing categories (`oxc/no-map-spread`, `unicorn/consistent-function-scoping`,
+    // `unicorn/no-array-sort`); the other 59 are pedantic or style.
+    //
+    // Rejected: dropping `pedantic` and `style` and re-enabling a short allowlist. It would remove 59
+    // exceptions at the cost of 177 rules that currently pass, and it would end the one property this
+    // shape has - a new rule in an oxlint minor fires and forces a decision, which is where most of the
+    // reasoning recorded below came from. An allowlist is silent about everything added after it is
+    // written. Keep the categories; keep writing the reason next to each `off`.
     "categories": {
         "correctness": "error",
         "suspicious": "error",
