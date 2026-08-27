@@ -88,4 +88,8 @@ fi
 # aren't workflow documents) - zizmor covers those.
 "${actionlint_cmd[@]}"
 
-"${zizmor_cmd[@]}" --config zizmor.yml .github/workflows/ actions/
+# --offline states the mode zizmor already runs in: with no GH_TOKEN it falls back to offline and
+# prints a notice on every run. The audits it disables need GitHub API access, and the alternative -
+# putting a token in the environment of the whole `pnpm test:all` step this runs inside - hands it to
+# every suite in the gate, which is a worse trade than losing those audits.
+"${zizmor_cmd[@]}" --offline --config zizmor.yml .github/workflows/ actions/

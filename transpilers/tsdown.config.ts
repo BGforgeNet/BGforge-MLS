@@ -19,7 +19,10 @@ export default defineConfig({
     // __filename/path.basename(__dirname) equal "main.js"/"lib". Bundling it breaks
     // that check, so it must stay external and resolve from node_modules with its
     // real filesystem path. It is therefore a runtime dependency in package.json.
-    deps: { neverBundle: ["esbuild-wasm"] },
+    // onlyBundle: false says the inlining is intended (it otherwise hints once per build, listing the
+    // ts-morph tree). The allowlist form is the alternative, but it errors on any dependency outside
+    // it, so it would have to name ts-morph's transitive set and be re-checked on every bump.
+    deps: { neverBundle: ["esbuild-wasm"], onlyBundle: false },
     // ts-morph bundles typescript.js (CJS), which references require/__filename/
     // __dirname at module-evaluation time. Rolldown injects its own `require`/
     // `createRequire` for the inlined CJS, so the banner must NOT redeclare those

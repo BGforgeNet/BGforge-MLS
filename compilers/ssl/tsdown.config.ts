@@ -17,6 +17,11 @@ export default defineConfig({
     fixedExtension: false,
     // The CLI resolves the SSL grammar next to itself via __dirname at runtime.
     onSuccess: "bash ../../scripts/build-ssl-postbuild.sh",
+    // Inlining the one small transitive dependency this bundle picks up (an LRU cache) is intended -
+    // it keeps the published tarball self-contained. onlyBundle: false says so; tsdown otherwise hints
+    // once per build. The allowlist form is the alternative, and would additionally fail the build on
+    // anything new entering the bundle.
+    deps: { onlyBundle: false },
     // Re-create the CJS globals the shared parser factory reads to find its WASM.
     banner: {
         js: [
