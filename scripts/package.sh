@@ -91,6 +91,12 @@ done
 mkdir -p dist
 name=$(node -p "require('./package.json').name")
 version=${ARTIFACT_VERSION:-$(node -p "require('./package.json').version")}
+# This step prints `npm warn Unknown env config "manage-package-manager-versions"`, and that line is
+# expected: vsce has no flag to skip the prepublish hook, so it shells out to `npm run` even though
+# SKIP_PREPUBLISH makes that script a no-op here, and pnpm exports its own settings as npm_config_* to
+# children. Unsetting the variable before this line does not work - pnpm re-injects it into whatever it
+# runs (verified) - and the alternatives are worse: calling the vsce binary directly to escape pnpm's
+# env, or lowering npm's loglevel, which would hide npm's real warnings too.
 SKIP_PREPUBLISH=1 pnpm vsce package --no-dependencies --out "dist/${name}-${version}.vsix" "$@"
 
 # Step 4: Inject TS plugins into VSIX.
