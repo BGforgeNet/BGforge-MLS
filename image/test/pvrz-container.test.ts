@@ -117,7 +117,7 @@ describe("encodePvrz", () => {
         const rgba = new Uint8Array(8 * 8 * 4).fill(0);
         for (let i = 0; i < 64; i++) rgba.set([255, 0, 0, 255], i * 4);
 
-        const roundTripped = decodePvrz(encodePvrz({ width: 8, height: 8, format: "bc3", rgba }));
+        const roundTripped = decodePvrz(encodePvrz({ width: 8, height: 8, rgba }));
 
         expect(roundTripped.width).toBe(8);
         expect(roundTripped.height).toBe(8);
@@ -128,16 +128,19 @@ describe("encodePvrz", () => {
     it("writes a length prefix matching the inflated payload", () => {
         const rgba = new Uint8Array(4 * 4 * 4).fill(255);
 
-        const bytes = encodePvrz({ width: 4, height: 4, format: "bc1", rgba });
+        const bytes = encodePvrz({ width: 4, height: 4, rgba });
 
         const declared = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, true);
         expect(zlib.inflateSync(Buffer.from(bytes.subarray(4)))).toHaveLength(declared);
     });
 
-    it("keeps a page in the format it arrived in rather than promoting it", () => {
-        // A BC1 page re-encoded as BC3 would double its size for alpha it never had.
+    it("writes BC3 even for a fully opaque texture, since only a repack ever encodes", () => {
+        // Encoding is not a re-encode of some page that arrived: the only writer is the repack, which
+        // composes one fresh canvas out of frames from several source pages, so there is no arrival
+        // format to keep. BC1 decoding stays covered by the corpus sweep above, which asserts both
+        // halves of the codec are exercised by real files.
         const rgba = new Uint8Array(4 * 4 * 4).fill(200);
 
-        expect(decodePvrz(encodePvrz({ width: 4, height: 4, format: "bc1", rgba })).format).toBe("bc1");
+        expect(decodePvrz(encodePvrz({ width: 4, height: 4, rgba })).format).toBe("bc3");
     });
 });

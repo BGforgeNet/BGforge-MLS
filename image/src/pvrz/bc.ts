@@ -230,18 +230,9 @@ function writeColourBlock(out: Uint8Array, base: number, rows: readonly Rgba4[][
     }
 }
 
-/** Encode an RGBA8 texture as BC1 (DXT1). */
-export function encodeBc1(rgba: Uint8Array, width: number, height: number): Uint8Array {
-    const blocksPerRow = Math.ceil(width / 4);
-    const blockRowCount = Math.ceil(height / 4);
-    const out = new Uint8Array(blocksPerRow * blockRowCount * 8);
-    for (let by = 0; by < blockRowCount; by++) {
-        for (let bx = 0; bx < blocksPerRow; bx++) {
-            writeColourBlock(out, (by * blocksPerRow + bx) * 8, blockRows(rgba, width, height, bx, by));
-        }
-    }
-    return out;
-}
+// No BC1 encoder: BC1 carries at most one bit of alpha, and the only texture this module encodes is
+// a repacked sprite page that needs per-pixel alpha. Decoding stays symmetric - most shipped pages
+// are BC1 - so the missing direction is deliberate. See encodePvrz.
 
 /** Encode an RGBA8 texture as BC3 (DXT5). */
 export function encodeBc3(rgba: Uint8Array, width: number, height: number): Uint8Array {

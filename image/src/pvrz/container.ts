@@ -1,6 +1,6 @@
 import zlib from "zlib";
 import { MAX_INFLATED_BYTES } from "../limits.ts";
-import { decodeBc1, decodeBc3, encodeBc1, encodeBc3 } from "./bc.ts";
+import { decodeBc1, decodeBc3, encodeBc3 } from "./bc.ts";
 import { type PvrFormat, type PvrTexture } from "./texture.ts";
 
 // PVR v3 container: 52-byte header, magic 'PVR\x03' as a little-endian dword, then the texture
@@ -16,15 +16,21 @@ const PIXEL_FORMAT: Record<number, PvrFormat> = { 7: "bc1", 11: "bc3" };
 /** Bytes per 4x4 block, which is the whole size difference between the two formats. */
 const BLOCK_BYTES: Record<PvrFormat, number> = { bc1: 8, bc3: 16 };
 
-/** Encode an RGBA texture as a PVRZ, in the block format the texture declares. */
-export function encodePvrz(texture: PvrTexture): Uint8Array {
-    const { width, height, format, rgba } = texture;
-    const blocks = (format === "bc1" ? encodeBc1 : encodeBc3)(rgba, width, height);
+/**
+ * Encode an RGBA texture as a PVRZ, always BC3.
+ *
+ * Not a choice the caller makes: BC1 carries at most one bit of alpha, and the only thing this
+ * encodes is a repacked sprite page, whose whole point is per-pixel alpha. Decoding still handles
+ * both formats - most shipped pages are BC1 - so the asymmetry is deliberate, not an omission.
+ */
+export function encodePvrz(texture: Omit<PvrTexture, "format">): Uint8Array {
+    const { width, height, rgba } = texture;
+    const blocks = encodeBc3(rgba, width, height);
 
     const payload = new Uint8Array(PVR_HEADER_BYTES + blocks.byteLength);
     const view = new DataView(payload.buffer);
     view.setUint32(0x00, PVR_MAGIC, true);
-    view.setUint32(0x08, format === "bc1" ? 7 : 11, true);
+    view.setUint32(0x08, 11, true); // BC3
     view.setUint32(0x18, height, true);
     view.setUint32(0x1c, width, true);
     // Single-surface, single-face, one mip level and no metadata: the shape every shipped game

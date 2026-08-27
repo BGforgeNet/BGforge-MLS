@@ -14,7 +14,7 @@ const v2Files = corpusFiles(IE_CORPUS, ".bam").filter(
 function solidPage(r: number, g: number, b: number, a = 255, size = 4): Uint8Array {
     const rgba = new Uint8Array(size * size * 4);
     for (let i = 0; i < size * size; i++) rgba.set([r, g, b, a], i * 4);
-    return encodePvrz({ width: size, height: size, format: "bc3", rgba });
+    return encodePvrz({ width: size, height: size, rgba });
 }
 
 /** One frame, one block copying the whole of page 7 into it. */

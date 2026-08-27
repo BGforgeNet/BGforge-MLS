@@ -68,8 +68,9 @@ function repack(
         if (!used) return;
         pages.push({
             page: basePage + pageIndex,
-            // BC3 throughout: a sprite page carries per-pixel alpha, which BC1 cannot represent.
-            bytes: encodePvrz({ width: PAGE_SIZE, height: PAGE_SIZE, format: "bc3", rgba: canvas }),
+            // BC3 throughout - a sprite page carries per-pixel alpha, which BC1 cannot represent.
+            // Not spelled here: encodePvrz has no format to choose.
+            bytes: encodePvrz({ width: PAGE_SIZE, height: PAGE_SIZE, rgba: canvas }),
         });
         canvas = new Uint8Array(PAGE_SIZE * PAGE_SIZE * 4);
         pageIndex++;

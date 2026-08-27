@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeBc1, decodeBc3, encodeBc1, encodeBc3 } from "../src/pvrz/bc.ts";
+import { decodeBc1, decodeBc3, encodeBc3 } from "../src/pvrz/bc.ts";
 
 /**
  * A BC1 block is 8 bytes: two RGB565 endpoints little-endian, then 16 two-bit indices packed
@@ -139,13 +139,16 @@ function maxChannelError(a: Uint8Array, b: Uint8Array): number {
     return worst;
 }
 
-describe("encodeBc1", () => {
+// No encodeBc1 suite: there is no BC1 encoder. The decodeBc1 cases above build their blocks by hand
+// rather than through one, and real BC1 pages are decoded by the corpus sweep in pvrz-container.test.ts.
+
+describe("encodeBc3", () => {
     it("round-trips a uniform block exactly when its colour is representable in RGB565", () => {
         // Pure red is exact in RGB565 (r=31 expands back to 255), so a lossy codec still has no
         // excuse to change it. An error bound would absorb an endpoint-ordering bug here.
         const rgba = rgbaOf(4, 4, () => [255, 0, 0, 255]);
 
-        expect(decodeBc1(encodeBc1(rgba, 4, 4), 4, 4)).toEqual(rgba);
+        expect(decodeBc3(encodeBc3(rgba, 4, 4), 4, 4)).toEqual(rgba);
     });
 
     it("round-trips a texture whose dimensions are not multiples of four", () => {
@@ -153,17 +156,15 @@ describe("encodeBc1", () => {
         // reads and dropped on the way back, so the visible 36 must survive unchanged.
         const rgba = rgbaOf(6, 6, () => [255, 0, 0, 255]);
 
-        expect(decodeBc1(encodeBc1(rgba, 6, 6), 6, 6)).toEqual(rgba);
+        expect(decodeBc3(encodeBc3(rgba, 6, 6), 6, 6)).toEqual(rgba);
     });
 
     it("keeps a two-colour block within a small per-channel error", () => {
         const rgba = rgbaOf(4, 4, (i) => (i % 2 === 0 ? [200, 30, 40, 255] : [20, 180, 90, 255]));
 
-        expect(maxChannelError(decodeBc1(encodeBc1(rgba, 4, 4), 4, 4), rgba)).toBeLessThanOrEqual(8);
+        expect(maxChannelError(decodeBc3(encodeBc3(rgba, 4, 4), 4, 4), rgba)).toBeLessThanOrEqual(8);
     });
-});
 
-describe("encodeBc3", () => {
     it("round-trips fully opaque and fully transparent alpha exactly", () => {
         // 0 and 255 are endpoints of the ramp whichever ordering is chosen, so both must survive.
         const rgba = rgbaOf(4, 4, (i) => [255, 0, 0, i % 2 === 0 ? 255 : 0]);
