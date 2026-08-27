@@ -4,7 +4,7 @@
  * bytes arrive from the second.
  */
 import { describe, expect, it } from "vitest";
-import { serializeBamV1, type Animation, type Rgba } from "@bgforge/image";
+import { serializeBamV1, type IndexedAnimation, type Rgba } from "@bgforge/image";
 import { canThumbnail, thumbnailDataUri } from "../src/ie-resources/thumbnails";
 
 /** A real BAM, built through the library's own serializer rather than typed by hand - the decode under test is
@@ -12,7 +12,7 @@ import { canThumbnail, thumbnailDataUri } from "../src/ie-resources/thumbnails";
 function bam(edge: number, frames = 1): Uint8Array {
     const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
     palette[1] = { r: 255, g: 0, b: 255, a: 255 };
-    const animation: Animation = {
+    const animation: IndexedAnimation = {
         palette,
         frames: Array.from({ length: frames }, () => ({
             width: edge,

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { type Animation } from "@bgforge/image";
+import { type IndexedAnimation } from "@bgforge/image";
 import { frameFileName, readManifest, sequenceDirId, writeManifest } from "../src/io/manifest.ts";
 
-function makeAnimation(): Animation {
+function makeAnimation(): IndexedAnimation {
     return {
         palette: Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 })),
         frames: [

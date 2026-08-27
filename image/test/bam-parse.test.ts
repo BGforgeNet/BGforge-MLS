@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
-import { type Animation, emptyPalette, parseBamV1, serializeBamV1 } from "@bgforge/image";
+import { type IndexedAnimation, emptyPalette, parseBamV1, serializeBamV1 } from "@bgforge/image";
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
 // Uncompressed 'BAM ' files only here; the BAMC container is covered in bamc.test.ts.
@@ -12,7 +12,7 @@ const bams = corpusFiles(IE_CORPUS, ".bam").filter((f) => {
 // A minimal valid BAM V1 built by the real serializer, then corrupted per test. The last pixel is
 // the transparent index so the RLE-truncation case ends mid-run at end-of-file.
 function synthBamBytes(): Uint8Array {
-    const anim: Animation = {
+    const anim: IndexedAnimation = {
         palette: emptyPalette(),
         frames: [{ width: 2, height: 2, pixels: Uint8Array.from([1, 2, 3, 0]), offsetX: 0, offsetY: 0 }],
         sequences: [{ frameRefs: [0], facing: "none" }],
@@ -31,7 +31,7 @@ describe("parseBamV1 direction-layout resolution", () => {
             offsetX: 0,
             offsetY: 0,
         }));
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: emptyPalette(),
             frames,
             sequences: [

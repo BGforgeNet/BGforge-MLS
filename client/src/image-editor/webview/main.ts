@@ -19,7 +19,7 @@ const target = document.querySelector("#app");
 // (output channel + toast) and shown in the panel, instead of leaving a silently blank webview.
 installFatalErrorHandler({
     vscode,
-    label: "Animation editor",
+    label: "IndexedAnimation editor",
     render: (detail) => {
         if (target) target.textContent = detail;
     },

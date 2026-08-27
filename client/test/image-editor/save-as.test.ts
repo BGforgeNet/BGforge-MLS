@@ -1,6 +1,6 @@
 import path from "path";
 import { describe, expect, it } from "vitest";
-import { type Animation, LossReport } from "@bgforge/image";
+import { type IndexedAnimation, LossReport } from "@bgforge/image";
 import {
     ieGroupCount,
     needsCyclePick,
@@ -10,7 +10,7 @@ import {
 } from "../../src/image-editor/save-as";
 import { makeMiniBam, makeMiniFrm } from "./fixtures";
 
-function multiCycleBam(cycles: number): Animation {
+function multiCycleBam(cycles: number): IndexedAnimation {
     const base = makeMiniBam();
     return {
         ...base,
@@ -68,7 +68,7 @@ describe("needsCyclePick", () => {
 describe("ieGroupCount", () => {
     it("returns the 8-cycle block count for an ie8-resolved animation", () => {
         const base = multiCycleBam(16);
-        const anim: Animation = { ...base, meta: { ...base.meta, directionLayout: "ie8" } };
+        const anim: IndexedAnimation = { ...base, meta: { ...base.meta, directionLayout: "ie8" } };
         expect(ieGroupCount(anim)).toBe(2);
     });
 
@@ -120,7 +120,7 @@ describe("reshapeImportToFrm", () => {
     });
 
     it("reshapes even an frm-tagged import (the re-tag defeats convertToFrm's no-op)", () => {
-        const imported: Animation = { ...makeMiniBam(), meta: { sourceFormat: "frm" } };
+        const imported: IndexedAnimation = { ...makeMiniBam(), meta: { sourceFormat: "frm" } };
         const reshaped = reshapeImportToFrm(imported);
         expect(reshaped.sequences).toHaveLength(6);
         expect(reshaped.palette).not.toBe(imported.palette); // converted, not aliased through the no-op

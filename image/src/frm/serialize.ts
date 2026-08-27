@@ -1,4 +1,4 @@
-import { type Animation, type Frame, FRM_FACINGS } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, FRM_FACINGS } from "../model/animation.ts";
 
 const HEADER_SIZE = 0x3e;
 
@@ -6,7 +6,7 @@ function frameBytes(f: Frame): Uint8Array {
     return f.rawEncoding ?? f.pixels;
 }
 
-export function serializeFrm(anim: Animation): Uint8Array {
+export function serializeFrm(anim: IndexedAnimation): Uint8Array {
     const be = false; // FRM is big-endian
     const seqs = anim.sequences;
     const framesPerDirection = seqs[0]?.frameRefs.length ?? 0;

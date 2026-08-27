@@ -1,5 +1,5 @@
 import {
-    type Animation,
+    type IndexedAnimation,
     type Facing,
     type Frame,
     type Sequence,
@@ -28,12 +28,12 @@ export interface FrmConvertOpts {
  * a non-directional sprite fills all six rotations from ONE cycle, written as equal data_offsets. The
  * provider reads this to decide whether it must ask which cycle (multi-cycle non-directional source).
  */
-export function frmDirectionMode(anim: Animation): "directional" | "single-orientation" {
+export function frmDirectionMode(anim: IndexedAnimation): "directional" | "single-orientation" {
     if (anim.sequences.some((s) => s.facing !== "none")) return "directional";
     return facingsForCycleCount(anim.sequences.length) === null ? "single-orientation" : "directional";
 }
 
-function resolveFacings(anim: Animation): Facing[] {
+function resolveFacings(anim: IndexedAnimation): Facing[] {
     // Tagged facings are authoritative; the count-derived IE8/FRM order is only for untagged sources
     // (a 6-cycle source tagged in a different order must not be re-read positionally).
     const ownFacings = anim.sequences.map((s) => s.facing);
@@ -101,7 +101,7 @@ function composeUniformCanvas(
  * that cycle's frames once and every slot references the IDENTICAL frame-ref list, so serializeFrm
  * writes equal data_offsets (the FRM spec's shared-rotation form) rather than six copies.
  */
-function buildSingleOrientationSlots(anim: Animation, cycleIndex: number): SlotBuild {
+function buildSingleOrientationSlots(anim: IndexedAnimation, cycleIndex: number): SlotBuild {
     const seq = anim.sequences[cycleIndex];
     if (!seq) throw new Error(`convertToFrm: single-orientation cycle index ${cycleIndex} out of range`);
     const pool: Frame[] = seq.frameRefs.map((ref) => {
@@ -158,7 +158,7 @@ function mirrorFrame(frame: Frame): Frame {
  * refs (the 0xFFFF "no frame" sentinel) are filtered the way the interpretation ignores them, so the
  * directional builder never chases a sentinel into the frame table.
  */
-function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport): Animation {
+function extractIeGroup(anim: IndexedAnimation, groupIndex: number, report: LossReport): IndexedAnimation {
     const group = interpretIeDirections(anim.sequences, anim.frames.length)?.groups[groupIndex];
     if (!group || group.length === 0) {
         throw new Error(
@@ -211,7 +211,7 @@ function extractIeGroup(anim: Animation, groupIndex: number, report: LossReport)
  * shared across rotations (FRM cannot share a frame object across directions) and padding short
  * rotations to the longest with fully-transparent frames.
  */
-function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
+function buildDirectionalSlots(anim: IndexedAnimation, report: LossReport): SlotBuild {
     const facings = resolveFacings(anim);
 
     // Reject an ambiguous layout: two source directions claiming the same FRM facing cannot both occupy
@@ -328,10 +328,13 @@ function buildDirectionalSlots(anim: Animation, report: LossReport): SlotBuild {
     return { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY };
 }
 
-// Converts any Animation to an FRM-shaped one: 6 fixed hex rotations sharing a uniform frame count, an
+// Converts any IndexedAnimation to an FRM-shaped one: 6 fixed hex rotations sharing a uniform frame count, an
 // index-0-transparent palette, and no frame object shared across rotations. Already-FRM input is a
 // no-op (still a new object per the shallow-clone contract, matching convertToBam).
-export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animation: Animation; report: LossReport } {
+export function convertToFrm(
+    anim: IndexedAnimation,
+    opts?: FrmConvertOpts,
+): { animation: IndexedAnimation; report: LossReport } {
     const report = new LossReport();
 
     if (anim.meta.sourceFormat === "frm") {
@@ -411,7 +414,7 @@ export function convertToFrm(anim: Animation, opts?: FrmConvertOpts): { animatio
         return { frameRefs: [...refs], facing };
     });
 
-    const animation: Animation = {
+    const animation: IndexedAnimation = {
         palette: outputPalette,
         sequences,
         frames,

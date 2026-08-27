@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import {
-    type Animation,
+    type IndexedAnimation,
     combineFrmDirections,
     combineIeBamPair,
     encodeBamc,
@@ -36,7 +36,7 @@ interface IePairInfo {
     eastFormat: BamFormat;
 }
 
-function serializeBamAs(animation: Animation, format: BamFormat): Uint8Array {
+function serializeBamAs(animation: IndexedAnimation, format: BamFormat): Uint8Array {
     const bytes = serializeBamV1(animation);
     return format === "bamc" ? encodeBamc(bytes) : bytes;
 }
@@ -150,7 +150,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     private static async tryReadIePair(
         uri: vscode.Uri,
         bytes: Uint8Array,
-    ): Promise<{ animation: Animation; info: IePairInfo } | undefined> {
+    ): Promise<{ animation: IndexedAnimation; info: IePairInfo } | undefined> {
         const opened = ImageEditorDocument.tryParseBam(bytes, uri);
         if (!opened) return undefined;
 
@@ -189,7 +189,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     private static tryParseBam(
         bytes: Uint8Array,
         uri: vscode.Uri,
-    ): { animation: Animation; format: BamFormat } | undefined {
+    ): { animation: IndexedAnimation; format: BamFormat } | undefined {
         try {
             const animation = loadImage(bytes, path.posix.basename(uri.path));
             const format = animation.meta.sourceFormat;
@@ -205,7 +205,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     // merge them into one 6-direction FRM. The sidecar palette is the combined file's `<base>.pal`.
     private static async readFrSplit(
         fsPath: string,
-    ): Promise<{ animation: Animation; sidecarBytes: Uint8Array | undefined }> {
+    ): Promise<{ animation: IndexedAnimation; sidecarBytes: Uint8Array | undefined }> {
         const files = await Promise.all(frSplitSiblingPaths(fsPath).map((p) => ImageEditorDocument.tryReadFile(p)));
         const animation = combineFrmDirections(files);
         const sidecarBytes = await ImageEditorDocument.tryReadFile(sidecarPalPath(frSplitCombinedPath(fsPath)));
@@ -254,7 +254,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.fireEdit(enabled ? "Enable external palette" : "Disable external palette");
     }
 
-    replaceSequences(next: Animation, mode: "replace" | "append"): void {
+    replaceSequences(next: IndexedAnimation, mode: "replace" | "append"): void {
         this.model.replaceSequences(next, mode);
         this.fireEdit(mode === "append" ? "Import cycles" : "Replace cycles");
     }
@@ -278,12 +278,12 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return this.model.sidecarBytes();
     }
 
-    get animation(): Animation {
+    get animation(): IndexedAnimation {
         return this.model.animation;
     }
 
-    /** Animation with the active palette resolved in - use for exports/conversions (see model). */
-    resolvedAnimation(): Animation {
+    /** IndexedAnimation with the active palette resolved in - use for exports/conversions (see model). */
+    resolvedAnimation(): IndexedAnimation {
         return this.model.resolvedAnimation();
     }
 

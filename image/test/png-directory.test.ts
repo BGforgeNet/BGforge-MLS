@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { type Animation, type Frame, emptyPalette, exportPngDirectory, importPngDirectory } from "@bgforge/image";
+import {
+    type IndexedAnimation,
+    type Frame,
+    emptyPalette,
+    exportPngDirectory,
+    importPngDirectory,
+} from "@bgforge/image";
 import { encodeIndexedPng } from "../src/png/encode.ts";
 
 // Six sequences (one per FRM facing), with distinct frame counts, pixel content,
@@ -8,7 +14,7 @@ import { encodeIndexedPng } from "../src/png/encode.ts";
 // `anim.meta.transparentIndex ?? 0` fallback in exportPngDirectory. Every palette
 // entry stays opaque (a: 255) per the IR convention - transparency is carried only
 // via the (implicit, here index 0) transparentIndex, never via palette alpha.
-function makeAnimation(): Animation {
+function makeAnimation(): IndexedAnimation {
     const palette = emptyPalette();
     palette[0] = { r: 0, g: 0, b: 0, a: 255 };
     palette[5] = { r: 10, g: 20, b: 30, a: 255 };
@@ -41,7 +47,7 @@ function makeAnimation(): Animation {
     };
 }
 
-function frameAt(anim: Animation, seqIndex: number, frameIndex: number): Frame {
+function frameAt(anim: IndexedAnimation, seqIndex: number, frameIndex: number): Frame {
     const seq = anim.sequences[seqIndex];
     if (!seq) throw new Error(`test setup: missing sequence ${seqIndex}`);
     const ref = seq.frameRefs[frameIndex];
@@ -69,7 +75,7 @@ describe("exportPngDirectory", () => {
     });
 
     it("throws a clear error when a sequence references an out-of-range frame index", () => {
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: emptyPalette(),
             frames: [],
             sequences: [{ frameRefs: [0], facing: "none" }],
@@ -135,7 +141,12 @@ describe("importPngDirectory(exportPngDirectory(anim))", () => {
     });
 
     it("falls back to an empty palette when the manifest has no sequences to decode a PNG from", () => {
-        const anim: Animation = { palette: emptyPalette(), frames: [], sequences: [], meta: { sourceFormat: "frm" } };
+        const anim: IndexedAnimation = {
+            palette: emptyPalette(),
+            frames: [],
+            sequences: [],
+            meta: { sourceFormat: "frm" },
+        };
         const roundTripped = importPngDirectory(exportPngDirectory(anim));
         expect(roundTripped.palette).toEqual(emptyPalette());
         expect(roundTripped.sequences).toEqual([]);

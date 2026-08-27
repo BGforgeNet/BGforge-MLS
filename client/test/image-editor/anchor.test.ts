@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { type Animation, convertToFrm, emptyPalette } from "@bgforge/image";
+import { type IndexedAnimation, convertToFrm, emptyPalette } from "@bgforge/image";
 import { frameTopLeft, referenceMarkerPercent, tileSizePx } from "../../src/image-editor/webview/render/anchor";
 
 // TILE_BASE_PX is 96. BAM: the stored centre IS the anchor, placed at the tile CENTRE. FRM: the anchor is
@@ -95,7 +95,7 @@ test("converting BAM->FRM makes a feet-anchored file that keeps the sprite's on-
     // header offset (62/2 - 30 = 1 here), and the editor frames it so it lands at ~the same spot.
     const width = 62;
     const height = 62;
-    const bam: Animation = {
+    const bam: IndexedAnimation = {
         palette: emptyPalette(),
         sequences: [{ frameRefs: [0], facing: "none" }],
         frames: [{ width, height, pixels: new Uint8Array(width * height), offsetX: 30, offsetY: 30 }],

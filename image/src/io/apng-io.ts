@@ -5,13 +5,13 @@
 // shared anchor-aligned canvas (the same steadiness treatment as the FRM conversion's uniform
 // rotation canvas), so the played APNG holds still, but the individual frame boxes and
 // offsetX/offsetY are NOT preserved. The PNG-directory codec (png-directory.ts) is the lossless one.
-import { type Animation, transparentIndexOf } from "../model/animation.ts";
+import { type IndexedAnimation, transparentIndexOf } from "../model/animation.ts";
 import { type PlacedFrame, blitToBox, unionAnchorBox } from "../model/anchor-align.ts";
 import { offsetToAnchor } from "../model/frame-anchor.ts";
 import { type ApngFrame, decodeApng, encodeApng } from "../png/apng.ts";
 import { sequenceDirId } from "./manifest.ts";
 
-export function exportApngPerDirection(anim: Animation): Map<string, Uint8Array> {
+export function exportApngPerDirection(anim: IndexedAnimation): Map<string, Uint8Array> {
     const files = new Map<string, Uint8Array>();
     const transparentIndex = transparentIndexOf(anim.meta);
     const fps = anim.meta.fps ?? 10;

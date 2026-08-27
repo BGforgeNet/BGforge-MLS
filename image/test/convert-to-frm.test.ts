@@ -5,17 +5,17 @@ import {
     serializeFrm,
     parseFrm,
     DEFAULT_FALLOUT_PALETTE,
-    type Animation,
+    type IndexedAnimation,
     type Facing,
     type Frame,
     type Rgba,
     type Sequence,
 } from "@bgforge/image";
 
-// Builds a BAM-shaped Animation with `seqLens.length` cycles, each holding `seqLens[i]` frames
+// Builds a BAM-shaped IndexedAnimation with `seqLens.length` cycles, each holding `seqLens[i]` frames
 // of distinct pixel content (so a specific frame can be traced through the conversion). Frames
 // carry rawEncoding/rleEncoded like a real BAM parse, to exercise the FRM output's stripping.
-function synthBam(seqLens: number[], facings?: Facing[]): Animation {
+function synthBam(seqLens: number[], facings?: Facing[]): IndexedAnimation {
     const frames: Frame[] = [];
     const sequences: Sequence[] = seqLens.map((len, seqIdx) => {
         const frameRefs: number[] = [];
@@ -88,7 +88,7 @@ describe("convertToFrm", () => {
         // A 6-cycle source (positional -> FRM order) where two directions reference the same frame;
         // FRM cannot share a frame across directions, so it must be duplicated into two entries.
         const mk = (v: number): Frame => ({ width: 1, height: 1, pixels: new Uint8Array([v]), offsetX: 0, offsetY: 0 });
-        const source: Animation = {
+        const source: IndexedAnimation = {
             palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
             sequences: [
                 { frameRefs: [0], facing: "none" }, // NE
@@ -205,7 +205,7 @@ describe("convertToFrm", () => {
 
     it("is a no-op for an already-FRM source", () => {
         const facings: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
-        const src: Animation = {
+        const src: IndexedAnimation = {
             palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
             sequences: facings.map((facing) => ({ frameRefs: [0], facing })),
             frames: [{ width: 1, height: 1, pixels: new Uint8Array([0]), offsetX: 0, offsetY: 0 }],
@@ -245,7 +245,7 @@ describe("convertToFrm", () => {
 
     // A palette whose colors are absent from DEFAULT_FALLOUT_PALETTE, forcing the sidecar path
     // under the default paletteMode (mirrors the oddColor fixture above, but every slot is bespoke).
-    function bespokeBam(): Animation {
+    function bespokeBam(): IndexedAnimation {
         const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({
             r: (i * 7) % 256,
             g: (i * 13) % 256,
@@ -352,7 +352,7 @@ describe("convertToFrm", () => {
             });
             // NE holds two frames of differing width whose BAM centre anchors align the content:
             // A (w4, anchor x3) spans anchor-relative [-3..1], B (w1, anchor x0) spans [0..1].
-            const source: Animation = {
+            const source: IndexedAnimation = {
                 palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
                 sequences: [
                     { frameRefs: [0, 1], facing: "NE" },
@@ -392,7 +392,7 @@ describe("convertToFrm", () => {
     // An IE base file: per 8-slot block, slots 0-4 (S, SW, W, NW, N) hold one traceable frame each
     // (pixel value 1 + block*16 + slot), slots 5-7 stuff the shared filler frame 0 - the shape
     // interpretIeDirections detects. Frame 0's pixel is 255 so a leaked filler is traceable too.
-    function baseFileBam(blocks: number): Animation {
+    function baseFileBam(blocks: number): IndexedAnimation {
         const frames: Frame[] = [{ width: 1, height: 1, pixels: new Uint8Array([255]), offsetX: 0, offsetY: 0 }];
         const sequences: Sequence[] = [];
         for (let g = 0; g < blocks; g++) {
@@ -417,7 +417,7 @@ describe("convertToFrm", () => {
     }
 
     describe("opts.ieGroup", () => {
-        const slotPixel = (animation: Animation, slot: number): number => {
+        const slotPixel = (animation: IndexedAnimation, slot: number): number => {
             const ref = animation.sequences[slot]?.frameRefs[0];
             const frame = ref === undefined ? undefined : animation.frames[ref];
             if (!frame) throw new Error(`missing frame at FRM slot ${slot}`);

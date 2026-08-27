@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { DEFAULT_FALLOUT_PALETTE, emptyPalette, loadImage, type Animation } from "@bgforge/image";
+import { DEFAULT_FALLOUT_PALETTE, emptyPalette, loadImage, type IndexedAnimation } from "@bgforge/image";
 import { buildCrossFormatSave, buildExport } from "../../src/image-editor/export-actions";
 import { makeMiniFrm } from "./fixtures";
 
@@ -45,7 +45,7 @@ describe("buildCrossFormatSave", () => {
     });
 
     test("BAM -> FRM with a losslessly-remappable palette needs no .pal sidecar", () => {
-        const bam: Animation = {
+        const bam: IndexedAnimation = {
             palette: emptyPalette(),
             sequences: [{ frameRefs: [0], facing: "none" }],
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([0]), offsetX: 0, offsetY: 0 }],
@@ -60,7 +60,7 @@ describe("buildCrossFormatSave", () => {
     test("BAM -> FRM with a non-remappable palette adds a .pal sidecar", () => {
         const palette = emptyPalette();
         palette[1] = { r: 123, g: 45, b: 67, a: 255 };
-        const bam: Animation = {
+        const bam: IndexedAnimation = {
             palette,
             sequences: [{ frameRefs: [0], facing: "none" }],
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([1]), offsetX: 0, offsetY: 0 }],

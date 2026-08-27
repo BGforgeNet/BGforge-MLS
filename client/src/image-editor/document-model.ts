@@ -6,7 +6,7 @@ import {
     serializeBamV1,
     serializeFrm,
     serializePal,
-    type Animation,
+    type IndexedAnimation,
     type Rgba,
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
@@ -29,10 +29,10 @@ function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
 }
 
 // A single undo/redo step captures ALL mutable document state a mutation can change - the
-// animation AND externalEnabled (which is not part of the Animation IR but is a saveable,
+// animation AND externalEnabled (which is not part of the IndexedAnimation IR but is a saveable,
 // undoable choice); snapshotting only the animation would leave a palette toggle unrevertible.
 interface DocumentSnapshot {
-    animation: Animation;
+    animation: IndexedAnimation;
     externalEnabled: boolean;
 }
 
@@ -41,7 +41,7 @@ interface DocumentSnapshot {
  * vscode.CustomDocument shell wraps this and wires onChange to its own refresh event.
  */
 export class ImageDocumentModel {
-    private animationValue: Animation;
+    private animationValue: IndexedAnimation;
     private readonly basename: string;
     private sidecarPalette: Rgba[] | undefined;
     private hasSidecar = false;
@@ -51,7 +51,7 @@ export class ImageDocumentModel {
 
     onChange?: () => void;
 
-    private constructor(animation: Animation, basename: string, sidecarPalette?: Rgba[]) {
+    private constructor(animation: IndexedAnimation, basename: string, sidecarPalette?: Rgba[]) {
         this.animationValue = animation;
         this.basename = basename;
         this.setSidecar(sidecarPalette);
@@ -75,7 +75,7 @@ export class ImageDocumentModel {
     // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
     // via combineFrmDirections), so the byte-sniffing loadImage path is bypassed. basename is the
     // combined `<base>.frm` identity the editor should present and save to.
-    static fromAnimation(animation: Animation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
+    static fromAnimation(animation: IndexedAnimation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
     }
@@ -89,7 +89,7 @@ export class ImageDocumentModel {
         this.externalEnabled = this.hasSidecar;
     }
 
-    get animation(): Animation {
+    get animation(): IndexedAnimation {
         return this.animationValue;
     }
 
@@ -99,7 +99,7 @@ export class ImageDocumentModel {
      * default Fallout / sidecar palette (the same one toView uses). Every export/convert path MUST
      * use this, not the raw `animation`, or an FRM exports as a black silhouette.
      */
-    resolvedAnimation(): Animation {
+    resolvedAnimation(): IndexedAnimation {
         return { ...this.animationValue, palette: this.activePalette() };
     }
 
@@ -177,7 +177,7 @@ export class ImageDocumentModel {
         this.onChange?.();
     }
 
-    replaceSequences(next: Animation, mode: "replace" | "append"): void {
+    replaceSequences(next: IndexedAnimation, mode: "replace" | "append"): void {
         this.snapshotForUndo();
         if (mode === "replace") {
             this.animationValue = { ...this.animationValue, frames: next.frames, sequences: next.sequences };
@@ -245,7 +245,7 @@ export class ImageDocumentModel {
     }
 
     // Reload from an already-combined animation (the FR-split path), skipping byte sniffing.
-    reloadAnimation(animation: Animation, sidecarBytes?: Uint8Array): void {
+    reloadAnimation(animation: IndexedAnimation, sidecarBytes?: Uint8Array): void {
         this.animationValue = animation;
         this.setSidecar(sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined);
         this.undoStack = [];

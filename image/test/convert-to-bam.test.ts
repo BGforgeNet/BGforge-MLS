@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
 import {
-    type Animation,
+    type IndexedAnimation,
     FRM_FACINGS,
     convertToBam,
     emptyPalette,
@@ -13,7 +13,7 @@ import {
 import { corpusFiles, FALLOUT_ART } from "./fixtures.ts";
 
 // A 6-direction FRM whose every direction shares frame 0, with per-direction header offsets from the caller.
-function frmSharingOneFrame(dirOffsetsX: number[]): Animation {
+function frmSharingOneFrame(dirOffsetsX: number[]): IndexedAnimation {
     return {
         palette: emptyPalette(),
         frames: [{ width: 1, height: 1, pixels: new Uint8Array([0]), offsetX: 0, offsetY: 0 }],
@@ -37,7 +37,7 @@ describe("convertToBam shared-frame offsets", () => {
 
 describe("convertToBam anchor placement", () => {
     // Two same-sequence frames of differing heights, feet on one ground line (FRM convention).
-    const twoHeights: Animation = {
+    const twoHeights: IndexedAnimation = {
         palette: emptyPalette(),
         frames: [
             { width: 4, height: 10, pixels: new Uint8Array(40), offsetX: 0, offsetY: 0 },

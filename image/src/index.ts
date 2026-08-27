@@ -11,11 +11,18 @@ export {
     type DirectionLayout,
     type Facing,
     type Frame,
+    type IndexedAnimation,
+    type IndexedAnimationMeta,
+    type IndexedSourceFormat,
     type Rgba,
+    type RgbaAnimation,
+    type RgbaAnimationMeta,
+    type RgbaFrame,
     type Sequence,
     type SourceFormat,
     FRM_FACINGS,
     emptyPalette,
+    isRgbaAnimation,
     transparentIndexOf,
 } from "./model/animation.ts";
 export { type Anchor, type AnchorGeom, offsetToAnchor } from "./model/frame-anchor.ts";

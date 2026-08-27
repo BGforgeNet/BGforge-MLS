@@ -1,10 +1,10 @@
-import { type Animation, type Frame } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame } from "../model/animation.ts";
 
 function payload(f: Frame): Uint8Array {
     return f.rawEncoding ?? f.pixels;
 }
 
-export function serializeBamV1(anim: Animation): Uint8Array {
+export function serializeBamV1(anim: IndexedAnimation): Uint8Array {
     const le = true;
     const frameCount = anim.frames.length;
     const cycleCount = anim.sequences.length;

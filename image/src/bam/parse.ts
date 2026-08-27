@@ -1,4 +1,4 @@
-import { type Animation, type Frame, type Rgba, type Sequence, emptyPalette } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Rgba, type Sequence, emptyPalette } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
 import { MAX_FRAME_PIXELS } from "../limits.ts";
 
@@ -30,7 +30,7 @@ function tag(bytes: Uint8Array, start: number): string {
     return String.fromCodePoint(bytes[start] ?? 0, bytes[start + 1] ?? 0, bytes[start + 2] ?? 0, bytes[start + 3] ?? 0);
 }
 
-export function parseBamV1(bytes: Uint8Array): Animation {
+export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
     if (bytes.byteLength < 0x18) throw new Error("parseBamV1: BAM header truncated");
     const signature = tag(bytes, 0x00);
     if (signature !== "BAM ") throw new Error(`parseBamV1: not a BAM file (signature "${signature}")`);

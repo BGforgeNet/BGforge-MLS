@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { type Animation, type Frame, emptyPalette, exportApngPerDirection, importApng } from "@bgforge/image";
+import { type IndexedAnimation, type Frame, emptyPalette, exportApngPerDirection, importApng } from "@bgforge/image";
 
 // Two sequences with distinct frame counts and pixel content, so the per-sequence
 // split can be distinguished from a mixed-up one.
-function makeAnimation(): Animation {
+function makeAnimation(): IndexedAnimation {
     const palette = emptyPalette();
     palette[0] = { r: 0, g: 0, b: 0, a: 0 };
     palette[5] = { r: 10, g: 20, b: 30, a: 255 };
@@ -71,7 +71,7 @@ describe("importApng(exportApngPerDirection(anim).get(id))", () => {
         // anchor-relative [-3..1], B (w1, anchor x0) spans [0..1] -> shared canvas width 4, with B's
         // pixel landing under A's anchor column instead of being geometrically centred.
         const palette = emptyPalette();
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette,
             frames: [
                 { width: 4, height: 1, pixels: Uint8Array.from([1, 2, 3, 4]), offsetX: 3, offsetY: 0 },
@@ -92,7 +92,7 @@ describe("importApng(exportApngPerDirection(anim).get(id))", () => {
     });
 
     it("skips empty sequences instead of failing the whole export", () => {
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: emptyPalette(),
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([5]), offsetX: 0, offsetY: 0 }],
             sequences: [
@@ -106,7 +106,7 @@ describe("importApng(exportApngPerDirection(anim).get(id))", () => {
     });
 
     it("throws a clear error when a sequence references an out-of-range frame index", () => {
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: emptyPalette(),
             frames: [],
             sequences: [{ frameRefs: [0], facing: "none" }],

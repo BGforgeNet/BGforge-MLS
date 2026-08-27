@@ -30,6 +30,8 @@ function referencePoint(format: SourceFormat, height: number, tilePx: number): {
             return { x: tilePx / 2, y: tilePx / 2 + height / 2 - 1 };
         case "bam":
         case "bamc":
+        case "bamv2":
+            // v2 anchors on the same per-frame centre coordinate as v1, so it is centred identically.
             return { x: tilePx / 2, y: tilePx / 2 };
         default: {
             const unhandled: never = format;

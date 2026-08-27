@@ -5,7 +5,7 @@ import {
     serializeBamV1,
     splitIeBamPair,
     DEFAULT_FALLOUT_PALETTE,
-    type Animation,
+    type IndexedAnimation,
     type Frame,
     type Sequence,
 } from "@bgforge/image";
@@ -14,7 +14,7 @@ function px(v: number): Frame {
     return { width: 1, height: 1, pixels: new Uint8Array([v]), offsetX: 0, offsetY: 0 };
 }
 
-function bam(sequences: Sequence[], frames: Frame[]): Animation {
+function bam(sequences: Sequence[], frames: Frame[]): IndexedAnimation {
     return {
         palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
         frames,
@@ -25,7 +25,7 @@ function bam(sequences: Sequence[], frames: Frame[]): Animation {
 
 // The base file: per block, slots 0-4 hold one traceable frame (1 + block*16 + slot), slots 5-7 the
 // shared filler frame 0 (pixel 255) - the detected base-file fingerprint.
-function makeBase(blocks: number): Animation {
+function makeBase(blocks: number): IndexedAnimation {
     const frames: Frame[] = [px(255)];
     const sequences: Sequence[] = [];
     for (let g = 0; g < blocks; g++) {
@@ -40,7 +40,7 @@ function makeBase(blocks: number): Animation {
 
 // The *E companion: same block layout, west slots dummied with 0xFFFF sentinels, east slots real
 // (traceable as 100 + block*16 + slot).
-function makeEast(blocks: number): Animation {
+function makeEast(blocks: number): IndexedAnimation {
     const frames: Frame[] = [];
     const sequences: Sequence[] = [];
     for (let g = 0; g < blocks; g++) {
@@ -53,7 +53,7 @@ function makeEast(blocks: number): Animation {
     return bam(sequences, frames);
 }
 
-function cyclePixel(anim: Animation, cycle: number): number | undefined {
+function cyclePixel(anim: IndexedAnimation, cycle: number): number | undefined {
     const ref = anim.sequences[cycle]?.frameRefs[0];
     const frame = ref === undefined ? undefined : anim.frames[ref];
     return frame?.pixels[0];

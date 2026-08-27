@@ -2,7 +2,7 @@ import { assert, describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
 import {
-    type Animation,
+    type IndexedAnimation,
     type Frame,
     combineFrmDirections,
     emptyPalette,
@@ -18,7 +18,7 @@ function makeFrame(fill: number): Frame {
 
 // Build a 6-direction FRM whose directions are individually identifiable (facing d's two frames
 // carry pixel values d*10+1 and d*10+2) and whose per-direction offsets are all distinct.
-function sampleCombined(): Animation {
+function sampleCombined(): IndexedAnimation {
     const frames: Frame[] = [];
     const sequences = FRM_FACINGS.map((facing, d) => {
         const base = frames.length;
@@ -44,7 +44,7 @@ function sampleCombined(): Animation {
 // Reproduce how a modding tool splits a combined critter into one `.frN` per facing: a full FRM
 // carrying only facing d's frames, with facing d's offset replicated across all six header slots.
 // Verified against real corpus splits (each .frN has doff-distinct=1 and a uniform offset).
-function splitDirection(anim: Animation, d: number): Uint8Array {
+function splitDirection(anim: IndexedAnimation, d: number): Uint8Array {
     const seq = anim.sequences[d];
     if (!seq) throw new Error(`no sequence ${d}`);
     const dirFrames = seq.frameRefs.map((r) => {
@@ -54,7 +54,7 @@ function splitDirection(anim: Animation, d: number): Uint8Array {
     });
     const x = anim.meta.dirOffsetsX?.[d] ?? 0;
     const y = anim.meta.dirOffsetsY?.[d] ?? 0;
-    const single: Animation = {
+    const single: IndexedAnimation = {
         palette: anim.palette,
         frames: dirFrames,
         sequences: FRM_FACINGS.map((facing) => ({ frameRefs: dirFrames.map((_, i) => i), facing })),
@@ -63,7 +63,7 @@ function splitDirection(anim: Animation, d: number): Uint8Array {
     return serializeFrm(single);
 }
 
-function directionPixels(anim: Animation, d: number): number[] {
+function directionPixels(anim: IndexedAnimation, d: number): number[] {
     const seq = anim.sequences[d];
     if (!seq) throw new Error(`no sequence ${d}`);
     return seq.frameRefs.map((r) => {
@@ -173,7 +173,10 @@ describe.skipIf(!haveRealSplit)("combineFrmDirections (real corpus)", () => {
 });
 
 // Per-direction frame content (dimensions + offset + pixels), the identity a split/recombine preserves.
-function directionFrames(anim: Animation, d: number): { w: number; h: number; ox: number; oy: number; px: string }[] {
+function directionFrames(
+    anim: IndexedAnimation,
+    d: number,
+): { w: number; h: number; ox: number; oy: number; px: string }[] {
     const seq = anim.sequences[d];
     if (!seq) throw new Error(`no sequence ${d}`);
     return seq.frameRefs.map((r) => {

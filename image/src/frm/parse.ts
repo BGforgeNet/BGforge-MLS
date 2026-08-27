@@ -1,8 +1,8 @@
-import { type Animation, type Frame, type Sequence, FRM_FACINGS, emptyPalette } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Sequence, FRM_FACINGS, emptyPalette } from "../model/animation.ts";
 
 const HEADER_SIZE = 0x3e;
 
-export function parseFrm(bytes: Uint8Array): Animation {
+export function parseFrm(bytes: Uint8Array): IndexedAnimation {
     if (bytes.byteLength < HEADER_SIZE) throw new Error("parseFrm: FRM header truncated");
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const be = false; // DataView littleEndian flag; FRM is big-endian

@@ -1,10 +1,10 @@
-import { type Animation, type Frame, type Sequence } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Sequence } from "../model/animation.ts";
 import { offsetToAnchor } from "../model/frame-anchor.ts";
 import { LossReport } from "./loss-report.ts";
 
-// Converts an FRM-shaped Animation to a BAM-shaped one. Already-BAM input is a no-op
+// Converts an FRM-shaped IndexedAnimation to a BAM-shaped one. Already-BAM input is a no-op
 // (still returns a new object per the shallow-clone contract) since there is nothing to convert.
-export function convertToBam(anim: Animation): { animation: Animation; report: LossReport } {
+export function convertToBam(anim: IndexedAnimation): { animation: IndexedAnimation; report: LossReport } {
     const report = new LossReport();
 
     if (anim.meta.sourceFormat === "bam" || anim.meta.sourceFormat === "bamc") {
@@ -89,7 +89,7 @@ export function convertToBam(anim: Animation): { animation: Animation; report: L
     // every conversion.
     report.add("embedded-palette", "palette embedded directly in the BAM output");
 
-    const animation: Animation = {
+    const animation: IndexedAnimation = {
         palette,
         sequences,
         frames,

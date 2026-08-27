@@ -365,7 +365,7 @@ describe("withGameContext", () => {
         const anim = {
             id: "a1",
             kind: "field",
-            name: "Animation Id",
+            name: "IndexedAnimation Id",
             valueType: "uint32",
             ref: { kind: "ids", tables: ["ANIMATE"] },
             rawValue: 24832,

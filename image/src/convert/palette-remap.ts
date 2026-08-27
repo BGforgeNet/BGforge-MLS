@@ -1,4 +1,4 @@
-import { type Animation, type Frame, type Rgba, transparentIndexOf } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Rgba, transparentIndexOf } from "../model/animation.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
 // FRM's transparency convention is index 0. When a source marks another slot transparent, swap
@@ -100,7 +100,10 @@ function nearestIndex(color: Rgba, target: Rgba[]): number {
 // Lossy: re-index every pixel to the nearest color in `target` (the bundled default palette).
 // The transparent source index maps to 0 (the default palette's transparency slot) so
 // transparency survives. Output frames drop rawEncoding/rleEncoded (they described the old bytes).
-export function remapToNearest(anim: Animation, target: Rgba[]): { animation: Animation; remapped: true } {
+export function remapToNearest(
+    anim: IndexedAnimation,
+    target: Rgba[],
+): { animation: IndexedAnimation; remapped: true } {
     const transparent = transparentIndexOf(anim.meta);
     // src index -> target index, one entry per palette slot, computed once.
     const table = anim.palette.map((color, idx) => (idx === transparent ? 0 : nearestIndex(color, target)));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
-import { type Animation, FRM_FACINGS, emptyPalette, parseFrm, serializeFrm } from "@bgforge/image";
+import { type IndexedAnimation, FRM_FACINGS, emptyPalette, parseFrm, serializeFrm } from "@bgforge/image";
 import { corpusFiles, FALLOUT_ART } from "./fixtures.ts";
 
 const frms = corpusFiles(FALLOUT_ART, ".frm");
@@ -25,7 +25,7 @@ describe("parseFrm hostile input", () => {
     });
 
     it("reports frame pixel data cut off at end-of-file as truncated", () => {
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: emptyPalette(),
             frames: [{ width: 2, height: 2, pixels: new Uint8Array([1, 2, 3, 4]), offsetX: 0, offsetY: 0 }],
             sequences: FRM_FACINGS.map((facing) => ({ frameRefs: [0], facing })),

@@ -1,5 +1,5 @@
 import * as path from "path";
-import { type Animation, type LossReport, convertToFrm, frmDirectionMode } from "@bgforge/image";
+import { type IndexedAnimation, type LossReport, convertToFrm, frmDirectionMode } from "@bgforge/image";
 import type { SaveAsTarget } from "./webview/messages";
 
 /** The user-facing summary behind the lossy-conversion confirmation modal: a headline for the
@@ -33,7 +33,7 @@ export function saveAsTargetPath(srcPath: string, target: SaveAsTarget): string 
  * non-directional multi-cycle animation cannot fill FRM's 6 rotations on its own (a single cycle
  * auto-resolves to a single-orientation FRM).
  */
-export function needsCyclePick(anim: Animation): boolean {
+export function needsCyclePick(anim: IndexedAnimation): boolean {
     return frmDirectionMode(anim) === "single-orientation" && anim.sequences.length > 1;
 }
 
@@ -42,7 +42,7 @@ export function needsCyclePick(anim: Animation): boolean {
  * "ie8"); undefined otherwise (then `needsCyclePick` decides). The ie8 layout guarantees a multiple of
  * 8 cycles at parse; Math.ceil keeps a loosely-claiming imported manifest from truncating a block.
  */
-export function ieGroupCount(anim: Animation): number | undefined {
+export function ieGroupCount(anim: IndexedAnimation): number | undefined {
     if (anim.meta.directionLayout !== "ie8") return undefined;
     return Math.ceil(anim.sequences.length / 8);
 }
@@ -57,8 +57,8 @@ export interface FrmShapePick {
  * Reshape an imported animation into a valid FRM. `nearest` keeps its pixels consistent with the
  * FRM's default palette. The caller resolves `pick` first (the group/cycle choice, when one is needed).
  */
-export function reshapeImportToFrm(next: Animation, pick?: FrmShapePick): Animation {
+export function reshapeImportToFrm(next: IndexedAnimation, pick?: FrmShapePick): IndexedAnimation {
     // Tag the source as bam so convertToFrm actually reshapes it (it no-ops on frm-tagged input).
-    const src: Animation = { ...next, meta: { ...next.meta, sourceFormat: "bam" } };
+    const src: IndexedAnimation = { ...next, meta: { ...next.meta, sourceFormat: "bam" } };
     return convertToFrm(src, { paletteMode: "nearest", ...pick }).animation;
 }

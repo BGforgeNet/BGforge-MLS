@@ -42,6 +42,9 @@ export function offsetToAnchor(format: SourceFormat, g: AnchorGeom): Anchor {
             return { ax: g.width / 2 - (g.dirOffsetX ?? 0), ay: g.height - 1 - (g.dirOffsetY ?? 0) };
         case "bam":
         case "bamc":
+        case "bamv2":
+            // v2's frame entry stores the same per-frame centre coordinate as v1, so the anchor
+            // convention is identical - only the pixel encoding differs between them.
             return { ax: g.offsetX, ay: g.offsetY };
         /* v8 ignore start -- unreachable: the never narrowing makes a new SourceFormat a compile error here */
         default: {

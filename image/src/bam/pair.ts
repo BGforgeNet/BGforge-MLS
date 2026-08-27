@@ -1,4 +1,4 @@
-import { type Animation, type Frame, type Rgba, type Sequence } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Rgba, type Sequence } from "../model/animation.ts";
 import { IE_STRIDE, IE_WEST_SLOTS, interpretIeDirections } from "../model/ie-direction.ts";
 
 /**
@@ -27,7 +27,7 @@ function validRefs(refs: number[], frameCount: number): number[] {
  * fingerprint, the companion must match its cycle count and palette and actually contribute
  * east-facing cycles. Out-of-range frame refs (the 0xFFFF "no frame" sentinel) are dropped.
  */
-export function combineIeBamPair(base: Animation, east: Animation): Animation | undefined {
+export function combineIeBamPair(base: IndexedAnimation, east: IndexedAnimation): IndexedAnimation | undefined {
     if (base.sequences.length === 0 || base.sequences.length !== east.sequences.length) return undefined;
     if (base.sequences.length % IE_STRIDE !== 0) return undefined;
     if (!interpretIeDirections(base.sequences, base.frames.length)?.detected) return undefined;
@@ -58,7 +58,9 @@ export function combineIeBamPair(base: Animation, east: Animation): Animation | 
  * empty east dummies, the companion keeps the east slots. Undefined when the animation no longer maps
  * onto 8-slot blocks (tagged facings, or a cycle count edits broke off the stride).
  */
-export function splitIeBamPair(combined: Animation): { base: Animation; east: Animation } | undefined {
+export function splitIeBamPair(
+    combined: IndexedAnimation,
+): { base: IndexedAnimation; east: IndexedAnimation } | undefined {
     if (combined.sequences.length === 0 || combined.sequences.length % IE_STRIDE !== 0) return undefined;
     if (!interpretIeDirections(combined.sequences, combined.frames.length)) return undefined;
     return {
@@ -69,7 +71,7 @@ export function splitIeBamPair(combined: Animation): { base: Animation; east: An
 
 // One side of the split: kept slots get their cycles with frames compacted into a fresh pool (the
 // other side's frames must not ship in this file); dropped slots become empty dummy cycles.
-function sideAnimation(combined: Animation, keep: (slot: number) => boolean): Animation {
+function sideAnimation(combined: IndexedAnimation, keep: (slot: number) => boolean): IndexedAnimation {
     const remap = new Map<number, number>();
     const frames: Frame[] = [];
     const sequences: Sequence[] = combined.sequences.map((seq, i) => {

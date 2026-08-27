@@ -8,7 +8,7 @@ import {
     serializeBamV1,
     serializeFrm,
     serializePal,
-    type Animation,
+    type IndexedAnimation,
     type LossReport,
     type Rgba,
 } from "@bgforge/image";
@@ -16,7 +16,7 @@ import { sidecarPalPath } from "./sidecar";
 import { type SaveWrite } from "./save";
 
 /** Maps the relative-path Map exported by @bgforge/image onto absolute writes under destDir. */
-export function buildExport(anim: Animation, target: "apng" | "png-directory", destDir: string): SaveWrite[] {
+export function buildExport(anim: IndexedAnimation, target: "apng" | "png-directory", destDir: string): SaveWrite[] {
     const files = target === "apng" ? exportApngPerDirection(anim) : exportPngDirectory(anim);
     return Array.from(files, ([relativePath, bytes]) => ({ path: path.join(destDir, relativePath), bytes }));
 }
@@ -34,7 +34,7 @@ function palettesEqual(a: Rgba[], b: Rgba[]): boolean {
  * `bamc` is the compressed on-disk encoding of `bam`: the animation converts identically, then the
  * serialized BAM V1 is wrapped by encodeBamc. */
 export function buildCrossFormatSave(
-    anim: Animation,
+    anim: IndexedAnimation,
     target: "frm" | "bam" | "bamc",
     targetPath: string,
     opts?: { paletteMode?: "sidecar" | "nearest"; singleCycle?: number; ieGroup?: number },

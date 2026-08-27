@@ -1,4 +1,4 @@
-import { type Animation } from "./model/animation.ts";
+import { type IndexedAnimation } from "./model/animation.ts";
 import { parseFrm } from "./frm/parse.ts";
 import { parseBamV1 } from "./bam/parse.ts";
 import { isBamc, decodeBamc } from "./bam/bamc.ts";
@@ -7,7 +7,7 @@ function sig(bytes: Uint8Array): string {
     return String.fromCodePoint(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0, bytes[3] ?? 0);
 }
 
-export function loadImage(bytes: Uint8Array, name: string): Animation {
+export function loadImage(bytes: Uint8Array, name: string): IndexedAnimation {
     if (isBamc(bytes)) {
         const anim = parseBamV1(decodeBamc(bytes));
         anim.meta.sourceFormat = "bamc";

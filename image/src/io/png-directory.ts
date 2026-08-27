@@ -2,7 +2,7 @@
 // Pure byte-in/byte-out (Map<string, Uint8Array>) - no filesystem access; the caller
 // decides where those bytes land.
 import {
-    type Animation,
+    type IndexedAnimation,
     type Frame,
     type Rgba,
     type Sequence,
@@ -13,7 +13,7 @@ import { encodeIndexedPng } from "../png/encode.ts";
 import { decodeIndexedPng } from "../png/decode.ts";
 import { frameFileName, readManifest, sequenceDirId, writeManifest } from "./manifest.ts";
 
-export function exportPngDirectory(anim: Animation): Map<string, Uint8Array> {
+export function exportPngDirectory(anim: IndexedAnimation): Map<string, Uint8Array> {
     const files = new Map<string, Uint8Array>();
     const manifest = writeManifest(anim);
     files.set("manifest.json", new TextEncoder().encode(JSON.stringify(manifest)));
@@ -41,7 +41,7 @@ function samePalette(a: Rgba[], b: Rgba[]): boolean {
     });
 }
 
-export function importPngDirectory(files: Map<string, Uint8Array>): Animation {
+export function importPngDirectory(files: Map<string, Uint8Array>): IndexedAnimation {
     const manifestBytes = files.get("manifest.json");
     if (!manifestBytes) throw new Error("importPngDirectory: missing manifest.json");
     const manifestJson: unknown = JSON.parse(new TextDecoder().decode(manifestBytes));

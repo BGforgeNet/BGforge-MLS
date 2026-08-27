@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FALLOUT_PALETTE, emptyPalette, type Animation, type Frame, type Rgba } from "@bgforge/image";
+import { DEFAULT_FALLOUT_PALETTE, emptyPalette, type IndexedAnimation, type Frame, type Rgba } from "@bgforge/image";
 import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "../src/convert/palette-remap.ts";
 
 function frame(pixels: number[]): Frame {
@@ -61,7 +61,7 @@ describe("remapToNearest", () => {
         // A 1-color source palette whose color is closest to some default index.
         const src: Rgba[] = emptyPalette();
         src[5] = { r: 255, g: 254, b: 253, a: 255 }; // near-white -> default's white-ish slot
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: src,
             frames: [
                 {
@@ -96,7 +96,7 @@ describe("remapToNearest", () => {
 
     it("sends the transparent index to 0", () => {
         const src: Rgba[] = Array.from({ length: 256 }, () => ({ r: 10, g: 20, b: 30, a: 255 }));
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: src,
             frames: [{ width: 2, height: 1, pixels: Uint8Array.from([7, 3]), offsetX: 0, offsetY: 0 }],
             sequences: [{ frameRefs: [0], facing: "none" }],
@@ -110,7 +110,7 @@ describe("remapToNearest", () => {
 
     it("defaults the transparent index to 0 when meta omits transparentIndex", () => {
         const src: Rgba[] = emptyPalette(); // index 0 is black; the default palette's nearest to black is not 0
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: src,
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([0]), offsetX: 0, offsetY: 0 }],
             sequences: [{ frameRefs: [0], facing: "none" }],
@@ -127,7 +127,7 @@ describe("remapToNearest", () => {
             { r: 0, g: 0, b: 0, a: 255 },
             { r: 10, g: 10, b: 10, a: 255 },
         ];
-        const anim: Animation = {
+        const anim: IndexedAnimation = {
             palette: src,
             frames: [{ width: 1, height: 1, pixels: Uint8Array.from([9]), offsetX: 0, offsetY: 0 }],
             sequences: [{ frameRefs: [0], facing: "none" }],

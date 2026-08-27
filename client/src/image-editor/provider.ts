@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { type Animation, importPngDirectory } from "@bgforge/image";
+import { type IndexedAnimation, importPngDirectory } from "@bgforge/image";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
@@ -136,7 +136,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
                 surfaceWebviewRuntimeError({
-                    editor: "Animation editor",
+                    editor: "IndexedAnimation editor",
                     file,
                     message: message.message,
                     stack: message.stack,
@@ -235,7 +235,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      * non-directional multi-cycle animation converts one chosen cycle into all six rotations. Returns
      * an empty pick when no choice is needed, undefined when the user dismisses a picker.
      */
-    private async resolveFrmShape(anim: Animation, sourceName: string): Promise<FrmShapePick | undefined> {
+    private async resolveFrmShape(anim: IndexedAnimation, sourceName: string): Promise<FrmShapePick | undefined> {
         const groupCount = ieGroupCount(anim);
         if (groupCount !== undefined) {
             if (groupCount === 1) return { ieGroup: 0 };
@@ -295,7 +295,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
-    private async importPngDirectory(): Promise<{ animation: Animation; name: string } | undefined> {
+    private async importPngDirectory(): Promise<{ animation: IndexedAnimation; name: string } | undefined> {
         // Accept EITHER the export folder or its manifest.json - both resolve to the same directory,
         // whose frames are read relative to manifest.json.
         const selection = await vscode.window.showOpenDialog({

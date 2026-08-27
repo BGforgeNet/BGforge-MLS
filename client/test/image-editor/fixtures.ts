@@ -2,13 +2,13 @@ import {
     DEFAULT_FALLOUT_PALETTE,
     emptyPalette,
     FRM_FACINGS,
-    type Animation,
+    type IndexedAnimation,
     type Frame,
     type Sequence,
 } from "@bgforge/image";
 
 /** A minimal valid 6-facing FRM animation: one 1x1 frame per facing, still a real FRM construct. */
-export function makeMiniFrm(): Animation {
+export function makeMiniFrm(): IndexedAnimation {
     return {
         palette: emptyPalette(),
         sequences: FRM_FACINGS.map((facing, i) => ({ frameRefs: [i], facing })),
@@ -34,7 +34,7 @@ function px(v: number): Frame {
     return { width: 1, height: 1, pixels: Uint8Array.from([v]), offsetX: 0, offsetY: 0 };
 }
 
-function ieBam(sequences: Sequence[], frames: Frame[]): Animation {
+function ieBam(sequences: Sequence[], frames: Frame[]): IndexedAnimation {
     return {
         palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
         frames,
@@ -48,7 +48,7 @@ function ieBam(sequences: Sequence[], frames: Frame[]): Animation {
  * frame and the three east slots share filler frame 0 - the fingerprint combineIeBamPair detects.
  * Two blocks, the smallest count the detector accepts.
  */
-export function makeIeBamBase(): Animation {
+export function makeIeBamBase(): IndexedAnimation {
     const frames: Frame[] = [px(255)];
     const sequences: Sequence[] = [];
     for (let block = 0; block < 2; block++) {
@@ -62,7 +62,7 @@ export function makeIeBamBase(): Animation {
 }
 
 /** The `*E` companion to makeIeBamBase: west slots dummied with the 0xFFFF sentinel, east slots real. */
-export function makeIeBamEast(): Animation {
+export function makeIeBamEast(): IndexedAnimation {
     const frames: Frame[] = [];
     const sequences: Sequence[] = [];
     for (let block = 0; block < 2; block++) {
@@ -76,7 +76,7 @@ export function makeIeBamEast(): Animation {
 }
 
 /** A minimal valid BAM v1 animation: one facing-less cycle, one 1x1 frame, transparent index 0. */
-export function makeMiniBam(): Animation {
+export function makeMiniBam(): IndexedAnimation {
     return {
         palette: emptyPalette(),
         sequences: [{ frameRefs: [0], facing: "none" }],

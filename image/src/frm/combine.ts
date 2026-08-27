@@ -1,4 +1,4 @@
-import { type Animation, type Frame, type Sequence, FRM_FACINGS, emptyPalette } from "../model/animation.ts";
+import { type IndexedAnimation, type Frame, type Sequence, FRM_FACINGS, emptyPalette } from "../model/animation.ts";
 import { parseFrm } from "./parse.ts";
 
 /**
@@ -15,7 +15,7 @@ import { parseFrm } from "./parse.ts";
  * disk) yields an empty sequence for that facing rather than throwing; the header fps / action
  * frame / version come from the first present file.
  */
-export function combineFrmDirections(files: readonly (Uint8Array | undefined)[]): Animation {
+export function combineFrmDirections(files: readonly (Uint8Array | undefined)[]): IndexedAnimation {
     const frames: Frame[] = [];
     const sequences: Sequence[] = [];
     const dirOffsetsX: number[] = [];
