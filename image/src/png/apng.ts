@@ -71,7 +71,11 @@ function padFrameToCanvas(
     if (frame.width === canvasWidth && frame.height === canvasHeight) return frame.pixels;
     const bpp = model.bytesPerPixel;
     const out = new Uint8Array(canvasWidth * canvasHeight * bpp);
-    for (let p = 0; p < canvasWidth * canvasHeight; p++) out.set(model.padPixel, p * bpp);
+    // Skipped for an all-zero pad pixel, which the allocation already gives - the true-colour case,
+    // where transparent IS zero. Same skip as blitBytes in model/anchor-align.ts.
+    if (model.padPixel.some((byte) => byte !== 0)) {
+        for (let p = 0; p < canvasWidth * canvasHeight; p++) out.set(model.padPixel, p * bpp);
+    }
     const dx = Math.floor((canvasWidth - frame.width) / 2);
     const dy = Math.floor((canvasHeight - frame.height) / 2);
     for (let y = 0; y < frame.height; y++) {
@@ -88,7 +92,8 @@ function padFrameToCanvas(
  */
 function encodeApngWith(frames: ApngFrame[], fps: number, model: ApngColourModel): Uint8Array {
     if (frames.length === 0) {
-        throw new Error("encodeApng: at least one frame is required");
+        // Names the operation, not this function: both encodeApng and encodeTruecolourApng land here.
+        throw new Error("APNG encode: at least one frame is required");
     }
     const delayDen = fps || 10;
 

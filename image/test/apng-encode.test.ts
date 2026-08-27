@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { emptyPalette } from "@bgforge/image";
-import { decodeApng, encodeApng } from "../src/png/apng.ts";
+import { decodeApng, encodeApng, encodeTruecolourApng } from "../src/png/apng.ts";
 import { readChunks } from "../src/png/chunk.ts";
 
 describe("encodeApng", () => {
     it("throws when given no frames", () => {
         expect(() => encodeApng([], emptyPalette(), 0, 10)).toThrow(/at least one frame is required/);
+    });
+
+    // Both entry points share one guard, so the message names the operation rather than either
+    // function - a truecolour caller must not be told it called encodeApng.
+    it("names the operation, not the indexed entry point, when a truecolour encode has no frames", () => {
+        expect(() => encodeTruecolourApng([], 10)).toThrow("APNG encode: at least one frame is required");
     });
 
     it("falls back to a delay denominator of 10 when fps is 0", () => {
@@ -76,5 +82,24 @@ describe("encodeApng", () => {
             [4, 3],
             [4, 3],
         ]);
+    });
+
+    it("fills the padding around a smaller frame with the transparent index, not index 0", () => {
+        // The fixture above pads with index 0, which the zeroed allocation already supplies - so it
+        // passes whether or not the pad is written. Only a NON-ZERO transparent index distinguishes
+        // "padded transparent" from "padded with whatever palette entry 0 happens to be", and a
+        // palette's transparent index is index 0 only by convention.
+        const pal = emptyPalette();
+        pal[1] = { r: 200, g: 100, b: 50, a: 255 };
+        pal[5] = { r: 0, g: 0, b: 0, a: 255 };
+        const frames = [
+            { width: 2, height: 2, pixels: new Uint8Array([1, 1, 1, 1]) },
+            { width: 4, height: 3, pixels: new Uint8Array(12).fill(1) },
+        ];
+        const png = encodeApng(frames, pal, 5, 10);
+
+        // Centred at dx=1, dy=0 on the 4x3 canvas: the frame's four pixels sit in the top two rows.
+        const decoded = decodeApng(png);
+        expect([...(decoded.frames[0]?.pixels ?? [])]).toEqual([5, 1, 1, 5, 5, 1, 1, 5, 5, 5, 5, 5]);
     });
 });
