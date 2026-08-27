@@ -10,7 +10,12 @@ import { fileURLToPath } from "node:url";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/image-editor/webview/messages";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
-import { buildBamFixture, buildDirectionalBamFixture, buildMultiSequenceBamFixture } from "./image-fixtures";
+import {
+    buildBamFixture,
+    buildDirectionalBamFixture,
+    buildMultiSequenceBamFixture,
+    buildRgbaBamFixture,
+} from "./image-fixtures";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const view = buildBamFixture();
@@ -193,6 +198,49 @@ check(
 );
 
 await page.screenshot({ path: shotPath("shot-bam-rose-grid.png"), fullPage: true });
+
+// True-colour (BAM v2): the second colour model the editor renders, and the one whose draw path has
+// no palette to fall back on. Reading a pixel is what separates a working rgba path from one that
+// silently routed through the indexed reader - the tile would still be drawn, just wrong.
+currentView = buildRgbaBamFixture();
+await page.reload();
+await page.waitForSelector(".cycle-grid canvas", { timeout: 5000 });
+
+const rgbaTiles = await page.locator(".cycle-grid canvas").count();
+check("rgba: every true-colour cycle renders a tile", rgbaTiles === 4, `count=${rgbaTiles}`);
+
+// Sampled in the top-left quadrant, which the fixture writes at alpha 128, and in the body, which is
+// opaque. An indexed read of the same bytes cannot produce this pair.
+const rgbaSamples = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLCanvasElement>(".cycle-grid canvas"), (canvas) => {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return "no-ctx";
+        const q = ctx.getImageData(Math.floor(canvas.width * 0.3), Math.floor(canvas.height * 0.3), 1, 1).data;
+        const body = ctx.getImageData(Math.floor(canvas.width * 0.7), Math.floor(canvas.height * 0.7), 1, 1).data;
+        return `${q[3]}/${body[3]}`;
+    }),
+);
+check(
+    "rgba: a partly transparent quadrant keeps its alpha, the body stays opaque",
+    rgbaSamples.every((sample) => sample === "128/255"),
+    JSON.stringify(rgbaSamples),
+);
+
+// A palette control on a format with no palette would offer an edit that could never be stored.
+const paletteControls = await page
+    .locator('[aria-label="Transparent palette index"], [aria-label="Use external palette"]')
+    .count();
+check(
+    "rgba: no palette control is offered for a format with no palette",
+    paletteControls === 0,
+    `count=${paletteControls}`,
+);
+
+// The frame rate IS offered - a BAM stores none, but retuning playback is the point of the control.
+const fpsControls = await page.locator('[aria-label="Frames per second"]').count();
+check("rgba: the playback rate stays available", fpsControls === 1, `count=${fpsControls}`);
+
+await page.screenshot({ path: shotPath("shot-bam-truecolour.png"), fullPage: true });
 
 await browser.close();
 

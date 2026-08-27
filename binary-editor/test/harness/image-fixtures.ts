@@ -157,6 +157,56 @@ export function buildDirectionalBamFixture(): AnimationView {
     };
 }
 
+/**
+ * A true-colour frame: a flat RGB body, a marker corner as above, and one quadrant at PARTIAL alpha.
+ *
+ * The partial quadrant is the point. It is the one thing an indexed frame cannot express - a palette
+ * has a single all-or-nothing transparent index - so it is what separates a working true-colour draw
+ * path from one that silently fell through to the indexed reader.
+ */
+function makeRgbaFrame(colour: [number, number, number], frameIndex: number): FrameView {
+    const pixels = new Uint8Array(TILE_SIZE * TILE_SIZE * 4);
+    for (let i = 0; i < TILE_SIZE * TILE_SIZE; i++) {
+        const x = i % TILE_SIZE;
+        const y = Math.floor(i / TILE_SIZE);
+        const half = TILE_SIZE / 2;
+        pixels.set([...colour, x < half && y < half ? 128 : 255], i * 4);
+    }
+    const start = frameIndex % 2 === 1 ? TILE_SIZE - MARKER_SIZE : 0;
+    for (let y = 0; y < MARKER_SIZE; y++) {
+        for (let x = 0; x < MARKER_SIZE; x++) {
+            pixels.set([255, 255, 255, 255], ((start + y) * TILE_SIZE + (start + x)) * 4);
+        }
+    }
+    return { width: TILE_SIZE, height: TILE_SIZE, pixels: encodeFramePixels(pixels), offsetX: 0, offsetY: 0 };
+}
+
+/**
+ * BAM v2 (true colour): the same grid shape as buildBamFixture, with no palette at all.
+ *
+ * The colour model is the ONLY axis this fixture adds - keeping everything else identical to its
+ * indexed sibling is what makes a difference in the rendered output attributable to it.
+ */
+export function buildRgbaBamFixture(): AnimationView {
+    const frames: FrameView[] = [];
+    const sequences: SequenceView[] = BAM_COLORS.map((_colour, i) => {
+        const frameRefs = [0, 1].map((frameIndex) => {
+            frames.push(makeRgbaFrame(colorAt(BAM_COLORS, i), frameIndex));
+            return frames.length - 1;
+        });
+        return { frameRefs, facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 };
+    });
+
+    return {
+        colorModel: "rgba",
+        frames,
+        sequences,
+        meta: { sourceFormat: "bamv2", fps: 15 },
+        basename: "harness-fixture",
+        sourceFormat: "bamv2",
+    };
+}
+
 export function buildBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
