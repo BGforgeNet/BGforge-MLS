@@ -554,3 +554,28 @@ describe("childStates (shared tree traversal)", () => {
         expect(childStates(hub).map((c) => c.id)).toEqual(["A"]);
     });
 });
+
+describe("a format with no source spans at all", () => {
+    // Found by driving a real .dlg: every node showed the amber "unsaved" badge. `isPendingState` reads a
+    // missing span as "the user just added this", which holds for text-backed formats and is false for a
+    // compiled DLG, where NO state has a span and nothing is editable. Absence of a span means "just added"
+    // only where spans exist at all, so the format has to say which case it is.
+    const r = root([st("0", "hi", [ch("0#0", { kind: "exit" }, { text: "bye" })])]);
+
+    it("marks a span-less state pending when the format normally has spans", () => {
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, fieldEditable: () => true });
+
+        expect(roots[0]!.pending).toBe(true);
+    });
+
+    it("marks nothing pending when the format has no spans to be missing", () => {
+        const { roots } = buildConversationTree(r, undefined, noJump, {
+            ssl: false,
+            fieldEditable: () => true,
+            sourceless: true,
+        });
+
+        expect(roots[0]!.pending).toBeUndefined();
+        expect(roots[0]!.replies[0]!.pending).toBeUndefined();
+    });
+});

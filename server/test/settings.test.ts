@@ -55,6 +55,24 @@ describe("settings", () => {
             expect(defaultSettings).toHaveProperty("validate");
         });
 
+        // The reference implementation stays the default: a tp2 variable appears in 215 of the 741 real .baf
+        // files under external/ (matched case-insensitively - five carry an uppercase .BAF extension), and
+        // only WeiDU can resolve one, so the built-in must be opted into and never inherited.
+        it("defaults the WeiDU compiler to the external binary", async () => {
+            const { normalizeSettings } = await import("../src/settings");
+            expect(normalizeSettings({}).weidu.compiler).toBe("weidu");
+        });
+
+        it("accepts the built-in compiler", async () => {
+            const { normalizeSettings } = await import("../src/settings");
+            expect(normalizeSettings({ weidu: { compiler: "built-in" } }).weidu.compiler).toBe("built-in");
+        });
+
+        it("falls back to the external binary for an unknown value", async () => {
+            const { normalizeSettings } = await import("../src/settings");
+            expect(normalizeSettings({ weidu: { compiler: "nonsense" } }).weidu.compiler).toBe("weidu");
+        });
+
         it("should normalize partial settings by filling defaults", async () => {
             const { normalizeSettings } = await import("../src/settings");
             const settings = normalizeSettings({

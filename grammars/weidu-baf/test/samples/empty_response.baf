@@ -1,0 +1,7 @@
+IF
+  Global("g_done","GLOBAL",0)
+THEN
+  RESPONSE #40
+  RESPONSE #60
+    SetGlobal("g_done","GLOBAL",1)
+END

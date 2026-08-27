@@ -24,6 +24,10 @@
             sharedText?: boolean;
             /** Per-node FIELD editability (superset incl. faithful/bundle TSSL). Gates drag-to-retarget. */
             fieldEditable?: boolean;
+            /** The format carries no source spans at all (a compiled DLG), so a missing one is not "new". */
+            sourceless?: boolean;
+            /** This card belongs to a neighbouring dialog drawn for context; this editor writes one file. */
+            external?: boolean;
         };
         type: string;
     } = $props();
@@ -32,8 +36,8 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    {@const pending = isPendingState(data.state)}
-    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged} class:pending>
+    {@const pending = !data.sourceless && isPendingState(data.state)}
+    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged} class:pending class:foreign={data.external}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
             <span class="who">{stateHeadLabel(data.state, data.sourceName)}</span>
@@ -45,6 +49,7 @@
             {#if data.state.isEntry}<span class="rmark start" title="Conversation start node: reached from talk_p_proc. Read-only - edit the .ssl to change the dialog's entry wiring.">start</span>{/if}
             {#if data.sharedText}<span class="rmark shared" title="Shared text: this state's line or an option uses the same .msg/.tra entry as another state - editing it here changes the other one too.">shared</span>{/if}
             {#if pending}<span class="rmark unsaved" title="Unsaved draft: this node isn't in the source file yet - it lands on the next save.">unsaved</span>{/if}
+            {#if data.external}<span class="rmark foreign" title="Another dialog: shown so this conversation's hand-offs are visible. This editor saves only the file it opened, so nothing here can be edited.">{data.state.dlgResref}</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -167,6 +172,21 @@
         color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
         background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
         border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+        border-radius: 3px;
+        padding: 0 3px;
+        font-size: 8px;
+        font-weight: 700;
+    }
+    /* A state from a neighbouring dialog, drawn so a hand-off lands somewhere visible. Muted and dashed like
+       the other read-only cards; the chip carries its file name, since that is the fact the reader needs. */
+    .card.foreign {
+        border-style: dashed;
+        border-color: var(--vscode-descriptionForeground);
+        opacity: 0.85;
+    }
+    .hd .rmark.foreign {
+        color: var(--vscode-descriptionForeground);
+        border: 1px solid var(--vscode-descriptionForeground);
         border-radius: 3px;
         padding: 0 3px;
         font-size: 8px;

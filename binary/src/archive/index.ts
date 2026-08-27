@@ -9,7 +9,7 @@ export { parseKey } from "./key";
 export type { KeyIndex, KeyBifEntry, KeyResource } from "./key";
 export { openBif, parseBif } from "./bif";
 export type { BifArchive, BifFileEntry, BifTilesetEntry } from "./bif";
-export { parseIds } from "./ids";
+export { parseIds, parseIdsAll } from "./ids";
 export { parse2daRowNames, parse2daTable, type TwoDaRow, type TwoDaTable } from "./two-da";
 export { openTlk, parseTlk } from "./tlk";
 export type { Tlk, TlkOptions } from "./tlk";

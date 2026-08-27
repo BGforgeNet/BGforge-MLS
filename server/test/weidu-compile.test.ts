@@ -64,6 +64,8 @@ describe("weidu-compile", () => {
     const baseSettings: WeiDUsettings = {
         path: "/usr/bin/weidu",
         gamePath: "/games/bg2",
+        tlkEncoding: "",
+        compiler: "weidu",
     };
 
     /** Helper: set up mockExecFile to invoke the callback with given results. */
@@ -85,7 +87,12 @@ describe("weidu-compile", () => {
         });
 
         it("rejects .d without game path", async () => {
-            const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
+            const noGameSettings: WeiDUsettings = {
+                path: "/usr/bin/weidu",
+                gamePath: "",
+                tlkEncoding: "",
+                compiler: "weidu",
+            };
             await compile(normalizeUri("file:///test.d"), noGameSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
@@ -93,7 +100,12 @@ describe("weidu-compile", () => {
         });
 
         it("rejects .baf without game path", async () => {
-            const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
+            const noGameSettings: WeiDUsettings = {
+                path: "/usr/bin/weidu",
+                gamePath: "",
+                tlkEncoding: "",
+                compiler: "weidu",
+            };
             await compile(normalizeUri("file:///test.baf"), noGameSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
@@ -101,7 +113,12 @@ describe("weidu-compile", () => {
         });
 
         it("allows .tp2 without game path (uses --nogame)", async () => {
-            const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
+            const noGameSettings: WeiDUsettings = {
+                path: "/usr/bin/weidu",
+                gamePath: "",
+                tlkEncoding: "",
+                compiler: "weidu",
+            };
             setupExecFile(null, "OK");
             await compile(normalizeUri("file:///test.tp2"), noGameSettings, false, "content");
 

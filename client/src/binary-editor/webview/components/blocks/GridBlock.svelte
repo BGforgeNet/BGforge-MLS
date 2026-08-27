@@ -88,7 +88,7 @@
             <span class="field-control {controlWidthClass(cell.row)}">
                 <CellControl row={cell.row} {onedit} />
             </span>
-            <!-- Per `webview/AGENTS.md`, a per-field affordance covers every block renderer, not just the kv
+            <!-- Per `docs/binary-editor-ui.md`, a per-field affordance covers every block renderer, not just the kv
                  form - a grid cell holding a resref (a CRE item slot) offers the same open chip and, where the
                  target is a picture, the same thumbnail. -->
             {#if cell.row.thumbnail}

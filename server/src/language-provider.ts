@@ -33,6 +33,7 @@ export {
     type IndexingCapability,
     type FeatureGateCapability,
     type SemanticTokenCapability,
+    type StrRefCapability,
     type WorkspaceSymbolCapability,
 } from "./core/capabilities";
 
@@ -53,6 +54,7 @@ import type {
     FeatureGateCapability,
     SemanticTokenCapability,
     InlayHintCapability,
+    StrRefCapability,
     WorkspaceSymbolCapability,
 } from "./core/capabilities";
 
@@ -79,4 +81,5 @@ export type LanguageProvider = ProviderBase &
     Partial<FeatureGateCapability> &
     Partial<SemanticTokenCapability> &
     Partial<InlayHintCapability> &
+    Partial<StrRefCapability> &
     Partial<WorkspaceSymbolCapability>;

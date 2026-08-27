@@ -5,22 +5,39 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 
 // Imported after vi.mock so the mocked vscode is in place.
-import type { TwoDaTable } from "@bgforge/binary";
+import type { IeScriptStyle, TwoDaTable } from "@bgforge/binary";
 import {
+    createBcsSymbolResolver,
     createFlagBitNamesResolver,
     createNamingTableResolver,
     createResourceListResolver,
     createResourceBytesResolver,
     createResourceTypeResolver,
     createSlotLabelResolver,
+    createStringTableProbe,
     createStrrefResolver,
+    createStrrefSearch,
+    type StrrefMatch,
     isGameDocument,
 } from "../src/ie-resources/game-lookups";
 import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
 
+/** Stands in for a real dialog.tlk search: substring, case-insensitive, in strref order, capped at `limit`. */
+function searchLines(query: string, limit: number) {
+    return Object.entries(LINES)
+        .map(([strref, text]) => ({ strref: Number(strref), text }))
+        .filter((hit) => hit.text !== "" && hit.text.toLowerCase().includes(query.toLowerCase()))
+        .sort((a, b) => a.strref - b.strref)
+        .slice(0, limit);
+}
+
 const TABLES: Record<string, ReadonlyMap<number, string>> = {
+    // The two a compiled script's every call is named through, plus one enumerated object field.
+    trigger: new Map([[0x4030, "False()"]]),
+    action: new Map([[36, "Continue()"]]),
+    ea: new Map([[2, "PC"]]),
     sndslot: new Map([[21, "AREA_FOREST"]]),
     soundoff: new Map([
         [21, "AREA_FOREST_BG1"],
@@ -28,7 +45,7 @@ const TABLES: Record<string, ReadonlyMap<number, string>> = {
     ]),
 };
 
-function session(
+function gameSource(
     overrides: {
         throws?: boolean;
         noTlk?: boolean;
@@ -36,27 +53,50 @@ function session(
         twoDa?: string[];
         resources?: string[];
         flavour?: string;
+        scriptStyle?: IeScriptStyle;
         kitlist?: TwoDaTable;
     } = {},
 ): {
-    ensureOpen: (dir: string) => {
-        tlk: () => { get: (n: number) => string | undefined } | undefined;
+    gameAt: (dir: string) => {
+        tlk: () =>
+            | {
+                  get: (n: number) => string | undefined;
+                  search: (q: string, o?: { limit?: number }) => readonly StrrefMatch[];
+              }
+            | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
+        idsAll: (resref: string) => ReadonlyMap<number, readonly string[]> | undefined;
         twoDa: (resref: string) => ReadonlyMap<number, string> | undefined;
         twoDaTable: (resref: string) => TwoDaTable | undefined;
         canRead: (resref: string, type: string) => boolean;
         read: (resref: string, type: string) => Uint8Array;
         list: () => { resref: string; ext: string | undefined }[];
-        identity: { flavour: string };
+        identity: { flavour: string; scriptStyle: IeScriptStyle };
     };
 } {
     return {
-        ensureOpen: (dir: string) => {
+        gameAt: (dir: string) => {
             if (overrides.throws === true) throw new Error(`no game at ${dir}`);
             return {
-                tlk: () => (overrides.noTlk === true ? undefined : { get: (n: number) => LINES[n] }),
+                tlk: () =>
+                    overrides.noTlk === true
+                        ? undefined
+                        : {
+                              get: (n: number) => LINES[n],
+                              search: (q: string, o?: { limit?: number }) => searchLines(q, o?.limit ?? 100),
+                          },
                 ids: (resref: string) =>
                     (overrides.tables ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
+                // Every row per value, which is what a script decompiler reads. The fake tables hold one row
+                // each, so this is the same content in the shape `idsAll` promises.
+                idsAll: (resref: string) => {
+                    const table = (overrides.tables ?? []).includes(resref.toLowerCase())
+                        ? TABLES[resref.toLowerCase()]
+                        : undefined;
+                    return table === undefined
+                        ? undefined
+                        : new Map([...table].map(([value, name]) => [value, [name]]));
+                },
                 twoDa: (resref: string) =>
                     (overrides.twoDa ?? []).includes(resref.toLowerCase()) ? TABLES[resref.toLowerCase()] : undefined,
                 twoDaTable: (resref: string) => (resref.toLowerCase() === "kitlist" ? overrides.kitlist : undefined),
@@ -77,7 +117,7 @@ function session(
                         const dot = name.lastIndexOf(".");
                         return { resref: name.slice(0, dot).toUpperCase(), ext: name.slice(dot + 1) };
                     }),
-                identity: { flavour: overrides.flavour ?? "tob" },
+                identity: { flavour: overrides.flavour ?? "tob", scriptStyle: overrides.scriptStyle ?? "bg2" },
             };
         },
     };
@@ -138,11 +178,11 @@ describe("file-record fallback", () => {
 
     it("resolves a file record's strref against the fallback game", () => {
         const opened: string[] = [];
-        const base = session();
+        const base = gameSource();
         const spied = {
-            ensureOpen: (dir: string) => {
+            gameAt: (dir: string) => {
                 opened.push(dir);
-                return base.ensureOpen(dir);
+                return base.gameAt(dir);
             },
         };
 
@@ -157,11 +197,11 @@ describe("file-record fallback", () => {
     it("ignores a g= query on a file document in favour of the fallback", () => {
         const queried = { scheme: "file", query: "g=%2Fgames%2Felsewhere", path: "/mods/sw1h01.itm" } as never;
         const opened: string[] = [];
-        const base = session();
+        const base = gameSource();
         const spied = {
-            ensureOpen: (dir: string) => {
+            gameAt: (dir: string) => {
                 opened.push(dir);
-                return base.ensureOpen(dir);
+                return base.gameAt(dir);
             },
         };
 
@@ -172,11 +212,11 @@ describe("file-record fallback", () => {
 
     it("lets a game URI's own directory win over the fallback", () => {
         const opened: string[] = [];
-        const base = session();
+        const base = gameSource();
         const spied = {
-            ensureOpen: (dir: string) => {
+            gameAt: (dir: string) => {
                 opened.push(dir);
-                return base.ensureOpen(dir);
+                return base.gameAt(dir);
             },
         };
 
@@ -188,7 +228,7 @@ describe("file-record fallback", () => {
 
 describe("createStrrefResolver", () => {
     it("resolves a strref against the game the URI names", () => {
-        expect(createStrrefResolver(session())(gameUri(), 6348)).toBe("Ring of Protection +1");
+        expect(createStrrefResolver(gameSource())(gameUri(), 6348)).toBe("Ring of Protection +1");
     });
 
     // Carries a `g=` query, so it differs from a game URI ONLY by scheme: with an empty query the later
@@ -196,7 +236,7 @@ describe("createStrrefResolver", () => {
     it("resolves nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
 
-        expect(createStrrefResolver(session())(fileUri, 6348)).toBeUndefined();
+        expect(createStrrefResolver(gameSource())(fileUri, 6348)).toBeUndefined();
     });
 
     // -1 is the format-wide "no string" sentinel, so it must never reach the TLK (where it would either miss
@@ -204,9 +244,10 @@ describe("createStrrefResolver", () => {
     it("resolves nothing for the -1 sentinel", () => {
         const get = vi.fn();
         const spySession = {
-            ensureOpen: () => ({
-                tlk: () => ({ get }),
+            gameAt: () => ({
+                tlk: () => ({ get, search: () => [] }),
                 ids: () => undefined,
+                idsAll: () => undefined,
                 twoDa: () => undefined,
                 twoDaTable: () => undefined,
                 canRead: () => false,
@@ -214,7 +255,7 @@ describe("createStrrefResolver", () => {
                     throw new Error("empty game");
                 },
                 list: () => [],
-                identity: { flavour: "tob" },
+                identity: { flavour: "tob", scriptStyle: "bg2" as const },
             }),
         };
 
@@ -222,29 +263,110 @@ describe("createStrrefResolver", () => {
         expect(get).not.toHaveBeenCalled();
     });
 
-    // A CRE leaves unused sound slots pointing at an empty entry; showing it would render a trailing space in
-    // the field and a blank tooltip.
-    it("treats an empty TLK line as unresolved", () => {
-        expect(createStrrefResolver(session())(gameUri(), 72909)).toBeUndefined();
+    // An entry that exists and is blank IS resolved - a DLG state whose line is empty is real text, and
+    // reporting it as unresolved had the dialog editor warn that a line was missing from the TLK. Whether a
+    // blank line is worth showing is the consuming field's call (`game-rows.ts`), not the resolver's.
+    it("returns an empty TLK line as the empty string rather than as unresolved", () => {
+        expect(createStrrefResolver(gameSource())(gameUri(), 72909)).toBe("");
     });
 
     it("resolves nothing when the strref is absent from the TLK", () => {
-        expect(createStrrefResolver(session())(gameUri(), 999999)).toBeUndefined();
+        expect(createStrrefResolver(gameSource())(gameUri(), 999999)).toBeUndefined();
     });
 
     it("resolves nothing when the game has no TLK", () => {
-        expect(createStrrefResolver(session({ noTlk: true }))(gameUri(), 6348)).toBeUndefined();
+        expect(createStrrefResolver(gameSource({ noTlk: true }))(gameUri(), 6348)).toBeUndefined();
     });
 
     // An unreadable game must not fail the editor open - the field falls back to showing its number.
     it("swallows an unopenable game", () => {
-        expect(createStrrefResolver(session({ throws: true }))(gameUri(), 6348)).toBeUndefined();
+        expect(createStrrefResolver(gameSource({ throws: true }))(gameUri(), 6348)).toBeUndefined();
+    });
+
+    /**
+     * Only one install is open at a time, so a document naming another one gets `undefined` from `gameAt`
+     * rather than a game. It has to read as "nothing to resolve", exactly like a record outside a game - the
+     * alternative is a strref silently resolved against whichever install happened to answer.
+     */
+    it("resolves nothing for a document naming an install that is not the open one", () => {
+        const otherGame = { gameAt: () => undefined };
+
+        expect(createStrrefResolver(otherGame)(gameUri(), 6348)).toBeUndefined();
+    });
+});
+
+/**
+ * The banner over a compiled dialog reads its advice off this: with no table there is a game to open, with a
+ * table the strref is simply one the game does not have. Getting it wrong tells a reader to open the game
+ * they already have open.
+ */
+describe("createStringTableProbe", () => {
+    it("finds the game's string table", () => {
+        expect(createStringTableProbe(gameSource())(gameUri())).toBe(true);
+    });
+
+    it("answers no for a game with no TLK", () => {
+        expect(createStringTableProbe(gameSource({ noTlk: true }))(gameUri())).toBe(false);
+    });
+
+    it("answers no for an unopenable game rather than throwing", () => {
+        expect(createStringTableProbe(gameSource({ throws: true }))(gameUri())).toBe(false);
+    });
+
+    it("answers no for a document that names no game at all", () => {
+        expect(createStringTableProbe(gameSource())({ scheme: "file", path: "/mod/x.dlg" } as never)).toBe(false);
+    });
+});
+
+describe("createStrrefSearch", () => {
+    it("finds strings by what they say, against the game the URI names", () => {
+        expect(createStrrefSearch(gameSource())(gameUri(), "protection")).toEqual([
+            { strref: 6348, text: "Ring of Protection +1" },
+        ]);
+    });
+
+    it("passes the caller's limit through, so a common word cannot flood a picker", () => {
+        const search = vi.fn(() => []);
+        const spySession = {
+            gameAt: () => ({
+                tlk: () => ({ get: () => undefined, search }),
+                ids: () => undefined,
+                idsAll: () => undefined,
+                twoDa: () => undefined,
+                twoDaTable: () => undefined,
+                canRead: () => false,
+                read: (): Uint8Array => {
+                    throw new Error("empty game");
+                },
+                list: () => [],
+                identity: { flavour: "bg2", scriptStyle: "bg2" as IeScriptStyle },
+            }),
+        };
+
+        createStrrefSearch(spySession)(gameUri(), "sword", 5);
+
+        expect(search).toHaveBeenCalledWith("sword", { limit: 5 });
+    });
+
+    it("finds nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
+
+        expect(createStrrefSearch(gameSource())(fileUri, "protection")).toEqual([]);
+    });
+
+    it("finds nothing when the game has no string table", () => {
+        expect(createStrrefSearch(gameSource({ noTlk: true }))(gameUri(), "protection")).toEqual([]);
+    });
+
+    // An unreadable game reads as "no matches", exactly as the strref resolver treats it as "no line".
+    it("finds nothing when the game cannot be opened", () => {
+        expect(createStrrefSearch(gameSource({ throws: true }))(gameUri(), "protection")).toEqual([]);
     });
 });
 
 describe("createSlotLabelResolver", () => {
     it("names a slot from the game's IDS table", () => {
-        const resolve = createSlotLabelResolver(session({ tables: ["sndslot"] }));
+        const resolve = createSlotLabelResolver(gameSource({ tables: ["sndslot"] }));
 
         expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST");
     });
@@ -252,7 +374,7 @@ describe("createSlotLabelResolver", () => {
     // A BG2 install ships both tables and they disagree at the same index, so preference order has to decide
     // rather than a merge - SNDSLOT wins where present.
     it("prefers the first table the game ships, not a merge of both", () => {
-        const resolve = createSlotLabelResolver(session({ tables: ["sndslot", "soundoff"] }));
+        const resolve = createSlotLabelResolver(gameSource({ tables: ["sndslot", "soundoff"] }));
 
         expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST");
         // Only the fallback names slot 35, so it still answers there.
@@ -260,13 +382,13 @@ describe("createSlotLabelResolver", () => {
     });
 
     it("falls back to the next table when the preferred one is absent", () => {
-        const resolve = createSlotLabelResolver(session({ tables: ["soundoff"] }));
+        const resolve = createSlotLabelResolver(gameSource({ tables: ["soundoff"] }));
 
         expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 21)).toBe("AREA_FOREST_BG1");
     });
 
     it("names nothing for a slot no table covers", () => {
-        const resolve = createSlotLabelResolver(session({ tables: ["sndslot"] }));
+        const resolve = createSlotLabelResolver(gameSource({ tables: ["sndslot"] }));
 
         expect(resolve(gameUri(), ["SNDSLOT", "SOUNDOFF"], 90)).toBeUndefined();
     });
@@ -274,13 +396,13 @@ describe("createSlotLabelResolver", () => {
     it("names nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.cre" } as never;
 
-        expect(createSlotLabelResolver(session({ tables: ["sndslot"] }))(fileUri, ["SNDSLOT"], 21)).toBeUndefined();
+        expect(createSlotLabelResolver(gameSource({ tables: ["sndslot"] }))(fileUri, ["SNDSLOT"], 21)).toBeUndefined();
     });
 });
 
 describe("createNamingTableResolver", () => {
     it("returns the whole table, so a consumer can build an option list from it", () => {
-        const resolve = createNamingTableResolver(session({ tables: ["sndslot"] }));
+        const resolve = createNamingTableResolver(gameSource({ tables: ["sndslot"] }));
 
         expect(resolve(gameUri(), "ids", ["SNDSLOT"])).toEqual([
             { table: "SNDSLOT", entries: new Map([[21, "AREA_FOREST"]]) },
@@ -290,7 +412,7 @@ describe("createNamingTableResolver", () => {
     // Every present candidate is reported, tagged with the table it came from, because the caller needs both:
     // which key encoding to apply (declared per table) and which name wins a key two tables share.
     it("reports every candidate the game ships, in declaration order", () => {
-        const resolve = createNamingTableResolver(session({ tables: ["sndslot", "soundoff"] }));
+        const resolve = createNamingTableResolver(gameSource({ tables: ["sndslot", "soundoff"] }));
 
         expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])?.map((t) => t.table)).toEqual([
             "SNDSLOT",
@@ -299,7 +421,7 @@ describe("createNamingTableResolver", () => {
     });
 
     it("reports only the candidates present when the preferred one is absent", () => {
-        const resolve = createNamingTableResolver(session({ tables: ["soundoff"] }));
+        const resolve = createNamingTableResolver(gameSource({ tables: ["soundoff"] }));
 
         expect(resolve(gameUri(), "ids", ["SNDSLOT", "SOUNDOFF"])).toEqual([
             { table: "SOUNDOFF", entries: TABLES["soundoff"] },
@@ -307,20 +429,20 @@ describe("createNamingTableResolver", () => {
     });
 
     it("returns nothing when the game ships none of the candidates", () => {
-        expect(createNamingTableResolver(session())(gameUri(), "ids", ["RACE"])).toBeUndefined();
+        expect(createNamingTableResolver(gameSource())(gameUri(), "ids", ["RACE"])).toBeUndefined();
     });
 
     it("returns nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.cre" } as never;
 
         expect(
-            createNamingTableResolver(session({ tables: ["sndslot"] }))(fileUri, "ids", ["SNDSLOT"]),
+            createNamingTableResolver(gameSource({ tables: ["sndslot"] }))(fileUri, "ids", ["SNDSLOT"]),
         ).toBeUndefined();
     });
 
     // An unreadable game must not fail the open; the field falls back to its vendored table.
     it("swallows an unopenable game", () => {
-        expect(createNamingTableResolver(session({ throws: true }))(gameUri(), "ids", ["SNDSLOT"])).toBeUndefined();
+        expect(createNamingTableResolver(gameSource({ throws: true }))(gameUri(), "ids", ["SNDSLOT"])).toBeUndefined();
     });
 });
 
@@ -329,13 +451,13 @@ describe("createResourceTypeResolver", () => {
     const REPLACEMENT = { type: "ITM", byFlavour: { pstee: "WAV" } };
 
     it("answers with the declared type when the install has it", () => {
-        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
+        const resolve = createResourceTypeResolver(gameSource({ resources: ["sw1h01.itm"] }));
 
         expect(resolve(gameUri(), REPLACEMENT, "SW1H01")).toEqual({ type: "ITM", present: true });
     });
 
     it("answers with the flavour's own type where one is declared", () => {
-        const resolve = createResourceTypeResolver(session({ resources: ["drop01.wav"], flavour: "pstee" }));
+        const resolve = createResourceTypeResolver(gameSource({ resources: ["drop01.wav"], flavour: "pstee" }));
 
         expect(resolve(gameUri(), REPLACEMENT, "DROP01")).toEqual({ type: "WAV", present: true });
     });
@@ -346,14 +468,14 @@ describe("createResourceTypeResolver", () => {
     it("follows the flavour even when both types exist in the install", () => {
         const both = { resources: ["x.itm", "x.wav"] };
 
-        expect(createResourceTypeResolver(session(both))(gameUri(), REPLACEMENT, "X")?.type).toBe("ITM");
+        expect(createResourceTypeResolver(gameSource(both))(gameUri(), REPLACEMENT, "X")?.type).toBe("ITM");
         expect(
-            createResourceTypeResolver(session({ ...both, flavour: "pstee" }))(gameUri(), REPLACEMENT, "X")?.type,
+            createResourceTypeResolver(gameSource({ ...both, flavour: "pstee" }))(gameUri(), REPLACEMENT, "X")?.type,
         ).toBe("WAV");
     });
 
     it("ignores a byFlavour entry for some other game", () => {
-        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"], flavour: "bgee" }));
+        const resolve = createResourceTypeResolver(gameSource({ resources: ["sw1h01.itm"], flavour: "bgee" }));
 
         expect(resolve(gameUri(), REPLACEMENT, "SW1H01")?.type).toBe("ITM");
     });
@@ -362,7 +484,7 @@ describe("createResourceTypeResolver", () => {
     // holds - it follows from the record and the game - so the field stays pickable; only `present` is false,
     // and that is what withholds the open affordance.
     it("still names the type when the install does not have it", () => {
-        expect(createResourceTypeResolver(session())(gameUri(), { type: "ITM" }, "NOPE")).toEqual({
+        expect(createResourceTypeResolver(gameSource())(gameUri(), { type: "ITM" }, "NOPE")).toEqual({
             type: "ITM",
             present: false,
         });
@@ -371,7 +493,7 @@ describe("createResourceTypeResolver", () => {
     // The empty field is the one a picker exists for, so it gets an answer - but "" is the "no resource"
     // value, so it never counts as present.
     it("names the type for an empty resref, which is never present", () => {
-        const resolve = createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }));
+        const resolve = createResourceTypeResolver(gameSource({ resources: ["sw1h01.itm"] }));
 
         expect(resolve(gameUri(), { type: "ITM" }, "")).toEqual({ type: "ITM", present: false });
     });
@@ -380,14 +502,14 @@ describe("createResourceTypeResolver", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
 
         expect(
-            createResourceTypeResolver(session({ resources: ["sw1h01.itm"] }))(fileUri, { type: "ITM" }, "SW1H01"),
+            createResourceTypeResolver(gameSource({ resources: ["sw1h01.itm"] }))(fileUri, { type: "ITM" }, "SW1H01"),
         ).toBeUndefined();
     });
 
     // An unreadable game must not fail the open - the field just gets no affordance.
     it("swallows an unopenable game", () => {
         expect(
-            createResourceTypeResolver(session({ throws: true }))(gameUri(), { type: "ITM" }, "SW1H01"),
+            createResourceTypeResolver(gameSource({ throws: true }))(gameUri(), { type: "ITM" }, "SW1H01"),
         ).toBeUndefined();
     });
 });
@@ -396,7 +518,7 @@ describe("createResourceBytesResolver", () => {
     const INSTALL = { resources: ["isw1h01.bam", "imoenm.bmp"] };
 
     it("reads a resource the install has", () => {
-        const read = createResourceBytesResolver(session(INSTALL));
+        const read = createResourceBytesResolver(gameSource(INSTALL));
 
         expect(new TextDecoder().decode(read(gameUri(), "ISW1H01", "BAM"))).toBe("isw1h01.bam");
     });
@@ -407,20 +529,20 @@ describe("createResourceBytesResolver", () => {
      * exception that would take the field beside it down.
      */
     it("answers nothing for a resource the install does not have, without throwing", () => {
-        const read = createResourceBytesResolver(session(INSTALL));
+        const read = createResourceBytesResolver(gameSource(INSTALL));
 
         expect(read(gameUri(), "MODONLY", "BAM")).toBeUndefined();
     });
 
     // An unreadable game is the same answer as no game: nothing to draw, and nothing that fails an open.
     it("answers nothing when the game cannot be opened", () => {
-        expect(createResourceBytesResolver(session({ throws: true }))(gameUri(), "ISW1H01", "BAM")).toBeUndefined();
+        expect(createResourceBytesResolver(gameSource({ throws: true }))(gameUri(), "ISW1H01", "BAM")).toBeUndefined();
     });
 
     it("answers nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
 
-        expect(createResourceBytesResolver(session(INSTALL))(fileUri, "ISW1H01", "BAM")).toBeUndefined();
+        expect(createResourceBytesResolver(gameSource(INSTALL))(fileUri, "ISW1H01", "BAM")).toBeUndefined();
     });
 });
 
@@ -428,7 +550,7 @@ describe("createResourceListResolver", () => {
     const INSTALL = { resources: ["sw1h01.itm", "misc01.itm", "isw1h01.bam", "drop01.wav"] };
 
     it("lists the install's resrefs of one type, sorted", () => {
-        const list = createResourceListResolver(session(INSTALL));
+        const list = createResourceListResolver(gameSource(INSTALL));
 
         expect(list(gameUri(), "itm")).toEqual(["MISC01", "SW1H01"]);
     });
@@ -436,7 +558,7 @@ describe("createResourceListResolver", () => {
     // The declaration's type is upper-case ("BAM") while the index names extensions lower-case; a picker that
     // matched them literally would offer nothing for every field.
     it("matches the type case-insensitively", () => {
-        const list = createResourceListResolver(session(INSTALL));
+        const list = createResourceListResolver(gameSource(INSTALL));
 
         expect(list(gameUri(), "BAM")).toEqual(["ISW1H01"]);
     });
@@ -444,18 +566,18 @@ describe("createResourceListResolver", () => {
     // Not an error and not undefined: a game can genuinely hold none of a type, and the picker then simply has
     // nothing to suggest while the field stays editable.
     it("answers an empty list for a type the install has none of", () => {
-        expect(createResourceListResolver(session(INSTALL))(gameUri(), "spl")).toEqual([]);
+        expect(createResourceListResolver(gameSource(INSTALL))(gameUri(), "spl")).toEqual([]);
     });
 
     // Undefined, distinct from empty: there is no game to ask, so the field is not a picker at all.
     it("answers nothing for a document outside a game", () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/x.itm" } as never;
 
-        expect(createResourceListResolver(session(INSTALL))(fileUri, "itm")).toBeUndefined();
+        expect(createResourceListResolver(gameSource(INSTALL))(fileUri, "itm")).toBeUndefined();
     });
 
     it("swallows an unopenable game", () => {
-        expect(createResourceListResolver(session({ throws: true }))(gameUri(), "itm")).toBeUndefined();
+        expect(createResourceListResolver(gameSource({ throws: true }))(gameUri(), "itm")).toBeUndefined();
     });
 });
 
@@ -463,7 +585,7 @@ describe("createResourceListResolver", () => {
  * ITM kit-usability bits -> the install's kits, through the resolver the editor actually calls.
  *
  * The pure mapping is covered in `ie-resources-kit-usability.test.ts`; this pins the resolver's own decisions:
- * that it reads KITLIST.2DA off the session, resolves display names through the game's tlk, answers only for its
+ * that it reads KITLIST.2DA off the gameSource, resolves display names through the game's tlk, answers only for its
  * own ref kind, and reports "nothing" rather than an empty object so a bit falls back to its vendored label.
  */
 describe("createFlagBitNamesResolver", () => {
@@ -479,7 +601,7 @@ describe("createFlagBitNamesResolver", () => {
     };
 
     it("names a shared bit with every kit the install maps onto it", () => {
-        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+        const resolve = createFlagBitNamesResolver(gameSource({ kitlist: KITLIST }));
 
         expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toEqual({
             "64": ["Ring of Protection +1", "DWARVEN_DEFENDER"],
@@ -487,27 +609,74 @@ describe("createFlagBitNamesResolver", () => {
     });
 
     it("answers nothing for a byte whose bits the install does not claim", () => {
-        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+        const resolve = createFlagBitNamesResolver(gameSource({ kitlist: KITLIST }));
 
         expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 1 })).toBeUndefined();
     });
 
     it("answers nothing when the install ships no KITLIST", () => {
-        const resolve = createFlagBitNamesResolver(session());
+        const resolve = createFlagBitNamesResolver(gameSource());
 
         expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toBeUndefined();
     });
 
     // Another bit-ref kind would have its own table and its own key relation; answering for it would be a guess.
     it("declines a ref kind it does not own", () => {
-        const resolve = createFlagBitNamesResolver(session({ kitlist: KITLIST }));
+        const resolve = createFlagBitNamesResolver(gameSource({ kitlist: KITLIST }));
 
         expect(resolve(gameUri(), { kind: "somethingElse", byte: 3 })).toBeUndefined();
     });
 
     it("answers nothing when the game cannot be opened", () => {
-        const resolve = createFlagBitNamesResolver(session({ throws: true, kitlist: KITLIST }));
+        const resolve = createFlagBitNamesResolver(gameSource({ throws: true, kitlist: KITLIST }));
 
         expect(resolve(gameUri(), { kind: "itmKitUsability", byte: 3 })).toBeUndefined();
+    });
+});
+
+/**
+ * How a compiled script reads under its install: the tables that name its numbers, and the engine that says
+ * which field each number is. Both come from one open game, so the resolver hands back one record.
+ */
+describe("createBcsSymbolResolver", () => {
+    const naming = (overrides: Parameters<typeof gameSource>[0] = {}) =>
+        createBcsSymbolResolver(gameSource({ tables: ["trigger", "action", "ea"], ...overrides }))(gameUri());
+
+    it("names triggers and actions from the install's own tables", () => {
+        const resolved = naming();
+
+        expect(resolved?.symbols.trigger(0x4030)).toEqual(["False()"]);
+        expect(resolved?.symbols.action(36)).toEqual(["Continue()"]);
+        expect(resolved?.symbols.ids("EA")?.get(2)).toBe("PC");
+    });
+
+    // Signatures come through `idsAll`, so an id the table never names is an empty list, not undefined - the
+    // decompiler reads "no row for this id" and degrades to `UnknownTrigger<id>()` rather than failing.
+    it("reports no rows for an id the install does not name", () => {
+        const resolved = naming();
+
+        expect(resolved?.symbols.trigger(0x9999)).toEqual([]);
+        expect(resolved?.symbols.action(9999)).toEqual([]);
+    });
+
+    it("reports no table the install does not ship", () => {
+        expect(naming()?.symbols.ids("SUBRACE")).toBeUndefined();
+    });
+
+    // The engine decides which table names each object field, and nothing in a script says which game wrote it.
+    it("takes the engine from the game's detected script style", () => {
+        expect(naming()?.engine).toBe("bg");
+        expect(naming({ scriptStyle: "pst" })?.engine).toBe("pst");
+        expect(naming({ scriptStyle: "iwd1" })?.engine).toBe("iwd");
+        expect(naming({ scriptStyle: "iwd2" })?.engine).toBe("iwd2");
+    });
+
+    it("resolves nothing for a document with no game behind it", () => {
+        expect(createBcsSymbolResolver(gameSource())({ scheme: "file", path: "/mod/a.bcs" } as never)).toBeUndefined();
+    });
+
+    // An unreadable game reads as "no game", exactly as a document outside one does.
+    it("resolves nothing when the game cannot be opened", () => {
+        expect(naming({ throws: true })).toBeUndefined();
     });
 });

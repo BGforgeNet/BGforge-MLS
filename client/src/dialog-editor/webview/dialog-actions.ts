@@ -8,6 +8,17 @@
 import type { DialogReaction, DialogTarget } from "../../../../shared/dialog-model";
 
 export interface DialogActions {
+    /**
+     * Ask the host to choose a game string for a line. Only a compiled dialog offers this: its text is a
+     * reference into the game's string table, so it is picked rather than typed. `null` addresses the state's
+     * own line, a choice id one of its replies.
+     */
+    pickString: (choiceId: string | null) => void;
+    /**
+     * Ask the host to detach the selected state: the replies leading to it stop doing so, but the state and
+     * its number stay, because other dialogs address it by number. Compiled dialogs only.
+     */
+    detachState: () => void;
     rename: (newId: string) => void;
     addReply: () => void;
     removeReply: (choiceId: string) => void;

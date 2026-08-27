@@ -130,7 +130,7 @@ describe("compile dispatcher", () => {
             mockRegistryHas.mockReturnValue(true);
             mockRegistryCompile.mockResolvedValue(true);
 
-            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+            await compile("bgforge-script:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
 
             expect(mockRegistryCompile).not.toHaveBeenCalled();
         });
@@ -138,7 +138,7 @@ describe("compile dispatcher", () => {
         it("stays silent about it on the automatic path, which runs on every save and keystroke", async () => {
             mockRegistryHas.mockReturnValue(true);
 
-            await compile("bgforge-int:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
+            await compile("bgforge-script:/mods/a.int.ssl", "fallout-ssl", false, "procedure start begin end");
 
             expect(mockShowInfo).not.toHaveBeenCalled();
         });

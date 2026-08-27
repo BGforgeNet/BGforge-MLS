@@ -236,6 +236,16 @@ importers:
         specifier: ^13.0.6
         version: 13.0.6
 
+  compilers/bcs:
+    dependencies:
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.26.10
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(vite@8.1.4(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+
   compilers/ssl:
     dependencies:
       web-tree-sitter:
@@ -366,6 +376,9 @@ importers:
         specifier: 'catalog:'
         version: 0.28.1
     devDependencies:
+      '@bgforge/binary':
+        specifier: workspace:*
+        version: link:../binary
       '@bgforge/format':
         specifier: workspace:*
         version: link:../format

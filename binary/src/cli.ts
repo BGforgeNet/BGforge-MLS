@@ -331,7 +331,9 @@ async function main() {
     await runCli({
         args,
         extensions: EXTENSIONS,
-        description: ".pro binary",
+        // The extensions come from the registry, so the scan message names the kind rather than one
+        // format - it used to say ".pro binary" for a sweep of any of the seven.
+        description: "binary",
         processFile: (filePath, mode) => processFile(filePath, mode, args.quiet, cliParseOptions, protoDirOverride),
     });
 }

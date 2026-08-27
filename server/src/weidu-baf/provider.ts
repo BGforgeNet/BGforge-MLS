@@ -11,7 +11,7 @@ import type { NormalizedUri } from "../core/normalized-uri";
 import { LANG_WEIDU_BAF } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";
-import { loadStaticSymbols } from "../core/static-loader";
+import { loadStaticSymbols, loadStrRefParams } from "../core/static-loader";
 import {
     type FormatResult,
     type LanguageProvider,
@@ -24,16 +24,18 @@ import {
     type SelectionRangeCapability,
     type FeatureGateCapability,
     type CompilationCapability,
+    type StrRefCapability,
 } from "../language-provider";
 import { createIsInsideComment } from "../shared/comment-check";
 import { stripCommentsWeidu, formatWeiduBaf as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-baf";
-import { compile as weiduCompile } from "../weidu-compile";
+import { runBafDiagnostics } from "./diagnostics";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
+import { findStrRefSites, type StrRefSite } from "../ie-resources/strref-sites";
 
 /** Comment node types in the BAF grammar. */
 const BAF_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, SyntaxType.LineComment]);
@@ -55,10 +57,12 @@ class WeiduBafProvider
         FoldingCapability,
         SelectionRangeCapability,
         FeatureGateCapability,
-        CompilationCapability
+        CompilationCapability,
+        StrRefCapability
 {
     readonly id = LANG_WEIDU_BAF;
     private symbolStore: Symbols | undefined;
+    private strRefParams: ReadonlyMap<string, readonly number[]> = new Map();
     private storedContext: ProviderContext | undefined;
 
     async init(context: ProviderContext): Promise<void> {
@@ -67,6 +71,7 @@ class WeiduBafProvider
         await initParser();
 
         this.symbolStore = new Symbols();
+        this.strRefParams = loadStrRefParams(LANG_WEIDU_BAF);
         const staticSymbols = loadStaticSymbols(LANG_WEIDU_BAF);
         this.symbolStore.loadStatic(staticSymbols);
 
@@ -81,6 +86,17 @@ class WeiduBafProvider
     // so symbol lookup is static-only (YAML data: actions + triggers).
     resolveSymbol(name: string, _text: string, _uri: NormalizedUri): IndexedSymbol | undefined {
         return resolveSymbolStatic(name, this.symbolStore);
+    }
+
+    /**
+     * Where the TLK string references are. The strref slots are generated from each action's own signature in
+     * the engine data, so the set tracks the data rather than a list of action names kept in code.
+     */
+    strRefs(text: string): StrRefSite[] {
+        if (this.strRefParams.size === 0) return [];
+        const tree = parseWithCache(text);
+        if (!tree) return [];
+        return findStrRefSites(tree.rootNode, (name) => this.strRefParams.get(name));
     }
 
     foldingRanges(text: string): FoldingRange[] {
@@ -119,7 +135,7 @@ class WeiduBafProvider
             conlog("WeiDU BAF provider not initialized, cannot compile");
             return;
         }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await runBafDiagnostics(uri, text, this.storedContext.settings, interactive);
     }
 }
 

@@ -19,37 +19,24 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
+import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../../../shared/languages";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import type { DialogMessages } from "../../../shared/dialog-model";
-import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
-import { buildDialogWebviewHtml } from "./dialog-webview-html";
+import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { isWebviewToHost } from "./webview/messages";
 
 // The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
 // language service + the tssl/td plugins run), so they are recognized by EXTENSION, not languageId - see
 // isDialogDocument. (The old set listed "tssl"/"td" as languageIds; those never matched - the live-open bug.)
-const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d"]);
+const DIALOG_LANGS: ReadonlySet<string> = new Set([LANG_FALLOUT_SSL, LANG_WEIDU_D]);
 
 /** Whether a document is an editable dialog file: a real dialog language, or a `.td`/`.tssl` (languageId typescript). */
 function isDialogDocument(doc: vscode.TextDocument): boolean {
-    return DIALOG_LANGS.has(doc.languageId) || (doc.languageId === "typescript" && /\.(tssl|td)$/i.test(doc.uri.path));
-}
-
-function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-    // Resolve the vscode/webview-bound inputs here; the pure HTML assembly (CSP shape +
-    // verbatim inline of the bundle) lives in buildDialogWebviewHtml, which is unit-tested
-    // without the vscode runtime (dialog-panel-html.test.ts).
-    const base = vscode.Uri.joinPath(extensionUri, "client", "out", "dialog-editor", "webview");
-    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.css")).toString();
-    const nonce = generateNonce();
-    const scriptBody = getCachedJsAsset(
-        "dialog-editor",
-        extensionUri.fsPath,
-        "client/out/dialog-editor/webview/main.js",
+    return (
+        DIALOG_LANGS.has(doc.languageId) || (doc.languageId === LANG_TYPESCRIPT && /\.(tssl|td)$/i.test(doc.uri.path))
     );
-    return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce, scriptBody });
 }
 
 // Exported for the integration test (client/test/dialog-panel.test.ts), which drives resolveCustomTextEditor
@@ -74,7 +61,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             enableScripts: true,
             localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "client", "out")],
         };
-        panel.webview.html = buildHtml(panel.webview, this.context.extensionUri);
+        panel.webview.html = buildDialogHostHtml(panel.webview, this.context.extensionUri);
 
         const io: DialogHostIO = {
             getText: () => document.getText(),
@@ -132,8 +119,8 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 case "runtimeError": {
                     const file = path.basename(document.uri.fsPath);
                     surfaceWebviewRuntimeError({
-                        label: `Dialog editor for ${file}`,
-                        userFacingFile: file,
+                        editor: "Dialog editor",
+                        file,
                         message: raw.message,
                         stack: raw.stack,
                     });

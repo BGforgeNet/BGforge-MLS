@@ -10,6 +10,8 @@
  *   flags:    --lang <id>        override the extension-derived languageId (e.g. weidu-ssl for .ssl)
  *             --workspace <dir>  workspace root sent at initialize (default: the file's directory)
  *             --new-name <name>  required for rename
+ *             --game <dir>       IE game install to resolve TLK strrefs against (weidu.gamePath)
+ *             --tlk-encoding <e> codepage of that game's dialog.tlk (classic non-Western installs)
  *             --scan-timeout <ms> how long to wait for the workspace scan (default 20000; 0 = don't wait)
  *             --json             full JSON output (completion is summarized to labels by default)
  *             --verbose          forward server window/logMessage notifications to stderr
@@ -54,7 +56,7 @@ const POSITIONLESS = new Set(["symbols", "inlay"]);
 function usage(message?: string): never {
     if (message) console.error(`lsp-probe: ${message}`);
     console.error(
-        "Usage: pnpm lsp-probe <request> <file> [line] [col] [--lang id] [--workspace dir] [--new-name n] [--scan-timeout ms] [--json] [--verbose]",
+        "Usage: pnpm lsp-probe <request> <file> [line] [col] [--lang id] [--workspace dir] [--new-name n] [--game dir] [--tlk-encoding e] [--scan-timeout ms] [--json] [--verbose]",
     );
     console.error(`Requests: ${REQUESTS.join(", ")}. line/col are 1-based.`);
     process.exit(1);
@@ -68,6 +70,8 @@ interface Args {
     lang?: string;
     workspace?: string;
     newName?: string;
+    game?: string;
+    tlkEncoding?: string;
     json: boolean;
     verbose: boolean;
     scanTimeoutMs: number;
@@ -92,6 +96,8 @@ function parseArgs(argv: string[]): Args {
         else if (a === "--lang") args.lang = argv[++i];
         else if (a === "--workspace") args.workspace = argv[++i];
         else if (a === "--new-name") args.newName = argv[++i];
+        else if (a === "--game") args.game = argv[++i];
+        else if (a === "--tlk-encoding") args.tlkEncoding = argv[++i];
         else if (a === "--scan-timeout") {
             const ms = Number(argv[++i]);
             if (!Number.isFinite(ms) || ms < 0) usage("--scan-timeout takes a non-negative number of milliseconds");
@@ -173,7 +179,7 @@ child.stdout.on("data", (chunk: Buffer) => {
 interface RpcMessage {
     id?: number;
     method?: string;
-    params?: { type?: number; message?: string };
+    params?: { type?: number; message?: string; items?: readonly unknown[] };
     result?: unknown;
     error?: unknown;
 }
@@ -184,12 +190,24 @@ const scanFinished = new Promise<void>((resolvePromise) => {
     scanComplete = resolvePromise;
 });
 
+/** The `bgforge` settings the probe reports, so a strref can resolve against a real install. */
+function probeConfiguration(): Record<string, unknown> {
+    return { weidu: { gamePath: args.game ?? "", tlkEncoding: args.tlkEncoding ?? "" } };
+}
+
 function handleMessage(message: RpcMessage): void {
     if (message.id !== undefined && message.method === undefined) {
         pending.get(message.id)?.(message.result, message.error);
         pending.delete(message.id);
+    } else if (message.method === "workspace/configuration") {
+        // Only answered when --game is given; otherwise the probe declares no configuration capability and
+        // the server keeps its defaults. One entry per requested section, as the LSP spec requires.
+        const sections = message.params?.items ?? [];
+        if (args.verbose) console.error(`[probe] answering workspace/configuration (${sections.length})`);
+        send({ id: message.id, result: sections.map(() => probeConfiguration()) });
     } else if (message.id !== undefined) {
         // Server-to-client request (e.g. capability registration): answer null so nothing hangs.
+        if (args.verbose) console.error(`[probe] answering null to ${message.method}`);
         send({ id: message.id, result: null });
     } else if (message.method === "window/logMessage") {
         if (message.params?.message?.includes(LSP_LOG_WORKSPACE_SCAN_COMPLETE)) scanComplete();
@@ -276,7 +294,7 @@ await request("initialize", {
     processId: process.pid,
     rootUri: pathToFileURL(workspaceDir).toString(),
     workspaceFolders: [{ uri: pathToFileURL(workspaceDir).toString(), name: "probe" }],
-    capabilities: {},
+    capabilities: args.game ? { workspace: { configuration: true } } : {},
 });
 send({ method: "initialized", params: {} });
 send({ method: "textDocument/didOpen", params: { textDocument: { uri, languageId, version: 1, text } } });

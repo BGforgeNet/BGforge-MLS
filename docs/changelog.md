@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Infinity Engine
+
+- DLG, BCS and BS get first-class IDE experience. They are automatically decoded on click and presented for
+  editing, and compiled back on save. That includes both standalone files and those in IE game view. Of course,
+  both cases require an IE game open.
+- All these also got theme icons.
+- New `bgforge.weidu.tlkEncoding` setting, for Classic installs with non-cp1252 encoding.
+- BAF diagnostics get an alternative compiler alongside the existing WeiDU one. Enable with
+  `bgforge.weidu.compiler: built-in`. It needs no WeiDU binary and reports every problem in a file at once,
+  but cannot resolve variables nor TRA references for now.
+
 ## 3.14.0
 
 ### Fallout SSL

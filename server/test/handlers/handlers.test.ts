@@ -19,13 +19,15 @@
  */
 
 import { describe, expect, it, vi, afterEach, beforeAll } from "vitest";
-import { MarkupKind, type Connection, type TextDocuments } from "vscode-languageserver/node";
+import { MarkupKind, type Connection, type InlayHint, type TextDocuments } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { registry } from "../../src/provider-registry";
 import { HoverResult as HoverResultFactory } from "../../src/language-provider";
 import { initServerContext } from "../../src/server-context";
+import { initSettingsService } from "../../src/settings-service";
 import type { HandlerContext } from "../../src/handlers/context";
-import type { MLSsettings, ProjectSettings } from "../../src/settings";
+import { defaultSettings, type ProjectSettings } from "../../src/settings";
+import { ConfiguredGame } from "../../src/ie-resources/configured-game";
 import type { Translation } from "../../src/translation";
 
 import * as completion from "../../src/handlers/completion";
@@ -125,12 +127,15 @@ let translationStub: Translation;
 
 beforeAll(() => {
     translationStub = makeTranslationStub();
+    // The hover and inlay handlers read per-resource settings; wire the real service, as with the context.
+    initSettingsService(() => Promise.resolve(defaultSettings));
     initServerContext({
         capabilities: { configuration: false, workspaceFolders: false, fileWatching: false },
         workspaceRoot: undefined,
         projectSettings: {} as ProjectSettings,
-        settings: { debug: false } as unknown as MLSsettings,
+        settings: { ...defaultSettings, debug: false },
         translation: translationStub,
+        configuredGame: new ConfiguredGame(),
     });
 });
 
@@ -820,7 +825,7 @@ describe("inlay-hints handler", () => {
     const INLAY_RANGE = { start: POSITION, end: { line: 1, character: 0 } };
     const inlayParams = (uri: string) => ({ textDocument: { uri }, range: INLAY_RANGE });
 
-    it("returns provider inlay hints when registry.inlayHints is non-empty", async () => {
+    it("passes the requested document and range to the provider", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const hints = [{ position: POSITION, label: "42" }];
         const spy = vi.spyOn(registry, "inlayHints").mockReturnValue(hints as never);
@@ -828,10 +833,10 @@ describe("inlay-hints handler", () => {
         inlayHints.register(ctx);
         const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
         expect(spy).toHaveBeenCalledWith("fallout-ssl", "text", KNOWN_URI, INLAY_RANGE);
-        expect(result).toBe(hints);
+        expect(result).toEqual(hints);
     });
 
-    it("falls through to translation.getInlayHints when provider returns empty", async () => {
+    it("returns translation hints when the provider has none", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         vi.spyOn(registry, "inlayHints").mockReturnValue([]);
         const traHints = [{ position: POSITION, label: "@99" }];
@@ -839,7 +844,19 @@ describe("inlay-hints handler", () => {
 
         inlayHints.register(ctx);
         const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
-        expect(result).toBe(traHints);
+        expect(result).toEqual(traHints);
+    });
+
+    it("merges the sources rather than letting the first non-empty one win", async () => {
+        // One BAF line can carry both a `@100` translation reference and a bare TLK strref, so a handler
+        // that returned the first non-empty source would silently drop the other kind.
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
+        vi.spyOn(registry, "inlayHints").mockReturnValue([{ position: POSITION, label: "42" }] as never);
+        vi.spyOn(translationStub, "getInlayHints").mockReturnValue([{ position: POSITION, label: "@99" }] as never);
+
+        inlayHints.register(ctx);
+        const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
+        expect((result as InlayHint[]).map((hint) => hint.label)).toEqual(["42", "@99"]);
     });
 });
 

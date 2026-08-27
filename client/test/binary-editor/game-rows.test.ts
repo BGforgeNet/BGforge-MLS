@@ -69,6 +69,16 @@ describe("withGameContext", () => {
         expect(out.rows[0]).not.toHaveProperty("strrefText");
     });
 
+    // A CRE's unused sound slots point at an entry that exists and is blank. The resolver reports it as the
+    // empty string it is; the field wants its number, not a trailing space and an empty tooltip.
+    it("leaves a strref whose TLK entry is blank untouched", () => {
+        const blank = { ...lookups, strref: (): string => "" };
+
+        const out = withGameContext({ rows: [strrefRow] }, blank);
+
+        expect(out.rows[0]).not.toHaveProperty("strrefText");
+    });
+
     // Structural sharing is what keeps this affordable at the post choke point: a record with no game behind it
     // resolves nothing, and must not pay a deep clone of every message.
     it("returns the identical object when nothing resolved", () => {
@@ -148,10 +158,10 @@ describe("withGameContext", () => {
     });
 
     /**
-     * A projectile field is named by MISSILE.IDS and PROJECTL.IDS at once, and which one carries the value is
-     * per-install: BG:EE ships a full 365-entry MISSILE while BG2 classic ships a 29-entry stub beside a full
-     * PROJECTL. So every present candidate contributes, and the declaration's order decides only who wins a key
-     * they both name - taking the first table outright leaves BG2 classic mostly unnamed.
+     * A projectile field is named by MISSILE.IDS and PROJECTL.IDS at once, and neither covers the other's whole
+     * key space: on BG2:ToB, MISSILE's 279 entries name 108 stored values PROJECTL's 171 have no key for. So
+     * every present candidate contributes, and the declaration's order decides only who wins a key they both
+     * name - taking the first table outright leaves those 108 unnamed.
      */
     it("merges every candidate table the install ships, earlier ones winning a shared key", () => {
         const projectile = {

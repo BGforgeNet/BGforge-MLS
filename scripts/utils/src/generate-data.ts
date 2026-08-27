@@ -7,6 +7,7 @@
  *     --completion out/completion.json \
  *     --hover out/hover.json \
  *     --signature out/signature.json \
+ *     --strrefs out/strrefs.json \
  *     --tooltip-lang fallout-ssl-tooltip
  */
 
@@ -18,6 +19,7 @@ import { buildSignatureBlock, buildWeiduHoverContent, formatDeprecation } from "
 import { buildFalloutArgsTable, buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table.ts";
 import { WEIDU_TP2_CALLABLE_PREFIX } from "../../../shared/stanza-names.ts";
 import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types.ts";
+import { strRefParamIndexes } from "../../../shared/strref-params.ts";
 import { cmpStr } from "./yaml-helpers.ts";
 
 // -- Types --
@@ -126,10 +128,6 @@ function isWeiduFormat(item: DataItem): boolean {
 const COMPLETION_TAG_DEPRECATED = 1;
 
 /**
- * Validates that parsed YAML data conforms to the DataFile structure.
- * Checks that each stanza has a numeric type and an items array.
- */
-/**
  * A signature whose parameter list is never closed reads as a no-argument value to anything parsing it,
  * so the truncation is invisible downstream: hover renders the half-signature verbatim and an argument
  * count derived from it comes back as zero. Three entries were in that state when this check landed.
@@ -144,6 +142,10 @@ function assertBalancedDetail(item: DataItem, stanza: string, source: string): v
     }
 }
 
+/**
+ * Validates that parsed YAML data conforms to the DataFile structure.
+ * Checks that each stanza has a numeric type and an items array.
+ */
 function validateDataFile(data: unknown, source: string): DataFile {
     if (typeof data !== "object" || data === null) {
         throw new Error(`Expected object in ${source}, got ${data === null ? "null" : typeof data}`);
@@ -512,6 +514,23 @@ function getCategoryPrefix(type: string): string {
     return "";
 }
 
+/**
+ * Maps each callable that takes a TLK string reference to the argument positions holding one, so the server
+ * can annotate strrefs without parsing signatures at runtime. Callables with none are omitted - only a handful
+ * of actions take a strref, and an entry per callable would be almost entirely zeroes.
+ */
+export function generateStrRefParams(data: DataFile): Record<string, number[]> {
+    const result: Record<string, number[]> = {};
+    for (const stanza of Object.values(sortDataFile(data))) {
+        for (const item of stanza.items) {
+            if (item.detail === undefined) continue;
+            const indexes = strRefParamIndexes(item.detail);
+            if (indexes.length > 0) result[item.name] = indexes;
+        }
+    }
+    return result;
+}
+
 // -- CLI entry point (tested via subprocess in generate-data-cli.test.ts) --
 
 /* v8 ignore start -- CLI wrapper tested via execSync integration tests */
@@ -522,6 +541,7 @@ function main(): void {
             hover: { type: "string" },
             completion: { type: "string" },
             signature: { type: "string" },
+            strrefs: { type: "string" },
             "tooltip-lang": { type: "string" },
         },
         strict: true,
@@ -531,6 +551,7 @@ function main(): void {
     const hoverFile = values.hover;
     const completionFile = values.completion;
     const signatureFile = values.signature;
+    const strrefsFile = values.strrefs;
     const tooltipLangId = values["tooltip-lang"];
 
     if (
@@ -540,7 +561,8 @@ function main(): void {
         tooltipLangId === undefined
     ) {
         console.error(
-            "Usage: generate-data -i <yaml...> --completion <path> --hover <path> --tooltip-lang <id> [--signature <path>]",
+            "Usage: generate-data -i <yaml...> --completion <path> --hover <path> --tooltip-lang <id> " +
+                "[--signature <path>] [--strrefs <path>]",
         );
         process.exit(1);
     }
@@ -551,6 +573,10 @@ function main(): void {
 
     fs.writeFileSync(hoverFile, JSON.stringify(hoverData, null, 4), "utf8");
     fs.writeFileSync(completionFile, JSON.stringify(completionData, null, 4), "utf8");
+
+    if (strrefsFile !== undefined) {
+        fs.writeFileSync(strrefsFile, JSON.stringify(generateStrRefParams(inputData), null, 4), "utf8");
+    }
 
     if (signatureFile !== undefined) {
         const signatureData = generateSignatures(inputData, tooltipLangId);

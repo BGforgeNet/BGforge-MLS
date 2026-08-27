@@ -19,10 +19,11 @@ import {
 } from "../../shared/protocol";
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
+import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";
 import { registerImageEditor } from "./image-editor/register";
-import { routeCompile } from "./int-editor/compile-command";
-import { INT_SCHEME } from "./int-editor/document";
-import { registerIntEditor } from "./int-editor/register";
+import { routeCompile } from "./script-view/compile-command";
+import { registerScriptViews } from "./script-view/register";
+import { LSP_DOCUMENT_SELECTOR } from "./document-selector";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
 
@@ -71,7 +72,7 @@ export async function activate(context: ExtensionContext) {
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context),
-        registerIntEditor(context),
+        registerScriptViews(context, gameLookups.bcsSymbols),
     );
 
     // If the extension is launched in debug mode then the debug server options are used
@@ -93,36 +94,7 @@ export async function activate(context: ExtensionContext) {
     // dropdown alongside the extension's manual channel.
     const clientOptions: LanguageClientOptions = {
         outputChannel,
-        documentSelector: [
-            { scheme: "file", language: "infinity-2da" },
-
-            { scheme: "file", language: "fallout-msg" },
-            { scheme: "file", language: "fallout-scripts-lst" },
-            { scheme: "file", language: "fallout-ssl" },
-            // A decompiled `.int`, which is Fallout SSL on its own scheme rather than on disk. Without
-            // this the language client never attaches and the tab has highlighting but no completion,
-            // hover or outline - the parts that come from the server rather than from the grammar.
-            // Compiling one is refused server-side: the URI names no file to write output beside.
-            { scheme: INT_SCHEME, language: "fallout-ssl" },
-            { scheme: "file", language: "fallout-worldmap-txt" },
-
-            { scheme: "file", language: "weidu-tp2" },
-
-            { scheme: "file", language: "weidu-baf" },
-
-            { scheme: "file", language: "weidu-d" },
-
-            { scheme: "file", language: "weidu-ssl" },
-            { scheme: "file", language: "weidu-slb" },
-
-            { scheme: "file", language: "weidu-tra" },
-
-            { scheme: "file", language: "weidu-log" },
-
-            { scheme: "file", pattern: "**/*.tbaf" },
-            { scheme: "file", pattern: "**/*.tssl" },
-            { scheme: "file", pattern: "**/*.td" },
-        ],
+        documentSelector: LSP_DOCUMENT_SELECTOR,
         middleware: {
             provideWorkspaceSymbols: async (query, token, next) => {
                 const languageId = getWorkspaceSymbolScopeLanguageId();
@@ -145,7 +117,19 @@ export async function activate(context: ExtensionContext) {
     await client.start();
     conlog("BGforge MLS client started");
 
-    context.subscriptions.push(registerDialogEditor(context, client));
+    context.subscriptions.push(
+        registerDialogEditor(context, client),
+        // Compiled dialogs get their own viewType: `.dlg` is binary, and `bgforge.dialogEditor` is a
+        // CustomTextEditorProvider. Both feed the same webview, so the two are one editor to a reader.
+        registerDlgDialogEditor(context, {
+            strref: gameLookups.strref,
+            hasStrings: gameLookups.hasStrings,
+            pickStrref: gameLookups.pickStrref,
+            inbound: gameLookups.inbound,
+            inboundToDialog: gameLookups.inboundToDialog,
+            resourceBytes: gameLookups.resourceBytes,
+        }),
+    );
 }
 
 export async function deactivate(): Promise<void> {

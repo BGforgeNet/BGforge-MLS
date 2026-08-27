@@ -51,6 +51,9 @@ Prereqs: `playwright` is a pinned devDep (resolved by `pnpm install`); install t
   CodeField colours per token (editor-parity hues) with the overlay aligned to the textarea and no CSP violation.
 - `render-ts.mts` - the same for the TypeScript-based languages (`.td`/`.tssl`): a real TSSL parse whose
   condition carries distinctly-TypeScript operators (`&&`, `!`), asserting the TypeScript grammar colours it.
+- `render-dlg-tree.mts` - the compiled-dialog driver: a model spanning several `.dlg` files, asserting the
+  neighbouring states are drawn as cards (so a hand-off out and back closes as one graph), are marked with the
+  dialog they belong to, and offer none of the controls that would write a file the editor did not open.
 - `edit-behavior.mts` - the selection/add/edit driver (the unified `select()` primitive + shared add/remove paths).
 - `fake-host.ts` - `DialogHostCore` bound to an in-memory document/`.tra` (real server-side D parse, real splice).
 - `edit-roundtrip.mts` - the host round-trip driver: injects `acquireVsCodeApi`, wires the webview to

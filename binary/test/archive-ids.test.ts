@@ -4,7 +4,7 @@
  * rows in decimal or hex, optionally XOR-encrypted behind an 0xFFFF marker.
  */
 import { describe, it, expect } from "vitest";
-import { parseIds } from "../src/archive/ids";
+import { parseIds, parseIdsAll } from "../src/archive/ids";
 
 /** The game writes CRLF and pads identifiers with trailing spaces. */
 function idsBytes(body: string): Uint8Array {
@@ -82,6 +82,38 @@ describe("parseIds", () => {
         expect([...hexTable.keys()]).toEqual([...decimalTable.keys()]);
         expect(hexTable.get(107)).toBe("ACIDBLOB");
         expect(decimalTable.get(107)).toBe("Acid_Blob");
+    });
+
+    /**
+     * The identifier column runs to the end of the line, spaces included. Two shipped tables need this and are
+     * read wrongly without it: MISSILE.IDS names projectiles in prose (`3 Arrow Exploding`), and TRIGGER.IDS
+     * writes a whole signature whose parameter names carry spaces. Both rows below are verbatim from BG2:ToB.
+     *
+     * A reader that takes only the first token after the value does not mis-name these - it drops them, which
+     * is the worse failure: 250 of MISSILE.IDS's rows and 9 of TRIGGER.IDS's vanish from a table that reports
+     * itself as read.
+     */
+    it("keeps an identifier that contains spaces", () => {
+        const missile = parseIds(idsBytes("IDS\r\n2 Arrow\r\n3 Arrow Exploding\r\n"));
+        const trigger = parseIds(idsBytes("0x4010 HP(O:Object*,I:Hit Points*)\r\n"));
+
+        expect(missile.get(3)).toBe("Arrow Exploding");
+        expect(trigger.get(0x4010)).toBe("HP(O:Object*,I:Hit Points*)");
+    });
+
+    /**
+     * Real tables name one value twice - BG2:ToB's ACTION.IDS does it 32 times, and CLASS.IDS's 202 is
+     * `LONG_BOW` for an item and `MAGE_ALL` for a creature. Position does not rank them: id 160's two rows take
+     * different argument types (`ApplySpell(O:Target,I:Spell*Spell)` and `ApplySpellRES(S:RES*,O:Target)`), so
+     * only a caller holding the record can say which was meant. Hence both readings - one row per value, and
+     * every row for a caller that has to choose.
+     */
+    it("keeps the last row when a value is named twice, and every row through parseIdsAll", () => {
+        const body = "IDS V1.0\r\n8 Dialogue(O:Object*)\r\n8 Dialog(O:Object*)\r\n1 Attack(O:Target*)\r\n";
+
+        expect(parseIds(idsBytes(body)).get(8)).toBe("Dialog(O:Object*)");
+        expect(parseIdsAll(idsBytes(body)).get(8)).toEqual(["Dialogue(O:Object*)", "Dialog(O:Object*)"]);
+        expect(parseIdsAll(idsBytes(body)).get(1)).toEqual(["Attack(O:Target*)"]);
     });
 
     it("skips blank and malformed lines rather than failing the table", () => {

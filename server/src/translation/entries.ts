@@ -9,6 +9,7 @@
 import type { Hover, Position } from "vscode-languageserver/node";
 import { CONSUMER_EXTENSIONS_MSG, CONSUMER_EXTENSIONS_TRA } from "../core/languages";
 import { REGEX_MSG_HOVER, REGEX_TRANSPILER_TRA_HOVER } from "../core/patterns";
+import { stringPreview } from "../shared/string-preview";
 
 export interface TraEntry {
     source: string;
@@ -31,17 +32,6 @@ export interface TraEntries extends Map<string, TraEntry> {}
 export interface TraData extends Map<string, TraEntries> {}
 
 export type TraExt = "msg" | "tra";
-
-function stringToInlay(text: string): string {
-    let line = text.replaceAll("\r", "");
-    line = line.replaceAll("\n", "\\n");
-    // Escape */ to prevent breaking the inlay comment syntax
-    line = line.replaceAll("*/", "*\\/");
-    if (line.length > 30) {
-        line = line.slice(0, 27) + "...";
-    }
-    return `/* ${line} */`;
-}
 
 /** Parses text and returns a map of index => entry */
 export function parseEntries(text: string, traType: TraExt): TraEntries {
@@ -93,25 +83,19 @@ export function parseEntries(text: string, traType: TraExt): TraEntries {
         const endLine = currentLine;
         const endCharacter = matchEnd - lineStartIndex;
 
-        const hover: Hover = {
-            contents: {
-                kind: "markdown",
-                value: `\`\`\`bgforge-mls-string\n${str}\n\`\`\``,
-            },
-        };
-        const inlay = stringToInlay(str);
+        const preview = stringPreview(str);
 
         const entry: TraEntry = {
             source: str,
-            hover,
-            inlay,
+            hover: preview.hover,
+            inlay: preview.inlay,
             line: startLine,
             character,
             endLine,
             endCharacter,
         };
-        if (`/* ${str} */` !== inlay) {
-            entry.inlayTooltip = str;
+        if (preview.inlayTooltip !== undefined) {
+            entry.inlayTooltip = preview.inlayTooltip;
         }
         entries.set(num, entry);
         match = regex.exec(text);

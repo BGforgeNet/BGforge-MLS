@@ -1,0 +1,10 @@
+IDS V1.0
+1 ActionOverride(O:Actor*,A:Action*)
+3 Attack(O:Target*)
+23 MoveToPoint(P:Point*)
+26 PlaySound(S:Sound*)
+30 SetGlobal(S:Name*,S:Area*,I:Value*)
+36 Continue()
+160 ApplySpell(O:Target,I:Spell*Spell)
+160 ApplySpellRES(S:RES*,O:Target)
+269 DisplayStringHead(O:Object*,I:StrRef*)

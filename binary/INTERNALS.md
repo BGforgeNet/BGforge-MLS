@@ -2,7 +2,7 @@
 
 See also: [README.md](README.md) (npm-facing) | [docs/architecture.md](../docs/architecture.md) (system overview)
 
-`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) files. Round-trips bytes <-> structured data <-> canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
+`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), `.cre` (v1), and `.dlg` (v1) files. Round-trips bytes <-> structured data <-> canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
 
 The IE `.itm` / `.spl` / `.eff` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; effect-opcode lookups are generated from `_opcodes/op<N>.html` frontmatter (250+ entries). Checked-in `.ts` outputs carry an `Auto-generated from IESDP ...` banner. Run `scripts/ie-binary-update.sh` to refresh.
 
@@ -128,6 +128,21 @@ binary/src/
     presentation-schema.ts     # crePresentationSchema (derived) + per-item-slot exact entries + creDomainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
+
+  dlg/                         # Infinity Engine DLG v1 (dialogs)
+    specs/{header,state,transition,text-ref}.ts
+                               # Hand-written from IESDP dlg_v1.htm - IESDP publishes no `_data/` YAML for
+                               # DLG, so there is no generator. The header comes in two lengths (see
+                               # `headerSizeOf`): BG1-era files stop at 48 bytes, later ones append the
+                               # interrupt-flags dword, and 1002 of a 4286-file stock corpus take the
+                               # shorter form
+    build.ts                   # buildDlg: builds a file from content, DECIDING its layout, where
+                               # serializeDlg re-emits one over its own bytes and cannot change a string's
+                               # length. The layout is the reference implementation's, and reproduces 4203
+                               # of the 4286-file corpus byte for byte
+    canonical-schemas.ts, canonical-writer.ts, format-adapter.ts, json-snapshot.ts, index.ts
+                               # No presentation or layout schema: a DLG is read through the dialog editor
+                               # (`shared/dialog-model-dlg.ts` -> `DialogModel`), not the field-form one
 
   ie-common/                   # Shared IE bits (effect spec + opcodes + lookups)
     types.ts                   # EFFECT_SIZE, bytesEqual, EffectTarget/Timing/Resistance/SaveType,
@@ -305,7 +320,7 @@ Adapter responsibilities:
 - **Variable-length array editing** (optional): `buildAddEntryBytes(pr, arrayPath)` / `buildRemoveEntryBytes(pr, arrayPath, index)` / `buildInsertEntryBytes(pr, arrayPath, index, position)` / `buildMoveEntryBytes(pr, arrayPath, index, direction)` / `buildDuplicateEntryBytes(pr, arrayPath, index)` / `isListSection` / `isModifiableArray` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global/local vars; ITM and SPL abilities and effects; CRE known/memorized spells, spell-memorization entries, effects, items). EFF v2 is a single flat header+body record with no variable-length list section; these methods are not applicable and the EFF adapter does not implement them.
   - **Entries are addressed by section path + structural ordinal `index`, never by display label.** `arrayPath` is the section's tree path (e.g. `["Abilities"]`, `["Global Variables"]`, `["Elevation 0 Objects"]`); `index` is the entry's 0-based position among its siblings, resolved by the editor (`binary-editor`) from the target node's stable identity. The byte-builders no longer parse an ordinal out of a label like `"Ability 2"`, so a presentation relabel / i18n / override cannot misaddress a byte op (this closed a real correctness hazard). Section-name routing inside a builder is fine - section names are structural identity, not per-entry display strings.
 - **Cache invalidation** (required): `documentCacheStrategy: "clear" | "none"` - declares how the editor invalidates this format's cached canonical `document` after a display-tree edit. All current formats cache a rebuildable document and use `"clear"` (the editor sets `parseResult.document = undefined`; the next serialize rebuilds from the edited tree). It is required so a new format must consciously choose rather than inherit a fragile property-shape heuristic.
-- **Declarative layout** (optional): `layout: FormatLayout` (`layout-schema-types.ts`, zod-validated) - describes the editor UI as data (variants -> rows -> panels -> blocks: `fields`/`flags`/`grid`/`matrix`, plus `list`/`raw` stubs), referencing fields by semantic key. Sibling of `presentationSchema`: presentation data attached to the adapter, so the parser/codec carry no UI knowledge. When present and the parse result reports a matching `variantId`, the editor renders a single dense page via its generic layout renderer instead of the legacy depth-0-groups-as-tabs path; absent or unmatched, it falls back to tabs. Authored in `<format>/layout-schema.ts`, now present for all six formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`): each parser emits faithful flat `walkStruct` groups and all grouping/placement lives in the layout. Within PRO, only the **critter** variant is authored; other PRO object/subtypes report a `variantId` with no matching variant and fall back to the tabs path.
+- **Declarative layout** (optional): `layout: FormatLayout` (`layout-schema-types.ts`, zod-validated) - describes the editor UI as data (variants -> rows -> panels -> blocks: `fields`/`flags`/`grid`/`matrix`, plus `list`/`raw` stubs), referencing fields by semantic key. Sibling of `presentationSchema`: presentation data attached to the adapter, so the parser/codec carry no UI knowledge. When present and the parse result reports a matching `variantId`, the editor renders a single dense page via its generic layout renderer instead of the legacy depth-0-groups-as-tabs path; absent or unmatched, it falls back to tabs. Authored in `<format>/layout-schema.ts`, now present for the six field-form formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`; DLG deliberately has none, since it renders in the dialog editor): each parser emits faithful flat `walkStruct` groups and all grouping/placement lives in the layout. Within PRO, only the **critter** variant is authored; other PRO object/subtypes report a `variantId` with no matching variant and fall back to the tabs path.
 
 ### Structure-op cores (`ie-common/`)
 
@@ -403,7 +418,7 @@ The format-adapter consolidates per-format data (presentation schema, domain ran
 ## CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|file.dlg|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
 ```
 
 | Flag                | Behaviour                                                                                                                                                  |
@@ -468,7 +483,10 @@ the `BinaryParser` / `BinaryFormatAdapter` editor path. Formats: IESDP `key_v1.h
   content is read-only. The tree is the source of truth after open, so externally-written files (outside this
   API) are not seen until re-open. `writeAuxFile` / `readAuxFile` round-trip a non-resource loose file (e.g. a
   `<resref>.<ext>.json` snapshot sidecar) in `override` under an exact name; it is not indexed and the open scan
-  skips it (its extension has no resType), so it never appears in `list()`.
+  skips it (its extension has no resType), so it never appears in `list()`. `looseFile(resref, type, {folder})`
+  and `auxFile(fileName)` name the file each write would REPLACE, or `undefined` when it would create one - the
+  same lookup `write` uses to pick its target, so a caller confirming a destructive overwrite reads the path
+  that will actually be written, on-disk case included, rather than rebuilding the naming rule.
 
 - **`tlk.ts`** - `openTlk(source, {encoding?})` / `parseTlk(bytes, {encoding?}): Tlk`, the `dialog.tlk` string
   table (IESDP `tlk_v1.htm`). Records reference strings by strref; `Tlk.get(strref)` resolves one to text

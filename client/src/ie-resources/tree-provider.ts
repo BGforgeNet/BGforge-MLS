@@ -2,7 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
 import { hasViewerFor } from "./editor-routing";
-import { type GameSession } from "./session";
+import { type CurrentGame } from "./current-game";
 import { resourceUri } from "./uri";
 
 /** Pinned top row showing the open game's type + path (mirrors the view header). */
@@ -41,10 +41,10 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
 
     // Grouped resources for the current game, built once per open and cleared on refresh.
     private grouped: Map<number, GameResourceRef[]> | undefined;
-    private readonly session: GameSession;
+    private readonly currentGame: CurrentGame;
 
-    constructor(session: GameSession) {
-        this.session = session;
+    constructor(currentGame: CurrentGame) {
+        this.currentGame = currentGame;
     }
 
     refresh(): void {
@@ -55,7 +55,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
     private ensureGrouped(): Map<number, GameResourceRef[]> {
         if (this.grouped) return this.grouped;
         const grouped = new Map<number, GameResourceRef[]>();
-        const current = this.session.current;
+        const current = this.currentGame.current;
         if (current) {
             for (const resource of current.game.list()) {
                 const list = grouped.get(resource.type);
@@ -68,7 +68,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
     }
 
     getChildren(element?: Node): Node[] {
-        const current = this.session.current;
+        const current = this.currentGame.current;
         if (!current) return [];
         if (!element) {
             const typeNodes: TypeNode[] = [];
@@ -131,7 +131,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
         item.description = element.ext;
         // A resource URI whose basename carries the extension lets the active File Icon Theme render a per-format
         // icon (keeping the explicit resref label). Falls back to the theme's generic file icon for unknown types.
-        const current = this.session.current;
+        const current = this.currentGame.current;
         if (current) item.resourceUri = resourceUri(current.dir, element.resref, element.ext);
         item.contextValue = element.openable ? "bgforgeOpenableResource" : "bgforgeResource";
         // Every resource opens; the handler routes records to the binary editor, animations to the animation
@@ -144,7 +144,7 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
     resolveTreeItem(item: vscode.TreeItem, element: Node): vscode.TreeItem {
         // "Show lines": resolve the record's name via dialog.tlk on hover, for the types that carry a name strref.
         if (element.kind !== "resource" || !NAME_STRREF_TYPES.has(element.type)) return item;
-        const current = this.session.current;
+        const current = this.currentGame.current;
         if (!current) return item;
         try {
             const bytes = current.game.read(element.resref, element.type);

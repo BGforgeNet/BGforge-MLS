@@ -4,7 +4,8 @@
  * Its own module so it is testable without the vscode-heavy registration around it.
  */
 
-import { parserRegistry } from "@bgforge/binary";
+import { formatAdapterRegistry, parserRegistry } from "@bgforge/binary";
+import { SCRIPT_EDITOR_VIEW_TYPE, scriptFormatForExtension } from "../script-view/formats";
 
 /**
  * Whether the binary editor can read this extension AS AN INFINITY ENGINE RECORD - the one question both the
@@ -16,7 +17,14 @@ import { parserRegistry } from "@bgforge/binary";
  * itself the moment it registers, where the hand-kept extension list this replaced could silently omit it.
  */
 export function isIeBinaryRecord(ext: string): boolean {
-    return parserRegistry.getByExtension(ext, "infinity-engine") !== undefined;
+    const parser = parserRegistry.getByExtension(ext, "infinity-engine");
+    if (!parser) return false;
+    // A parser alone is not enough: the binary editor renders a format through its declarative `layout`, and a
+    // result with no matching layout reaches the webview's error banner rather than a form. DLG is the case
+    // that forced this - it parses as an IE record but is authored in the dialog editor's graph, so its
+    // adapter declares no layout on purpose. Asking for the layout keeps the "a new parser routes itself"
+    // property for formats the binary editor can actually draw.
+    return formatAdapterRegistry.get(parser.id)?.layout !== undefined;
 }
 
 /**
@@ -31,14 +39,22 @@ function isIeAnimation(ext: string): boolean {
 }
 
 /**
- * Formats VS Code's own bundled previewers read, mapped to the view that reads them. These need naming for the
- * same reason ours do, and for a reason that is easy to miss: `"default"` is documented as the plain TEXT
- * editor, not "pick a suitable editor", so a portrait routed there renders as bytes even though the image
- * preview claims `.bmp` at builtin priority and would have shown it.
+ * Formats routed by extension rather than by what a registry can answer, mapped to the view that reads them.
+ * Two kinds sit here for the same reason - neither is discoverable from a parser or adapter:
  *
- * Only the formats a game archive actually serves are listed; the previewers cover more.
+ * - Ours, where nothing in the binary-record registry could ever name the view. A compiled dialog IS a record
+ *   the library parses, but as a graph rather than a record form, which is also why its adapter declares no
+ *   layout for `isIeBinaryRecord` to find.
+ * - VS Code's own bundled previewers. These need naming for a reason that is easy to miss: `"default"` is
+ *   documented as the plain TEXT editor, not "pick a suitable editor", so a portrait routed there renders as
+ *   bytes even though the image preview claims `.bmp` at builtin priority and would have shown it.
+ *
+ * Only the formats a game archive actually serves are listed; the previewers cover more. Compiled scripts are
+ * NOT here: they have their own registry, and asking it is what makes a format added there open from the tree
+ * without a second entry to remember.
  */
-const BUILTIN_VIEWS = new Map([
+const VIEWS_BY_EXTENSION = new Map([
+    ["dlg", "bgforge.dlgViewer"],
     ["bmp", "imagePreview.previewEditor"],
     ["wav", "vscode.audioPreview"],
 ]);
@@ -48,9 +64,11 @@ const BUILTIN_VIEWS = new Map([
  * The binary editor is registered for `*.pro` at DEFAULT priority, so a plain `vscode.open` resolves a `.pro`
  * to it regardless of what this decided; naming a view is what actually routes a format elsewhere.
  *
- * Three sources are asked, in the order a format can only answer one of: a record goes to the binary editor, an
- * animation to the animation editor, and the rest to a bundled previewer where VS Code ships one. Asking only
- * the first sent every BAM to the text editor, which showed it as an undisplayable binary file.
+ * Four sources are asked, in the order a format can only answer one of: a record goes to the binary editor, an
+ * animation to the animation editor, a compiled script to the script view, and the rest to whatever the
+ * extension map names - our own graph editor for a compiled dialog, a bundled previewer where VS Code ships
+ * one. Asking only the first sent every BAM to the text editor, which showed it as an undisplayable binary
+ * file.
  *
  * `"default"` is the last resort and means the plain TEXT editor - the right answer only for a format nothing
  * can render, which is why the previewer map above exists rather than falling through to it.
@@ -58,7 +76,8 @@ const BUILTIN_VIEWS = new Map([
 export function viewTypeForResource(ext: string): string {
     if (isIeBinaryRecord(ext)) return "bgforge.binaryEditor";
     if (isIeAnimation(ext)) return "bgforge.animationEditor";
-    return BUILTIN_VIEWS.get(ext.toLowerCase()) ?? "default";
+    if (scriptFormatForExtension(ext)) return SCRIPT_EDITOR_VIEW_TYPE;
+    return VIEWS_BY_EXTENSION.get(ext.toLowerCase()) ?? "default";
 }
 
 /**

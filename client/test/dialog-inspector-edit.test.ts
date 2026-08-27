@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+    codeFieldEditable,
+    codeLockReason,
+    DLG_RENAME_LOCK_REASON,
     conditionLockReason,
     isPendingChoice,
     isPendingState,
@@ -284,6 +287,50 @@ describe("textEditability (unified text gate - one decision both views consume)"
         expect(literal.reason).toMatch(/no plain @N/);
     });
 
+    // A DLG holds a number pointing into the game's string table, so there is nowhere to put typed prose. It
+    // used to read as editable whenever the string resolved, and the host then dropped the edit in silence.
+    it("locks a compiled dialog's line even when its string resolved", () => {
+        const gate = textEditability({ state: st(), choice: null, messages, ssl: false, textRO: false, dlg: true });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).toMatch(/Change string/);
+    });
+
+    it("locks a compiled dialog's reply text for the same reason", () => {
+        const gate = textEditability({
+            state: st(),
+            choice: ch({ text: "@200" }),
+            messages,
+            ssl: false,
+            textRO: false,
+            dlg: true,
+        });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).toMatch(/Change string/);
+    });
+
+    it("does not point at a button a state from another dialog does not have", () => {
+        // The tree holds the dialogs this one hands off to. Their lines are locked for a different reason -
+        // the editor writes one file - and telling the reader to press "Change string..." is a dead end.
+        const gate = textEditability({
+            state: st(),
+            choice: null,
+            messages,
+            ssl: false,
+            textRO: false,
+            dlg: true,
+            foreign: true,
+        });
+        expect(gate.editable).toBe(false);
+        expect(gate.reason).not.toMatch(/Change string/);
+        expect(gate.reason).toMatch(/another dialog/i);
+    });
+
+    it("leaves every other format alone", () => {
+        expect(
+            textEditability({ state: st(), choice: null, messages, ssl: false, textRO: false, dlg: false }).editable,
+        ).toBe(true);
+    });
+
     it("NPC line of a faithful reply-less adopted SSL node is editable (the +State regression, decided in one place)", () => {
         const state = st({ text: "", procRange: { start: 0, end: 9 }, replyless: true });
         expect(textEditability({ state, choice: null, messages, ssl: true, textRO: false })).toEqual({
@@ -483,4 +530,52 @@ it("derives conditionEditable from ifPure (gates the option alone) and absence o
     expect(choices[2]!.conditionEditable).toBe(false); // shared/impure if
     expect(choices[1]!.condRange).toEqual({ start: 0, end: 3 });
     expect(choices[1]!.ifRange).toEqual({ start: 0, end: 9 });
+});
+
+describe("codeFieldEditable (trigger / condition / action)", () => {
+    it("lets a compiled dialog's own state take a trigger, condition or action", () => {
+        // A DLG stores these as text in its own tables and the writer puts an edited one back, so the
+        // file-wide `editable` flag - false because a DLG line is a strref, not prose - must not lock them.
+        expect(codeFieldEditable({ dlg: true, foreign: false, editable: false })).toBe(true);
+    });
+
+    it("locks them on a state belonging to another dialog", () => {
+        expect(codeFieldEditable({ dlg: true, foreign: true, editable: false })).toBe(false);
+    });
+
+    it("leaves the D family on the file's own edit flag", () => {
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: true })).toBe(true);
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: false })).toBe(false);
+    });
+
+    it("locks a derived state whatever the family", () => {
+        expect(codeFieldEditable({ dlg: false, foreign: false, editable: true, derivedFrom: "CHAIN" })).toBe(false);
+    });
+});
+
+describe("codeLockReason", () => {
+    it("says nothing when the field is editable", () => {
+        expect(codeLockReason({ dlg: true, foreign: false, editable: false })).toBe("");
+    });
+
+    it("explains a foreign compiled state by the file it belongs to, not by read-only", () => {
+        const reason = codeLockReason({ dlg: true, foreign: true, editable: false });
+
+        expect(reason).toMatch(/another dialog/i);
+        expect(reason).not.toMatch(/read-only/i);
+    });
+
+    it("keeps the read-only wording for the D family", () => {
+        expect(codeLockReason({ dlg: false, foreign: false, editable: false })).toMatch(/read-only/i);
+    });
+});
+
+describe("DLG_RENAME_LOCK_REASON", () => {
+    it("says the number is the address, not that the file is read-only", () => {
+        const reason = DLG_RENAME_LOCK_REASON;
+
+        // The rename field used to be ENABLED on a DLG state and silently drop what was typed.
+        expect(reason).toMatch(/number/i);
+        expect(reason).not.toMatch(/read-only/i);
+    });
 });

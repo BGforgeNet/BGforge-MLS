@@ -435,6 +435,71 @@ describe("TLK (dialog.tlk)", () => {
         expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow();
     });
 
+    describe("search", () => {
+        const SAMPLE = ["Sword of Chaos", "a sword +1", null, "Shield", "SWORDFISH", ""];
+
+        it("matches text case-insensitively, reporting each hit's strref", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("sword")).toEqual([
+                { strref: 0, text: "Sword of Chaos" },
+                { strref: 1, text: "a sword +1" },
+                { strref: 4, text: "SWORDFISH" },
+            ]);
+            tlk.close();
+        });
+
+        it("returns hits in strref order, which is the order the game numbers them", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("s").map((hit) => hit.strref)).toEqual([0, 1, 3, 4]);
+            tlk.close();
+        });
+
+        it("stops at the requested limit, so a common word cannot return the whole table", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("s", { limit: 2 }).map((hit) => hit.strref)).toEqual([0, 1]);
+            tlk.close();
+        });
+
+        it("skips entries the table holds no text for", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            // Index 2 is a no-text entry and index 5 an empty string; neither can match anything.
+            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(2);
+            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(5);
+            tlk.close();
+        });
+
+        it("finds nothing for a query no entry contains", () => {
+            const tlk = parseTlk(buildTlk(SAMPLE));
+            expect(tlk.search("halberd")).toEqual([]);
+            tlk.close();
+        });
+
+        it("decodes with the configured codepage, so a match is on the text the player sees", () => {
+            const tlk = parseTlk(buildTlk([Uint8Array.from([0xc0, 0x42])]), { encoding: "windows-1251" });
+            expect(tlk.search("\u0410B")).toEqual([{ strref: 0, text: "\u0410B" }]);
+            tlk.close();
+        });
+
+        it("reads the table once however many searches are run", () => {
+            const bytes = buildTlk(SAMPLE);
+            let reads = 0;
+            const counting: ByteSource = {
+                size: bytes.byteLength,
+                read(offset, length) {
+                    reads++;
+                    return bytes.subarray(offset, offset + length);
+                },
+                close() {},
+            };
+            const tlk = openTlk(counting);
+            tlk.search("sword");
+            const afterFirst = reads;
+            tlk.search("shield");
+            tlk.search("fish");
+            expect(reads).toBe(afterFirst);
+        });
+    });
+
     /**
      * A record's fields resolve one strref at a time and every message re-resolves them - a CRE alone carries
      * 100 sound-slot strrefs - so an uncached `get` turns one panel refresh into hundreds of positioned reads
@@ -607,6 +672,37 @@ describe("openGame (real filesystem)", () => {
         try {
             expect(game.ids("SNDSLOT")?.get(0)).toBe("INITIAL_MEETING");
             expect(game.ids("sndslot")?.get(1)).toBe("MORALE");
+        } finally {
+            game.close();
+        }
+    });
+
+    /**
+     * The path the editor's naming-table resolver takes - install file through to `Game.ids` - over a table
+     * whose identifiers carry spaces. MISSILE.IDS is the shipped case: it names projectiles in prose, so a
+     * reader that stops at the first token drops 250 of BG2:ToB's 279 rows and the projectile dropdown loses
+     * them silently, the table still reporting itself as present.
+     */
+    it("reads a table whose identifiers contain spaces", () => {
+        const missile = new TextEncoder().encode("IDS\r\n2 Arrow\r\n3 Arrow Exploding\r\n");
+        const game = openGame(makeGameDir({ "override/missile.ids": missile }));
+        try {
+            expect(game.ids("MISSILE")?.get(3)).toBe("Arrow Exploding");
+        } finally {
+            game.close();
+        }
+    });
+
+    /**
+     * A script decompiler cannot use `ids`: BG2:ToB's ACTION.IDS names 32 ids twice, and id 160's two rows take
+     * different argument types, so the record decides which was meant. One row per value cannot express that.
+     */
+    it("reads every row for a value, not just the winning one", () => {
+        const action = new TextEncoder().encode("IDS V1.0\r\n8 Dialogue(O:Object*)\r\n8 Dialog(O:Object*)\r\n");
+        const game = openGame(makeGameDir({ "override/action.ids": action }));
+        try {
+            expect(game.ids("ACTION")?.get(8)).toBe("Dialog(O:Object*)");
+            expect(game.idsAll("ACTION")?.get(8)).toEqual(["Dialogue(O:Object*)", "Dialog(O:Object*)"]);
         } finally {
             game.close();
         }
@@ -845,6 +941,59 @@ describe("openGame (real filesystem)", () => {
             expect(game.remove("brandnew", "itm")).toBe(true);
             expect(() => game.read("brandnew", "itm")).toThrow(/Resource not found/);
             expect(fs.existsSync(path.join(dir, "override", "brandnew.itm"))).toBe(false);
+        } finally {
+            game.close();
+        }
+    });
+
+    it("looseFile() names the file a write would replace, and nothing before one exists", () => {
+        const dir = makeGameDir();
+        const game = openGame(dir);
+        try {
+            // item01 is biffed only: a write would CREATE an override copy, destroying nothing.
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+            game.write("item01", "itm", Uint8Array.from([1, 2]));
+            expect(game.looseFile("item01", "itm")).toBe(path.join(dir, "override", "item01.itm"));
+            // The answer tracks the file, not the write: removing it makes a write creative again.
+            game.remove("item01", "itm");
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+        } finally {
+            game.close();
+        }
+    });
+
+    it("looseFile() reports the path write would reuse, preserving the on-disk case another tool chose", () => {
+        // The point of asking the game rather than building `<resref>.<ext>`: a mod's installer writes
+        // whatever case it likes, and a confirmation naming a path that does not exist is worse than none.
+        const game = openGame(makeGameDir({ "override/Item01.ITM": Uint8Array.from([7]) }));
+        try {
+            expect(game.looseFile("item01", "itm")).toMatch(/Item01\.ITM$/);
+        } finally {
+            game.close();
+        }
+    });
+
+    it("looseFile() answers per override folder, and rejects one outside the stack", () => {
+        const game = openGame(makeGameDir({ "characters/item01.itm": Uint8Array.from([5]) }), { mode: "engine" });
+        try {
+            // The characters/ copy is the winner, but a write to override/ would not touch it.
+            expect(game.looseFile("item01", "itm")).toBeUndefined();
+            expect(game.looseFile("item01", "itm", { folder: "characters" })).toMatch(/item01\.itm$/);
+            expect(() => game.looseFile("item01", "itm", { folder: "nowhere" })).toThrow(
+                /not one of the override folders/,
+            );
+        } finally {
+            game.close();
+        }
+    });
+
+    it("auxFile() names an existing sidecar and nothing when there is none", () => {
+        const dir = makeGameDir();
+        const game = openGame(dir);
+        try {
+            expect(game.auxFile("item01.json")).toBeUndefined();
+            game.writeAuxFile("item01.json", Uint8Array.from([0x7b, 0x7d]));
+            expect(game.auxFile("item01.json")).toBe(path.join(dir, "override", "item01.json"));
         } finally {
             game.close();
         }

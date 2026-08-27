@@ -1,11 +1,10 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-    entry: ["src/index.ts", "src/cli.ts"],
+    entry: ["src/index.ts", "src/archive/index.ts", "src/cli.ts"],
     format: ["esm"],
-    // Only the library entry's .d.ts is part of the published contract; the CLI
-    // is a bin, not an imported module.
-    dts: { entry: "src/index.ts" },
+    // Both library entries ship .d.ts; the CLI is a bin, not an imported module.
+    dts: { entry: ["src/index.ts", "src/archive/index.ts"] },
     clean: true,
     sourcemap: false,
     platform: "node",

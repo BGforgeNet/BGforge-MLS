@@ -30,7 +30,8 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
-    import { nodeDeletable, nodeEditable } from "../../../../shared/dialog-editability";
+    import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "../../../../shared/dialog-editability";
+    import { dlgAddress } from "../../../../shared/dialog-dlg-edit";
     import { hasHost, postToHost } from "./host";
     import {
         renderFamily,
@@ -146,6 +147,16 @@
     let activeFile = $state<string>("");
     const tabs = $derived(editModel.roots.filter((r) => r.states.length > 0));
     const activeRoot = $derived(editModel.roots.find((r) => r.id === activeFile) ?? tabs[0] ?? null);
+    // A compiled dialog's roots are ONE conversation split across files - it hands off to a neighbour and is
+    // handed back - so the graph draws them together and a round trip closes up. Every other family's roots
+    // are independent dialogs that happen to share a file, which is what the tabs are for. The tree, the
+    // pickers and every edit still work on `activeRoot`: this editor writes the one file it opened.
+    const spansFiles = $derived(editModel.sourceLang === "dlg" && editModel.roots.length > 1);
+    const graphModel = $derived(
+        spansFiles ? editModel : activeRoot ? { ...editModel, roots: [activeRoot] } : editModel,
+    );
+    /** Which layout cache the graph's positions belong to. One shared key while the graph spans files. */
+    const graphKey = $derived(spansFiles ? "*" : (activeRoot?.id ?? ""));
 
     // Cross-file resolution: which root owns a given state id, and which root is a given
     // dialog file. Used to turn an external stub into a jump to the owning tab.
@@ -174,12 +185,23 @@
     // Target-picker id list. On SSL the reserved terminals (Node998/Node999) are presented as the Combat/Exit
     // picker entries, not raw ids, so drop them here (they would otherwise appear as `-> Node998` in the menus).
     const isSSL = $derived(renderFamily(editModel.sourceLang) === "fallout-ssl");
+    // Scoped to the active root, because a jump resolves per-dialogue everywhere a file holds several. A
+    // compiled dialog's tree is the exception: its roots are separate FILES drawn as one conversation, its ids
+    // carry the dialog name, and the writer stores a cross-file target as that file's resref plus the state
+    // number - so a hand-off must be listed, or it renders as an empty selection.
     const stateIds = $derived(
-        distinctStateIds(activeRoot?.states ?? []).filter((id) => !isSSL || !sslTerminalKind(id)),
+        distinctStateIds(spansFiles ? editModel.roots.flatMap((r) => r.states) : (activeRoot?.states ?? [])).filter(
+            (id) => !isSSL || !sslTerminalKind(id),
+        ),
     );
-    // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
-    // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.
-    const unresolvedRefs = $derived(unresolvedRefCount(editModel));
+    // How many refs failed to resolve to real text. Drives the banner below - otherwise a misconfigured
+    // translation dir silently renders every line as its raw @N ref. A compiled dialog resolves against the
+    // game's dialog.tlk rather than a tra/msg path, and its host substitutes `#N` for what it could not name,
+    // so its count comes from the host instead of from the model's text.
+    const isDlg = $derived(editModel.sourceLang === "dlg");
+    const unresolvedRefs = $derived(isDlg ? (editModel.dlgUnresolvedStrrefs ?? 0) : unresolvedRefCount(editModel));
+    // The banner counts things, so its nouns and verbs both have to agree with the count.
+    const manyRefs = $derived(unresolvedRefs !== 1);
     // Family-specific words for the unresolved-refs banner (Fallout SSL `.msg` vs WeiDU D `.tra`).
     const traHint = $derived(translationHint(isSSL));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
@@ -268,6 +290,7 @@
                   // The SAME per-state predicate the graph/inspector gate on, so the tree's text lock matches
                   // the inspector (a .td state is field-editable even though editModel.editable is false).
                   fieldEditable: (s) => structEditable(s),
+                  sourceless: !hasSourceSpans(editModel),
               })
             : { roots: [] },
     );
@@ -457,7 +480,7 @@
     // inspector's rename field and the tree's own F2 gate (a read-only/derived node cannot be renamed).
     function beginRenameState(stateId: string): void {
         const s = findState(stateId);
-        if (structEditable(s)) select({ on: "rename", state: s });
+        if (renamable(s)) select({ on: "rename", state: s });
     }
     // Commit an inline rename: renameState moves the label and every GOTO/EXTERN reference with it (see the op).
     // A rejected id (empty, unchanged, or a duplicate) leaves the model as-is and the row reverts to the old id
@@ -465,7 +488,9 @@
     function commitRenameState(stateId: string, value: string): void {
         if (adoptRestoreInFlight) return; // blur from the adopt's own DOM churn, not a user gesture
         const s = findState(stateId);
-        if (s && ops.renameState(editModel, s, value)) {
+        // Gated here as well as at the entry into rename mode: two entry points reach `renameState`, and a
+        // compiled dialog has no name to change at either.
+        if (renamable(s) && ops.renameState(editModel, s, value)) {
             select({ on: "state", state: s }); // keep the just-renamed node selected (its id changed)
             void rebuild({ frame: "none" });
         } else if (selected) {
@@ -481,7 +506,9 @@
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
     function navigateToState(stateId: string): void {
         const rootId = stateToRoot.get(stateId);
-        if (rootId && rootId !== activeFile) switchTab(rootId, stateId);
+        // Not while the graph spans files: every root is already on screen, and switching would move the
+        // tree and the edit affordances onto a dialog this editor does not write.
+        if (!spansFiles && rootId && rootId !== activeFile) switchTab(rootId, stateId);
         selectTreeState(stateId);
     }
 
@@ -625,9 +652,8 @@
             tabPos.set(renderedFile, cur);
         }
 
-        const root = activeRoot;
-        const fileId = root?.id ?? "";
-        const g = modelToFlow(root ? { ...editModel, roots: [root] } : editModel);
+        const fileId = graphKey;
+        const g = modelToFlow(graphModel);
         attachJumpTargets(g);
         const cached = tabPos.get(fileId);
         const sameTab = renderedFile === fileId;
@@ -947,6 +973,9 @@
     // there is one predicate, not the former structEditable/fieldEditable pair. These thin closures bind the model
     // and preserve the `s is DialogState` narrowing the template filters and handlers rely on.
     const structEditable = (s: DialogState | null): s is DialogState => nodeEditable(editModel, s);
+    // A compiled dialog's state has no name to change - its number is its position. Everywhere else
+    // renaming is just editability.
+    const renamable = (s: DialogState | null): s is DialogState => nodeRenamable(editModel, s);
     const canDelete = (s: DialogState | null): s is DialogState => nodeDeletable(editModel, s);
 
     // Ids of the active root's structurally-editable states, for the tree's inline add/remove-option
@@ -1074,8 +1103,21 @@
     }
 
     const actions: DialogActions = {
+        // A compiled dialog addresses its records by position. `dlgAddress` owns that mapping (and the cases
+        // where there is no record to address); the host turns the pair back into the file's own tables.
+        pickString: (choiceId: string | null) => {
+            if (!selected) return;
+            const address = dlgAddress(selected, choiceId);
+            if (address) postToHost({ type: "pickString", ...address });
+        },
+        // The host owns detaching: it has the game-wide reference index, and it must ask before doing
+        // anything, so the webview only names the state.
+        detachState: () => {
+            const address = selected && dlgAddress(selected, null);
+            if (address) postToHost({ type: "detach", ...address });
+        },
         rename: (newId: string) => {
-            if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
+            if (renamable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
         addReply: () => {
             if (structEditable(selected)) addOptionAndEdit(selected); // Tier 2 add option: D or faithful SSL
@@ -1331,7 +1373,7 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="dialog-graph">
-    {#if tabs.length > 1}
+    {#if tabs.length > 1 && !spansFiles}
         <div class="tabbar" role="tablist">
             {#each tabs as t (t.id)}
                 <button class="tab" class:active={t.id === activeFile} role="tab" aria-selected={t.id === activeFile} title={t.label} onclick={() => switchTab(t.id)}>
@@ -1339,6 +1381,14 @@
                     <span class="tcount">{t.states.length}</span>
                 </button>
             {/each}
+        </div>
+    {/if}
+    <!-- The tree holds a bounded number of states from other dialogs, so a busy hub shows some and not all.
+         Say how many were left out: a graph missing branches must not look like a complete one. -->
+    {#if editModel.dlgNeighboursOmitted}
+        <div class="omitnote">
+            {editModel.dlgNeighboursOmitted} more states in other dialogs connect to this one and are not shown.
+            Open those dialogs directly to see them.
         </div>
     {/if}
     <!-- One docked toolbar header shared by BOTH views. Previously the graph floated its toolbar over the
@@ -1446,11 +1496,24 @@
     {#if unresolvedRefs > 0}
         <!-- Make a silent resolution failure legible: without a resolvable tra/msg path, getMessages returns
              nothing and every line renders as its raw @N. Tell the author how to point the path rather than
-             leaving the whole conversation unreadable with no explanation. -->
+             leaving the whole conversation unreadable with no explanation. A compiled dialog fails for an
+             unrelated reason and gets its own wording: it holds strrefs into the game's dialog.tlk, not
+             trarefs into a .tra, and being binary it has no first line to annotate either. Which of its two
+             cases applies - no table to look in, or a line the table lacks - decides the advice, so it is
+             read from the host's flag rather than guessed from the counts. -->
         <div class="untra" role="status">
-            <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
-            Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
-            or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
+            {#if isDlg && !editModel.dlgGameOpen}
+                <b>{unresolvedRefs}</b> line{manyRefs ? "s" : ""} {manyRefs ? "show" : "shows"} as <code>#N</code> - a compiled dialog
+                keeps its text in the game's <b>dialog.tlk</b>, and no open game supplies one to read it from.
+                <button type="button" class="opengame" onclick={() => postToHost({ type: "openGame" })}>Open game...</button>
+            {:else if isDlg}
+                <b>{unresolvedRefs}</b> line{manyRefs ? "s" : ""} {manyRefs ? "name" : "names"} a strref the open game's
+                <b>dialog.tlk</b> has no entry for, so {manyRefs ? "they show" : "it shows"} as <code>#N</code>.
+            {:else}
+                <b>{unresolvedRefs}</b> message ref{manyRefs ? "s" : ""} {manyRefs ? "show" : "shows"} as <code>@N</code> - translations aren't resolved.
+                Point the {traHint.pathWord} path in <b>.bgforge.yml</b> (<code>mls.translation.directory</code>, e.g. <code>{traHint.dirExample}</code>)
+                or add a <code>/**&nbsp;@tra&nbsp;name.{traHint.ext}&nbsp;*/</code> comment as the source file's first line.
+            {/if}
         </div>
     {/if}
     <div class="body">
@@ -1595,6 +1658,13 @@
 </div>
 
 <style>
+    /* A quiet strip above the canvas, for a fact about the graph itself rather than about any node. */
+    .omitnote {
+        padding: 2px 8px;
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+        background: var(--vscode-editorGroupHeader-tabsBackground, var(--vscode-editor-background));
+    }
     /* Fill the host (body/#app), not the viewport: `100vw` ignores the scrollbar and,
        with the webview body's default margin, forces a constant horizontal scroll no
        matter the panel width. */
@@ -1848,6 +1918,19 @@
     }
     /* Unresolved-translations banner: a full-width amber notice below the toolbar, matching the
        inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
+    .untra .opengame {
+        margin-left: 0.5em;
+        padding: 0 0.6em;
+        font: inherit;
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+        border: 1px solid transparent;
+        border-radius: 2px;
+        cursor: pointer;
+    }
+    .untra .opengame:hover {
+        background: var(--vscode-button-hoverBackground);
+    }
     .untra {
         flex: 0 0 auto;
         background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));

@@ -14,7 +14,10 @@
     } from "../../../../shared/dialog-model";
     import type { DialogActions } from "./dialog-actions";
     import {
+        codeFieldEditable,
+        codeLockReason,
         conditionLockReason,
+        DLG_RENAME_LOCK_REASON,
         optionRemoveLockReason,
         sayLineEditability,
         stateReadOnlyReason,
@@ -141,13 +144,22 @@
     // SSL is a full scripting language with no surgical write-back, so its detail panel is
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
+    // A compiled dialog: its lines are string-table references, so they are chosen rather than typed.
+    const dlg = $derived(sourceLang === "dlg");
+    // A state from a neighbouring dialog, drawn so the hand-offs of this conversation are visible. This editor
+    // saves the one file it opened, so nothing here can be changed - and it must not offer controls that
+    // would silently do nothing. `structuralEditable` is `nodeEditable`, which already says so for a DLG.
+    const foreign = $derived(dlg && !structuralEditable);
 
     // Which TextMate grammar colours every code field (trigger, condition, action), chosen by SOURCE language,
     // not render family: a D dialog's fields are BAF, an SSL condition is SSL, and a TD or TSSL dialog's fields
     // are TypeScript source (the model stores the raw `cond.getText()` / action expression). The field's
     // language is its source language uniformly - a `.td` action is TypeScript the same as its condition, even
     // though the emitted D action is BAF.
-    const codeLang = $derived<"baf" | "ssl" | "ts">(sourceLang === "d" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts");
+    // A DLG stores the same trigger and action fragments a `.d` wraps in tildes, so it highlights as BAF too.
+    const codeLang = $derived<"baf" | "ssl" | "ts">(
+        sourceLang === "d" || sourceLang === "dlg" ? "baf" : sourceLang === "ssl" ? "ssl" : "ts",
+    );
 
     // Text saves to the message file of the family (.msg for SSL, .tra for D) - a separate file from the
     // source, so it is named concretely; structure edits just say "the source file" (the one the user opened).
@@ -162,6 +174,11 @@
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
     const structReason = $derived(structuralLockReason(state, ssl, editable));
     const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
+    // Trigger, condition and action are TEXT in a compiled dialog, and the save path writes an edited one back
+    // into its table - so they follow their own predicate rather than `readOnly`, whose `editable` flag says
+    // only that a DLG line is a strref instead of prose.
+    const codeEditable = $derived(codeFieldEditable({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
+    const codeReason = $derived(codeLockReason({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
 
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
     // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
@@ -186,7 +203,7 @@
         // The inspector locks text only on a derived (no-own-source) state; a D-family literal otherwise stays
         // editable even when the STRUCTURE is read-only (a .tra edit is structure-independent - a typo in an
         // unfaithful TD state's line can still be fixed). SSL's own @N gate lives inside textEditability.
-        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom) });
+        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom), dlg, foreign });
     }
 
 
@@ -323,6 +340,22 @@
             conditions) is read-only - this node is not simple enough to edit safely from the graph;
             edit the <b>source file</b> for that.
         </div>
+    {:else if foreign}
+        <!-- A state from a dialog this editor did not open. It is on screen so a hand-off leads somewhere
+             visible; every control that would write it is withheld rather than shown doing nothing. -->
+        <div class="ronote">
+            This state belongs to <b>{state.dlgResref}</b>, shown so this conversation's hand-offs are visible.
+            This editor saves only the file it opened - open <b>{state.dlgResref}</b> to change it.
+        </div>
+    {:else if dlg}
+        <!-- A compiled dialog. Its text is not prose the editor can write - it is a number pointing into the
+             game's string table - so the wording names what CAN be done rather than the D-family's .tra story. -->
+        <div class="ronote">
+            Each line refers to a string in the game's <b>dialog.tlk</b>; <b>Change string...</b> points it at a
+            different entry. Replies can be added, removed and retargeted, and states added. A state's
+            <b>number</b> is its position in the file, which other dialogs point at - so it cannot be renamed or
+            removed.
+        </div>
     {:else if !structuralEditable}
         <!-- D-family (D/TD) node the parser could not fully model (an inner if/else it can't round-trip), so its
              structure is read-only. Text still saves (a .tra edit is structure-independent). -->
@@ -334,9 +367,11 @@
     {/if}
 
     <!-- Read-only label only when the id input actually IS read-only (same condition as its `disabled` below):
-         a structurally-editable node (D, or a faithful td/tssl node) can be renamed, so it is a jump target. -->
-    <div class="ik">{ssl ? "State" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} title={!structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
+         a structurally-editable node (D, or a faithful td/tssl node) can be renamed, so it is a jump target.
+         A compiled dialog's state has no name at all - its number is its address - so the field is locked for
+         it whatever its structural editability, matching the `nodeRenamable` gate the commit path applies. -->
+    <div class="ik">{ssl ? "State" : dlg ? "State number" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
+    <input class="iv code" value={state.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? DLG_RENAME_LOCK_REASON : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches && !state.block}
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
@@ -344,6 +379,8 @@
         <div class="ik">NPC line</div>
         {@const npc = textEdit(null)}
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+        <!-- A compiled dialog's line is a reference into the game's string table, so it is chosen, not typed. -->
+        {#if dlg && !foreign}<button type="button" class="pickstr" onclick={() => actions.pickString(null)}>Change string...</button>{/if}
         <!-- Continuation lines of a multisay `SAY @a = @b = @c` monologue (line 1 is the field above): the NPC
              speaks several lines before the player replies. Each edits like the primary line - an @N line writes
              its .msg/.tra entry, a literal writes the .d source (setSayLine). Absent for a single-say state. -->
@@ -384,12 +421,16 @@
                 <!-- The D family reaches this branch: a D trigger is BAF, a TD trigger is TypeScript source (the
                      enclosing `if (...)` condition) - codeLang picks the grammar. CodeField's textarea wraps a
                      long trigger into view instead of scrolling it out of sight. -->
-                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
+                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={!codeEditable} title={codeReason} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
             </div>
-            <div class="wcol">
-                <div class="ik">Weight</div>
-                <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
-            </div>
+            <!-- Weight is a `.d` construct (IF WEIGHT #n): a compiled dialog has no such field, so showing an
+                 always-empty box would invite an edit with nowhere to go. -->
+            {#if !dlg}
+                <div class="wcol">
+                    <div class="ik">Weight</div>
+                    <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+                </div>
+            {/if}
         </div>
     {/if}
 
@@ -428,7 +469,10 @@
                                 <button title={i === 0 ? "Already the first option" : "Move up"} disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                                 <button title={i === state.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                             {/if}
-                            {#if !readOnly}
+                            <!-- `dlg` joins the plain-Remove arm: a compiled reply is removed by rebuilding its
+                                 state's transition list, which its trigger does not affect - the SSL arm below
+                                 would disable it for carrying one, and say so in SSL's terms. -->
+                            {#if !readOnly || dlg}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {:else if structuralEditable && !state.branches}
                                 <!-- Faithful SSL/TSSL and every TD node: remove writes back to source. A conditional
@@ -442,6 +486,7 @@
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={!oe.editable} title={oe.reason} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+            {#if dlg && !foreign}<button type="button" class="pickstr" onclick={() => actions.pickString(c.id)}>Change string...</button>{/if}
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
@@ -459,7 +504,7 @@
                     <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {:else}
                     <!-- D-family condition: BAF for D, TypeScript source for TD - codeLang picks the grammar. -->
-                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={readOnly} title={readOnly ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={readOnly ? "(none)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!codeEditable} title={codeReason} placeholder={!codeEditable ? "(none)" : dlg ? "(no condition)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {/if}
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
@@ -475,7 +520,7 @@
                      BAF for a D dialog, TypeScript for a TD one (its source is TypeScript, even though the D it
                      emits is BAF). The BAF grammar reads a name as an action or trigger by its IDS list, so no
                      per-field "kind" hint is needed. -->
-                <CodeField lang={codeLang} value={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder={readOnly ? "(none)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
+                <CodeField lang={codeLang} value={c.action ?? ""} disabled={!codeEditable} title={codeReason} placeholder={!codeEditable ? "(none)" : dlg ? "(no action)" : "action (DO ~...~)"} oninput={(v) => (c.action = v.trim() === "" ? undefined : v)} />
             {/if}
             <!-- Retarget is a FIELD edit: enabled for any field-editable node (D, faithful/bundle SSL, and
                  faithful/bundle TSSL - whose target token round-trips to the .tssl source). -->
@@ -673,6 +718,14 @@
         <div class="stateops">
             <button onclick={actions.duplicateState}>Duplicate state</button>
             {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
+        </div>
+    {:else if dlg && !foreign}
+        <!-- A compiled dialog offers Detach, not Delete: the state's number is an address other dialogs hold,
+             so the record stays and only the replies leading to it are cut. The host explains that and asks
+             before doing it. Duplicate is not offered - the generic op clones a state's file position too,
+             which a compiled dialog cannot hold twice. -->
+        <div class="stateops">
+            <button class="del" onclick={actions.detachState}>Detach state</button>
         </div>
     {:else if ssl && structuralEditable}
         <!-- A faithful SSL node: Duplicate clones the procedure (sharing the source's @N refs, like D) and
@@ -901,6 +954,26 @@
     }
     /* NPC line = blue (charts-blue), matching the graph card and tree; player option text = the default
        foreground, overridden to green/red by the per-option reaction chip. */
+    /* Sits under the line it changes, reading as an action on that field rather than a form control. */
+    .pickstr {
+        /* The inspector lays its fields out as blocks, and an option box stretches its children - so the size
+           is stated here rather than inherited, keeping the button identical under a line and under a reply. */
+        display: inline-block;
+        width: auto;
+        margin: 2px 0 4px;
+        padding: 2px 8px;
+        font: inherit;
+        font-size: 0.9em;
+        color: var(--vscode-button-secondaryForeground, inherit);
+        background: var(--vscode-button-secondaryBackground, transparent);
+        border: 1px solid var(--vscode-contrastBorder, transparent);
+        border-radius: 2px;
+        cursor: pointer;
+    }
+    .pickstr:hover {
+        background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+    }
+
     .iv.npc {
         color: var(--vscode-charts-blue);
     }

@@ -1477,8 +1477,8 @@ input[type="text"]::placeholder {
    minimum, so the browser fits min(count, what actually fits). */
 .layout-root .grid {
     column-width: var(--col-w, 12rem);
-    /* Column gap is the shared inter-column spacing, not a value of its own - see the webview AGENTS.md
-       "Uniform spacing" rule. It was a hardcoded 40px, which read as a gulf beside the packed field grids. */
+    /* Column gap is the shared inter-column spacing, not a value of its own - see docs/binary-editor-ui.md,
+       "Uniform spacing". It was a hardcoded 40px, which read as a gulf beside the packed field grids. */
     column-gap: var(--bb-col-gap);
 }
 .layout-root .grid .skill {

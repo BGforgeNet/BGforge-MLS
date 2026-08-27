@@ -40,7 +40,10 @@ interface GrammarSweep {
     readonly name: string;
     readonly mod: ParserModule;
     readonly root: string;
-    /** Glob (relative to `root`) matching every source file the grammar owns. */
+    /**
+     * Glob (relative to `root`) matching every source file the grammar owns. Matched case-insensitively: real
+     * mods ship uppercase extensions, and a case-sensitive sweep drops those files without reporting a thing.
+     */
     readonly glob: string;
 }
 
@@ -78,7 +81,7 @@ function collectErrorFiles(mod: ParserModule, root: string, absPaths: readonly s
 
 describe("grammar corpus parse sweep", () => {
     for (const g of GRAMMARS) {
-        const files = fg.sync(g.glob, { cwd: g.root, absolute: true }).sort();
+        const files = fg.sync(g.glob, { cwd: g.root, absolute: true, caseSensitiveMatch: false }).sort();
         const allowed = [...(ALLOWLIST[g.name]?.files ?? [])].sort();
 
         describe.skipIf(files.length === 0)(g.name, () => {

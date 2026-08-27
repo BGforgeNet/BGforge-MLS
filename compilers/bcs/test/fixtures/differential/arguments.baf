@@ -1,0 +1,11 @@
+IF
+	NearLocation(Player1,610,223,20)
+	Global("chapter","GLOBAL",3)
+THEN
+	RESPONSE #100
+		SetGlobal("ACH_GODLIKE","GLOBAL",1)
+		MoveToPoint([640.480])
+		ApplySpellRES("SPWI112",Myself)
+		ApplySpell(Myself,WIZARD_MAGIC_MISSILE)
+		PlaySound("BELLS")
+END

@@ -484,11 +484,17 @@
         ],
         "customEditors": [
             {
-                "viewType": "bgforge.intEditor",
-                "displayName": "Fallout Script (decompiled)",
+                "viewType": "bgforge.scriptEditor",
+                "displayName": "Compiled Script (decompiled)",
                 "selector": [
                     {
                         "filenamePattern": "*.int"
+                    },
+                    {
+                        "filenamePattern": "*.bcs"
+                    },
+                    {
+                        "filenamePattern": "*.bs"
                     }
                 ],
                 "priority": "default"
@@ -567,6 +573,16 @@
                     }
                 ],
                 "priority": "option"
+            },
+            {
+                "viewType": "bgforge.dlgViewer",
+                "displayName": "BGforge Dialog Viewer",
+                "selector": [
+                    {
+                        "filenamePattern": "*.dlg"
+                    }
+                ],
+                "priority": "default"
             }
         ],
         "grammars": [
@@ -748,6 +764,44 @@
                     "default": "",
                     "description": "Absolute path to an IE game. Enables the parse feature on BAF and D files, resolves IE records in workspace files against that game in the binary editor, and auto-loads the game in the IE Resources view. Opening a game in that view writes this setting."
                 },
+                "bgforge.weidu.tlkEncoding": {
+                    "type": "string",
+                    "default": "",
+                    "enum": [
+                        "",
+                        "windows-1250",
+                        "windows-1251",
+                        "windows-1254",
+                        "shift_jis",
+                        "gbk",
+                        "euc-kr",
+                        "big5"
+                    ],
+                    "enumDescriptions": [
+                        "Automatic: UTF-8 for Enhanced Editions, windows-1252 otherwise. Correct for every EE install and for Western classic games.",
+                        "Central European - Czech, Polish, Hungarian",
+                        "Cyrillic - Russian, Ukrainian",
+                        "Turkish",
+                        "Japanese (Shift-JIS)",
+                        "Simplified Chinese (GBK)",
+                        "Korean",
+                        "Traditional Chinese (Big5)"
+                    ],
+                    "markdownDescription": "Character encoding of a **classic** game's `dialog.tlk`. Leave empty unless text from the game shows as garbled characters.\n\nA classic install records its encoding nowhere, so the default assumes windows-1252 - correct for English, French, German, Italian, Spanish and the other Western languages, and wrong for the rest. Enhanced Editions are always UTF-8 and ignore this setting."
+                },
+                "bgforge.weidu.compiler": {
+                    "type": "string",
+                    "enum": [
+                        "weidu",
+                        "built-in"
+                    ],
+                    "enumDescriptions": [
+                        "The WeiDU binary at bgforge.weidu.path. The reference implementation: it resolves the %variable% substitutions and translation references that only exist once a mod is being installed.",
+                        "The extension's own compiler. Compiles the editor's text directly, writing no temporary file, and reports every problem at once - but refuses a file using %variable% or a @123 translation reference, which it cannot resolve outside an installation."
+                    ],
+                    "default": "weidu",
+                    "description": "Which compiler produces diagnostics for BAF files. Both need bgforge.weidu.gamePath; only the WeiDU one needs a WeiDU binary."
+                },
                 "bgforge.validate": {
                     "type": "string",
                     "default": "saveAndType",
@@ -806,9 +860,11 @@
     "activationEvents": [
         "onCustomEditor:bgforge.animationEditor",
         "onCustomEditor:bgforge.binaryEditor",
-        "onCustomEditor:bgforge.intEditor",
+        "onCustomEditor:bgforge.dialogEditor",
+        "onCustomEditor:bgforge.dlgViewer",
+        "onCustomEditor:bgforge.scriptEditor",
         "onFileSystem:bgforge-ie-resource",
-        "onFileSystem:bgforge-int",
+        "onFileSystem:bgforge-script",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",

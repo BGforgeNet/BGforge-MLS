@@ -7,7 +7,7 @@ human-readable JSON form.
 
 The set of binary formats handled is discovered at runtime from the installed `@bgforge/binary`
 (`fgbin --extensions`), so any format newly registered there is picked up by the action without a matching action
-release. At the time of writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` (Infinity
+release. At the time of writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` / `.dlg` (Infinity
 Engine).
 
 ## Usage

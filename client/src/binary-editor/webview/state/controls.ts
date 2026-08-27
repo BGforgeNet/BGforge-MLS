@@ -243,7 +243,7 @@ export function rangeTooltip(row: Row): string | undefined {
  * which is the only affordance a resource with nothing to show can have.
  *
  * Shared rather than repeated in each block renderer, so the two cannot end up disagreeing about which
- * affordance a row gets (`webview/AGENTS.md`, the shared-layer rule).
+ * affordance a row gets (`docs/binary-editor-ui.md`, the shared-layer rule).
  */
 export function showsOpenChip(row: Row): boolean {
     return row.openTarget !== undefined && row.thumbnail === undefined;

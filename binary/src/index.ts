@@ -88,6 +88,8 @@ export { mapParser } from "./map";
 export { itmParser } from "./itm";
 export { splParser } from "./spl";
 export { effParser } from "./eff";
+export { buildDlg, dlgParser, readDlg, serializeDlg, toDlgBuildInput, DlgTransitionFlag } from "./dlg";
+export type { Dlg, DlgBuildInput, DlgState, DlgTransition } from "./dlg";
 export { creParser } from "./cre";
 
 // Pid -> subType resolution for MAP item / scenery decode. The default
@@ -166,6 +168,7 @@ import { mapParser } from "./map";
 import { itmParser } from "./itm";
 import { splParser } from "./spl";
 import { effParser } from "./eff";
+import { dlgParser } from "./dlg";
 import { creParser } from "./cre";
 import { parserRegistry } from "./registry";
 parserRegistry.register(proParser);
@@ -173,4 +176,5 @@ parserRegistry.register(mapParser);
 parserRegistry.register(itmParser);
 parserRegistry.register(splParser);
 parserRegistry.register(effParser);
+parserRegistry.register(dlgParser);
 parserRegistry.register(creParser);

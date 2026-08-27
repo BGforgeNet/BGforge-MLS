@@ -183,9 +183,12 @@ export function buildConversationTree(
     // Optional (defaults to an editable file) so the pure-projection tests can stay 3-arg; the editor always
     // passes real values. Destructured with per-key defaults rather than an object-literal default param (which
     // oxlint's no-object-as-default-parameter rightly flags - a shared mutable default).
-    opts?: { ssl: boolean; fieldEditable: (s: DialogState) => boolean },
+    // `sourceless` says the FORMAT carries no source spans at all (a compiled DLG). Absence of a span means
+    // "the user just added this" only where spans otherwise exist; without this every DLG node reads as an
+    // unsaved draft, which is what a live drive showed.
+    opts?: { ssl: boolean; fieldEditable: (s: DialogState) => boolean; sourceless?: boolean },
 ): ConversationTree {
-    const { ssl = false, fieldEditable = () => true } = opts ?? {};
+    const { ssl = false, fieldEditable = () => true, sourceless = false } = opts ?? {};
     // SSL convention: Node998/Node999 are terminal Combat/Exit targets, not drawn conversation nodes
     // (SSL_TERMINAL_NODES). Exclude them from the states the tree draws; buildTarget maps an option targeting
     // them to a terminal chip instead. Non-SSL formats keep every state.
@@ -232,8 +235,8 @@ export function buildConversationTree(
         action: c.action,
         reaction: c.reaction,
         lowIq: c.lowIq,
-        textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO }).editable,
-        ...(isPendingChoice(c) ? { pending: true } : {}),
+        textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO, dlg: sourceless }).editable,
+        ...(!sourceless && isPendingChoice(c) ? { pending: true } : {}),
         target: buildTarget(c),
         // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
         // `sourceRange` (the SSL fields are absent for D), so F4 resolves on a D option too - parity with the
@@ -331,8 +334,8 @@ export function buildConversationTree(
             ...(branches ? { branches } : {}),
             ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
-            ...(isPendingState(s) ? { pending: true } : {}),
-            textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO }).editable,
+            ...(!sourceless && isPendingState(s) ? { pending: true } : {}),
+            textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO, dlg: sourceless }).editable,
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };
     }

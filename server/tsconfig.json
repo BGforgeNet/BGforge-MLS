@@ -7,10 +7,20 @@
         "outDir": "out",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
         "paths": {
+            "@bgforge/binary/archive": ["../binary/src/archive/index.ts"],
             "@bgforge/format": ["../format/src/index.ts"],
             "@bgforge/format/internal": ["../format/src/internal.ts"]
         }
     },
-    "include": ["src", "test", "scripts", "../shared", "../transpilers", "../format/src", "../test"],
+    "include": [
+        "src",
+        "test",
+        "scripts",
+        "../shared",
+        "../transpilers",
+        "../binary/src/archive",
+        "../format/src",
+        "../test"
+    ],
     "exclude": ["node_modules", ".vscode-test"]
 }

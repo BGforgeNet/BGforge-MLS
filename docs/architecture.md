@@ -63,6 +63,7 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
 |   transpile.js    |
 |    fgbin (cli.js) |
 |      ssl (cli.js) |
+|     tssl (cli.js) |
 +-------------------+
 ```
 
@@ -90,6 +91,9 @@ vscode-mls/
 |   |   +-- binary-editor/          Binary .pro/.map/.itm/.spl/.eff/.cre custom editor (worker thread + Svelte webview; uses @bgforge/binary + @bgforge/binary-editor)
 |   |   +-- image-editor/           Animation editor for Fallout FRM / IE BAM (custom editor + Svelte webview; uses @bgforge/image)
 |   |   +-- ie-resources/           IE game resource viewer: sidebar tree over an installed game, plus the bgforge-ie-resource: FileSystemProvider that lets the editors open and save resources out of chitin.key/BIF and override/
+|   |   +-- script-view/            bgforge-script: FileSystemProvider backing the read-and-recompile views below
+|   |   +-- bcs-editor/             Compiled IE script (.bcs/.bs) view: decompiles to BAF, recompiles on save
+|   |   +-- int-editor/             Compiled Fallout script (.int) view: disassembles to readable text
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -142,9 +146,11 @@ vscode-mls/
 |
 +-- compilers/              Compilers, one per source language (transpilers/ holds the ones that emit source)
 |   +-- ssl/                    @bgforge/ssl package: Fallout SSL -> INT compiler + the `ssl` CLI bin (private)
-|       +-- src/                    preprocess/lower/optimize + int/ back end, cli.ts (the `ssl` bin)
-|       +-- test/                   Library + CLI tests (vitest) + corpus differentials (test/integration/)
-|       +-- out/                    tsdown output + WASM files
+|   |   +-- src/                    preprocess/lower/optimize + int/ back end, cli.ts (the `ssl` bin)
+|   |   +-- test/                   Library + CLI tests (vitest) + corpus differentials (test/integration/)
+|   |   +-- out/                    tsdown output + WASM files
+|   +-- tssl/                   @bgforge/tssl package: TypeScript -> Fallout INT compiler + the `tssl` CLI bin
+|   +-- bcs/                    @bgforge/bcs package: IE BCS codec + BAF compile/decompile (private, no CLI)
 |
 +-- shared/                 Pure TypeScript helpers shared across workspaces
 |   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
@@ -172,10 +178,9 @@ vscode-mls/
 +-- themes/                 Color theme (BGforge Monokai) + icon theme
 +-- snippets/               Code snippets (SSL, BAF, TP2)
 +-- scripts/                Build, test, data generation scripts
-+-- actions/                Reusable composite GitHub Actions (binary, format, transpile) + _shared/ scripts
++-- actions/                Reusable composite GitHub Actions (binary, format, transpile, tssl) + _shared/ scripts
 +-- transpilers/            Transpiler implementations + user documentation
 |   +-- common/                 Shared utilities (@bgforge/transpiler-common, workspace-internal)
-|   +-- tssl/                   @bgforge/tssl: TypeScript to Fallout SSL
 |   +-- tbaf/                   @bgforge/tbaf: TypeScript to WeiDU BAF
 |   +-- td/                     @bgforge/td: TypeScript to WeiDU D
 |   +-- src/                    @bgforge/transpile: library entry (index.ts) + fgtp bin (cli.ts)
@@ -183,6 +188,10 @@ vscode-mls/
 +-- resources/              Extension icon
 +-- docs/                   Documentation
 ```
+
+`transpilers/common/` predates the repo-wide use of "shared" for this role (`shared/` now holds the helpers used by
+both runtime and build-time code). The name stays: renaming it would churn roughly 40 files plus the
+`@bgforge/transpiler-common` package name for no functional gain.
 
 ## Build System
 
@@ -374,7 +383,7 @@ The per-format editor UI can be described by **data** rather than by the parser'
 
 When an adapter declares a `layout` and the parse result reports a matching `variantId`, `binary-editor/buildLayout` returns a `ResolvedLayout` (the variant's rows + a `FieldRef -> Row` map) and the webview renders it via `LayoutRenderer` (`webview/components/LayoutRenderer.svelte` + the per-block components) - a single dense page, no section tabs. Otherwise the legacy depth-0-groups-as-tabs path renders unchanged. The two paths coexist; `App.svelte` branches on `open.layout.layout`.
 
-**PRO critters** were the first format migrated: a critter's ~90 fields render as a single page (Header + flag columns, Demographics, Final, a Stats matrix, a Skills grid) instead of 13 tabs. A `layout-schema.ts` is now authored for all six formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`). Within PRO, only the critter variant is authored - other PRO object/sub types report a `variantId` with no matching variant and fall back to the tabs path. The parser stays a faithful bytes<->model mapping; all grouping/placement is presentation data in `<format>/layout-schema.ts`.
+**PRO critters** were the first format migrated: a critter's ~90 fields render as a single page (Header + flag columns, Demographics, Final, a Stats matrix, a Skills grid) instead of 13 tabs. A `layout-schema.ts` is now authored for the six field-form formats (`pro`, `map`, `itm`, `spl`, `eff`, `cre`); DLG has none, since it renders in the dialog editor rather than the field form. Within PRO, only the critter variant is authored - other PRO object/sub types report a `variantId` with no matching variant and fall back to the tabs path. The parser stays a faithful bytes<->model mapping; all grouping/placement is presentation data in `<format>/layout-schema.ts`.
 
 - MAP JSON snapshots remain fidelity snapshots. Any MAP region the editor intentionally omits from the visible tree, such as tiles or opaque tails, is still carried in the canonical snapshot so JSON round-trips remain byte-preserving.
 - That byte preservation applies to omitted MAP regions and preserved fixed-width source bytes such as filename slots. Once a field is modeled and changed through the canonical document, JSON load/save treats the parsed value as authoritative and rewrites that field in canonical form.
@@ -426,10 +435,11 @@ matrix above does not track as a column.
 
 ### Transpilers
 
-Three TypeScript-to-scripting-language transpilers share a common pipeline:
+Two TypeScript-to-scripting-language transpilers share a common pipeline (TSSL emits INT bytecode rather
+than source, and lives under `compilers/`):
 
 ```
-Source (.tssl/.tbaf/.td)
+Source (.tbaf/.td)
   |
   +-> Extract @tra tag (esbuild strips comments)
   +-> Bundle imports (esbuild, shared bundler)
@@ -465,14 +475,13 @@ TBAF/TD skip bundling for import-free files (`hasImports()` guard); TSSL always 
 because enums are a first-class feature, inline function extraction depends on bundling,
 and enum property expansion needs all bundled enum names.
 
-**Architecture differences**: TSSL emits directly from AST (no IR). TBAF uses a
+**Architecture differences**: TBAF uses a
 structured IR (`BAFBlock/Condition/Action`) with condition algebra (boolean to
 CNF conversion for BAF OR groups). TD has the richest IR (20+ construct types)
 with state machines, method chain parsing, and dual-pass orphan detection.
 
 | Transpiler | Input   | Output | Key Features                                                                                                 |
 | ---------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------ |
-| TSSL       | `.tssl` | `.ssl` | const/let, loops, functions, enum pre-transform                                                              |
 | TBAF       | `.tbaf` | `.baf` | for/for-of, arrays, spread, destructuring, function inlining, point tuples                                   |
 | TD         | `.td`   | `.d`   | All TBAF features + conditionals, method chains, transitive state collection, orphan warnings, dialog editor |
 
@@ -518,23 +527,24 @@ library entry exposes the formatters for use in custom build pipelines.
 ### Transpile CLI
 
 ```bash
-fgtp <file|dir> [--save] [--check] [-r] [-q]
+fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q]
 ```
 
-Transpiles `.tssl`, `.tbaf`, `.td` files to their target formats. Uses ts-morph
+Transpiles `.tbaf` and `.td` files to their target formats; `.tssl` is compiled by the separate `tssl`
+CLI in `@bgforge/tssl`. Uses ts-morph
 and native esbuild in the standalone CLI build (`--alias:esbuild-wasm=esbuild`).
 Reports orphan warnings for TD files.
 
 ### Binary CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|file.dlg|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
 ```
 
 Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsdown to `binary/out/cli.js`).
 
-Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
-Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`.
+Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), `.cre` (v1), and `.dlg` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
+Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`, `file.dlg.json`.
 
 ### SSL CLI
 
@@ -883,9 +893,10 @@ Debug logs intentionally keep raw URIs to preserve diagnostic ability.
 Cases where apparent duplication is intentional. Each subsection explains why the
 components stay separate.
 
-### Four Separate CLIs (format, transpile, binary, ssl)
+### Five Separate CLIs (format, transpile, binary, ssl, tssl)
 
-`format/` (fgfmt bin), `transpilers/` (fgtp bin), `binary/` (fgbin bin) and `compilers/ssl/` (`ssl` bin) stay as separate bundles.
+`format/` (fgfmt bin), `transpilers/` (fgtp bin), `binary/` (fgbin bin), `compilers/ssl/` (`ssl` bin) and
+`compilers/tssl/` (`tssl` bin) stay as separate bundles.
 Shared scaffolding (argument parsing, file discovery, output modes) is already extracted to
 `shared/cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
 
@@ -893,8 +904,8 @@ Shared scaffolding (argument parsing, file discovery, output modes) is already e
   and binary bundles are small. A unified binary would load the transpile toolchain on every
   `format` or `binary` invocation -- cold-start and install-size regression for the two use
   cases that don't need it.
-- The three tools do semantically different jobs: text round-trip, source-to-source
-  compilation, binary parsing. The shared surface is already shared at the right layer
+- The tools do semantically different jobs: text round-trip, source-to-source
+  transpilation, bytecode compilation, binary parsing. The shared surface is already shared at the right layer
   (`shared/cli/cli-utils.ts`); the per-tool bodies are not duplicated.
 - The format CLI ships as the `fgfmt` bin entry within `@bgforge/format`, the transpile
   CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, and the binary CLI ships

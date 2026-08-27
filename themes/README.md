@@ -22,3 +22,10 @@ Same with `vs-seti-icon-theme.json`, sourced from [here](https://github.com/micr
    patch -p0 themes/bgforge-icon-theme.json themes/seti.patch
    ```
 4. Remove patch files and verify: `diff themes/vscode-monokai.json themes/bgforge-monokai.json` should show only BGforge customizations.
+
+## Icon assets
+
+`icons/` is SVG throughout except `weidu-baf.png`, `weidu-tp2-patch.png` and `weidu-bcs.png`. The BAF and
+TP2-patch glyphs arrived as rasters and have no SVG source; `weidu-bcs.png` is `weidu-baf.png` recoloured
+pixel for pixel, so that a compiled script reads as the same letter as its source in another colour.
+Redrawing the letter as an SVG would make the two diverge, which is the one thing the pair exists to avoid.

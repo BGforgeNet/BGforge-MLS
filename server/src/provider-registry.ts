@@ -38,6 +38,7 @@ import { showError } from "./user-messages";
 import { IDENTIFIER_EXTRA_CHARS } from "./core/languages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
+import type { StrRefSite } from "./ie-resources/strref-sites";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
@@ -158,6 +159,12 @@ class ProviderRegistry {
 
     // =========================================================================
     // Feature routing - delegates to appropriate provider
+    //
+    // THIS IS THE URI GATEWAY. Every method here that accepts a `uri` normalizes it with `normalizeUri`
+    // before it reaches a provider, so providers only ever see canonical encoding and can key maps by it.
+    // A new URI-accepting method must do the same - an un-normalized URI compares unequal to the same file
+    // reached another way, which surfaces as a lookup that silently misses rather than as an error.
+    // Anything using a URI as a Map/Set key takes the `NormalizedUri` branded type.
     // =========================================================================
 
     format(langId: string, text: string, uri: string): FormatResult {
@@ -269,6 +276,11 @@ class ProviderRegistry {
             return provider.inlayHints(text, normUri, range);
         }
         return [];
+    }
+
+    strRefs(langId: string, text: string, uri: string): StrRefSite[] {
+        const normUri = normalizeUri(uri);
+        return this.get(langId)?.strRefs?.(text, normUri) ?? [];
     }
 
     semanticTokens(langId: string, text: string, uri: string): SemanticTokens {

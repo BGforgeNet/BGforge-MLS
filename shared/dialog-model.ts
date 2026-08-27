@@ -20,7 +20,7 @@ import type {
 } from "./dialog-types";
 
 /** The source language a dialog model was parsed from - the single discriminant on `DialogModel`. */
-export type SourceLang = "d" | "ssl" | "td" | "tssl";
+export type SourceLang = "d" | "ssl" | "td" | "tssl" | "dlg";
 
 /** The target-language family a source language renders as (D-family vs SSL-family conventions). */
 export type RenderFamily = "weidu-d" | "fallout-ssl";
@@ -34,6 +34,9 @@ export function renderFamily(lang: SourceLang): RenderFamily {
     switch (lang) {
         case "d":
         case "td":
+        case "dlg":
+            // A DLG is the compiled form of what a .d describes - the same trigger and action fragments, the
+            // same state/transition shape - so it renders by D-family conventions rather than earning a family.
             return "weidu-d";
         case "ssl":
         case "tssl":
@@ -68,6 +71,23 @@ export interface DialogModel {
     roots: DialogRoot[];
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
     messages?: DialogMessages;
+    /**
+     * DLG only: how many states of other dialogs were left out of the tree, which holds a bounded number of
+     * them. Present only when some were, so the view can say so rather than looking complete. Set by the host.
+     */
+    dlgNeighboursOmitted?: number;
+    /**
+     * DLG only: whether the document was opened from a game whose `dialog.tlk` was available. A strref that
+     * did not resolve means two different things either side of this - no string table to look in, or a line
+     * the table genuinely lacks - and the two need opposite advice. Set by the host.
+     */
+    dlgGameOpen?: boolean;
+    /**
+     * DLG only: how many of the dialog's strrefs the game could not name. Counted by the host, which is the
+     * only side that sees a failed lookup: an unnamed strref still gets `#N` as its text so the view can
+     * show it as the strref it is, and that leaves nothing for `unresolvedRefCount` to find.
+     */
+    dlgUnresolvedStrrefs?: number;
     /**
      * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
@@ -122,6 +142,12 @@ export interface DialogRoot {
     label: string;
     kind: DialogRootKind;
     states: DialogState[];
+    /**
+     * This root belongs to a different file than the one being edited - it is here so a conversation that
+     * leaves and comes back closes up as one tree. The view marks it, and nothing in it is editable, since
+     * the editor only writes the file it opened.
+     */
+    external?: boolean;
 }
 
 /**
@@ -311,6 +337,14 @@ export interface DialogState {
     block?: DialogBlock;
     /** SSL only: true when the flat projection is an approximation (see SSLDialogNode.approximate). Drives an "approximate - see source" signal. */
     approximate?: boolean;
+    /**
+     * DLG only: this state's position in its file's state table, and the dialog that holds it. Together they
+     * are the stable key mapping an edited state back to its record, the role `sourceRange` plays for D - the
+     * id cannot serve, because a tree holding states from several dialogs must qualify ids by file. Set by
+     * the DLG adapter. `dlgIndex` is absent on a state the user just added, which has no record yet.
+     */
+    dlgIndex?: number;
+    dlgResref?: string;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -337,6 +371,13 @@ export interface DialogChoice {
      * adapter; used by the per-field surgical edit to splice just this transition.
      */
     sourceRange?: { start: number; end: number };
+    /**
+     * DLG only: this reply's position in its file's transition table. Set by the DLG adapter; absent on a
+     * reply the user just added. The writer rebuilds every state's transition window from the model, so this
+     * is what carries the fields the model does not model (journal entry, quest and interrupt flags) across
+     * an edit - not an address the written file preserves.
+     */
+    dlgTransition?: number;
     /**
      * SSL only: byte span of the whole option call `NOption(...)` (used by reorder). Set by the SSL
      * adapter; absent for D, which uses `sourceRange` for its whole-transition span.

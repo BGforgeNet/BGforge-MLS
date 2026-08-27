@@ -32,6 +32,7 @@ import type {
 import type { IndexedSymbol } from "./symbol";
 import type { NormalizedUri } from "./normalized-uri";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
+import type { StrRefSite } from "../ie-resources/strref-sites";
 import type { MLSsettings } from "../settings";
 
 // =============================================================================
@@ -199,6 +200,14 @@ export interface SemanticTokenCapability {
 
 export interface InlayHintCapability {
     inlayHints(text: string, uri: NormalizedUri, range: Range): InlayHint[];
+}
+
+/**
+ * Locating TLK string references in a document. Only the positions - resolving them to text needs the
+ * configured game install, which is not a provider's concern, so one consumer serves every language here.
+ */
+export interface StrRefCapability {
+    strRefs(text: string, uri: NormalizedUri): StrRefSite[];
 }
 
 export interface WorkspaceSymbolCapability {

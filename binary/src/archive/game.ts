@@ -17,7 +17,7 @@ import { atomicWriteFileSync, fileSource } from "./byte-source";
 import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game-type";
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
-import { parseIds } from "./ids";
+import { parseIds, parseIdsAll } from "./ids";
 import { parse2daRowNames, parse2daTable, type TwoDaTable } from "./two-da";
 import { openTlk, type Tlk } from "./tlk";
 
@@ -71,11 +71,21 @@ export interface Game {
      */
     rescan(): void;
     /**
+     * The loose file a `write` to this folder would REPLACE, or undefined when it would create a new one.
+     *
+     * Asks the same question `write` answers for itself when it reuses an existing file's path, so a caller
+     * that must confirm a destructive overwrite decides from the same fact rather than from its own guess at
+     * the naming and casing rules.
+     */
+    looseFile(resref: string, type: number | string, options?: { folder?: string }): string | undefined;
+    /**
      * Write an auxiliary loose file (e.g. a JSON snapshot sidecar) into the `override` folder under the given
      * name. Unlike `write`, this is NOT a game resource: it is not indexed, and the open-time scan ignores it
      * because its extension has no resType, so it never appears in `list()`. Returns the written path.
      */
     writeAuxFile(fileName: string, bytes: Uint8Array): string;
+    /** The path an auxiliary loose file already occupies (see `writeAuxFile`), or undefined if absent. */
+    auxFile(fileName: string): string | undefined;
     /** Read an auxiliary loose file from the `override` folder (see `writeAuxFile`), or undefined if absent. */
     readAuxFile(fileName: string): Uint8Array | undefined;
     /**
@@ -90,6 +100,13 @@ export interface Game {
      * SOUNDOFF.IDS and BG2's SNDSLOT.IDS disagree on most sound slots, and mods extend these tables.
      */
     ids(resref: string): ReadonlyMap<number, string> | undefined;
+
+    /**
+     * Every row of an IDS table, keyed by value. Tables name one value more than once - BG2:ToB's ACTION.IDS
+     * does it 32 times, and id 160's two rows take different argument types - so a caller that must choose
+     * between them reads this and decides from the record it holds. `ids` keeps one row and cannot serve that.
+     */
+    idsAll(resref: string): ReadonlyMap<number, readonly string[]> | undefined;
     /**
      * A 2DA table from THIS install as row index -> row NAME (e.g. `twoDa("MSCHOOL")`). Undefined when the game
      * has no such table - `itemtype.2da` ships only with the Enhanced Editions, for instance. Read from the game
@@ -320,8 +337,36 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
     const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
+    const idsAllCache = new Map<string, ReadonlyMap<number, readonly string[]> | null>();
     const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
     const twoDaTableCache = new Map<string, TwoDaTable | null>();
+
+    /**
+     * One resource-backed lookup table, parsed on first use and cached by resref.
+     *
+     * An absent table is a normal answer - not every game ships every IDS, and `itemtype.2da` is
+     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. Shared by the
+     * four table accessors below, which otherwise differ only in their cache, parser and resource type.
+     */
+    function cachedTable<T>(
+        cache: Map<string, T | null>,
+        resref: string,
+        resType: number,
+        parse: (bytes: Uint8Array) => T,
+    ): T | undefined {
+        const cacheKey = resref.toLowerCase();
+        let entry = cache.get(cacheKey);
+        if (entry === undefined) {
+            entry = null;
+            try {
+                entry = parse(readResource(resref, resType));
+            } catch {
+                // Resource not found, or unreadable - reported as "no table" by the null above.
+            }
+            cache.set(cacheKey, entry);
+        }
+        return entry ?? undefined;
+    }
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
     // the folder is taken from weidu.conf (or the sorted-first lang subdir that has a dialog.tlk). Classic games
@@ -464,6 +509,29 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         return rank;
     }
 
+    /** Where an auxiliary loose file sits in `override`, or undefined when there is none. */
+    function auxFilePath(fileName: string): string | undefined {
+        return resolveGamePath(gameDir, `override/${fileName}`);
+    }
+
+    /**
+     * The loose file this folder already holds for a resource, or undefined.
+     *
+     * One definition, read by `write` to reuse an existing file's on-disk case, by `remove` to find what to
+     * delete, and by `looseFile` to tell a caller whether a write would replace something. Three answers from
+     * one lookup, so a confirmation prompt cannot disagree with the write it is guarding.
+     */
+    function looseSourceIn(
+        resref: string,
+        typeCode: number,
+        folder: string,
+    ): Extract<Source, { kind: "file" }> | undefined {
+        const entry = tree.get(keyOf(resref, typeCode));
+        return entry?.sources.find(
+            (s): s is Extract<Source, { kind: "file" }> => s.kind === "file" && s.folder === folder,
+        );
+    }
+
     // Shared by the `read` method and the `ids`/`twoDa` table readers. A closure rather than `this.read`, so
     // every member of the returned object reaches its state the same way and none of them depends on being
     // called as a method.
@@ -520,9 +588,9 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
 
             // Reuse the existing loose file's path (preserving its on-disk case) if this folder already holds
             // one for this key; otherwise create a fresh lowercase filename in the (created-if-absent) folder.
-            const existing = entry.sources.find((s) => s.kind === "file" && s.folder === folder);
+            const existing = looseSourceIn(resref, typeCode, folder);
             const targetPath =
-                existing && existing.kind === "file"
+                existing !== undefined
                     ? existing.path
                     : path.join(ensureFolder(gameDir, folder), `${resref.toLowerCase()}.${ext}`);
 
@@ -541,9 +609,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             folderRankOf(folder); // validates the folder even when nothing is tracked
             const k = keyOf(resref, typeCode);
             const entry = tree.get(k);
-            const source = entry?.sources.find(
-                (s): s is Extract<Source, { kind: "file" }> => s.kind === "file" && s.folder === folder,
-            );
+            const source = looseSourceIn(resref, typeCode, folder);
             if (!entry || !source) return false;
             fs.rmSync(source.path, { force: true });
             entry.sources = entry.sources.filter((s) => s !== source);
@@ -562,13 +628,19 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             scanOverrideFolders();
             sortSources();
         },
+        looseFile(resref, type, lookupOptions) {
+            const folder = lookupOptions?.folder ?? "override";
+            folderRankOf(folder); // validates the folder even when nothing is tracked
+            return looseSourceIn(resref, typeCodeOf(type), folder)?.path;
+        },
         writeAuxFile(fileName, bytes) {
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());
             atomicWriteFileSync(target, bytes);
             return target;
         },
+        auxFile: auxFilePath,
         readAuxFile(fileName) {
-            const resolved = resolveGamePath(gameDir, `override/${fileName}`);
+            const resolved = auxFilePath(fileName);
             return resolved ? fs.readFileSync(resolved) : undefined;
         },
         tlk(variant = "male") {
@@ -588,51 +660,16 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return entry ?? undefined;
         },
         ids(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = idsCache.get(cacheKey);
-            if (entry === undefined) {
-                // An absent table is normal (not every game ships every IDS), so it caches as null rather than
-                // re-reading on each lookup.
-                entry = null;
-                try {
-                    entry = parseIds(readResource(resref, IDS_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                idsCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(idsCache, resref, IDS_RESTYPE, parseIds);
+        },
+        idsAll(resref) {
+            return cachedTable(idsAllCache, resref, IDS_RESTYPE, parseIdsAll);
         },
         twoDa(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = twoDaCache.get(cacheKey);
-            if (entry === undefined) {
-                // Absent is normal - itemtype.2da is Enhanced-Edition-only - so it caches as null rather than
-                // re-reading on each lookup, exactly as `ids` above.
-                entry = null;
-                try {
-                    entry = parse2daRowNames(readResource(resref, TWO_DA_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                twoDaCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(twoDaCache, resref, TWO_DA_RESTYPE, parse2daRowNames);
         },
         twoDaTable(resref) {
-            const cacheKey = resref.toLowerCase();
-            let entry = twoDaTableCache.get(cacheKey);
-            if (entry === undefined) {
-                // Absent caches as null, same as `twoDa` above: a missing table is a normal answer, not an error.
-                entry = null;
-                try {
-                    entry = parse2daTable(readResource(resref, TWO_DA_RESTYPE));
-                } catch {
-                    // Resource not found, or unreadable - reported as "no table" by the null above.
-                }
-                twoDaTableCache.set(cacheKey, entry);
-            }
-            return entry ?? undefined;
+            return cachedTable(twoDaTableCache, resref, TWO_DA_RESTYPE, parse2daTable);
         },
         close() {
             for (const archive of openBifs.values()) archive.close();

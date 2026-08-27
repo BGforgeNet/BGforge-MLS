@@ -21,6 +21,7 @@ server/out/*
 !server/out/completion.*.json
 !server/out/hover.*.json
 !server/out/signature.*.json
+!server/out/strrefs.*.json
 !server/out/fallout-ssl-engine-proc-docs.json
 !server/out/fallout-ssl-engine-procedures.json
 

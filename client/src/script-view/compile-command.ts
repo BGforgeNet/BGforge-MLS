@@ -12,14 +12,19 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { INT_SCHEME, sourcePath } from "./document";
+import { sourceUriOf } from "./filesystem";
+import { SCRIPT_VIEW_SCHEME } from "./formats";
 
 export async function routeCompile(document: vscode.TextDocument, toServer: () => Promise<void>): Promise<void> {
-    if (document.uri.scheme !== INT_SCHEME) {
+    // Every compiled format, not one of them: this asks whether the document IS a rendering of a compiled
+    // file, which the scheme answers for all of them at once. Naming a single format's scheme here left the
+    // command silently doing nothing on the others - the server refuses a compile for any URI that is not a
+    // file on disk, and says so only in the log.
+    if (document.uri.scheme !== SCRIPT_VIEW_SCHEME) {
         await toServer();
         return;
     }
-    const name = path.basename(sourcePath(document.uri));
+    const name = path.basename(sourceUriOf(document.uri).fsPath);
     // Not a rewrite of identical bytes: an unedited document already matches the file, and rewriting
     // would move its timestamp and wake every watcher for nothing. Saying so is the useful part.
     if (!document.isDirty) {

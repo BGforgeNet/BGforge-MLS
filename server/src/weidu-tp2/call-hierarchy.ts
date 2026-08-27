@@ -221,7 +221,7 @@ export function incomingCalls(
         if (!launchName || stripStringDelimiters(launchName.text) !== item.name) continue;
 
         const from = callerItem(callNode, loc.uri);
-        const key = `${from.uri} ${from.name} ${from.range.start.line}:${from.range.start.character}`;
+        const key = `${from.uri}\0${from.name}\0${from.range.start.line}:${from.range.start.character}`;
         let entry = byCaller.get(key);
         if (!entry) {
             entry = { from, ranges: [] };

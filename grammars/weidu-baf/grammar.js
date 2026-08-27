@@ -35,12 +35,14 @@ export default grammar({
 
         then_clause: ($) => seq(alias(/[Tt][Hh][Ee][Nn]/, "THEN"), repeat1($.response)),
 
+        // A response may hold no actions at all. The reference compiler accepts one and writes it as a bare
+        // weight, and compiled scripts really do carry them - 28 files in a stock BG:EE plus BG2:ToB pair.
         response: ($) =>
             seq(
                 alias(/[Rr][Ee][Ss][Pp][Oo][Nn][Ss][Ee]/, "RESPONSE"),
                 "#",
                 field("weight", $.number),
-                repeat1($.action), // At least one action required
+                repeat($.action),
             ),
 
         action: ($) => field("call", $.call_expr),

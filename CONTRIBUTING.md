@@ -30,7 +30,7 @@ git hooks automatically. Run the hooks manually with `pnpm exec lefthook run pre
 | [server/data/README.md](server/data/README.md)                 | YAML data format for completion/hover                                                         |
 | [plugins/tssl-plugin/README.md](plugins/tssl-plugin/README.md) | TSSL tsserver plugin: TS6133 suppression, engine proc hover                                   |
 | [plugins/td-plugin/README.md](plugins/td-plugin/README.md)     | TD tsserver plugin: runtime injection, completion filtering                                   |
-| [docs/ignore-files.md](docs/ignore-files.md)                   | Ignore file reference (.gitignore, .vscodeignore, editorconfig, oxlint)                       |
+| [docs/ignore-files.md](docs/ignore-files.md)                   | Ignore file reference (.gitignore, .vscodeignore, editorconfig, oxfmt, oxlint)                |
 
 ## Project Structure
 
@@ -47,6 +47,16 @@ This includes:
 - behavior differences that third-party clients may need to opt into
 
 Architecture-only docs are not enough for those cases. Document the wire-level contract and compatibility expectations explicitly.
+
+## Describing external tools
+
+This project reimplements or interoperates with several third-party tools - the reference `sslc` compiler,
+WeiDU, the game engines. Naming them is fine and often necessary; citing their internals is not.
+
+Describe what such a tool _does_ - its observable behaviour, switches, file formats, and the values it
+produces. Do not cite its source files or internal symbols in committed code, comments, or docs, and do not
+vendor its lookup tables (a handful of values in a test is fine). Behaviour is what this project depends on
+and what stays true across their versions; a file or symbol name is neither.
 
 ## Public-surface contracts
 
@@ -65,11 +75,41 @@ The bundled CLIs (`fgbin`, `fgfmt`, `fgtp`) ship from the same package as
 their library and therefore share its version; their flag and exit-code
 contracts are covered by `pnpm test:cli` integration tests.
 
-The on-disk shape of `*.{pro,map,itm,spl,eff}.json` snapshots is its own
+The on-disk shape of `*.{pro,map,itm,spl,eff,cre,dlg}.json` snapshots is its own
 consumer-facing contract (committed snapshots, [`actions/binary`](actions/binary/README.md) CI checks)
 and moves with `@bgforge/binary`. A versioned consumer-facing specification
 is queued in [docs/todo.md](docs/todo.md); until that lands, treat any
 change to `createBinaryJsonSnapshot` output as breaking.
+
+## Testing against real external files
+
+The `external/` mod trees are gitignored but reproducible: `pnpm test:external` (via `scripts/reset-external.sh`
+and `scripts/external-repos-lib.sh`) checks them out at pinned refs. Real-corpus coverage therefore belongs in a
+committed test, never a throwaway script.
+
+- Home: `server/test/integration/**`, run by `pnpm test:integration` (config `server/vitest.integration.config.ts`).
+- Helpers: `test/integration/test-helpers.ts` - `FALLOUT_FIXTURES`, `IE_FIXTURES`, `loadFixture`/`loadFixtures`.
+- Gate a corpus sweep with `describe.skipIf(files.length === 0)` so it skips cleanly when the corpus is absent.
+- Read a sibling first (`integration/weidu-d.test.ts`, `integration/fallout-ssl.test.ts`) for the fixture and
+  init conventions.
+- Never commit copies of gitignored `external/` files as fixtures.
+
+## Verification tiers
+
+Cheapest first:
+
+1. `scripts/test-scoped.sh [paths...]` while iterating - maps changed paths (default: uncommitted git changes)
+   to the affected suites. `--dry-run` prints the plan.
+2. `pnpm test` (~3 min) when a change outgrows the scoped suites.
+3. `pnpm build:all` + `pnpm test:all` (~14 min) at close-out, and for anything spanning subsystems or touching
+   shared build infra, grammars, transpilers, or the server.
+
+`pnpm test` is not a close-out gate however green: it runs every category but not every gate, because the
+coverage thresholds live only in `test:all` and CI - which is why its unit phase prints `no coverage` in its own
+name. A change can pass `pnpm test` and still commit a threshold breach.
+
+All vitest configs and suites run from any cwd; includes and fixture paths are anchored to their own file. Keep
+it that way.
 
 ## Debugging
 

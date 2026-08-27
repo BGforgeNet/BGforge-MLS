@@ -287,8 +287,8 @@ interface ModContext {
 }
 
 /**
- * Resolve `%MOD_FOLDER%` and the path-resolution base by WeiDU's own algorithm (WeiDUorg/weidu
- * `src/tpstate.ml` mod_folder, `src/util.ml` tp2_directory/tp2_name, `src/var.ml` get_mod_folder).
+ * Resolve `%MOD_FOLDER%` and the path-resolution base by WeiDU's own rule: the tp2's parent directory
+ * when its name matches the tp2's own, otherwise the first segment of the tp2's BACKUP path.
  * The tp2 may live INSIDE the mod folder (`mymod/mymod.tp2`) or BESIDE it (`setup-mymod.tp2` at the
  * game root), so MOD_FOLDER is not simply the tp2's directory. It is governed by the main tp2, which
  * we approximate by the nearest ancestor `.tp2` (constant across nested `.tph`/`.tpa` includes).

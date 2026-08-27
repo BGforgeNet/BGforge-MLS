@@ -34,6 +34,14 @@ step "Resetting External Repos"
 step "Building transpile library bundle"
 pnpm build:transpile
 
+# Four suites drive the real WeiDU as their authority and SKIP without one, so resolve it BEFORE Phase 1
+# rather than letting one quietly drop itself. Three (the BCS and DLG differentials, and the DLG parser's
+# compiled fixtures) run in the unit phase, so resolving this at Phase 3 - where only the TP2 grammar
+# differential needed it - left them skipping on any host without a WeiDU already on PATH. Cached after
+# the first run.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
+
 # --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
 # Coverage runs are deliberately NOT in this block - see Phase 1.5 for why.
 # The webview Playwright harnesses are typechecked now that playwright is a pinned devDep (it resolves in
@@ -55,6 +63,7 @@ parallel \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
+    "Typecheck bcs" "(cd compilers/bcs && pnpm exec tsc --noEmit)" \
     "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
     "Typecheck tssl" "(cd compilers/tssl && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
@@ -88,6 +97,7 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
         "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
@@ -109,6 +119,7 @@ else
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
         "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
         "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
+        "Unit bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=1" \
         "Unit ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
         "Unit tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \
         "Unit shared" "pnpm exec vitest run --config shared/vitest.config.ts --maxWorkers=1"
@@ -128,11 +139,6 @@ if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
     timing_summary "Phases 1-2 passed (build-only mode)"
     exit 0
 fi
-
-# The differential inside the integration suite uses the real WeiDU as its authority and SKIPS without
-# one, so resolve it here rather than letting the suite quietly drop itself. Cached after the first run.
-WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
-export WEIDU_BIN
 
 # --- Phase 3: Tests that need builds (all in parallel) ---
 # Every category the close-out gate covers is represented here at dev-loop depth: grammars whole, server

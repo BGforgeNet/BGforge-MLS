@@ -3,9 +3,10 @@
  * shipped as a live defect ("Unknown object type: 80" when following a projectile reference).
  */
 import { describe, expect, it } from "vitest";
-import { parserRegistry, type BinaryParser } from "@bgforge/binary";
+import { formatAdapterRegistry, parserRegistry, type BinaryParser } from "@bgforge/binary";
 import pkg from "../../package.json";
 import { isIeBinaryRecord, hasViewerFor, viewTypeForResource } from "../src/ie-resources/editor-routing";
+import { SCRIPT_EDITOR_VIEW_TYPE, SCRIPT_FORMATS } from "../src/script-view/formats";
 
 describe("viewTypeForResource", () => {
     it("sends the four parsed IE formats to the binary editor", () => {
@@ -44,9 +45,22 @@ describe("viewTypeForResource", () => {
 
     // Never left to file association: the binary editor is registered for `*.pro` at DEFAULT priority, so an
     // unnamed `vscode.open` resolves to it anyway. A named view is what actually routes these elsewhere.
-    it("names a concrete view for a format it cannot parse, rather than leaving it unset", () => {
-        expect(viewTypeForResource("bcs")).toBe("default");
-        expect(viewTypeForResource("dlg")).toBe("default");
+    // Written per CLASS: a format added to the script registry is meant to open from the tree with no second
+    // entry to remember, and pinning `.bcs` alone is exactly what let `.bs` sit in the tree as raw markers.
+    it.each(SCRIPT_FORMATS.map((format) => [format.ext]))(
+        "sends a compiled .%s to its decompiled-source view, which the parser registry cannot name",
+        (ext) => {
+            // A compiled script is not a record the binary editor's registry parses - it is decompiled to
+            // source, so nothing there could ever answer this.
+            expect(viewTypeForResource(ext)).toBe(SCRIPT_EDITOR_VIEW_TYPE);
+            expect(viewTypeForResource(ext.toUpperCase())).toBe(SCRIPT_EDITOR_VIEW_TYPE);
+        },
+    );
+
+    it("sends a compiled dialog to the dialog webview, not the binary editor", () => {
+        // A DLG is a graph, not a record form. It reaches an editor of its own rather than the record form
+        // it would otherwise fall into by virtue of being a parsed IE format.
+        expect(viewTypeForResource("dlg")).toBe("bgforge.dlgViewer");
     });
 
     /**
@@ -65,19 +79,45 @@ describe("viewTypeForResource", () => {
      * remembered to list it here, and no test could catch the omission because the registry could not be asked
      * which game a parser serves. It can now, so registration IS the wiring.
      */
-    it("routes a newly registered IE format without being told about it", () => {
-        const added: BinaryParser = {
-            id: "routing-test-ie",
-            name: "routing-test-ie",
-            extensions: ["rtie"],
+    function testParser(id: string, ext: string): BinaryParser {
+        return {
+            id,
+            name: id,
+            extensions: [ext],
             family: "infinity-engine",
             parse: () => ({ fields: [] }) as unknown as ReturnType<BinaryParser["parse"]>,
         };
+    }
+
+    it("routes a newly registered IE format without being told about it", () => {
+        // No hand-kept extension list: registering the format is what routes it. The adapter's layout is
+        // part of that registration, because the layout is what the binary editor renders through.
         expect(viewTypeForResource("rtie")).toBe("default");
 
-        parserRegistry.register(added);
+        parserRegistry.register(testParser("routing-test-ie", "rtie"));
+        formatAdapterRegistry.register({
+            formatId: "routing-test-ie",
+            documentCacheStrategy: "clear",
+            layout: { variants: [] } as never,
+            createJsonSnapshot: () => "",
+            loadJsonSnapshot: () => ({ parseResult: {} as never }),
+            rebuildCanonicalDocument: () => undefined,
+            toSemanticFieldKey: () => undefined,
+        });
 
         expect(viewTypeForResource("rtie")).toBe("bgforge.binaryEditor");
+    });
+
+    it("leaves an IE format the binary editor cannot draw on the text editor", () => {
+        // DLG is the shipped case: it parses as an IE record but is authored in the dialog editor's graph,
+        // so its adapter declares no layout. Routing it to the binary editor would reach the webview's
+        // error banner instead of a form, which is worse than the plain editor.
+        parserRegistry.register(testParser("routing-test-nolayout", "rtnl"));
+
+        expect(viewTypeForResource("rtnl")).toBe("default");
+        // DLG is the shipped instance: it parses as an IE record but must not reach the record form.
+        expect(isIeBinaryRecord("dlg")).toBe(false);
+        expect(viewTypeForResource("dlg")).not.toBe("bgforge.binaryEditor");
     });
 });
 
@@ -139,18 +179,18 @@ describe("hasViewerFor", () => {
     // (`ref: { kind: "resource", type: "ITM" }`), where the tree passes a filename's lowercase extension. A
     // case-sensitive lookup here would withhold the chip from every field that currently has one.
     it("answers the same for a declared ref type as for a filename extension", () => {
-        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP"]) {
+        for (const ext of ["ITM", "SPL", "EFF", "CRE", "BAM", "BMP", "BCS"]) {
             expect(hasViewerFor(ext)).toBe(true);
         }
-        for (const ext of ["BCS", "DLG", "PRO"]) {
-            expect(hasViewerFor(ext)).toBe(false);
-        }
+        expect(hasViewerFor("PRO")).toBe(false);
+        // DLG gained a viewer of its own; the point of the check is that the answer tracks the view choice.
+        expect(hasViewerFor("DLG")).toBe(true);
     });
 
-    // A creature's portraits are the reason this covers more than our own editors: they were withheld with the
-    // scripts, though only the scripts are genuinely unviewable.
+    // A creature's portraits are the reason this covers more than our own editors: a portrait's viewer is
+    // VS Code's own previewer, not one of ours - and a compiled script now has one too.
     it("covers a portrait, which only VS Code's previewer can show", () => {
         expect(hasViewerFor("BMP")).toBe(true);
-        expect(hasViewerFor("BCS")).toBe(false);
+        expect(hasViewerFor("BCS")).toBe(true);
     });
 });

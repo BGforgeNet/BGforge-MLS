@@ -144,10 +144,10 @@ export const SECTYPE_REF = { kind: "2da", tables: ["MSECTYPE"] } as const;
  *
  * MISSILE still earns second place rather than none, for two things PROJECTL structurally cannot do: name a
  * stored 1 (PROJECTL's keys start at 1, so a stored 1 would need its key 0, which does not exist) - and that
- * is 2292 of 3537 BG:EE spell abilities - and cover the keys a sparse install omits. BG:EE ships a full
- * 365-entry MISSILE.IDS while BG2 classic ships a 29-entry stub of it beside a full 171-entry PROJECTL.IDS,
- * so the candidates merge rather than the first present winning outright; ordering only decides who wins a
- * key both name, never how many values get named.
+ * is 2292 of 3537 BG:EE spell abilities - and cover the keys a sparse install omits. On BG2:ToB its 279 entries
+ * name 108 stored values the 171-entry PROJECTL.IDS has no key for, so the candidates merge rather than the
+ * first present winning outright; ordering only decides who wins a key both name, never how many values get
+ * named.
  *
  * "For most purposes adds 1" is the caveat that makes `IMPACT_PROJECTILE_REF` a separate declaration - the
  * EFF v2 field is one of the purposes it does not.
@@ -177,7 +177,7 @@ export const PROJECTILE_REF = {
  *
  * Both read `None` because that is what each is: the value prefix the dropdown renders (`0 None` / `1 None`)
  * keeps them apart. `None` is the editor's own word for unset, as in `Schools` - not an invented identifier,
- * which the vendored-mirror rule forbids (`binary/src/AGENTS.md`).
+ * which the vendored-mirror rule forbids (`docs/binary-editor-ui.md`, Schema layer).
  */
 export const AbilityProjectileNone: Readonly<Record<number, string>> = {
     0: "None",
