@@ -340,8 +340,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     applyMetaPatch(patch: MetaPatch): void {
-        this.model.applyMetaPatch(patch);
-        this.fireEdit("Edit animation properties");
+        // Only an edit the format can actually store becomes a document edit. Retuning a BAM's
+        // playback rate changes what the editor shows and nothing the save writes, so marking the
+        // file dirty for it would promise a persistence no reopen delivers (see persistedMetaFields).
+        if (this.model.applyMetaPatch(patch)) this.fireEdit("Edit animation properties");
     }
 
     setExternalPalette(enabled: boolean): void {

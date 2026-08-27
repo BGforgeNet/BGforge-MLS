@@ -178,12 +178,25 @@ describe("ImageDocumentModel with a true-colour animation", () => {
         expect([...decodeFramePixels(frame.pixels).subarray(0, 4)]).toEqual([16, 20, 24, 255]);
     });
 
-    it("applies a meta edit to a true-colour document", () => {
-        // The playback-rate control is shown for a v2 as much as for a BAM; without an rgba arm in
-        // applyMetaPatch the edit would be silently dropped and the field would snap back.
+    it("applies a playback-rate edit to a true-colour document without calling it a document change", () => {
+        // The FPS control is offered for every format. A v2 stores no frame rate, so the edit must
+        // reach the view (playback follows it) while reporting false, which is what keeps the host
+        // from marking the file dirty for a change no save can write.
         const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
 
+        const persisted = model.applyMetaPatch({ fps: 24 });
+
+        expect(model.toView().meta.fps).toBe(24);
+        expect(persisted).toBe(false);
+    });
+
+    it("leaves a non-persisting edit out of the undo stack", () => {
+        // An orphaned snapshot would be popped by a later undo of some other edit, silently
+        // reverting the playback rate alongside it.
+        const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
         model.applyMetaPatch({ fps: 24 });
+
+        model.undo();
 
         expect(model.toView().meta.fps).toBe(24);
     });

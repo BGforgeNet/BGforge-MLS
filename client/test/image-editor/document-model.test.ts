@@ -62,6 +62,26 @@ test("editing the transparent index keeps RLE-parsed frames decodable (cached en
     expect([...saved.frames[0]!.pixels]).toEqual([1, 0, 0, 0]);
 });
 
+test("a BAM's frame rate retunes playback but is not a document change", () => {
+    // The FPS control is offered for every format, but only an FRM header stores a rate: a BAM's is
+    // the engine's fixed 15, resolved at parse. The edit must reach the view so playback follows it
+    // while reporting false, so the host does not mark the file dirty for something the save drops.
+    const model = ImageDocumentModel.fromBytes(serializeBamV1(makeMiniBam()), "x.bam");
+
+    const persisted = model.applyMetaPatch({ fps: 24 });
+
+    expect(persisted).toBe(false);
+    expect(model.animation.meta.fps).toBe(24);
+    // The proof it is not persisted: a save-and-reload lands back on the parser's resolved rate.
+    expect(loadImage(model.getBytes(), "x.bam").meta.fps).toBe(15);
+});
+
+test("a BAM's transparent index IS a document change - its header stores one", () => {
+    const model = ImageDocumentModel.fromBytes(serializeBamV1(makeMiniBam()), "x.bam");
+
+    expect(model.applyMetaPatch({ transparentIndex: 3 })).toBe(true);
+});
+
 test("applyMetaPatch fires onChange, round-trips through getBytes, and undo restores", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
     let changes = 0;

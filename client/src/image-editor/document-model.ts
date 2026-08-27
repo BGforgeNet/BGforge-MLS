@@ -4,6 +4,7 @@ import {
     type IndexedSourceFormat,
     type RgbaAnimation,
     type Sequence,
+    type SourceFormat,
     DEFAULT_FALLOUT_PALETTE,
     LossReport,
     convertToIndexed,
@@ -61,6 +62,35 @@ function serializeIndexed(indexed: IndexedAnimation): Uint8Array {
 }
 
 const COLOUR_MODEL_MISMATCH = "replaceSequences: the incoming animation's colour model does not match the document's";
+
+/**
+ * Which MetaPatch fields this format actually writes to disk.
+ *
+ * A patch touching none of them is a VIEW setting, not a document edit: the frame rate is the case
+ * that matters, since a BAM of any version stores none and the parser resolves the engine's fixed 15
+ * (see AnimationMeta.fps). Applying such an edit is right - playback should follow it - but marking
+ * the file dirty and pushing an undo step for it is not: the save would write nothing, and reopening
+ * would snap the value back. That is exactly why `directionLayout` is not patchable at all; the
+ * difference here is that the frame rate is worth retuning for playback, so it is offered and scoped
+ * rather than withheld.
+ */
+function persistedMetaFields(format: SourceFormat): readonly (keyof MetaPatch)[] {
+    switch (format) {
+        case "frm":
+            return ["fps", "actionFrame"];
+        case "bam":
+        case "bamc":
+            return ["transparentIndex"];
+        case "bamv2":
+            return [];
+        /* v8 ignore start -- unreachable: the never narrowing makes a new SourceFormat a compile error here */
+        default: {
+            const unhandled: never = format;
+            throw new Error(`persistedMetaFields: unhandled sourceFormat ${String(unhandled)}`);
+        }
+        /* v8 ignore stop */
+    }
+}
 
 /**
  * Frames and cycles from `next` spliced into `current`, either replacing its own or appended after
@@ -318,8 +348,18 @@ export class ImageDocumentModel {
         this.redoStack = [];
     }
 
-    applyMetaPatch(patch: MetaPatch): void {
-        this.snapshotForUndo();
+    /**
+     * Apply a metadata edit. Returns whether it changed anything the file will actually carry, so
+     * the caller knows whether to mark the document dirty and push an undo step - see
+     * persistedMetaFields.
+     */
+    applyMetaPatch(patch: MetaPatch): boolean {
+        const persists = persistedMetaFields(this.animationValue.meta.sourceFormat).some(
+            (field) => patch[field] !== undefined,
+        );
+        // Only a persisting edit is undoable: an orphaned snapshot would be popped by a later undo
+        // of some other edit and silently revert the view setting along with it.
+        if (persists) this.snapshotForUndo();
         const indexed = this.indexedAnimation();
         // A BAM v1 frame's cached rawEncoding is RLE-encoded against the transparent index it was
         // parsed with; serializing it verbatim under an edited header index yields an unreadable
@@ -347,6 +387,7 @@ export class ImageDocumentModel {
             this.animationValue = { ...this.animationValue, meta: { ...this.animationValue.meta, ...patch } };
         }
         this.onChange?.();
+        return persists;
     }
 
     setExternalPalette(enabled: boolean): void {

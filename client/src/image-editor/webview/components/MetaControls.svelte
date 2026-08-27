@@ -10,22 +10,31 @@
 </script>
 
 <div class="meta-controls" role="group" aria-label="Metadata">
+    <!-- Offered for every format, not just FRM. Only an FRM header stores a frame rate, so on a BAM
+         this retunes playback and nothing else - the title says so, and the host does not mark the
+         document dirty for it (see persistedMetaFields). Without it a BAM had no rate control at
+         all, and the 15 the parser resolves is what a conversion to FRM would then write. -->
+    <label
+        class="meta-field"
+        title={view.sourceFormat === "frm"
+            ? undefined
+            : "Playback speed in the editor. A BAM stores no frame rate - the game plays at 15 - so this is not saved."}
+    >
+        <span class="meta-label">FPS</span>
+        <input
+            type="number"
+            min="1"
+            max="60"
+            step="1"
+            value={view.meta.fps ?? 10}
+            onchange={(e) => {
+                const next = Number(e.currentTarget.value);
+                if (Number.isFinite(next) && next > 0) bridge.send({ type: "editMeta", patch: { fps: next } });
+            }}
+            aria-label="Frames per second"
+        />
+    </label>
     {#if view.sourceFormat === "frm"}
-        <label class="meta-field">
-            <span class="meta-label">FPS</span>
-            <input
-                type="number"
-                min="1"
-                max="60"
-                step="1"
-                value={view.meta.fps ?? 10}
-                onchange={(e) => {
-                    const next = Number(e.currentTarget.value);
-                    if (Number.isFinite(next) && next > 0) bridge.send({ type: "editMeta", patch: { fps: next } });
-                }}
-                aria-label="Frames per second"
-            />
-        </label>
         <label class="meta-field" title="Marks the action frame in playback">
             <span class="meta-label">Action frame</span>
             <input
