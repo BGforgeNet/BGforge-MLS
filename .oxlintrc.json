@@ -127,9 +127,13 @@
         // Readability preference; `if (!x)` is idiomatic in this codebase.
         "no-negated-condition": "off",
 
-        // `async` without `await` is used deliberately to make interfaces
-        // uniformly Promise-returning (e.g., provider methods where some
-        // impls are sync).
+        // `async` without `await` is used deliberately to make interfaces uniformly
+        // Promise-returning (provider methods where some impls are sync, CLI entry
+        // points, `async f(): Promise<T> { return promise; }` pass-throughs) - ~80
+        // sites. This rule was never the guard against a FORGOTTEN await, which it
+        // cannot see; that is `pnpm lint:types` (no-floating-promises,
+        // no-misused-promises, await-thenable), and it caught four real ones the day
+        // it was added.
         "require-await": "off",
 
         // Inline `import("module").Type` annotations are used in places where

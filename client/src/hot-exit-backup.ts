@@ -30,10 +30,13 @@ export function warnBackupUnreadable(uri: vscode.Uri): void {
 export function backupHandle(destination: vscode.Uri): vscode.CustomDocumentBackup {
     return {
         id: destination.toString(),
-        delete: () =>
-            vscode.workspace.fs.delete(destination).then(
+        // The block body matters: `delete` is declared void-returning, so handing back the thenable
+        // would be a promise where the host expects none.
+        delete: () => {
+            void vscode.workspace.fs.delete(destination).then(
                 () => {},
                 () => {},
-            ),
+            );
+        },
     };
 }

@@ -34,6 +34,7 @@ import { Translation } from "../translation";
 import { initServerContext, updateServerSettings } from "../server-context";
 import { ConfiguredGame } from "../ie-resources/configured-game";
 import { getServerCapabilities } from "../server-capabilities";
+import { fireRefresh } from "../shared/lsp-refresh";
 import type { HandlerContext } from "./context";
 
 // Capability flags captured in onInitialize, consumed in onInitialized.
@@ -73,9 +74,9 @@ export function register(ctx: HandlerContext): void {
         // Initialize translation service. The refresh callback lets a .tra/.msg reload push
         // open consumer documents' stale inlay @N previews to be recomputed - see
         // Translation.reloadFileLines, which fires it after re-indexing a translation file.
-        const translation = new Translation(projectSettings.translation, workspaceRoot, () =>
-            ctx.connection.languages.inlayHint.refresh(),
-        );
+        const translation = new Translation(projectSettings.translation, workspaceRoot, () => {
+            fireRefresh(() => ctx.connection.languages.inlayHint.refresh());
+        });
         await translation.init();
 
         // Route parser-init log lines through the LSP connection so they surface

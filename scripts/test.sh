@@ -67,6 +67,7 @@ parallel \
     "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
     "Typecheck tssl" "(cd compilers/tssl && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
+    "Type-aware lint" "pnpm lint:types" \
     "Lint scripts" "pnpm lint:scripts" \
     "Lint md-links" "pnpm lint:md-links" \
     "Format check" "pnpm exec oxfmt --check" \

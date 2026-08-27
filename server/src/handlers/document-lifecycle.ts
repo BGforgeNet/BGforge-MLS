@@ -7,6 +7,7 @@ import { compile } from "../compile";
 import { clearAllDiagnostics, setDiagnostics } from "../diagnostic-store";
 import { updateTreeSitterDiagnostics } from "../tree-sitter-validation";
 import { timeHandler } from "../shared/time-handler";
+import { fireRefresh } from "../shared/lsp-refresh";
 import { handleCompileError } from "./compile-error";
 import {
     type MLSsettings,
@@ -117,7 +118,7 @@ export function register(ctx: HandlerContext): void {
                 // Header changes can affect semantic tokens in other files
                 // (e.g., @type {resref} annotations define resref highlighting).
                 if (isHeaderFile(uri)) {
-                    ctx.connection.languages.semanticTokens.refresh();
+                    fireRefresh(() => ctx.connection.languages.semanticTokens.refresh());
                 }
 
                 tryGetServerContext()?.translation.reloadFile(uri, langId, text);
@@ -166,7 +167,7 @@ export function register(ctx: HandlerContext): void {
                     tryGetServerContext()?.translation.reloadFile(uri, langId, text);
                     tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
                     if (isHeaderFile(uri)) {
-                        ctx.connection.languages.semanticTokens.refresh();
+                        fireRefresh(() => ctx.connection.languages.semanticTokens.refresh());
                     }
                 });
 

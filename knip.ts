@@ -48,8 +48,10 @@ const config: KnipConfig = {
             // vitest.mutation.config.ts is referenced from stryker.conf.json
             // (vitest.configFile); knip's Stryker plugin resolves runner/checker
             // package names but not vitest configFile paths, so list it explicitly.
-            // src/server.ts is already covered by knip's default entry patterns, so
-            // listing it explicitly is redundant. Test files are explicit entries because
+            // src/server.ts has to be listed: knip derives the default entry from the tsconfig, and the
+            // explicit `rootDir` there (added so tsgolint can build a program - see that comment) stops
+            // the derivation, which drops server.ts and every handler it reaches.
+            // Test files are explicit entries because
             // knip's vitest plugin cannot derive them from the config's absolute
             // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
             // Both compile-worker.ts files are bundle entries of their own, started by path from the
@@ -58,6 +60,7 @@ const config: KnipConfig = {
             // sslc-wrapper.mjs is the same shape one step further out: the build copies it beside the
             // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
             entry: [
+                "src/server.ts",
                 "vitest.mutation.config.ts",
                 "test/**/*.test.ts",
                 // Production mode does not read package.json scripts, so the `lsp-probe` script's

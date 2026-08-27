@@ -184,13 +184,32 @@ Oxlint configuration.
 | `categories`     | `correctness`, `suspicious`, `pedantic`, `perf`, `style`, all set to `error`          |
 | `rules`          | Per-rule severity and the disabled set, each entry carrying its reason inline         |
 | `overrides`      | Grammar globals, the custom `no-showmessage` rule, and per-directory idiom exemptions |
-| `ignorePatterns` | Excludes: `node_modules`, `out`, `*.d.ts`, and both webview render harnesses          |
+| `ignorePatterns` | Excludes `node_modules` and `out` - build output only                                 |
 | `jsPlugins`      | Custom plugin for banning direct LSP showMessage calls                                |
 
 A rule that must be relaxed for one file gets an `overrides` entry naming that rule, never an `ignorePatterns`
 entry: the latter drops the file from every enabled rule to silence one. `server/src/user-messages.ts` is the worked
 example - it is the wrapper the `no-showmessage` rule points callers at, so that single rule is switched off for
-it there.
+it there. The render harnesses and the ambient `*-runtime.d.ts` declarations were both converted from blanket
+exclusions to rule-scoped overrides for the same reason.
+
+### The type-aware pass runs separately
+
+`pnpm lint:types` is a second oxlint run with `--type-aware`, backed by the `oxlint-tsgolint` binary. It enables
+exactly three rules - `no-floating-promises`, `no-misused-promises`, `await-thenable` - and allows everything else,
+because the full type-aware set is dominated by `prefer-readonly-parameter-types` and the `no-unsafe-*` family
+(~14000 findings, almost all style). The three it does run cannot be expressed syntactically, and they found four
+real defects when first enabled. It takes about four seconds and is wired into `scripts/test.sh` Phase 1 and
+pre-commit.
+
+**It excludes `plugins/**`.** Both TS Language Service plugins set `moduleResolution: node`, which the TS 7 compiler
+that tsgolint embeds has removed, so their programs fail to construct. That is a deliberate config choice for
+tsserver compatibility (see the comment in either plugin's `tsconfig.json`), not something to change for a linter -
+so those two `src` trees get no type-aware coverage until the plugins move to a supported resolution mode.
+
+A program that fails to construct reports zero findings, not an error per file: `client` and `server` were in that
+state until their `rootDir` was made explicit, and read as clean while nothing had been analysed. Treat a sudden
+drop to zero findings as a config failure until the run's `tsconfig-error` count is confirmed to be zero.
 
 ### Tree-sitter globals
 

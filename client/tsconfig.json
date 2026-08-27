@@ -3,6 +3,11 @@
     "compilerOptions": {
         "lib": ["es2023", "DOM", "DOM.Iterable"],
         "outDir": "out",
+        // Stated rather than inferred: `include` reaches ../shared and ../binary/src, so the source
+        // root is the repo, not this directory. Inert under the base config's `noEmit` (esbuild does
+        // the emit), but tsgolint's TS7 program rejects the directory tsc would otherwise infer from
+        // `outDir`.
+        "rootDir": "..",
         "sourceMap": true,
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/client.tsbuildinfo",

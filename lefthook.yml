@@ -40,6 +40,15 @@ pre-commit:
       # zero files for it to check - --no-error-on-unmatched-pattern keeps that a pass rather
       # than an error. Full-tree runs stay in test.sh/CI.
       run: pnpm exec oxlint --no-error-on-unmatched-pattern {staged_files}
+    lint-types:
+      glob:
+        - "*.{ts,mts,cts,tsx}"
+        - "tsconfig*.json"
+        - "package.json"
+      # Type-aware pass (oxlint-tsgolint): floating/misused promises and non-thenable awaits, which the
+      # syntax-only oxlint run above cannot see. Whole-tree rather than {staged_files} - the rules need a
+      # complete program, not a file list - which costs a few seconds.
+      run: pnpm lint:types
     oxfmt-check:
       glob:
         - "*.{ts,mts,cts,tsx,js,mjs,cjs,json,md,yml,yaml}"

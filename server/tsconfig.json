@@ -5,6 +5,12 @@
         "sourceMap": true,
         "allowImportingTsExtensions": true,
         "outDir": "out",
+        // Stated rather than inferred: `include` reaches ../shared, ../transpilers, ../binary and
+        // ../format, so the source root is the repo, not this directory. Inert under the base config's
+        // `noEmit` (esbuild does the emit), but tsgolint's TS7 program rejects the directory tsc would
+        // otherwise infer from `outDir`, and `pnpm lint:types` then analyses nothing here. Setting it
+        // also stops knip deriving `src/server.ts` as a default entry, so knip.ts names it explicitly.
+        "rootDir": "..",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
         "paths": {
             "@bgforge/binary/archive": ["../binary/src/archive/index.ts"],
