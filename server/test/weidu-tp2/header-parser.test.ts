@@ -630,13 +630,13 @@ END`;
             if (!isCallableSymbol(sym!)) return;
 
             // Verify params have JSDoc descriptions
-            expect(sym!.callable.params?.intVar[0]!.name).toBe("bonus");
-            expect(sym!.callable.params?.intVar[0]!.description).toBe("the bonus amount");
-            expect(sym!.callable.params?.intVar[0]!.required).toBe(true);
+            expect(sym.callable.params?.intVar[0]!.name).toBe("bonus");
+            expect(sym.callable.params?.intVar[0]!.description).toBe("the bonus amount");
+            expect(sym.callable.params?.intVar[0]!.required).toBe(true);
 
-            expect(sym!.callable.params?.strVar[0]!.name).toBe("name");
-            expect(sym!.callable.params?.strVar[0]!.description).toBe("item name to use");
-            expect(sym!.callable.params?.strVar[0]!.required).toBeFalsy();
+            expect(sym.callable.params?.strVar[0]!.name).toBe("name");
+            expect(sym.callable.params?.strVar[0]!.description).toBe("item name to use");
+            expect(sym.callable.params?.strVar[0]!.required).toBeFalsy();
         });
 
         it("includes @arg type override in callable.params", () => {
@@ -655,7 +655,7 @@ END`;
             if (!isCallableSymbol(sym!)) return;
 
             // Type from @arg should override default "string"
-            expect(sym!.callable.params?.strVar[0]!.type).toBe("resref");
+            expect(sym.callable.params?.strVar[0]!.type).toBe("resref");
         });
     });
 });

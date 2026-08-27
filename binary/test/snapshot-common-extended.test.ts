@@ -139,7 +139,7 @@ describe("parseScalarFieldValue", () => {
 
     it("JSON-serializes non-scalar values", () => {
         // Line 50: JSON.stringify branch
-        const f = field({ value: [1, 2, 3] as unknown as string });
+        const f = field({ value: [1, 2, 3] as unknown });
         expect(parseScalarFieldValue("testbin", "any.key", f)).toBe("[1,2,3]");
     });
 });

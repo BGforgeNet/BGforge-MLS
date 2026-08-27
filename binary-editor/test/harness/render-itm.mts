@@ -645,8 +645,8 @@ check(
     ddWidths.arrow?.cls === "dd-1" &&
         !!ddWidths.damage &&
         !!ddWidths.attack &&
-        ddWidths.arrow!.w < ddWidths.attack!.w &&
-        ddWidths.attack!.w < ddWidths.damage!.w,
+        ddWidths.arrow.w < ddWidths.attack.w &&
+        ddWidths.attack.w < ddWidths.damage.w,
     JSON.stringify(ddWidths),
 );
 await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });

@@ -7,15 +7,7 @@
  * to avoid circular imports - callers provide any inlining behaviour via callback.
  */
 
-import {
-    type CallExpression,
-    type ForOfStatement,
-    type ForStatement,
-    type IfStatement,
-    type Statement,
-    Node,
-    SyntaxKind,
-} from "ts-morph";
+import { type CallExpression, type Statement, Node, SyntaxKind } from "ts-morph";
 import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
@@ -238,7 +230,7 @@ export function processTransitionStatement(
             // existing transition (preserving trigger) and discard the rest
             // (state-transitions.ts already spliced them onto state.transitions).
             if (!handled && onInline) {
-                const inlined = onInline(expr as CallExpression, funcName);
+                const inlined = onInline(expr, funcName);
                 if (inlined.length > 0) {
                     mergeTransitionFields(trans, inlined[0]!);
                 }
@@ -255,7 +247,7 @@ export function processExtendStatements(statements: Statement[], transitions: TD
     for (const stmt of statements) {
         if (stmt.isKind(SyntaxKind.IfStatement)) {
             // if (trigger) { ... } - transition with trigger
-            const ifStmt = stmt as IfStatement;
+            const ifStmt = stmt;
             const trigger = expressionToTrigger(ifStmt.getExpression(), vars);
             const thenStmts = utils.getBlockStatements(ifStmt.getThenStatement());
 
@@ -306,12 +298,12 @@ export function processExtendStatements(statements: Statement[], transitions: TD
             }
         } else if (stmt.isKind(SyntaxKind.ForOfStatement)) {
             // Unroll loop
-            unrollForOf(stmt as ForOfStatement, vars, (s) => {
+            unrollForOf(stmt, vars, (s) => {
                 processExtendStatements([s], transitions, vars);
             });
         } else if (stmt.isKind(SyntaxKind.ForStatement)) {
             // Unroll loop
-            unrollFor(stmt as ForStatement, vars, (s) => {
+            unrollFor(stmt, vars, (s) => {
                 processExtendStatements([s], transitions, vars);
             });
         }

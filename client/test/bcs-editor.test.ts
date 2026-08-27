@@ -198,7 +198,7 @@ const bcsProvider = (symbolsFor: SymbolsFor): ScriptViewFileSystemProvider =>
     new ScriptViewFileSystemProvider(new Map([["bcs", bcsScriptView(symbolsFor, REPO_ROOT)]]));
 
 const newProvider = (naming: () => typeof NAMING | undefined = () => NAMING): ScriptViewFileSystemProvider =>
-    bcsProvider(naming as SymbolsFor);
+    bcsProvider(naming);
 
 /** A `.bcs` on disk plus the view URI that renders it, built the same way production does. */
 function script(): { file: string; view: never } {
@@ -247,7 +247,7 @@ describe("the .bcs custom editor", () => {
         const file = path.join(dir, "EMPTY.bcs");
         fs.writeFileSync(file, "");
 
-        const stat = await newProvider().stat(scriptViewUri(new h.FakeUri("file", file) as never) as never);
+        const stat = await newProvider().stat(scriptViewUri(new h.FakeUri("file", file) as never));
 
         expect(stat.permissions).toBe(1);
     });
@@ -374,7 +374,7 @@ describe("the .bcs custom editor", () => {
         const provider = h.editor.provider;
         expect(provider, "the custom editor did not register").toBeDefined();
 
-        const document = provider!.openCustomDocument(new h.FakeUri("file", file) as never);
+        const document = provider!.openCustomDocument(new h.FakeUri("file", file));
         await provider!.resolveCustomEditor(document, {
             viewColumn: 2,
             dispose: () => {
@@ -396,7 +396,7 @@ describe("the .bcs custom editor", () => {
         registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
-        const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
+        const document = provider.openCustomDocument(new h.FakeUri("file", file));
         await provider.resolveCustomEditor(document, {
             viewColumn: 1,
             dispose: () => {
@@ -419,7 +419,7 @@ describe("the .bcs custom editor", () => {
         registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
         const provider = h.editor.provider!;
 
-        const document = provider.openCustomDocument(new h.FakeUri("file", file) as never);
+        const document = provider.openCustomDocument(new h.FakeUri("file", file));
         await provider.resolveCustomEditor(document, { viewColumn: 1, dispose: () => h.disposedPanels++ });
 
         expect(h.errors[0]).toContain("host said no");

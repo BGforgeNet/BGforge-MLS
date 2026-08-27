@@ -46,7 +46,7 @@ export function extractTriggersFromHtml(html: string, pageUrl: string): Completi
             }
             group.push({ name, detail: fullHeader });
 
-            const bodyStart = match.index! + match[0].length;
+            const bodyStart = match.index + match[0].length;
             bodyEnd = next?.index ?? html.length;
             doc = htmlToMarkdown(html.slice(bodyStart, bodyEnd), pageUrl);
             if (doc) {

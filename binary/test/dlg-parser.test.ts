@@ -54,7 +54,7 @@ describe("dlgParser - BG1-era 48-byte header", () => {
     test("round-trips byte-identically, without growing the header", () => {
         const original = buildEmptyBg1Dlg();
 
-        const round = dlgParser.serialize!(dlgParser.parse(original));
+        const round = dlgParser.serialize(dlgParser.parse(original));
 
         expect(round.byteLength).toBe(BG1_HEADER_SIZE);
         expect([...round]).toEqual([...original]);
@@ -285,7 +285,7 @@ describe.skipIf(!available)(
         test.each(COMPILED)("%s round-trips byte-identically", (name) => {
             const original = bytesOf(name);
 
-            const round = dlgParser.serialize!(dlgParser.parse(original));
+            const round = dlgParser.serialize(dlgParser.parse(original));
 
             expect(round.byteLength).toBe(original.byteLength);
             expect([...round]).toEqual([...original]);

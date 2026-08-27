@@ -325,7 +325,7 @@ class FalloutSslProvider
         const version = this.storedContext?.getDocumentVersion?.(uri);
         const localSymbols = getLocalSymbols(text, version, uri);
         const localLabels = new Set(localSymbols.map((s) => s.name));
-        const filtered = items.filter((item) => !localLabels.has(item.label as string));
+        const filtered = items.filter((item) => !localLabels.has(item.label));
         return [...localSymbols.map((s) => s.completion), ...filtered];
     }
 

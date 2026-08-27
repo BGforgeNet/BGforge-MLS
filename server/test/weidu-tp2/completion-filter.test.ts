@@ -16,7 +16,7 @@ describe("completion-filter", () => {
     describe("CATEGORY_EXCLUSIONS validation", () => {
         it("should only contain valid CompletionContext values in exclusions", () => {
             for (const [category, exclusions] of Object.entries(CATEGORY_EXCLUSIONS)) {
-                for (const ctx of exclusions!) {
+                for (const ctx of exclusions) {
                     expect(
                         VALID_CONTEXTS.has(ctx),
                         `Invalid context "${ctx}" in exclusion for category "${category}"`,

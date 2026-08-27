@@ -177,15 +177,13 @@ export function enumValueZodSchema(
     if (closedStrict) {
         return literalSchemas.length === 1
             ? (literalSchemas[0] as unknown as z.ZodType<string | number>)
-            : (z.union(literalSchemas as unknown as [z.ZodType<string>, z.ZodType<string>]) as unknown as z.ZodType<
-                  string | number
-              >);
+            : z.union(literalSchemas as unknown as [z.ZodType<string>, z.ZodType<string>]);
     }
     const stringPart =
         literalSchemas.length === 1
             ? (literalSchemas[0] as unknown as z.ZodType<string>)
             : z.union(literalSchemas as unknown as [z.ZodType<string>, z.ZodType<string>]);
-    return z.union([stringPart, z.number().int()]) as unknown as z.ZodType<string | number>;
+    return z.union([stringPart, z.number().int()]);
 }
 
 /**

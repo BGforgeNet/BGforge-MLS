@@ -144,10 +144,10 @@ export function entryAtPosition(entries: TraEntries, position: Position): string
  */
 export function consumerExtToTraExt(ext: string): TraExt | undefined {
     const bare = ext.startsWith(".") ? ext.slice(1).toLowerCase() : ext.toLowerCase();
-    if (CONSUMER_EXTENSIONS_TRA.includes(bare as (typeof CONSUMER_EXTENSIONS_TRA)[number])) {
+    if (CONSUMER_EXTENSIONS_TRA.includes(bare)) {
         return "tra";
     }
-    if (CONSUMER_EXTENSIONS_MSG.includes(bare as (typeof CONSUMER_EXTENSIONS_MSG)[number])) {
+    if (CONSUMER_EXTENSIONS_MSG.includes(bare)) {
         return "msg";
     }
     return undefined;

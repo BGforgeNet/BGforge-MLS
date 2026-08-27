@@ -123,7 +123,7 @@ describe.skipIf(files.length === 0)(`readDlg - real install corpus (${files.leng
 
         for (const file of files) {
             const original = new Uint8Array(fs.readFileSync(file));
-            const round = dlgParser.serialize!(dlgParser.parse(original));
+            const round = dlgParser.serialize(dlgParser.parse(original));
             if (round.byteLength !== original.byteLength || !round.every((b, i) => b === original[i])) {
                 mismatched.push(path.basename(file));
             }

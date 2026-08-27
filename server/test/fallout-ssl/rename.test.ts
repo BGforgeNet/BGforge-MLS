@@ -274,7 +274,7 @@ end
 
             // Check that foobar is not renamed
             const edits = result?.changes?.[uri] ?? [];
-            const hasEditOnFoobar = edits!.some(
+            const hasEditOnFoobar = edits.some(
                 (edit) => edit.range.start.line === 2 && edit.range.start.character === 10,
             );
             expect(hasEditOnFoobar).toBe(false);

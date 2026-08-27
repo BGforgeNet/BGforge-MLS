@@ -74,7 +74,7 @@ export function findFieldByName(
         throw new Error(`Missing field ${name}`);
     }
 
-    return found as { value: unknown; type?: unknown; rawValue?: unknown };
+    return found;
 }
 
 export function findGroupByName(fields: unknown[], name: string): { name: string; fields: unknown[] } {

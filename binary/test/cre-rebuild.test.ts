@@ -94,7 +94,7 @@ function buildZeroSample(spec: Record<string, FieldSpec>): Record<string, unknow
 function buildMinimalCreDoc(
     effects: { kind: "v1"; records: unknown[] } | { kind: "v2"; records: unknown[] },
 ): Record<string, unknown> {
-    const header = buildZeroSample(creHeaderSpecAnnotated as Record<string, FieldSpec>);
+    const header = buildZeroSample(creHeaderSpecAnnotated);
     header["signature"] = String.fromCodePoint(...CRE_SIGNATURE);
     header["version"] = String.fromCodePoint(...CRE_VERSION_V1);
     // effStructureVersion must agree with effects.kind.
@@ -115,12 +115,12 @@ function buildMinimalCreDoc(
 
 /** Build a minimal EFF v1 (48-byte feature-block) record (all scalars zero, resource "", flags []). */
 function buildZeroEffV1(): Record<string, unknown> {
-    return buildZeroSample(effectSpecAnnotated as Record<string, FieldSpec>);
+    return buildZeroSample(effectSpecAnnotated);
 }
 
 /** Build a minimal EFF v2 body record. signature2/version2 carry the EFF magic. */
 function buildZeroEffV2(): Record<string, unknown> {
-    const body = buildZeroSample(effBodySpecAnnotated as Record<string, FieldSpec>);
+    const body = buildZeroSample(effBodySpecAnnotated);
     body["signature2"] = String.fromCodePoint(...EFF_SIGNATURE);
     body["version2"] = String.fromCodePoint(...EFF_VERSION_V2);
     return body;
@@ -132,7 +132,7 @@ function buildZeroEffV2(): Record<string, unknown> {
 
 describe("CRE per-struct walkStruct -> structFromDisplayFull round-trip", () => {
     it("creHeaderSpecAnnotated: non-zero sample round-trips through display", () => {
-        const sample = buildSample(creHeaderSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(creHeaderSpecAnnotated);
         // Set the derived count/offset fields to 0 so the walk does not include
         // them as non-zero (structFromDisplayFull skips derivedOffset/Count
         // annotation but the codec still writes them - zeroing avoids false
@@ -152,31 +152,31 @@ describe("CRE per-struct walkStruct -> structFromDisplayFull round-trip", () => 
     });
 
     it("creKnownSpellSpecAnnotated: round-trips", () => {
-        const sample = buildSample(creKnownSpellSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(creKnownSpellSpecAnnotated);
         const g = walkStruct(creKnownSpellSpecAnnotated, {}, 0, sample as never, "Known Spell 1");
         expect(structFromDisplayFull(g, creKnownSpellSpecAnnotated, {})).toEqual(sample);
     });
 
     it("creSpellMemInfoSpecAnnotated: round-trips", () => {
-        const sample = buildSample(creSpellMemInfoSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(creSpellMemInfoSpecAnnotated);
         const g = walkStruct(creSpellMemInfoSpecAnnotated, {}, 0, sample as never, "Entry 1");
         expect(structFromDisplayFull(g, creSpellMemInfoSpecAnnotated, {})).toEqual(sample);
     });
 
     it("creMemorizedSpellSpecAnnotated: round-trips", () => {
-        const sample = buildSample(creMemorizedSpellSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(creMemorizedSpellSpecAnnotated);
         const g = walkStruct(creMemorizedSpellSpecAnnotated, {}, 0, sample as never, "Memorized Spell 1");
         expect(structFromDisplayFull(g, creMemorizedSpellSpecAnnotated, {})).toEqual(sample);
     });
 
     it("creItemSpecAnnotated: round-trips", () => {
-        const sample = buildSample(creItemSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(creItemSpecAnnotated);
         const g = walkStruct(creItemSpecAnnotated, {}, 0, sample as never, "Item 1");
         expect(structFromDisplayFull(g, creItemSpecAnnotated, {})).toEqual(sample);
     });
 
     it("effectSpec (CRE v0 effects = ITM/SPL feature block): round-trips", () => {
-        const sample = buildSample(effectSpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(effectSpecAnnotated);
         const g = walkStruct(effectSpecAnnotated, {}, 0, sample as never, "Effect 1");
         expect(structFromDisplayFull(g, effectSpecAnnotated, {})).toEqual(sample);
     });
@@ -185,7 +185,7 @@ describe("CRE per-struct walkStruct -> structFromDisplayFull round-trip", () => 
         // unused7 (15 x u32) is the only plain (non-slots, non-chars) array in
         // effBodySpecAnnotated; its display value is discarded. This is acceptable
         // because unused7 is a reserved padding field.
-        const sample = buildSample(effBodySpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildSample(effBodySpecAnnotated);
         const g = walkStruct(effBodySpecAnnotated, {}, 0, sample as never, "Effect 1");
         const rebuilt = structFromDisplayFull(g, effBodySpecAnnotated, {});
 
@@ -290,7 +290,7 @@ describe("CRE rebuild - edit survives", () => {
         // Edit the Opcode field to 42.
         const editedEffectFields = effectRecord!.fields.map((e) => {
             if (!("fields" in e) && e.name === "Opcode") {
-                return { ...e, rawValue: 42, value: 42 } as ParsedField;
+                return { ...e, rawValue: 42, value: 42 };
             }
             return e;
         });
@@ -332,7 +332,7 @@ describe("CRE rebuild - edit survives", () => {
 
         const editedEffectFields = effectRecord!.fields.map((e) => {
             if (!("fields" in e) && e.name === "Opcode") {
-                return { ...e, rawValue: 17, value: 17 } as ParsedField;
+                return { ...e, rawValue: 17, value: 17 };
             }
             return e;
         });

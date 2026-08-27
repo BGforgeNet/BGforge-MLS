@@ -100,7 +100,7 @@ describe("buildLayout (cre): Spells tab total", () => {
                     { name: "Memorized Spells", fields: kids("Memorized Spell", memorized) },
                 ],
             },
-        } as unknown as ParseResult;
+        };
     }
 
     it("shows total known/memorized on the Spells tab", () => {

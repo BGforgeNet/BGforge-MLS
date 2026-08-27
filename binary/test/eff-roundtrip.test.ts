@@ -38,7 +38,7 @@ describe("effParser - round-trip on real EFF v2 fixtures", () => {
             const result = effParser.parse(bytes);
             if (result.errors) throw new Error(result.errors.join(", "));
 
-            const reserialized = effParser.serialize!(result);
+            const reserialized = effParser.serialize(result);
             expect(reserialized.byteLength).toBe(bytes.byteLength);
             expect([...reserialized]).toEqual([...bytes]);
         });

@@ -92,7 +92,7 @@ maybe("CRE v0 effects render through the SHARED feature-block fragment (no CRE-l
         const reparsed = creParser.parse(bytes);
         const doc = getCreCanonicalDocument(reparsed) ?? rebuildCreCanonicalDocument(reparsed);
         expect(doc).toBeDefined();
-        const out = serializeCreCanonicalDocument(doc!);
+        const out = serializeCreCanonicalDocument(doc);
         expect([...out]).toEqual([...bytes]);
     });
 });

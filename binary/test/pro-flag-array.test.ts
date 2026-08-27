@@ -91,7 +91,7 @@ describe("PRO header.flags - round-trip via parser", () => {
         const input = new Uint8Array(fs.readFileSync(abs));
         const parsed = proParser.parse(input);
         expect(parsed.errors).toBeUndefined();
-        const out = proParser.serialize!(parsed);
+        const out = proParser.serialize(parsed);
         expect(Buffer.from(out).equals(Buffer.from(input))).toBe(true);
     });
 });

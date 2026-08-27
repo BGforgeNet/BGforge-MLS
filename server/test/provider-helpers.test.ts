@@ -4,7 +4,6 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { CompletionItem } from "vscode-languageserver/node";
 import type { IndexedSymbol } from "../src/core/symbol";
 import type { Symbols } from "../src/core/symbol-index";
 
@@ -19,7 +18,7 @@ function mockSymbol(name: string, uri: string | null = null): IndexedSymbol {
     return {
         name,
         source: { uri },
-        completion: { label: name } as CompletionItem,
+        completion: { label: name },
         hover: { contents: `hover for ${name}` },
         location: null,
     } as IndexedSymbol;

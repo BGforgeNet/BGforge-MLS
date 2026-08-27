@@ -60,7 +60,7 @@ function gameUri(uriPath: string): vscode.Uri {
 }
 
 function openContext(): vscode.CustomDocumentOpenContext {
-    return { backupId: undefined, untitledDocumentData: undefined } as vscode.CustomDocumentOpenContext;
+    return { backupId: undefined, untitledDocumentData: undefined };
 }
 
 describe("an IE BAM pair served from a game", () => {

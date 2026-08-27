@@ -158,7 +158,7 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
         const input = new Uint8Array(fs.readFileSync(proPath));
         const parsed = proParser.parse(input);
         expect(parsed.errors).toBeUndefined();
-        const output = proParser.serialize!(parsed);
+        const output = proParser.serialize(parsed);
         expect(Buffer.from(output).equals(Buffer.from(input))).toBe(true);
     });
 
@@ -183,7 +183,7 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
         textId.value = 999999;
         textId.rawValue = 999999;
 
-        const output = proParser.serialize!(parsed);
+        const output = proParser.serialize(parsed);
         expect(Buffer.from(output).equals(Buffer.from(input))).toBe(true);
     });
 
@@ -209,7 +209,7 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
         objectType.rawValue = 1;
         parsed.document = undefined;
 
-        expect(() => proParser.serialize!(parsed)).toThrow(/required for critter PRO snapshots/i);
+        expect(() => proParser.serialize(parsed)).toThrow(/required for critter PRO snapshots/i);
     });
 
     it("clamps invalid header values while rebuilding canonical data for save and JSON export", () => {
@@ -240,7 +240,7 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
         };
         expect(snapshot.document.header.lightRadius).toBe(8);
 
-        const output = proParser.serialize!(parsed);
+        const output = proParser.serialize(parsed);
         const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
         expect(view.getUint32(0x0c, false)).toBe(8);
     });

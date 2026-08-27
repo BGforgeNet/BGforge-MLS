@@ -11,7 +11,6 @@
 import { describe, expect, it } from "vitest";
 import { mapParser } from "../src/map";
 import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
-import type { ParseResult } from "../src/types";
 import { findFieldByName, hasExternalMaps, loadMap, REAL_MAPS } from "./map-fixtures";
 
 describe("MAP parser - real corpus", () => {
@@ -31,7 +30,7 @@ describe("MAP parser - real corpus", () => {
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
 
         expect(result.errors).toBeUndefined();
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
@@ -50,7 +49,7 @@ describe("MAP parser - real corpus", () => {
             ),
         ).toBe(false);
 
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
@@ -61,7 +60,7 @@ describe("MAP parser - real corpus", () => {
         expect(result.opaqueRanges?.some((range) => range.label === "tiles")).toBe(true);
 
         const reparsedSnapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-        const serialized = mapParser.serialize!(reparsedSnapshot);
+        const serialized = mapParser.serialize(reparsedSnapshot);
 
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
@@ -84,9 +83,9 @@ describe("MAP parser - real corpus", () => {
         floorFlagsField.value = 0x5;
         roofField.value = 0x678;
         roofFlagsField.value = 0x9;
-        (result as ParseResult).document = undefined;
+        result.document = undefined;
 
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
 
         expect(view.getUint32(240, false)).toBe(0x96785234);

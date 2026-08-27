@@ -88,7 +88,7 @@ function uri(value: string): vscode.Uri {
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
-    return { backupId, untitledDocumentData: undefined } as vscode.CustomDocumentOpenContext;
+    return { backupId, untitledDocumentData: undefined };
 }
 
 const token = {} as vscode.CancellationToken;

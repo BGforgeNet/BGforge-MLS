@@ -39,7 +39,7 @@ import init from "../src/index";
 // isFunctionDeclaration / etc. to parse the runtime .d.ts, and the host
 // override reads ScriptTarget.ES2020 for the compilation settings.
 const MOCK_TS_MODULES = {
-    typescript: tsModule as unknown as typeof ts,
+    typescript: tsModule,
 };
 
 interface MockHost {
@@ -76,7 +76,7 @@ function createMockInfo(
         project: {} as ts.server.Project,
         config: {},
         serverHost: {} as ts.server.ServerHost,
-    } as ts.server.PluginCreateInfo;
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/dialog.td"], {}, makeCompletionResult(entries));
             const service = plugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined);
             const names = result!.entries.map((e: { name: string }) => e.name);
             expect(names).toContain("begin");
             expect(names).not.toContain("Array");
@@ -209,7 +209,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/dialog.td"], {}, makeCompletionResult(entries));
             const service = plugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined);
             expect(result!.entries).toHaveLength(2);
         });
 
@@ -219,7 +219,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/dialog.td"], {}, makeCompletionResult(entries));
             const service = plugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined);
             expect(result!.entries).toHaveLength(memberKinds.length);
         });
     });
@@ -235,7 +235,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
             const service = plugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
             const names = result!.entries.map((e: { name: string }) => e.name);
             expect(names).toContain("myFunction");
             expect(names).not.toContain("begin");
@@ -310,7 +310,7 @@ describe("TD plugin", () => {
             const service = freshPlugin.create(info);
 
             // With an empty names set, filtering is skipped and result is returned as-is
-            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
             expect(result!.entries).toHaveLength(2);
         });
     });
@@ -320,7 +320,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/dialog.td"], {}, undefined);
             const service = plugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined);
             expect(result).toBeUndefined();
         });
     });
@@ -335,8 +335,8 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
             const service = freshPlugin.create(info);
 
-            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
-            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
+            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
 
             // First call reads the file; second call hits the memoized set without re-reading.
             expect(vi.mocked(readFileSync)).toHaveBeenCalledTimes(1);
@@ -361,7 +361,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
             const service = freshPlugin.create(info);
 
-            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
             const names = result!.entries.map((e: { name: string }) => e.name);
             // declared var names must be filtered out of non-.td completions
             expect(names).toContain("myFunction");

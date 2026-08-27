@@ -182,7 +182,7 @@ END
 
     it("inserts a newly-added state on save, after its siblings, re-parseable", () => {
         const m = model();
-        const added = ops.addState(m)!;
+        const added = ops.addState(m);
         added.id = "fresh"; // (rename is tested elsewhere; just give it a readable id)
         // retarget the rename's ref pass is irrelevant here; set content directly
         added.text = "A new line.";
@@ -214,7 +214,7 @@ END
             ],
         };
         const s = ops.addState(m);
-        expect(s!.id).toBe("Node004"); // max(Node001, Node003) + 1, zero-padded to 3
+        expect(s.id).toBe("Node004"); // max(Node001, Node003) + 1, zero-padded to 3
     });
 
     it("names a new D state StateNNN (next free), ignoring non-StateNNN labels", () => {
@@ -235,7 +235,7 @@ END
             ],
         };
         const s = ops.addState(m);
-        expect(s!.id).toBe("State004"); // max(State001, State003) + 1, zero-padded to 3
+        expect(s.id).toBe("State004"); // max(State001, State003) + 1, zero-padded to 3
     });
 
     it("skips the reserved Node998/Node999 sink range when naming a new SSL node", () => {
@@ -258,7 +258,7 @@ END
                 },
             ],
         };
-        expect(ops.addState(m)!.id).toBe("Node004"); // Node999 ignored -> Node004, not Node1000
+        expect(ops.addState(m).id).toBe("Node004"); // Node999 ignored -> Node004, not Node1000
     });
 
     it("never allocates a reserved id: after Node997 the next node jumps past 998/999 to Node1000", () => {
@@ -274,7 +274,7 @@ END
                 },
             ],
         };
-        expect(ops.addState(m)!.id).toBe("Node1000"); // 998 and 999 are reserved, so skip past them
+        expect(ops.addState(m).id).toBe("Node1000"); // 998 and 999 are reserved, so skip past them
     });
 
     it("bootstraps the first dialog root from scratch (SSL entry node; D root labelled by sourceName)", () => {

@@ -44,7 +44,7 @@ const model = async (src: string) => ({
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 500, height: 850 } });
 const pageErrors: string[] = [];
-page.on("pageerror", (e) => pageErrors.push((e as Error).stack ?? String(e)));
+page.on("pageerror", (e) => pageErrors.push(e.stack ?? String(e)));
 
 await page.goto("file://" + appHtml);
 await page.evaluate(

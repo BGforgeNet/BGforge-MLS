@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { parseRawGrammar, Registry, type IGrammar, type IRawGrammar, INITIAL } from "vscode-textmate";
+import { parseRawGrammar, Registry, type IGrammar, INITIAL } from "vscode-textmate";
 import { loadWASM, OnigScanner, OnigString } from "vscode-oniguruma";
 
 const SYNTAX_PATH = path.resolve(__dirname, "../../../syntaxes/fallout-ssl.tmLanguage.json");
@@ -55,14 +55,11 @@ beforeAll(async () => {
         }),
         loadGrammar: async (scopeName) => {
             if (scopeName === "source.fallout-ssl") {
-                const rawGrammar = parseRawGrammar(readFileSync(SYNTAX_PATH, "utf-8"), SYNTAX_PATH) as IRawGrammar;
+                const rawGrammar = parseRawGrammar(readFileSync(SYNTAX_PATH, "utf-8"), SYNTAX_PATH);
                 return rawGrammar;
             }
             if (scopeName === "source.fallout-ssl-tooltip") {
-                const rawGrammar = parseRawGrammar(
-                    readFileSync(TOOLTIP_SYNTAX_PATH, "utf-8"),
-                    TOOLTIP_SYNTAX_PATH,
-                ) as IRawGrammar;
+                const rawGrammar = parseRawGrammar(readFileSync(TOOLTIP_SYNTAX_PATH, "utf-8"), TOOLTIP_SYNTAX_PATH);
                 return rawGrammar;
             }
             return null;

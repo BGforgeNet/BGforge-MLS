@@ -103,7 +103,7 @@ describe("setDlgLineText", () => {
     });
 
     it("finds the state by its file index, not by its place in the list", () => {
-        const withExternal = structuredClone(model()) as DialogModel;
+        const withExternal = structuredClone(model());
         withExternal.roots.unshift({
             id: "dialog:OTHER",
             label: "OTHER",
@@ -157,7 +157,7 @@ describe("detachDlgState", () => {
     });
 
     it("cuts a reply that led back into the detached state from itself", () => {
-        const selfish = structuredClone(model()) as DialogModel;
+        const selfish = structuredClone(model());
         selfish.roots[0]!.states[1]!.choices[0]!.target = { kind: "state", stateId: selfish.roots[0]!.states[1]!.id };
 
         const { model: after, cut } = detachDlgState(selfish, "TEST", 1);

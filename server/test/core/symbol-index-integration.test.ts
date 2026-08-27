@@ -52,7 +52,7 @@ function completionToSymbol(item: CompletionItem & { category?: string }): Index
         if (typeof item.documentation === "string") {
             hoverContents = { kind: "markdown", value: item.documentation };
         } else {
-            hoverContents = item.documentation as MarkupContent;
+            hoverContents = item.documentation;
         }
     } else {
         hoverContents = { kind: "markdown", value: name };

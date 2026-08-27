@@ -48,7 +48,7 @@ export function parseWithSchemaValidation<T>(schema: z.ZodType<T>, value: unknow
 
     const issues: SchemaValidationIssue[] = parsed.error.issues.map((issue) => ({
         ...issue,
-        actual: getValueAtPath(value, issue.path as PathSegment[]),
+        actual: getValueAtPath(value, issue.path),
     }));
     throw new SchemaValidationError(context, issues);
 }

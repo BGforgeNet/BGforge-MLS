@@ -6,7 +6,7 @@
  * invoked by transformTopLevelCall() in parse.ts.
  */
 
-import { type ArrayLiteralExpression, type Block, type CallExpression, type Expression, Node } from "ts-morph";
+import { type CallExpression, type Expression, Node } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,
@@ -145,7 +145,7 @@ export function transformReplaceState(
         line: call.getStartLineNumber() - 1,
     };
 
-    for (const s of (body as Block).getStatements()) {
+    for (const s of body.getStatements()) {
         processStateStatement(s, state, ctx.vars, ctx.funcs);
     }
 
@@ -213,7 +213,7 @@ export function transformExtend(
         const body = transitionsArg.getBody();
         if (Node.isBlock(body)) {
             // Process all statements together to build transitions
-            processExtendStatements((body as Block).getStatements(), transitions, ctx.vars);
+            processExtendStatements(body.getStatements(), transitions, ctx.vars);
         }
     } else {
         throw TranspileError.fromNode(call, `${funcName}() transitions argument must be an arrow function`);
@@ -268,7 +268,7 @@ export function transformInterject(
     if (Node.isArrowFunction(chainFunc)) {
         const body = chainFunc.getBody();
         if (Node.isBlock(body)) {
-            const statements = (body as Block).getStatements();
+            const statements = body.getStatements();
             const currentEntry = processChainStatements(statements, entries, null, ctx.vars);
 
             // Push final entry
@@ -336,7 +336,7 @@ function collectStatesFromArgs(
     for (const arg of stateArgs) {
         if (Node.isArrayLiteralExpression(arg)) {
             // Array of state references: [s1, s2, state("label", () => {...})]
-            for (const element of (arg as ArrayLiteralExpression).getElements()) {
+            for (const element of arg.getElements()) {
                 if (Node.isCallExpression(element) && element.getExpression().getText() === "state") {
                     collectInlineState(ctx, element, states);
                 } else {
@@ -363,7 +363,7 @@ function collectStatesFromArgs(
                         transitions: [],
                     };
 
-                    for (const s of (body as Block).getStatements()) {
+                    for (const s of body.getStatements()) {
                         processStateStatement(s, state, ctx.vars, ctx.funcs);
                     }
 
@@ -405,7 +405,7 @@ function collectInlineState(
         transitions: [],
     };
 
-    for (const s of (body as Block).getStatements()) {
+    for (const s of body.getStatements()) {
         processStateStatement(s, state, ctx.vars, ctx.funcs);
     }
 

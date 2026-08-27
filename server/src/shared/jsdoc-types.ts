@@ -46,7 +46,7 @@ export const CUSTOM_JSDOC_TYPE_NAMES: readonly string[] = ["list", "map"] as con
 /** All JSDoc type names across all languages, deduplicated and sorted. Used for brace-less type disambiguation. */
 export const ALL_JSDOC_TYPE_NAMES: readonly string[] = [
     ...new Set([...FALLOUT_JSDOC_TYPE_NAMES, ...WEIDU_JSDOC_TYPE_NAMES, ...CUSTOM_JSDOC_TYPE_NAMES]),
-].sort() as readonly string[];
+].sort();
 
 /** Regex alternation string for all JSDoc types, for use in patterns. */
 export const JSDOC_TYPE_PATTERN = ALL_JSDOC_TYPE_NAMES.join("|");

@@ -60,7 +60,7 @@ function sampleModel(): DialogModel {
 }
 
 function editedModel(mutate: (m: DialogModel) => void): DialogModel {
-    const copy = structuredClone(sampleModel()) as DialogModel;
+    const copy = structuredClone(sampleModel());
     mutate(copy);
     return copy;
 }

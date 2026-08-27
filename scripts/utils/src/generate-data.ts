@@ -457,12 +457,12 @@ export function generateHover(data: DataFile, langId: string): Record<string, Ho
 
             if (result[label]) {
                 // Skip if identical content already present
-                if (result[label]!.contents.value === value) {
+                if (result[label].contents.value === value) {
                     continue;
                 }
                 // Merge overloads: append with separator
                 result[label] = {
-                    contents: markdown(result[label]!.contents.value + "\n\n---\n\n" + value),
+                    contents: markdown(result[label].contents.value + "\n\n---\n\n" + value),
                 };
             } else {
                 result[label] = { contents: markdown(value) };

@@ -5,7 +5,7 @@
  * Extracted from parse.ts. Called by transformTopLevelCall() in parse.ts.
  */
 
-import { type Block, type CallExpression, type Expression, type FunctionExpression, Node } from "ts-morph";
+import { type CallExpression, type Expression, Node } from "ts-morph";
 import { TDConstructType, TDEpilogueType, type TDConstruct, type TDChainEntry, type TDChainEpilogue } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { resolveStringExpr } from "./parse-helpers";
@@ -61,7 +61,7 @@ export function transformChainCall(
         const chain = transformFunctionToChain(funcInfo.func, ctx.vars, trigger);
         return chain ? [chain] : null;
     } else if (Node.isFunctionExpression(funcArg)) {
-        const chain = transformFunctionToChain(funcArg as FunctionExpression, ctx.vars, trigger);
+        const chain = transformFunctionToChain(funcArg, ctx.vars, trigger);
         return chain ? [chain] : null;
     }
 
@@ -86,13 +86,13 @@ function transformChainNewForm(
         // chain(dialog, label, body)
         dialog = resolveStringExpr(args[0] as Expression, ctx.vars);
         label = resolveStringExpr(args[1] as Expression, ctx.vars);
-        bodyArg = args[2] as Expression;
+        bodyArg = args[2];
     } else if (args[3] && Node.isArrowFunction(args[3])) {
         // chain(trigger, dialog, label, body)
         trigger = expressionToTrigger(args[0] as Expression, ctx.vars);
         dialog = resolveStringExpr(args[1] as Expression, ctx.vars);
         label = resolveStringExpr(args[2] as Expression, ctx.vars);
-        bodyArg = args[3] as Expression;
+        bodyArg = args[3];
     } else {
         throw TranspileError.fromNode(call, `chain() body must be an arrow function`);
     }
@@ -104,7 +104,7 @@ function transformChainNewForm(
     if (Node.isArrowFunction(bodyArg)) {
         const body = bodyArg.getBody();
         if (Node.isBlock(body)) {
-            const result = processChainBody((body as Block).getStatements(), dialog, ctx.vars);
+            const result = processChainBody(body.getStatements(), dialog, ctx.vars);
             entries.push(...result.entries);
             epilogue = result.epilogue;
         }

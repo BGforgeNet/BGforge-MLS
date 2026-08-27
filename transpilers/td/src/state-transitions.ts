@@ -14,8 +14,6 @@
 
 import {
     type CallExpression,
-    type ForOfStatement,
-    type ForStatement,
     type FunctionDeclaration,
     type FunctionExpression,
     type IfStatement,
@@ -197,13 +195,13 @@ function processStateStatement(
         // if (trigger) { ... } - transition with trigger.
         // Clear pending since if blocks produce complete transitions.
         pending.ref = undefined;
-        processIfTransition(stmt as IfStatement, state, vars, funcs);
+        processIfTransition(stmt, state, vars, funcs);
     } else if (stmt.isKind(SyntaxKind.ForOfStatement)) {
         // for (const x of arr) { ... } - unroll
-        unrollForOf(stmt as ForOfStatement, vars, (s) => processStateStatement(s, state, vars, funcs, pending));
+        unrollForOf(stmt, vars, (s) => processStateStatement(s, state, vars, funcs, pending));
     } else if (stmt.isKind(SyntaxKind.ForStatement)) {
         // for (let i = 0; ...) { ... } - unroll
-        unrollFor(stmt as ForStatement, vars, (s) => processStateStatement(s, state, vars, funcs, pending));
+        unrollFor(stmt, vars, (s) => processStateStatement(s, state, vars, funcs, pending));
     }
 }
 

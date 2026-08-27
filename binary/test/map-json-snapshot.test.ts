@@ -23,7 +23,7 @@ function assertSnapshotRoundTrip(fileName: string, options?: Parameters<typeof m
     expect(result.errors).toBeUndefined();
 
     const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-    const serialized = mapParser.serialize!(snapshot);
+    const serialized = mapParser.serialize(snapshot);
 
     expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
 }

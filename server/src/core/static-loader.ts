@@ -307,7 +307,7 @@ function extractHover(item: StaticCompletionItem): { contents: MarkupContent } {
                 },
             };
         }
-        const markup = item.documentation as MarkupContent;
+        const markup = item.documentation;
         return {
             contents: markup,
         };

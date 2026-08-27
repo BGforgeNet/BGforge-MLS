@@ -4,7 +4,7 @@ import { opaqueRangeSchema } from "./shared-schemas";
 import { formatAdapterRegistry } from "./format-adapter";
 import { buildParsedTreeNode } from "./parsed-tree-codec";
 import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
-import type { ParseOpaqueRange, ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
+import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
 import { getScalarFieldLookupKey, parseScalarFieldValue } from "./snapshot-common";
 import { slugify } from "./spec/presentation";
 
@@ -221,7 +221,7 @@ function fromBinaryJsonDocument(document: BinaryJsonDocumentV1): ParseResult {
         result.root.expanded = document.root.expanded;
     }
     if (document.opaqueRanges !== undefined) {
-        result.opaqueRanges = document.opaqueRanges as ParseOpaqueRange[];
+        result.opaqueRanges = document.opaqueRanges;
     }
     if (document.warnings !== undefined) {
         result.warnings = document.warnings;

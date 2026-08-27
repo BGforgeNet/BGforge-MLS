@@ -211,6 +211,15 @@ A program that fails to construct reports zero findings, not an error per file: 
 state until their `rootDir` was made explicit, and read as clean while nothing had been analysed. Treat a sudden
 drop to zero findings as a config failure until the run's `tsconfig-error` count is confirmed to be zero.
 
+**`no-unnecessary-type-assertion` is not in the enabled set, and cannot be.** Its 318 findings were swept in one
+pass and 269 were genuine - mostly `as unknown as T` double casts. The other 49 are assertions `tsc` REQUIRES: it
+reports a non-null `!` on an indexed access as unnecessary where the package typecheck then fails with
+"Object is possibly 'undefined'". `compilers/bcs/test/ids-tables.ts:31` is the smallest reproducer - `value(text:
+string)` fed `match[1]`, which is `string | undefined` under the `noUncheckedIndexedAccess` that
+`tsconfig.base.json` sets. Enabling the rule would therefore stand permanently red on 49 sites, and its `--fix`
+produces a tree that does not compile. The 49 are concentrated in `shared/dialog-*`; re-test after a
+tsgolint bump, since this is a divergence between its program and `tsc`, not a property of the code.
+
 ### The test-lint pass, and the two rules it leaves out
 
 `pnpm lint:tests` runs the vitest plugin with a named allowlist - committed `.only`, duplicate titles, duplicate

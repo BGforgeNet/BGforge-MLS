@@ -154,7 +154,7 @@ describe("applyTSSLDialogEdits - option retarget", () => {
             id: "Node003",
             text: "@300",
             choices: [{ id: "Node003#o0", text: "@301", target: { kind: "exit" } }],
-        } as (typeof root.states)[number]);
+        });
         // Wire it in: retarget Node001's existing option from Node002 to the new node.
         const opt = root.states.find((s) => s.id === "Node001")!.choices.find((c) => c.target.kind === "state")!;
         (opt.target as { kind: "state"; stateId: string }).stateId = "Node003";

@@ -87,7 +87,7 @@ function transformFunctionToChain(
                 entries.push(currentEntry);
                 currentEntry = null;
             }
-            processChainIf(stmt as IfStatement, entries, vars);
+            processChainIf(stmt, entries, vars);
         }
     }
 
@@ -171,7 +171,7 @@ function processChainStatements(
                 entries.push(currentEntry);
                 currentEntry = null;
             }
-            processChainIf(stmt as IfStatement, entries, vars);
+            processChainIf(stmt, entries, vars);
         }
     }
 

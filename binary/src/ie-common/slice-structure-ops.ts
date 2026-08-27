@@ -194,7 +194,7 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
     function setOwnerStart(owner: Owner, start: number): Owner {
         // Computed-key spread widens the type; the runtime shape is unchanged (abilityStart
         // is one of the owner's own numeric range fields), so the cast is isolated here.
-        return { ...owner, [fields.abilityStart]: start } as Owner;
+        return { ...owner, [fields.abilityStart]: start };
     }
 
     /**

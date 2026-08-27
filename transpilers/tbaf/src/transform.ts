@@ -6,8 +6,6 @@
  */
 
 import {
-    type ArrayLiteralExpression,
-    type Block,
     type CallExpression,
     type CaseClause,
     type Expression,
@@ -95,15 +93,15 @@ export class TBAFTransformer implements TransformerContext {
         }
 
         if (stmt.isKind(SyntaxKind.IfStatement)) {
-            this.transformIfStatement(stmt as IfStatement, parentConditions);
+            this.transformIfStatement(stmt, parentConditions);
         } else if (stmt.isKind(SyntaxKind.ForOfStatement)) {
-            this.transformForOfStatement(stmt as ForOfStatement, parentConditions);
+            this.transformForOfStatement(stmt, parentConditions);
         } else if (stmt.isKind(SyntaxKind.ForStatement)) {
-            this.transformForStatement(stmt as ForStatement, parentConditions);
+            this.transformForStatement(stmt, parentConditions);
         } else if (stmt.isKind(SyntaxKind.SwitchStatement)) {
-            this.transformSwitchStatement(stmt as SwitchStatement, parentConditions);
+            this.transformSwitchStatement(stmt, parentConditions);
         } else if (stmt.isKind(SyntaxKind.Block)) {
-            for (const s of (stmt as Block).getStatements()) {
+            for (const s of stmt.getStatements()) {
                 this.transformStatement(s, parentConditions);
             }
         } else if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
@@ -152,7 +150,7 @@ export class TBAFTransformer implements TransformerContext {
             const invertedConds = invertConditions(this, parentConditions, condExpr);
             if (elseStmt.isKind(SyntaxKind.IfStatement)) {
                 // else if - recurse
-                this.transformIfStatement(elseStmt as IfStatement, invertedConds);
+                this.transformIfStatement(elseStmt, invertedConds);
             } else {
                 // else block
                 this.processBlock(utils.getBlockStatements(elseStmt), invertedConds);
@@ -217,7 +215,7 @@ export class TBAFTransformer implements TransformerContext {
                 );
             }
 
-            const caseClause = clause as CaseClause;
+            const caseClause = clause;
             const caseValue = caseClause.getExpression().getText();
 
             // Build the condition by augmenting the switch expression with the case value
@@ -297,11 +295,11 @@ export class TBAFTransformer implements TransformerContext {
                 }
             } else if (stmt.isKind(SyntaxKind.ForOfStatement)) {
                 // Unroll for-of loop into actions
-                const unrolledActions = unrollForOfAsActions(this, stmt as ForOfStatement);
+                const unrolledActions = unrollForOfAsActions(this, stmt);
                 actions.push(...unrolledActions);
             } else if (stmt.isKind(SyntaxKind.ForStatement)) {
                 // Unroll for loop into actions
-                const unrolledActions = unrollForAsActions(this, stmt as ForStatement);
+                const unrolledActions = unrollForAsActions(this, stmt);
                 actions.push(...unrolledActions);
             }
         }
@@ -400,7 +398,7 @@ export class TBAFTransformer implements TransformerContext {
      */
     evaluateExpression(expr: Expression): string | undefined {
         if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-            const arr = expr as ArrayLiteralExpression;
+            const arr = expr;
             const elements = utils.flattenArrayElements(arr, this.vars);
             return `[${elements.join(", ")}]`;
         }
@@ -424,7 +422,7 @@ export class TBAFTransformer implements TransformerContext {
      */
     resolveArrayElements(expr: Expression): string[] | null {
         if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-            return utils.flattenArrayElements(expr as ArrayLiteralExpression, this.vars);
+            return utils.flattenArrayElements(expr, this.vars);
         }
 
         if (expr.isKind(SyntaxKind.Identifier)) {

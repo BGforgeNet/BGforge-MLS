@@ -40,7 +40,7 @@ function createSymbol(name: string, uri: string | null): IndexedSymbol {
     return {
         name,
         source: { type: uri ? SourceType.Workspace : SourceType.Static, uri },
-        completion: { label: name } as CompletionItem,
+        completion: { label: name },
         hover: { contents: "" },
         location: null,
     } as IndexedSymbol;

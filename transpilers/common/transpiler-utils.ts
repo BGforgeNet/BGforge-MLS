@@ -8,11 +8,9 @@
 import {
     type ArrayBindingPattern,
     type ArrayLiteralExpression,
-    type Block,
     type CallExpression,
     type Expression,
     type FunctionDeclaration,
-    type SpreadElement,
     type Statement,
     SyntaxKind,
 } from "ts-morph";
@@ -175,7 +173,7 @@ export function evaluateNumeric(expr: Expression | undefined, vars: VarsContext)
  */
 export function getBlockStatements(stmt: Statement): Statement[] {
     if (stmt.isKind(SyntaxKind.Block)) {
-        return (stmt as Block).getStatements();
+        return stmt.getStatements();
     }
     return [stmt];
 }
@@ -416,11 +414,11 @@ export function flattenArrayElements(arr: ArrayLiteralExpression, vars: VarsCont
 
     for (const el of arr.getElements()) {
         if (el.isKind(SyntaxKind.SpreadElement)) {
-            const spreadExpr = (el as SpreadElement).getExpression();
+            const spreadExpr = el.getExpression();
 
             if (spreadExpr.isKind(SyntaxKind.ArrayLiteralExpression)) {
                 // Spread of array literal: [...[1, 2]]
-                result.push(...flattenArrayElements(spreadExpr as ArrayLiteralExpression, vars));
+                result.push(...flattenArrayElements(spreadExpr, vars));
             } else if (spreadExpr.isKind(SyntaxKind.Identifier)) {
                 // Spread of variable: [...arr]
                 const name = spreadExpr.getText();

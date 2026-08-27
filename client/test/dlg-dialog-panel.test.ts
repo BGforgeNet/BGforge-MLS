@@ -340,9 +340,9 @@ describe("DlgDialogEditorProvider", () => {
         await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
         executeCommandMock.mockClear();
 
-        h.send({ type: "openGame", extra: 1 } as never);
-        h.send({ type: "detach" } as never); // no stateIndex
-        h.send({ nonsense: true } as never);
+        h.send({ type: "openGame", extra: 1 });
+        h.send({ type: "detach" }); // no stateIndex
+        h.send({ nonsense: true });
 
         // The well-formed one still went through; the two malformed ones did not reach a handler.
         expect(executeCommandMock).toHaveBeenCalledTimes(1);

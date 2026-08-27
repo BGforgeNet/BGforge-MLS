@@ -511,7 +511,7 @@ procedure talk_p_proc begin call Node002; end
         // thenBlockEnd = thenBody.endIndex: offset right after the then-block's closing `end`.
         // For the if/else SRC fixture the next non-space after thenBlockEnd is `else`.
         expect(ifB!.thenBlockEnd).toBeDefined();
-        expect(SRC.slice(ifB!.thenBlockEnd!).trimStart().startsWith("else")).toBe(true);
+        expect(SRC.slice(ifB!.thenBlockEnd).trimStart().startsWith("else")).toBe(true);
         // elseClauseRange starts at the `else` keyword and ends at the else-block `end`.
         expect(elseB!.elseClauseRange).toBeDefined();
         expect(SRC.slice(elseB!.elseClauseRange!.start).trimStart().startsWith("else")).toBe(true);
@@ -532,6 +532,6 @@ procedure talk_p_proc begin call NodeSingle; end
         expect(ifB!.thenBlockEnd).toBeDefined();
         // For a single-if the then-block end coincides with the statement end; the next non-space
         // after thenBlockEnd is the procedure's closing `end`.
-        expect(SINGLE_IF.slice(ifB!.thenBlockEnd!).trimStart().startsWith("end")).toBe(true);
+        expect(SINGLE_IF.slice(ifB!.thenBlockEnd).trimStart().startsWith("end")).toBe(true);
     });
 });

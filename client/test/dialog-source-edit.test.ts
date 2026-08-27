@@ -239,7 +239,7 @@ describe("computeDialogSourceEdit - fallout-ssl id allocation", () => {
         const result = computeDialogSourceEdit(SSL_SRC, edited, original);
         // Next free id after 101/200 is 201; Reply(201) spliced at the node's body anchor, entry added to .msg.
         expect(result.newText).toContain("Reply(201);");
-        expect(result.messages!["201"]).toBe("Hello, traveler.");
+        expect(result.messages["201"]).toBe("Hello, traveler.");
     });
 
     it("does NOT mint an orphan @N for a non-faithful reply-less node (the writer can't splice a Reply there)", () => {

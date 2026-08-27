@@ -20,7 +20,7 @@ describe("DLG variant corpus", () => {
     test.each(DLG_VARIANTS.map((v) => [v.name, v] as const))("%s round-trips byte-identically", (_name, variant) => {
         // Preserve-mode: re-emitting a file over its own bytes has to reproduce it exactly, whatever layout
         // its producer chose.
-        const round = dlgParser.serialize!(dlgParser.parse(variant.bytes));
+        const round = dlgParser.serialize(dlgParser.parse(variant.bytes));
 
         expect([...round]).toEqual([...variant.bytes]);
     });

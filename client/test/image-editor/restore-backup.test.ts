@@ -59,7 +59,7 @@ function fileUri(fsPath: string): vscode.Uri {
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
-    return { backupId, untitledDocumentData: undefined } as vscode.CustomDocumentOpenContext;
+    return { backupId, untitledDocumentData: undefined };
 }
 
 // A sidecar on disk makes the external palette auto-on at open, so a backup taken with it toggled OFF

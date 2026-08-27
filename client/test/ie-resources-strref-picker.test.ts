@@ -132,7 +132,7 @@ describe("pickStrref", () => {
     function open() {
         created.length = 0;
         warned.length = 0;
-        const result = pickStrref(search as never, lookup, uri);
+        const result = pickStrref(search, lookup, uri);
         return { result, pick: created[0]! };
     }
 
@@ -140,7 +140,11 @@ describe("pickStrref", () => {
         created.length = 0;
         warned.length = 0;
         // What a closed game answers with: no strings for any query, the empty one included.
-        const result = await pickStrref((() => []) as never, () => undefined, uri);
+        const result = await pickStrref(
+            () => [],
+            () => undefined,
+            uri,
+        );
         expect(result).toBeUndefined();
         expect(warned).toHaveLength(1);
         expect(warned[0]).toMatch(/game/i);

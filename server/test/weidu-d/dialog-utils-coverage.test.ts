@@ -37,8 +37,8 @@ END
         expect(states.length).toBeGreaterThan(0);
         const target = states[0]!.transitions[0]!.target;
         expect(target).toBeDefined();
-        expect(target!.kind).toBe("extern");
-        if (target!.kind === "extern") {
+        expect(target.kind).toBe("extern");
+        if (target.kind === "extern") {
             expect(target.file).toBe("~D2~");
             expect(target.label).toBe("remote_state");
         }
@@ -92,7 +92,7 @@ END
         expect(s1).toBeDefined();
         const target = s1!.transitions[0]!.target;
         expect(target).toBeDefined();
-        expect(target!.kind).toBe("goto");
+        expect(target.kind).toBe("goto");
     });
 });
 

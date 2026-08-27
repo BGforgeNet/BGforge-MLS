@@ -331,7 +331,7 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     // LEAF - a field carries scalars, and only a group carries children, which no guard here matches. Stated
     // rather than assumed: this module deliberately does not import the row types, so nothing else would catch
     // a future shape that carries both a `ref` and nested rows.
-    if (row !== value) return row as T;
+    if (row !== value) return row;
 
     let changed = false;
     const next: Record<string, unknown> = {};

@@ -84,7 +84,7 @@ export function validate(session: EditorSession): Diagnostic[] {
             error !== null &&
             typeof error === "object" &&
             "issues" in error &&
-            Array.isArray((error as { issues: unknown }).issues) &&
+            Array.isArray(error.issues) &&
             (error as { issues: unknown[] }).issues.length > 0
         ) {
             const firstIssue = (error as { issues: { path?: unknown[] }[] }).issues[0];

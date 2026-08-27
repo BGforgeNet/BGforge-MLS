@@ -264,7 +264,7 @@ describe("handler delegation to the provider registry", () => {
     it("completion delegates to registry.completion", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const sentinel = [{ label: "x" }];
-        const spy = vi.spyOn(registry, "completion").mockReturnValue(sentinel as never);
+        const spy = vi.spyOn(registry, "completion").mockReturnValue(sentinel);
 
         completion.register(ctx);
         const result = await wiredHandler(
@@ -279,7 +279,7 @@ describe("handler delegation to the provider registry", () => {
     it("folding delegates to registry.foldingRanges", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const sentinel = [{ startLine: 0, endLine: 1 }];
-        const spy = vi.spyOn(registry, "foldingRanges").mockReturnValue(sentinel as never);
+        const spy = vi.spyOn(registry, "foldingRanges").mockReturnValue(sentinel);
 
         folding.register(ctx);
         const result = await wiredHandler(wired, "onFoldingRanges")({ textDocument: { uri: KNOWN_URI } });
@@ -291,7 +291,7 @@ describe("handler delegation to the provider registry", () => {
     it("selection range delegates to registry.selectionRanges", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const sentinel = [{ range: { start: POSITION, end: POSITION } }];
-        const spy = vi.spyOn(registry, "selectionRanges").mockReturnValue(sentinel as never);
+        const spy = vi.spyOn(registry, "selectionRanges").mockReturnValue(sentinel);
 
         selectionRange.register(ctx);
         const result = await wiredHandler(
@@ -306,7 +306,7 @@ describe("handler delegation to the provider registry", () => {
     it("formatting delegates to registry.format and returns its edits", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const edits = [{ range: { start: POSITION, end: POSITION }, newText: "" }];
-        const spy = vi.spyOn(registry, "format").mockReturnValue({ edits } as never);
+        const spy = vi.spyOn(registry, "format").mockReturnValue({ edits });
 
         formatting.register(ctx);
         const result = await wiredHandler(wired, "onDocumentFormatting")({ textDocument: { uri: KNOWN_URI } });
@@ -330,7 +330,7 @@ describe("handler delegation to the provider registry", () => {
     it("semantic tokens delegate to registry.semanticTokens", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const sentinel = { data: [1, 2, 3] };
-        const spy = vi.spyOn(registry, "semanticTokens").mockReturnValue(sentinel as never);
+        const spy = vi.spyOn(registry, "semanticTokens").mockReturnValue(sentinel);
 
         semanticTokens.register(ctx);
         const result = await wiredHandler(wired, "semanticTokens")({ textDocument: { uri: KNOWN_URI } });
@@ -828,7 +828,7 @@ describe("inlay-hints handler", () => {
     it("passes the requested document and range to the provider", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         const hints = [{ position: POSITION, label: "42" }];
-        const spy = vi.spyOn(registry, "inlayHints").mockReturnValue(hints as never);
+        const spy = vi.spyOn(registry, "inlayHints").mockReturnValue(hints);
 
         inlayHints.register(ctx);
         const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
@@ -840,7 +840,7 @@ describe("inlay-hints handler", () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
         vi.spyOn(registry, "inlayHints").mockReturnValue([]);
         const traHints = [{ position: POSITION, label: "@99" }];
-        vi.spyOn(translationStub, "getInlayHints").mockReturnValue(traHints as never);
+        vi.spyOn(translationStub, "getInlayHints").mockReturnValue(traHints);
 
         inlayHints.register(ctx);
         const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
@@ -893,7 +893,7 @@ describe("rename handler", () => {
                 },
             ],
         };
-        const spy = vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit as never);
+        const spy = vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit);
 
         rename.register(ctx);
         const result = await wiredHandler(
@@ -923,7 +923,7 @@ describe("rename handler", () => {
                 },
             ],
         };
-        vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit as never);
+        vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit);
 
         rename.register(ctx);
         await wiredHandler(
@@ -961,7 +961,7 @@ describe("rename handler", () => {
 
     it("onRenameRequest does not call markAffected when documentChanges is empty", async () => {
         const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
-        vi.spyOn(registry, "rename").mockResolvedValue({ documentChanges: [] } as never);
+        vi.spyOn(registry, "rename").mockResolvedValue({ documentChanges: [] });
 
         rename.register(ctx);
         await wiredHandler(

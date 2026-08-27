@@ -52,7 +52,7 @@ describe("parseTDSource - botsmith (statement-form replies)", () => {
         expect(src[wiring.listInsert!.offset]).toBe("]");
         expect(wiring.listInsert!.separator).toBe(", ");
         // The new-function anchor is the start of the `append(...)` statement.
-        expect(src.slice(wiring.newFnAnchor!, wiring.newFnAnchor! + "append".length)).toBe("append");
+        expect(src.slice(wiring.newFnAnchor, wiring.newFnAnchor! + "append".length)).toBe("append");
     });
 
     it("threads the transition/name spans and wiring onto the DialogModel via modelFromD", () => {

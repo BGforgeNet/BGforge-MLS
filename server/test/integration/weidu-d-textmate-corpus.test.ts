@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
-import { parseRawGrammar, Registry, type IGrammar, type IRawGrammar, INITIAL } from "vscode-textmate";
+import { parseRawGrammar, Registry, type IGrammar, INITIAL } from "vscode-textmate";
 import { loadWASM, OnigScanner, OnigString } from "vscode-oniguruma";
 import { IE_FIXTURES } from "./test-helpers";
 
@@ -44,10 +44,10 @@ beforeAll(async () => {
         }),
         loadGrammar: async (scopeName) => {
             if (scopeName === "source.weidu-d") {
-                return parseRawGrammar(readFileSync(D_SYNTAX_PATH, "utf-8"), D_SYNTAX_PATH) as IRawGrammar;
+                return parseRawGrammar(readFileSync(D_SYNTAX_PATH, "utf-8"), D_SYNTAX_PATH);
             }
             if (scopeName === "source.weidu-baf") {
-                return parseRawGrammar(readFileSync(BAF_SYNTAX_PATH, "utf-8"), BAF_SYNTAX_PATH) as IRawGrammar;
+                return parseRawGrammar(readFileSync(BAF_SYNTAX_PATH, "utf-8"), BAF_SYNTAX_PATH);
             }
             return null;
         },

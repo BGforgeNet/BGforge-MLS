@@ -6,7 +6,7 @@
  * receive parser context (vars map) as a parameter.
  */
 
-import { type ArrayLiteralExpression, type Expression, Node, SyntaxKind } from "ts-morph";
+import { type Expression, Node, SyntaxKind } from "ts-morph";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { TranspileError } from "../../common/transpile-error";
@@ -26,7 +26,7 @@ function evaluateExpression(expr: Expression, vars: VarsContext): string | undef
     }
 
     if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-        const elements = (expr as ArrayLiteralExpression).getElements().map((e) => e.getText());
+        const elements = expr.getElements().map((e) => e.getText());
         return `[${elements.join(", ")}]`;
     }
 
@@ -58,7 +58,7 @@ function evaluateExpression(expr: Expression, vars: VarsContext): string | undef
 function resolveArrayElements(expr: Expression, vars: VarsContext): string[] | null {
     if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
         // Use flattenArrayElements to support spread expressions
-        return utils.flattenArrayElements(expr as ArrayLiteralExpression, vars);
+        return utils.flattenArrayElements(expr, vars);
     }
 
     if (expr.isKind(SyntaxKind.Identifier)) {
@@ -172,7 +172,7 @@ function parseStateList(expr: Expression, vars: VarsContext): (string | number)[
             if (/^\d+$/.test(text)) {
                 return Number(text);
             }
-            return resolveStringExpr(e as Expression, vars);
+            return resolveStringExpr(e, vars);
         });
     }
 

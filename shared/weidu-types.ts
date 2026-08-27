@@ -41,6 +41,6 @@ export function formatTypeLink(type: string): string {
     if (!WEIDU_JSDOC_TYPES.has(type)) {
         return type;
     }
-    const baseType = type.split(" ", 1)[0]!;
+    const baseType = type.split(" ", 1)[0];
     return `[${type}](${IELIB_TYPES_URL}${baseType})`;
 }

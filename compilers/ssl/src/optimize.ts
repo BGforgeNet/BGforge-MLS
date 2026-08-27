@@ -25,7 +25,6 @@ import {
     type ProcedureDecl,
     type Program,
     type Stmt,
-    type VariableDecl,
 } from "./int/ir";
 
 export interface OptimizeOptions {
@@ -743,7 +742,7 @@ function deadStoreRemoval(procedure: ProcedureDecl): { procedure: ProcedureDecl;
                 // The store was a constant, so it becomes the declared initial value instead.
                 if (initial && locals[index] && (initial.kind === "int" || initial.kind === "float")) {
                     const next = [...locals];
-                    next[index] = { ...(locals[index] as VariableDecl), initial };
+                    next[index] = { ...locals[index], initial };
                     locals = next;
                 }
                 body = removeStatement(body, entry.firstAssign);
@@ -978,7 +977,7 @@ function propagateConstantGlobals(program: Program): Program {
         });
         const walk = (stmt: Stmt): void => {
             if (stmt.kind === "callStmt") note(stmt.target);
-            if (stmt.kind === "timedCallStmt") note(stmt.target as Expr);
+            if (stmt.kind === "timedCallStmt") note(stmt.target);
             if (stmt.kind === "block") stmt.body.forEach(walk);
             if (stmt.kind === "if") {
                 walk(stmt.thenBranch);

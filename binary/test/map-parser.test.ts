@@ -74,7 +74,7 @@ describe("MAP parser - real maps", () => {
         expect(result.errors).toBeUndefined();
         expect(result.opaqueRanges?.some((range) => range.label === "objects-tail")).toBe(true);
 
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
@@ -86,7 +86,7 @@ describe("MAP parser - real maps", () => {
         const version = findFieldByName(header.fields, "Version");
         version.value = 999;
 
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
@@ -162,7 +162,7 @@ describe("MAP parser - real maps", () => {
         };
         expect(snapshot.document.header.defaultOrientation).toBe(5);
 
-        const serialized = mapParser.serialize!(result);
+        const serialized = mapParser.serialize(result);
         const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
         expect(view.getInt32(0x1c, false)).toBe(5);
     });
@@ -306,7 +306,7 @@ describe("MAP parser - real maps", () => {
 
         const jsonText = JSON.stringify(result, null, 2);
         const reparsed = JSON.parse(jsonText);
-        const serialized = mapParser.serialize!(reparsed);
+        const serialized = mapParser.serialize(reparsed);
 
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });

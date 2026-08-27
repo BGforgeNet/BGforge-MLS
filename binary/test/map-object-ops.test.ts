@@ -40,19 +40,19 @@ describe.skipIf(!hasFixture)("map writer object-section helpers", () => {
         const pr = parseDenbus1();
         const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
         expect(doc).toBeDefined();
-        const start = mapObjectsSectionStart(doc!);
+        const start = mapObjectsSectionStart(doc);
         const total = (pr.sourceData as Uint8Array).length;
         // The objects section + its serialized length should reach the end of the
         // decoded region (objects are the last real section before any opaque tail).
         expect(start).toBeGreaterThan(0);
-        expect(start + objectsSerializedLength(doc!.objects)).toBeLessThanOrEqual(total);
+        expect(start + objectsSerializedLength(doc.objects)).toBeLessThanOrEqual(total);
     });
 });
 
 function elevationWithObjects(pr: ReturnType<typeof mapParser.parse>): { elev: number; count: number } {
-    const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)!;
-    const idx = doc!.objects.elevations.findIndex((e) => e.objects.length > 0);
-    return { elev: idx, count: doc!.objects.elevations[idx]!.objects.length };
+    const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
+    const idx = doc.objects.elevations.findIndex((e) => e.objects.length > 0);
+    return { elev: idx, count: doc.objects.elevations[idx]!.objects.length };
 }
 
 describe("map object-ops predicates", () => {
@@ -73,8 +73,8 @@ describe.skipIf(!hasFixture)("map object-ops round-trip", () => {
         const added = buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`]);
         expect(added).toBeDefined();
         const addedPr = mapParser.parse(added!, { gracefulMapBoundaries: true });
-        const addedDoc = getMapCanonicalDocument(addedPr) ?? rebuildMapCanonicalDocument(addedPr)!;
-        expect(addedDoc!.objects.elevations[elev]!.objects.length).toBe(count + 1);
+        const addedDoc = getMapCanonicalDocument(addedPr) ?? rebuildMapCanonicalDocument(addedPr);
+        expect(addedDoc.objects.elevations[elev]!.objects.length).toBe(count + 1);
         // The appended object is the new last entry; removing it restores the bytes.
         const removed = buildMapObjectRemoveEntryBytes(addedPr, [`Elevation ${elev} Objects`], count);
         expect(removed).toBeDefined();
@@ -98,13 +98,13 @@ describe.skipIf(!hasFixture)("map object-ops round-trip", () => {
     it("duplicate preserves pid, freshens id, and is deeply independent", () => {
         const pr = parseClean();
         const { elev } = elevationWithObjects(pr);
-        const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)!;
-        const target = doc!.objects.elevations[elev]!.objects[0]!;
+        const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
+        const target = doc.objects.elevations[elev]!.objects[0]!;
         const dup = buildMapObjectDuplicateEntryBytes(pr, [`Elevation ${elev} Objects`], 0);
         expect(dup).toBeDefined();
         const dupPr = mapParser.parse(dup!, { gracefulMapBoundaries: true });
-        const dupDoc = getMapCanonicalDocument(dupPr) ?? rebuildMapCanonicalDocument(dupPr)!;
-        const clone = dupDoc!.objects.elevations[elev]!.objects[1]!;
+        const dupDoc = getMapCanonicalDocument(dupPr) ?? rebuildMapCanonicalDocument(dupPr);
+        const clone = dupDoc.objects.elevations[elev]!.objects[1]!;
         expect(clone.base.pid).toBe(target.base.pid);
         expect(clone.base.id).not.toBe(target.base.id);
     });
@@ -128,9 +128,9 @@ describe.skipIf(!hasFixture)("map object-ops add/remove inverse across fixtures"
             (r) => (r.label === "objects-tail" || r.label === "script-section-tail") && r.size > 0,
         );
         expect(hasTail).toBe(false);
-        const elev = doc!.objects.elevations.findIndex((e) => e.objects.length > 0);
+        const elev = doc.objects.elevations.findIndex((e) => e.objects.length > 0);
         expect(elev).toBeGreaterThanOrEqual(0);
-        const count = doc!.objects.elevations[elev]!.objects.length;
+        const count = doc.objects.elevations[elev]!.objects.length;
 
         const added = buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`]);
         expect(added).toBeDefined();
@@ -143,7 +143,7 @@ describe.skipIf(!hasFixture)("map object-ops add/remove inverse across fixtures"
 
 describe.skipIf(!hasFixture)("map object inventory ops", () => {
     const docOf = (pr: ReturnType<typeof mapParser.parse>) =>
-        (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr))!;
+        getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
 
     it("add inventory entry grows the object's inventory; add-then-remove is byte-identity", () => {
         const pr = parseClean();
@@ -208,7 +208,7 @@ describe.skipIf(!hasFixture)("map object-ops refuse on incomplete decode", () =>
         const hasTruncationError = (pr.errors ?? []).some((e) => /truncated/i.test(e) && /object|elevation/i.test(e));
         expect(hasTail).toBe(false); // the case the opaque-tail check alone would miss
         expect(hasTruncationError).toBe(true);
-        const elev = (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)!)!.objects.elevations.findIndex(
+        const elev = (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)).objects.elevations.findIndex(
             (e) => e.objects.length > 0,
         );
         expect(buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`])).toBeUndefined();

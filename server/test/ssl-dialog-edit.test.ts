@@ -1108,7 +1108,7 @@ procedure talk_p_proc begin call Node002; end
             target: { kind: "state" as const, stateId: "Node999" },
             reaction: "neutral" as const,
         };
-        node.choices.push(newChoice as (typeof node.choices)[number]);
+        node.choices.push(newChoice);
         elseB.choiceIds = [...elseB.choiceIds, newId];
         const out = applySSLDialogEdits(SRC_BA, edited, original);
         // The new option lands inside the else block (after NOption(124,...), before the else `end`).
@@ -1480,7 +1480,7 @@ procedure talk_p_proc begin call Node002; end
             target: { kind: "state" as const, stateId: "Node999" },
             condition: "(local_var(LVAR_2) == 2)",
         });
-        node.branches!.push({
+        node.branches.push({
             kind: "if",
             condition: "(local_var(LVAR_2) == 2)",
             choiceIds: [newOptId],
@@ -1548,7 +1548,7 @@ procedure talk_p_proc begin call Node002; end
 
         // Edit the surviving second branch's condition AND the corresponding choice conditions,
         // mirroring the real editor's ops (applyBranchConditionEdit updates both).
-        const survivingBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("GVAR_B"))!;
+        const survivingBranch = node.branches.find((b) => b.kind === "if" && b.condition?.includes("GVAR_B"))!;
         survivingBranch.condition = "(global_var(GVAR_B) == 5)";
         for (const id of survivingBranch.choiceIds) {
             const ch = node.choices.find((c) => c.id === id);

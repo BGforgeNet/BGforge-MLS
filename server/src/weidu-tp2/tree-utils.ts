@@ -42,7 +42,7 @@ export function findNodeAtPosition(root: SyntaxNode, position: Position): Syntax
 export function findAncestorOfType(node: SyntaxNode, types: ReadonlySet<SyntaxType | string>): SyntaxNode | null {
     let current: SyntaxNode | null = node;
     while (current) {
-        if (types.has(current.type as SyntaxType)) {
+        if (types.has(current.type)) {
             return current;
         }
         current = current.parent;

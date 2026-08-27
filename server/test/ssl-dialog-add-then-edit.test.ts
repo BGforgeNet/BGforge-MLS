@@ -79,7 +79,7 @@ describe("SSL add-option then keep-editing round-trip", () => {
         // EMIT 1: the user added a state (Node003), typed its NPC line and one option, and wired Node001's
         // option to it so it is reachable (else the re-parse prunes the unreachable procedure).
         const editModel = structuredClone(original0);
-        const newState = addState(editModel)!;
+        const newState = addState(editModel);
         expect(newState.id).toBe("Node003"); // next free id
         newState.text = "A brand new line.";
         const opt1 = addReply(editModel, newState);

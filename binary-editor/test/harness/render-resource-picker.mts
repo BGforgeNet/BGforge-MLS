@@ -238,7 +238,7 @@ gameOpen = true;
     sessionId = r.result.sessionId;
     await page.evaluate(
         (rr) => window.postMessage(rr, "*"),
-        withGameContext({ type: "init", open: r.result } as HostToWebview, lookups),
+        withGameContext({ type: "init", open: r.result }, lookups),
     );
 }
 await page.waitForSelector(".layout-root .bb-combobox-input", { timeout: 5000 });

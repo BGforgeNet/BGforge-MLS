@@ -91,12 +91,7 @@ export function errorMessage(error: unknown): string {
  * cast every time they want to branch on a filesystem-errno.
  */
 export function getErrnoCode(error: unknown): string | undefined {
-    if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        typeof (error as { code: unknown }).code === "string"
-    ) {
+    if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
         return (error as { code: string }).code;
     }
     return undefined;

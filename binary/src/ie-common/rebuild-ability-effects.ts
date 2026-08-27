@@ -110,7 +110,7 @@ export function structFromDisplayFull<S extends Record<string, FieldSpec>>(
             s: Record<string, FieldSpec>,
             p: StructPresentation<Record<string, unknown>>,
         ) => Record<string, unknown>
-    )(group, scalarSpec, presentation as StructPresentation<Record<string, unknown>>);
+    )(group, scalarSpec, presentation);
 
     // Read each array field: slots from a named sub-group, plain padding by zero-fill.
     const presTyped = presentation as Record<string, { label?: string } | undefined>;

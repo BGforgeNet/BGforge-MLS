@@ -150,9 +150,7 @@ function readSections(bytes: Uint8Array): DlgSections {
     const tablesOverrun = firstOverrun(headerSections(header, hasInterrupt), bytes.byteLength);
     if (tablesOverrun !== undefined) throw new Error(`Truncated DLG: ${tablesOverrun}`);
 
-    const headerInterrupt = hasInterrupt
-        ? (dlgHeaderInterruptSchema.read(readerAt(bytes, DLG_HEADER_SIZE)) as DlgHeaderInterruptData)
-        : undefined;
+    const headerInterrupt = hasInterrupt ? dlgHeaderInterruptSchema.read(readerAt(bytes, DLG_HEADER_SIZE)) : undefined;
     const sections: DlgSections = {
         header,
         ...(headerInterrupt && { headerInterrupt }),

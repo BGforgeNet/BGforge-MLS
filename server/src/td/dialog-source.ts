@@ -199,7 +199,7 @@ function parseState(fn: FunctionDeclaration): DDialogState {
     const enclosingIf = parentBlock?.getParentIfKind(SyntaxKind.IfStatement);
     let enclosingIfRange: Range | undefined;
     if (enclosingIf && enclosingIf.getThenStatement() === parentBlock && !enclosingIf.getElseStatement()) {
-        const meaningful = parentBlock!.getStatements().filter((s) => !Node.isEmptyStatement(s));
+        const meaningful = parentBlock.getStatements().filter((s) => !Node.isEmptyStatement(s));
         if (meaningful.length === 1 && meaningful[0] === fn) enclosingIfRange = span(enclosingIf);
     }
 

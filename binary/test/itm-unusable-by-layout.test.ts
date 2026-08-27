@@ -16,7 +16,7 @@ function generalPanels(): Array<{ title?: string; blocks: Block[] }> {
     if (!variant) throw new Error("ITM layout has no item variant");
     const general = (variant.tabs ?? []).find((t) => t.id === "general");
     if (!general) throw new Error("ITM layout has no General tab");
-    return (general.rows ?? []).flatMap((r) => r.panels) as Array<{ title?: string; blocks: Block[] }>;
+    return (general.rows ?? []).flatMap((r) => r.panels);
 }
 
 function panelBlock(title: string): Block {

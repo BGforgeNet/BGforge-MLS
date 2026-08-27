@@ -455,7 +455,7 @@ function getCompletionCategory(context: CallableContext, dtype: CallableDefType)
 /** Helper to extract MarkupContent from hover contents */
 function extractMarkupContent(contents: Hover["contents"]): MarkupContent | undefined {
     if (typeof contents === "object" && "kind" in contents && "value" in contents) {
-        return contents as MarkupContent;
+        return contents;
     }
     return undefined;
 }

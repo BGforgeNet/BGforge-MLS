@@ -260,7 +260,7 @@ export function arraySpec<Ctx = never>(args: {
         element: args.element,
         // Re-narrow the public never-seed parameter for storage; the variance
         // would otherwise reject ctx being typed wider than `never` here.
-        count: args.count as ArrayFieldSpec["count"],
+        count: args.count,
         ...(args.view !== undefined ? { view: args.view } : {}),
         ...(args.slotLabels !== undefined ? { slotLabels: args.slotLabels } : {}),
         ...(args.slotRef !== undefined ? { slotRef: args.slotRef } : {}),

@@ -14,7 +14,7 @@ import {
 } from "../../../shared/dialog-tra-edit";
 import { conlog } from "../logger";
 import { type ResolvedEncoding, atomicWriteFileSync, decodeFileBytes, encodeToResolvedEncoding } from "./encoding";
-import { parseEntries, type TraExt } from "./entries";
+import { parseEntries } from "./entries";
 import { ensureTraConfig, resolveAbsolutePath, resolveTraDir } from "./loader";
 import { getTraExt, resolveTraFileKey } from "./features";
 import type { TranslationState } from "./state";
@@ -178,7 +178,7 @@ export function reloadFileLines(state: TranslationState, wsPath: string, text: s
         conlog(`Translation: unknown extension ${ext}`);
         return;
     }
-    const entries = parseEntries(text, ext as TraExt);
+    const entries = parseEntries(text, ext);
     state.data.set(traPath, entries);
     conlog(`Translation: reloaded ${traPath}`);
     // Open consumer documents' inlay hints were computed against the now-stale entries;

@@ -104,7 +104,7 @@ export function readNum(obj: RangeRecord, field: string): number {
  * cast is isolated here so callers stay assertion-free.
  */
 export function setNum<T extends RangeRecord>(obj: T, field: string, value: number): T {
-    return { ...obj, [field]: value } as T;
+    return { ...obj, [field]: value };
 }
 
 /** Owner of an effect index: the header equipping range, or a specific ability. */

@@ -158,7 +158,7 @@ export function toTypedBinarySchema<S extends Record<string, FieldSpec>, Ctx = v
 
     let schema: SpecCodec<unknown, unknown>;
     if (needsCustom) {
-        schema = new SpecStructSchema(spec) as unknown as SpecCodec<unknown, unknown>;
+        schema = new SpecStructSchema(spec);
     } else {
         const props: Record<string, AnySchema> = {};
         for (const key of Object.keys(spec)) {
@@ -213,15 +213,15 @@ function fieldSpecToCodec(fs: FieldSpec): AnySchema {
                 "Variable-length arrays must be derived via SpecStructSchema, not the object({...}) path.",
             );
         }
-        return arrayOf(fs.element.codec, fs.count) as unknown as AnySchema;
+        return arrayOf(fs.element.codec, fs.count);
     }
     if (isCharsSpec(fs)) {
-        return new CharsSchema(fs.count) as unknown as AnySchema;
+        return new CharsSchema(fs.count);
     }
     if (fs.flags) {
-        return new FlagArraySchema(fs) as unknown as AnySchema;
+        return new FlagArraySchema(fs);
     }
-    return fs.codec as unknown as AnySchema;
+    return fs.codec;
 }
 
 interface PackedPart {
@@ -279,7 +279,7 @@ class SpecStructSchema extends Schema<unknown> {
         const out: Record<string, unknown> = {};
         for (const entry of this.entries) {
             if (entry.kind === "plain") {
-                out[entry.key] = (entry.codec as ISchema<unknown>).read(input);
+                out[entry.key] = entry.codec.read(input);
             } else if (entry.kind === "packed") {
                 const word = entry.codec.read(input);
                 for (const p of entry.parts) {
@@ -325,7 +325,7 @@ class SpecStructSchema extends Schema<unknown> {
         const v = value as Record<string, unknown>;
         for (const entry of this.entries) {
             if (entry.kind === "plain") {
-                (entry.codec as ISchema<unknown>).write(output, v[entry.key]);
+                entry.codec.write(output, v[entry.key]);
             } else if (entry.kind === "packed") {
                 let word = 0;
                 for (const p of entry.parts) {
@@ -424,9 +424,7 @@ function buildWireLayout<S extends Record<string, FieldSpec>>(spec: S): WireEntr
         }
 
         if (fs.packedAs === undefined) {
-            const codec: AnySchema = fs.flags
-                ? (new FlagArraySchema(fs) as unknown as AnySchema)
-                : (fs.codec as unknown as AnySchema);
+            const codec: AnySchema = fs.flags ? new FlagArraySchema(fs) : fs.codec;
             entries.push({
                 kind: "plain",
                 key,

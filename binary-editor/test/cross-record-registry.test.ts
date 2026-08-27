@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { ParseResult } from "@bgforge/binary";
 import { buildModel, creResult } from "./cross-record-fixture";
 import { getRelationshipModel } from "../src/relationship/registry";
 
@@ -19,7 +18,7 @@ describe("registry composition wires cross-record checks per format", () => {
             format: "eff",
             formatName: "EFF",
             root: { name: "EFF File", fields: [] },
-        } as unknown as ParseResult);
+        });
         expect(model!.constraints(m)).toHaveLength(0);
     });
 });

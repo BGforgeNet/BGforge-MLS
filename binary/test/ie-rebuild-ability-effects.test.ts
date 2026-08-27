@@ -51,7 +51,7 @@ describe("ITM rebuild from display", () => {
 
         // The rebuilt document must be idempotent: serialize it, parse again,
         // and rebuild again to get the same document.
-        const bytes2 = itmParser.serialize!({ ...result, document: rebuilt as never });
+        const bytes2 = itmParser.serialize!({ ...result, document: rebuilt });
         const reparsed = itmParser.parse(bytes2);
         const rebuilt2 = rebuildItmCanonicalDocument({ ...reparsed, document: undefined });
         expect(rebuilt2).toEqual(rebuilt);
@@ -98,11 +98,11 @@ describe("SPL rebuild from display", () => {
         // field type spectrum in splHeaderSpecAnnotated and splAbilitySpecAnnotated.
         // SPL has no array fields in either spec, so structFromDisplay covers everything.
 
-        const headerSample = buildAllZeroSample(splHeaderSpecAnnotated as Record<string, FieldSpec>);
+        const headerSample = buildAllZeroSample(splHeaderSpecAnnotated);
         const headerGroup = walkStruct(splHeaderSpecAnnotated, {}, 0, headerSample as never, "SPL Header");
         expect(structFromDisplay(headerGroup, splHeaderSpecAnnotated, {})).toEqual(headerSample);
 
-        const abilitySample = buildAllZeroSample(splAbilitySpecAnnotated as Record<string, FieldSpec>);
+        const abilitySample = buildAllZeroSample(splAbilitySpecAnnotated);
         const abilityGroup = walkStruct(splAbilitySpecAnnotated, {}, 0, abilitySample as never, "Ability 1");
         expect(structFromDisplay(abilityGroup, splAbilitySpecAnnotated, {})).toEqual(abilitySample);
     });
@@ -130,7 +130,7 @@ function buildAllZeroSample(spec: Record<string, FieldSpec>): Record<string, unk
 
 /** Build a minimal all-zero SPL doc object that the permissive schema accepts. */
 function buildMinimalSplDoc(): { header: Record<string, unknown>; abilities: never[]; effects: never[] } {
-    const header = buildAllZeroSample(splHeaderSpecAnnotated as Record<string, FieldSpec>);
+    const header = buildAllZeroSample(splHeaderSpecAnnotated);
     // Signature and version must match SPL v1 wire magic for the parser to
     // accept the resulting bytes. The serializer writes them verbatim from the
     // canonical doc, so supply the correct ASCII strings here.

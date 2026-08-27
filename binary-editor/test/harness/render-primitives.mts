@@ -293,7 +293,7 @@ const diag = await page.evaluate(() => {
         style: el.getAttribute("style") ?? "",
     }));
     const styleTags = Array.from(document.querySelectorAll("style")).map((el) => ({
-        nonce: (el as HTMLStyleElement).nonce || "(none)",
+        nonce: el.nonce || "(none)",
         head: (el.textContent ?? "").slice(0, 60),
     }));
     // Did the inline positioning style apply to CSSOM? Check the combobox floating wrapper.

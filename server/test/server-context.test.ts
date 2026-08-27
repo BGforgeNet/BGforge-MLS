@@ -38,7 +38,7 @@ describe("server-context", () => {
         vi.resetModules();
         mockConlog.mockReset();
         const mod = await import("../src/server-context");
-        initServerContext = mod.initServerContext as typeof initServerContext;
+        initServerContext = mod.initServerContext;
         getServerContext = mod.getServerContext as typeof getServerContext;
         tryGetServerContext = mod.tryGetServerContext as typeof tryGetServerContext;
         updateServerSettings = mod.updateServerSettings;

@@ -63,7 +63,7 @@ const INTERNAL_EXPORTS = [
     "isBodyContent",
 ] as const;
 
-const names = (mod: object) => Object.keys(mod as Record<string, unknown>).sort();
+const names = (mod: object) => Object.keys(mod).sort();
 
 describe("@bgforge/format public API", () => {
     it("exports exactly the committed surface", () => {

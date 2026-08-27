@@ -54,7 +54,7 @@ describe.skipIf(!hasFixture)("map projectDisplayRoot objects", () => {
         expect(childNames.some((n) => /^Object 0\.\d+ /.test(n))).toBe(true);
 
         const objectsForm = roots.find((r) => r.entry.name === "Objects");
-        expect(objectsForm?.kind === "group" && (objectsForm.entry as ParsedGroup).editingLocked).toBe(true);
+        expect(objectsForm?.kind === "group" && objectsForm.entry.editingLocked).toBe(true);
         // The counts form surfaces Total Objects + per-elevation counts read-only.
         const formChildren = objectsForm!.kind === "group" ? objectsForm!.children.map((c) => c.entry.name) : [];
         expect(formChildren).toContain("Total Objects");

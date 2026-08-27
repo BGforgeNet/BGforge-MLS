@@ -40,7 +40,7 @@ describe("creParser - round-trip on real CRE v1 fixtures", () => {
         const result = creParser.parse(bytes);
         if (result.errors) throw new Error(result.errors.join(", "));
 
-        const reserialized = creParser.serialize!(result);
+        const reserialized = creParser.serialize(result);
         expect(reserialized.byteLength).toBe(bytes.byteLength);
         expect([...reserialized]).toEqual([...bytes]);
     });

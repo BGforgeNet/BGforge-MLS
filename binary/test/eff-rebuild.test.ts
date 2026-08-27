@@ -57,11 +57,11 @@ function buildAllZeroSample(spec: Record<string, FieldSpec>): Record<string, unk
  * `unused7` (15 x u32 padding) and `variableName` (charsSpec 32) are zeroed.
  */
 function buildMinimalEffDoc(): Record<string, unknown> {
-    const header = buildAllZeroSample(effHeaderSpec as Record<string, FieldSpec>);
+    const header = buildAllZeroSample(effHeaderSpec);
     header["signature"] = String.fromCodePoint(...EFF_SIGNATURE);
     header["version"] = String.fromCodePoint(...EFF_VERSION_V2);
 
-    const body = buildAllZeroSample(effBodySpecAnnotated as Record<string, FieldSpec>);
+    const body = buildAllZeroSample(effBodySpecAnnotated);
     // body.signature2 + body.version2 carry the EFF wire magic in the body too.
     body["signature2"] = String.fromCodePoint(...EFF_SIGNATURE);
     body["version2"] = String.fromCodePoint(...EFF_VERSION_V2);
@@ -101,7 +101,7 @@ describe("EFF structFromDisplay property", () => {
     it("walkStruct + structFromDisplay round-trips EFF header spec", () => {
         // EFF header is only signature + version (both charsSpec); structFromDisplay
         // handles chars fields directly.
-        const sample = buildAllZeroSample(effHeaderSpec as Record<string, FieldSpec>);
+        const sample = buildAllZeroSample(effHeaderSpec);
         const g = walkStruct(effHeaderSpec, {}, 0, sample as never, "EFF Header");
         expect(structFromDisplay(g, effHeaderSpec, {})).toEqual(sample);
     });
@@ -111,13 +111,13 @@ describe("EFF structFromDisplay property", () => {
         // has no view:"slots" arrays, but does have unused7 (plain padding array).
         // structFromDisplay is tested here only for the scalar+chars subset; the full
         // rebuild (including unused7 zero-fill) is covered by the round-trip test above.
-        const sample = buildAllZeroSample(effBodySpecAnnotated as Record<string, FieldSpec>);
+        const sample = buildAllZeroSample(effBodySpecAnnotated);
         const g = walkStruct(effBodySpecAnnotated, {}, 0, sample as never, "EFF Body");
 
         // Build a scalar-only spec by stripping array fields; structFromDisplay
         // throws on array fields and we just need to confirm scalar+chars roundtrip.
         const scalarSpec: Record<string, FieldSpec> = {};
-        for (const key of Object.keys(effBodySpecAnnotated as Record<string, FieldSpec>)) {
+        for (const key of Object.keys(effBodySpecAnnotated)) {
             const fs = (effBodySpecAnnotated as Record<string, FieldSpec>)[key]!;
             if (!isArraySpec(fs)) scalarSpec[key] = fs;
         }
