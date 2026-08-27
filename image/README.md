@@ -13,8 +13,8 @@ Internal workspace package - not currently published to npm.
   split critter sets.
 - `parseBamV1` / `serializeBamV1`, `isBamc` / `decodeBamc` / `encodeBamc` - Infinity Engine
   BAM v1 and BAMC.
-- `convert` (`convertToFrm` / `convertToBam`) - cross-format conversion; lossy steps are
-  collected in a `LossReport`.
+- `convertToFrm` / `convertToBam` - cross-format conversion; lossy steps are collected in a
+  `LossReport`.
 - `exportPngDirectory` / `importPngDirectory` - lossless per-frame PNG round-trip with a
   `manifest.json`.
 - `exportApngPerDirection` - APNG preview export (drops per-frame offsets).

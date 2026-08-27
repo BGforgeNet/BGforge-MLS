@@ -1,13 +1,15 @@
 import * as path from "path";
 import {
     type Animation,
-    convert,
+    convertToBam,
+    convertToFrm,
     convertToIndexed,
     convertToRgba,
     DEFAULT_FALLOUT_PALETTE,
     encodeBamc,
     exportApngPerDirection,
     exportPngDirectory,
+    type FrmConvertOpts,
     serializeBamV1,
     serializeFrm,
     serializePal,
@@ -58,21 +60,49 @@ function palettesEqual(a: Rgba[], b: Rgba[]): boolean {
     });
 }
 
+/**
+ * Convert and serialize in ONE switch, with a `never` default so a new target is a compile error
+ * here rather than a silent fall-through - the two used to be separate decisions over two different
+ * target vocabularies, which meant collapsing three targets to two and re-expanding them a line later.
+ * `bamc` is the compressed on-disk encoding of `bam`: it converts identically, then encodeBamc wraps
+ * the serialized BAM V1.
+ */
+function convertAndSerialize(
+    anim: IndexedAnimation,
+    target: "frm" | "bam" | "bamc",
+    opts?: FrmConvertOpts,
+): { animation: IndexedAnimation; report: LossReport; bytes: Uint8Array } {
+    switch (target) {
+        case "frm": {
+            const { animation, report } = convertToFrm(anim, opts);
+            return { animation, report, bytes: serializeFrm(animation) };
+        }
+        case "bam": {
+            const { animation, report } = convertToBam(anim);
+            return { animation, report, bytes: serializeBamV1(animation) };
+        }
+        case "bamc": {
+            const { animation, report } = convertToBam(anim);
+            return { animation, report, bytes: encodeBamc(serializeBamV1(animation)) };
+        }
+        /* v8 ignore start -- unreachable: the never narrowing makes a new target a compile error here */
+        default: {
+            const unhandled: never = target;
+            throw new Error(`convertAndSerialize: unhandled target ${String(unhandled)}`);
+        }
+        /* v8 ignore stop */
+    }
+}
+
 /** Converts anim to the target format and serializes it, adding a `.pal` sidecar when the
- * converted FRM palette could not be losslessly remapped onto the default Fallout palette.
- * `bamc` is the compressed on-disk encoding of `bam`: the animation converts identically, then the
- * serialized BAM V1 is wrapped by encodeBamc. */
+ * converted FRM palette could not be losslessly remapped onto the default Fallout palette. */
 export function buildCrossFormatSave(
     anim: IndexedAnimation,
     target: "frm" | "bam" | "bamc",
     targetPath: string,
-    opts?: { paletteMode?: "sidecar" | "nearest"; singleCycle?: number; ieGroup?: number },
+    opts?: FrmConvertOpts,
 ): { writes: SaveWrite[]; report: LossReport } {
-    const { animation, report } = convert(anim, target === "frm" ? "frm" : "bam", opts);
-    let bytes: Uint8Array;
-    if (target === "frm") bytes = serializeFrm(animation);
-    else if (target === "bam") bytes = serializeBamV1(animation);
-    else bytes = encodeBamc(serializeBamV1(animation));
+    const { animation, report, bytes } = convertAndSerialize(anim, target, opts);
     const writes: SaveWrite[] = [{ path: targetPath, bytes }];
     if (target === "frm" && !palettesEqual(animation.palette, DEFAULT_FALLOUT_PALETTE)) {
         writes.push({ path: sidecarPalPath(targetPath), bytes: serializePal(animation.palette) });

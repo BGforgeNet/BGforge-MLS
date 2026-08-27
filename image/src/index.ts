@@ -59,7 +59,6 @@ export { type LossItem, type LossKind, LossReport } from "./convert/loss-report.
 export {
     type FrmConvertOpts,
     type IndexedConvertOpts,
-    convert,
     convertToBam,
     convertToBamV2,
     convertToFrm,
