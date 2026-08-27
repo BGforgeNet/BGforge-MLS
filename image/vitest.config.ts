@@ -1,14 +1,14 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
-        alias: { "@bgforge/image": path.resolve(__dirname, "./src/index.ts") },
+        alias: { "@bgforge/image": path.resolve(import.meta.dirname, "./src/index.ts") },
     },
     test: {
         name: "image-lib",
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         testTimeout: 60000,
         coverage: coverageConfig({
             reportsDirectory: "coverage/image",

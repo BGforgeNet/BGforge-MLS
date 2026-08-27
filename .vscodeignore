@@ -107,7 +107,7 @@ client/testFixture/
 client/out/test/
 client/scripts/
 client/tsconfig*.json
-client/vitest*.config.ts
+client/vitest*.config.*
 client/node_modules/
 client/coverage/
 
@@ -117,7 +117,7 @@ server/data/
 server/test/
 server/scripts/
 server/tsconfig*.json
-server/vitest*.config.ts
+server/vitest*.config.*
 server/coverage/
 
 # esbuild-wasm: only keep runtime files (wasm, bin, lib/main.js, wasm_exec*)

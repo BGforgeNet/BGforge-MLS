@@ -87,7 +87,7 @@ The `external/` mod trees are gitignored but reproducible: `pnpm test:external` 
 and `scripts/external-repos-lib.sh`) checks them out at pinned refs. Real-corpus coverage therefore belongs in a
 committed test, never a throwaway script.
 
-- Home: `server/test/integration/**`, run by `pnpm test:integration` (config `server/vitest.integration.config.ts`).
+- Home: `server/test/integration/**`, run by `pnpm test:integration` (config `server/vitest.integration.config.mts`).
 - Helpers: `test/integration/test-helpers.ts` - `FALLOUT_FIXTURES`, `IE_FIXTURES`, `loadFixture`/`loadFixtures`.
 - Gate a corpus sweep with `describe.skipIf(files.length === 0)` so it skips cleanly when the corpus is absent.
 - Read a sibling first (`integration/weidu-d.test.ts`, `integration/fallout-ssl.test.ts`) for the fixture and

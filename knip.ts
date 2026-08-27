@@ -36,7 +36,7 @@ const config: KnipConfig = {
                 "src/test/runTest.ts",
                 "src/test/index.ts",
                 "src/test/*.test.ts",
-                // vitest unit tests (run via client/vitest.config.ts)
+                // vitest unit tests (run via client/vitest.config.mts)
                 "test/**/*.test.ts",
             ],
             // The dialog-editor render harness is environment-only (Playwright + browser
@@ -45,7 +45,7 @@ const config: KnipConfig = {
             ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
-            // vitest.mutation.config.ts is referenced from stryker.conf.json
+            // vitest.mutation.config.mts is referenced from stryker.conf.json
             // (vitest.configFile); knip's Stryker plugin resolves runner/checker
             // package names but not vitest configFile paths, so list it explicitly.
             // src/server.ts has to be listed: knip derives the default entry from the tsconfig, and the
@@ -53,7 +53,7 @@ const config: KnipConfig = {
             // the derivation, which drops server.ts and every handler it reaches.
             // Test files are explicit entries because
             // knip's vitest plugin cannot derive them from the config's absolute
-            // path.resolve(__dirname, ...) include globs (made absolute for cwd-independence).
+            // path.resolve(import.meta.dirname, ...) include globs (made absolute for cwd-independence).
             // Both compile-worker.ts files are bundle entries of their own, started by path from the
             // matching compile-worker-client.ts rather than imported, so nothing references them in
             // source.
@@ -61,7 +61,7 @@ const config: KnipConfig = {
             // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
             entry: [
                 "src/server.ts",
-                "vitest.mutation.config.ts",
+                "vitest.mutation.config.mts",
                 "test/**/*.test.ts",
                 // Production mode does not read package.json scripts, so the `lsp-probe` script's
                 // reference to this file is invisible there and it reports as an unused file. The
@@ -83,7 +83,7 @@ const config: KnipConfig = {
                 // In production mode test files are not entries, so any non-.test.ts helper under test/
                 // (assertion helpers, fixtures) would be reported as an unused file - the whole test tree
                 // is irrelevant to production analysis.
-                ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/**"] : []),
+                ...(isProductionKnip ? ["src/**", "vitest.integration.config.mts", "test/**"] : []),
             ],
             // esbuild-wasm is required at runtime: the server bundle imports
             // transpilers/common/bundle.ts via filesystem path and externalises

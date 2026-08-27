@@ -5,7 +5,7 @@
 
 import { defineConfig } from "vitest/config";
 import path from "path";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
@@ -13,15 +13,15 @@ export default defineConfig({
         // without requiring a build step. The built out/ does not exist until
         // pnpm --filter @bgforge/binary build runs, but tests run from source.
         alias: {
-            "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
-            "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
+            "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
+            "@bgforge/binary-editor": path.resolve(import.meta.dirname, "../binary-editor/src/index.ts"),
             // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts
             // with `key + "/"`, so "@bgforge/image" would otherwise capture them and rewrite to a bad
             // path. The webview renderer imports these subpaths to avoid pulling the barrel's Node-only
             // codecs into a browser bundle.
-            "@bgforge/image/frame-anchor": path.resolve(__dirname, "../image/src/model/frame-anchor.ts"),
-            "@bgforge/image/ie-direction": path.resolve(__dirname, "../image/src/model/ie-direction.ts"),
-            "@bgforge/image": path.resolve(__dirname, "../image/src/index.ts"),
+            "@bgforge/image/frame-anchor": path.resolve(import.meta.dirname, "../image/src/model/frame-anchor.ts"),
+            "@bgforge/image/ie-direction": path.resolve(import.meta.dirname, "../image/src/model/ie-direction.ts"),
+            "@bgforge/image": path.resolve(import.meta.dirname, "../image/src/index.ts"),
         },
     },
     test: {
@@ -29,7 +29,7 @@ export default defineConfig({
         // Absolute so discovery works both from client/ and from the repo root
         // (scripts/test.sh invokes this config from root); a repo-root-relative
         // glob silently matches 0 files when run from client/.
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // v8 coverage instrumentation roughly 3-4x slows the binary-format parser
         // tests in this suite, and the parallel coverage block in scripts/test.sh
         // saturates every core, starving this suite's worker-spawning and

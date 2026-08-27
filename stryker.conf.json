@@ -4,7 +4,7 @@
     "testRunner": "vitest",
     "plugins": ["@stryker-mutator/typescript-checker", "@stryker-mutator/vitest-runner"],
     "vitest": {
-        "configFile": "server/vitest.mutation.config.ts",
+        "configFile": "server/vitest.mutation.config.mts",
         "dir": "server"
     },
     "mutate": [

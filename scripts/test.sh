@@ -91,9 +91,9 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
     step "Phase 1.5: Unit tests + coverage (parallel)"
     parallel \
         "Coverage server" "(cd server && pnpm exec vitest run --coverage --maxWorkers=3)" \
-        "Coverage client" "pnpm exec vitest run --config client/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage client" "pnpm exec vitest run --config client/vitest.config.mts --coverage --maxWorkers=2" \
+        "Coverage tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts --coverage --maxWorkers=1" \
+        "Coverage td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts --coverage --maxWorkers=1" \
         "Coverage transpilers" "pnpm exec vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage format" "pnpm exec vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
@@ -113,9 +113,9 @@ else
     step "Phase 1.5: Unit tests (parallel, no coverage)"
     parallel \
         "Unit server" "(cd server && pnpm exec vitest run --maxWorkers=3)" \
-        "Unit client" "pnpm exec vitest run --config client/vitest.config.ts --maxWorkers=2" \
-        "Unit tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts --maxWorkers=1" \
-        "Unit td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.ts --maxWorkers=1" \
+        "Unit client" "pnpm exec vitest run --config client/vitest.config.mts --maxWorkers=2" \
+        "Unit tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts --maxWorkers=1" \
+        "Unit td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts --maxWorkers=1" \
         "Unit transpilers" "pnpm exec vitest run --config transpilers/vitest.config.ts --maxWorkers=2" \
         "Unit format" "pnpm exec vitest run --config format/vitest.config.ts --maxWorkers=1" \
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
@@ -154,10 +154,10 @@ fi
 # cleanly here. Adding a job that writes there, or setting that variable, breaks both sides at once.
 step "Phase 3: Smoke + Samples + CLI + Grammars + Integration + Corpus canary"
 parallel \
-    "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.ts)" \
+    "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.mts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars" \
-    "Server integration" "(cd server && pnpm exec vitest run --config vitest.integration.config.ts)" \
+    "Server integration" "(cd server && pnpm exec vitest run --config vitest.integration.config.mts)" \
     "Corpus canary" "pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
 
 timing_summary "All tests passed"

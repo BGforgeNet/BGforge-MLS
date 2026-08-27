@@ -311,7 +311,7 @@ begin("DIALOG", [start]);
 
     // The tests below each drive one previously-untested provider/handler through the real
     // built server, black-box, as a smoke-level substitute for direct unit-test imports (see
-    // server/vitest.config.ts "Coverage scope" for the exclusion-vs-smoke-test policy).
+    // server/vitest.config.mts "Coverage scope" for the exclusion-vs-smoke-test policy).
 
     it("fallout-worldmap: hover resolves a static terrain keyword", { timeout: 30000 }, async () => {
         proc = await spawnInitialized();

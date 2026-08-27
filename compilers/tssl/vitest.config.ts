@@ -1,15 +1,15 @@
 import * as path from "path";
 import { defineConfig } from "vitest/config";
-import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     test: {
         name: "tssl",
         // Absolute include so the config works from the package directory and from the repo root.
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // The CLI test spawns the built bundle and runs from scripts/vitest.cli.config.ts once it
         // exists; without this it runs twice, and the subprocess copy is the slow one.
-        exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
+        exclude: [path.resolve(import.meta.dirname, "test/**/*-cli.test.ts")],
         // See binary-editor/vitest.config.ts for the rationale: reusing the worker's module registry
         // across files, which matters here because each file builds its own ts-morph project.
         isolate: false,

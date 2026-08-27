@@ -12,12 +12,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
     test: {
         projects: [
-            "server/vitest.config.ts",
-            "server/vitest.integration.config.ts",
-            "server/vitest.smoke.config.ts",
-            "client/vitest.config.ts",
-            "plugins/tssl-plugin/vitest.config.ts",
-            "plugins/td-plugin/vitest.config.ts",
+            "server/vitest.config.mts",
+            "server/vitest.integration.config.mts",
+            "server/vitest.smoke.config.mts",
+            "client/vitest.config.mts",
+            "plugins/tssl-plugin/vitest.config.mts",
+            "plugins/td-plugin/vitest.config.mts",
             "scripts/vitest.config.ts",
             "shared/vitest.config.ts",
             "transpilers/vitest.config.ts",

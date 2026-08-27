@@ -12,10 +12,10 @@ export default defineConfig({
     test: {
         name: "ssl-integration",
         // Absolute so discovery works from the package directory and from the repo root alike.
-        include: [path.resolve(__dirname, "test/integration/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/integration/**/*.test.ts")],
         // Links the sfall headers into the corpus once for the whole project. Both suites need them,
         // and doing it per-file raced when the files ran in parallel.
-        globalSetup: [path.resolve(__dirname, "test/integration/global-setup.ts")],
+        globalSetup: [path.resolve(import.meta.dirname, "test/integration/global-setup.ts")],
         // The corpus differential once obtained 1516 oracles inside the full parallel gate and 1517 with
         // the machine to itself, for a reason that went uncaptured for a long time. It is captured now:
         // bounding the child turned the symptom into `killed by SIGTERM`, and the script it struck

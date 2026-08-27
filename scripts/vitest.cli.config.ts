@@ -15,7 +15,7 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(import.meta.dirname, "..");
 
 export default defineConfig({
     test: {

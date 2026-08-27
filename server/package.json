@@ -33,7 +33,7 @@
     "scripts": {
         "test": "./scripts/test.sh",
         "test:unit": "vitest run",
-        "test:integration": "vitest run --config vitest.integration.config.ts",
+        "test:integration": "vitest run --config vitest.integration.config.mts",
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {

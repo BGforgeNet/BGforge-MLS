@@ -17,7 +17,7 @@
 
 import { defineConfig } from "vitest/config";
 import path from "path";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
@@ -25,9 +25,9 @@ export default defineConfig({
         // without requiring a build step. The built out/ does not exist until
         // pnpm --filter @bgforge/format build runs, but tests run from source.
         alias: {
-            "@bgforge/binary/archive": path.resolve(__dirname, "../binary/src/archive/index.ts"),
-            "@bgforge/format/internal": path.resolve(__dirname, "../format/src/internal.ts"),
-            "@bgforge/format": path.resolve(__dirname, "../format/src/index.ts"),
+            "@bgforge/binary/archive": path.resolve(import.meta.dirname, "../binary/src/archive/index.ts"),
+            "@bgforge/format/internal": path.resolve(import.meta.dirname, "../format/src/internal.ts"),
+            "@bgforge/format": path.resolve(import.meta.dirname, "../format/src/index.ts"),
         },
     },
     test: {
@@ -36,14 +36,14 @@ export default defineConfig({
         // repo root (scripts/test.sh), which is the only invocation that also passes
         // --coverage; a bare "test/**" glob resolves against process.cwd() and silently
         // matches 0 files when the caller's cwd is the repo root.
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // smoke-stdio and lsp-probe spawn the built server/out bundle, which Phase 2 of
-        // scripts/test.sh produces AFTER this suite runs - they live in vitest.smoke.config.ts.
+        // scripts/test.sh produces AFTER this suite runs - they live in vitest.smoke.config.mts.
         exclude: [
-            path.resolve(__dirname, "test/smoke-stdio.test.ts"),
-            path.resolve(__dirname, "test/lsp-probe.test.ts"),
-            path.resolve(__dirname, "test/tssl-worker-smoke.test.ts"),
-            path.resolve(__dirname, "test/integration/**"),
+            path.resolve(import.meta.dirname, "test/smoke-stdio.test.ts"),
+            path.resolve(import.meta.dirname, "test/lsp-probe.test.ts"),
+            path.resolve(import.meta.dirname, "test/tssl-worker-smoke.test.ts"),
+            path.resolve(import.meta.dirname, "test/integration/**"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner (the .td cohort

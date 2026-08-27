@@ -1,16 +1,16 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
         alias: {
-            "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
+            "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
         },
     },
     test: {
         name: "binary-editor",
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // Module registry shared across files in a worker rather than rebuilt per file: measured 19.6s ->
         // 14.3s, because this suite's per-file import cost dominates its actual test time (import 67.7s ->
         // 22.6s). Safe here because no file in it calls vi.mock/vi.spyOn/vi.stubGlobal - every case builds

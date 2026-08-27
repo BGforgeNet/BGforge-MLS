@@ -1,21 +1,24 @@
 import path from "path";
 import { defineConfig } from "vitest/config";
-import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
         alias: {
-            "@bgforge/ssl": path.resolve(__dirname, "./src/index.ts"),
+            "@bgforge/ssl": path.resolve(import.meta.dirname, "./src/index.ts"),
         },
     },
     test: {
         name: "ssl",
         // Absolute include so the config works from the package directory and from the repo root.
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // The gcc differential needs the external corpus; it runs from vitest.integration.config.ts
         // in the close-out phase, alongside the other external-corpus suites. The CLI tests spawn the
         // built bundle and run from scripts/vitest.cli.config.ts once it exists.
-        exclude: [path.resolve(__dirname, "test/integration/**"), path.resolve(__dirname, "test/**/*-cli.test.ts")],
+        exclude: [
+            path.resolve(import.meta.dirname, "test/integration/**"),
+            path.resolve(import.meta.dirname, "test/**/*-cli.test.ts"),
+        ],
         coverage: coverageConfig({
             reportsDirectory: "coverage/ssl",
             include: ["src/**/*.ts"],

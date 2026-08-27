@@ -759,11 +759,11 @@ See [scripts/README.md](../scripts/README.md) for all test commands.
 
 ### Test layers
 
-| Layer             | Config                         | What it covers                                                                                                                                                                        | Fixtures                                         |
-| ----------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| Unit tests        | `vitest.config.ts`             | Pure logic, utilities, parsers, transpilers                                                                                                                                           | Inline strings                                   |
-| Integration tests | `vitest.integration.config.ts` | AST-derived LSP features (symbols, definition, references, rename, folding, formatting, signature, hover, local symbols, workspace symbols, completion context) against real mod code | `external/` repos (cloned by `test-external.sh`) |
-| Smoke test        | `vitest.smoke.config.ts`       | Server starts and responds over stdio                                                                                                                                                 | Built server bundle                              |
+| Layer             | Config                          | What it covers                                                                                                                                                                        | Fixtures                                         |
+| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Unit tests        | `vitest.config.mts`             | Pure logic, utilities, parsers, transpilers                                                                                                                                           | Inline strings                                   |
+| Integration tests | `vitest.integration.config.mts` | AST-derived LSP features (symbols, definition, references, rename, folding, formatting, signature, hover, local symbols, workspace symbols, completion context) against real mod code | `external/` repos (cloned by `test-external.sh`) |
+| Smoke test        | `vitest.smoke.config.mts`       | Server starts and responds over stdio                                                                                                                                                 | Built server bundle                              |
 
 Integration tests live in `test/integration/` and cover SSL, BAF, D, and TP2. They test all AST-derived LSP features: symbols, definition, references, rename, folding, formatting, signature, hover (JSDoc), local symbols, workspace symbols, and completion context. Static-data-only features (completion/hover from YAML) are covered by unit tests.
 

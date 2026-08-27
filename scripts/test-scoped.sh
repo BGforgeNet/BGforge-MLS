@@ -70,28 +70,28 @@ declare -A suite_label=(
     ["td-plugin"]="td-plugin unit tests"
 )
 declare -A suite_check=(
-    [server]="server/vitest.config.ts"
+    [server]="server/vitest.config.mts"
     [binary]="binary/vitest.config.ts"
     ["binary-editor"]="binary-editor/vitest.config.ts"
     [bcs]="compilers/bcs/vitest.config.ts"
     [client]="client/scripts/test.sh"
-    ["client-unit"]="client/vitest.config.ts"
+    ["client-unit"]="client/vitest.config.mts"
     [format]="format/vitest.config.ts"
     [image]="image/vitest.config.ts"
     [ssl]="compilers/ssl/vitest.config.ts"
     [tssl]="compilers/tssl/vitest.config.ts"
     [transpilers]="transpilers/vitest.config.ts"
     [scripts]="scripts/vitest.config.ts"
-    ["tssl-plugin"]="plugins/tssl-plugin/vitest.config.ts"
-    ["td-plugin"]="plugins/td-plugin/vitest.config.ts"
+    ["tssl-plugin"]="plugins/tssl-plugin/vitest.config.mts"
+    ["td-plugin"]="plugins/td-plugin/vitest.config.mts"
 )
 declare -A suite_cmd=(
-    [server]="pnpm exec vitest run --config server/vitest.config.ts"
+    [server]="pnpm exec vitest run --config server/vitest.config.mts"
     [binary]="pnpm exec vitest run --config binary/vitest.config.ts"
     ["binary-editor"]="pnpm exec vitest run --config binary-editor/vitest.config.ts"
     [bcs]="pnpm exec vitest run --config compilers/bcs/vitest.config.ts"
     [client]="cd client && pnpm test"
-    ["client-unit"]="pnpm exec vitest run --config client/vitest.config.ts"
+    ["client-unit"]="pnpm exec vitest run --config client/vitest.config.mts"
     [format]="pnpm exec vitest run --config format/vitest.config.ts"
     [image]="pnpm exec vitest run --config image/vitest.config.ts"
     # The only suite that runs two configs: the compiler's unit tests never touch a real script, so an
@@ -100,8 +100,8 @@ declare -A suite_cmd=(
     [tssl]="pnpm exec vitest run --config compilers/tssl/vitest.config.ts"
     [transpilers]="pnpm exec vitest run --config transpilers/vitest.config.ts"
     [scripts]="pnpm exec vitest run --config scripts/vitest.config.ts"
-    ["tssl-plugin"]="pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.ts"
-    ["td-plugin"]="pnpm exec vitest run --config plugins/td-plugin/vitest.config.ts"
+    ["tssl-plugin"]="pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts"
+    ["td-plugin"]="pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts"
 )
 declare -A suite_prefixes=(
     [server]="server/ shared/"

@@ -1,17 +1,17 @@
 import path from "path";
 import { defineConfig } from "vitest/config";
-import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
         alias: {
-            "@bgforge/bcs": path.resolve(__dirname, "./src/index.ts"),
+            "@bgforge/bcs": path.resolve(import.meta.dirname, "./src/index.ts"),
         },
     },
     test: {
         name: "bcs",
         // Absolute include so the config works from the package directory and from the repo root.
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         coverage: coverageConfig({
             reportsDirectory: "coverage/bcs",
             include: ["src/**/*.ts"],

@@ -1,22 +1,22 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     resolve: {
         alias: {
-            "@bgforge/format/internal": path.resolve(__dirname, "./src/internal.ts"),
-            "@bgforge/format": path.resolve(__dirname, "./src/index.ts"),
+            "@bgforge/format/internal": path.resolve(import.meta.dirname, "./src/internal.ts"),
+            "@bgforge/format": path.resolve(import.meta.dirname, "./src/index.ts"),
         },
     },
     test: {
         name: "format-lib",
         // Use an absolute include path so the config works both when run from the
         // package directory (pnpm test) and from the repo root (scripts/test.sh).
-        include: [path.resolve(__dirname, "test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "test/**/*.test.ts")],
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
-        exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
+        exclude: [path.resolve(import.meta.dirname, "test/**/*-cli.test.ts")],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
         // guards against hangs, not slowness.

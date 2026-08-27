@@ -84,18 +84,18 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 
 ### Excluded: source code and dev files
 
-| Pattern                                                               | What it excludes                                              |
-| --------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `client/src/**/*.ts`                                                  | Client TypeScript source (HTML/CSS webview assets are kept)   |
-| `client/test/`, `client/testFixture/`, `client/out/test/`             | Client test files and fixtures                                |
-| `client/scripts/`, `client/tsconfig*.json`, `client/vitest.config.ts` | Client dev files                                              |
-| `client/node_modules/`, `client/coverage/`                            | Client dev dependencies and coverage reports                  |
-| `server/src/`, `server/data/`                                         | Server TypeScript source, YAML data files                     |
-| `server/test/`, `server/scripts/`, `server/coverage/`                 | Server test files and dev artifacts                           |
-| `server/tsconfig*.json`, `server/vitest.config.ts`                    | Server dev config                                             |
-| `syntaxes/*.yml`                                                      | Source YAML for TextMate grammars (only .json ships)          |
-| `themes/vscode-monokai.json`, `themes/vs-seti-icon-theme.json`        | Upstream theme sources                                        |
-| `**/README.md`                                                        | READMEs in subdirectories (root README auto-included by vsce) |
+| Pattern                                                                | What it excludes                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `client/src/**/*.ts`                                                   | Client TypeScript source (HTML/CSS webview assets are kept)   |
+| `client/test/`, `client/testFixture/`, `client/out/test/`              | Client test files and fixtures                                |
+| `client/scripts/`, `client/tsconfig*.json`, `client/vitest.config.mts` | Client dev files                                              |
+| `client/node_modules/`, `client/coverage/`                             | Client dev dependencies and coverage reports                  |
+| `server/src/`, `server/data/`                                          | Server TypeScript source, YAML data files                     |
+| `server/test/`, `server/scripts/`, `server/coverage/`                  | Server test files and dev artifacts                           |
+| `server/tsconfig*.json`, `server/vitest.config.mts`                    | Server dev config                                             |
+| `syntaxes/*.yml`                                                       | Source YAML for TextMate grammars (only .json ships)          |
+| `themes/vscode-monokai.json`, `themes/vs-seti-icon-theme.json`         | Upstream theme sources                                        |
+| `**/README.md`                                                         | READMEs in subdirectories (root README auto-included by vsce) |
 
 ### Excluded: node_modules
 

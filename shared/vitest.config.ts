@@ -1,11 +1,11 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
-import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config";
+import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
     test: {
         name: "shared",
-        include: [path.resolve(__dirname, "**/test/**/*.test.ts")],
+        include: [path.resolve(import.meta.dirname, "**/test/**/*.test.ts")],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner (the CLI fan-out
         // tests spawn child processes); the timeout guards against hangs, not slowness.

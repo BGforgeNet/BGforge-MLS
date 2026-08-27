@@ -11,9 +11,9 @@ export default defineConfig({
         name: "server-smoke",
         // Absolute so discovery works both from server/ and from the repo root.
         include: [
-            path.resolve(__dirname, "test/smoke-stdio.test.ts"),
-            path.resolve(__dirname, "test/lsp-probe.test.ts"),
-            path.resolve(__dirname, "test/tssl-worker-smoke.test.ts"),
+            path.resolve(import.meta.dirname, "test/smoke-stdio.test.ts"),
+            path.resolve(import.meta.dirname, "test/lsp-probe.test.ts"),
+            path.resolve(import.meta.dirname, "test/tssl-worker-smoke.test.ts"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout

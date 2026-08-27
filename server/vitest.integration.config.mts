@@ -12,19 +12,19 @@ import path from "path";
 export default defineConfig({
     resolve: {
         // Map the workspace package to its source so vitest can import it
-        // without requiring a build step (mirrors vitest.config.ts).
+        // without requiring a build step (mirrors vitest.config.mts).
         alias: {
-            "@bgforge/binary/archive": path.resolve(__dirname, "../binary/src/archive/index.ts"),
-            "@bgforge/format/internal": path.resolve(__dirname, "../format/src/internal.ts"),
-            "@bgforge/format": path.resolve(__dirname, "../format/src/index.ts"),
+            "@bgforge/binary/archive": path.resolve(import.meta.dirname, "../binary/src/archive/index.ts"),
+            "@bgforge/format/internal": path.resolve(import.meta.dirname, "../format/src/internal.ts"),
+            "@bgforge/format": path.resolve(import.meta.dirname, "../format/src/index.ts"),
         },
     },
     test: {
         name: "server-integration",
         // Absolute so discovery works both from server/ (pnpm test:integration) and
         // from the repo root; a bare "test/**" glob resolves against process.cwd().
-        include: [path.resolve(__dirname, "test/integration/**/*.test.ts")],
-        setupFiles: [path.resolve(__dirname, "test/integration/setup.ts")],
+        include: [path.resolve(import.meta.dirname, "test/integration/**/*.test.ts")],
+        setupFiles: [path.resolve(import.meta.dirname, "test/integration/setup.ts")],
         // These tests sweep real external corpora (hundreds of tree-sitter parses) while
         // other suites run in parallel - a CPU-contended CI runner is far slower than a
         // local run, and near-threshold tests trip stochastically. 60s like every suite
