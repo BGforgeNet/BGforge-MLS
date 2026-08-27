@@ -9,6 +9,7 @@ import {
     serializeBamV2,
 } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
+import { decodeBackup, encodeBackup } from "../../src/image-editor/backup";
 import { decodeFramePixels } from "../../src/image-editor/webview/messages";
 
 function rgbaAnimation(): RgbaAnimation {
@@ -108,12 +109,73 @@ describe("ImageDocumentModel with a true-colour animation", () => {
         expect(saved.bytes).toEqual(bytes);
     });
 
-    it("names the page numbering it needs when a v2 has no pages of its own to reuse", () => {
-        // Reachable once frames can be imported into a v2: the repack needs a page number, and
-        // guessing one risks colliding with a page inside a BIF.
+    it("names the page numbering it needs when a v2 has no pages of its own and none was chosen", () => {
+        // The repack needs a page number, and guessing one risks colliding with a page inside a BIF.
+        // The provider answers this at the edit (see ensureBasePage); reaching the serializer without
+        // an answer means no path asked, which must fail rather than invent one.
         const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
 
         expect(() => model.saveArtifacts()).toThrow(/basePage/);
+    });
+
+    it("saves and backs up an imported v2 once a page number has been chosen", () => {
+        // The path that was unsaveable: an import replaces the frames with ones no page describes,
+        // so every save AND the hot-exit backup went through serializeBamV2 with nothing to allocate
+        // from. All three are exercised here because each passes different options.
+        const { animation } = openedV2();
+        const model = ImageDocumentModel.fromRgbaAnimation(animation, "MAPICONS.BAM");
+        const palette = emptyPalette();
+        palette[1] = { r: 7, g: 8, b: 9, a: 255 };
+        model.replaceSequences(
+            convertToRgba({
+                palette,
+                frames: [{ width: 2, height: 2, pixels: Uint8Array.from([1, 1, 1, 1]), offsetX: 0, offsetY: 0 }],
+                sequences: [{ frameRefs: [0], facing: "none" }],
+                meta: { sourceFormat: "bam", transparentIndex: 0 },
+            }),
+            "replace",
+        );
+        model.setBasePage(4200);
+
+        const inPlace = model.saveArtifacts();
+        const saveAs = model.saveArtifacts({ standalone: true });
+        const backup = model.backup();
+
+        // A repack writes pages on every path, in-place included: the frames are no longer the
+        // file's own, so the pages on disk no longer describe them.
+        expect(inPlace.pages.map((p) => p.page)).toEqual([4200]);
+        expect(saveAs.pages.map((p) => p.page)).toEqual([4200]);
+        expect(backup.pages?.map((p) => p.page)).toEqual([4200]);
+    });
+
+    it("round-trips an imported v2 through a backup, pages and all", () => {
+        // A v2's frames live outside the .bam, so a backup carrying only the .bam would restore to
+        // pages that were never written - the pre-edit picture at best, nothing at all at worst.
+        const { animation } = openedV2();
+        const model = ImageDocumentModel.fromRgbaAnimation(animation, "MAPICONS.BAM");
+        const palette = emptyPalette();
+        // Exact in RGB565 (r/b multiples of 8, g of 4), so the assertion pins where the pixels came
+        // from rather than absorbing the block codec's rounding - a backup repacks through BC3, and
+        // a tolerance here would hide a restore that read the wrong page.
+        palette[1] = { r: 16, g: 20, b: 24, a: 255 };
+        model.replaceSequences(
+            convertToRgba({
+                palette,
+                frames: [{ width: 2, height: 2, pixels: Uint8Array.from([1, 1, 1, 1]), offsetX: 0, offsetY: 0 }],
+                sequences: [{ frameRefs: [0], facing: "none" }],
+                meta: { sourceFormat: "bam", transparentIndex: 0 },
+            }),
+            "replace",
+        );
+        model.setBasePage(4200);
+
+        const restored = ImageDocumentModel.fromBackup(decodeBackup(encodeBackup(model.backup())), "MAPICONS.BAM");
+
+        // The decoded pixel, not the frame count: a restore that resolved pages from the wrong place
+        // still produces a frame, it just produces the pre-edit one (red, from openedV2's fixture).
+        const frame = restored.toView().frames[0];
+        if (frame === undefined) throw new Error("expected one frame");
+        expect([...decodeFramePixels(frame.pixels).subarray(0, 4)]).toEqual([16, 20, 24, 255]);
     });
 
     it("applies a meta edit to a true-colour document", () => {

@@ -40,8 +40,52 @@ describe("animation editor backup container", () => {
     });
 
     it("rejects a header whose palette flag is not a boolean", () => {
-        const raw = new TextEncoder().encode('{"version":1,"externalPalette":"yes"}\n');
+        const raw = new TextEncoder().encode('{"version":2,"externalPalette":"yes","main":0}\n');
 
         expect(() => decodeBackup(raw)).toThrow(/externalPalette flag/);
+    });
+
+    it("round-trips PVRZ pages alongside the payload, keyed by page number", () => {
+        // A BAM v2's frames live outside the .bam, so a backup that dropped the pages would restore
+        // to whatever happens to be on disk - the pre-edit picture, or nothing.
+        const pages = [
+            { page: 4200, bytes: Uint8Array.from([1, 2, 3]) },
+            { page: 4201, bytes: Uint8Array.from([4, 5]) },
+        ];
+
+        const decoded = decodeBackup(encodeBackup({ bytes: PAYLOAD, externalPalette: false, pages }));
+
+        expect([...decoded.bytes]).toEqual([...PAYLOAD]);
+        expect(decoded.pages?.map((p) => p.page)).toEqual([4200, 4201]);
+        expect(decoded.pages?.map((p) => [...p.bytes])).toEqual([
+            [1, 2, 3],
+            [4, 5],
+        ]);
+    });
+
+    it("round-trips a page whose bytes contain the header terminator", () => {
+        // The page table's lengths are what slice the payload; a newline inside a compressed page is
+        // ordinary, and cutting on it would corrupt every page after the first.
+        const pages = [{ page: 7, bytes: Uint8Array.from([0x0a, 0x0a, 0x42]) }];
+
+        const decoded = decodeBackup(encodeBackup({ bytes: PAYLOAD, externalPalette: false, pages }));
+
+        expect([...(decoded.pages?.[0]?.bytes ?? [])]).toEqual([0x0a, 0x0a, 0x42]);
+    });
+
+    it("rejects a header whose page table is not a list of page/length pairs", () => {
+        const raw = new TextEncoder().encode('{"version":2,"externalPalette":true,"main":0,"pages":[{"page":1}]}\n');
+
+        expect(() => decodeBackup(raw)).toThrow(/malformed page table/);
+    });
+
+    it("rejects a file too short for the lengths its header declares", () => {
+        // Truncation must fail here rather than hand back a short final page that decodes as a
+        // corrupt texture somewhere far from the cause.
+        const raw = new TextEncoder().encode(
+            '{"version":2,"externalPalette":true,"main":2,"pages":[{"page":1,"length":8}]}\nAB',
+        );
+
+        expect(() => decodeBackup(raw)).toThrow(/truncated/);
     });
 });

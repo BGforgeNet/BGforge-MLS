@@ -7,10 +7,14 @@ import {
     DEFAULT_FALLOUT_PALETTE,
     LossReport,
     convertToIndexed,
+    decodeBamV2,
     encodeBamc,
     loadImage,
+    isBamV2,
     isRgbaAnimation,
+    needsFreshPages,
     parsePal,
+    readBamV2Structure,
     serializeBamV1,
     serializeBamV2,
     serializeFrm,
@@ -85,9 +89,24 @@ function spliceInto<A extends { frames: F[]; sequences: Sequence[] }, F>(
 // A single undo/redo step captures ALL mutable document state a mutation can change - the
 // animation AND externalEnabled (which is not part of the Animation IR but is a saveable,
 // undoable choice); snapshotting only the animation would leave a palette toggle unrevertible.
+// basePage rides along for the same reason: undoing the import that forced a page allocation must
+// also forget the number chosen for it.
 interface DocumentSnapshot {
     animation: Animation;
     externalEnabled: boolean;
+    basePage: number | undefined;
+}
+
+/**
+ * Rebuild a true-colour animation from a backup, resolving its pages out of the backup itself.
+ *
+ * A v2 cannot go through `loadImage` - that path deliberately refuses a v2, since it cannot fetch
+ * pages - and it must not read them from disk either: the whole point of a backup is that the edited
+ * pages were never written there.
+ */
+function rgbaFromBackup(backup: DocumentBackup): RgbaAnimation {
+    const pages = new Map((backup.pages ?? []).map((p) => [p.page, p.bytes]));
+    return decodeBamV2(readBamV2Structure(backup.bytes), (page) => pages.get(page), backup.bytes);
 }
 
 /**
@@ -100,6 +119,12 @@ export class ImageDocumentModel {
     private sidecarPalette: Rgba[] | undefined;
     private hasSidecar = false;
     private externalEnabled = false;
+    /**
+     * First PVRZ page number a save may allocate, once the user has chosen one. Undefined until then
+     * - never defaulted, because a number already taken by a page inside the game's own archives
+     * surfaces only as corrupted graphics at runtime.
+     */
+    private basePage: number | undefined;
     private undoStack: DocumentSnapshot[] = [];
     private redoStack: DocumentSnapshot[] = [];
 
@@ -121,7 +146,11 @@ export class ImageDocumentModel {
     // document wrote nothing), but the toggle must be replayed over setSidecar's auto-on default, which
     // otherwise silently re-enables a palette the pending edit had turned off.
     static fromBackup(backup: DocumentBackup, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
-        const model = ImageDocumentModel.fromBytes(backup.bytes, basename, sidecarBytes);
+        // A v2 is rebuilt from the backup's own pages rather than sniffed by loadImage, which refuses
+        // one; every other format still routes through the byte-sniffing path.
+        const model = isBamV2(backup.bytes)
+            ? ImageDocumentModel.fromRgbaAnimation(rgbaFromBackup(backup), basename)
+            : ImageDocumentModel.fromBytes(backup.bytes, basename, sidecarBytes);
         model.externalEnabled = backup.externalPalette;
         return model;
     }
@@ -246,8 +275,46 @@ export class ImageDocumentModel {
         };
     }
 
+    /**
+     * Whether a save must write fresh PVRZ pages, i.e. whether this document's frames still carry
+     * the data blocks they were read from. False for every palette-indexed format, which has none.
+     */
+    needsFreshPages(): boolean {
+        const animation = this.animationValue;
+        return isRgbaAnimation(animation) && needsFreshPages(animation);
+    }
+
+    /** The page number already chosen, or undefined while none has been - so a caller knows both
+     *  whether to ask and what to pass on. */
+    chosenBasePage(): number | undefined {
+        return this.basePage;
+    }
+
+    /**
+     * Record the first PVRZ page number a save may allocate. Set at the EDIT that forces a repack,
+     * not at the save: a save path that could still be missing it has no way to ask (a hot-exit
+     * backup least of all), and would have to fail instead.
+     */
+    setBasePage(page: number): void {
+        this.basePage = page;
+    }
+
+    private snapshot(): DocumentSnapshot {
+        return {
+            animation: structuredClone(this.animationValue),
+            externalEnabled: this.externalEnabled,
+            basePage: this.basePage,
+        };
+    }
+
+    private restore(snapshot: DocumentSnapshot): void {
+        this.animationValue = snapshot.animation;
+        this.externalEnabled = snapshot.externalEnabled;
+        this.basePage = snapshot.basePage;
+    }
+
     private snapshotForUndo(): void {
-        this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
+        this.undoStack.push(this.snapshot());
         this.redoStack = [];
     }
 
@@ -316,18 +383,16 @@ export class ImageDocumentModel {
     undo(): void {
         const previous = this.undoStack.pop();
         if (previous === undefined) return;
-        this.redoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
-        this.animationValue = previous.animation;
-        this.externalEnabled = previous.externalEnabled;
+        this.redoStack.push(this.snapshot());
+        this.restore(previous);
         this.onChange?.();
     }
 
     redo(): void {
         const next = this.redoStack.pop();
         if (next === undefined) return;
-        this.undoStack.push({ animation: structuredClone(this.animationValue), externalEnabled: this.externalEnabled });
-        this.animationValue = next.animation;
-        this.externalEnabled = next.externalEnabled;
+        this.undoStack.push(this.snapshot());
+        this.restore(next);
         this.onChange?.();
     }
 
@@ -343,7 +408,10 @@ export class ImageDocumentModel {
     saveArtifacts(options: { standalone?: boolean } = {}): { bytes: Uint8Array; pages: readonly BamV2PageWrite[] } {
         const animation = this.animationValue;
         if (isRgbaAnimation(animation)) {
-            const saved = serializeBamV2(animation, { emitUnchangedPages: options.standalone });
+            const saved = serializeBamV2(animation, {
+                emitUnchangedPages: options.standalone,
+                ...(this.basePage === undefined ? {} : { basePage: this.basePage }),
+            });
             return { bytes: saved.bam, pages: saved.pages };
         }
         return { bytes: serializeIndexed(animation), pages: [] };
@@ -354,9 +422,16 @@ export class ImageDocumentModel {
         return this.saveArtifacts().bytes;
     }
 
-    /** Snapshot for a hot-exit backup: the serialized animation plus the state its bytes cannot carry. */
+    /**
+     * Snapshot for a hot-exit backup: the serialized animation plus the state its bytes cannot carry.
+     *
+     * `standalone` because a backup must stand on its own. A v2's frames live in PVRZ pages the
+     * document may have repacked and never written, so a restore that re-read them from the folder
+     * would rebuild the pre-edit picture - or find nothing at all.
+     */
     backup(): DocumentBackup {
-        return { bytes: this.getBytes(), externalPalette: this.externalEnabled };
+        const { bytes, pages } = this.saveArtifacts({ standalone: true });
+        return { bytes, externalPalette: this.externalEnabled, pages: [...pages] };
     }
 
     sidecarBytes(): Uint8Array | undefined {

@@ -6,6 +6,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type * as vscode from "vscode";
 import { decodeBamV2, readBamV2Structure, serializeBamV1, serializeBamV2, type RgbaAnimation } from "@bgforge/image";
+import { decodeBackup, encodeBackup } from "../../src/image-editor/backup";
 import { makeMiniBam } from "./fixtures";
 
 const { readFileMock, writeFileMock, showInputBoxMock, createDirectoryMock } = vi.hoisted(() => ({
@@ -79,6 +80,18 @@ function uri(uriPath: string): vscode.Uri {
     return make(uriPath) as vscode.Uri;
 }
 
+/** What an import leaves behind: frames carrying no PVRZ provenance, so a save must repack. */
+function importedRgba(): RgbaAnimation {
+    const pixels = new Uint8Array(2 * 2 * 4);
+    for (let i = 0; i < 4; i++) pixels.set([16, 20, 24, 255], i * 4);
+    return {
+        colorModel: "rgba",
+        frames: [{ width: 2, height: 2, pixels, offsetX: 0, offsetY: 0 }],
+        sequences: [{ frameRefs: [0], facing: "none" }],
+        meta: { sourceFormat: "bamv2", fps: 15 },
+    };
+}
+
 /** A one-frame v2, written through the real serializer so the file and its page genuinely match. */
 function makeV2(): { bam: Uint8Array; page: Uint8Array } {
     const pixels = new Uint8Array(4 * 4 * 4);
@@ -122,6 +135,37 @@ describe("saving a BAM v2", () => {
         const writes = writeFileMock.mock.calls.map((call: unknown[]) => String(call[0]));
         expect(writes).toEqual(["file:/data/MAPICONS.BAM"]);
         expect(writeFileMock.mock.calls[0]?.[1]).toEqual(source.bam);
+    });
+
+    it("asks for a page number rather than failing when an edited v2 is saved in place", async () => {
+        // An edit replaces the frames with ones no PVRZ page describes, so the save must allocate.
+        // The in-place path has no prompt of its own, so before this guard it reached serializeBamV2
+        // with nothing to allocate from and the save died on a library error the user could not act on.
+        showInputBoxMock.mockResolvedValue("4300");
+        const provider = new ImageEditorProvider(context);
+        const document = await provider.openCustomDocument(uri("/data/MAPICONS.BAM"), openContext(), token);
+        document.replaceSequences(importedRgba(), "replace");
+
+        await provider.saveCustomDocument(document, token);
+
+        expect(showInputBoxMock).toHaveBeenCalledTimes(1);
+        const writes = writeFileMock.mock.calls.map((call: unknown[]) => String(call[0]));
+        expect(writes).toEqual(["file:/data/MAPICONS.BAM", "file:/data/MOS4300.PVRZ"]);
+    });
+
+    it("backs up an edited v2 with its pages, so a hot-exit restore is not the pre-edit picture", async () => {
+        // backup() serializes through the same path, so before the guard it threw and the pending
+        // edits were lost on window close. The pages must ride along: they were never written to disk.
+        showInputBoxMock.mockResolvedValue("4300");
+        const provider = new ImageEditorProvider(context);
+        const document = await provider.openCustomDocument(uri("/data/MAPICONS.BAM"), openContext(), token);
+        document.replaceSequences(importedRgba(), "replace");
+        document.setBasePage(4300);
+
+        const backup = document.backup();
+
+        expect(backup.pages?.map((p) => p.page)).toEqual([4300]);
+        expect(decodeBackup(encodeBackup(backup)).pages?.[0]?.bytes).toEqual(backup.pages?.[0]?.bytes);
     });
 
     it("carries the pages along on a Save As, since the new folder has none of them", async () => {

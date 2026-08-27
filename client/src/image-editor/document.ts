@@ -12,6 +12,7 @@ import {
     combineIeBamPair,
     encodeBamc,
     decodeBamV2,
+    isBamV2,
     loadImage,
     pvrzResourceName,
     readBamV2Structure,
@@ -109,6 +110,16 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         }
         const bytes = await vscode.workspace.fs.readFile(uri);
         if (isBamPath(uri.path)) {
+            // A v2 backup carries its own pages, so the restore rebuilds from it rather than from
+            // disk - the edited pages were never written there. Checked before the disk read below
+            // for the same reason: re-reading would resurrect the pre-edit picture.
+            if (backup && isBamV2(backup.bytes)) {
+                return new ImageEditorDocument(
+                    uri,
+                    ImageDocumentModel.fromBackup(backup, path.basename(uri.fsPath)),
+                    false,
+                );
+            }
             // v2 before the pair probe: pairing combines two BAM v1 files, and a v2 file cannot be
             // a member of one, so probing it first would read siblings for nothing.
             const v2 = await ImageEditorDocument.tryReadBamV2(uri, bytes, resourceBytes);
@@ -186,7 +197,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         bytes: Uint8Array,
         resourceBytes?: GameResourceBytes,
     ): Promise<RgbaAnimation | undefined> {
-        if (bytes.byteLength < 8 || String.fromCodePoint(...bytes.subarray(0, 8)) !== "BAM V2  ") return undefined;
+        if (!isBamV2(bytes)) return undefined;
 
         const structure = readBamV2Structure(bytes);
         const dir = uri.with({ path: path.posix.dirname(uri.path) });
@@ -365,6 +376,20 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     /** See ImageDocumentModel.saveArtifacts - the artifact bytes plus any PVRZ pages to write. */
     saveArtifacts(options: { standalone?: boolean } = {}): { bytes: Uint8Array; pages: readonly BamV2PageWrite[] } {
         return this.model.saveArtifacts(options);
+    }
+
+    /** See ImageDocumentModel.needsFreshPages - whether a save must allocate PVRZ pages. */
+    needsFreshPages(): boolean {
+        return this.model.needsFreshPages();
+    }
+
+    /** See ImageDocumentModel.chosenBasePage / setBasePage - the page number a repack starts at. */
+    chosenBasePage(): number | undefined {
+        return this.model.chosenBasePage();
+    }
+
+    setBasePage(page: number): void {
+        this.model.setBasePage(page);
     }
 
     backup(): DocumentBackup {

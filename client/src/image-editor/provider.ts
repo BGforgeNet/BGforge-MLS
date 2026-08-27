@@ -281,10 +281,12 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
         // Frames that came from a page can be written back against it; anything else needs pages of
         // its own, and which page numbers are free is a fact about the installation, not the file.
+        // The document's own answer is reused where it has one, so a v2 edited and then saved as a
+        // v2 is not asked the same question twice.
         let basePage: number | undefined;
         if (needsFreshPages(animation)) {
-            basePage = await this.pickBasePage(path.basename(targetPath));
-            if (basePage === undefined) return; // user dismissed the prompt
+            if (!(await this.ensureBasePage(document, true))) return; // user dismissed the prompt
+            basePage = document.chosenBasePage();
         }
         // No fresh pages needed means the frames are still the source file's, so its own pages come
         // along verbatim - the destination folder has none of them.
@@ -301,6 +303,22 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             `Saved ${path.basename(targetPath)}${pageCount > 0 ? ` and ${pageCount} PVRZ page(s)` : ""}`,
             3000,
         );
+    }
+
+    /**
+     * Make sure the document can name a first PVRZ page before anything needs one, asking once.
+     *
+     * Called at the EDIT that forces a repack rather than at the save, because three of the four
+     * paths that serialize a document cannot ask: an in-place save, a native Save As, and a hot-exit
+     * backup all run without a place to put a prompt. Answering here means none of them can meet a
+     * document that cannot be written. False when the user dismisses the prompt.
+     */
+    private async ensureBasePage(document: ImageEditorDocument, needed: boolean): Promise<boolean> {
+        if (!needed || document.chosenBasePage() !== undefined) return true;
+        const basePage = await this.pickBasePage(path.basename(document.uri.fsPath));
+        if (basePage === undefined) return false;
+        document.setBasePage(basePage);
+        return true;
     }
 
     /**
@@ -392,6 +410,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 document.replaceSequences(reshapeImportToFrm(indexed, pick), "replace");
                 return;
             }
+            // Imported frames come from PNGs, so no PVRZ page describes them and the save that
+            // follows must allocate. Asked BEFORE the splice, not after: dismissing then cancels the
+            // import outright rather than leaving behind a document that cannot be saved at all.
+            if (!(await this.ensureBasePage(document, isRgbaAnimation(document.animation)))) return;
             document.replaceSequences(adapted.animation, mode);
         } catch (error) {
             void vscode.window.showErrorMessage(
@@ -518,6 +540,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
         }
         const targetPath = destination.fsPath;
+        // Defence in depth: the import path already answers this at the edit, so reaching here with
+        // an unanswered page number means a new mutation path skipped it. Ask rather than let
+        // serializeBamV2 throw - but a dismissal has to fail the save, since VS Code has already
+        // committed to writing something.
+        if (!(await this.ensureBasePage(document, document.needsFreshPages()))) {
+            throw new Error("Save cancelled: a BAM v2 with edited frames needs a PVRZ page number.");
+        }
         // A save that lands anywhere but the document's own file cannot rely on the PVRZ pages a
         // BAM v2 addresses being there, so it takes them along; an in-place save leaves them alone.
         const standalone = destination.toString() !== document.saveUri.toString();

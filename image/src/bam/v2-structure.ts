@@ -49,6 +49,18 @@ function tag(bytes: Uint8Array, start: number): string {
     return String.fromCodePoint(bytes[start] ?? 0, bytes[start + 1] ?? 0, bytes[start + 2] ?? 0, bytes[start + 3] ?? 0);
 }
 
+/**
+ * Whether these bytes are a BAM v2, by signature AND version - v1 and v2 share the "BAM " tag, so
+ * the four bytes after it are what separates them.
+ *
+ * The one place that decision is made, alongside `isBamc`: every caller that must route a file to
+ * the right reader (loadImage, the editor's open path, a backup restore) asks here rather than
+ * re-deriving the byte test, which is how three sniffs come to disagree about a truncated header.
+ */
+export function isBamV2(bytes: Uint8Array): boolean {
+    return bytes.byteLength >= 8 && tag(bytes, 0x00) === "BAM " && tag(bytes, 0x04) === "V2  ";
+}
+
 export function readBamV2Structure(bytes: Uint8Array): BamV2Structure {
     if (bytes.byteLength < HEADER_BYTES) throw new Error("readBamV2Structure: BAM header truncated");
     const signature = tag(bytes, 0x00);
