@@ -197,6 +197,21 @@ describe("a true-colour PNG directory", () => {
         expect([first.offsetX, first.offsetY]).toEqual([1, -1]);
     });
 
+    it("reads indexed PNGs as indexed even when the manifest claims BAM v2", () => {
+        // A hand-edited or downgraded directory: the PNGs are the authority on the colour model,
+        // and calling the result a v2 would hand 1-byte-per-pixel frames to a 4-byte reader.
+        const files = exportPngDirectory(makeAnimation());
+        const manifest: unknown = JSON.parse(new TextDecoder().decode(files.get("manifest.json") ?? new Uint8Array()));
+        if (typeof manifest !== "object" || manifest === null) throw new Error("expected a manifest object");
+        const claimed = { ...manifest, meta: { ...(manifest as { meta: object }).meta, sourceFormat: "bamv2" } };
+        files.set("manifest.json", new TextEncoder().encode(JSON.stringify(claimed)));
+
+        const imported = importPngDirectory(files);
+
+        expect(imported.colorModel).toBeUndefined();
+        expect(imported.meta.sourceFormat).toBe("bam");
+    });
+
     it("writes PNGs a true-colour reader can open, alpha intact", () => {
         // Asserting the decoded pixel rather than the file count: a directory of the right shape
         // holding indexed PNGs would pass any structural check and lose the alpha silently.

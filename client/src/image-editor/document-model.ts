@@ -47,10 +47,12 @@ function serializeIndexed(indexed: IndexedAnimation): Uint8Array {
             return serializeBamV1(indexed);
         case "bamc":
             return encodeBamc(serializeBamV1(indexed));
+        /* v8 ignore start -- unreachable: the never narrowing makes a new IndexedSourceFormat a compile error here */
         default: {
             const unhandled: never = indexed.meta.sourceFormat;
             throw new Error(`serializeIndexed: unhandled sourceFormat ${String(unhandled)}`);
         }
+        /* v8 ignore stop */
     }
 }
 

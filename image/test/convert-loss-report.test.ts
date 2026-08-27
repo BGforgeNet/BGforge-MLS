@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { LossReport } from "@bgforge/image";
 
+describe("LossReport.absorb", () => {
+    it("folds another report's items in, so a two-stage conversion warns once", () => {
+        const first = new LossReport();
+        first.add("colours-quantized", "colours merged");
+        const second = new LossReport();
+        second.add("padded-sequence", "direction padded");
+
+        first.absorb(second);
+
+        expect(first.has("padded-sequence")).toBe(true);
+        expect(first.losses).toHaveLength(2);
+    });
+});
+
 describe("LossReport", () => {
     it("starts lossless and records items", () => {
         const r = new LossReport();

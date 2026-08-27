@@ -8,7 +8,7 @@ import {
     type RgbaAnimation,
 } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
-import { buildCrossFormatSave, buildExport } from "../../src/image-editor/export-actions";
+import { adaptImportedColourModel, buildCrossFormatSave, buildExport } from "../../src/image-editor/export-actions";
 import { makeMiniFrm } from "./fixtures";
 
 /** A true-colour document, as a BAM v2 opens into one. */
@@ -93,6 +93,35 @@ describe("buildCrossFormatSave", () => {
         expect(writes[1]?.path).toBe("/out/y.pal");
         expect(report.has("palette-sidecar-required")).toBe(true);
         expect(DEFAULT_FALLOUT_PALETTE).not.toEqual(palette);
+    });
+});
+
+describe("adaptImportedColourModel", () => {
+    const rgbaImport = rgbaModel([[255, 0, 0, 90]]).animation;
+    const indexedImport = makeMiniFrm();
+
+    test("leaves an import alone when it already matches the document", () => {
+        const same = adaptImportedColourModel(indexedImport, makeMiniFrm());
+
+        expect(same.animation).toBe(indexedImport);
+        expect(same.report.lossless).toBe(true);
+    });
+
+    test("resolves an indexed import into pixels for a true-colour document, losing nothing", () => {
+        // Every index has exactly one colour, so this direction is exact - and must not warn.
+        const adapted = adaptImportedColourModel(indexedImport, rgbaModel([[0, 0, 0, 255]]).animation);
+
+        expect(adapted.animation.colorModel).toBe("rgba");
+        expect(adapted.report.lossless).toBe(true);
+    });
+
+    test("quantizes a true-colour import for an indexed document, and says what it cost", () => {
+        const adapted = adaptImportedColourModel(rgbaImport, makeMiniFrm());
+
+        expect(adapted.animation.colorModel).toBeUndefined();
+        expect(adapted.animation.meta.sourceFormat).toBe("frm");
+        // The import's one pixel is half-transparent, which an indexed frame cannot hold.
+        expect(adapted.report.has("alpha-flattened")).toBe(true);
     });
 });
 

@@ -9,9 +9,9 @@
     // "Save as" and "Import" are both ActionMenu dropdowns: picking an entry immediately runs the action
     // (host-side, auto-named next to the source). Every save format is offered EXCEPT the source's own
     // exact format - plain "Save" already writes that in place. FRM is split by palette mode (sidecar
-    // writes a .pal, nearest remaps to the default Fallout palette). BAM has two on-disk encodings that
-    // share the .bam extension - uncompressed (bam) and compressed (bamc) - so both are offered as distinct
-    // targets, letting a source convert between them (a re-encode overwrites <base>.bam, which is intended).
+    // writes a .pal, nearest remaps to the default Fallout palette). THREE different formats share the
+    // .bam extension - v1, compressed v1 (BAMC) and v2 - so every label carries its version, and each is
+    // its own target (a re-encode overwrites <base>.bam, which is intended).
     interface SaveAsOption {
         value: string;
         label: string;
@@ -28,13 +28,12 @@
                       { value: "frm-nearest", label: "FRM (nearest match)", target: "frm", paletteMode: "nearest" },
                   ];
         const bamUncompressed: SaveAsOption[] =
-            source === "bam" ? [] : [{ value: "bam", label: "BAM (uncompressed)", target: "bam" }];
+            source === "bam" ? [] : [{ value: "bam", label: "BAM v1", target: "bam" }];
         const bamCompressed: SaveAsOption[] =
-            source === "bamc" ? [] : [{ value: "bamc", label: "BAM (compressed)", target: "bamc" }];
+            source === "bamc" ? [] : [{ value: "bamc", label: "BAMC v1 (compressed)", target: "bamc" }];
         // BAM v2 keeps true colour and per-pixel alpha, but writes its frames into separate
         // MOSxxxx.PVRZ files - the host asks which page number to start at when it needs new ones.
-        const bamV2: SaveAsOption[] =
-            source === "bamv2" ? [] : [{ value: "bamv2", label: "BAM v2 (true colour)", target: "bamv2" }];
+        const bamV2: SaveAsOption[] = source === "bamv2" ? [] : [{ value: "bamv2", label: "BAM v2", target: "bamv2" }];
         return [
             ...frmVariants,
             ...bamUncompressed,
@@ -46,6 +45,15 @@
     }
 
     const saveAsOptions = $derived(buildSaveAsOptions(view.sourceFormat));
+
+    // Plain "Save" writes the source format back in place, so its tooltip names that format the same
+    // way the "Save as" entries do - an upper-cased tag would read "BAMV2" and "BAMC".
+    const SOURCE_FORMAT_LABEL = {
+        frm: "FRM",
+        bam: "BAM v1",
+        bamc: "BAMC v1 (compressed)",
+        bamv2: "BAM v2",
+    } as const satisfies Record<SourceFormat, string>;
 
     // Import brings in a PNG directory's cycles, either replacing every current cycle or appending to them.
     const IMPORT_ITEMS = [
@@ -81,7 +89,7 @@
 </script>
 
 <div class="toolbar">
-    <button type="button" onclick={handleSave} title={`Save in place as ${view.sourceFormat.toUpperCase()}`}>
+    <button type="button" onclick={handleSave} title={`Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`}>
         Save
     </button>
     <ActionMenu

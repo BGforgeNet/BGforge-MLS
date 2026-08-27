@@ -59,8 +59,7 @@ function widestChannel(box: Entry[]): "r" | "g" | "b" {
  * of one colour and two stray highlights are two entries and must not be given equal weight, or the
  * background averages away with the strays.
  */
-function split(box: Entry[]): [Entry[], Entry[]] | undefined {
-    if (box.length < 2) return undefined;
+function split(box: Entry[]): [Entry[], Entry[]] {
     const channel = widestChannel(box);
     const sorted = [...box].sort((a, b) => a[channel] - b[channel]);
     const total = sorted.reduce((sum, e) => sum + e.count, 0);
@@ -110,8 +109,11 @@ export function medianCutPalette(histogram: ColourHistogram, maxColours: number)
 
     let boxes: Entry[][] = [entries];
     while (boxes.length < maxColours) {
-        // Split the heaviest splittable box; when none can be split further the palette is as fine
-        // as the image allows and the loop has to stop regardless of the target count.
+        // Heaviest box holding two or more colours. There is always one while the loop runs - boxes
+        // only grow in number, and if every box held a single colour there would already be more
+        // boxes than colours - but the sentinel stays rather than defaulting to box 0: splitting a
+        // single-colour box yields an empty half, and an empty half averages to a black palette
+        // entry that nothing downstream would flag.
         let target = -1;
         let targetWeight = 0;
         boxes.forEach((box, i) => {
@@ -122,11 +124,11 @@ export function medianCutPalette(histogram: ColourHistogram, maxColours: number)
                 target = i;
             }
         });
-        if (target === -1) break;
         const box = boxes[target];
-        const halves = box === undefined ? undefined : split(box);
-        if (halves === undefined) break;
-        boxes = [...boxes.slice(0, target), halves[0], halves[1], ...boxes.slice(target + 1)];
+        /* v8 ignore next -- unreachable per the note above; kept so the impossible case cannot pass silently */
+        if (box === undefined) break;
+        const [low, high] = split(box);
+        boxes = [...boxes.slice(0, target), low, high, ...boxes.slice(target + 1)];
     }
     return boxes.map((box) => averageColour(box));
 }

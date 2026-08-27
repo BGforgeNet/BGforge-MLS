@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
+import { type RgbaFrame } from "../src/model/animation.ts";
 import { decodeBamV2, pvrzResourceName } from "../src/bam/v2-parse.ts";
 import { readBamV2Structure } from "../src/bam/v2-structure.ts";
 import { serializeBamV2 } from "../src/bam/v2-serialize.ts";
@@ -123,6 +124,63 @@ describe("serializeBamV2 (repacking)", () => {
         expect([...frame.pixels.subarray(0, 4)]).toEqual([255, 0, 0, 255]);
         expect(frame.offsetX).toBe(2);
         expect(frame.offsetY).toBe(2);
+    });
+
+    it("wraps onto a new shelf row and then onto a new page as the frames fill it", () => {
+        // The packer's two boundaries at once, worked out from its own rule rather than from what it
+        // printed. On a 1024 page, 400-wide frames sit two to a row (800 fits, 1200 does not), so
+        // frames 3 and 4 start a second row at y=400. A third row would need y=800..1200, past the
+        // page, so frame 5 forces a new page - and must land there rather than off the edge.
+        const tile = (): RgbaFrame => ({
+            width: 400,
+            height: 400,
+            pixels: new Uint8Array(400 * 400 * 4).fill(200),
+            offsetX: 0,
+            offsetY: 0,
+        });
+        const anim: Parameters<typeof serializeBamV2>[0] = {
+            colorModel: "rgba",
+            frames: [tile(), tile(), tile(), tile(), tile()],
+            sequences: [{ frameRefs: [0, 1, 2, 3, 4], facing: "none" }],
+            meta: { sourceFormat: "bamv2" },
+        };
+
+        const saved = serializeBamV2(anim, { basePage: 100 });
+
+        expect(saved.pages.map((p) => p.page)).toEqual([100, 101]);
+        const blocks = readBamV2Structure(saved.bam).blocks;
+        expect(blocks.map((b) => b.page)).toEqual([100, 100, 100, 100, 101]);
+        expect([blocks[1]?.sourceX, blocks[1]?.sourceY]).toEqual([400, 0]); // same row, beside blocks[0]
+        expect([blocks[2]?.sourceX, blocks[2]?.sourceY]).toEqual([0, 400]); // wrapped to a new row
+        expect([blocks[4]?.sourceX, blocks[4]?.sourceY]).toEqual([0, 0]); // fresh page
+    });
+
+    it("refuses a frame too large for a page instead of writing past its edge", () => {
+        const anim: Parameters<typeof serializeBamV2>[0] = {
+            colorModel: "rgba",
+            frames: [{ width: 2000, height: 4, pixels: new Uint8Array(2000 * 4 * 4), offsetX: 0, offsetY: 0 }],
+            sequences: [{ frameRefs: [0], facing: "none" }],
+            meta: { sourceFormat: "bamv2" },
+        };
+
+        expect(() => serializeBamV2(anim, { basePage: 100 })).toThrow(/exceeds the 1024x1024 page size/);
+    });
+
+    it("refuses a cycle whose frames are not a contiguous run", () => {
+        // A v2 cycle is a start index plus a count, so this shape simply cannot be written. Silently
+        // reordering it would change what the animation plays.
+        const pixels = new Uint8Array(4);
+        const anim: Parameters<typeof serializeBamV2>[0] = {
+            colorModel: "rgba",
+            frames: [
+                { width: 1, height: 1, pixels, offsetX: 0, offsetY: 0 },
+                { width: 1, height: 1, pixels: new Uint8Array(4), offsetX: 0, offsetY: 0 },
+            ],
+            sequences: [{ frameRefs: [1, 0], facing: "none" }],
+            meta: { sourceFormat: "bamv2" },
+        };
+
+        expect(() => serializeBamV2(anim, { basePage: 100 })).toThrow(/non-contiguous/);
     });
 
     it("keeps the page it wrote decodable on its own", () => {

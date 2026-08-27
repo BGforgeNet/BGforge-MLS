@@ -96,6 +96,15 @@ describe("convertToBamV2", () => {
         expect(animation.frames).toHaveLength(2);
     });
 
+    it("refuses a cycle pointing past the end of the frame table", () => {
+        // A malformed animation must not be laid out into a file that looks valid: the bad
+        // reference has to surface here, where the index is still traceable to its cycle.
+        const anim = sharedFrameAnimation();
+        anim.sequences = [{ frameRefs: [0, 9], facing: "NE" }];
+
+        expect(() => convertToBamV2(anim)).toThrow(/out-of-range frame index 9/);
+    });
+
     it("passes a true-colour animation through with its page provenance intact", () => {
         // A v2 saved as a v2 must still be able to re-emit its own pages; a conversion that rebuilt
         // the frames would strip that and force a lossy re-encode of pixels nothing had touched.

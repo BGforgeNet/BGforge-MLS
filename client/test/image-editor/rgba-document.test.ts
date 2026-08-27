@@ -116,6 +116,16 @@ describe("ImageDocumentModel with a true-colour animation", () => {
         expect(() => model.saveArtifacts()).toThrow(/basePage/);
     });
 
+    it("applies a meta edit to a true-colour document", () => {
+        // The playback-rate control is shown for a v2 as much as for a BAM; without an rgba arm in
+        // applyMetaPatch the edit would be silently dropped and the field would snap back.
+        const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
+
+        model.applyMetaPatch({ fps: 24 });
+
+        expect(model.toView().meta.fps).toBe(24);
+    });
+
     it("keeps the frame's centre offsets, which v2 stores exactly as v1 does", () => {
         const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
 

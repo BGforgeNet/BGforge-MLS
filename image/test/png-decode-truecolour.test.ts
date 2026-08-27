@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import zlib from "zlib";
 import { PNG_SIGNATURE, writeChunk } from "../src/png/chunk.ts";
 import { buildIhdr, encodeIndexedPng, encodeTruecolourPng } from "../src/png/encode.ts";
-import { decodeTruecolourPng } from "../src/png/decode.ts";
+import { decodeTruecolourPng, pngColourType } from "../src/png/decode.ts";
 import { emptyPalette } from "../src/model/animation.ts";
 
 /** RGBA bytes for `quads`, in order. */
@@ -102,5 +102,28 @@ describe("decodeTruecolourPng", () => {
         const indexed = encodeIndexedPng(1, 1, Uint8Array.from([0]), emptyPalette(), 0);
 
         expect(() => decodeTruecolourPng(indexed)).toThrow(/colour type 3/);
+    });
+});
+
+describe("pngColourType", () => {
+    it("reports which decoder a PNG needs", () => {
+        expect(pngColourType(encodeTruecolourPng(1, 1, pixelsOf([[1, 2, 3, 4]])))).toBe(6);
+        expect(pngColourType(encodeIndexedPng(1, 1, Uint8Array.from([0]), emptyPalette(), 0))).toBe(3);
+    });
+
+    it("says so when there is no header to read it from", () => {
+        // Whatever this is, guessing a colour type for it would pick a decoder at random.
+        const headerless = new Uint8Array([...PNG_SIGNATURE, ...writeChunk("IEND", new Uint8Array(0))]);
+
+        expect(() => pngColourType(headerless)).toThrow(/missing IHDR/);
+    });
+
+    it("says so when the header is too short to hold one", () => {
+        const truncated = new Uint8Array([
+            ...PNG_SIGNATURE,
+            ...writeChunk("IHDR", new Uint8Array(8)), // dimensions only: no bit depth, no colour type
+        ]);
+
+        expect(() => pngColourType(truncated)).toThrow(/truncated IHDR/);
     });
 });

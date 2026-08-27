@@ -40,7 +40,7 @@ Pick the cheapest tool that answers the actual question.
 ## Verification tiers
 
 Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run` prints the plan) -> `pnpm test`
-(~3 min) -> `pnpm build:all` + `pnpm test:all` (~14 min) at close-out.
+(~3 min) -> `pnpm build:all` + `pnpm test:all` (~15 min) at close-out.
 
 **`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
 Full tier guidance, and the rule that every vitest config runs from any cwd: `CONTRIBUTING.md`.
