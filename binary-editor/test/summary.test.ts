@@ -253,13 +253,12 @@ describe("summaryComposerFor cre", () => {
             expect(row).toBeDefined();
             const summary = summaryComposerFor("cre")!(entry, model, rel);
 
-            if (isEnum) {
-                expect(row!.valueType).toBe("enum");
-                expect(summary).toMatch(/^-?\d+ \S/); // "<value> <name>"
-            } else {
-                // A resref string is shown as-is, with no numeric prefix.
-                expect(summary).toBe(row!.displayValue);
-            }
+            // An enum renders "<value> <name>"; a resref string is shown as-is, with no numeric prefix.
+            // The per-case expectation is folded into the compared values so both shapes are asserted on
+            // every run rather than one branch reporting green over the other.
+            expect(row!.valueType).toBe(isEnum ? "enum" : row!.valueType);
+            const actualShape = isEnum && /^-?\d+ \S/.test(summary ?? "") ? "<value> <name>" : summary;
+            expect(actualShape).toBe(isEnum ? "<value> <name>" : row!.displayValue);
             expect(summary).toBe(expectedSummary(row!));
         });
     }

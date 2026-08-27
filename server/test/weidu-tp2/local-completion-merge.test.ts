@@ -5,7 +5,7 @@
  * and that local completions take precedence over static/header ones.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 // Mock LSP connection before importing provider
 vi.mock("../../src/lsp-connection", () => ({
@@ -60,9 +60,8 @@ COPY ~a~ ~b~
         expect(item?.kind).toBe(CompletionItemKind.Variable);
 
         // File-scope variables from getLocalSymbols should have documentation
-        if (item?.documentation && typeof item.documentation === "object" && "value" in item.documentation) {
-            expect(item.documentation.value).toContain("my_documented_var");
-        }
+        assert(item?.documentation && typeof item.documentation === "object" && "value" in item.documentation);
+        expect(item.documentation.value).toContain("my_documented_var");
     });
 
     it("local functions have hover documentation in completions", () => {
@@ -87,9 +86,8 @@ END
         expect(item?.kind).toBe(CompletionItemKind.Function);
 
         // Function completions from getLocalSymbols should have documentation
-        if (item?.documentation && typeof item.documentation === "object" && "value" in item.documentation) {
-            expect(item.documentation.value).toContain("helpful_func");
-        }
+        assert(item?.documentation && typeof item.documentation === "object" && "value" in item.documentation);
+        expect(item.documentation.value).toContain("helpful_func");
     });
 
     it("function-scoped variables are still included via deep extraction", () => {

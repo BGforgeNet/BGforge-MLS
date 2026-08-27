@@ -180,10 +180,9 @@ END
         const position: Position = { line: 1, character: 8 };
         const result = weiduTp2Provider.hover?.(text, "INT_VAR", uri, position);
 
-        // Symbol "INT_VAR" is not a parameter - hover should not be handled by funcparam path.
-        // Either not handled or fall-through - the test is that it does not pretend to be a param.
-        if (result?.handled) {
-            expect(hoverValue(result)).not.toContain("int INT_VAR");
-        }
+        // Symbol "INT_VAR" is not a parameter, so the funcparam path must not claim it. Either outcome is
+        // allowed (not handled, or handled without a param hover), so the assertion is the disjunction
+        // rather than a branch that checks nothing on the not-handled path.
+        expect(hoverValue(result) ?? "").not.toContain("int INT_VAR");
     });
 });

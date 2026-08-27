@@ -171,14 +171,17 @@ describe("evaluateCondition - edge cases", () => {
 
     it("includes substituted expression in error message", () => {
         const vars: VarsContext = new Map([["bad", "abc"]]);
+        // Captured rather than asserted inside the catch: an expect in a catch block never runs once the
+        // call stops throwing, and the test would go green having checked nothing. An empty message here
+        // means it did not throw, which fails both assertions below.
+        let message = "";
         try {
             evaluateCondition("i < bad", "i", 5, vars);
-            expect.fail("should have thrown");
         } catch (error) {
-            const msg = (error as Error).message;
-            expect(msg).toContain("Substituted:");
-            expect(msg).toContain("5 < abc");
+            message = (error as Error).message;
         }
+        expect(message).toContain("Substituted:");
+        expect(message).toContain("5 < abc");
     });
 });
 

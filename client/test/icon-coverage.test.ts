@@ -80,14 +80,21 @@ describe("icon coverage", () => {
         it(`.${compiled} is styled as the compiled counterpart of .${source}`, () => {
             const compiledIcon = theme.iconDefinitions[theme.fileExtensions[compiled]];
             expect(compiledIcon, `.${compiled} has no icon definition`).toBeDefined();
-            if (compiledIcon.fontCharacter !== undefined) {
-                // Same glyph as the source, differing only in colour.
-                const sourceIcon = theme.iconDefinitions[theme.fileExtensions[source]];
-                expect(compiledIcon.fontCharacter).toBe(sourceIcon.fontCharacter);
-                expect(compiledIcon.fontColor).not.toBe(sourceIcon.fontColor);
-            } else {
-                expect(compiledIcon.iconPath).toMatch(/\.(svg|png)$/);
-            }
+            // A font icon is the same glyph as its source differing only in colour; a raster icon is a
+            // file path. Which one applies is a property of the theme entry, so it is folded into the
+            // expected value rather than a branch - either way one assertion runs.
+            const sourceIcon = theme.iconDefinitions[theme.fileExtensions[source]];
+            const isFont = compiledIcon.fontCharacter !== undefined;
+            const rasterPath = String(compiledIcon.iconPath);
+            expect({
+                glyph: isFont ? compiledIcon.fontCharacter : undefined,
+                recoloured: isFont ? compiledIcon.fontColor !== sourceIcon.fontColor : true,
+                path: isFont || /\.(svg|png)$/.test(rasterPath) ? "ok" : rasterPath,
+            }).toEqual({
+                glyph: isFont ? sourceIcon.fontCharacter : undefined,
+                recoloured: true,
+                path: "ok",
+            });
         });
     }
 });

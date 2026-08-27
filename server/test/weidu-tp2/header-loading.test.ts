@@ -8,7 +8,7 @@
  * the legacy function/variable indices.
  */
 
-import { describe, expect, it, beforeAll, beforeEach, afterEach, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -67,13 +67,11 @@ END
 
             const func = store.lookup("unstack_armor_bonus");
             expect(func).toBeDefined();
-            expect(isCallableSymbol(func!)).toBe(true);
-            if (isCallableSymbol(func!)) {
-                expect(func.callable.params?.intVar).toHaveLength(1);
-                expect(func.callable.params?.intVar[0]!.name).toBe("bonus");
-                expect(func.callable.params?.strVar).toHaveLength(1);
-                expect(func.callable.params?.strVar[0]!.name).toBe("item");
-            }
+            assert(isCallableSymbol(func!));
+            expect(func.callable.params?.intVar).toHaveLength(1);
+            expect(func.callable.params?.intVar[0]!.name).toBe("bonus");
+            expect(func.callable.params?.strVar).toHaveLength(1);
+            expect(func.callable.params?.strVar[0]!.name).toBe("item");
         });
 
         it("indexes multiple functions from same file", () => {

@@ -3,7 +3,7 @@
  * Tests utility functions and formatting integration.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import type { MarkupContent } from "vscode-languageserver/node";
 
 /** Extract markdown value from hover contents. */
@@ -296,11 +296,8 @@ END`;
         const lines = output.split("\n");
         const xLine = lines.find((l) => l.includes("x "));
         const longnameLine = lines.find((l) => l.includes("longname"));
-        if (xLine && longnameLine) {
-            const xEqPos = xLine.indexOf("=");
-            const longEqPos = longnameLine.indexOf("=");
-            expect(xEqPos).toBe(longEqPos);
-        }
+        assert(xLine && longnameLine);
+        expect(xLine.indexOf("=")).toBe(longnameLine.indexOf("="));
     });
 
     it("handles inline comments", () => {

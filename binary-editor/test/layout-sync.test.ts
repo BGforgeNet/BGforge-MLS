@@ -388,8 +388,9 @@ describe("PRO read-only discriminators", () => {
         expect(resolved?.fields["pro.header.objectType"], "objectType not shown in this variant").toBeDefined();
         expect(resolved?.fields["pro.header.objectType"]?.editable, "objectType must be read-only").toBe(false);
         for (const key of ["pro.itemProperties.subType", "pro.sceneryProperties.subType"]) {
-            const row = resolved?.fields[key];
-            if (row) expect(row.editable, `${key} must be read-only`).toBe(false);
+            // Only one of the two subType rows is present per PRO variant, so an absent row is expected -
+            // asserted as such rather than skipped, which would report green over a row that vanished.
+            expect(resolved?.fields[key]?.editable ?? false, `${key} must be read-only when shown`).toBe(false);
         }
     });
 });

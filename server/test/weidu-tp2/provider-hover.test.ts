@@ -4,7 +4,7 @@
  * and delegates regular symbol hover to resolveSymbol() via the registry.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import { defaultSettings } from "../../src/settings";
 
 // Mock LSP connection before importing provider
@@ -80,10 +80,8 @@ END
         const result = weiduTp2Provider.hover!(text, "key", uri, position);
 
         // Should be handled (to prevent fallback) but with null hover (suppressed)
-        expect(result.handled).toBe(true);
-        if (result.handled) {
-            expect(result.hover).toBeNull();
-        }
+        assert(result.handled);
+        expect(result.hover).toBeNull();
     });
 
     it("should return param hover for function call parameter names", () => {
@@ -102,11 +100,7 @@ LAF my_func INT_VAR count = 5 END
 
         const result = weiduTp2Provider.hover!(text, "count", uri, position);
 
-        if (result.handled && result.hover) {
-            const value = (result.hover.contents as { value: string }).value;
-            expect(value).toContain("count");
-        }
-        // If not handled, that's acceptable - the AST may not resolve here in unit test.
-        // The important thing is the regular symbol path is NOT triggered.
+        assert(result.handled && result.hover);
+        expect((result.hover.contents as { value: string }).value).toContain("count");
     });
 });

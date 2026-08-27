@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock modules to avoid LSP connection issues
 vi.mock("../src/lsp-connection", () => ({
@@ -637,11 +637,8 @@ translation~`;
 
             // [^~]* matches across lines since the regex has /gm flag
             // and [^~]* doesn't restrict to single line
-            expect(hover).not.toBeNull();
-            if (hover) {
-                const content = (hover.contents as { value: string }).value;
-                expect(content).toContain("multi-line");
-            }
+            assert(hover);
+            expect((hover.contents as { value: string }).value).toContain("multi-line");
         });
     });
 

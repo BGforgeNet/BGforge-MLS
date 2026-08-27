@@ -6,7 +6,7 @@
  * SAY content, and empty/whitespace trigger handling.
  */
 
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { assert, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
@@ -37,11 +37,9 @@ END
         expect(states.length).toBeGreaterThan(0);
         const target = states[0]!.transitions[0]!.target;
         expect(target).toBeDefined();
-        expect(target.kind).toBe("extern");
-        if (target.kind === "extern") {
-            expect(target.file).toBe("~D2~");
-            expect(target.label).toBe("remote_state");
-        }
+        assert(target.kind === "extern");
+        expect(target.file).toBe("~D2~");
+        expect(target.label).toBe("remote_state");
     });
 
     it("parses COPY_TRANS target", () => {
@@ -64,11 +62,9 @@ END
         const s2 = states.find((s) => s.label === "s2");
         expect(s2).toBeDefined();
         const trans = s2!.transitions.find((t) => t.target?.kind === "copy_trans");
-        expect(trans).toBeDefined();
-        if (trans!.target?.kind === "copy_trans") {
-            expect(trans!.target.file).toBe("D1");
-            expect(trans!.target.label).toBe("s1");
-        }
+        assert(trans?.target?.kind === "copy_trans");
+        expect(trans.target.file).toBe("D1");
+        expect(trans.target.label).toBe("s1");
     });
 
     it("parses SHORT_GOTO target (label only)", () => {

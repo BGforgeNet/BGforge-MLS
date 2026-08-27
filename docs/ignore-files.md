@@ -220,19 +220,30 @@ string)` fed `match[1]`, which is `string | undefined` under the `noUncheckedInd
 produces a tree that does not compile. The 49 are concentrated in `shared/dialog-*`; re-test after a
 tsgolint bump, since this is a divergence between its program and `tsc`, not a property of the code.
 
-### The test-lint pass, and the two rules it leaves out
+### The test-lint pass, and what it leaves out
 
 `pnpm lint:tests` runs the vitest plugin with a named allowlist - committed `.only`, duplicate titles, duplicate
-and misordered hooks, and the two structural checks. The plugin is not enabled wholesale: with the repo's
-categories, its full set produces roughly 16000 findings, nearly all style (`prefer-expect-assertions` alone is
-7559).
+and misordered hooks, the two structural checks, and `no-conditional-expect`. The plugin is not enabled wholesale:
+with the repo's categories, its full set produces roughly 16000 findings, nearly all style
+(`prefer-expect-assertions` alone is 7559).
 
-Two rules were measured and deliberately left out, so nobody has to re-derive them:
+`no-conditional-expect` was cleared across 98 sites rather than suppressed. Three shapes came out of it, and the
+same three are what a new finding will be: an `if` re-checking what an earlier `expect` established purely to
+narrow a type, which becomes `assert(...)` from vitest (it narrows discriminated unions, type-guard calls and
+truthiness alike); a genuinely two-sided expectation in a table-driven helper or corpus loop, where the condition
+belongs in the expected VALUE rather than in control flow around the assertion; and an `expect` inside a `catch`,
+which never runs once the call stops throwing - capture the error into a variable and assert after the block.
+Note that a matcher inside a ternary (`isEnum ? expect.stringMatching(...) : x`) still counts as a conditional
+expect; normalise the actual value instead.
 
-| Rule                           | Findings | Why not enabled                                                                                                                                                                                                                                                                         |
-| ------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vitest/expect-expect`         | 154      | False positives. Assertions in this suite routinely sit in a per-file helper (`expectSite(...)`), which the rule cannot follow, so it reports the calling test as assertion-free.                                                                                                       |
-| `vitest/no-conditional-expect` | 98       | Real, but not a config change. Most sites are an `if` that re-checks something an earlier `expect` already established, purely to narrow the type; a few have no such guard and would pass asserting nothing. Clearing them means replacing ~98 narrowings by hand, one judgement each. |
+Rules measured against this repo and deliberately left out, so nobody has to re-derive them. The last two come
+from the `promise` and `node` plugins, which are likewise not enabled wholesale:
+
+| Rule                    | Findings | Why not enabled                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vitest/expect-expect`  | 154      | False positives. Assertions in this suite routinely sit in a per-file helper (`expectSite(...)`), which the rule cannot follow, so it reports the calling test as assertion-free.                                                                                                                                                                                            |
+| `promise/always-return` | 19       | False positives against this codebase's fire-and-forget idiom, `void promise.then(sideEffect)`. A terminal `.then` doing work has nothing to return, and the `void` already states the intent the rule is asking for.                                                                                                                                                        |
+| `node/no-sync`          | 1763     | Correct in the CLIs, scripts and tests that make up most of it. The ~50 under `server/src` are the ones that could matter, and they sit on on-demand handler paths (call hierarchy, static loading) behind a provider interface that is synchronous by design - converting them is an architecture change, not a lint fix. Re-open if the server ever shows request latency. |
 
 ### Tree-sitter globals
 

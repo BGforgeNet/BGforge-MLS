@@ -3,7 +3,7 @@
  * Tests the parse and emit stages of TypeScript to WeiDU D transpilation.
  */
 
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
 import { parse } from "../../transpilers/td/src/parse";
 import { emitD } from "../../transpilers/td/src/emit";
@@ -1324,12 +1324,11 @@ begin("MYDLG", [start]);
             const ir = parse(goodSource);
             expect(ir.constructs).toHaveLength(1);
             // Non-null safe: guarded by toHaveLength(1) assertion above
-            expect(ir.constructs[0]!.type).toBe("begin");
-            if (ir.constructs[0]?.type === "begin") {
-                expect(ir.constructs[0].states).toHaveLength(1);
-                // Non-null safe: guarded by toHaveLength(1) assertion above
-                expect(ir.constructs[0].states[0]!.label).toBe("start");
-            }
+            const begin = ir.constructs[0];
+            assert(begin?.type === "begin");
+            expect(begin.states).toHaveLength(1);
+            // Non-null safe: guarded by toHaveLength(1) assertion above
+            expect(begin.states[0]!.label).toBe("start");
         });
     });
 });

@@ -307,14 +307,18 @@ describe("errors carry their location", () => {
     });
 
     it("exposes file and line on the error object", () => {
+        // Captured rather than asserted inside the catch: an expect in a catch never runs once the call
+        // stops throwing, and the test would go green having checked nothing. A null here fails the
+        // instanceof below, so the no-throw case is still a failure.
+        let thrown: unknown = null;
         try {
             run({ "main.ssl": "x := 1;\n#bogus" });
-            expect.unreachable("should have thrown");
         } catch (error) {
-            expect(error).toBeInstanceOf(PreprocessError);
-            expect((error as PreprocessError).line).toBe(2);
-            expect((error as PreprocessError).file).toMatch(/main\.ssl$/);
+            thrown = error;
         }
+        expect(thrown).toBeInstanceOf(PreprocessError);
+        expect((thrown as PreprocessError).line).toBe(2);
+        expect((thrown as PreprocessError).file).toMatch(/main\.ssl$/);
     });
 
     it("rejects a malformed #define", () => {

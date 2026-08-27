@@ -30,9 +30,11 @@ const PROVIDERS: Array<[string, LanguageProvider]> = [
 
 describe("definition fallback gate - capability pairing", () => {
     it.each(PROVIDERS)("%s: getSymbolDefinition implies isPositionInString", (_id, provider) => {
-        if (typeof provider.getSymbolDefinition === "function") {
-            expect(typeof provider.isPositionInString).toBe("function");
-        }
+        // The implication itself is the assertion. Branching on the antecedent asserts nothing for a
+        // provider that does not implement getSymbolDefinition, so those rows reported green untested.
+        const implies =
+            typeof provider.getSymbolDefinition !== "function" || typeof provider.isPositionInString === "function";
+        expect(implies).toBe(true);
     });
 
     it("at least one provider actually exercises the pairing (guard is not vacuous)", () => {

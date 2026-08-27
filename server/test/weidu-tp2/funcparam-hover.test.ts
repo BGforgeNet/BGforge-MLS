@@ -3,7 +3,7 @@
  * Tests that hover only shows parameter info when cursor is inside a function call.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import type { Position } from "vscode-languageserver/node";
 
 // Mock the LSP connection module
@@ -272,10 +272,8 @@ END
 
         // hover() should return handled+null (block fallthrough) not not-handled (fall through)
         const result = weiduTp2Provider.hover?.(text, "parameter2", uri, position);
-        expect(result?.handled).toBe(true);
-        if (result?.handled) {
-            expect(result.hover).toBeNull();
-        }
+        assert(result?.handled);
+        expect(result.hover).toBeNull();
     });
 });
 
@@ -366,11 +364,9 @@ END
 
         // 2. Try local hover (new semantics: handled means provider claims this position)
         const localHover = weiduTp2Provider.hover?.(text, symbol, uri, position);
-        expect(localHover?.handled).toBe(true);
-        if (localHover?.handled) {
-            expect(localHover.hover).not.toBeNull();
-            expect(hoverValue(localHover)).toContain("int func_param = 99");
-        }
+        assert(localHover?.handled);
+        expect(localHover.hover).not.toBeNull();
+        expect(hoverValue(localHover)).toContain("int func_param = 99");
     });
 
     it("server flow does NOT return variable hover when cursor is on param name of non-indexed function", () => {
@@ -394,10 +390,8 @@ END
 
         // 2. hover() returns handled+null (block fallthrough)
         const localHover = weiduTp2Provider.hover?.(text, symbol, uri, position);
-        expect(localHover?.handled).toBe(true);
-        if (localHover?.handled) {
-            expect(localHover.hover).toBeNull();
-        }
+        assert(localHover?.handled);
+        expect(localHover.hover).toBeNull();
 
         // Since localHover.handled is true, server.ts does NOT call getHover()
         // Variable data never leaks
@@ -460,10 +454,8 @@ BUT_ONLY
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);
         // Should return handled+null - loop binding, not a reference
-        expect(result?.handled).toBe(true);
-        if (result?.handled) {
-            expect(result.hover).toBeNull();
-        }
+        assert(result?.handled);
+        expect(result.hover).toBeNull();
     });
 
     it("returns empty for variable in ACTION_PHP_EACH AS binding", () => {
@@ -480,10 +472,8 @@ END
         const position: Position = { line: 0, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "item", uri, position);
-        expect(result?.handled).toBe(true);
-        if (result?.handled) {
-            expect(result.hover).toBeNull();
-        }
+        assert(result?.handled);
+        expect(result.hover).toBeNull();
     });
 
     it("returns empty for value variable in PHP_EACH => binding", () => {
@@ -501,10 +491,8 @@ END
         const position: Position = { line: 0, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "power", uri, position);
-        expect(result?.handled).toBe(true);
-        if (result?.handled) {
-            expect(result.hover).toBeNull();
-        }
+        assert(result?.handled);
+        expect(result.hover).toBeNull();
     });
 
     it("allows hover for variable reference inside loop body", () => {
@@ -524,10 +512,9 @@ BUT_ONLY
         const position: Position = { line: 2, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);
-        // Should NOT be handled+null - this is a reference, not a binding
-        // It should either return found hover or not-handled (fall through)
-        if (result?.handled) {
-            expect(result.hover).not.toBeNull();
-        }
+        // Should NOT be handled+null - this is a reference, not a binding. Either outcome is allowed
+        // (a found hover, or not-handled so the data-driven hover runs), so the assertion is the
+        // disjunction rather than a branch: the one thing that must not happen is handled-with-null.
+        expect(result?.handled === true && result.hover === null).toBe(false);
     });
 });

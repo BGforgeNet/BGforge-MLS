@@ -44,12 +44,9 @@ function expectFiltering(
     const items = [createItem("TEST_ITEM", category)];
     const contexts = Array.isArray(context) ? context : [context];
     const filtered = filterItemsByContext(items, contexts);
-    if (shouldBeIncluded) {
-        expect(filtered).toHaveLength(1);
-        expect(filtered[0]!.label).toBe("TEST_ITEM");
-    } else {
-        expect(filtered).toHaveLength(0);
-    }
+    // One assertion covering both outcomes rather than a branch per outcome: the helper is table-driven,
+    // so `shouldBeIncluded` belongs in the expected VALUE, not in control flow around the expectation.
+    expect(filtered.map((item) => item.label)).toEqual(shouldBeIncluded ? ["TEST_ITEM"] : []);
 }
 
 /** Helper to place cursor at a position marked by | in the text. */

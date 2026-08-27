@@ -2,7 +2,7 @@
  * Unit tests for fallout-ssl/utils.ts - utility functions for local symbol extraction.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import type { Position } from "vscode-languageserver/node";
 import { findPrecedingDocComment } from "../../src/core/doc-comment";
 
@@ -37,14 +37,20 @@ describe("fallout-ssl/utils", () => {
             const tree = parseWithCache(text);
             expect(tree!).not.toBeNull();
 
-            const nameNode = tree!.rootNode.childForFieldName("name");
-            if (nameNode) {
-                const range = makeRange(nameNode);
-                expect(range.start.line).toBe(0);
-                expect(range.start.character).toBeGreaterThanOrEqual(0);
-                expect(range.end.line).toBe(0);
-                expect(range.end.character).toBeGreaterThan(range.start.character);
-            }
+            // The "name" field belongs to the procedure declaration, not to the source-file root - asking
+            // the root for it returned null, so this case previously skipped its whole body and asserted
+            // nothing. Descend to the declaration first.
+            const declaration = tree!.rootNode.firstNamedChild;
+            assert(declaration, "expected a procedure declaration under the root");
+            const nameNode = declaration.childForFieldName("name");
+            assert(nameNode, `expected a name field on ${declaration.type}`);
+            expect(nameNode.text).toBe("foo");
+
+            const range = makeRange(nameNode);
+            expect(range.start.line).toBe(0);
+            expect(range.start.character).toBeGreaterThanOrEqual(0);
+            expect(range.end.line).toBe(0);
+            expect(range.end.character).toBeGreaterThan(range.start.character);
         });
     });
 

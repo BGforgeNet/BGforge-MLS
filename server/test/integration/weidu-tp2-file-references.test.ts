@@ -112,16 +112,19 @@ describe.skipIf(allScripts.length === 0)("weidu-tp2 file-reference navigation (r
                 const result = getDefinition(text, uri, position);
                 if (result === null) continue;
 
-                if (result.uri === uri) {
-                    // Same-file target: a heredoc block or the authoritative no-op self-location; either
-                    // way it must land within this document.
-                    resolvedToHeredoc++;
-                    expect(result.range.start.line).toBeLessThan(text.split("\n").length);
-                } else {
-                    // Cross-file target: the file it points at MUST exist. A nonexistent target is a wrong jump.
-                    resolvedToFile++;
-                    expect(existsSync(fileURLToPath(result.uri))).toBe(true);
-                }
+                // Same-file target: a heredoc block or the authoritative no-op self-location; either way
+                // it must land within this document. Cross-file target: the file it points at MUST
+                // exist, since a nonexistent target is a wrong jump. One assertion either way, so a
+                // failure names the offending site rather than a branch that quietly checked nothing.
+                const sameFile = result.uri === uri;
+                if (sameFile) resolvedToHeredoc++;
+                else resolvedToFile++;
+                expect({
+                    site: `${uri} -> ${result.uri}`,
+                    ok: sameFile
+                        ? result.range.start.line < text.split("\n").length
+                        : existsSync(fileURLToPath(result.uri)),
+                }).toEqual({ site: `${uri} -> ${result.uri}`, ok: true });
             }
         }
 

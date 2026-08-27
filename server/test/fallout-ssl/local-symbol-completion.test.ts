@@ -4,7 +4,7 @@
  * for procedures, macros, and variables.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import { CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 
 // Mock LSP connection before importing modules that use it
@@ -114,11 +114,9 @@ variable my_var := 42;
         const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
-        expect(isVariableSymbol(symbol!)).toBe(true);
-        if (isVariableSymbol(symbol!)) {
-            // Type should be omitted when not known, not set to magic "unknown" string
-            expect(symbol.variable.type).toBeUndefined();
-        }
+        assert(isVariableSymbol(symbol!));
+        // Type should be omitted when not known, not set to magic "unknown" string
+        expect(symbol.variable.type).toBeUndefined();
     });
 
     it("should not have explicit signature on variable symbols", () => {

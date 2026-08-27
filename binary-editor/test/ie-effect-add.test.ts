@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { buildLayout } from "../src/layout";
 import { structureOp } from "../src/structure-ops";
 import type { EditorSession } from "../src/session";
@@ -32,8 +32,8 @@ maybe("ITM effect add wiring", () => {
             (t.rows ?? []).flatMap((r) => r.panels.flatMap((p) => p.blocks)),
         );
         const tree = blocks.find((b) => b.kind === "effectTree");
-        expect(tree, "ITM layout should expose an effectTree block").toBeDefined();
-        if (tree?.kind === "effectTree") expect(tree.childSection).toBe("Effects");
+        assert(tree?.kind === "effectTree", "ITM layout should expose an effectTree block");
+        expect(tree.childSection).toBe("Effects");
     });
 
     it("section add on Effects grows the Effects table by one (a global effect)", () => {

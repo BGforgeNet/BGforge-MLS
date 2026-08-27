@@ -3,7 +3,7 @@
  * Tests distributive law application, De Morgan's, and blowup limits.
  */
 
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { dnfToCnf } from "../../../transpilers/tbaf/src/cnf";
 import type { BAFCondition, BAFTopCondition, BAFOrGroup } from "../../../transpilers/tbaf/src/ir";
 
@@ -55,12 +55,10 @@ describe("dnfToCnf", () => {
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
-            expect(isOrGroup(first)).toBe(true);
-            if (isOrGroup(first)) {
-                expect(first.conditions).toHaveLength(2);
-                expect(first.conditions[0]!.name).toBe("A");
-                expect(first.conditions[1]!.name).toBe("B");
-            }
+            assert(isOrGroup(first));
+            expect(first.conditions).toHaveLength(2);
+            expect(first.conditions[0]!.name).toBe("A");
+            expect(first.conditions[1]!.name).toBe("B");
         });
     });
 
@@ -74,12 +72,10 @@ describe("dnfToCnf", () => {
 
             // Each result clause should be an OR group
             for (const clause of result) {
-                expect(isOrGroup(clause)).toBe(true);
-                if (isOrGroup(clause)) {
-                    expect(clause.conditions).toHaveLength(2);
-                    // Each clause should contain C
-                    expect(clause.conditions.some((c) => c.name === "C")).toBe(true);
-                }
+                assert(isOrGroup(clause));
+                expect(clause.conditions).toHaveLength(2);
+                // Each clause should contain C
+                expect(clause.conditions.some((c) => c.name === "C")).toBe(true);
             }
         });
 
@@ -95,10 +91,8 @@ describe("dnfToCnf", () => {
 
             // All should be OR groups
             for (const clause of result) {
-                expect(isOrGroup(clause)).toBe(true);
-                if (isOrGroup(clause)) {
-                    expect(clause.conditions).toHaveLength(2);
-                }
+                assert(isOrGroup(clause));
+                expect(clause.conditions).toHaveLength(2);
             }
         });
     });
@@ -111,11 +105,9 @@ describe("dnfToCnf", () => {
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
-            expect(isOrGroup(first)).toBe(true);
-            if (isOrGroup(first)) {
-                expect(first.conditions[0]!.negated).toBe(true);
-                expect(first.conditions[1]!.negated).toBe(true);
-            }
+            assert(isOrGroup(first));
+            expect(first.conditions[0]!.negated).toBe(true);
+            expect(first.conditions[1]!.negated).toBe(true);
         });
 
         it("converts (!A && !B) || (!C) to (!A || !C) && (!B || !C)", () => {
@@ -123,12 +115,10 @@ describe("dnfToCnf", () => {
 
             expect(result).toHaveLength(2);
             for (const clause of result) {
-                expect(isOrGroup(clause)).toBe(true);
-                if (isOrGroup(clause)) {
-                    // All atoms should be negated
-                    for (const c of clause.conditions) {
-                        expect(c.negated).toBe(true);
-                    }
+                assert(isOrGroup(clause));
+                // All atoms should be negated
+                for (const c of clause.conditions) {
+                    expect(c.negated).toBe(true);
                 }
             }
         });
@@ -152,10 +142,8 @@ describe("dnfToCnf", () => {
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
-            expect(isOrGroup(first)).toBe(true);
-            if (isOrGroup(first)) {
-                expect(first.conditions).toHaveLength(2);
-            }
+            assert(isOrGroup(first));
+            expect(first.conditions).toHaveLength(2);
         });
     });
 
@@ -204,10 +192,8 @@ describe("dnfToCnf", () => {
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
-            expect(isOrGroup(first)).toBe(true);
-            if (isOrGroup(first)) {
-                expect(first.conditions).toHaveLength(3);
-            }
+            assert(isOrGroup(first));
+            expect(first.conditions).toHaveLength(3);
         });
 
         it("handles mixed single and multi-element terms", () => {
@@ -229,10 +215,8 @@ describe("dnfToCnf", () => {
             // Should produce (X || Y || Z) as one clause
             expect(result).toHaveLength(1);
             const first = result[0]!;
-            expect(isOrGroup(first)).toBe(true);
-            if (isOrGroup(first)) {
-                expect(first.conditions).toHaveLength(3);
-            }
+            assert(isOrGroup(first));
+            expect(first.conditions).toHaveLength(3);
         });
     });
 });

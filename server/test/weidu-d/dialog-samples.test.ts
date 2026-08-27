@@ -182,12 +182,9 @@ describe("weidu-d/dialog - sample files", () => {
             // the chain ends with an EXIT action not captured as a transition node.
             const lastIdx = result.states.length - 1;
             for (const [i, state] of result.states.entries()) {
-                if (i < lastIdx) {
-                    expect(
-                        state.transitions.length,
-                        `non-last state[${i}] must have transitions`,
-                    ).toBeGreaterThanOrEqual(1);
-                }
+                // The last state is exempt, so it is asserted to its own floor of 0 rather than skipped -
+                // a branch that asserts on only some iterations reports green over the ones it skipped.
+                expect(state.transitions.length, `state[${i}] transitions`).toBeGreaterThanOrEqual(i < lastIdx ? 1 : 0);
             }
             // The last state has no outgoing transitions (chain ends with EXIT).
             expect(result.states[lastIdx]!.transitions.length).toBe(0);

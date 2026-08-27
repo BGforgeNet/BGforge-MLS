@@ -49,11 +49,11 @@ describe("root vitest.config.ts project list", () => {
     });
 
     it.each(configs)("%s is aggregated or excluded with a reason", (config) => {
-        if (EXCLUDED[config] !== undefined) {
-            expect(EXCLUDED[config]).not.toBe("");
-            return;
-        }
-        expect(listed).toContain(config);
+        // Every config is either aggregated by the root vitest config or carries a non-empty exclusion
+        // reason. Asserted as one disjunction so both halves run on every row.
+        const reason = EXCLUDED[config];
+        const satisfied = reason === undefined ? listed.includes(config) : reason !== "";
+        expect(satisfied, `${config}: not aggregated and no exclusion reason`).toBe(true);
     });
 
     it("lists no config that has been renamed or deleted", () => {

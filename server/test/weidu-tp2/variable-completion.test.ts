@@ -3,7 +3,7 @@
  * Tests local variable completion and header variable completion (with JSDoc).
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 import type { Position } from "vscode-languageserver/node";
 
 // Mock the LSP connection module
@@ -23,6 +23,15 @@ vi.mock("../../src/path-utils", async (importOriginal) => {
         isSubpath: vi.fn(() => true),
     };
 });
+
+/**
+ * The rendered text of a hover's MarkupContent. Asserts the shape rather than testing it: these cases exist
+ * to check what the hover SAYS, so a hover that is absent or not markup is a failure, not a case to skip.
+ */
+function hoverText(contents: unknown): string {
+    assert(contents && typeof contents === "object" && "value" in contents);
+    return String(contents.value);
+}
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
@@ -263,13 +272,11 @@ OUTER_SET debug_mode = 0
         // Get hover from symbol
         const symbol = weiduTp2Provider.resolveSymbol!("debug_mode", "", normalizeUri(""));
         expect(symbol?.hover).toBeDefined();
-        const contents = symbol?.hover.contents;
-        if (contents && typeof contents === "object" && "value" in contents) {
-            expect(contents.value).toContain("int debug_mode");
-            // Non-UPPERCASE: should not show value
-            expect(contents.value).not.toContain("= 0");
-            expect(contents.value).toContain("Configuration flag for debug mode");
-        }
+        const contents = hoverText(symbol?.hover.contents);
+        expect(contents).toContain("int debug_mode");
+        // Non-UPPERCASE: should not show value
+        expect(contents).not.toContain("= 0");
+        expect(contents).toContain("Configuration flag for debug mode");
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
@@ -300,25 +307,15 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~`;
         // Non-UPPERCASE: should show type and name only
         const intSymbol = weiduTp2Provider.resolveSymbol!("test123", "", normalizeUri(""));
         expect(intSymbol?.hover).toBeDefined();
-        if (
-            intSymbol?.hover.contents &&
-            typeof intSymbol.hover.contents === "object" &&
-            "value" in intSymbol.hover.contents
-        ) {
-            expect(intSymbol.hover.contents.value).toContain("int test123");
-            expect(intSymbol.hover.contents.value).not.toContain("= 120");
-        }
+        const intText = hoverText(intSymbol?.hover.contents);
+        expect(intText).toContain("int test123");
+        expect(intText).not.toContain("= 120");
 
         const strSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", normalizeUri(""));
         expect(strSymbol?.hover).toBeDefined();
-        if (
-            strSymbol?.hover.contents &&
-            typeof strSymbol.hover.contents === "object" &&
-            "value" in strSymbol.hover.contents
-        ) {
-            expect(strSymbol.hover.contents.value).toContain("string mod_folder");
-            expect(strSymbol.hover.contents.value).not.toContain("= ~mymod~");
-        }
+        const strText = hoverText(strSymbol?.hover.contents);
+        expect(strText).toContain("string mod_folder");
+        expect(strText).not.toContain("= ~mymod~");
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
@@ -333,23 +330,11 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~`;
         // UPPERCASE: should show type, name, AND value
         const intSymbol = weiduTp2Provider.resolveSymbol!("MAX_LEVEL", "", normalizeUri(""));
         expect(intSymbol?.hover).toBeDefined();
-        if (
-            intSymbol?.hover.contents &&
-            typeof intSymbol.hover.contents === "object" &&
-            "value" in intSymbol.hover.contents
-        ) {
-            expect(intSymbol.hover.contents.value).toContain("int MAX_LEVEL = 40");
-        }
+        expect(hoverText(intSymbol?.hover.contents)).toContain("int MAX_LEVEL = 40");
 
         const strSymbol = weiduTp2Provider.resolveSymbol!("MOD_FOLDER", "", normalizeUri(""));
         expect(strSymbol?.hover).toBeDefined();
-        if (
-            strSymbol?.hover.contents &&
-            typeof strSymbol.hover.contents === "object" &&
-            "value" in strSymbol.hover.contents
-        ) {
-            expect(strSymbol.hover.contents.value).toContain("string MOD_FOLDER = ~mymod~");
-        }
+        expect(hoverText(strSymbol?.hover.contents)).toContain("string MOD_FOLDER = ~mymod~");
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
@@ -366,11 +351,10 @@ OUTER_TEXT_SPRINT spell ~SPWI101~`;
         // Test JSDoc @type overrides inferred type
         const symbol = weiduTp2Provider.resolveSymbol!("spell", "", normalizeUri(""));
         expect(symbol?.hover).toBeDefined();
-        if (symbol?.hover.contents && typeof symbol.hover.contents === "object" && "value" in symbol.hover.contents) {
-            expect(symbol.hover.contents.value).toContain("resref spell");
-            // Non-UPPERCASE: should not show value
-            expect(symbol.hover.contents.value).not.toContain("= ~SPWI101~");
-        }
+        const spellText = hoverText(symbol?.hover.contents);
+        expect(spellText).toContain("resref spell");
+        // Non-UPPERCASE: should not show value
+        expect(spellText).not.toContain("= ~SPWI101~");
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);

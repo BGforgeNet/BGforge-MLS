@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 vi.mock("../../src/logger", () => ({
     conlog: vi.fn(),
 }));
@@ -58,8 +58,8 @@ function at(line: number, token: string): Position {
 describe("weiduDProvider.hover - embedded BAF", () => {
     it("resolves a BAF trigger hovered inside a trigger string", () => {
         const result = weiduDProvider.hover!(text, "Acquired", URI, at(2, "Acquired"));
-        expect(result.handled).toBe(true);
-        if (result.handled) expect(result.hover).not.toBeNull();
+        assert(result.handled);
+        expect(result.hover).not.toBeNull();
     });
 
     it("falls through (notHandled) for a non-BAF word inside a trigger string", () => {
@@ -69,8 +69,8 @@ describe("weiduDProvider.hover - embedded BAF", () => {
 
     it("still hovers a D state label outside any embedded region", () => {
         const result = weiduDProvider.hover!(text, "greeting", URI, at(2, "greeting"));
-        expect(result.handled).toBe(true);
-        if (result.handled) expect(result.hover).not.toBeNull();
+        assert(result.handled);
+        expect(result.hover).not.toBeNull();
     });
 });
 

@@ -155,17 +155,14 @@ describe("Symbols integration", () => {
                 // Both should be markdown
                 expect(newContent.kind).toBe(oldContent.kind);
 
-                if ((nameCounts.get(name) ?? 0) > 1) {
-                    // Overloaded: hover.json has merged content from all stanzas.
-                    // The symbol's hover (from first completion entry) should be
-                    // contained within the merged hover. We only check merged ⊃ single
-                    // (not exact equality) because the symbol system returns the first
-                    // stanza's hover, while merged hover combines all stanzas.
-                    expect(oldContent.value).toContain(newContent.value);
-                } else {
-                    // Unique name: exact match
-                    expect(newContent.value).toBe(oldContent.value);
-                }
+                // Overloaded: hover.json has merged content from all stanzas, so the symbol's hover
+                // (from the first completion entry) is CONTAINED in the merged hover rather than equal
+                // to it. A unique name matches exactly. The distinction goes in the expected value, not
+                // in a branch around the expectation.
+                const overloaded = (nameCounts.get(name) ?? 0) > 1;
+                const actual =
+                    overloaded && oldContent.value.includes(newContent.value) ? newContent.value : oldContent.value;
+                expect(actual).toBe(newContent.value);
             }
         });
 

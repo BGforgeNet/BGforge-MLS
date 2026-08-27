@@ -2,7 +2,7 @@
  * Unit tests for weidu-d/hover.ts - JSDoc hover for state labels.
  */
 
-import { describe, expect, it, beforeAll, vi } from "vitest";
+import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 vi.mock("../../src/server", () => ({
     connection: {
         console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -33,15 +33,13 @@ describe("weidu-d/hover", () => {
         // Cursor on "greeting" label (line 3, char 25 - inside "greeting" at col 23-30)
         const result = getStateLabelHover(text, "greeting", URI, { line: 3, character: 25 });
 
-        expect(result.handled).toBe(true);
-        if (result.handled) {
-            expect(result.hover).not.toBeNull();
-            const contents = result.hover?.contents;
-            expect(contents).toBeDefined();
-            const value = (contents as { value: string }).value;
-            expect(value).toContain("greeting");
-            expect(value).toContain("Greeting state");
-        }
+        assert(result.handled);
+        expect(result.hover).not.toBeNull();
+        const contents = result.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
+        expect(value).toContain("greeting");
+        expect(value).toContain("Greeting state");
     });
 
     it("shows JSDoc description when hovering on a GOTO target", () => {
@@ -63,14 +61,12 @@ describe("weidu-d/hover", () => {
         // "greeting" starts at char 20
         const result = getStateLabelHover(text, "greeting", URI, { line: 4, character: 22 });
 
-        expect(result.handled).toBe(true);
-        if (result.handled) {
-            expect(result.hover).not.toBeNull();
-            const contents = result.hover?.contents;
-            expect(contents).toBeDefined();
-            const value = (contents as { value: string }).value;
-            expect(value).toContain("Greeting state");
-        }
+        assert(result.handled);
+        expect(result.hover).not.toBeNull();
+        const contents = result.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
+        expect(value).toContain("Greeting state");
     });
 
     it("returns notHandled when no JSDoc exists", () => {
@@ -110,23 +106,17 @@ describe("weidu-d/hover", () => {
 
         // Hover on "shared" in DIALOG_A (line 3, char 20)
         const resultA = getStateLabelHover(text, "shared", URI, { line: 3, character: 20 });
-        expect(resultA.handled).toBe(true);
-        if (resultA.handled) {
-            const contents = resultA.hover?.contents;
-            expect(contents).toBeDefined();
-            const value = (contents as { value: string }).value;
-            expect(value).toContain("State in dialog A");
-        }
+        assert(resultA.handled);
+        const contentsA = resultA.hover?.contents;
+        expect(contentsA).toBeDefined();
+        expect((contentsA as { value: string }).value).toContain("State in dialog A");
 
         // Hover on "shared" in DIALOG_B (line 10, char 20)
         const resultB = getStateLabelHover(text, "shared", URI, { line: 10, character: 20 });
-        expect(resultB.handled).toBe(true);
-        if (resultB.handled) {
-            const contents = resultB.hover?.contents;
-            expect(contents).toBeDefined();
-            const value = (contents as { value: string }).value;
-            expect(value).toContain("State in dialog B");
-        }
+        assert(resultB.handled);
+        const contentsB = resultB.hover?.contents;
+        expect(contentsB).toBeDefined();
+        expect((contentsB as { value: string }).value).toContain("State in dialog B");
     });
 
     it("returns notHandled when JSDoc comment does not start with /**", () => {
@@ -184,12 +174,9 @@ describe("weidu-d/hover", () => {
         // Cursor on "greeting" (line 4, char 25)
         const result = getStateLabelHover(text, "greeting", URI, { line: 4, character: 25 });
 
-        expect(result.handled).toBe(true);
-        if (result.handled) {
-            const contents = result.hover?.contents;
-            expect(contents).toBeDefined();
-            const value = (contents as { value: string }).value;
-            expect(value).toContain("Greeting state");
-        }
+        assert(result.handled);
+        const contents = result.hover?.contents;
+        expect(contents).toBeDefined();
+        expect((contents as { value: string }).value).toContain("Greeting state");
     });
 });

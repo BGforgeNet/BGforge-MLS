@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
 import {
@@ -141,8 +141,8 @@ describe.skipIf(!haveRealSplit)("combineFrmDirections (real corpus)", () => {
         for (const seq of combined.sequences) {
             for (const ref of seq.frameRefs) {
                 const f = combined.frames[ref];
-                expect(f).toBeDefined();
-                if (f) expect(f.pixels).toHaveLength(f.width * f.height);
+                assert(f);
+                expect(f.pixels).toHaveLength(f.width * f.height);
             }
         }
         // The combined animation re-serializes into a parseable 6-direction FRM.
