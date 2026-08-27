@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Animation editor
+
+- BAM V2 files open, play and save. Their frames live in separate `MOSxxxx.PVRZ` pages, which are read
+  from beside the `.bam` first and from the open game second, so a modded page shadows the installed one.
+  - True colour with per-pixel alpha, so soft edges survive where a palette could only round them off.
+  - An untouched file saves back byte for byte and its pages are left alone: block compression is lossy,
+    and re-encoding on every save would degrade the art a little each time.
+  - Saving elsewhere carries the pages along, since the `.bam` addresses them by number and the new
+    folder has none of them.
+  - Editing the frames means the pages have to be rebuilt, so the editor asks which page number to start
+    at. Pick a range your mod owns - reusing one the game ships corrupts its graphics.
+  - Saving asks before replacing any `MOSxxxx.PVRZ` already in the target folder.
+- BAM V2 joins FRM, BAM V1 and BAMC as a "Save as" target, in both directions: a palette-indexed
+  animation converts up to true colour, and a true-colour one converts down by quantizing, warning first
+  about the colours and the per-pixel alpha it cannot keep.
+- A true-colour animation exports to PNG and APNG in true colour, and imports back the same way, rather
+  than being flattened onto a palette on the way through.
+- The frame rate is editable for every format, not only FRM. Only an FRM header stores one, so on a BAM
+  it retunes playback in the editor and is not saved - the field says so.
+- A BAM V2 whose header claims more pixels than any real animation is reported as malformed rather than
+  allocated for.
+
 ### Infinity Engine
 
 - DLG, BCS and BS get first-class IDE experience. They are automatically decoded on click and presented for

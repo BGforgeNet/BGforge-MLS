@@ -139,8 +139,8 @@ vscode-mls/
 |   +-- src/                    index.ts (public library) + internal.ts (in-repo helpers) + cli.ts (fgfmt bin)
 |   +-- out/                    tsdown output + WASM files
 |
-+-- image/                  @bgforge/image package: animation library (Fallout FRM / IE BAM codecs, FRM <-> BAM conversion, PNG/APNG import-export)
-|   +-- src/                    Codecs (frm/, bam/, png/, palette/) + conversions (convert/) + PNG-directory/APNG io (io/)
++-- image/                  @bgforge/image package: animation library (Fallout FRM / IE BAM codecs, indexed <-> true-colour conversion, PNG/APNG import-export)
+|   +-- src/                    Codecs (frm/, bam/, png/, palette/, pvrz/) + conversions (convert/, quantize/) + PNG-directory/APNG io (io/)
 |   +-- test/                   Library tests (vitest)
 |   +-- out/                    tsdown output
 |
