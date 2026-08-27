@@ -19,13 +19,28 @@ export function summarizeLoss(report: LossReport): { message: string; detail: st
  * `<base>.<ext>`. BAMC shares the .bam extension, so its output name collides with an uncompressed
  * BAM / the source - a re-encode in place, intended.
  */
+/**
+ * How each target names its output: a file with an extension, or a directory with a name suffix.
+ *
+ * A `Record<SaveAsTarget, ...>` rather than a chain of comparisons, so adding a target is a COMPILE
+ * error here instead of falling through to a default that invents `<base>.<target>`. BAMC and BAM v2
+ * both live in a `.bam` alongside an uncompressed BAM - the header inside says which - so their
+ * output name collides with the source, a re-encode in place, intended.
+ */
+const TARGET_OUTPUT = {
+    frm: { kind: "file", ext: "frm" },
+    bam: { kind: "file", ext: "bam" },
+    bamc: { kind: "file", ext: "bam" },
+    bamv2: { kind: "file", ext: "bam" },
+    apng: { kind: "directory", suffix: "-apng" },
+    "png-directory": { kind: "directory", suffix: "" },
+} as const satisfies Record<SaveAsTarget, { kind: "file"; ext: string } | { kind: "directory"; suffix: string }>;
+
 export function saveAsTargetPath(srcPath: string, target: SaveAsTarget): string {
     const dir = path.dirname(srcPath);
     const base = path.parse(srcPath).name;
-    if (target === "apng") return path.join(dir, `${base}-apng`);
-    if (target === "png-directory") return path.join(dir, base);
-    const ext = target === "bamc" ? "bam" : target;
-    return path.join(dir, `${base}.${ext}`);
+    const output = TARGET_OUTPUT[target];
+    return output.kind === "file" ? path.join(dir, `${base}.${output.ext}`) : path.join(dir, `${base}${output.suffix}`);
 }
 
 /**

@@ -4,8 +4,11 @@ import {
     type Animation,
     type IndexedAnimation,
     DEFAULT_FALLOUT_PALETTE,
+    convertToBamV2,
     importPngDirectory,
     isRgbaAnimation,
+    needsFreshPages,
+    serializeBamV2,
 } from "@bgforge/image";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
@@ -216,6 +219,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 return;
             }
 
+            if (target === "bamv2") {
+                await this.saveAsBamV2(document, targetPath);
+                return;
+            }
+
             // A true-colour document is quantized here; an indexed one comes back with its active
             // palette resolved. FRM's "nearest match" mode pins the palette so the colours make ONE
             // hop rather than being quantized and then remapped (see indexedForExport).
@@ -254,6 +262,60 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 `Save failed: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
+    }
+
+    /**
+     * Save As a BAM v2: convert the animation into v2's shape, then write the `.bam` plus the PVRZ
+     * pages its frames need. Unlike every other target this can require input - a page number - so it
+     * lives in its own method rather than another branch of handleSaveAs.
+     */
+    private async saveAsBamV2(document: ImageEditorDocument, targetPath: string): Promise<void> {
+        // resolvedAnimation for an indexed document: its active palette is what becomes the pixels,
+        // and an FRM's own palette is an all-black placeholder (see document-model).
+        const { animation, report } = convertToBamV2(document.resolvedAnimation() ?? document.animation);
+        if (!report.lossless) {
+            const { message, detail } = summarizeLoss(report);
+            const confirmed = await vscode.window.showWarningMessage(message, { modal: true, detail }, "Save anyway");
+            if (confirmed !== "Save anyway") return;
+        }
+
+        // Frames that came from a page can be written back against it; anything else needs pages of
+        // its own, and which page numbers are free is a fact about the installation, not the file.
+        let basePage: number | undefined;
+        if (needsFreshPages(animation)) {
+            basePage = await this.pickBasePage(path.basename(targetPath));
+            if (basePage === undefined) return; // user dismissed the prompt
+        }
+        // No fresh pages needed means the frames are still the source file's, so its own pages come
+        // along verbatim - the destination folder has none of them.
+        const saved = serializeBamV2(animation, basePage === undefined ? { emitUnchangedPages: true } : { basePage });
+        await this.writeAll(
+            planImageSave({
+                targetPath,
+                bytes: saved.bam,
+                pages: pvrzPageWrites(targetPath, saved.pages),
+            }),
+        );
+        const pageCount = saved.pages.length;
+        vscode.window.setStatusBarMessage(
+            `Saved ${path.basename(targetPath)}${pageCount > 0 ? ` and ${pageCount} PVRZ page(s)` : ""}`,
+            3000,
+        );
+    }
+
+    /**
+     * Ask which PVRZ page number to start at. Never defaulted: a number already taken by a page
+     * inside the game's own BIF archives surfaces only as corrupted graphics at runtime, and only
+     * the person doing the install knows which range their mod owns.
+     */
+    private async pickBasePage(fileName: string): Promise<number | undefined> {
+        const answer = await vscode.window.showInputBox({
+            title: `PVRZ page number for ${fileName}`,
+            prompt: "The frames are written into MOS<nnnn>.PVRZ files starting at this number. Pick a range your mod owns - reusing a number the game already ships corrupts its graphics.",
+            validateInput: (value) =>
+                /^\d{1,4}$/.test(value.trim()) ? undefined : "Enter a page number between 0 and 9999.",
+        });
+        return answer === undefined ? undefined : Number(answer.trim());
     }
 
     /**

@@ -78,11 +78,23 @@ export function decodeFramePixels(b64: string): Uint8Array {
 // and has no on-disk BAM field, so a webview edit could not survive save/reopen anyway.
 export type MetaPatch = Partial<Pick<AnimationMeta, "fps" | "actionFrame" | "transparentIndex">>;
 
-// "bam" = uncompressed BAM V1, "bamc" = compressed BAMC - two on-disk encodings of the same animation,
-// both using the .bam extension (the host maps the extension; see provider.handleSaveAs).
-export type SaveAsTarget = "frm" | "bam" | "bamc" | "apng" | "png-directory";
+// "bam" = uncompressed BAM V1, "bamc" = compressed BAMC, "bamv2" = true-colour BAM V2 - three on-disk
+// encodings sharing the .bam extension (the host maps the extension; see saveAsTargetPath).
+export type SaveAsTarget = "frm" | "bam" | "bamc" | "bamv2" | "apng" | "png-directory";
 
-const SAVE_AS_TARGETS = new Set<string>(["frm", "bam", "bamc", "apng", "png-directory"] satisfies SaveAsTarget[]);
+// Keyed off a Record, not a bare array: `satisfies SaveAsTarget[]` checks each entry is a valid
+// target but NOT that every target is listed, so a new member could be added to the union and
+// silently rejected by the guard below. A Record demands every key.
+const SAVE_AS_TARGETS = new Set<string>(
+    Object.keys({
+        frm: true,
+        bam: true,
+        bamc: true,
+        bamv2: true,
+        apng: true,
+        "png-directory": true,
+    } satisfies Record<SaveAsTarget, true>),
+);
 const PALETTE_MODES = new Set<string>(["sidecar", "nearest"]);
 const IMPORT_MODES = new Set<string>(["replace", "append"]);
 

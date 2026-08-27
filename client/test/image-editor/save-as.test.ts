@@ -44,6 +44,10 @@ describe("saveAsTargetPath", () => {
     it("gives BAMC the shared .bam extension", () => {
         expect(saveAsTargetPath(src, "bamc")).toBe(path.join("mods", "art", "critter.bam"));
     });
+
+    it("gives BAM v2 the shared .bam extension too - the header inside says which it is", () => {
+        expect(saveAsTargetPath(src, "bamv2")).toBe(path.join("mods", "art", "critter.bam"));
+    });
 });
 
 describe("needsCyclePick", () => {

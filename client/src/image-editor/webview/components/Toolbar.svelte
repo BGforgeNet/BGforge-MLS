@@ -31,10 +31,15 @@
             source === "bam" ? [] : [{ value: "bam", label: "BAM (uncompressed)", target: "bam" }];
         const bamCompressed: SaveAsOption[] =
             source === "bamc" ? [] : [{ value: "bamc", label: "BAM (compressed)", target: "bamc" }];
+        // BAM v2 keeps true colour and per-pixel alpha, but writes its frames into separate
+        // MOSxxxx.PVRZ files - the host asks which page number to start at when it needs new ones.
+        const bamV2: SaveAsOption[] =
+            source === "bamv2" ? [] : [{ value: "bamv2", label: "BAM v2 (true colour)", target: "bamv2" }];
         return [
             ...frmVariants,
             ...bamUncompressed,
             ...bamCompressed,
+            ...bamV2,
             { value: "apng", label: "APNG", target: "apng" },
             { value: "png-directory", label: "PNG directory", target: "png-directory" },
         ];

@@ -61,10 +61,12 @@ export {
     type IndexedConvertOpts,
     convert,
     convertToBam,
+    convertToBamV2,
     convertToFrm,
     convertToIndexed,
     convertToRgba,
     frmDirectionMode,
+    needsFreshPages,
 } from "./convert/index.ts";
 
 // Import/export codecs (PNG directory with manifest, APNG preview). The manifest wire-format
