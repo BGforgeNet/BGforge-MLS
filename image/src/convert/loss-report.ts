@@ -6,7 +6,9 @@ export type LossKind =
     | "shared-frame-direction-offset"
     | "embedded-palette"
     | "palette-remapped-to-default"
-    | "palette-sidecar-required";
+    | "palette-sidecar-required"
+    | "alpha-flattened"
+    | "colours-quantized";
 
 export interface LossItem {
     kind: LossKind;
@@ -42,6 +44,11 @@ export class LossReport {
     /** True when nothing was actually lost (informational representation changes do not count). */
     get lossless(): boolean {
         return this.losses.length === 0;
+    }
+
+    /** Fold another report in, so a conversion that ran in two stages warns about the result once. */
+    absorb(other: LossReport): void {
+        this.items.push(...other.items);
     }
 
     has(kind: LossKind): boolean {

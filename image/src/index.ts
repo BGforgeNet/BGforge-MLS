@@ -55,7 +55,15 @@ export { loadImage } from "./load.ts";
 
 // Conversion.
 export { type LossItem, type LossKind, LossReport } from "./convert/loss-report.ts";
-export { type FrmConvertOpts, convert, convertToBam, convertToFrm, frmDirectionMode } from "./convert/index.ts";
+export {
+    type FrmConvertOpts,
+    type IndexedConvertOpts,
+    convert,
+    convertToBam,
+    convertToFrm,
+    convertToIndexed,
+    frmDirectionMode,
+} from "./convert/index.ts";
 
 // Import/export codecs (PNG directory with manifest, APNG preview). The manifest wire-format
 // internals (readManifest/writeManifest and friends) stay io/-internal, like the PNG codec.

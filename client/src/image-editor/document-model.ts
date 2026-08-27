@@ -1,8 +1,11 @@
 import {
     type Animation,
     type BamV2PageWrite,
+    type IndexedSourceFormat,
     type RgbaAnimation,
     DEFAULT_FALLOUT_PALETTE,
+    LossReport,
+    convertToIndexed,
     encodeBamc,
     loadImage,
     isRgbaAnimation,
@@ -145,6 +148,28 @@ export class ImageDocumentModel {
     resolvedAnimation(): IndexedAnimation | undefined {
         const indexed = this.indexedAnimation();
         return indexed && { ...indexed, palette: this.activePalette(indexed) };
+    }
+
+    /**
+     * The document as an indexed animation, for an export to a format that cannot hold true colour.
+     * An indexed document comes back with its ACTIVE palette resolved in (see resolvedAnimation); a
+     * true-colour one is quantized, and the report says what that cost - per-pixel alpha becoming
+     * one transparent index, colours merging into their nearest neighbour, or neither.
+     *
+     * `palette` pins the result to a given palette instead of building one, for FRM's "nearest
+     * match" mode. Passing it here rather than remapping afterwards keeps it to ONE quantization:
+     * quantizing to a fresh palette and then remapping that onto the bundled one compounds the
+     * error twice over the same pixels.
+     */
+    indexedForExport(opts: { target: IndexedSourceFormat; palette?: Rgba[] }): {
+        animation: IndexedAnimation;
+        report: LossReport;
+    } {
+        const resolved = this.resolvedAnimation();
+        if (resolved !== undefined) return { animation: resolved, report: new LossReport() };
+        const animation = this.animationValue;
+        if (!isRgbaAnimation(animation)) throw new Error("indexedForExport: document is neither indexed nor rgba");
+        return convertToIndexed(animation, opts.target, opts.palette ? { palette: opts.palette } : {});
     }
 
     private activePalette(indexed: IndexedAnimation): Rgba[] {

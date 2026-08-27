@@ -4,6 +4,9 @@ import {
     type Animation,
     type BamV2PageWrite,
     type IndexedAnimation,
+    type IndexedSourceFormat,
+    type LossReport,
+    type Rgba,
     type RgbaAnimation,
     combineFrmDirections,
     combineIeBamPair,
@@ -349,6 +352,14 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     getBytes(): Uint8Array {
         return this.model.getBytes();
+    }
+
+    /** See ImageDocumentModel.indexedForExport - the document as indexed, and what that cost. */
+    indexedForExport(opts: { target: IndexedSourceFormat; palette?: Rgba[] }): {
+        animation: IndexedAnimation;
+        report: LossReport;
+    } {
+        return this.model.indexedForExport(opts);
     }
 
     /** See ImageDocumentModel.saveArtifacts - the artifact bytes plus any PVRZ pages to write. */

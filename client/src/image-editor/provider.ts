@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { type IndexedAnimation, importPngDirectory } from "@bgforge/image";
+import { type IndexedAnimation, DEFAULT_FALLOUT_PALETTE, importPngDirectory } from "@bgforge/image";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
@@ -180,15 +180,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         paletteMode: "sidecar" | "nearest" | undefined,
     ): Promise<void> {
         try {
-            // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder, so a
-            // raw-animation export would write black-silhouette PNGs / a black BAM (see document-model).
-            const anim = document.resolvedAnimation();
-            if (anim === undefined) {
-                // Every Save As target below writes an indexed artifact (FRM, BAM v1/BAMC, indexed
-                // PNGs, APNG built from a palette), so a true-colour document has nothing to offer
-                // here until conversion lands.
+            if (document.resolvedAnimation() === undefined && (target === "apng" || target === "png-directory")) {
+                // Both PNG exports write indexed images built from a palette, so a true-colour
+                // document has nothing to hand them until the true-colour writers land.
                 await vscode.window.showWarningMessage(
-                    "Save As is not available for a true-colour BAM v2 yet - this build reads it but cannot convert it.",
+                    `Exporting a true-colour BAM v2 as ${target === "apng" ? "APNG" : "a PNG directory"} is not available yet - save it as FRM or BAM instead.`,
                 );
                 return;
             }
@@ -211,10 +207,23 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
 
             if (target === "apng" || target === "png-directory") {
-                await this.writeAll(buildExport(anim, target, targetPath));
+                // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder,
+                // so a raw-animation export writes black-silhouette PNGs (see document-model). The
+                // true-colour case returned above, so this resolves.
+                const indexed = document.resolvedAnimation();
+                if (indexed === undefined) throw new Error("handleSaveAs: a true-colour PNG export reached the writer");
+                await this.writeAll(buildExport(indexed, target, targetPath));
                 vscode.window.setStatusBarMessage(`Exported ${path.basename(targetPath)}${path.sep}`, 3000);
                 return;
             }
+
+            // A true-colour document is quantized here; an indexed one comes back with its active
+            // palette resolved. FRM's "nearest match" mode pins the palette so the colours make ONE
+            // hop rather than being quantized and then remapped (see indexedForExport).
+            const { animation: anim, report: conversion } = document.indexedForExport({
+                target,
+                ...(target === "frm" && paletteMode === "nearest" ? { palette: DEFAULT_FALLOUT_PALETTE } : {}),
+            });
 
             // How the animation fills FRM's 6 rotations: an IE base file contributes one direction
             // block (asked by name when there are several), a non-directional animation one cycle for
@@ -225,6 +234,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 if (pick === undefined) return; // user dismissed the picker
             }
             const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, ...pick });
+            // One warning for the whole journey: quantizing to indexed and then reshaping to the
+            // target are two steps of one save, and the user is deciding about the result.
+            report.absorb(conversion);
             if (!report.lossless) {
                 const { message, detail } = summarizeLoss(report);
                 const confirmed = await vscode.window.showWarningMessage(

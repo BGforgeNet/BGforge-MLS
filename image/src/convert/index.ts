@@ -5,6 +5,7 @@ import { type FrmConvertOpts, convertToFrm } from "./to-frm.ts";
 
 export { convertToBam } from "./to-bam.ts";
 export { convertToFrm, frmDirectionMode, type FrmConvertOpts } from "./to-frm.ts";
+export { convertToIndexed, type IndexedConvertOpts } from "./to-indexed.ts";
 
 // Dispatches to the target-specific converter; each already handles the already-target-format no-op
 // case. `opts` (palette mode or a single-orientation cycle) forwards to convertToFrm, so a caller can
