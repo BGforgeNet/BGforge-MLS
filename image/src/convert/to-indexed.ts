@@ -93,14 +93,16 @@ export function convertToIndexed(
     // One nearest-colour search per DISTINCT colour rather than per pixel: a sprite repeats a few
     // hundred colours across tens of thousands of pixels, and the search is linear in the palette.
     const lookup = new Map<number, number>();
-    let quantized = false;
+    // Counted, not a flag: the loss message quotes how many DISTINCT colours actually moved, and the
+    // cache-miss branch runs exactly once per distinct colour - the same set the histogram counts.
+    let quantizedColours = 0;
     const indexOf = (r: number, g: number, b: number): number => {
         const key = (r << 16) | (g << 8) | b;
         const cached = lookup.get(key);
         if (cached !== undefined) return cached;
         const index = nearestIndex(r, g, b, palette);
         const chosen = palette[index];
-        if (chosen === undefined || chosen.r !== r || chosen.g !== g || chosen.b !== b) quantized = true;
+        if (chosen === undefined || chosen.r !== r || chosen.g !== g || chosen.b !== b) quantizedColours++;
         lookup.set(key, index);
         return index;
     };
@@ -131,10 +133,15 @@ export function convertToIndexed(
                 `${target.toUpperCase()} stores one transparent index, not per-pixel alpha`,
         );
     }
-    if (quantized) {
+    if (quantizedColours > 0) {
+        // Two messages because the two modes lose colour for different reasons: a built palette runs
+        // out of slots, a supplied one has no slot for the colour at all. One message would have to
+        // quote a capacity, which is meaningless in the supplied case (and was reported wrongly there).
         report.add(
             "colours-quantized",
-            `${histogram.size} colour(s) were reduced to the ${MAX_PALETTE - 1} a ${target.toUpperCase()} palette holds`,
+            opts.palette
+                ? `${quantizedColours} of ${histogram.size} colour(s) were shifted to their nearest match in the ${target.toUpperCase()} palette`
+                : `${quantizedColours} of ${histogram.size} colour(s) were merged into their nearest neighbour - a ${target.toUpperCase()} palette holds ${MAX_PALETTE - 1} alongside its transparent slot`,
         );
     }
 

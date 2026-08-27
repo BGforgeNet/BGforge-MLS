@@ -25,10 +25,16 @@ export function exportPngDirectory(anim: Animation): Map<string, Uint8Array> {
     const manifest = writeManifest(anim);
     files.set("manifest.json", new TextEncoder().encode(JSON.stringify(manifest)));
 
-    const encodeFrame = isRgbaAnimation(anim)
-        ? (frame: Frame | RgbaFrame): Uint8Array => encodeTruecolourPng(frame.width, frame.height, frame.pixels)
-        : (frame: Frame | RgbaFrame): Uint8Array =>
-              encodeIndexedPng(frame.width, frame.height, frame.pixels, anim.palette, transparentIndexOf(anim.meta));
+    let encodeFrame: (frame: Frame | RgbaFrame) => Uint8Array;
+    if (isRgbaAnimation(anim)) {
+        encodeFrame = (frame) => encodeTruecolourPng(frame.width, frame.height, frame.pixels);
+    } else {
+        // Both resolved once, not per frame: they are whole-animation properties, and
+        // transparentIndexOf is the single resolution site the optional field is read through.
+        const { palette } = anim;
+        const transparentIndex = transparentIndexOf(anim.meta);
+        encodeFrame = (frame) => encodeIndexedPng(frame.width, frame.height, frame.pixels, palette, transparentIndex);
+    }
 
     for (const [s, seq] of anim.sequences.entries()) {
         const dirId = sequenceDirId(seq, s);

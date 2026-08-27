@@ -93,6 +93,8 @@ describe("convertToIndexed", () => {
         expect(report.has("colours-quantized")).toBe(true);
         expect(report.lossless).toBe(false);
         expect(animation.palette).toHaveLength(256);
+        // A BUILT palette ran out of slots, so quoting its capacity is what explains the loss.
+        expect(report.losses[0]?.detail).toMatch(/a BAM palette holds 255 alongside its transparent slot$/);
     });
 
     it("carries the frame geometry, offsets, sequences and timing across unchanged", () => {
@@ -121,5 +123,10 @@ describe("convertToIndexed", () => {
         // Nearest, not exact: the bundled palette has no 254,254,254, and white is what it has.
         expect(colourAt(animation.palette, frame.pixels, 0)).toEqual({ r: 255, g: 255, b: 255, a: 255 });
         expect(report.has("colours-quantized")).toBe(true);
+        // A SUPPLIED palette has no capacity to run out of, so the message must not quote one - the
+        // single source colour did not shrink to 255 of anything, it just landed on the nearest slot.
+        expect(report.losses[0]?.detail).toBe(
+            "1 of 1 colour(s) were shifted to their nearest match in the FRM palette",
+        );
     });
 });
