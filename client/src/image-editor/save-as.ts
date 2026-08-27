@@ -14,12 +14,6 @@ export function summarizeLoss(report: LossReport): { message: string; detail: st
 }
 
 /**
- * Auto-named destination next to the source. Multi-file exports get a directory (the -apng suffix
- * stops the two directory exports from colliding on the same folder); single-file targets get
- * `<base>.<ext>`. BAMC shares the .bam extension, so its output name collides with an uncompressed
- * BAM / the source - a re-encode in place, intended.
- */
-/**
  * How each target names its output: a file with an extension, or a directory with a name suffix.
  *
  * A `Record<SaveAsTarget, ...>` rather than a chain of comparisons, so adding a target is a COMPILE
@@ -36,6 +30,8 @@ const TARGET_OUTPUT = {
     "png-directory": { kind: "directory", suffix: "" },
 } as const satisfies Record<SaveAsTarget, { kind: "file"; ext: string } | { kind: "directory"; suffix: string }>;
 
+/** Auto-named destination next to the source. The `-apng` suffix is what stops the two directory
+ *  exports from landing on the same folder. */
 export function saveAsTargetPath(srcPath: string, target: SaveAsTarget): string {
     const dir = path.dirname(srcPath);
     const base = path.parse(srcPath).name;

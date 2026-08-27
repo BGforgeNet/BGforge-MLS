@@ -126,9 +126,6 @@ export class ImageDocumentModel {
         return model;
     }
 
-    // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
-    // via combineFrmDirections), so the byte-sniffing loadImage path is bypassed. basename is the
-    // combined `<base>.frm` identity the editor should present and save to.
     /**
      * A true-colour animation the document layer already composed (BAM v2, whose PVRZ pages it
      * resolved). No sidecar: a `.pal` cannot apply to a format with no palette.
@@ -137,6 +134,9 @@ export class ImageDocumentModel {
         return new ImageDocumentModel(animation, basename, undefined);
     }
 
+    // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
+    // via combineFrmDirections), so the byte-sniffing loadImage path is bypassed. basename is the
+    // combined `<base>.frm` identity the editor should present and save to.
     static fromAnimation(animation: IndexedAnimation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
