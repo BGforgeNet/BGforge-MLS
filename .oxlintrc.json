@@ -332,6 +332,20 @@
             }
         },
         {
+            // Ambient declaration surfaces for the TD/TBAF runtimes and the generated engine stubs.
+            // `vars-on-top` misreads a top-level `declare var` (how an engine global is declared in a
+            // .d.ts) as a function-scope var. `no-unsafe-function-type` is a real weakness rather than a
+            // false positive: `state()` returns an opaque state handle typed `Function`, which `begin()`
+            // and `append()` consume. The fix is a branded handle type like the `StrRef`/`Action` brands
+            // already in td-runtime.d.ts - an API change across the plugin and every TD fixture, not a
+            // lint-config edit. Scoped to these two rules so the rest still applies here.
+            "files": ["**/*-runtime.d.ts", "**/*-engine-stubs.d.ts"],
+            "rules": {
+                "vars-on-top": "off",
+                "typescript/no-unsafe-function-type": "off"
+            }
+        },
+        {
             // `document.getElementById` is clearer and faster than
             // `.querySelector('#id')`; the rule's premise doesn't hold.
             // Webview scripts are the only DOM consumers in the codebase.
@@ -446,7 +460,6 @@
     "ignorePatterns": [
         "**/node_modules/**",
         "**/out/**",
-        "**/*.d.ts",
         "binary-editor/test/harness/**",
         "client/src/dialog-editor/test/harness/**"
     ]

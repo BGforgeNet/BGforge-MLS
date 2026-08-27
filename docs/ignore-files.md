@@ -169,6 +169,12 @@ Two guards keep the list honest:
 files stay linted: a linter catches real generator bugs, whereas a formatter only fights the generator. Do not "align"
 the two lists.
 
+The reach of that promise stops at `.gitignore`, which oxlint honours when it walks the tree. The generated
+tree-sitter declarations (`server/src/*/tree-sitter.d.ts`, `grammars/*/src/`) are gitignored build output, so no
+full-tree run ever reaches them however the lint config is written - linting them takes an explicit path argument.
+The asymmetry therefore covers generated files that are **tracked** (the `server/out/` data JSONs, the
+`shared/syntax-types/` modules), not gitignored build output.
+
 ## .oxlintrc.json
 
 Oxlint configuration.
