@@ -115,6 +115,23 @@ describe("decodeBamV2", () => {
         expect(() => decodeBamV2(structure, () => solidPage(0, 0, 0))).toThrow(/implausibly large/);
     });
 
+    it("rejects an animation whose frames are individually legal but ruinous in total", () => {
+        // The per-frame bound alone leaves the aggregate open, and a v2 frame is zero-filled rather
+        // than backed by file bytes: a 320-byte header declaring 24 maximal frames allocated 1.5 GiB
+        // before this bound existed, and frame count is limited only by file size / 12.
+        const structure = oneBlockStructure();
+        structure.frames = Array.from({ length: 24 }, () => ({
+            width: 4096,
+            height: 4096,
+            centerX: 0,
+            centerY: 0,
+            blockStart: 0,
+            blockCount: 0,
+        }));
+
+        expect(() => decodeBamV2(structure, () => solidPage(0, 0, 0))).toThrow(/whole animation|in total/);
+    });
+
     it("rejects a block naming a page the structure never listed as required", () => {
         // requiredPages drives which pages get resolved, so a block outside it would otherwise read
         // an undefined page. Reachable only for a hand-built structure, which is exactly this case.

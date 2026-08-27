@@ -1,6 +1,6 @@
 import { type RgbaAnimation, type RgbaFrame, type Sequence } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
-import { MAX_FRAME_PIXELS } from "../limits.ts";
+import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 import { decodePvrz } from "../pvrz/container.ts";
 import { type PvrTexture } from "../pvrz/texture.ts";
 import { type BamV2Structure } from "./v2-structure.ts";
@@ -42,10 +42,20 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, so
         pages.set(page, decodePvrz(bytes));
     }
 
+    // Running total, checked before each allocation: every frame can sit under MAX_FRAME_PIXELS while
+    // the animation as a whole is ruinous, and a v2 frame needs no backing bytes to claim its size.
+    let totalPixels = 0;
+
     const frames: RgbaFrame[] = structure.frames.map((entry, index) => {
         if (entry.width * entry.height > MAX_FRAME_PIXELS) {
             throw new Error(
                 `decodeBamV2: frame ${index} claims ${entry.width}x${entry.height} pixels - implausibly large for a sprite`,
+            );
+        }
+        totalPixels += entry.width * entry.height;
+        if (totalPixels > MAX_ANIMATION_PIXELS) {
+            throw new Error(
+                `decodeBamV2: frames 0-${index} claim ${totalPixels} pixels in total - more than the ${MAX_ANIMATION_PIXELS} a whole animation may hold`,
             );
         }
         // Zero-filled, so any region no block covers stays fully transparent.
