@@ -9,12 +9,17 @@ import { decodeBamV2, readBamV2Structure, serializeBamV1, serializeBamV2, type R
 import { decodeBackup, encodeBackup } from "../../src/image-editor/backup";
 import { makeMiniBam } from "./fixtures";
 
-const { readFileMock, writeFileMock, showInputBoxMock, createDirectoryMock } = vi.hoisted(() => ({
-    readFileMock: vi.fn(),
-    writeFileMock: vi.fn(),
-    showInputBoxMock: vi.fn(),
-    createDirectoryMock: vi.fn(),
-}));
+const { readFileMock, writeFileMock, showInputBoxMock, createDirectoryMock, showWarningMock, statMock } = vi.hoisted(
+    () => ({
+        readFileMock: vi.fn(),
+        writeFileMock: vi.fn(),
+        showInputBoxMock: vi.fn(),
+        createDirectoryMock: vi.fn(),
+        showWarningMock: vi.fn(),
+        // fs.stat is how fileExists answers; rejecting means "no such file", which is the default.
+        statMock: vi.fn((_target: { toString: () => string }): Promise<unknown> => Promise.reject(new Error("ENOENT"))),
+    }),
+);
 
 vi.mock("vscode", () => {
     class EventEmitter {
@@ -38,13 +43,18 @@ vi.mock("vscode", () => {
             joinPath: (base: { path: string }, ...parts: string[]) => make([base.path, ...parts].join("/")),
         },
         window: {
-            showWarningMessage: vi.fn(),
+            showWarningMessage: showWarningMock,
             showOpenDialog: vi.fn(),
             showInputBox: showInputBoxMock,
             setStatusBarMessage: vi.fn(),
         },
         workspace: {
-            fs: { readFile: readFileMock, writeFile: writeFileMock, createDirectory: createDirectoryMock },
+            fs: {
+                readFile: readFileMock,
+                writeFile: writeFileMock,
+                createDirectory: createDirectoryMock,
+                stat: statMock,
+            },
         },
     };
 });
@@ -115,6 +125,10 @@ describe("saving a BAM v2", () => {
         source = makeV2();
         readFileMock.mockReset();
         writeFileMock.mockReset();
+        showWarningMock.mockReset();
+        showInputBoxMock.mockReset();
+        statMock.mockReset();
+        statMock.mockImplementation(() => Promise.reject(new Error("ENOENT")));
         const files = new Map<string, Uint8Array>([
             ["file:/data/MAPICONS.BAM", source.bam],
             ["file:/data/MOS4200.PVRZ", source.page],
@@ -166,6 +180,27 @@ describe("saving a BAM v2", () => {
 
         expect(backup.pages?.map((p) => p.page)).toEqual([4300]);
         expect(decodeBackup(encodeBackup(backup)).pages?.[0]?.bytes).toEqual(backup.pages?.[0]?.bytes);
+    });
+
+    it("asks before a page write would replace a file already in the destination folder", async () => {
+        // The pages are named by page NUMBER, not by the animation's name, so a copy into a folder
+        // that already uses that range silently destroyed whatever owned it. Only the .bam was gated.
+        showWarningMock.mockResolvedValue(undefined); // dismissed - not "Overwrite"
+        const provider = new ImageEditorProvider(context);
+        const document = await provider.openCustomDocument(uri("/data/MAPICONS.BAM"), openContext(), token);
+        // The destination folder already holds the page number this file's blocks name.
+        statMock.mockImplementation((target: { toString: () => string }) =>
+            target.toString() === "file:/other/MOS4200.PVRZ"
+                ? Promise.resolve({})
+                : Promise.reject(new Error("ENOENT")),
+        );
+
+        await expect(provider.saveCustomDocumentAs(document, uri("/other/COPY.BAM"), token)).rejects.toThrow(
+            /overwrite/i,
+        );
+
+        expect(writeFileMock).not.toHaveBeenCalled();
+        expect(String(showWarningMock.mock.calls[0]?.[0])).toContain("MOS4200.PVRZ");
     });
 
     it("carries the pages along on a Save As, since the new folder has none of them", async () => {

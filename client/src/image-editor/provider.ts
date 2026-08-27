@@ -198,14 +198,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // re-encode of the source (see saveAsTargetPath), and a split set's combined <base>.frm
             // is overwrite-by-design (see document.saveUri).
             const inPlace = targetPath === document.uri.fsPath || targetPath === document.saveUri.fsPath;
-            if (!inPlace && (await this.fileExists(vscode.Uri.file(targetPath)))) {
-                const overwrite = await vscode.window.showWarningMessage(
-                    `${path.basename(targetPath)} already exists - overwrite?`,
-                    { modal: true },
-                    "Overwrite",
-                );
-                if (overwrite !== "Overwrite") return;
-            }
+            if (!inPlace && !(await this.confirmOverwrite([targetPath]))) return;
 
             if (target === "apng" || target === "png-directory") {
                 // Both PNG targets hold everything either colour model does, so the animation goes
@@ -291,13 +284,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // No fresh pages needed means the frames are still the source file's, so its own pages come
         // along verbatim - the destination folder has none of them.
         const saved = serializeBamV2(animation, basePage === undefined ? { emitUnchangedPages: true } : { basePage });
-        await this.writeAll(
-            planImageSave({
-                targetPath,
-                bytes: saved.bam,
-                pages: pvrzPageWrites(targetPath, saved.pages),
-            }),
-        );
+        const pageWrites = pvrzPageWrites(targetPath, saved.pages);
+        // The .bam already had its own gate above; the pages are a separate set of filenames, chosen
+        // by page number rather than by the animation's name, so they need their own consent.
+        if (!(await this.confirmOverwrite(pageWrites.map((write) => write.path)))) return;
+        await this.writeAll(planImageSave({ targetPath, bytes: saved.bam, pages: pageWrites }));
         const pageCount = saved.pages.length;
         vscode.window.setStatusBarMessage(
             `Saved ${path.basename(targetPath)}${pageCount > 0 ? ` and ${pageCount} PVRZ page(s)` : ""}`,
@@ -466,6 +457,31 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
+    /**
+     * Consent for every file a save is about to replace, naming them.
+     *
+     * A BAM v2 save writes N+1 files - the `.bam` plus one `MOSxxxx.PVRZ` per page - and the pages
+     * are the half nothing used to ask about. Their names come from page NUMBERS, not from the
+     * animation's, so they collide with whatever else in that folder happens to use the same range:
+     * a Save As carries the source's own numbers into a folder that may already have them, and a
+     * repack allocates from a base page the user picked without seeing the folder's contents.
+     */
+    private async confirmOverwrite(paths: readonly string[]): Promise<boolean> {
+        const checked = await Promise.all(
+            paths.map(async (p) => ({ name: path.basename(p), exists: await this.fileExists(vscode.Uri.file(p)) })),
+        );
+        const existing = checked.filter((entry) => entry.exists).map((entry) => entry.name);
+        if (existing.length === 0) return true;
+        const answer = await vscode.window.showWarningMessage(
+            existing.length === 1
+                ? `${existing[0]} already exists - overwrite?`
+                : `${existing.length} files already exist - overwrite?`,
+            { modal: true, ...(existing.length > 1 ? { detail: existing.join("\n") } : {}) },
+            "Overwrite",
+        );
+        return answer === "Overwrite";
+    }
+
     /** True when the path already exists (file or directory) - the Save As overwrite check and the
      *  sidecar-manifest probe both ask this. */
     private async fileExists(uri: vscode.Uri): Promise<boolean> {
@@ -553,7 +569,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         const { bytes, pages } = document.saveArtifacts({ standalone });
         const sidecarBytes = document.sidecarBytes();
         const sidecar = sidecarBytes ? { path: sidecarPalPath(targetPath), bytes: sidecarBytes } : undefined;
-        for (const write of planImageSave({ targetPath, bytes, sidecar, pages: pvrzPageWrites(targetPath, pages) })) {
+        const pageWrites = pvrzPageWrites(targetPath, pages);
+        // The .bam itself is the destination VS Code already confirmed, but its pages are named by
+        // page number and may belong to another animation in that folder - an in-place save included,
+        // since a repack allocates numbers the user picked without seeing what the folder holds.
+        if (pageWrites.length > 0 && !(await this.confirmOverwrite(pageWrites.map((write) => write.path)))) {
+            throw new Error("Save cancelled: its PVRZ pages would overwrite files already in the folder.");
+        }
+        for (const write of planImageSave({ targetPath, bytes, sidecar, pages: pageWrites })) {
             // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar and
             // any PVRZ pages are plain filesystem paths, same as the binary editor's writeSave. Only
             // an FRM has a sidecar, and an FRM is always a real file, so that stays a `file:` write.
