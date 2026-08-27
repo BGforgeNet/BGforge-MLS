@@ -1,9 +1,13 @@
 import type { KnipConfig } from "knip";
 
-// knip is held at ^6.25.x: 6.26.0 regressed its .svelte import parsing and
+// knip is held at ~6.25.0: 6.26.0 regressed its .svelte import parsing and
 // false-flags genuinely-used deps imported only from .svelte files
 // (@xyflow/svelte, bits-ui) as unused. Re-test .svelte dependency detection
-// before moving past 6.25.x.
+// before moving past 6.25.x. Still reproduces on 6.32.2 (re-tested 2026-08-27),
+// so the hold is not a stale pin - the two reports are the whole reason for it,
+// and silencing them via ignoreDependencies would blind the check for real.
+// The range is a TILDE, not a caret: a caret leaves the hold resting on whatever
+// the lockfile happens to say, and the next `pnpm update` walks straight past it.
 
 const isProductionKnip = process.argv.includes("--production");
 

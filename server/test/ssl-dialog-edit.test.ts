@@ -632,7 +632,10 @@ describe("duplicateState - SSL (share refs)", () => {
 
     it("save allocates NO new ids for the duplicate (the refs are shared, not copied)", async () => {
         const model = modelFromSSL(await parseDialog(DUP_SRC));
-        duplicateState(model, model.roots[0]!.states.find((s) => s.id === "Node001")!);
+        duplicateState(
+            model,
+            model.roots[0]!.states.find((s) => s.id === "Node001")!,
+        );
         const created = allocateNodeIds(model, {}); // panel.save runs this; an all-@N node yields nothing new
         expect(created.newMessages).toEqual({});
     });
@@ -670,7 +673,10 @@ describe("duplicateState - SSL (share refs)", () => {
         const original = modelFromSSL(await parseDialog(DUP_SRC));
         expect(original.roots[0]!.states.find((s) => s.id === "Node001")!.isEntry).toBe(true); // called by talk_p_proc
         const edited = structuredCloneModel(original);
-        const copy = duplicateState(edited, edited.roots[0]!.states.find((s) => s.id === "Node001")!)!;
+        const copy = duplicateState(
+            edited,
+            edited.roots[0]!.states.find((s) => s.id === "Node001")!,
+        )!;
         // The copy is an orphan to wire deliberately (and stays visible - parser keeps unreachable dialog
         // nodes), never a silent second conversation start.
         expect(copy.isEntry).toBeFalsy();
@@ -681,7 +687,10 @@ describe("duplicateState - SSL (share refs)", () => {
     it("splices the duplicated procedure into the .ssl sharing the refs, original intact, re-parseable", async () => {
         const original = modelFromSSL(await parseDialog(DUP_SRC));
         const edited = structuredCloneModel(original);
-        duplicateState(edited, edited.roots[0]!.states.find((s) => s.id === "Node001")!);
+        duplicateState(
+            edited,
+            edited.roots[0]!.states.find((s) => s.id === "Node001")!,
+        );
         const out = applySSLDialogEdits(DUP_SRC, edited, original);
         expect(out).toMatch(/procedure Node003 begin/); // new procedure spliced in
         expect((out.match(/Reply\(100\)/g) ?? []).length).toBe(2); // shared reply ref now in both nodes

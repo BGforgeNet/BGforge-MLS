@@ -173,10 +173,14 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 if (!opt) continue;
 
                 const edited = clone(model);
-                setChoiceTarget(statesOf(edited).find((s) => s.id === node.id)!, opt.id, {
-                    kind: "state",
-                    stateId: other.id,
-                });
+                setChoiceTarget(
+                    statesOf(edited).find((s) => s.id === node.id)!,
+                    opt.id,
+                    {
+                        kind: "state",
+                        stateId: other.id,
+                    },
+                );
                 const out = apply(text, edited, model);
                 expect(out, `${rel}: retarget produced no splice`).not.toBe(text);
                 // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe
@@ -198,7 +202,10 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 const survivorTexts = sortedTexts(node.choices.slice(1));
 
                 const edited = clone(model);
-                removeReply(statesOf(edited).find((s) => s.id === node.id)!, node.choices[0]!.id);
+                removeReply(
+                    statesOf(edited).find((s) => s.id === node.id)!,
+                    node.choices[0]!.id,
+                );
                 const out = apply(text, edited, model);
                 // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe
                 const re = await parse(out);
@@ -252,7 +259,11 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 const setTexts = sortedTexts(node.choices);
 
                 const edited = clone(model);
-                moveReply(statesOf(edited).find((s) => s.id === node.id)!, node.choices[0]!.id, 1);
+                moveReply(
+                    statesOf(edited).find((s) => s.id === node.id)!,
+                    node.choices[0]!.id,
+                    1,
+                );
                 const out = apply(text, edited, model);
                 // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe
                 const re = await parse(out);
@@ -272,7 +283,10 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 if (!victim) continue;
 
                 const edited = clone(model);
-                deleteState(edited, statesOf(edited).find((s) => s.id === victim.id)!);
+                deleteState(
+                    edited,
+                    statesOf(edited).find((s) => s.id === victim.id)!,
+                );
                 const out = apply(text, edited, model);
                 // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe
                 const re = await parse(out);
@@ -341,7 +355,14 @@ export function defineWritebackCorpus(corpus: FamilyCorpus): void {
                 if (statesOf(model).some((s) => s.id === newId)) continue;
 
                 const edited = clone(model);
-                if (!renameState(edited, statesOf(edited).find((s) => s.id === node.id)!, newId)) continue;
+                if (
+                    !renameState(
+                        edited,
+                        statesOf(edited).find((s) => s.id === node.id)!,
+                        newId,
+                    )
+                )
+                    continue;
                 const out = apply(text, edited, model);
                 // oxlint-disable-next-line no-await-in-loop -- shared WASM parser is not concurrency-safe
                 const re = await parse(out);

@@ -30,7 +30,7 @@ rm -rf "$stage" "$zip_path"
 # generated parser rather than restated here.
 abi=$(sed -n 's/^#define LANGUAGE_VERSION \([0-9]*\)$/\1/p' grammars/fallout-ssl/src/parser.c)
 # `tree-sitter --version` prints "tree-sitter X.Y.Z"; keep only the number so the README does not
-# read "tree-sitter CLI tree-sitter 0.26.9".
+# read "tree-sitter CLI tree-sitter 0.26.13".
 cli_version=$(pnpm exec tree-sitter --version | awk '{print $NF}')
 
 if [ -z "$abi" ]; then

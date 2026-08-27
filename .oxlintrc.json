@@ -229,7 +229,37 @@
         // node text, and an env var (BGFORGE_LSP_SLOW_MS) - swapping to the
         // stricter form at 30+ sites is a behavior change out of scope for a
         // lint-tool upgrade, same rationale as `prefer-named-capture-group`.
-        "unicorn/prefer-number-coercion": "off"
+        "unicorn/prefer-number-coercion": "off",
+
+        // The next four all began firing somewhere in the 1.73 -> 1.80 upgrade;
+        // 1.73 was green on this tree.
+
+        // By far the largest single source of findings in the repo (16k+). The
+        // rule's "always" default demands that consecutive `const` declarations be
+        // merged into one comma-separated statement, which is the opposite of the
+        // codebase's style throughout. Pure style with no correctness value, same
+        // rationale as `operator-assignment` and `object-shorthand` above.
+        "one-var": "off",
+
+        // The base ESLint rule has no TypeScript awareness, so it false-positives on
+        // the companion-object pattern (`export const ScopeKind = {...} as const`
+        // beside `export type ScopeKind = ...`), where the value and the type occupy
+        // separate declaration spaces and pairing them is the point. Genuine
+        // redeclaration in one space is a TypeScript error already, so nothing is
+        // lost by turning it off.
+        "no-redeclare": "off",
+
+        // Every site is the lazy-memo idiom `const x = (cache ??= compute())`, not
+        // the `a = b = c` chain the rule targets: the assignment IS the
+        // memoization, and splitting it into two statements loses that.
+        "no-multi-assign": "off",
+
+        // Comments are exempted rather than the rule turned off: several block
+        // comments quote a `/* ... */` placeholder and need a zero-width space to
+        // keep the inner `*/` from closing the comment early, so the character is
+        // load-bearing there. In code - the place where an invisible space is
+        // actually a bug - the rule stays on.
+        "no-irregular-whitespace": ["error", { "skipComments": true }]
     },
     "overrides": [
         {

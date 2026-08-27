@@ -26,15 +26,15 @@ catalog:
   vscode-languageserver-protocol: 3.18.2
   ts-morph: ^27.0.2
   typescript: ^5.9.3
-  vitest: ^4.1.10
+  vitest: ^4.1.11
   "@types/node": ^24.13.3
   cac: ^7.0.0
   diff: ^9.0.0
-  esbuild-wasm: ^0.28.1
+  esbuild-wasm: ^0.28.2
   fast-check: ^4.9.0
   quick-lru: ^7.3.0
-  tsdown: ^0.22.4
-  web-tree-sitter: ^0.26.10
+  tsdown: ^0.22.14
+  web-tree-sitter: ^0.26.13
 
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
@@ -52,7 +52,9 @@ allowBuilds:
 
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version
-# and `pnpm audit` re-flags the advisory.
+# and `pnpm audit` re-flags the advisory. All three re-verified that way on
+# 2026-08-27, after mocha moved to 11.8.0 - it still bundles both vulnerable
+# versions, so the mocha bump did not make its two pins redundant.
 #   - mocha's bundled diff (GHSA-73rr-hh4g-fpgx: parsePatch/applyPatch DoS; fixed
 #     in 8.0.3) and serialize-javascript (GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v
 #     DoS; fixed in 7.0.5).

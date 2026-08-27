@@ -7,7 +7,7 @@
 //^^ number
 //   ^ punctuation.delimiter
 //     ^ string
-//                   ^ string
+//                   ^ string.special
 //                     ^ string.special
 @200 = "double quoted"
 //     ^ string

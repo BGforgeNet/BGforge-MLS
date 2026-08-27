@@ -81,14 +81,12 @@ const projectChoice = (c: DialogChoice): ProjChoice => ({
 const project = (model: DialogModel): ProjState[] =>
     model.roots
         .flatMap((r) => r.states)
-        .map(
-            (s: DialogState): ProjState => ({
-                id: s.id,
-                text: (s.text ?? "").trim(),
-                trigger: (s.trigger ?? "").trim(),
-                choices: s.choices.map(projectChoice),
-            }),
-        )
+        .map((s: DialogState): ProjState => ({
+            id: s.id,
+            text: (s.text ?? "").trim(),
+            trigger: (s.trigger ?? "").trim(),
+            choices: s.choices.map(projectChoice),
+        }))
         .sort((a, b) => a.id.localeCompare(b.id));
 
 const clone = (m: DialogModel): DialogModel => structuredClone(m);

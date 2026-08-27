@@ -113,13 +113,11 @@ const project = (model: DialogModel): ProjState[] =>
                 choices: s.choices.map((c) =>
                     branchChoiceIds.has(c.id) ? { ...projectChoice(c), condition: "" } : projectChoice(c),
                 ),
-                branches: s.branches?.map(
-                    (b): ProjBranch => ({
-                        kind: b.kind,
-                        condition: normCond((b.condition ?? "").trim()),
-                        options: b.choiceIds.map((id) => (s.choices.find((c) => c.id === id)?.text ?? "").trim()),
-                    }),
-                ),
+                branches: s.branches?.map((b): ProjBranch => ({
+                    kind: b.kind,
+                    condition: normCond((b.condition ?? "").trim()),
+                    options: b.choiceIds.map((id) => (s.choices.find((c) => c.id === id)?.text ?? "").trim()),
+                })),
             };
         })
         .sort((a, b) => a.id.localeCompare(b.id));

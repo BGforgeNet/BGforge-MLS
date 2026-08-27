@@ -574,7 +574,7 @@ function emitReplaceStates(op: TDReplaceStates): string {
 
     const states = [...op.replacements.entries()]
         .sort(([a], [b]) => a - b)
-        .map(([_, state]) => indentBlock(emitState(state)));
+        .map(([, state]) => indentBlock(emitState(state)));
 
     lines.push(...states.flatMap((s) => s.split("\n")), "END");
 

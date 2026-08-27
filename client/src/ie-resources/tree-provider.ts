@@ -87,15 +87,13 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
         if (element.kind === "type") {
             const openable = hasViewerFor(element.ext);
             return (this.ensureGrouped().get(element.type) ?? [])
-                .map(
-                    (r): ResourceNode => ({
-                        kind: "resource",
-                        resref: r.resref,
-                        type: r.type,
-                        ext: element.ext,
-                        openable,
-                    }),
-                )
+                .map((r): ResourceNode => ({
+                    kind: "resource",
+                    resref: r.resref,
+                    type: r.type,
+                    ext: element.ext,
+                    openable,
+                }))
                 .sort((a, b) => a.resref.localeCompare(b.resref));
         }
         return [];
