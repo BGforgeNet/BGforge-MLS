@@ -47,6 +47,24 @@ export interface RgbaFrame {
     pixels: Uint8Array; // RGBA, row-major, length width*height*4
     offsetX: number;
     offsetY: number;
+    /**
+     * The data blocks this frame was composed from on disk; present when parsed, dropped when the
+     * frame is synthesized or edited. Presence means "these pixels are still the file's own", which
+     * is what lets an untouched frame re-serialize without re-encoding its lossy pages - exactly
+     * the contract `Frame.rawEncoding` provides for BAM v1, raised to the page level.
+     */
+    sourceBlocks?: readonly BamV2SourceBlock[];
+}
+
+/** A frame's on-disk rectangle: where it came from in a page, and where it lands in the frame. */
+export interface BamV2SourceBlock {
+    page: number;
+    sourceX: number;
+    sourceY: number;
+    width: number;
+    height: number;
+    targetX: number;
+    targetY: number;
 }
 
 /** An indexed animation's metadata, with `sourceFormat` narrowed to the palette-indexed formats. */
@@ -82,6 +100,14 @@ export interface RgbaAnimation {
     sequences: Sequence[];
     frames: RgbaFrame[];
     meta: RgbaAnimationMeta;
+    /**
+     * The PVRZ bytes each page arrived as, keyed by page number. Kept verbatim so an unmodified
+     * animation writes its pages back unchanged rather than re-compressing them; absent for an
+     * animation that was synthesized rather than read.
+     */
+    sourcePages?: ReadonlyMap<number, Uint8Array>;
+    /** The exact bytes this animation was parsed from, for a byte-identical unmodified save. */
+    sourceBytes?: Uint8Array;
 }
 
 export type Animation = IndexedAnimation | RgbaAnimation;

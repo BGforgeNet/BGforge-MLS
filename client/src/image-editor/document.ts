@@ -2,6 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import {
     type Animation,
+    type BamV2PageWrite,
     type IndexedAnimation,
     type RgbaAnimation,
     combineFrmDirections,
@@ -214,6 +215,9 @@ export class ImageEditorDocument implements vscode.CustomDocument {
                       }
                     : {}),
             }),
+            // The file's own bytes travel with the animation so an untouched v2 saves back exactly as
+            // it was read, rather than through a re-encode that block compression would degrade.
+            bytes,
         );
     }
 
@@ -345,6 +349,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
 
     getBytes(): Uint8Array {
         return this.model.getBytes();
+    }
+
+    /** See ImageDocumentModel.saveArtifacts - the artifact bytes plus any PVRZ pages to write. */
+    saveArtifacts(options: { standalone?: boolean } = {}): { bytes: Uint8Array; pages: readonly BamV2PageWrite[] } {
+        return this.model.saveArtifacts(options);
     }
 
     backup(): DocumentBackup {

@@ -9,7 +9,7 @@ import type { SequenceView } from "../messages";
  * Sources:
  * - FRM: rotators/fallout2-docs (frm.md "Where FRMs Live" + "Critter Filename Construction",
  *   anim_names.md), cross-checked against the engine's suffix builder (fallout2-ce art.cc
- *   _art_get_code) and the IndexedAnimation enum (sfall FalloutEngine/Enums.h).
+ *   _art_get_code) and the Animation enum (sfall FalloutEngine/Enums.h).
  * - BAM: IESDP "Avatar Naming Schemes" appendix (appendices/avatarnaming.htm).
  */
 export function describeAnimationName(view: {
@@ -65,7 +65,7 @@ const FRM_WEAPONS: Record<string, string> = {
     t: "sfall weapon code 15",
 };
 
-// Unarmed basic animations: second letter is 'a' + IndexedAnimation enum value (0..19).
+// Unarmed basic animations: second letter is 'a' + Animation enum value (0..19).
 const FRM_BASIC = [
     "stand",
     "walk",

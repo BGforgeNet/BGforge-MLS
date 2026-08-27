@@ -1,5 +1,6 @@
 import {
     type Animation,
+    type BamV2PageWrite,
     type RgbaAnimation,
     DEFAULT_FALLOUT_PALETTE,
     encodeBamc,
@@ -7,6 +8,7 @@ import {
     isRgbaAnimation,
     parsePal,
     serializeBamV1,
+    serializeBamV2,
     serializeFrm,
     serializePal,
     type IndexedAnimation,
@@ -31,8 +33,25 @@ function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     });
 }
 
+// A switch + never default keeps this exhaustive: a new IndexedSourceFormat member without a
+// dispatch arm becomes a compile error instead of silently mis-serializing.
+function serializeIndexed(indexed: IndexedAnimation): Uint8Array {
+    switch (indexed.meta.sourceFormat) {
+        case "frm":
+            return serializeFrm(indexed);
+        case "bam":
+            return serializeBamV1(indexed);
+        case "bamc":
+            return encodeBamc(serializeBamV1(indexed));
+        default: {
+            const unhandled: never = indexed.meta.sourceFormat;
+            throw new Error(`serializeIndexed: unhandled sourceFormat ${String(unhandled)}`);
+        }
+    }
+}
+
 // A single undo/redo step captures ALL mutable document state a mutation can change - the
-// animation AND externalEnabled (which is not part of the IndexedAnimation IR but is a saveable,
+// animation AND externalEnabled (which is not part of the Animation IR but is a saveable,
 // undoable choice); snapshotting only the animation would leave a palette toggle unrevertible.
 interface DocumentSnapshot {
     animation: Animation;
@@ -255,27 +274,27 @@ export class ImageDocumentModel {
         this.onChange?.();
     }
 
+    /**
+     * Everything a save must write: the artifact itself, plus the PVRZ pages a BAM v2 re-encoded.
+     * `pages` is empty for every other format, and for a v2 whose frames still carry the blocks they
+     * were composed from - that file writes back byte-for-byte rather than through a lossy re-encode.
+     *
+     * `standalone` says the write must stand on its own, i.e. it is going somewhere the file's
+     * existing pages are not (a Save As). A v2 then carries its untouched pages along verbatim,
+     * because its data blocks address them by number and the destination folder has none.
+     */
+    saveArtifacts(options: { standalone?: boolean } = {}): { bytes: Uint8Array; pages: readonly BamV2PageWrite[] } {
+        const animation = this.animationValue;
+        if (isRgbaAnimation(animation)) {
+            const saved = serializeBamV2(animation, { emitUnchangedPages: options.standalone });
+            return { bytes: saved.bam, pages: saved.pages };
+        }
+        return { bytes: serializeIndexed(animation), pages: [] };
+    }
+
+    /** The artifact bytes alone. A BAM v2 save also writes PVRZ pages - see saveArtifacts. */
     getBytes(): Uint8Array {
-        // A switch + never default keeps this exhaustive: a new SourceFormat member without a
-        // dispatch arm becomes a compile error instead of silently mis-serializing.
-        const indexed = this.indexedAnimation();
-        if (indexed === undefined) {
-            throw new Error(
-                "Saving BAM v2 is not supported yet - its frames live in separate PVRZ pages that this build only reads.",
-            );
-        }
-        switch (indexed.meta.sourceFormat) {
-            case "frm":
-                return serializeFrm(indexed);
-            case "bam":
-                return serializeBamV1(indexed);
-            case "bamc":
-                return encodeBamc(serializeBamV1(indexed));
-            default: {
-                const unhandled: never = indexed.meta.sourceFormat;
-                throw new Error(`getBytes: unhandled sourceFormat ${String(unhandled)}`);
-            }
-        }
+        return this.saveArtifacts().bytes;
     }
 
     /** Snapshot for a hot-exit backup: the serialized animation plus the state its bytes cannot carry. */

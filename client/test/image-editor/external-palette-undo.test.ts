@@ -9,7 +9,7 @@ function sidecarBytes(): Uint8Array {
     return serializePal(pal);
 }
 
-// externalEnabled lives outside the IndexedAnimation IR; if undo snapshots only the animation, a palette
+// externalEnabled lives outside the Animation IR; if undo snapshots only the animation, a palette
 // toggle silently does not revert (and burns a no-op undo step). This guards that regression.
 test("undo/redo revert the external-palette toggle, not just the animation", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm", sidecarBytes());

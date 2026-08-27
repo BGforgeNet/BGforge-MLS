@@ -7,7 +7,7 @@ import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
-import { type SaveWrite, planImageSave } from "./save";
+import { type SaveWrite, planImageSave, pvrzPageWrites } from "./save";
 import {
     type FrmShapePick,
     ieGroupCount,
@@ -143,7 +143,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "runtimeError": {
                 const file = path.basename(document.uri.fsPath);
                 surfaceWebviewRuntimeError({
-                    editor: "IndexedAnimation editor",
+                    editor: "Animation editor",
                     file,
                     message: message.message,
                     stack: message.stack,
@@ -429,13 +429,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
         }
         const targetPath = destination.fsPath;
-        const bytes = document.getBytes();
+        // A save that lands anywhere but the document's own file cannot rely on the PVRZ pages a
+        // BAM v2 addresses being there, so it takes them along; an in-place save leaves them alone.
+        const standalone = destination.toString() !== document.saveUri.toString();
+        const { bytes, pages } = document.saveArtifacts({ standalone });
         const sidecarBytes = document.sidecarBytes();
         const sidecar = sidecarBytes ? { path: sidecarPalPath(targetPath), bytes: sidecarBytes } : undefined;
-        for (const write of planImageSave({ targetPath, bytes, sidecar })) {
-            // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar
-            // is always a plain filesystem path, same as the binary editor's writeSave. Only an FRM
-            // has a sidecar, and an FRM is always a real file, so that stays a `file:` write.
+        for (const write of planImageSave({ targetPath, bytes, sidecar, pages: pvrzPageWrites(targetPath, pages) })) {
+            // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar and
+            // any PVRZ pages are plain filesystem paths, same as the binary editor's writeSave. Only
+            // an FRM has a sidecar, and an FRM is always a real file, so that stays a `file:` write.
             const target = write.path === targetPath ? destination : vscode.Uri.file(write.path);
             // Sequential by design: the main artifact lands before the .pal sidecar so a crash
             // never leaves a sidecar describing a palette for a file that was never written.

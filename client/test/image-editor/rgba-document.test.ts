@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { type IndexedAnimation, type RgbaAnimation, emptyPalette } from "@bgforge/image";
+import {
+    type IndexedAnimation,
+    type RgbaAnimation,
+    decodeBamV2,
+    emptyPalette,
+    readBamV2Structure,
+    serializeBamV2,
+} from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
 import { decodeFramePixels } from "../../src/image-editor/webview/messages";
 
@@ -13,6 +20,19 @@ function rgbaAnimation(): RgbaAnimation {
         sequences: [{ frameRefs: [0], facing: "none" }],
         meta: { sourceFormat: "bamv2", fps: 15 },
     };
+}
+
+/**
+ * A v2 animation as an opened document holds one: parsed from real bytes, with the page it was
+ * composed from. Built through the real serializer rather than hand-written so the provenance the
+ * save path reads is the provenance the parser actually produces.
+ */
+function openedV2(): { animation: RgbaAnimation; bytes: Uint8Array } {
+    const written = serializeBamV2(rgbaAnimation(), { basePage: 4200 });
+    const page = written.pages[0];
+    if (page === undefined) throw new Error("expected one page");
+    const animation = decodeBamV2(readBamV2Structure(written.bam), () => page.bytes, written.bam);
+    return { animation, bytes: written.bam };
 }
 
 describe("ImageDocumentModel with a true-colour animation", () => {
@@ -52,6 +72,26 @@ describe("ImageDocumentModel with a true-colour animation", () => {
         };
 
         expect(() => model.replaceSequences(indexed, "replace")).toThrow(/true-colour/);
+    });
+
+    it("saves an untouched v2 back byte-for-byte, rewriting none of its pages", () => {
+        // Block compression is lossy, so a save that re-encoded the pages would degrade the file a
+        // little every time it was opened and saved. The zero-page assertion is what pins that.
+        const { animation, bytes } = openedV2();
+        const model = ImageDocumentModel.fromRgbaAnimation(animation, "MAPICONS.BAM");
+
+        const saved = model.saveArtifacts();
+
+        expect(saved.pages).toEqual([]);
+        expect(saved.bytes).toEqual(bytes);
+    });
+
+    it("names the page numbering it needs when a v2 has no pages of its own to reuse", () => {
+        // Reachable once frames can be imported into a v2: the repack needs a page number, and
+        // guessing one risks colliding with a page inside a BIF.
+        const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
+
+        expect(() => model.saveArtifacts()).toThrow(/basePage/);
     });
 
     it("keeps the frame's centre offsets, which v2 stores exactly as v1 does", () => {

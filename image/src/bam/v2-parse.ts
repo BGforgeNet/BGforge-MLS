@@ -26,8 +26,11 @@ export function pvrzResourceName(page: number): string {
  * thousands of blocks over a handful of 1024x1024 pages, and decoding per block would repeat the
  * zlib inflate and the whole-texture BC decode for each one.
  */
-export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver): RgbaAnimation {
+export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, sourceBytes?: Uint8Array): RgbaAnimation {
     const pages = new Map<number, PvrTexture>();
+    // The raw PVRZ bytes are retained alongside the decoded textures so an unmodified animation can
+    // write its pages back untouched instead of re-encoding through a lossy codec.
+    const sourcePages = new Map<number, Uint8Array>();
     for (const page of structure.requiredPages) {
         const bytes = resolve(page);
         if (bytes === undefined) {
@@ -35,6 +38,7 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver): R
                 `decodeBamV2: cannot resolve PVRZ page ${page} (${pvrzResourceName(page)}) - the file is incomplete`,
             );
         }
+        sourcePages.set(page, bytes);
         pages.set(page, decodePvrz(bytes));
     }
 
@@ -75,6 +79,7 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver): R
             pixels,
             offsetX: entry.centerX,
             offsetY: entry.centerY,
+            sourceBlocks: structure.blocks.slice(entry.blockStart, entry.blockStart + entry.blockCount),
         };
     });
 
@@ -88,6 +93,8 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver): R
         colorModel: "rgba",
         frames,
         sequences,
+        sourcePages,
+        ...(sourceBytes === undefined ? {} : { sourceBytes }),
         // Same direction-layout resolution and fixed engine frame rate as v1: the container carries
         // neither, and both formats are played by the same engine at 15 fps.
         meta: {

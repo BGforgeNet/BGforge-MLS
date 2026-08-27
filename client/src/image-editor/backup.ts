@@ -33,16 +33,16 @@ export function encodeBackup(backup: DocumentBackup): Uint8Array {
 
 export function decodeBackup(raw: Uint8Array): DocumentBackup {
     const end = raw.indexOf(HEADER_TERMINATOR);
-    if (end === -1) throw new Error("IndexedAnimation editor backup is missing its header");
+    if (end === -1) throw new Error("Animation editor backup is missing its header");
     const header: unknown = JSON.parse(new TextDecoder().decode(raw.subarray(0, end)));
     if (typeof header !== "object" || header === null || !("version" in header) || !("externalPalette" in header)) {
-        throw new Error("IndexedAnimation editor backup has a malformed header");
+        throw new Error("Animation editor backup has a malformed header");
     }
     if (header.version !== BACKUP_VERSION) {
-        throw new Error(`IndexedAnimation editor backup has unsupported version ${String(header.version)}`);
+        throw new Error(`Animation editor backup has unsupported version ${String(header.version)}`);
     }
     if (typeof header.externalPalette !== "boolean") {
-        throw new TypeError("IndexedAnimation editor backup is missing its externalPalette flag");
+        throw new TypeError("Animation editor backup is missing its externalPalette flag");
     }
     return { bytes: raw.subarray(end + 1), externalPalette: header.externalPalette };
 }
