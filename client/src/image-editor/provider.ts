@@ -1,12 +1,18 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { type IndexedAnimation, DEFAULT_FALLOUT_PALETTE, importPngDirectory } from "@bgforge/image";
+import {
+    type Animation,
+    type IndexedAnimation,
+    DEFAULT_FALLOUT_PALETTE,
+    importPngDirectory,
+    isRgbaAnimation,
+} from "@bgforge/image";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
-import { buildCrossFormatSave, buildExport } from "./export-actions";
+import { adaptImportedColourModel, buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave, pvrzPageWrites } from "./save";
 import {
     type FrmShapePick,
@@ -180,14 +186,6 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         paletteMode: "sidecar" | "nearest" | undefined,
     ): Promise<void> {
         try {
-            if (document.resolvedAnimation() === undefined && (target === "apng" || target === "png-directory")) {
-                // Both PNG exports write indexed images built from a palette, so a true-colour
-                // document has nothing to hand them until the true-colour writers land.
-                await vscode.window.showWarningMessage(
-                    `Exporting a true-colour BAM v2 as ${target === "apng" ? "APNG" : "a PNG directory"} is not available yet - save it as FRM or BAM instead.`,
-                );
-                return;
-            }
             const sourcePath = await this.saveAsSourcePath(document);
             if (sourcePath === undefined) return; // user dismissed the destination picker
             const targetPath = saveAsTargetPath(sourcePath, target);
@@ -207,12 +205,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
 
             if (target === "apng" || target === "png-directory") {
-                // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder,
-                // so a raw-animation export writes black-silhouette PNGs (see document-model). The
-                // true-colour case returned above, so this resolves.
-                const indexed = document.resolvedAnimation();
-                if (indexed === undefined) throw new Error("handleSaveAs: a true-colour PNG export reached the writer");
-                await this.writeAll(buildExport(indexed, target, targetPath));
+                // Both PNG targets hold everything either colour model does, so the animation goes
+                // out as it is - no quantization, nothing to warn about. For an INDEXED document
+                // that means resolvedAnimation, not animation: an FRM's own palette is an all-black
+                // placeholder, and exporting the raw one writes black silhouettes (see document-model).
+                await this.writeAll(
+                    buildExport(document.resolvedAnimation() ?? document.animation, target, targetPath),
+                );
                 vscode.window.setStatusBarMessage(`Exported ${path.basename(targetPath)}${path.sep}`, 3000);
                 return;
             }
@@ -304,18 +303,34 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             const next = await this.importPngDirectory();
             if (!next) return;
 
+            // A directory carries its own colour model, which need not be the document's. Matching
+            // them up front keeps replaceSequences a pure splice, and puts the one lossy direction
+            // (true-colour PNGs into an indexed document) behind the same confirmation as a save.
+            const adapted = adaptImportedColourModel(next.animation, document.animation);
+            if (!adapted.report.lossless) {
+                const { detail } = summarizeLoss(adapted.report);
+                const confirmed = await vscode.window.showWarningMessage(
+                    "Importing will lose data.",
+                    { modal: true, detail },
+                    "Import anyway",
+                );
+                if (confirmed !== "Import anyway") return;
+            }
+
             // An FRM is a fixed 6-rotation format, so an import INTO one is reshaped to a valid FRM
             // (a direction block or a single chosen cycle, per resolveFrmShape) and always REPLACES -
             // otherwise an in-place Save would serialize the non-FRM shape into a malformed .frm
             // (rotations 1-5 empty while the header claims frames). A BAM accepts arbitrary cycles, so
             // its import applies unchanged.
             if (document.animation.meta.sourceFormat === "frm") {
-                const pick = await this.resolveFrmShape(next.animation, next.name);
+                const indexed = adapted.animation;
+                if (isRgbaAnimation(indexed)) throw new Error("handleImport: an FRM document adapted to true colour");
+                const pick = await this.resolveFrmShape(indexed, next.name);
                 if (pick === undefined) return; // user dismissed the picker
-                document.replaceSequences(reshapeImportToFrm(next.animation, pick), "replace");
+                document.replaceSequences(reshapeImportToFrm(indexed, pick), "replace");
                 return;
             }
-            document.replaceSequences(next.animation, mode);
+            document.replaceSequences(adapted.animation, mode);
         } catch (error) {
             void vscode.window.showErrorMessage(
                 `Import failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -323,7 +338,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
-    private async importPngDirectory(): Promise<{ animation: IndexedAnimation; name: string } | undefined> {
+    private async importPngDirectory(): Promise<{ animation: Animation; name: string } | undefined> {
         // Accept EITHER the export folder or its manifest.json - both resolve to the same directory,
         // whose frames are read relative to manifest.json.
         const selection = await vscode.window.showOpenDialog({

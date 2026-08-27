@@ -3,6 +3,7 @@ import {
     type BamV2PageWrite,
     type IndexedSourceFormat,
     type RgbaAnimation,
+    type Sequence,
     DEFAULT_FALLOUT_PALETTE,
     LossReport,
     convertToIndexed,
@@ -51,6 +52,32 @@ function serializeIndexed(indexed: IndexedAnimation): Uint8Array {
             throw new Error(`serializeIndexed: unhandled sourceFormat ${String(unhandled)}`);
         }
     }
+}
+
+const COLOUR_MODEL_MISMATCH = "replaceSequences: the incoming animation's colour model does not match the document's";
+
+/**
+ * Frames and cycles from `next` spliced into `current`, either replacing its own or appended after
+ * them (with every incoming frame reference shifted past the frames already there).
+ *
+ * Generic over the animation so both colour models share one splice: the frame arrays never mix,
+ * which is exactly the property the mismatch guard above exists to hold.
+ */
+function spliceInto<A extends { frames: F[]; sequences: Sequence[] }, F>(
+    current: A,
+    next: { frames: F[]; sequences: Sequence[] },
+    mode: "replace" | "append",
+): A {
+    if (mode === "replace") return { ...current, frames: next.frames, sequences: next.sequences };
+    const offset = current.frames.length;
+    return {
+        ...current,
+        frames: [...current.frames, ...next.frames],
+        sequences: [
+            ...current.sequences,
+            ...next.sequences.map((s) => ({ ...s, frameRefs: s.frameRefs.map((r) => r + offset) })),
+        ],
+    };
 }
 
 // A single undo/redo step captures ALL mutable document state a mutation can change - the
@@ -259,25 +286,28 @@ export class ImageDocumentModel {
         this.onChange?.();
     }
 
-    replaceSequences(next: IndexedAnimation, mode: "replace" | "append"): void {
+    replaceSequences(next: Animation, mode: "replace" | "append"): void {
         // Indexed frames carry one byte per pixel; a true-colour animation's carry four. `Frame` is
-        // structurally assignable to `RgbaFrame`, so splicing them in typechecks and then renders
+        // structurally assignable to `RgbaFrame`, so a mismatched splice typechecks and then renders
         // garbage - this is the only thing standing between an import and a corrupted document.
-        if (isRgbaAnimation(this.animationValue)) {
-            throw new Error("Importing indexed frames into a true-colour BAM v2 is not supported.");
+        // Callers convert first (see adaptImportedColourModel), so a mismatch here is a bug, not a
+        // user-reachable state.
+        // Branching on the DOCUMENT and re-checking the import inside keeps each arm's frame type
+        // concrete, which is what makes the splice type-safe rather than merely type-checked.
+        const current = this.animationValue;
+        if (isRgbaAnimation(current)) {
+            if (!isRgbaAnimation(next)) throw new Error(COLOUR_MODEL_MISMATCH);
+            this.commitSplice(spliceInto(current, next, mode));
+            return;
         }
+        if (isRgbaAnimation(next)) throw new Error(COLOUR_MODEL_MISMATCH);
+        this.commitSplice(spliceInto(current, next, mode));
+    }
+
+    /** Undo point plus the swap. Separate so the two colour-model arms above share it verbatim. */
+    private commitSplice(animation: Animation): void {
         this.snapshotForUndo();
-        if (mode === "replace") {
-            this.animationValue = { ...this.animationValue, frames: next.frames, sequences: next.sequences };
-        } else {
-            const offset = this.animationValue.frames.length;
-            const frames = [...this.animationValue.frames, ...next.frames];
-            const sequences = [
-                ...this.animationValue.sequences,
-                ...next.sequences.map((s) => ({ ...s, frameRefs: s.frameRefs.map((r) => r + offset) })),
-            ];
-            this.animationValue = { ...this.animationValue, frames, sequences };
-        }
+        this.animationValue = animation;
         this.onChange?.();
     }
 

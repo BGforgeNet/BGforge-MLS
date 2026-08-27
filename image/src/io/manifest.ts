@@ -1,23 +1,19 @@
-// Versioned on-disk manifest for an exported animation directory (indexed PNG frames +
-// manifest.json). This is a FROZEN wire format, deliberately decoupled from the internal
-// `Animation` IR so the IR can evolve without breaking directories exported by older builds.
-// No palette here - palettes live in the exported PNGs.
-import type {
-    DirectionLayout,
-    Facing,
-    IndexedAnimation,
-    IndexedAnimationMeta,
-    IndexedSourceFormat,
-    Sequence,
-} from "../model/animation.ts";
+// Versioned on-disk manifest for an exported animation directory (PNG frames + manifest.json).
+// This is a FROZEN wire format, deliberately decoupled from the internal `Animation` IR so the IR
+// can evolve without breaking directories exported by older builds. No palette and no colour model
+// here - both live in the exported PNGs themselves.
+import type { Animation, AnimationMeta, DirectionLayout, Facing, Sequence, SourceFormat } from "../model/animation.ts";
 
 // Owned by this module, deliberately NOT `AnimationMeta` itself: the wire format is
 // frozen, so a new `AnimationMeta` field must be a conscious mapping decision below
 // (writeManifest/readManifest) rather than a silent addition to what gets persisted.
 export interface ManifestMetaV1 {
-    // Indexed formats only, which is what the validator below has always enforced: a directory of
-    // indexed PNGs plus a palette cannot represent a true-colour animation.
-    sourceFormat: IndexedSourceFormat;
+    // Every source format, true-colour included: the directory's PNGs carry the colour model (indexed
+    // with a palette, or colour type 6 with per-pixel alpha), and this names which one wrote them. A
+    // build predating true colour rejects a "bamv2" directory as malformed meta rather than reading
+    // its PNGs wrong, which is the behaviour that matters; the version stays 1 because the structure
+    // did not change, and bumping it would stop old builds reading indexed directories they handle.
+    sourceFormat: SourceFormat;
     fps?: number;
     actionFrame?: number;
     transparentIndex?: number;
@@ -39,7 +35,7 @@ type ManifestSequence = ManifestV1["sequences"][number];
 // Sets typed <string> (not <Facing>/etc.) so membership checks accept an arbitrary
 // unknown-derived string without a cast; Facing[] -> Iterable<string> is a safe widening.
 const FACINGS = new Set<string>(["NE", "E", "SE", "SW", "W", "NW", "N", "S", "none"] satisfies Facing[]);
-const SOURCE_FORMATS = new Set<string>(["frm", "bam", "bamc"] satisfies IndexedSourceFormat[]);
+const SOURCE_FORMATS = new Set<string>(["frm", "bam", "bamc", "bamv2"] satisfies SourceFormat[]);
 const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] satisfies DirectionLayout[]);
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -50,7 +46,7 @@ function isFacing(v: unknown): v is Facing {
     return typeof v === "string" && FACINGS.has(v);
 }
 
-function isSourceFormat(v: unknown): v is IndexedSourceFormat {
+function isSourceFormat(v: unknown): v is SourceFormat {
     return typeof v === "string" && SOURCE_FORMATS.has(v);
 }
 
@@ -99,7 +95,7 @@ export function sequenceDirId(seq: Sequence, index: number): string {
 // Field-by-field, not a spread of `anim.meta`: adding an `AnimationMeta` field is
 // then a compile-visible decision here (persist it, or deliberately leave it out of
 // the frozen wire format) rather than a silent addition to what gets written.
-function toManifestMetaV1(meta: IndexedAnimationMeta): ManifestMetaV1 {
+function toManifestMetaV1(meta: AnimationMeta): ManifestMetaV1 {
     return {
         sourceFormat: meta.sourceFormat,
         fps: meta.fps,
@@ -112,7 +108,7 @@ function toManifestMetaV1(meta: IndexedAnimationMeta): ManifestMetaV1 {
     };
 }
 
-function toAnimationMeta(meta: ManifestMetaV1): IndexedAnimationMeta {
+function toAnimationMeta(meta: ManifestMetaV1): AnimationMeta {
     return {
         sourceFormat: meta.sourceFormat,
         fps: meta.fps,
@@ -125,7 +121,7 @@ function toAnimationMeta(meta: ManifestMetaV1): IndexedAnimationMeta {
     };
 }
 
-export function writeManifest(anim: IndexedAnimation): ManifestV1 {
+export function writeManifest(anim: Animation): ManifestV1 {
     return {
         manifestVersion: 1,
         kind: "bgforge-animation",
@@ -142,7 +138,7 @@ export function writeManifest(anim: IndexedAnimation): ManifestV1 {
     };
 }
 
-export function readManifest(m: unknown): { meta: IndexedAnimationMeta; sequences: ManifestV1["sequences"] } {
+export function readManifest(m: unknown): { meta: AnimationMeta; sequences: ManifestV1["sequences"] } {
     if (!isRecord(m)) throw new Error("manifest must be a JSON object");
     if (m.manifestVersion !== 1) {
         // Seam for the next format bump: add `migrateV1toV2(m)` here once a v2 schema exists,

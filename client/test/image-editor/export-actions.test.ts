@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
     DEFAULT_FALLOUT_PALETTE,
+    decodeTruecolourPng,
     emptyPalette,
     loadImage,
     type IndexedAnimation,
@@ -133,6 +134,22 @@ describe("exporting a true-colour document to an indexed format", () => {
         expect(animation.palette).toEqual(DEFAULT_FALLOUT_PALETTE);
         expect(report.has("colours-quantized")).toBe(true);
         expect(report.lossless).toBe(false);
+    });
+
+    test("a true-colour document exports PNGs that keep its alpha, with no quantizing on the way", () => {
+        // The reason APNG and PNG-directory bypass indexedForExport entirely: PNG holds per-pixel
+        // alpha, so the lossless path stays lossless.
+        const model = rgbaModel([
+            [255, 0, 0, 255],
+            [0, 128, 255, 64],
+        ]);
+
+        const writes = buildExport(model.animation, "png-directory", "/out");
+
+        const frame = writes.find((w) => w.path.endsWith("000.png"));
+        if (!frame) throw new Error("expected a frame PNG");
+        const decoded = decodeTruecolourPng(frame.bytes);
+        expect([...decoded.pixels.subarray(4, 8)]).toEqual([0, 128, 255, 64]);
     });
 
     test("an indexed document comes back with its ACTIVE palette, not the placeholder", () => {

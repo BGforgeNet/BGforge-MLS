@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     type IndexedAnimation,
     type RgbaAnimation,
+    convertToRgba,
     decodeBamV2,
     emptyPalette,
     readBamV2Structure,
@@ -62,7 +63,8 @@ describe("ImageDocumentModel with a true-colour animation", () => {
     it("refuses to splice indexed frames into a true-colour document", () => {
         // Frame is structurally assignable to RgbaFrame - same fields, minus the optional v1 caches -
         // so this import typechecks and would leave 1-byte-per-pixel frames in an animation the
-        // renderer reads 4 bytes at a time. Nothing but this guard catches it.
+        // renderer reads 4 bytes at a time. Callers convert first; nothing but this guard catches a
+        // caller that forgot.
         const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
         const indexed: IndexedAnimation = {
             palette: emptyPalette(),
@@ -71,7 +73,27 @@ describe("ImageDocumentModel with a true-colour animation", () => {
             meta: { sourceFormat: "bam" },
         };
 
-        expect(() => model.replaceSequences(indexed, "replace")).toThrow(/true-colour/);
+        expect(() => model.replaceSequences(indexed, "replace")).toThrow(/colour model/);
+    });
+
+    it("takes an indexed import once it has been converted, resolving its palette into pixels", () => {
+        // The path the editor actually uses: an indexed PNG directory imported into a v2 document
+        // converts on the way in, which is exact - every index has one colour.
+        const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
+        const palette = emptyPalette();
+        palette[1] = { r: 7, g: 8, b: 9, a: 255 };
+        const indexed: IndexedAnimation = {
+            palette,
+            frames: [{ width: 2, height: 2, pixels: Uint8Array.from([1, 1, 1, 1]), offsetX: 0, offsetY: 0 }],
+            sequences: [{ frameRefs: [0], facing: "none" }],
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+
+        model.replaceSequences(convertToRgba(indexed), "replace");
+
+        const frame = model.toView().frames[0];
+        if (frame === undefined) throw new Error("expected one frame");
+        expect([...decodeFramePixels(frame.pixels).subarray(0, 4)]).toEqual([7, 8, 9, 255]);
     });
 
     it("saves an untouched v2 back byte-for-byte, rewriting none of its pages", () => {

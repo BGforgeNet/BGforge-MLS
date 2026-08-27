@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
     type IndexedAnimation,
     type Frame,
+    type RgbaAnimation,
     emptyPalette,
     exportPngDirectory,
     importPngDirectory,
 } from "@bgforge/image";
 import { encodeIndexedPng } from "../src/png/encode.ts";
+import { decodeTruecolourPng } from "../src/png/decode.ts";
 
 // Six sequences (one per FRM facing), with distinct frame counts, pixel content,
 // and offsets, so the round-trip test can distinguish a mixed-up ordering from a
@@ -89,6 +91,7 @@ describe("importPngDirectory(exportPngDirectory(anim))", () => {
     it("round-trips meta, facings, frame counts, offsets, pixels, and palette", () => {
         const anim = makeAnimation();
         const roundTripped = importPngDirectory(exportPngDirectory(anim));
+        if (roundTripped.colorModel === "rgba") throw new Error("indexed PNGs must import as indexed");
 
         expect(roundTripped.meta).toEqual(anim.meta);
         expect(roundTripped.palette).toEqual(anim.palette);
@@ -148,8 +151,61 @@ describe("importPngDirectory(exportPngDirectory(anim))", () => {
             meta: { sourceFormat: "frm" },
         };
         const roundTripped = importPngDirectory(exportPngDirectory(anim));
+        if (roundTripped.colorModel === "rgba") throw new Error("indexed PNGs must import as indexed");
         expect(roundTripped.palette).toEqual(emptyPalette());
         expect(roundTripped.sequences).toEqual([]);
         expect(roundTripped.frames).toEqual([]);
+    });
+});
+
+describe("a true-colour PNG directory", () => {
+    /** Two sequences of a 2x2 true-colour frame, with alpha no indexed PNG could carry. */
+    function makeRgbaAnimation(): RgbaAnimation {
+        const frames = [0, 1].map((n) => {
+            const pixels = new Uint8Array(2 * 2 * 4);
+            pixels.set([255, n, 0, 255], 0);
+            pixels.set([0, 128, 255, 90], 4);
+            pixels.set([1, 2, 3, 0], 8);
+            pixels.set([200, 210, 220, 255], 12);
+            return { width: 2, height: 2, pixels, offsetX: n + 1, offsetY: -(n + 1) };
+        });
+        return {
+            colorModel: "rgba",
+            frames,
+            sequences: [
+                { frameRefs: [0], facing: "NE" as const },
+                { frameRefs: [1, 0], facing: "E" as const },
+            ],
+            meta: { sourceFormat: "bamv2", fps: 15 },
+        };
+    }
+
+    it("round-trips a true-colour animation exactly, per-pixel alpha included", () => {
+        // The whole reason this path exists: routing a v2 through the indexed exporter would flatten
+        // every soft edge, and a directory is meant to be the LOSSLESS export.
+        const anim = makeRgbaAnimation();
+
+        const roundTripped = importPngDirectory(exportPngDirectory(anim));
+
+        if (roundTripped.colorModel !== "rgba") throw new Error("true-colour PNGs must import as true colour");
+        expect(roundTripped.meta.sourceFormat).toBe("bamv2");
+        expect(roundTripped.sequences.map((s) => s.facing)).toEqual(["NE", "E"]);
+        expect(roundTripped.sequences.map((s) => s.frameRefs.length)).toEqual([1, 2]);
+        const first = roundTripped.frames[0];
+        if (first === undefined) throw new Error("expected frames");
+        expect([...first.pixels]).toEqual([...(anim.frames[0]?.pixels ?? [])]);
+        expect([first.offsetX, first.offsetY]).toEqual([1, -1]);
+    });
+
+    it("writes PNGs a true-colour reader can open, alpha intact", () => {
+        // Asserting the decoded pixel rather than the file count: a directory of the right shape
+        // holding indexed PNGs would pass any structural check and lose the alpha silently.
+        const files = exportPngDirectory(makeRgbaAnimation());
+
+        const png = files.get("NE/000.png");
+        if (png === undefined) throw new Error("expected NE/000.png");
+        const decoded = decodeTruecolourPng(png);
+        expect([decoded.width, decoded.height]).toEqual([2, 2]);
+        expect([...decoded.pixels.subarray(4, 8)]).toEqual([0, 128, 255, 90]);
     });
 });

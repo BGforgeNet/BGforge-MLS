@@ -338,7 +338,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.fireEdit(enabled ? "Enable external palette" : "Disable external palette");
     }
 
-    replaceSequences(next: IndexedAnimation, mode: "replace" | "append"): void {
+    replaceSequences(next: Animation, mode: "replace" | "append"): void {
         this.model.replaceSequences(next, mode);
         this.fireEdit(mode === "append" ? "Import cycles" : "Replace cycles");
     }

@@ -49,28 +49,45 @@ function buildFdAt(sequenceNumber: number, payload: Uint8Array): Uint8Array {
     return data;
 }
 
-/** Centre `frame` on a canvasWidth x canvasHeight buffer filled with `fill` (the transparent index).
- *  Returns the pixels unchanged when the frame already fills the canvas. */
-function padFrameToCanvas(frame: ApngFrame, canvasWidth: number, canvasHeight: number, fill: number): Uint8Array {
+/** How one colour model fills in the parts of the encoder that differ between them. */
+interface ApngColourModel {
+    /** IHDR colour type: 3 for indexed, 6 for true colour with alpha. */
+    colourType: number;
+    bytesPerPixel: number;
+    /** Chunks written between acTL and the first fcTL - PLTE/tRNS for indexed, none for true colour. */
+    colourChunks: Uint8Array[];
+    /** One pixel's worth of bytes, used to fill the canvas around a smaller frame. */
+    padPixel: readonly number[];
+}
+
+/** Centre `frame` on a canvasWidth x canvasHeight canvas of `padPixel`s. Returns the pixels
+ *  unchanged when the frame already fills the canvas. */
+function padFrameToCanvas(
+    frame: ApngFrame,
+    canvasWidth: number,
+    canvasHeight: number,
+    model: ApngColourModel,
+): Uint8Array {
     if (frame.width === canvasWidth && frame.height === canvasHeight) return frame.pixels;
-    const out = new Uint8Array(canvasWidth * canvasHeight).fill(fill);
+    const bpp = model.bytesPerPixel;
+    const out = new Uint8Array(canvasWidth * canvasHeight * bpp);
+    for (let p = 0; p < canvasWidth * canvasHeight; p++) out.set(model.padPixel, p * bpp);
     const dx = Math.floor((canvasWidth - frame.width) / 2);
     const dy = Math.floor((canvasHeight - frame.height) / 2);
     for (let y = 0; y < frame.height; y++) {
-        const src = y * frame.width;
-        out.set(frame.pixels.subarray(src, src + frame.width), (y + dy) * canvasWidth + dx);
+        const src = y * frame.width * bpp;
+        out.set(frame.pixels.subarray(src, src + frame.width * bpp), ((y + dy) * canvasWidth + dx) * bpp);
     }
     return out;
 }
 
 /**
- * Hand-rolled colour-type-3 (indexed) APNG encoder: default image is frame 0
- * (IHDR/IDAT), later frames ride fdAT chunks, all sharing one PLTE/tRNS.
- * Chunk order: signature, IHDR, acTL, PLTE, tRNS, [fcTL, IDAT], [fcTL, fdAT]..., IEND.
+ * The APNG container, in whichever colour model `model` describes: default image is frame 0
+ * (IHDR/IDAT), later frames ride fdAT chunks. Chunk order: signature, IHDR, acTL, [colour chunks],
+ * [fcTL, IDAT], [fcTL, fdAT]..., IEND.
  */
-export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentIndex: number, fps: number): Uint8Array {
-    const first = frames[0];
-    if (!first) {
+function encodeApngWith(frames: ApngFrame[], fps: number, model: ApngColourModel): Uint8Array {
+    if (frames.length === 0) {
         throw new Error("encodeApng: at least one frame is required");
     }
     const delayDen = fps || 10;
@@ -84,18 +101,17 @@ export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentInde
 
     const parts: Uint8Array[] = [
         PNG_SIGNATURE,
-        writeChunk("IHDR", buildIhdr(canvasWidth, canvasHeight)),
+        writeChunk("IHDR", buildIhdr(canvasWidth, canvasHeight, model.colourType)),
         writeChunk("acTL", buildAcTl(frames.length)),
-        writeChunk("PLTE", buildPlte(palette)),
-        writeChunk("tRNS", buildTrns(transparentIndex)),
+        ...model.colourChunks,
     ];
 
     let sequenceNumber = 0;
     for (const [index, frame] of frames.entries()) {
-        const pixels = padFrameToCanvas(frame, canvasWidth, canvasHeight, transparentIndex);
+        const pixels = padFrameToCanvas(frame, canvasWidth, canvasHeight, model);
         parts.push(writeChunk("fcTL", buildFcTl(sequenceNumber, canvasWidth, canvasHeight, delayDen)));
         sequenceNumber++;
-        const payload = deflateScanlines(canvasWidth, canvasHeight, pixels);
+        const payload = deflateScanlines(canvasWidth, canvasHeight, pixels, model.bytesPerPixel);
         if (index === 0) {
             parts.push(writeChunk("IDAT", payload));
         } else {
@@ -113,6 +129,29 @@ export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentInde
         offset += part.length;
     }
     return out;
+}
+
+/** Colour-type-3 (indexed) APNG: every frame shares one PLTE/tRNS, and padding is the transparent index. */
+export function encodeApng(frames: ApngFrame[], palette: Rgba[], transparentIndex: number, fps: number): Uint8Array {
+    return encodeApngWith(frames, fps, {
+        colourType: 3,
+        bytesPerPixel: 1,
+        colourChunks: [writeChunk("PLTE", buildPlte(palette)), writeChunk("tRNS", buildTrns(transparentIndex))],
+        padPixel: [transparentIndex],
+    });
+}
+
+/**
+ * Colour-type-6 (true colour with alpha) APNG: no palette chunks at all, and padding is a fully
+ * transparent pixel rather than an index into a palette that does not exist.
+ */
+export function encodeTruecolourApng(frames: ApngFrame[], fps: number): Uint8Array {
+    return encodeApngWith(frames, fps, {
+        colourType: 6,
+        bytesPerPixel: 4,
+        colourChunks: [],
+        padPixel: [0, 0, 0, 0],
+    });
 }
 
 // fdAT payloads are prefixed with a 4-byte big-endian sequence number (APNG
