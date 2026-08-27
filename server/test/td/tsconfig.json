@@ -6,5 +6,8 @@
         "skipLibCheck": true,
         "allowUnusedLabels": true
     },
-    "files": ["td-runtime.d.ts", "td-engine-stubs.d.ts"]
+    // The runtime declarations are read from their single source in transpilers/, not copied here:
+    // a local copy silently typechecks the samples against a stale API. td-engine-stubs.d.ts is
+    // generated per-project and has no such source.
+    "files": ["../../../transpilers/td/src/td-runtime.d.ts", "td-engine-stubs.d.ts"]
 }

@@ -28,6 +28,22 @@ interface Action {
 
 // --- IElib sync surface end ---
 
+/**
+ * A dialogue state: a nullary function whose `say`/`reply`/`goTo` calls describe one state.
+ *
+ * Deliberately a call signature and not a brand, unlike `StrRef` and `Action` above. Those name values
+ * the runtime itself produces, so a brand costs their callers nothing; a state is written by the author
+ * with the `function` keyword (`function greeting() { ... }; begin("DLG", [greeting])`), and a branded
+ * type would reject every one of them.
+ *
+ * What this buys over `Function`, exactly: a function REQUIRING arguments is now rejected at the call
+ * site (`begin("DLG", [f])` where `f(a: string)` - "Target signature provides too few arguments").
+ * It is not airtight - anything callable with zero arguments still passes, `Math.max` included, since a
+ * rest parameter satisfies a nullary signature and every return type is assignable to `void`. Tightening
+ * further would need a brand, which the paragraph above rules out.
+ */
+type StateFn = () => void;
+
 // ---------------------------------------------------------------------------
 // State-level functions (called inside state functions)
 // ---------------------------------------------------------------------------
@@ -69,7 +85,7 @@ interface TransitionBuilder<Self> {
     /** Set transition feature flags directly using the binary DLG format. */
     flags(n: number): Self;
     /** Continue dialogue at the given state label in the same DLG file. */
-    goTo(target: string | number | Function): void;
+    goTo(target: string | number | StateFn): void;
     /** End the conversation. */
     exit(): void;
     /** Continue dialogue at the given state in another DLG file. */
@@ -100,7 +116,7 @@ declare function reply(text: StrRef): AfterReply;
 declare function action(...actions: Action[]): AfterAction;
 
 /** Continue dialogue at the given state label in the same DLG file. Synonym for GOTO. */
-declare function goTo(target: string | number | Function): void;
+declare function goTo(target: string | number | StateFn): void;
 
 /** End the conversation. */
 declare function exit(): void;
@@ -139,26 +155,26 @@ declare function unsolvedJournal(text: StrRef): void;
  * Use inside begin(), append(), appendEarly() argument lists.
  * @example begin("DLG", [state("greeting", () => { say(tra(1)); exit(); })]);
  */
-declare function state(label: string, body: () => void): Function;
+declare function state(label: string, body: StateFn): StateFn;
 
 /**
  * Create a new DLG file from scratch. Any existing DLG file with the same name
  * will be overwritten. The new DLG file contains exactly the states in the list.
  */
-declare function begin(dialog: string, states: (Function | string)[]): void;
-declare function begin(dialog: string, ...states: Function[]): void;
+declare function begin(dialog: string, states: (StateFn | string)[]): void;
+declare function begin(dialog: string, ...states: StateFn[]): void;
 
 /**
  * Add states to the end of an already-existing dialogue file.
  */
-declare function append(dialog: string, states: Function[]): void;
-declare function append(dialog: string, ...states: Function[]): void;
+declare function append(dialog: string, states: StateFn[]): void;
+declare function append(dialog: string, ...states: StateFn[]): void;
 
 /**
  * Like `append`, but the states are added early in the compilation timeline
  * (just after BEGIN is processed). They can be targets for INTERJECT_COPY_TRANS.
  */
-declare function appendEarly(dialog: string, ...states: Function[]): void;
+declare function appendEarly(dialog: string, ...states: StateFn[]): void;
 
 /**
  * Load the given dialog and replace the state at the given numeric index
@@ -169,15 +185,15 @@ declare function replaceState(dialog: string, state: number, body: () => void): 
 /**
  * Add transitions to the top of the transition list for the specified state.
  */
-declare function extendTop(dialog: string, state: string | number | Function, callback: () => void): void;
+declare function extendTop(dialog: string, state: string | number | StateFn, callback: () => void): void;
 
 /**
  * Add transitions to the bottom of the transition list for the specified state.
  */
-declare function extendBottom(dialog: string, state: string | number | Function, callback: () => void): void;
+declare function extendBottom(dialog: string, state: string | number | StateFn, callback: () => void): void;
 declare function extendBottom(
     dialog: string,
-    state: string | number | Function,
+    state: string | number | StateFn,
     options: { position?: number },
     callback: () => void,
 ): void;
@@ -191,8 +207,8 @@ declare function extendBottom(
  * Useful when NPCs talk among themselves. CHAIN only appends to existing
  * dialogues; it cannot create a new DLG.
  */
-declare function chain(callback: Function): void;
-declare function chain(entryTrigger: boolean, callback: Function): void;
+declare function chain(callback: () => void): void;
+declare function chain(entryTrigger: boolean, callback: () => void): void;
 declare function chain(dialog: string, label: string, body: () => void): void;
 declare function chain(entryTrigger: boolean, dialog: string, label: string, body: () => void): void;
 
@@ -215,7 +231,7 @@ declare function interject(
     entryDialog: string,
     entryState: string,
     globalVar: string,
-    callback: Function,
+    callback: () => void,
     exitDialog?: string,
     exitState?: string,
 ): void;
@@ -229,7 +245,7 @@ declare function interjectCopyTrans(
     entryDialog: string,
     entryState: string,
     globalVar: string,
-    callback: Function,
+    callback: () => void,
     exitDialog?: string,
     exitState?: string,
 ): void;
@@ -242,7 +258,7 @@ declare function interjectCopyTrans2(
     entryDialog: string,
     entryState: string,
     globalVar: string,
-    callback: Function,
+    callback: () => void,
 ): void;
 
 /**
@@ -253,7 +269,7 @@ declare function interjectCopyTrans3(
     entryDialog: string,
     entryState: string,
     globalVar: string,
-    callback: Function,
+    callback: () => void,
 ): void;
 
 /**
@@ -264,7 +280,7 @@ declare function interjectCopyTrans4(
     entryDialog: string,
     entryState: string,
     globalVar: string,
-    callback: Function,
+    callback: () => void,
 ): void;
 
 // ---------------------------------------------------------------------------
@@ -311,7 +327,7 @@ declare function addTransAction(dialog: string, states: (string | number)[], tra
  */
 declare function replaceTransTrigger(
     dialog: string,
-    states: (string | number | Function)[],
+    states: (string | number | StateFn)[],
     trans: number[],
     from: string,
     to: string,
@@ -323,7 +339,7 @@ declare function replaceTransTrigger(
  */
 declare function replaceTransAction(
     dialog: string,
-    states: (string | number | Function)[],
+    states: (string | number | StateFn)[],
     trans: number[],
     from: string,
     to: string,

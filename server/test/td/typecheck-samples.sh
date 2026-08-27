@@ -24,8 +24,11 @@ for sample in samples/*.td; do
     links+=("$link")
 done
 
-# Typecheck all samples
-if $TSC --noEmit --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 td-runtime.d.ts td-engine-stubs.d.ts "${links[@]}" 2>&1; then
+# Typecheck all samples. The runtime declarations come from their single source in transpilers/ - a
+# copy beside this script would typecheck the samples against a stale API without anything failing.
+TD_RUNTIME="$ROOT/transpilers/td/src/td-runtime.d.ts"
+
+if $TSC --noEmit --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 "$TD_RUNTIME" td-engine-stubs.d.ts "${links[@]}" 2>&1; then
     echo "TD typecheck: ${#links[@]} passed, 0 failed"
 else
     exit 1

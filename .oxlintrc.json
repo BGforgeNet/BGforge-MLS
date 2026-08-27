@@ -392,17 +392,14 @@
             }
         },
         {
-            // Ambient declaration surfaces for the TD/TBAF runtimes and the generated engine stubs.
-            // `vars-on-top` misreads a top-level `declare var` (how an engine global is declared in a
-            // .d.ts) as a function-scope var. `no-unsafe-function-type` is a real weakness rather than a
-            // false positive: `state()` returns an opaque state handle typed `Function`, which `begin()`
-            // and `append()` consume. The fix is a branded handle type like the `StrRef`/`Action` brands
-            // already in td-runtime.d.ts - an API change across the plugin and every TD fixture, not a
-            // lint-config edit. Scoped to these two rules so the rest still applies here.
+            // Ambient declaration surfaces for the TBAF runtime and the engine stubs, which declare the
+            // engine's globals as top-level `declare var` - the form a .d.ts requires, and which
+            // `vars-on-top` misreads as a function-scope var. That rule alone; everything else applies.
+            // `no-unsafe-function-type` used to be disabled here too and no longer needs to be: its 40
+            // sites were all the TD runtime's `Function`, since narrowed to `StateFn`.
             "files": ["**/*-runtime.d.ts", "**/*-engine-stubs.d.ts"],
             "rules": {
-                "vars-on-top": "off",
-                "typescript/no-unsafe-function-type": "off"
+                "vars-on-top": "off"
             }
         },
         {
