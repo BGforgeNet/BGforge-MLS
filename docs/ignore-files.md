@@ -202,10 +202,10 @@ because the full type-aware set is dominated by `prefer-readonly-parameter-types
 real defects when first enabled. It takes about four seconds and is wired into `scripts/test.sh` Phase 1 and
 pre-commit.
 
-**It excludes `plugins/**`.** Both TS Language Service plugins set `moduleResolution: node`, which the TS 7 compiler
-that tsgolint embeds has removed, so their programs fail to construct. That is a deliberate config choice for
-tsserver compatibility (see the comment in either plugin's `tsconfig.json`), not something to change for a linter -
-so those two `src` trees get no type-aware coverage until the plugins move to a supported resolution mode.
+It covers every workspace. It briefly did not: both TS Language Service plugins pinned `moduleResolution: node`,
+removed in TS 7, so their programs failed to construct and neither `src` tree was analysed. They now use `node16`,
+which resolves and emits CommonJS in a package that declares no `"type"` - so `export = init` stays legal - and the
+shipped bundle never depended on the setting anyway, since `scripts/build-ts-plugin.sh` uses esbuild `--format=cjs`.
 
 A program that fails to construct reports zero findings, not an error per file: `client` and `server` were in that
 state until their `rootDir` was made explicit, and read as clean while nothing had been analysed. Treat a sudden

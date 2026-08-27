@@ -81,7 +81,7 @@
         "tssl-int-diff": "tsx compilers/ssl/scripts/tssl-int-diff.mts",
         "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "pnpm exec oxlint && pnpm lint:types && pnpm lint:tests && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
-        "lint:types": "pnpm exec oxlint --type-aware --ignore-pattern 'plugins/**' -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
+        "lint:types": "pnpm exec oxlint --type-aware -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
         "lint:tests": "pnpm exec oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots",
         "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
