@@ -189,3 +189,14 @@ test("BAMC uses the same tile-centre anchor as BAM", () => {
         frameTopLeft({ sourceFormat: "bam", ...geom }, 96),
     );
 });
+
+test("BAM v2 anchors on its stored centre exactly as v1 does", () => {
+    // v2's frame entry stores the same centre X/Y as v1, so both must place identically; a v2 file
+    // that drifted here would sit visibly off from the same sprite saved as v1.
+    const geom = { width: 40, height: 76, offsetX: 20, offsetY: 38, dirOffsetX: 0, dirOffsetY: 0 };
+
+    expect(frameTopLeft({ sourceFormat: "bamv2", ...geom }, 96)).toEqual(
+        frameTopLeft({ sourceFormat: "bam", ...geom }, 96),
+    );
+    expect(referenceMarkerPercent("bamv2", 76, 96)).toEqual(referenceMarkerPercent("bam", 76, 96));
+});

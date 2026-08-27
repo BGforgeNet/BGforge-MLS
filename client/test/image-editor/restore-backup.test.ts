@@ -9,7 +9,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type * as vscode from "vscode";
 import { combineIeBamPair, serializeBamV1, serializeFrm, serializePal, type Rgba } from "@bgforge/image";
 import { encodeBackup } from "../../src/image-editor/backup";
-import { makeIeBamBase, makeIeBamEast, makeMiniFrm } from "./fixtures";
+import { makeIeBamBase, makeIeBamEast, makeMiniFrm, asIndexedView } from "./fixtures";
 
 const DOC_PATH = "/w/hero.frm";
 const SIDECAR_PATH = "/w/hero.pal";
@@ -115,8 +115,8 @@ describe("animation editor hot-exit restore", () => {
         const document = await provider.openCustomDocument(fileUri(DOC_PATH), openContext(BACKUP_PATH), token);
 
         // The on-disk animation, not the pending edit: fps 10 and the sidecar's auto-on palette.
-        expect(document.toView().meta.fps).toBe(10);
-        expect(document.toView().externalPaletteActive).toBe(true);
+        expect(asIndexedView(document.toView()).meta.fps).toBe(10);
+        expect(asIndexedView(document.toView()).externalPaletteActive).toBe(true);
         expect(document.saveUri.fsPath).toBe(DOC_PATH);
         expect(showWarningMock).toHaveBeenCalledTimes(1);
         expect(String(showWarningMock.mock.calls[0]?.[0])).toContain("hero.frm");
@@ -137,7 +137,7 @@ describe("animation editor hot-exit restore", () => {
         const provider = new ImageEditorProvider(context);
 
         const document = await provider.openCustomDocument(fileUri(DOC_PATH), openContext(BACKUP_PATH), token);
-        const view = document.toView();
+        const view = asIndexedView(document.toView());
 
         expect(view.meta.fps).toBe(25);
         // The sidecar is still read from disk (it is real, and the edit never touched it) - but the
@@ -152,7 +152,7 @@ describe("animation editor hot-exit restore", () => {
         const provider = new ImageEditorProvider(context);
 
         const document = await provider.openCustomDocument(fileUri(DOC_PATH), openContext(), token);
-        const view = document.toView();
+        const view = asIndexedView(document.toView());
 
         expect(view.meta.fps).toBe(10);
         expect(view.externalPaletteActive).toBe(true);
@@ -169,7 +169,7 @@ describe("animation editor hot-exit restore", () => {
 
         const document = await provider.openCustomDocument(fileUri(BASE_PATH), openContext(BACKUP_PATH), token);
 
-        expect(document.toView().meta.transparentIndex).toBe(5);
+        expect(asIndexedView(document.toView()).meta.transparentIndex).toBe(5);
         expect(document.saveUri.fsPath).toBe(BASE_PATH);
         expect(document.pairSaveWrites()?.map((w) => w.uri.fsPath)).toEqual([BASE_PATH, EAST_PATH]);
     });

@@ -13,6 +13,7 @@ function makeView(facings: Facing[]): AnimationView {
         dirOffsetY: 0,
     }));
     return {
+        colorModel: "indexed",
         palette: [],
         frames: [],
         sequences,

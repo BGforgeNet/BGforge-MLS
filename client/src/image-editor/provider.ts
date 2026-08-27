@@ -5,7 +5,7 @@ import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
-import { ImageEditorDocument } from "./document";
+import { type GameResourceBytes, ImageEditorDocument } from "./document";
 import { buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave } from "./save";
 import {
@@ -62,7 +62,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     private readonly extensionUri: vscode.Uri;
 
-    constructor(context: vscode.ExtensionContext) {
+    /**
+     * `resourceBytes` reads the open game's resources, used to resolve a BAM v2's PVRZ pages when
+     * they are not siblings of the opened file. Absent when the resource viewer is not registered.
+     */
+    private readonly resourceBytes: GameResourceBytes | undefined;
+
+    constructor(context: vscode.ExtensionContext, resourceBytes?: GameResourceBytes) {
+        this.resourceBytes = resourceBytes;
         this.extensionUri = context.extensionUri;
     }
 
@@ -75,7 +82,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // the unsaved edits; reading the files instead would silently discard them while the editor still
         // shows as dirty.
         const backup = await readBackup(uri, openContext.backupId);
-        const document = await ImageEditorDocument.open(uri, backup);
+        const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: document.toView() }));
         return document;
@@ -176,6 +183,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // resolvedAnimation, not animation: an FRM's own palette is an all-black placeholder, so a
             // raw-animation export would write black-silhouette PNGs / a black BAM (see document-model).
             const anim = document.resolvedAnimation();
+            if (anim === undefined) {
+                // Every Save As target below writes an indexed artifact (FRM, BAM v1/BAMC, indexed
+                // PNGs, APNG built from a palette), so a true-colour document has nothing to offer
+                // here until conversion lands.
+                await vscode.window.showWarningMessage(
+                    "Save As is not available for a true-colour BAM v2 yet - this build reads it but cannot convert it.",
+                );
+                return;
+            }
             const sourcePath = await this.saveAsSourcePath(document);
             if (sourcePath === undefined) return; // user dismissed the destination picker
             const targetPath = saveAsTargetPath(sourcePath, target);

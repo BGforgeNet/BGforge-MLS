@@ -31,6 +31,14 @@ export function frameToRgba(
     return out;
 }
 
+/**
+ * A true-colour frame's pixels are already RGBA, so this is a copy rather than a lookup. It exists
+ * so both colour models resolve through one module and FrameCanvas has a single draw path.
+ */
+export function rgbaFrameToRgba(pixels: Uint8Array): Uint8ClampedArray {
+    return new Uint8ClampedArray(pixels);
+}
+
 /** A simple checkerboard CSS background for the "checkered" transparency background option. */
 export function checkerboardCss(): string {
     return "repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%) 0 0 / 16px 16px";

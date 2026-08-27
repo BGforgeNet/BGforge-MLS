@@ -42,21 +42,27 @@
                 aria-label="Action frame"
             />
         </label>
-        <label
-            class="meta-field meta-checkbox"
-            title={view.hasSidecarPal
-                ? "Render with the sidecar .pal palette instead of the default Fallout palette"
-                : "Disabled: no sidecar .pal file found next to this .frm"}
-        >
-            <input
-                type="checkbox"
-                checked={view.externalPaletteActive}
-                disabled={!view.hasSidecarPal}
-                onchange={(e) => bridge.send({ type: "setExternalPalette", enabled: e.currentTarget.checked })}
-            />
-            <span class="meta-label">Use external palette</span>
-        </label>
-    {:else}
+        <!-- Absent, not disabled, for a true-colour document: the format has no palette, so a
+             greyed-out control would still offer an edit that could never be represented. -->
+        {#if view.colorModel === "indexed"}
+            <label
+                class="meta-field meta-checkbox"
+                title={view.hasSidecarPal
+                    ? "Render with the sidecar .pal palette instead of the default Fallout palette"
+                    : "Disabled: no sidecar .pal file found next to this .frm"}
+            >
+                <input
+                    type="checkbox"
+                    checked={view.externalPaletteActive}
+                    disabled={!view.hasSidecarPal}
+                    onchange={(e) => bridge.send({ type: "setExternalPalette", enabled: e.currentTarget.checked })}
+                />
+                <span class="meta-label">Use external palette</span>
+            </label>
+        {/if}
+    {:else if view.colorModel === "indexed"}
+        <!-- A transparent INDEX is a palette concept: BAM v2 carries real per-pixel alpha instead,
+             so there is no index to nominate and the control has nothing to act on. -->
         <label
             class="meta-field"
             title="Palette index drawn as transparent - pixels with this index show the background instead of a colour"

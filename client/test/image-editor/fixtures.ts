@@ -1,3 +1,4 @@
+import type { AnimationView, IndexedAnimationView } from "../../src/image-editor/webview/messages";
 import {
     DEFAULT_FALLOUT_PALETTE,
     emptyPalette,
@@ -83,4 +84,14 @@ export function makeMiniBam(): IndexedAnimation {
         frames: [{ width: 1, height: 1, pixels: Uint8Array.from([0]), offsetX: 0, offsetY: 0 }],
         meta: { sourceFormat: "bam", transparentIndex: 0 },
     };
+}
+
+/**
+ * The view as an indexed one, for suites that build palette-indexed documents. Throws rather than
+ * casting, so a document that unexpectedly became true-colour fails here instead of at a missing
+ * palette three assertions later.
+ */
+export function asIndexedView(view: AnimationView): IndexedAnimationView {
+    if (view.colorModel !== "indexed") throw new Error(`expected an indexed view, got ${view.colorModel}`);
+    return view;
 }

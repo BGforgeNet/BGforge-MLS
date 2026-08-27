@@ -71,7 +71,7 @@ export async function activate(context: ExtensionContext) {
     // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
-        registerImageEditor(context),
+        registerImageEditor(context, gameLookups.resourceBytes),
         registerScriptViews(context, gameLookups.bcsSymbols),
     );
 

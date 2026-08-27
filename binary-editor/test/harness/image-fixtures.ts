@@ -67,6 +67,7 @@ export function buildFrmFixture(): AnimationView {
     });
 
     return {
+        colorModel: "indexed",
         palette,
         frames,
         sequences,
@@ -101,6 +102,7 @@ export function buildMultiSequenceBamFixture(): AnimationView {
     });
 
     return {
+        colorModel: "indexed",
         palette,
         frames,
         sequences,
@@ -143,6 +145,7 @@ export function buildDirectionalBamFixture(): AnimationView {
     }
 
     return {
+        colorModel: "indexed",
         palette,
         frames,
         sequences,
@@ -170,6 +173,7 @@ export function buildBamFixture(): AnimationView {
     });
 
     return {
+        colorModel: "indexed",
         palette,
         frames,
         sequences,

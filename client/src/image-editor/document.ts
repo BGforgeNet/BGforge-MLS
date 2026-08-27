@@ -1,11 +1,16 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import {
+    type Animation,
     type IndexedAnimation,
+    type RgbaAnimation,
     combineFrmDirections,
     combineIeBamPair,
     encodeBamc,
+    decodeBamV2,
     loadImage,
+    pvrzResourceName,
+    readBamV2Structure,
     serializeBamV1,
     splitIeBamPair,
 } from "@bgforge/image";
@@ -13,8 +18,15 @@ import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
+import { composePvrzResolver } from "./pvrz-resolver";
 import { sidecarPalPath } from "./sidecar";
 import type { AnimationView, MetaPatch } from "./webview/messages";
+
+/**
+ * Reads a resource out of the game an editor document was opened against - `gameLookups.resourceBytes`
+ * from the IE resource viewer, taken as a function so this module stays free of the archive layer.
+ */
+export type GameResourceBytes = (uri: vscode.Uri, resref: string, ext: string) => Uint8Array | undefined;
 
 type BamFormat = "bam" | "bamc";
 
@@ -77,7 +89,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * shutdown. A restore takes only the animation from the backup: the split-set / pair identity and
      * the sidecar palette still come from disk, which the unsaved edits never touched.
      */
-    static async open(uri: vscode.Uri, backup?: DocumentBackup): Promise<ImageEditorDocument> {
+    static async open(
+        uri: vscode.Uri,
+        backup?: DocumentBackup,
+        resourceBytes?: GameResourceBytes,
+    ): Promise<ImageEditorDocument> {
         if (isFrSplitPath(uri.fsPath)) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(uri.fsPath);
             // Present and save under the combined <base>.frm identity, not the opened .frN member.
@@ -89,6 +105,16 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         }
         const bytes = await vscode.workspace.fs.readFile(uri);
         if (isBamPath(uri.path)) {
+            // v2 before the pair probe: pairing combines two BAM v1 files, and a v2 file cannot be
+            // a member of one, so probing it first would read siblings for nothing.
+            const v2 = await ImageEditorDocument.tryReadBamV2(uri, bytes, resourceBytes);
+            if (v2) {
+                return new ImageEditorDocument(
+                    uri,
+                    ImageDocumentModel.fromRgbaAnimation(v2, path.basename(uri.fsPath)),
+                    false,
+                );
+            }
             const pair = await ImageEditorDocument.tryReadIePair(uri, bytes);
             if (pair) {
                 // Present under the base file's identity, whichever member was opened.
@@ -128,7 +154,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      */
     pairSaveWrites(): PairWrite[] | undefined {
         if (!this.iePair) return undefined;
-        const split = splitIeBamPair(this.model.animation);
+        const indexed = this.model.indexedAnimation();
+        // Pairing is a BAM v1 shape: a document only becomes a pair by combining two v1 files.
+        if (indexed === undefined) throw new Error("A true-colour BAM has no base/east pair to split.");
+        const split = splitIeBamPair(indexed);
         if (!split) {
             throw new Error(
                 "This base/east BAM pair no longer fits the 8-cycle direction blocks - use Save As instead.",
@@ -138,6 +167,54 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             { uri: this.iePair.baseUri, bytes: serializeBamAs(split.base, this.iePair.baseFormat) },
             { uri: this.iePair.eastUri, bytes: serializeBamAs(split.east, this.iePair.eastFormat) },
         ];
+    }
+
+    /**
+     * A BAM v2's frames live in separate `MOSxxxx.PVRZ` pages, so opening one means resolving every
+     * page it names before anything can be decoded. Returns undefined for a file that is not v2.
+     *
+     * Pages are read up front rather than lazily because `decodeBamV2` is synchronous and the two
+     * sources here are not: the sibling read crosses `vscode.workspace.fs`, and the game lookup
+     * goes through the archive layer.
+     */
+    private static async tryReadBamV2(
+        uri: vscode.Uri,
+        bytes: Uint8Array,
+        resourceBytes?: GameResourceBytes,
+    ): Promise<RgbaAnimation | undefined> {
+        if (bytes.byteLength < 8 || String.fromCodePoint(...bytes.subarray(0, 8)) !== "BAM V2  ") return undefined;
+
+        const structure = readBamV2Structure(bytes);
+        const dir = uri.with({ path: path.posix.dirname(uri.path) });
+        // In parallel: a BAM referencing a dozen pages would otherwise pay a serial round-trip each,
+        // and the reads are independent.
+        const found = await Promise.all(
+            structure.requiredPages.map(async (page): Promise<[string, Uint8Array] | undefined> => {
+                const resource = pvrzResourceName(page);
+                try {
+                    return [resource, await vscode.workspace.fs.readFile(vscode.Uri.joinPath(dir, resource))];
+                } catch {
+                    // An absent sibling is the normal case for a file whose pages live in the install;
+                    // the game lookup answers for it, and an unresolved page fails loudly in decode.
+                    return undefined;
+                }
+            }),
+        );
+        const siblings = new Map(found.filter((entry) => entry !== undefined));
+        return decodeBamV2(
+            structure,
+            composePvrzResolver({
+                readSibling: (resource) => siblings.get(resource),
+                // The archive lookup is keyed by resref and extension, so the resource name splits
+                // here rather than the resolver's one-name contract bending to fit it.
+                ...(resourceBytes
+                    ? {
+                          readGameResource: (resource: string): Uint8Array | undefined =>
+                              resourceBytes(uri, path.parse(resource).name, "pvrz"),
+                      }
+                    : {}),
+            }),
+        );
     }
 
     // Probe the opened .bam's siblings for the other pair member: first as the base (companion =
@@ -278,12 +355,15 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return this.model.sidecarBytes();
     }
 
-    get animation(): IndexedAnimation {
+    get animation(): Animation {
         return this.model.animation;
     }
 
-    /** IndexedAnimation with the active palette resolved in - use for exports/conversions (see model). */
-    resolvedAnimation(): IndexedAnimation {
+    /**
+     * IndexedAnimation with the active palette resolved in - use for exports/conversions (see
+     * model). Undefined for a true-colour document, which has no palette to resolve.
+     */
+    resolvedAnimation(): IndexedAnimation | undefined {
         return this.model.resolvedAnimation();
     }
 

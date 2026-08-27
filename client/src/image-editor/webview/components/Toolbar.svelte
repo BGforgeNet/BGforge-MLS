@@ -85,5 +85,14 @@
         items={saveAsOptions.map((o) => ({ value: o.value, label: o.label }))}
         onselect={chooseSaveAs}
     />
-    <ActionMenu label="Import PNG directory..." ariaLabel="Import PNG directory" items={IMPORT_ITEMS} onselect={chooseImport} />
+    <!-- Indexed-only: a PNG directory carries a palette and one byte per pixel, which a true-colour
+         document cannot absorb. Absent rather than disabled - see MetaControls for the same reasoning. -->
+    {#if view.colorModel === "indexed"}
+        <ActionMenu
+            label="Import PNG directory..."
+            ariaLabel="Import PNG directory"
+            items={IMPORT_ITEMS}
+            onselect={chooseImport}
+        />
+    {/if}
 </div>

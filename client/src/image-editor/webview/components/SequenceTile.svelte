@@ -31,7 +31,8 @@
 {#if frameView}
     <FrameCanvas
         frame={frameView}
-        palette={view.palette}
+        colorModel={view.colorModel}
+        palette={view.colorModel === "indexed" ? view.palette : undefined}
         transparentIndex={view.meta.transparentIndex ?? 0}
         {zoom}
         sourceFormat={view.sourceFormat}

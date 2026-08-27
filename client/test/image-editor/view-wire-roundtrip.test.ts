@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { serializeFrm } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
 import { decodeFramePixels } from "../../src/image-editor/webview/messages";
-import { makeMiniFrm } from "./fixtures";
+import { makeMiniFrm, asIndexedView } from "./fixtures";
 
 // Guards the whole host->webview wire contract against the silent-drop class: a non-JSON-safe
 // payload type (a raw Uint8Array, Map, Date, class instance) can survive in memory and on desktop
@@ -13,7 +13,7 @@ import { makeMiniFrm } from "./fixtures";
 // object here, so `typeof === "string"` + a correct decode length catch it deterministically.
 test("AnimationView survives a JSON round-trip so the webview canvas still gets usable pixels", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
-    const view = model.toView();
+    const view = asIndexedView(model.toView());
     // JSON is the DELIBERATE lossy-transport proxy here: structuredClone would preserve the very
     // types (Uint8Array etc.) the web webview drops, defeating this guard. The annotation (not a
     // cast) types JSON.parse's `any`.

@@ -2,14 +2,17 @@ import zlib from "zlib";
 import { type Rgba } from "../model/animation.ts";
 import { PNG_SIGNATURE, writeChunk } from "./chunk.ts";
 
-/** Colour-type-3 IHDR shared by the static and animated (APNG) encoders. */
-export function buildIhdr(width: number, height: number): Uint8Array {
+/**
+ * IHDR shared by the static, animated (APNG) and truecolour encoders. `colourType` defaults to 3
+ * (indexed) so every existing caller is unaffected; 6 is truecolour with alpha.
+ */
+export function buildIhdr(width: number, height: number, colourType = 3): Uint8Array {
     const data = new Uint8Array(13);
     const view = new DataView(data.buffer);
     view.setUint32(0, width, false);
     view.setUint32(4, height, false);
     data[8] = 8; // bit depth
-    data[9] = 3; // colour type: indexed
+    data[9] = colourType;
     data[10] = 0; // compression
     data[11] = 0; // filter
     data[12] = 0; // interlace
@@ -41,13 +44,14 @@ export function buildTrns(transparentIndex: number): Uint8Array {
  * The same payload backs a static IDAT and, per animation frame, an APNG
  * IDAT/fdAT - shared here so both encoders filter+compress identically.
  */
-export function deflateScanlines(width: number, height: number, pixels: Uint8Array): Uint8Array {
-    const raw = new Uint8Array(height * (1 + width));
+export function deflateScanlines(width: number, height: number, pixels: Uint8Array, bytesPerPixel = 1): Uint8Array {
+    const stride = width * bytesPerPixel;
+    const raw = new Uint8Array(height * (1 + stride));
     for (let row = 0; row < height; row++) {
-        const rowStart = row * (1 + width);
+        const rowStart = row * (1 + stride);
         raw[rowStart] = 0; // filter type: none
-        const pixelRowStart = row * width;
-        for (let col = 0; col < width; col++) {
+        const pixelRowStart = row * stride;
+        for (let col = 0; col < stride; col++) {
             raw[rowStart + 1 + col] = pixels[pixelRowStart + col] ?? 0;
         }
     }
@@ -73,6 +77,26 @@ export function encodeIndexedPng(
     );
     let offset = 0;
     for (const part of [PNG_SIGNATURE, ihdr, plte, trns, idat, iend]) {
+        out.set(part, offset);
+        offset += part.length;
+    }
+    return out;
+}
+
+/**
+ * Hand-rolled colour-type-6 (truecolour with alpha) PNG encoder: IHDR, one IDAT, IEND.
+ *
+ * No PLTE or tRNS: a true-colour frame carries per-pixel alpha, which an indexed PNG's single
+ * transparent palette entry cannot represent. `rgba` is `width * height * 4` bytes.
+ */
+export function encodeTruecolourPng(width: number, height: number, rgba: Uint8Array): Uint8Array {
+    const ihdr = writeChunk("IHDR", buildIhdr(width, height, 6));
+    const idat = writeChunk("IDAT", deflateScanlines(width, height, rgba, 4));
+    const iend = writeChunk("IEND", new Uint8Array(0));
+
+    const out = new Uint8Array(PNG_SIGNATURE.length + ihdr.length + idat.length + iend.length);
+    let offset = 0;
+    for (const part of [PNG_SIGNATURE, ihdr, idat, iend]) {
         out.set(part, offset);
         offset += part.length;
     }

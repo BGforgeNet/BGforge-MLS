@@ -1,7 +1,10 @@
 import type { AnimationMeta, Facing, Rgba, SourceFormat } from "@bgforge/image";
 import { isRecord } from "../../is-record";
 
-/** A single decoded frame, trimmed for the wire: no rawEncoding/rleEncoded (re-encoding is host-side). */
+/**
+ * A single decoded frame, trimmed for the wire: no rawEncoding/rleEncoded (re-encoding is host-side).
+ * `pixels` holds palette indices or RGBA quads depending on the view's colorModel.
+ */
 export interface FrameView {
     width: number;
     height: number;
@@ -21,8 +24,7 @@ export interface SequenceView {
     dirOffsetY: number;
 }
 
-export interface AnimationView {
-    palette: Rgba[]; // 256, the ACTIVE palette (sidecar/default/embedded already chosen host-side)
+interface AnimationViewBase {
     frames: FrameView[];
     sequences: SequenceView[];
     meta: AnimationMeta;
@@ -31,9 +33,27 @@ export interface AnimationView {
     // category from the art directory (art/critters, art/scenery, ...) - see render/naming.ts.
     dirName?: string;
     sourceFormat: SourceFormat;
+}
+
+/** FRM, BAM v1 and BAMC: FrameView.pixels holds palette indices. */
+export interface IndexedAnimationView extends AnimationViewBase {
+    colorModel: "indexed";
+    palette: Rgba[]; // 256, the ACTIVE palette (sidecar/default/embedded already chosen host-side)
     hasSidecarPal: boolean; // FRM: <basename>.pal exists on disk
     externalPaletteActive: boolean; // FRM: sidecar currently in use
 }
+
+/**
+ * BAM v2: FrameView.pixels holds RGBA quads, and there is no palette at all.
+ *
+ * Carrying a placeholder palette instead would be worse than absent: the palette controls key off
+ * it, so they would render for a format that cannot store their result.
+ */
+export interface RgbaAnimationView extends AnimationViewBase {
+    colorModel: "rgba";
+}
+
+export type AnimationView = IndexedAnimationView | RgbaAnimationView;
 
 /** Universal base64 codec for FrameView.pixels: btoa/atob are global in the extension host (including
  *  the web-worker host code-server runs it in, where Node's Buffer is unavailable), the webview, and Node. */

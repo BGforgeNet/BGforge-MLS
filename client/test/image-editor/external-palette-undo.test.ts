@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { serializeFrm, serializePal, type Rgba } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
-import { makeMiniFrm } from "./fixtures";
+import { makeMiniFrm, asIndexedView } from "./fixtures";
 
 // A sidecar .pal makes externalEnabled auto-on, so a toggle is observable via externalPaletteActive.
 function sidecarBytes(): Uint8Array {
@@ -13,14 +13,14 @@ function sidecarBytes(): Uint8Array {
 // toggle silently does not revert (and burns a no-op undo step). This guards that regression.
 test("undo/redo revert the external-palette toggle, not just the animation", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm", sidecarBytes());
-    expect(model.toView().externalPaletteActive).toBe(true); // auto-on when a sidecar is present
+    expect(asIndexedView(model.toView()).externalPaletteActive).toBe(true); // auto-on when a sidecar is present
 
     model.setExternalPalette(false);
-    expect(model.toView().externalPaletteActive).toBe(false);
+    expect(asIndexedView(model.toView()).externalPaletteActive).toBe(false);
 
     model.undo();
-    expect(model.toView().externalPaletteActive).toBe(true); // reverted (pre-fix: stayed false)
+    expect(asIndexedView(model.toView()).externalPaletteActive).toBe(true); // reverted (pre-fix: stayed false)
 
     model.redo();
-    expect(model.toView().externalPaletteActive).toBe(false);
+    expect(asIndexedView(model.toView()).externalPaletteActive).toBe(false);
 });

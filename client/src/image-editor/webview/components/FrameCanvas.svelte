@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Rgba, SourceFormat } from "@bgforge/image";
     import { decodeFramePixels, type FrameView } from "../messages";
-    import { frameToRgba } from "../render/indexed-to-rgba";
+    import { frameToRgba, rgbaFrameToRgba } from "../render/indexed-to-rgba";
     import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
 
     // The per-tile backdrop (.frame-tile-bg, fed by the stage's --tile-bg variable) must stay UNDER
@@ -11,6 +11,7 @@
     // alpha-0 in the bitmap and show the backdrop through.
     const {
         frame,
+        colorModel,
         palette,
         transparentIndex,
         zoom,
@@ -22,7 +23,9 @@
         ariaLabel = "Animation frame",
     }: {
         frame: FrameView;
-        palette: Rgba[];
+        // Decides how frame.pixels is read: palette indices, or RGBA quads that need no palette.
+        colorModel: "indexed" | "rgba";
+        palette: Rgba[] | undefined;
         transparentIndex: number;
         zoom: number;
         sourceFormat: SourceFormat;
@@ -85,7 +88,11 @@
         // ArrayLike<number> regardless of buffer type.
         const imageData = nctx.createImageData(frame.width, frame.height);
         const pixels = decodeFramePixels(frame.pixels);
-        imageData.data.set(frameToRgba(pixels, frame.width, frame.height, palette, transparentIndex));
+        imageData.data.set(
+            colorModel === "rgba" || palette === undefined
+                ? rgbaFrameToRgba(pixels)
+                : frameToRgba(pixels, frame.width, frame.height, palette, transparentIndex),
+        );
         nctx.putImageData(imageData, 0, 0);
 
         ctx.imageSmoothingEnabled = false;

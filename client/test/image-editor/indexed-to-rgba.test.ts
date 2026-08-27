@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { Rgba } from "@bgforge/image";
-import { frameToRgba } from "../../src/image-editor/webview/render/indexed-to-rgba";
+import { frameToRgba, rgbaFrameToRgba } from "../../src/image-editor/webview/render/indexed-to-rgba";
 
 test("frameToRgba maps indices to palette RGBA and makes the transparent index alpha 0", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: 0, b: 0, a: 255 }));
@@ -31,4 +31,12 @@ test("frameToRgba resolves the last pixel of a multi-pixel frame against its own
     const pixels = Uint8Array.from([10, 20, 30, 255]);
     const rgba = frameToRgba(pixels, 2, 2, palette, 0);
     expect([rgba[12], rgba[13], rgba[14], rgba[15]]).toEqual([0, 0, 255, 255]); // last pixel, index 255
+});
+
+test("a true-colour frame's pixels pass through unchanged, alpha included", () => {
+    // No palette lookup and no transparent-index rule: a v2 frame already carries per-pixel alpha,
+    // and reinterpreting it through the indexed path would read every quad as four separate pixels.
+    const pixels = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 1, 2, 3, 128]);
+
+    expect([...rgbaFrameToRgba(pixels)]).toEqual([255, 0, 0, 255, 0, 255, 0, 0, 1, 2, 3, 128]);
 });

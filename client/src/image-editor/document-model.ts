@@ -1,7 +1,10 @@
 import {
+    type Animation,
+    type RgbaAnimation,
     DEFAULT_FALLOUT_PALETTE,
     encodeBamc,
     loadImage,
+    isRgbaAnimation,
     parsePal,
     serializeBamV1,
     serializeFrm,
@@ -32,7 +35,7 @@ function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
 // animation AND externalEnabled (which is not part of the IndexedAnimation IR but is a saveable,
 // undoable choice); snapshotting only the animation would leave a palette toggle unrevertible.
 interface DocumentSnapshot {
-    animation: IndexedAnimation;
+    animation: Animation;
     externalEnabled: boolean;
 }
 
@@ -41,7 +44,7 @@ interface DocumentSnapshot {
  * vscode.CustomDocument shell wraps this and wires onChange to its own refresh event.
  */
 export class ImageDocumentModel {
-    private animationValue: IndexedAnimation;
+    private animationValue: Animation;
     private readonly basename: string;
     private sidecarPalette: Rgba[] | undefined;
     private hasSidecar = false;
@@ -51,7 +54,7 @@ export class ImageDocumentModel {
 
     onChange?: () => void;
 
-    private constructor(animation: IndexedAnimation, basename: string, sidecarPalette?: Rgba[]) {
+    private constructor(animation: Animation, basename: string, sidecarPalette?: Rgba[]) {
         this.animationValue = animation;
         this.basename = basename;
         this.setSidecar(sidecarPalette);
@@ -75,6 +78,14 @@ export class ImageDocumentModel {
     // An already-combined animation (a Fallout `.fr0`-`.fr5` split set the document layer merged
     // via combineFrmDirections), so the byte-sniffing loadImage path is bypassed. basename is the
     // combined `<base>.frm` identity the editor should present and save to.
+    /**
+     * A true-colour animation the document layer already composed (BAM v2, whose PVRZ pages it
+     * resolved). No sidecar: a `.pal` cannot apply to a format with no palette.
+     */
+    static fromRgbaAnimation(animation: RgbaAnimation, basename: string): ImageDocumentModel {
+        return new ImageDocumentModel(animation, basename, undefined);
+    }
+
     static fromAnimation(animation: IndexedAnimation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
@@ -89,8 +100,21 @@ export class ImageDocumentModel {
         this.externalEnabled = this.hasSidecar;
     }
 
-    get animation(): IndexedAnimation {
+    /**
+     * The document's animation. Indexed-only callers (every save, export and convert path today)
+     * should take `indexedAnimation()` instead, which states the requirement rather than casting.
+     */
+    get animation(): Animation {
         return this.animationValue;
+    }
+
+    /**
+     * The animation as an indexed one, or undefined when the document is true-colour. Callers that
+     * cannot represent true colour ask here and say what they will do about `undefined`, rather
+     * than reading `.palette` off a union member that has none.
+     */
+    indexedAnimation(): IndexedAnimation | undefined {
+        return isRgbaAnimation(this.animationValue) ? undefined : this.animationValue;
     }
 
     /**
@@ -99,14 +123,15 @@ export class ImageDocumentModel {
      * default Fallout / sidecar palette (the same one toView uses). Every export/convert path MUST
      * use this, not the raw `animation`, or an FRM exports as a black silhouette.
      */
-    resolvedAnimation(): IndexedAnimation {
-        return { ...this.animationValue, palette: this.activePalette() };
+    resolvedAnimation(): IndexedAnimation | undefined {
+        const indexed = this.indexedAnimation();
+        return indexed && { ...indexed, palette: this.activePalette(indexed) };
     }
 
-    private activePalette(): Rgba[] {
+    private activePalette(indexed: IndexedAnimation): Rgba[] {
         return chooseActivePalette({
-            sourceFormat: this.animationValue.meta.sourceFormat,
-            embedded: this.animationValue.palette,
+            sourceFormat: indexed.meta.sourceFormat,
+            embedded: indexed.palette,
             sidecar: this.sidecarPalette,
             externalEnabled: this.externalEnabled,
         });
@@ -129,18 +154,22 @@ export class ImageDocumentModel {
             dirOffsetX: dirOffsetsX?.[i] ?? 0,
             dirOffsetY: dirOffsetsY?.[i] ?? 0,
         }));
-        return {
-            palette: this.activePalette(),
+        const shared = {
             frames,
             sequences,
             meta: this.animationValue.meta,
             basename: this.basename,
             sourceFormat: this.animationValue.meta.sourceFormat,
+        };
+        const indexed = this.indexedAnimation();
+        if (indexed === undefined) return { ...shared, colorModel: "rgba" };
+        return {
+            ...shared,
+            colorModel: "indexed",
+            palette: this.activePalette(indexed),
             hasSidecarPal: this.hasSidecar,
             externalPaletteActive:
-                this.animationValue.meta.sourceFormat === "frm" &&
-                this.externalEnabled &&
-                this.sidecarPalette !== undefined,
+                indexed.meta.sourceFormat === "frm" && this.externalEnabled && this.sidecarPalette !== undefined,
         };
     }
 
@@ -151,23 +180,32 @@ export class ImageDocumentModel {
 
     applyMetaPatch(patch: MetaPatch): void {
         this.snapshotForUndo();
-        let frames = this.animationValue.frames;
-        // A BAM frame's cached rawEncoding is RLE-encoded against the transparent index it was parsed
-        // with; serializing it verbatim under an edited header index yields an unreadable stream. Drop
-        // the caches so the serializer writes those frames uncompressed instead.
-        if (
+        const indexed = this.indexedAnimation();
+        // A BAM v1 frame's cached rawEncoding is RLE-encoded against the transparent index it was
+        // parsed with; serializing it verbatim under an edited header index yields an unreadable
+        // stream. Drop the caches so the serializer writes those frames uncompressed instead. A
+        // true-colour frame holds no such cache, so this applies only to the indexed member.
+        const dropsRawEncoding =
+            indexed !== undefined &&
             patch.transparentIndex !== undefined &&
-            patch.transparentIndex !== this.animationValue.meta.transparentIndex
-        ) {
-            frames = frames.map((f) => ({
-                width: f.width,
-                height: f.height,
-                pixels: f.pixels,
-                offsetX: f.offsetX,
-                offsetY: f.offsetY,
-            }));
+            patch.transparentIndex !== indexed.meta.transparentIndex;
+        if (indexed !== undefined && dropsRawEncoding) {
+            this.animationValue = {
+                ...indexed,
+                frames: indexed.frames.map((f) => ({
+                    width: f.width,
+                    height: f.height,
+                    pixels: f.pixels,
+                    offsetX: f.offsetX,
+                    offsetY: f.offsetY,
+                })),
+                meta: { ...indexed.meta, ...patch },
+            };
+        } else if (indexed !== undefined) {
+            this.animationValue = { ...indexed, meta: { ...indexed.meta, ...patch } };
+        } else if (isRgbaAnimation(this.animationValue)) {
+            this.animationValue = { ...this.animationValue, meta: { ...this.animationValue.meta, ...patch } };
         }
-        this.animationValue = { ...this.animationValue, frames, meta: { ...this.animationValue.meta, ...patch } };
         this.onChange?.();
     }
 
@@ -178,6 +216,12 @@ export class ImageDocumentModel {
     }
 
     replaceSequences(next: IndexedAnimation, mode: "replace" | "append"): void {
+        // Indexed frames carry one byte per pixel; a true-colour animation's carry four. `Frame` is
+        // structurally assignable to `RgbaFrame`, so splicing them in typechecks and then renders
+        // garbage - this is the only thing standing between an import and a corrupted document.
+        if (isRgbaAnimation(this.animationValue)) {
+            throw new Error("Importing indexed frames into a true-colour BAM v2 is not supported.");
+        }
         this.snapshotForUndo();
         if (mode === "replace") {
             this.animationValue = { ...this.animationValue, frames: next.frames, sequences: next.sequences };
@@ -214,15 +258,21 @@ export class ImageDocumentModel {
     getBytes(): Uint8Array {
         // A switch + never default keeps this exhaustive: a new SourceFormat member without a
         // dispatch arm becomes a compile error instead of silently mis-serializing.
-        switch (this.animationValue.meta.sourceFormat) {
+        const indexed = this.indexedAnimation();
+        if (indexed === undefined) {
+            throw new Error(
+                "Saving BAM v2 is not supported yet - its frames live in separate PVRZ pages that this build only reads.",
+            );
+        }
+        switch (indexed.meta.sourceFormat) {
             case "frm":
-                return serializeFrm(this.animationValue);
+                return serializeFrm(indexed);
             case "bam":
-                return serializeBamV1(this.animationValue);
+                return serializeBamV1(indexed);
             case "bamc":
-                return encodeBamc(serializeBamV1(this.animationValue));
+                return encodeBamc(serializeBamV1(indexed));
             default: {
-                const unhandled: never = this.animationValue.meta.sourceFormat;
+                const unhandled: never = indexed.meta.sourceFormat;
                 throw new Error(`getBytes: unhandled sourceFormat ${String(unhandled)}`);
             }
         }
@@ -234,8 +284,9 @@ export class ImageDocumentModel {
     }
 
     sidecarBytes(): Uint8Array | undefined {
-        if (this.animationValue.meta.sourceFormat !== "frm") return undefined;
-        const active = this.activePalette();
+        const indexed = this.indexedAnimation();
+        if (indexed === undefined || indexed.meta.sourceFormat !== "frm") return undefined;
+        const active = this.activePalette(indexed);
         if (paletteEquals(active, DEFAULT_FALLOUT_PALETTE)) return undefined;
         return serializePal(active);
     }

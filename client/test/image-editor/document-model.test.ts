@@ -9,11 +9,11 @@ import {
     serializePal,
 } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
-import { makeMiniBam, makeMiniFrm } from "./fixtures";
+import { makeMiniBam, makeMiniFrm, asIndexedView } from "./fixtures";
 
 test("toView trims frames and carries the active palette", () => {
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
-    const view = model.toView();
+    const view = asIndexedView(model.toView());
     expect(view.palette).toHaveLength(256);
     expect(view.frames[0]).not.toHaveProperty("rawEncoding");
     expect(view.frames[0]).not.toHaveProperty("rleEncoded");
@@ -23,10 +23,12 @@ test("resolvedAnimation swaps the FRM all-black placeholder palette for the acti
     // FRM parses to an all-black placeholder palette; exporting THAT gives black-silhouette PNGs. The
     // export path must use resolvedAnimation, whose palette is the real active one (default Fallout here).
     const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
-    const rawIsAllBlack = model.animation.palette.every((c) => c.r === 0 && c.g === 0 && c.b === 0);
+    const indexed = model.indexedAnimation();
+    if (indexed === undefined) throw new Error("expected an indexed animation");
+    const rawIsAllBlack = indexed.palette.every((c) => c.r === 0 && c.g === 0 && c.b === 0);
     expect(rawIsAllBlack).toBe(true);
-    expect(model.resolvedAnimation().palette).toEqual(DEFAULT_FALLOUT_PALETTE);
-    expect(model.resolvedAnimation().palette.some((c) => c.r !== 0 || c.g !== 0 || c.b !== 0)).toBe(true);
+    expect(model.resolvedAnimation()?.palette).toEqual(DEFAULT_FALLOUT_PALETTE);
+    expect(model.resolvedAnimation()?.palette.some((c) => c.r !== 0 || c.g !== 0 || c.b !== 0)).toBe(true);
 });
 
 test("editing the transparent index keeps RLE-parsed frames decodable (cached encodings dropped)", () => {
@@ -110,7 +112,7 @@ describe("setExternalPalette", () => {
     test("with no sidecar keeps the default palette", () => {
         const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm");
         model.setExternalPalette(true);
-        const view = model.toView();
+        const view = asIndexedView(model.toView());
         expect(view.palette).toEqual(DEFAULT_FALLOUT_PALETTE);
         expect(view.externalPaletteActive).toBe(false);
     });
@@ -118,13 +120,13 @@ describe("setExternalPalette", () => {
     test("with a sidecar swaps in the sidecar palette when enabled", () => {
         const sidecar = Array.from({ length: 256 }, () => ({ r: 1, g: 2, b: 3, a: 255 }));
         const model = ImageDocumentModel.fromBytes(serializeFrm(makeMiniFrm()), "hero.frm", serializePal(sidecar));
-        const view = model.toView();
+        const view = asIndexedView(model.toView());
         expect(view.hasSidecarPal).toBe(true);
         expect(view.externalPaletteActive).toBe(true);
         expect(view.palette[0]).toEqual(parsePal(serializePal(sidecar))[0]);
         model.setExternalPalette(false);
-        expect(model.toView().palette).toEqual(DEFAULT_FALLOUT_PALETTE);
-        expect(model.toView().externalPaletteActive).toBe(false);
+        expect(asIndexedView(model.toView()).palette).toEqual(DEFAULT_FALLOUT_PALETTE);
+        expect(asIndexedView(model.toView()).externalPaletteActive).toBe(false);
     });
 });
 
@@ -184,5 +186,5 @@ test("reload replaces the animation, sidecar, and history", () => {
     // History is gone with the old document state: undo must not resurrect the pre-reload edit.
     model.undo();
     expect(model.animation.meta.fps).toBe(makeMiniFrm().meta.fps);
-    expect(model.toView().hasSidecarPal).toBe(true);
+    expect(asIndexedView(model.toView()).hasSidecarPal).toBe(true);
 });
