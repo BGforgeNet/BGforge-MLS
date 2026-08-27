@@ -38,6 +38,11 @@ export { parseFrm } from "./frm/parse.ts";
 export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";
 export { parseBamV1 } from "./bam/parse.ts";
+// BAM v2 reads in two phases: the structure names the PVRZ pages, the caller resolves them, then
+// decodeBamV2 composes the frames. See v2-parse.ts for why the resolver is injected.
+export { type BamV2Cycle, type BamV2DataBlock, type BamV2FrameEntry, type BamV2Structure } from "./bam/v2-structure.ts";
+export { readBamV2Structure } from "./bam/v2-structure.ts";
+export { type PvrzResolver, decodeBamV2, pvrzResourceName } from "./bam/v2-parse.ts";
 export { serializeBamV1 } from "./bam/serialize.ts";
 export { combineIeBamPair, splitIeBamPair } from "./bam/pair.ts";
 export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";

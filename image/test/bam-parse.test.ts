@@ -4,10 +4,12 @@ import { type IndexedAnimation, emptyPalette, parseBamV1, serializeBamV1 } from 
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
 // Uncompressed 'BAM ' files only here; the BAMC container is covered in bamc.test.ts.
-const bams = corpusFiles(IE_CORPUS, ".bam").filter((f) => {
-    const sig = fs.readFileSync(f).subarray(0, 4).toString("latin1");
-    return sig === "BAM ";
-});
+// The full 8-byte header, not just the signature: v1 and v2 share "BAM " and differ only in the
+// version that follows, so a signature-only filter admits V2 files that parseBamV1 rejects. It
+// passed before only because the first match happened to sort ahead of the V2 files.
+const bams = corpusFiles(IE_CORPUS, ".bam").filter(
+    (f) => fs.readFileSync(f).subarray(0, 8).toString("latin1") === "BAM V1  ",
+);
 
 // A minimal valid BAM V1 built by the real serializer, then corrupted per test. The last pixel is
 // the transparent index so the RLE-truncation case ends mid-run at end-of-file.
