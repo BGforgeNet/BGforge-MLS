@@ -332,6 +332,35 @@
             }
         },
         {
+            // The two webview render harnesses are Playwright driver scripts, not extension code: they
+            // step a browser sequentially, run snippets inside `page.evaluate`, and read `import.meta`
+            // paths. The pedantic/style rules below all fire on that idiom rather than on a defect, so
+            // they are relaxed HERE instead of excluding the directories outright - which is what an
+            // `ignorePatterns` entry used to do, taking every correctness and suspicious rule with it.
+            // `prefer-const` is in the list because it misfires on render-cre.mts, reporting a
+            // module-scope `let` that is reassigned further down the file.
+            "files": ["binary-editor/test/harness/**", "client/src/dialog-editor/test/harness/**"],
+            "rules": {
+                "no-await-in-loop": "off",
+                "no-implicit-coercion": "off",
+                "no-loop-func": "off",
+                "no-promise-executor-return": "off",
+                "no-underscore-dangle": "off",
+                "no-unused-expressions": "off",
+                "prefer-const": "off",
+                "unicorn/no-await-expression-member": "off",
+                "unicorn/prefer-code-point": "off",
+                "unicorn/prefer-dom-node-dataset": "off",
+                "unicorn/prefer-dom-node-text-content": "off",
+                "unicorn/prefer-global-this": "off",
+                "unicorn/prefer-import-meta-properties": "off",
+                "unicorn/prefer-math-trunc": "off",
+                "unicorn/prefer-spread": "off",
+                "unicorn/prefer-string-replace-all": "off",
+                "unicorn/prefer-top-level-await": "off"
+            }
+        },
+        {
             // Ambient declaration surfaces for the TD/TBAF runtimes and the generated engine stubs.
             // `vars-on-top` misreads a top-level `declare var` (how an engine global is declared in a
             // .d.ts) as a function-scope var. `no-unsafe-function-type` is a real weakness rather than a
@@ -457,10 +486,5 @@
             }
         }
     ],
-    "ignorePatterns": [
-        "**/node_modules/**",
-        "**/out/**",
-        "binary-editor/test/harness/**",
-        "client/src/dialog-editor/test/harness/**"
-    ]
+    "ignorePatterns": ["**/node_modules/**", "**/out/**"]
 }

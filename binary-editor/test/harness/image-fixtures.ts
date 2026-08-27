@@ -6,8 +6,7 @@
  * so no rendered tile is ever a flat single color - the zoom-redraw check in render-frm.mts relies on
  * that variance to tell "redrawn" from "blank".
  */
-import { emptyPalette, FRM_FACINGS } from "../../../image/src/model/animation";
-import type { Rgba } from "../../../image/src/model/animation";
+import { emptyPalette, FRM_FACINGS, type Rgba } from "../../../image/src/model/animation";
 import {
     encodeFramePixels,
     type AnimationView,

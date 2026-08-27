@@ -28,7 +28,7 @@ async function main(): Promise<void> {
     console.log(`wrote real-model.ts: ${model.roots.length} roots [${roots}]`);
 }
 
-main().catch((e: unknown) => {
-    console.error(e);
+main().catch((error: unknown) => {
+    console.error(error);
     process.exit(1);
 });
