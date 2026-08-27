@@ -70,8 +70,12 @@
         "sort-imports": "off",
 
         // Project style: bare-statement `if`/`else`/`for` bodies are used
-        // deliberately. Forcing braces across hundreds of call sites is
-        // churn, not safety.
+        // deliberately, and forcing braces across ~3950 sites is churn. Not
+        // purely cosmetic, though: an unbraced body on its OWN line is the
+        // shape a second statement gets appended to by mistake. What makes
+        // the trade safe is oxfmt, which collapses every single-statement
+        // body back onto the guard line, so the dangling-line shape cannot
+        // survive a formatted commit.
         "curly": "off",
 
         // Template-vs-concat is a preference, not a correctness concern.
@@ -91,8 +95,15 @@
         // on every run.
         "unicorn/number-literal-case": "off",
 
-        // Rule pushes `.toSorted()` (ES2023) in places where the project's
-        // TS lib target predates it. Re-enable when lib is bumped.
+        // The rule's actual subject is MUTATION - `.sort()` orders the receiver in
+        // place - not modernization. It is off because its fix, `.toSorted()`, is
+        // ES2023 while `tsconfig.base.json` targets es2022, so all ~177 sites would
+        // need a hand-written copy instead of the autofix. The shipped-package sites
+        // were read when this was written and every one sorts an array the function
+        // itself built (a spread, a `.map()` result, a local accumulator); none sorts
+        // an array its caller owns. That is convention, not enforcement. Re-enable
+        // when `target`/`lib` in tsconfig.base.json reaches es2023 - the same move
+        // that makes the autofix valid.
         "unicorn/no-array-sort": "off",
 
         // Sequential-condition ternaries (`a ? X : b ? Y : Z`) are used
@@ -142,7 +153,11 @@
         // Flattening `if/else` to `?:` is a style preference.
         "unicorn/prefer-ternary": "off",
 
-        // False positives with closures that intentionally capture scope.
+        // Not the false-positive case it reads as: the rule is usually right that a
+        // small helper arrow captures nothing and could be hoisted. It is off because
+        // defining such a helper beside its only call site is the deliberate locality
+        // convention here, and because 140 of the ~163 sites are in tests, where a
+        // per-case helper is the point.
         "unicorn/consistent-function-scoping": "off",
 
         // Collapsing `else { if ... }` is style churn.
@@ -412,9 +427,8 @@
             }
         },
         {
-            // SSL-compiler tests mock Node `child_process` (EventEmitter-based);
-            // converting the mock to EventTarget would break the surface they
-            // stand in for.
+            // 6 sites: SSL-compiler tests mock Node `child_process` (EventEmitter-based);
+            // converting the mock to EventTarget would break the surface they stand in for.
             "files": ["server/test/**"],
             "rules": {
                 "unicorn/prefer-event-target": "off"
@@ -440,19 +454,22 @@
             }
         },
         {
-            // Tests intentionally compare against the literal string `"${x}"`
-            // (snippet output, esbuild template fixtures); the rule's
-            // "forgotten backticks" heuristic does not apply.
+            // 35 sites where tests compare against the literal string `"${x}"` (snippet
+            // output, esbuild template fixtures), so the rule's "forgotten backticks"
+            // heuristic reports the assertion's own expected value. Scoped to the whole
+            // test tree rather than to those files, which the config cannot express.
             "files": ["**/test/**", "**/*.test.ts"],
             "rules": {
                 "no-template-curly-in-string": "off"
             }
         },
         {
-            // Test mocks like `vi.fn().mockResolvedValue(undefined)` pass
-            // `undefined` to satisfy a typed signature that requires the
-            // argument; the rule's "useless undefined" heuristic doesn't
-            // distinguish that case from a genuinely-redundant pass.
+            // 224 sites, in two idioms the rule's "useless undefined" heuristic cannot tell
+            // from a redundant pass: `vi.fn().mockResolvedValue(undefined)`, which satisfies a
+            // typed signature that requires the argument, and an explicit `undefined` argument
+            // that exercises a function's absent-parameter path (`enumHexDigits("hex32",
+            // undefined)`) - dropping it there changes what the case is testing. Scoped to the
+            // whole test tree rather than to those call shapes, which the config cannot express.
             "files": ["**/test/**", "**/*.test.ts"],
             "rules": {
                 "unicorn/no-useless-undefined": "off"
