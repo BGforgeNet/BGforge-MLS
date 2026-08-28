@@ -11,7 +11,8 @@
  * so `if (c) { ... }` classifies exactly as SSL's `if (c) then ...` - see the design spec).
  */
 
-import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaration } from "ts-morph";
+import { Node, SyntaxKind, type CallExpression, type FunctionDeclaration } from "ts-morph";
+import { getSharedProject } from "../../../transpilers/common/shared-project";
 import { conlog } from "../logger";
 import type {
     SSLDialogBlock,
@@ -556,8 +557,10 @@ function buildNode(
  * `applyTSSLDialogEdits`); a structured node renders faithfully but read-only; approximate is lossy.
  */
 export function parseTSSLSource(text: string, sideEffectFns: ReadonlySet<string> = NO_SIDE_EFFECTS): SSLDialogData {
-    const project = new Project({ useInMemoryFileSystem: true });
-    const sf = project.createSourceFile("dialog.tssl.ts", text);
+    // Reused rather than fresh, for the reason given in the TD parser's twin of this call: project
+    // construction dominates, and this path runs per dialog-editor read on the server thread.
+    const project = getSharedProject();
+    const sf = project.createSourceFile("dialog.tssl.ts", text, { overwrite: true });
     // The TS parser never throws on malformed input, but its error recovery is not local: an unclosed brace
     // can swallow every following function into one misnested body, silently re-parenting nodes and shifting
     // the splice anchors the write-back relies on. Unlike tree-sitter's localized ERROR nodes (which the

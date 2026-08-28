@@ -8,7 +8,8 @@
  * are emitted for root grouping. Full block-kind write-back anchors land with TD editing (Phase 2+).
  */
 
-import { Node, Project, SyntaxKind, type CallExpression, type FunctionDeclaration, type SourceFile } from "ts-morph";
+import { Node, SyntaxKind, type CallExpression, type FunctionDeclaration, type SourceFile } from "ts-morph";
+import { getSharedProject } from "../../../transpilers/common/shared-project";
 import { conlog } from "../logger";
 import type {
     DDialogBlock,
@@ -339,8 +340,11 @@ function parseWiring(sf: SourceFile, stateNames: ReadonlySet<string>): TDWiring 
  * the state-list wiring (`tdWiring`) drive surgical write-back.
  */
 export function parseTDSource(text: string): DDialogData {
-    const project = new Project({ useInMemoryFileSystem: true });
-    const sf = project.createSourceFile("dialog.td.ts", text);
+    // Reused rather than fresh: standing up a project costs ~100x the parse, and this runs on the
+    // server thread for every dialog-editor read. The virtual path is this caller's alone, per the
+    // shared project's contract, and `overwrite` replaces the previous text at it.
+    const project = getSharedProject();
+    const sf = project.createSourceFile("dialog.td.ts", text, { overwrite: true });
     // The TS parser never throws on malformed input, but its error recovery is not local: an unclosed brace
     // can swallow every following function into one misnested body, silently re-parenting states and shifting
     // the splice anchors the write-back relies on. Unlike tree-sitter's localized ERROR nodes (which the
