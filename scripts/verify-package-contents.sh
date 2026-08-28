@@ -46,3 +46,11 @@ if ((size > max_bytes)) || ((${#violations[@]} > 0)); then
 fi
 
 echo "verify-package-contents: $vsix OK (${mib} MiB, ${#paths[@]} files)"
+
+# The checks above read the file list; none of them opens a declared runtime dependency to see
+# whether it can actually be loaded from where it landed. An externalised package whose own
+# dependencies did not come with it passes every check above and fails on the user's machine.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+unzip -q "$vsix" -d "$work"
+node "$(dirname "$0")/verify-vsix-runtime-deps.mjs" "$work"
