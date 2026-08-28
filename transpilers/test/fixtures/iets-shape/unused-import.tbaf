@@ -1,0 +1,6 @@
+import { neverCalled } from "./sideeffect";
+import { Player1, See, Attack } from "./engine";
+
+if (See(Player1)) {
+    Attack(Player1);
+}

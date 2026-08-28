@@ -51,6 +51,21 @@ describe("bundling a dependency that mixes declarations with runtime values", ()
         expect(code).not.toContain("Animate.MAGE_MALE_HUMAN");
     });
 
+    it("drops a module whose only import is unused, top-level side effect included", async () => {
+        const entry = path.join(FIXTURE, "unused-import.tbaf");
+        const { code } = await bundle(entry, fs.readFileSync(entry, "utf-8"));
+
+        // The transpiler emits BAF, so a retained module's top-level call would land in the script as a
+        // stray action. Measured note for whoever touches the plugin list: this holds with or without
+        // noSideEffectsPlugin - esbuild drops the module either way, here and across the real corpus -
+        // so the test pins the OUTPUT, and is not evidence that the plugin is doing the dropping.
+        expect(code).not.toContain("39321");
+        expect(code).not.toContain("0x9999");
+        expect(code).not.toContain("neverCalled");
+        // The entry's own logic must survive the same pass.
+        expect(code).toMatch(/if \(See\(Player1\)\)/);
+    });
+
     it("gives every bundled line an origin in a file that exists", async () => {
         const { code, origins } = await bundle(ENTRY, source);
 

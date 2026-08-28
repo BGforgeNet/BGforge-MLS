@@ -10,6 +10,8 @@ export declare const Player1: number;
 export declare function See(who: number): boolean;
 export declare function Attack(who: number): void;
 export declare function Polymorph(what: number): void;
+/** Lowercase helper, the shape iets uses for `obj`/`tra`/`tlk` alongside the capitalised builtins. */
+export declare function tlk(ref: number): number;
 
 /**
  * An IDS table as `declare enum`, the shape iets uses (animate.ids.d.ts and forty siblings).
