@@ -1,5 +1,5 @@
 # Blacklist approach: exclude dev files, keep runtime files.
-# pnpm symlinks in server/node_modules are stripped by package.sh.
+# server/node_modules is replaced with a flat, symlink-free runtime closure by package.sh.
 # Root node_modules is excluded below; TS plugins are injected by package.sh.
 #
 # WARNING: vsce does NOT read .gitignore. A gitignored build/cache dir still ships unless

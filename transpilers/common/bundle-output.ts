@@ -6,6 +6,11 @@
  * downstream emitter understands. These passes undo both, plus the marker prefix the caller prepended
  * to find where its own code starts.
  *
+ * That last one is inert against the only caller: the marker is a comment, and rolldown is asked to
+ * emit none, so it never reaches the output. Kept rather than deleted because it is the pass that
+ * would have to come back the moment comments are kept or a prelude appears above user code, and it
+ * costs one `indexOf` to leave standing.
+ *
  * The walkers are regex plus hand-rolled tokenization rather than a real parser: bundler output has no
  * regex literals and no exotic syntax, which is what makes skipping strings and comments sufficient.
  */

@@ -32,7 +32,7 @@ describe("bundling a dependency that mixes declarations with runtime values", ()
     it("keeps the declaration half out of the bundle while its symbols stay callable", async () => {
         const { code } = await bundle(ENTRY, source);
 
-        // engine.d.ts is externalised, and cleanupEsbuildOutput then strips the import line, so the
+        // engine.d.ts is externalised, and cleanupBundleOutput then strips the import line, so the
         // engine names survive as free identifiers - which is the form the TBAF transpiler turns into
         // triggers and actions. Nothing of the declaration file's own text may appear.
         expect(code).not.toContain("declare");

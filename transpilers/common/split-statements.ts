@@ -19,7 +19,7 @@
  * `return; x`. An expression never starts a statement, so it is never a candidate.
  */
 
-import { SyntaxKind, type SourceFile } from "ts-morph";
+import { Node, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
 import type { SourceOrigin } from "./source-map";
 
@@ -42,13 +42,17 @@ export interface SplitResult {
  * Every statement counts, including one that is the unbraced body of an `if`/`else`/loop - which is
  * precisely the shape rolldown produces here. ts-morph reports those as statements in their own right,
  * so no special-casing is needed to find them.
+ *
+ * `Node.isStatement` rather than a kind-name suffix: a declaration is a statement too, and
+ * `FunctionDeclaration`/`ClassDeclaration`/`EnumDeclaration` are not spelled with one. It also answers
+ * true for `Block`, which the suffix test needed a second clause to reach.
  */
 function statementStarts(sourceFile: SourceFile): Set<number> {
     const starts = new Set<number>();
     for (const node of sourceFile.getDescendants()) {
         // getStart() skips leading trivia, so the offset is the statement's first real token - which is
         // where a newline has to go for the statement to end up at the start of its own line.
-        if (node.getKindName().endsWith("Statement") || node.getKind() === SyntaxKind.Block) {
+        if (Node.isStatement(node)) {
             starts.add(node.getStart());
         }
     }

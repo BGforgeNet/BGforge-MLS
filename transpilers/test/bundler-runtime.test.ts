@@ -23,6 +23,7 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import { execFileSync } from "child_process";
+import { createRequire } from "node:module";
 import * as fs from "fs";
 import * as path from "path";
 import { REPO_ROOT } from "./repo-root";
@@ -30,6 +31,30 @@ import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
 
 const BUNDLE = path.join(REPO_ROOT, "transpilers/out/index.js");
 const ENTRY = path.join(REPO_ROOT, "transpilers/test/fixtures/iets-shape/main.tbaf");
+
+/**
+ * Whether a platform-native binding is installed alongside rolldown, which its loader prefers.
+ *
+ * The equivalence case below compares a default run against a forced-wasi one. With no native binding
+ * present both runs load wasi, the two outputs are equal for a reason the test is not about, and it
+ * passes having compared nothing - so it asserts this first rather than reporting a silent pass.
+ */
+function nativeBindingInstalled(): boolean {
+    const fromHere = createRequire(path.join(REPO_ROOT, "transpilers/noop.js"));
+    const rolldownDir = path.dirname(fromHere.resolve("rolldown/package.json"));
+    const fromRolldown = createRequire(path.join(rolldownDir, "noop.js"));
+    const manifest = JSON.parse(fs.readFileSync(path.join(rolldownDir, "package.json"), "utf-8"));
+    return Object.keys(manifest.optionalDependencies ?? {}).some((name) => {
+        // The wasi binding is opt-in and declared separately; only the 15 native ones count here.
+        if (name.endsWith("-wasm32-wasi")) return false;
+        try {
+            fromRolldown.resolve(`${name}/package.json`);
+            return true;
+        } catch {
+            return false;
+        }
+    });
+}
 
 /** Transpile the import-bearing fixture in a child process under `env`, and return what it emitted. */
 function transpileIn(env: NodeJS.ProcessEnv): string {
@@ -83,6 +108,9 @@ describe("the bundler's runtime requirements", () => {
     });
 
     it("emits identical output whichever binding is loaded", () => {
+        // Without this the two legs load the same binding and the comparison is vacuous.
+        expect(nativeBindingInstalled()).toBe(true);
+
         const native = transpileIn({ ...process.env });
         const wasi = transpileIn({ ...process.env, NAPI_RS_WASI_FLAVOR: "wasm32-wasi" });
 

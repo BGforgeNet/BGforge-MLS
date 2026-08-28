@@ -115,6 +115,35 @@ describe("bundleWithRolldown line origins", () => {
         expect(sourceLine).toContain("333");
     });
 
+    it("traces a statement rolldown collapsed onto the line above it", async () => {
+        // rolldown drops the braces around a single-statement `if` body, so `if (...) {` and the action
+        // it guards leave the bundler on one line. Every other test here uses brace-free sources, where
+        // the per-line map is enough; this is the shape splitCollapsedStatements exists for, and the one
+        // where the hand-built maps in split-statements.test.ts encode an assumption about rolldown
+        // rather than test it. Without the split both lines below report the `if`.
+        const collapsed = `import { helper } from "./helper";\n\nexport function run() {\n    if (helper()) {\n        Attack(Player1);\n    }\n}\n`;
+        const entry = path.join(tmpDir, "collapsed.ts");
+        fs.writeFileSync(entry, collapsed, "utf-8");
+
+        const result = await bundleWithRolldown({ filePath: entry, sourceText: collapsed, marker: MARKER });
+
+        const lines = result.code.split("\n");
+        const actionIndex = lines.findIndex((line) => line.includes("Attack(Player1)"));
+        expect(actionIndex).toBeGreaterThanOrEqual(0);
+
+        const origin = result.origins[actionIndex];
+        expect(origin).toBeDefined();
+        const sourceLines = fs.readFileSync(origin!.file, "utf-8").split("\n");
+        // The discriminating assertion: the collapsed-away `if` sits one line above, so a run without
+        // the split names a line holding `if (helper()) {` and no Attack at all.
+        expect(sourceLines[origin!.line]).toContain("Attack(Player1)");
+
+        // And the guard itself still resolves to its own line, rather than both landing on one.
+        const ifIndex = lines.findIndex((line) => line.includes("if (helper())"));
+        expect(ifIndex).toBeGreaterThanOrEqual(0);
+        expect(sourceLines[result.origins[ifIndex]!.line]).toContain("if (helper())");
+    });
+
     it("traces an imported file's line back to that file, not to the entry", async () => {
         const result = await bundleWithRolldown({
             filePath: mainPath,

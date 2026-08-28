@@ -109,10 +109,10 @@ export class TBAFTransformer implements TransformerContext {
             if (Node.isCallExpression(expr)) {
                 const funcName = expr.getExpression().getText();
 
-                // esbuild's helper names. rolldown emits its own helpers above the marker, which the
-                // output cleanup strips, so this may now be unreachable - kept because proving that
-                // needs a corpus sweep of what rolldown can emit into a body, and the cost of the
-                // guard is two string comparisons.
+                // esbuild's helper names, which rolldown does not emit. Kept rather than deleted
+                // because nothing upstream strips a helper call now - the marker the cleanup pass
+                // looks for is a comment, and the bundler is asked for none - so if a helper ever does
+                // reach a statement body this is what keeps it out of the script.
                 if (funcName === "__name" || funcName === "__defProp") {
                     return;
                 }

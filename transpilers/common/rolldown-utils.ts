@@ -35,7 +35,11 @@ import { splitCollapsedStatements, type InputPosition } from "./split-statements
 interface BundleConfig {
     readonly filePath: string;
     readonly sourceText: string;
-    /** Marker string prepended to source for stripping bundler runtime helpers. */
+    /**
+     * Marker prepended to the entry before the bundler reads it. It is a comment and the bundler is
+     * asked for none, so it never reaches the output and the cleanup pass that looks for it does
+     * nothing; what it still buys is the line shift the entry's origins are read back through.
+     */
     readonly marker: string;
     readonly appendCode?: string;
     readonly extraPlugins?: rolldown.Plugin[];

@@ -102,13 +102,15 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 | Pattern                                                       | What it excludes                                                           |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `server/node_modules/rolldown/bin/`, `cli/`                   | The rolldown CLI (the server calls the JS API)                             |
-| `server/node_modules/rolldown/**/*.d.mts`, `*.d.ts`           | TypeScript definitions (not needed at runtime)                             |
-| `server/node_modules/@rolldown/binding-wasm32-wasi/*.d.cts`   | TypeScript definitions (not needed at runtime)                             |
+| `server/node_modules/**/*.d.mts`, `**/*.d.cts`                | TypeScript definitions (not needed at runtime)                             |
 | `server/node_modules/@rolldown/binding-wasm32-wasi/*browser*` | Browser builds (not used in Node.js)                                       |
 | rolldown `LICENSE`, `THIRD-PARTY-LICENSE`, `README.md`        | Documentation files                                                        |
-| `server/node_modules/.ignored*/`                              | pnpm internal dirs surviving after symlink strip                           |
 | `node_modules/`                                               | All root dependencies (TS plugins injected by `package.sh` post-packaging) |
 | `.pkg-inject/`                                                | Temp directory used by `package.sh` for zip injection                      |
+
+`*.d.ts` is deliberately NOT in that list: `@oxc-project/types` is a runtime dependency of rolldown whose only
+file is a `.d.ts`, so excluding the extension deletes the package and its resolution fails. The rationale sits
+beside the patterns in `.vscodeignore`; keep the two in step.
 
 ### Included: runtime files (not excluded, ship by default)
 

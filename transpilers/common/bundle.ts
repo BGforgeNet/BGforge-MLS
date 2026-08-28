@@ -57,11 +57,10 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
         };
     }
 
-    // Shared mutable collections for enum accumulation across plugins.
-    // The shared bundler's enumTransformPlugin handles .ts files;
-    // the tbaf-resolver plugin below handles .tbaf files.
-    // The ts-extension-resolver collects external enum names from .d.ts files
-    // that the default resolver can't reach (extensionless imports).
+    // Shared mutable collections the resolver plugin below accumulates into: enums it flattens out of
+    // the .ts and .tbaf files it loads, and the names of `declare enum`s in the .d.ts files it
+    // externalises. Mutated through these references because a plugin hook has no other way to hand
+    // anything back to the caller.
     const sharedEnums = new Map<string, ReadonlyArray<EnumMember>>();
     const sharedExternalEnumNames = new Set<string>();
 
@@ -128,7 +127,7 @@ function transpilerResolverPlugin(
                 return null;
             }
             if (!source.includes("enum ")) {
-                // A .tbaf is not a extension rolldown knows; a .ts it can read itself.
+                // A .tbaf is not an extension rolldown knows; a .ts it can read itself.
                 return id.endsWith(".tbaf") ? { code: source, moduleType: "ts" } : null;
             }
             const { code, enums } = transformEnums(source);
