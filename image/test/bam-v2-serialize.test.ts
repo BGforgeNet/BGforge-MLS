@@ -8,6 +8,14 @@ import { serializeBamV2 } from "../src/bam/v2-serialize.ts";
 import { decodePvrz } from "../src/pvrz/container.ts";
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
+/**
+ * Bound for the corpus sweeps below, which decode every BAM V2 file in the corpus along with the PVRZ
+ * pages it references. Measured at ~2-9s per sweep on an idle machine; under the gate's coverage run,
+ * alongside other vitest instances, the same work has exceeded vitest's default 60s and failed a test
+ * that was only ever slow. Sized as a hang detector against the LOADED time, not the idle one.
+ */
+const CORPUS_SWEEP_TIMEOUT_MS = 180_000;
+
 const v2Files = corpusFiles(IE_CORPUS, ".bam").filter(
     (f) => fs.readFileSync(f).subarray(0, 8).toString("latin1") === "BAM V2  ",
 );
@@ -26,61 +34,73 @@ function readWithPages(file: string, keepSourceBytes = true): ReturnType<typeof 
 }
 
 describe.skipIf(v2Files.length === 0)("serializeBamV2 (verbatim preservation)", () => {
-    it("re-emits an unmodified animation byte-identically and rewrites no pages", () => {
-        // The contract the whole write path rests on. Block compression is lossy, so re-encoding an
-        // untouched file would degrade it a little on every save, cumulatively. Asserting the .bam
-        // bytes alone is not enough: that would pass even if every page were silently recompressed,
-        // so the zero-page assertion is the one that actually pins it.
-        for (const file of v2Files) {
-            const original = new Uint8Array(fs.readFileSync(file));
+    it(
+        "re-emits an unmodified animation byte-identically and rewrites no pages",
+        () => {
+            // The contract the whole write path rests on. Block compression is lossy, so re-encoding an
+            // untouched file would degrade it a little on every save, cumulatively. Asserting the .bam
+            // bytes alone is not enough: that would pass even if every page were silently recompressed,
+            // so the zero-page assertion is the one that actually pins it.
+            for (const file of v2Files) {
+                const original = new Uint8Array(fs.readFileSync(file));
 
-            const saved = serializeBamV2(readWithPages(file));
+                const saved = serializeBamV2(readWithPages(file));
 
-            expect(saved.pages, `${file} rewrote pages`).toEqual([]);
-            expect(saved.bam, `${file} bytes differ`).toEqual(original);
-        }
-    });
-
-    it("hands back the untouched pages verbatim when the caller says it is writing them too", () => {
-        // What a Save As needs: the .bam names its pages by number, and the folder it is being
-        // written to has no MOSxxxx.PVRZ of its own, so the pages travel with it. Verbatim, not
-        // re-encoded - the whole point of retaining the source bytes.
-        for (const file of v2Files) {
-            const dir = path.dirname(file);
-
-            const saved = serializeBamV2(readWithPages(file), { emitUnchangedPages: true });
-
-            expect(saved.pages.length, `${file} emitted no pages`).toBeGreaterThan(0);
-            for (const page of saved.pages) {
-                const original = new Uint8Array(fs.readFileSync(path.join(dir, pvrzResourceName(page.page))));
-                expect(page.bytes, `${file} page ${page.page} was re-encoded`).toEqual(original);
+                expect(saved.pages, `${file} rewrote pages`).toEqual([]);
+                expect(saved.bam, `${file} bytes differ`).toEqual(original);
             }
-        }
-    });
+        },
+        CORPUS_SWEEP_TIMEOUT_MS,
+    );
 
-    it("rebuilds an equivalent file from the block table when the source bytes are not held", () => {
-        // Without sourceBytes the tables are rebuilt rather than copied. That still rewrites no
-        // pages - the contract that matters - but it is not byte-identical: a cycle with zero
-        // frames carries a start index in the file that the model does not keep, since a cycle
-        // referencing no frames has no meaningful start. Data-faithful, not byte-faithful.
-        for (const file of v2Files) {
-            const animation = readWithPages(file, false);
+    it(
+        "hands back the untouched pages verbatim when the caller says it is writing them too",
+        () => {
+            // What a Save As needs: the .bam names its pages by number, and the folder it is being
+            // written to has no MOSxxxx.PVRZ of its own, so the pages travel with it. Verbatim, not
+            // re-encoded - the whole point of retaining the source bytes.
+            for (const file of v2Files) {
+                const dir = path.dirname(file);
 
-            const saved = serializeBamV2(animation);
+                const saved = serializeBamV2(readWithPages(file), { emitUnchangedPages: true });
 
-            expect(saved.pages, file).toEqual([]);
-            const reparsed = readBamV2Structure(saved.bam);
-            expect(reparsed.frames.length, file).toBe(animation.frames.length);
-            expect(reparsed.cycles.length, file).toBe(animation.sequences.length);
-            expect(
-                reparsed.cycles.map((c) => c.frameCount),
-                file,
-            ).toEqual(animation.sequences.map((s) => s.frameRefs.length));
-            expect(reparsed.requiredPages, file).toEqual(
-                readBamV2Structure(new Uint8Array(fs.readFileSync(file))).requiredPages,
-            );
-        }
-    });
+                expect(saved.pages.length, `${file} emitted no pages`).toBeGreaterThan(0);
+                for (const page of saved.pages) {
+                    const original = new Uint8Array(fs.readFileSync(path.join(dir, pvrzResourceName(page.page))));
+                    expect(page.bytes, `${file} page ${page.page} was re-encoded`).toEqual(original);
+                }
+            }
+        },
+        CORPUS_SWEEP_TIMEOUT_MS,
+    );
+
+    it(
+        "rebuilds an equivalent file from the block table when the source bytes are not held",
+        () => {
+            // Without sourceBytes the tables are rebuilt rather than copied. That still rewrites no
+            // pages - the contract that matters - but it is not byte-identical: a cycle with zero
+            // frames carries a start index in the file that the model does not keep, since a cycle
+            // referencing no frames has no meaningful start. Data-faithful, not byte-faithful.
+            for (const file of v2Files) {
+                const animation = readWithPages(file, false);
+
+                const saved = serializeBamV2(animation);
+
+                expect(saved.pages, file).toEqual([]);
+                const reparsed = readBamV2Structure(saved.bam);
+                expect(reparsed.frames.length, file).toBe(animation.frames.length);
+                expect(reparsed.cycles.length, file).toBe(animation.sequences.length);
+                expect(
+                    reparsed.cycles.map((c) => c.frameCount),
+                    file,
+                ).toEqual(animation.sequences.map((s) => s.frameRefs.length));
+                expect(reparsed.requiredPages, file).toEqual(
+                    readBamV2Structure(new Uint8Array(fs.readFileSync(file))).requiredPages,
+                );
+            }
+        },
+        CORPUS_SWEEP_TIMEOUT_MS,
+    );
 });
 
 describe("serializeBamV2 (repacking)", () => {

@@ -6,6 +6,14 @@ import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
 const pvrzFiles = corpusFiles(IE_CORPUS, ".pvrz");
 
+/**
+ * Bound for the corpus sweeps, which decode every .pvrz in the corpus - about 15MB of BC1/BC3 texture.
+ * Measured at ~6s on an idle machine, but the gate runs this suite under v8 coverage alongside several
+ * other vitest instances, where the same work has exceeded 60s; vitest's default bound then fails a test
+ * that was only ever slow. Sized as a hang detector against the LOADED time, not the idle one.
+ */
+const CORPUS_SWEEP_TIMEOUT_MS = 180_000;
+
 /** A PVRZ wrapping an arbitrary PVR v3 payload: u32 LE inflated length, then the zlib stream. */
 function wrap(payload: Uint8Array): Uint8Array {
     const compressed = zlib.deflateSync(Buffer.from(payload));
@@ -97,19 +105,23 @@ describe("decodePvrz", () => {
 });
 
 describe.skipIf(pvrzFiles.length === 0)("decodePvrz (real corpus)", () => {
-    it("decodes every corpus PVRZ to RGBA matching its own header dimensions", () => {
-        let bc1 = 0;
-        let bc3 = 0;
-        for (const file of pvrzFiles) {
-            const texture = decodePvrz(new Uint8Array(fs.readFileSync(file)));
-            expect(texture.rgba, file).toHaveLength(texture.width * texture.height * 4);
-            if (texture.format === "bc1") bc1++;
-            else bc3++;
-        }
-        // Both codec halves must actually be exercised by the corpus, not just one of them.
-        expect(bc1).toBeGreaterThan(0);
-        expect(bc3).toBeGreaterThan(0);
-    });
+    it(
+        "decodes every corpus PVRZ to RGBA matching its own header dimensions",
+        () => {
+            let bc1 = 0;
+            let bc3 = 0;
+            for (const file of pvrzFiles) {
+                const texture = decodePvrz(new Uint8Array(fs.readFileSync(file)));
+                expect(texture.rgba, file).toHaveLength(texture.width * texture.height * 4);
+                if (texture.format === "bc1") bc1++;
+                else bc3++;
+            }
+            // Both codec halves must actually be exercised by the corpus, not just one of them.
+            expect(bc1).toBeGreaterThan(0);
+            expect(bc3).toBeGreaterThan(0);
+        },
+        CORPUS_SWEEP_TIMEOUT_MS,
+    );
 });
 
 describe("encodePvrz", () => {

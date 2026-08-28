@@ -12,7 +12,8 @@
  *             --new-name <name>  required for rename
  *             --game <dir>       IE game install to resolve TLK strrefs against (weidu.gamePath)
  *             --tlk-encoding <e> codepage of that game's dialog.tlk (classic non-Western installs)
- *             --scan-timeout <ms> how long to wait for the workspace scan (default 20000; 0 = don't wait)
+ *             --scan-timeout <ms> how long to wait for the workspace scan (default 20000; 0 = don't wait,
+ *                                and say so, since an unwaited index cannot be claimed complete)
  *             --json             full JSON output (completion is summarized to labels by default)
  *             --verbose          forward server window/logMessage notifications to stderr
  *
@@ -224,6 +225,17 @@ function handleMessage(message: RpcMessage): void {
  * either waits for a complete answer or says plainly that it could not.
  */
 async function waitForWorkspaceScan(): Promise<void> {
+    // A zero timeout is "do not wait", so there is nothing to race: report that the index was not waited
+    // for and move on. Racing it against an already-settled scanFinished decided the warning on promise
+    // ordering rather than on anything the caller asked for - the resolved promise wins in the microtask
+    // queue, so whether the caller was told depended on how long the probe's own startup happened to take.
+    if (args.scanTimeoutMs === 0) {
+        console.error(
+            "lsp-probe: did not wait for the workspace scan (--scan-timeout 0) - cross-file results " +
+                "(references, definition into another file) may be INCOMPLETE. Raise --scan-timeout to wait.",
+        );
+        return;
+    }
     const deadline = new Promise<"timeout">((resolvePromise) => {
         setTimeout(() => resolvePromise("timeout"), args.scanTimeoutMs).unref();
     });

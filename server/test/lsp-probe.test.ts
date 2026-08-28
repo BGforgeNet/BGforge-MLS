@@ -82,6 +82,11 @@ describe("lsp-probe", () => {
     // The wait is bounded, so on a workspace too big to index inside it the probe still answers - and the whole
     // point of the change is that it must not answer QUIETLY. Driven through the timeout knob rather than a
     // workspace large enough to take 20s, which would be slow and would time out stochastically.
+    //
+    // `--scan-timeout 0` is now a decision rather than a race: the probe reports that it did not wait, instead
+    // of asking whether the scan had happened to finish first. It used to race a 0ms deadline against
+    // scanFinished, and on a loaded machine - where the probe's own startup gives the scan time to complete -
+    // the settled promise won and no warning was printed, failing this test intermittently in the full gate.
     it("still answers when the scan outlasts the wait, but says the result may be incomplete", async () => {
         workspace = await makeWorkspace(40);
         const { stdout, stderr } = await runProbe(
