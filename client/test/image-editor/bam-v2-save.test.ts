@@ -118,11 +118,15 @@ function makeV2(): { bam: Uint8Array; page: Uint8Array } {
     return { bam: written.bam, page: page.bytes };
 }
 
+// serializeBamV2 runs a real PVRZ page encode, which dominated this file's runtime when it ran per test.
+// Encode once; each test still gets its own copies below, so nothing carries between them.
+const encodedV2 = makeV2();
+
 describe("saving a BAM v2", () => {
     let source: { bam: Uint8Array; page: Uint8Array };
 
     beforeEach(() => {
-        source = makeV2();
+        source = { bam: new Uint8Array(encodedV2.bam), page: new Uint8Array(encodedV2.page) };
         readFileMock.mockReset();
         writeFileMock.mockReset();
         showWarningMock.mockReset();
