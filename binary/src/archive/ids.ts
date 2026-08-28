@@ -48,7 +48,10 @@ function* idsRows(bytes: Uint8Array): Generator<[number, string]> {
         // names carry spaces, so a first-token-only read drops those rows instead of shortening them. The header
         // lines - a file identifier such as "IDS V1.0" and an entry count - still fail this shape, the first on
         // its non-numeric value and the second on having no second column.
-        const match = /^\s*(\S+)\s+(\S.*?)\s*$/.exec(line);
+        // Trimmed first: a lazy `.*?` directly against a trailing `\s*$` lets a run of spaces split
+        // between the two quantifiers in exponentially many ways (CodeQL js/polynomial-redos).
+        const trimmed = line.trim();
+        const match = /^(\S+)\s+(\S.*)$/.exec(trimmed);
         const name = match?.[2];
         if (match === null || name === undefined) continue;
         const value = Number(match[1]);
