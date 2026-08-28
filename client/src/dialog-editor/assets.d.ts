@@ -1,10 +1,10 @@
 /**
  * Ambient types for the non-JS assets the dialog editor's bundles import directly.
  *
- * esbuild turns these imports into inline data at build time via its `binary` and `text` loaders (see the
- * `loader` maps in scripts/build-webviews.mjs and test/harness/build.mts), so nothing is fetched at runtime
- * and the shapes below are what the bundle actually holds. tsc has no such loaders and would otherwise
- * report the imports as unresolved modules.
+ * esbuild turns the `*.wasm` and `*.scm` imports into inline data at build time via its `binary` and `text`
+ * loaders (see the `loader` maps in scripts/build-webviews.mjs and test/harness/build.mts), so nothing is
+ * fetched at runtime and the shapes below are what the bundle actually holds. tsc has no such loaders and
+ * would otherwise report the imports as unresolved modules.
  */
 
 declare module "*.wasm" {
@@ -18,3 +18,9 @@ declare module "*.scm" {
     const source: string;
     export default source;
 }
+
+/**
+ * Side-effect imports only: esbuild bundles the file into the webview's `main.css`, which the panel loads
+ * through a `<link>` tag. Declared with no exports because no caller imports a binding from it.
+ */
+declare module "*.css";

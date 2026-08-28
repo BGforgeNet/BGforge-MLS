@@ -24,8 +24,8 @@ catalog:
   vscode-languageclient: 10.1.0
   vscode-languageserver: 10.1.0
   vscode-languageserver-protocol: 3.18.2
-  ts-morph: ^27.0.2
-  typescript: ^5.9.3
+  ts-morph: ^28.0.0
+  typescript: ^6.0.3
   vitest: ^4.1.11
   "@types/node": ^24.13.3
   cac: ^7.0.0

@@ -28,8 +28,9 @@ done
 
 # Typecheck all samples together. Each sample ends in `export {};` so it is a module with an
 # isolated scope - samples may reuse top-level names (start) without colliding. --skipLibCheck
-# keeps the check hermetic (see the sibling td/tbaf typecheck for the full rationale).
-if $TSC --noEmit --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 tssl-engine-stubs.d.ts "${links[@]}" 2>&1; then
+# keeps the check hermetic, and --ignoreConfig is required from TS 6.0 (see the sibling td/tbaf
+# typecheck for the full rationale of both).
+if $TSC --noEmit --ignoreConfig --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 tssl-engine-stubs.d.ts "${links[@]}" 2>&1; then
     echo "TSSL typecheck: ${#links[@]} passed, 0 failed"
 else
     exit 1

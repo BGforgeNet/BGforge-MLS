@@ -26,9 +26,11 @@ done
 
 # Typecheck all samples. The runtime declarations come from their single source in transpilers/ - a
 # copy beside this script would typecheck the samples against a stale API without anything failing.
+# --ignoreConfig is required from TS 6.0, which errors on file arguments while a tsconfig.json sits
+# beside them; the flags on this line are the check's configuration.
 TD_RUNTIME="$ROOT/transpilers/td/src/td-runtime.d.ts"
 
-if $TSC --noEmit --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 "$TD_RUNTIME" td-engine-stubs.d.ts "${links[@]}" 2>&1; then
+if $TSC --noEmit --ignoreConfig --target ES2015 --skipLibCheck --allowUnusedLabels --lib ES2015 "$TD_RUNTIME" td-engine-stubs.d.ts "${links[@]}" 2>&1; then
     echo "TD typecheck: ${#links[@]} passed, 0 failed"
 else
     exit 1
