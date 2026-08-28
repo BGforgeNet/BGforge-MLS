@@ -27,8 +27,19 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
     "$@"
 
 # The TSSL compile worker, a third entry point for the same reason: it is started as a worker thread
-# from its own file, beside server.js. It carries ts-morph, so it is the one bundle here that is large
-# on its own - keeping it out of server.js is what stops every server start paying for that.
+# from its own file, beside server.js. It carries ts-morph, which is ~90% of it.
+#
+# Note this does NOT keep ts-morph out of server.js: the dialog parsers and compile.ts reach it too, so
+# server.js bundles its own full copy and pays ~300ms of parse and evaluation at every start. The split
+# is worth keeping for the reason it was made - a cold compile is ~700ms of synchronous CPU that would
+# otherwise stall hover and completion - not for bundle size.
+#
+# Externalising ts-morph to server/node_modules so it ships once was measured and rejected: worth
+# ~0.87 MB of a ~10 MB VSIX, because these bundles are minified and deflate-compressed while the
+# node_modules copy would ship unminified. It would also need package.sh to deref a dependency TREE
+# (pnpm stores @ts-morph/common and code-block-writer as siblings of the symlink target, not inside it)
+# and to stop deleting server/node_modules/@*/. If the VSIX ever needs to shrink, esbuild-wasm's
+# esbuild.wasm is 3.79 MB stored - 38% of the artifact and 4x this - and is the better target.
 esbuild ./server/src/tssl/compile-worker.ts --bundle --outfile=server/out/tssl-compile-worker.js \
     --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
     --banner:js="$imu_banner" \
