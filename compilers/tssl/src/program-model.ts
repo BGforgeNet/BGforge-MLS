@@ -79,12 +79,18 @@ export interface TsslProgram {
  * program up and modelling one script from 854 ms to 547 ms, and its retained heap from 113 MB to 85 MB.
  * It changes nothing a script can express: a name from those libraries was refused before and is refused
  * now, having simply stopped resolving first.
+ *
+ * `types` is empty for the same reason by another route: this project reads the real filesystem, so without
+ * it every `@types/*` package reachable from the entry is discovered and bound on every compile. TS 6.0
+ * defaults it empty, but that default belongs to whatever TypeScript ts-morph bundles rather than to this
+ * package, so it is stated here instead of inherited.
  */
 export const TSSL_COMPILER_OPTIONS: ts.CompilerOptions = {
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
     lib: ["lib.es2022.d.ts"],
+    types: [],
 };
 
 /**
