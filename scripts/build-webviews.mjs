@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "./esbuild-web-tree-sitter.mjs";
+import { dropThirdPartyWarnings } from "./esbuild-svelte-warnings.mjs";
 
 const dev = process.argv.includes("--sourcemap");
 const minify = process.argv.includes("--minify");
@@ -30,11 +31,7 @@ await build({
     plugins: [
         esbuildSvelte({
             compilerOptions: { dev },
-            // Svelte libraries ship uncompiled .svelte sources, so compiling them here inherits
-            // the Svelte compiler's lints about THEIR internal patterns (bits-ui alone emits ~49
-            // state_referenced_locally warnings) - unactionable noise that would bury a genuine
-            // warning from our own components. Drop third-party warnings; ours stay visible.
-            filterWarnings: (warning) => !warning.filename?.includes("node_modules"),
+            filterWarnings: dropThirdPartyWarnings,
         }),
         stubNodeOnlyImports,
     ],

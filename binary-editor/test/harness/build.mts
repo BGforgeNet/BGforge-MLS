@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { THEME_VARS } from "./theme-vars";
+import { dropThirdPartyWarnings } from "../../../scripts/esbuild-svelte-warnings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -42,7 +43,7 @@ async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: str
         write: true,
         outdir,
         logLevel: "info",
-        plugins: [esbuildSvelte({ compilerOptions: { dev: true } })],
+        plugins: [esbuildSvelte({ compilerOptions: { dev: true }, filterWarnings: dropThirdPartyWarnings })],
     });
     const js = fs.readFileSync(path.join(outdir, `${entryName}.js`), "utf8");
     fs.rmSync(outdir, { recursive: true, force: true });

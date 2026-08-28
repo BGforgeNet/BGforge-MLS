@@ -30,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { THEME_VARS } from "./theme-vars";
+import { dropThirdPartyWarnings } from "../../../scripts/esbuild-svelte-warnings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,7 +47,7 @@ await build({
     write: true,
     outdir,
     logLevel: "info",
-    plugins: [esbuildSvelte({ compilerOptions: { dev: true } })],
+    plugins: [esbuildSvelte({ compilerOptions: { dev: true }, filterWarnings: dropThirdPartyWarnings })],
 });
 const js = fs.readFileSync(path.join(outdir, "showcase-main.js"), "utf8");
 // The JS is now in memory; drop the temp build dir so repeated runs don't litter os.tmpdir().

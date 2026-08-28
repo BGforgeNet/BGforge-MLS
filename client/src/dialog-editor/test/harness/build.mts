@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DARK_THEME_VARS } from "./theme-vars";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../../../../scripts/esbuild-web-tree-sitter.mjs";
+import { dropThirdPartyWarnings } from "../../../../../scripts/esbuild-svelte-warnings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../../../..");
@@ -27,7 +28,10 @@ await build({
     // through esbuild's default json loader. The .scm loader and the web-tree-sitter node stub are retained
     // from the shared helper but no longer exercised here (nothing imports web-tree-sitter).
     loader: webTreeSitterLoaders,
-    plugins: [esbuildSvelte({ compilerOptions: { dev: true, css: "injected" } }), stubNodeOnlyImports],
+    plugins: [
+        esbuildSvelte({ compilerOptions: { dev: true, css: "injected" }, filterWarnings: dropThirdPartyWarnings }),
+        stubNodeOnlyImports,
+    ],
 });
 const js = fs.readFileSync(path.join(outdir, "harness-main.js"), "utf8");
 fs.rmSync(outdir, { recursive: true, force: true });
