@@ -1,0 +1,11 @@
+import { nearest } from "./lib";
+import { Player1, See, Attack, Polymorph, Animate } from "./engine";
+
+if (See(Player1)) {
+    Attack(Player1);
+}
+
+if (See(Player1)) {
+    Attack(nearest("ENEMY").id.length);
+    Polymorph(Animate.MAGE_MALE_HUMAN);
+}

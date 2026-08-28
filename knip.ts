@@ -131,6 +131,9 @@ const config: KnipConfig = {
             // any workspace; knip's per-workspace dep tracing doesn't reach across that
             // non-workspace boundary, so suppress the false positive.
             ignoreDependencies: ["esbuild-wasm", "cac", "diff"],
+            // test/fixtures holds bundler inputs, which the tests hand to esbuild as file PATHS rather
+            // than importing - so no TS import reaches them and knip reads them as unused files.
+            ignore: ["test/fixtures/**"],
         },
         format: {
             entry: ["test/**/*.test.ts"],
