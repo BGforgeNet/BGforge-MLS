@@ -27,18 +27,23 @@ import { buildSwitchCondition, invertConditions, transformConditionExpr } from "
 import { unrollFor, unrollForOf, unrollForAsActions, unrollForOfAsActions } from "./loop-unroll";
 import { TranspileError } from "../../common/transpile-error";
 import { getSharedProject } from "../../common/shared-project";
+import { LineIndex } from "../../common/line-index";
 
 export class TBAFTransformer implements TransformerContext {
     vars: VarsContext = new Map();
     funcs: FuncsContext = new Map();
     private blocks: BAFBlock[] = [];
     private sourceFile!: SourceFile;
+    /** Built once per transform: ts-morph's own line lookup rescans the file from character 0 on every
+     * call, and this transformer asks for a line on every condition and action it emits. */
+    private lineIndex!: LineIndex;
 
     /**
      * Transform a bundled TypeScript source file to BAF IR.
      */
     transform(sourceFile: SourceFile): BAFScript {
         this.sourceFile = sourceFile;
+        this.lineIndex = new LineIndex(sourceFile.getFullText());
         this.blocks = [];
         this.vars.clear();
         this.funcs.clear();
@@ -257,9 +262,10 @@ export class TBAFTransformer implements TransformerContext {
     transformCallToCondition(call: CallExpression): BAFCondition {
         const funcName = call.getExpression().getText();
         const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
-        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0. The algebra
-        // below copies conditions with spread, so this rides along through negation and CNF.
-        return { negated: false, name: funcName, args, line: call.getStartLineNumber() - 1 };
+        // The index counts lines from 1, as ts-morph did; everything downstream of the bundler counts
+        // from 0. The algebra below copies conditions with spread, so this rides along through
+        // negation and CNF.
+        return { negated: false, name: funcName, args, line: this.lineIndex.lineNumberAt(call.getStart()) - 1 };
     }
 
     /**
@@ -268,8 +274,8 @@ export class TBAFTransformer implements TransformerContext {
     private transformCallToAction(call: CallExpression): BAFAction {
         const funcName = call.getExpression().getText();
         const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
-        // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
-        return { name: funcName, args, line: call.getStartLineNumber() - 1 };
+        // Counted from 1, as ts-morph did; everything downstream of the bundler counts from 0.
+        return { name: funcName, args, line: this.lineIndex.lineNumberAt(call.getStart()) - 1 };
     }
 
     /**
