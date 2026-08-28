@@ -48,7 +48,8 @@
     "dependencies": {
         "cac": "catalog:",
         "diff": "catalog:",
-        "esbuild-wasm": "catalog:"
+        "esbuild-wasm": "catalog:",
+        "rolldown": "catalog:"
     },
     "devDependencies": {
         "fast-check": "catalog:",

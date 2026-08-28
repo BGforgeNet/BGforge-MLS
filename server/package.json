@@ -37,7 +37,8 @@
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
-        "esbuild-wasm": "catalog:"
+        "esbuild-wasm": "catalog:",
+        "rolldown": "catalog:"
     },
     "devDependencies": {
         "@bgforge/binary": "workspace:*",

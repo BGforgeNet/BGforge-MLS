@@ -24,6 +24,9 @@ catalogs:
     quick-lru:
       specifier: ^7.3.0
       version: 7.3.0
+    rolldown:
+      specifier: ^1.2.5
+      version: 1.2.5
     ts-morph:
       specifier: ^27.0.2
       version: 27.0.2
@@ -378,6 +381,9 @@ importers:
       esbuild-wasm:
         specifier: 'catalog:'
         version: 0.28.2
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.5
     devDependencies:
       '@bgforge/binary':
         specifier: workspace:*
@@ -434,6 +440,9 @@ importers:
       esbuild-wasm:
         specifier: 'catalog:'
         version: 0.28.2
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.5
     devDependencies:
       fast-check:
         specifier: 'catalog:'
@@ -451,6 +460,9 @@ importers:
       esbuild-wasm:
         specifier: 'catalog:'
         version: 0.28.2
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.2.5
       ts-morph:
         specifier: 'catalog:'
         version: 27.0.2

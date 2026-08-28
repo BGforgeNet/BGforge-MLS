@@ -15,9 +15,9 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import type * as esbuild from "esbuild-wasm";
-import { bundleWithEsbuild } from "./esbuild-utils";
-import { transformEnums, collectDeclareEnums, type EnumMember } from "./enum-transform";
+import type * as rolldown from "rolldown";
+import { bundleWithRolldown } from "./rolldown-utils";
+import { transformEnums, collectDeclareEnums, resolveDtsPath, type EnumMember } from "./enum-transform";
 import { hasImports } from "./transpiler-utils";
 import { lineCount, type SourcePosition } from "./line-map";
 
@@ -65,74 +65,75 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
     const sharedEnums = new Map<string, ReadonlyArray<EnumMember>>();
     const sharedExternalEnumNames = new Set<string>();
 
-    const result = await bundleWithEsbuild({
+    const result = await bundleWithRolldown({
         filePath,
         sourceText,
         marker: TBAF_CODE_MARKER,
-        target: "esnext",
         sharedEnums,
         sharedExternalEnumNames,
-        extraPlugins: [tbafResolverPlugin(sharedEnums), tsExtensionResolverPlugin(sharedExternalEnumNames)],
+        extraPlugins: [transpilerResolverPlugin(sharedEnums, sharedExternalEnumNames)],
     });
 
     return { code: result.code, origins: result.origins };
 }
 
 /**
- * Resolve and load .tbaf imports as TypeScript, transforming enums.
- * No custom namespace - nothing here needs esbuild to resolve through a plugin, so imports go
- * through its default resolver.
+ * The esbuild path needed three plugins - external declarations, .tbaf loading, extensionless
+ * resolution - because esbuild dispatches each hook by its own regex filter. rolldown gives one
+ * `resolveId`/`load` pair per plugin and no filters, so the three collapse into one whose hooks branch
+ * on the specifier themselves. Fewer moving parts, but the branch order is now load-bearing: `.d.ts`
+ * has to be tested before the extensionless case, which esbuild's filters expressed structurally.
  */
-function tbafResolverPlugin(sharedEnums: Map<string, ReadonlyArray<EnumMember>>): esbuild.Plugin {
+function transpilerResolverPlugin(
+    sharedEnums: Map<string, ReadonlyArray<EnumMember>>,
+    sharedExternalEnumNames: Set<string>,
+): rolldown.Plugin {
     return {
-        name: "tbaf-resolver",
-        setup(build) {
-            build.onResolve({ filter: /\.tbaf$/ }, (args) => ({
-                path: path.resolve(args.resolveDir, args.path),
-            }));
+        name: "transpiler-resolver",
 
-            build.onLoad({ filter: /\.tbaf$/ }, (args) => {
-                const source = fs.readFileSync(args.path, "utf-8");
-                if (source.includes("enum ")) {
-                    const { code, enums } = transformEnums(source);
-                    for (const [name, members] of enums) {
-                        sharedEnums.set(name, members);
-                    }
-                    return { contents: code, loader: "ts" };
-                }
-                return { contents: source, loader: "ts" };
-            });
-        },
-    };
-}
+        resolveId(source: string, importer: string | undefined) {
+            const from = importer === undefined ? undefined : path.dirname(importer);
+            if (from === undefined) return null;
 
-/**
- * Resolve extensionless relative imports that esbuild can't handle.
- * esbuild only appends single extensions (.ts, .tsx, etc.) but not
- * compound extensions like .d.ts. Packages like ielib use extensionless
- * imports (e.g., "./actions") that resolve to .d.ts declaration files.
- * This plugin tries .d.ts and externalizes those (they're type-only),
- * and also tries .ts / index.ts for regular source files.
- */
-function tsExtensionResolverPlugin(sharedExternalEnumNames: Set<string>): esbuild.Plugin {
-    return {
-        name: "ts-extension-resolver",
-        setup(build) {
-            build.onResolve({ filter: /^\./ }, (args) => {
-                if (path.extname(args.path)) return null;
-                const base = path.resolve(args.resolveDir, args.path);
-                // .d.ts - declaration file, externalize it
+            // Declaration files are type-only: externalise them, but read their enums first.
+            if (/\.d(\.ts)?$/.test(source)) {
+                collectDeclareEnums(resolveDtsPath(path.resolve(from, source)), sharedExternalEnumNames);
+                return { id: source, external: true };
+            }
+            if (source.endsWith(".tbaf")) return path.resolve(from, source);
+
+            // Extensionless relative imports. Packages like ielib write "./actions" for a .d.ts, which
+            // no bundler's default resolver reaches, since it appends single extensions only.
+            if (source.startsWith(".") && path.extname(source) === "") {
+                const base = path.resolve(from, source);
                 if (fs.existsSync(base + ".d.ts")) {
                     collectDeclareEnums(base + ".d.ts", sharedExternalEnumNames);
-                    return { path: args.path + ".d.ts", external: true };
+                    return { id: source + ".d.ts", external: true };
                 }
-                // .ts - regular source, bundle it
-                if (fs.existsSync(base + ".ts")) return { path: base + ".ts" };
-                // index.ts - directory import
+                if (fs.existsSync(base + ".ts")) return base + ".ts";
                 const indexTs = path.join(base, "index.ts");
-                if (fs.existsSync(indexTs)) return { path: indexTs };
+                if (fs.existsSync(indexTs)) return indexTs;
+            }
+            return null;
+        },
+
+        load(id: string) {
+            if (id.endsWith(".d.ts")) return null;
+            if (!id.endsWith(".tbaf") && !id.endsWith(".ts")) return null;
+
+            let source: string;
+            try {
+                source = fs.readFileSync(id, "utf-8");
+            } catch {
                 return null;
-            });
+            }
+            if (!source.includes("enum ")) {
+                // A .tbaf is not a extension rolldown knows; a .ts it can read itself.
+                return id.endsWith(".tbaf") ? { code: source, moduleType: "ts" } : null;
+            }
+            const { code, enums } = transformEnums(source);
+            for (const [name, members] of enums) sharedEnums.set(name, members);
+            return { code, moduleType: "ts" };
         },
     };
 }

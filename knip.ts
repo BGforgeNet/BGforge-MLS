@@ -92,7 +92,8 @@ const config: KnipConfig = {
             // to resolve `require("esbuild-wasm")` from server's node_modules at
             // runtime. Knip's per-workspace static analysis can't see the import
             // chain through the bundled-in non-workspace source.
-            ignoreDependencies: ["esbuild-wasm"],
+            // rolldown is the same shape, for the same reason, while the bundler swap is prototyped.
+            ignoreDependencies: ["esbuild-wasm", "rolldown"],
         },
         "plugins/tssl-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
@@ -130,7 +131,8 @@ const config: KnipConfig = {
             // cac and diff are imported via shared/cli/cli-utils.ts, which is not part of
             // any workspace; knip's per-workspace dep tracing doesn't reach across that
             // non-workspace boundary, so suppress the false positive.
-            ignoreDependencies: ["esbuild-wasm", "cac", "diff"],
+            // rolldown sits here for the same reason as esbuild-wasm, while the swap is prototyped.
+            ignoreDependencies: ["esbuild-wasm", "rolldown", "cac", "diff"],
             // test/fixtures holds bundler inputs, which the tests hand to esbuild as file PATHS rather
             // than importing - so no TS import reaches them and knip reads them as unused files.
             ignore: ["test/fixtures/**"],

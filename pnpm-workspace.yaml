@@ -31,6 +31,7 @@ catalog:
   cac: ^7.0.0
   diff: ^9.0.0
   esbuild-wasm: ^0.28.2
+  rolldown: ^1.2.5
   fast-check: ^4.9.0
   quick-lru: ^7.3.0
   tsdown: ^0.22.14
