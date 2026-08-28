@@ -13,6 +13,8 @@ import {
     transformEnums,
     expandEnumPropertyAccess,
     enumTransformPlugin,
+    type EnumMember,
+    type EnumRegistry,
 } from "./enum-transform";
 import { ensureNodeOnPath } from "./node-runtime";
 import { lineCount, composeLineMaps, type SourcePosition } from "./line-map";
@@ -56,16 +58,16 @@ interface BundleConfig {
     readonly metafile?: boolean;
     /**
      * Additional esbuild plugins inserted before the shared enum/tree-shaking plugins.
-     * If these plugins accumulate enum names, pass the same sets via
-     * sharedEnumNames/sharedExternalEnumNames so all plugins share state.
+     * If these plugins accumulate enums, pass the same collections via
+     * sharedEnums/sharedExternalEnumNames so all plugins share state.
      */
     readonly extraPlugins?: esbuild.Plugin[];
     /**
-     * Mutable set for extra plugins to add enum names into.
-     * Merged with the main file's enum names before bundling.
-     * Only needed when extraPlugins accumulate enum names (e.g., tbaf-resolver).
+     * Mutable map for extra plugins to add enums into, with their members and values.
+     * Merged with the main file's enums before bundling.
+     * Only needed when extraPlugins accumulate enums (e.g., tbaf-resolver).
      */
-    readonly sharedEnumNames?: Set<string>;
+    readonly sharedEnums?: Map<string, ReadonlyArray<EnumMember>>;
     /**
      * Mutable set for extra plugins to add externalized enum names into.
      * Only needed when extraPlugins collect external enums (e.g., ts-extension-resolver).
@@ -77,8 +79,8 @@ interface BundleConfig {
 interface BundleResult {
     /** Cleaned and post-processed bundled code */
     readonly code: string;
-    /** All enum names accumulated during bundling (main file + imports) */
-    readonly allEnumNames: ReadonlySet<string>;
+    /** Every enum accumulated during bundling (main file + imports), with members and values */
+    readonly allEnums: EnumRegistry;
     /** Enum names from externalized .d.ts files (for prefix stripping) */
     readonly externalEnumNames: ReadonlySet<string>;
     /** Input files from metafile (only when metafile: true was requested) */
@@ -109,15 +111,15 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // Where each line of the entry stood before its enums were flattened: without the map, the lines
     // below an enum would be reported one place off for every line the flattening removed.
     const entryLineMap: number[] = [];
-    const { code: enumTransformed, enumNames } = transformEnums(sourceText, entryLineMap);
+    const { code: enumTransformed, enums } = transformEnums(sourceText, entryLineMap);
 
-    // Accumulate enum names from imported files during bundling.
+    // Accumulate enums from imported files during bundling.
     // Mutated via closure in the enum-transform plugin.
-    // If caller provided a shared set (for extra plugins that also accumulate enums),
-    // merge main file enum names into it and use it as the canonical set.
-    const allEnumNames = config.sharedEnumNames ?? new Set<string>();
-    for (const name of enumNames) {
-        allEnumNames.add(name);
+    // If caller provided a shared map (for extra plugins that also accumulate enums),
+    // merge the main file's enums into it and use it as the canonical registry.
+    const allEnums = config.sharedEnums ?? new Map<string, ReadonlyArray<EnumMember>>();
+    for (const [name, members] of enums) {
+        allEnums.set(name, members);
     }
 
     // Accumulate externalized enum names from .d.ts files.
@@ -168,7 +170,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
             // Only .ts - transpiler source files (.tbaf, .td, .tssl) are not imported
             // by other transpiler files. Placed after extraPlugins so language-specific
             // resolvers run first.
-            enumTransformPlugin(allEnumNames, /\.ts$/),
+            enumTransformPlugin(allEnums, /\.ts$/),
             // No plugin marks modules `sideEffects: false` here. One used to, for TSSL, which now
             // compiles through compilers/tssl and never reaches this function. It matched every import
             // and awaited build.resolve() per module - 18 nested round-trips into the wasm on a real
@@ -193,7 +195,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
     const afterExpand: number[] = [];
-    const code = expandEnumPropertyAccess(cleaned, allEnumNames, externalEnumNames, afterExpand);
+    const code = expandEnumPropertyAccess(cleaned, allEnums, externalEnumNames, afterExpand);
 
     // Both passes only ever moved lines relative to what esbuild emitted, so composing them lands on a
     // line of that output; the source map then says which file and line that came from.
@@ -224,7 +226,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
                   .map((f) => path.resolve(resolveDir, f))
             : [];
 
-    return { code, allEnumNames, externalEnumNames, inputFiles, origins };
+    return { code, allEnums, externalEnumNames, inputFiles, origins };
 }
 
 /**

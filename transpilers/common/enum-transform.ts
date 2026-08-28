@@ -14,12 +14,26 @@ import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
 import { lineCount, survivorsFromEdits, type LineEdit } from "./line-map";
 
+/** One flattened enum member: its name, and its value as the literal text that will stand for it. */
+export interface EnumMember {
+    readonly name: string;
+    readonly value: string;
+}
+
+/** Every enum a transform pass has seen, by name, with the members needed to expand a later access. */
+export type EnumRegistry = ReadonlyMap<string, ReadonlyArray<EnumMember>>;
+
 /** Result of transforming enums in source text */
 interface EnumTransformResult {
     /** Transformed source code (unchanged if no enums found) */
     readonly code: string;
-    /** Set of enum names found and transformed */
-    readonly enumNames: ReadonlySet<string>;
+    /**
+     * Every enum found and transformed, with its members and their values. The members are what let a
+     * later pass expand a cross-file `Color.Red` without reading the compat object back out of bundled
+     * text: the generator already holds the fact, so the consumer takes it from here rather than
+     * re-deriving it from generated source.
+     */
+    readonly enums: EnumRegistry;
 }
 
 /**
@@ -31,7 +45,7 @@ interface EnumTransformResult {
  * 3. Replaces `EnumName.Member` property accesses with `EnumName_Member`
  *
  * @param sourceText TypeScript source text
- * @returns Transformed code and set of enum names
+ * @returns Transformed code and the enums it found, with their members and values
  */
 export function transformEnums(sourceText: string, survivors?: number[]): EnumTransformResult {
     /** Every line unchanged, for the paths that rewrite nothing. */
@@ -43,7 +57,7 @@ export function transformEnums(sourceText: string, survivors?: number[]): EnumTr
     // Fast path: no enums in source
     if (!sourceText.includes("enum ")) {
         reportIdentity();
-        return { code: sourceText, enumNames: new Set() };
+        return { code: sourceText, enums: new Map() };
     }
 
     const project = getSharedProject();
@@ -54,7 +68,7 @@ export function transformEnums(sourceText: string, survivors?: number[]): EnumTr
     // Fast path: enum keyword found in text but no actual enum declarations
     if (enumDecls.length === 0) {
         reportIdentity();
-        return { code: sourceText, enumNames: new Set() };
+        return { code: sourceText, enums: new Map() };
     }
 
     // Collect enum info before modifying AST
@@ -70,15 +84,15 @@ export function transformEnums(sourceText: string, survivors?: number[]): EnumTr
     // sourceFile itself remains valid. getDescendantsOfKind re-walks the current tree.
     replaceEnumPropertyAccesses(sourceFile, enumInfos);
 
-    const enumNames = new Set(enumInfos.map((e) => e.name));
-    return { code: sourceFile.getFullText(), enumNames };
+    const enums: EnumRegistry = new Map(enumInfos.map((e) => [e.name, e.members]));
+    return { code: sourceFile.getFullText(), enums };
 }
 
 /** Collected info about a single enum */
 interface EnumInfo {
     readonly name: string;
     readonly isExported: boolean;
-    readonly members: ReadonlyArray<{ readonly name: string; readonly value: string }>;
+    readonly members: ReadonlyArray<EnumMember>;
 }
 
 /**
@@ -202,26 +216,31 @@ function replaceEnumPropertyAccesses(sourceFile: SourceFile, enumInfos: readonly
 }
 
 /**
- * Expand enum compat objects in post-bundled code.
+ * Expand cross-file enum accesses in post-bundled code.
  *
- * After esbuild bundles cross-file imports, enum compat objects appear as
- * variable declarations with object literal initializers.
+ * `transformEnums` rewrites `EnumName.Member` within the file that declares the enum; an access from
+ * another file survives bundling untouched, and this pass resolves it. Both the membership and the
+ * values come from `enums` - the record the transform already produced - so the pass does not depend
+ * on the compat object surviving the bundler as a named binding. It used to: it read the values back
+ * out of the emitted `var EnumName = {...}` statement, which made enum resolution a hostage to one
+ * bundler's codegen, silently leaving `EnumName.Member` unresolved if that statement was inlined or
+ * dropped. The statement is now only cleaned up, never consulted.
  *
  * This function:
- * 1. Replaces those var/let/const statements with individual `var EnumName_Member = value;`
- * 2. Replaces remaining `EnumName.Member` property accesses with `EnumName_Member`
+ * 1. Emits `var EnumName_Member = value;` for each member an access actually refers to
+ * 2. Replaces those `EnumName.Member` accesses with `EnumName_Member`
  * 3. For externalized enums (from .d.ts files), strips the enum prefix:
  *    `ClassID.ANKHEG` -> `ANKHEG` (keeps symbolic name for the game engine)
  *
- * @param code Post-bundled code from esbuild
- * @param enumNames Set of bundled enum names to look for (have compat objects)
+ * @param code Post-bundled code
+ * @param enums Enums seen while bundling, with their members and values
  * @param externalEnumNames Set of externalized enum names from .d.ts files
- *   (no compat objects - prefix is stripped instead of replaced with underscore)
+ *   (declarations, so there is nothing to emit - the prefix is stripped instead)
  * @returns Expanded code
  */
 export function expandEnumPropertyAccess(
     code: string,
-    enumNames: ReadonlySet<string>,
+    enums: EnumRegistry,
     externalEnumNames: ReadonlySet<string> = new Set(),
     /**
      * Filled, when passed, with the 0-based input line each output line came from. Reported rather than
@@ -237,7 +256,7 @@ export function expandEnumPropertyAccess(
     };
 
     // Fast path: nothing to expand
-    if (enumNames.size === 0 && externalEnumNames.size === 0) {
+    if (enums.size === 0 && externalEnumNames.size === 0) {
         reportIdentity(code);
         return code;
     }
@@ -245,24 +264,38 @@ export function expandEnumPropertyAccess(
     const project = getSharedProject();
     const sourceFile = project.createSourceFile("expand-enum.ts", code, { overwrite: true });
 
-    // First pass: collect which enum members are actually referenced as EnumName.Member
+    // First pass: which members are actually referenced as EnumName.Member. Filtered against the
+    // registry, so `Color.toString()` is left alone rather than declared as a member that never was.
     const referencedMembers = new Map<string, Set<string>>();
     for (const access of sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)) {
         const expr = access.getExpression();
         if (!expr.isKind(SyntaxKind.Identifier)) {
             continue;
         }
-        const objName = expr.getText();
-        if (!enumNames.has(objName)) {
+        const members = enums.get(expr.getText());
+        if (members === undefined) {
             continue;
         }
+        const propName = access.getName();
+        if (!members.some((m) => m.name === propName)) {
+            continue;
+        }
+        const objName = expr.getText();
         if (!referencedMembers.has(objName)) {
             referencedMembers.set(objName, new Set());
         }
-        referencedMembers.get(objName)!.add(access.getName());
+        referencedMembers.get(objName)!.add(propName);
     }
 
-    const expandedInfos: EnumInfo[] = [];
+    /** The declarations an enum needs, in the registry's member order, values straight from it. */
+    const declarationsFor = (name: string): string[] => {
+        const used = referencedMembers.get(name);
+        if (used === undefined || used.size === 0) return [];
+        return (enums.get(name) ?? [])
+            .filter((m) => used.has(m.name))
+            .map((m) => `var ${name}_${m.name} = ${m.value};`);
+    };
+
     // What each rewritten statement did to the line count. Recorded during the loop below because it
     // walks statements in REVERSE, so a statement's line numbers are still its original ones when it is
     // reached - every edit so far was made after it.
@@ -272,7 +305,10 @@ export function expandEnumPropertyAccess(
         inputSpan: stmt.getEndLineNumber() - stmt.getStartLineNumber() + 1,
     });
 
-    // Second pass: find compat object declarations and replace with only referenced members
+    // Second pass: replace each surviving compat object with the declarations its enum needs. Doing it
+    // in place keeps the declarations where the bundler put the object, which is what leaves output and
+    // line provenance unchanged for the bundlers that do emit one.
+    const declaredInPlace = new Set<string>();
     const stmts = sourceFile.getStatements();
     for (let i = stmts.length - 1; i >= 0; i--) {
         const stmt = stmts[i]!;
@@ -291,7 +327,7 @@ export function expandEnumPropertyAccess(
 
         const decl = decls[0]!;
         const name = decl.getName();
-        if (!enumNames.has(name)) {
+        if (!enums.has(name)) {
             continue;
         }
 
@@ -300,43 +336,41 @@ export function expandEnumPropertyAccess(
             continue;
         }
 
-        const usedMembers = referencedMembers.get(name);
+        const lines = declarationsFor(name);
 
         // No members referenced - remove the compat object entirely
-        if (!usedMembers || usedMembers.size === 0) {
+        if (lines.length === 0) {
             edits.push({ ...spanOf(varStmt), outputSpan: 0 });
             varStmt.remove();
             continue;
         }
 
-        const objLiteral = init.asKind(SyntaxKind.ObjectLiteralExpression)!;
-        const members: Array<{ name: string; value: string }> = [];
-
-        for (const prop of objLiteral.getProperties()) {
-            if (prop.isKind(SyntaxKind.PropertyAssignment)) {
-                const propAssign = prop.asKind(SyntaxKind.PropertyAssignment)!;
-                const memberName = propAssign.getName();
-                // Only include members that are actually referenced
-                if (!usedMembers.has(memberName)) {
-                    continue;
-                }
-                const memberInit = propAssign.getInitializer();
-                if (memberInit) {
-                    members.push({ name: memberName, value: memberInit.getText() });
-                }
-            }
-        }
-
-        expandedInfos.push({ name, isExported: false, members });
-
-        // Replace var statement with individual declarations for referenced members only
-        const lines = members.map((m) => `var ${name}_${m.name} = ${m.value};`);
-        // No members left to write still leaves the statement's line behind, empty, rather than closing it.
-        edits.push({ ...spanOf(varStmt), outputSpan: Math.max(1, lines.length) });
+        declaredInPlace.add(name);
+        edits.push({ ...spanOf(varStmt), outputSpan: lines.length });
         varStmt.replaceWithText(lines.join("\n"));
     }
 
-    // Replace property accesses for expanded enums
+    // Third pass: an enum whose compat object never reached the output still needs its declarations.
+    // They go at the top, since there is no statement left to mark where they belonged.
+    const prepended: string[] = [];
+    for (const name of enums.keys()) {
+        if (declaredInPlace.has(name)) continue;
+        prepended.push(...declarationsFor(name));
+    }
+    if (prepended.length > 0) {
+        sourceFile.insertStatements(0, prepended);
+        // Ahead of the in-place edits in the array, not just in start line: survivorsFromEdits sorts
+        // stably, and an insertion sharing line 0 with a rewrite has to be consumed first or the
+        // rewrite's `next` cursor rewinds and replays every line after it.
+        edits.unshift({ startLine: 0, inputSpan: 0, outputSpan: prepended.length });
+    }
+
+    // Replace the accesses themselves, for every enum something referred to.
+    const expandedInfos: EnumInfo[] = [...referencedMembers.keys()].map((name) => ({
+        name,
+        isExported: false,
+        members: enums.get(name) ?? [],
+    }));
     if (expandedInfos.length > 0) {
         replaceEnumPropertyAccesses(sourceFile, expandedInfos);
     }
@@ -440,15 +474,15 @@ export function resolveDtsPath(basePath: string): string {
 
 /**
  * Create an esbuild plugin that transforms enums in loaded files.
- * Accumulates discovered enum names into the provided mutable set.
+ * Accumulates discovered enums, with their members and values, into the provided mutable map.
  *
- * @param allEnumNames Mutable set to accumulate enum names into.
+ * @param allEnums Mutable map to accumulate enums into.
  *   Mutated via closure because esbuild's plugin API provides no other way
  *   to communicate data back to the caller.
  * @param filter File filter regex for the onLoad handler
  * @returns esbuild plugin
  */
-export function enumTransformPlugin(allEnumNames: Set<string>, filter: RegExp): esbuild.Plugin {
+export function enumTransformPlugin(allEnums: Map<string, ReadonlyArray<EnumMember>>, filter: RegExp): esbuild.Plugin {
     return {
         name: "enum-transform",
         setup(build: esbuild.PluginBuild) {
@@ -468,9 +502,9 @@ export function enumTransformPlugin(allEnumNames: Set<string>, filter: RegExp): 
                 if (!source.includes("enum ")) {
                     return null;
                 }
-                const { code, enumNames: importedEnums } = transformEnums(source);
-                for (const name of importedEnums) {
-                    allEnumNames.add(name);
+                const { code, enums } = transformEnums(source);
+                for (const [name, members] of enums) {
+                    allEnums.set(name, members);
                 }
                 return { contents: code, loader: "ts" };
             });

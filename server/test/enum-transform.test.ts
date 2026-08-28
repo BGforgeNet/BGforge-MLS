@@ -13,16 +13,26 @@ import {
 } from "../../transpilers/common/enum-transform";
 import { bundle } from "../../transpilers/common/bundle";
 
+/** The registry expandEnumPropertyAccess reads, shaped as transformEnums reports it. */
+function enumRegistry(byName: Record<string, Record<string, number | string>>) {
+    return new Map(
+        Object.entries(byName).map(([name, members]) => [
+            name,
+            Object.entries(members).map(([member, value]) => ({ name: member, value: String(value) })),
+        ]),
+    );
+}
+
 describe("transformEnums", () => {
     it("transforms numeric enum with auto-increment", () => {
         const input = `enum Color { Red, Green, Blue }`;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         expect(code).toContain("const Color_Red = 0;");
         expect(code).toContain("const Color_Green = 1;");
         expect(code).toContain("const Color_Blue = 2;");
         expect(code).toContain("const Color = {");
-        expect(enumNames).toContain("Color");
+        expect([...enums.keys()]).toContain("Color");
     });
 
     it("transforms numeric enum with explicit values", () => {
@@ -72,14 +82,14 @@ enum Size { Small = 1, Large = 2 }
 const c = Color.Red;
 const s = Size.Large;
 `;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         expect(code).toContain("const Color_Red = 0;");
         expect(code).toContain("const Size_Small = 1;");
         expect(code).toContain("const c = Color_Red;");
         expect(code).toContain("const s = Size_Large;");
-        expect(enumNames).toContain("Color");
-        expect(enumNames).toContain("Size");
+        expect([...enums.keys()]).toContain("Color");
+        expect([...enums.keys()]).toContain("Size");
     });
 
     it("preserves export on enum", () => {
@@ -93,19 +103,19 @@ const s = Size.Large;
 
     it("skips declare enum", () => {
         const input = `declare enum E { A, B }`;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         // Should not transform declare enum
         expect(code).not.toContain("const E_A");
-        expect(enumNames.size).toBe(0);
+        expect(enums.size).toBe(0);
     });
 
     it("handles empty enum", () => {
         const input = `enum Empty {}`;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         expect(code).toContain("const Empty = {} as const;");
-        expect(enumNames).toContain("Empty");
+        expect([...enums.keys()]).toContain("Empty");
     });
 
     it("leaves non-enum property access unchanged", () => {
@@ -123,20 +133,20 @@ const y = Color.Red;
 
     it("returns input unchanged when no enums present", () => {
         const input = `const x = 42;\nconst y = "hello";`;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         expect(code).toBe(input);
-        expect(enumNames.size).toBe(0);
+        expect(enums.size).toBe(0);
     });
 
     it("handles const enum same as regular enum", () => {
         const input = `const enum Flags { A = 1, B = 2, C = 4 }`;
-        const { code, enumNames } = transformEnums(input);
+        const { code, enums } = transformEnums(input);
 
         expect(code).toContain("const Flags_A = 1;");
         expect(code).toContain("const Flags_B = 2;");
         expect(code).toContain("const Flags_C = 4;");
-        expect(enumNames).toContain("Flags");
+        expect([...enums.keys()]).toContain("Flags");
     });
 
     it("handles enum member referencing earlier member", () => {
@@ -152,7 +162,7 @@ const y = Color.Red;
 describe("expandEnumPropertyAccess", () => {
     it("only emits vars for referenced enum members", () => {
         const input = `var Color = { Red: 0, Green: 1, Blue: 2 };\nvar x = Color.Red;`;
-        const result = expandEnumPropertyAccess(input, new Set(["Color"]));
+        const result = expandEnumPropertyAccess(input, enumRegistry({ Color: { Red: 0, Green: 1, Blue: 2 } }));
 
         // Only Red is referenced
         expect(result).toContain("var Color_Red = 0;");
@@ -163,7 +173,7 @@ describe("expandEnumPropertyAccess", () => {
 
     it("emits multiple referenced members", () => {
         const input = `var E = { A: 0, B: 1, C: 2 };\nvar x = E.A + E.C;`;
-        const result = expandEnumPropertyAccess(input, new Set(["E"]));
+        const result = expandEnumPropertyAccess(input, enumRegistry({ E: { A: 0, B: 1, C: 2 } }));
 
         expect(result).toContain("var E_A = 0;");
         expect(result).toContain("var E_C = 2;");
@@ -173,29 +183,29 @@ describe("expandEnumPropertyAccess", () => {
 
     it("replaces property access in expressions", () => {
         const input = `var E = { A: 0, B: 1 };\nvar x = E.A + E.B;`;
-        const result = expandEnumPropertyAccess(input, new Set(["E"]));
+        const result = expandEnumPropertyAccess(input, enumRegistry({ E: { A: 0, B: 1 } }));
 
         expect(result).toContain("var x = E_A + E_B;");
     });
 
     it("leaves non-enum objects unchanged", () => {
         const input = `var obj = { A: 0, B: 1 };\nvar x = obj.A;`;
-        const result = expandEnumPropertyAccess(input, new Set(["Color"]));
+        const result = expandEnumPropertyAccess(input, enumRegistry({ Color: { Red: 0 } }));
 
         expect(result).toContain("var obj = { A: 0, B: 1 }");
         expect(result).toContain("obj.A");
     });
 
-    it("returns input unchanged when enumNames is empty", () => {
+    it("returns input unchanged when no enums are given", () => {
         const input = `var x = 42;`;
-        const result = expandEnumPropertyAccess(input, new Set());
+        const result = expandEnumPropertyAccess(input, new Map());
 
         expect(result).toBe(input);
     });
 
     it("removes compat object entirely when no members referenced", () => {
         const input = `var Color = { Red: 0, Green: 1 };\nvar x = 42;`;
-        const result = expandEnumPropertyAccess(input, new Set(["Color"]));
+        const result = expandEnumPropertyAccess(input, enumRegistry({ Color: { Red: 0, Green: 1 } }));
 
         expect(result).not.toContain("Color_Red");
         expect(result).not.toContain("Color_Green");
@@ -209,7 +219,7 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
         // ClassID is a declare enum in a .d.ts file - externalized by esbuild,
         // so no compat object exists in the bundled code. ClassID.ANKHEG -> ANKHEG.
         const input = `var x = ClassID.ANKHEG;`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID"]));
+        const result = expandEnumPropertyAccess(input, new Map(), new Set(["ClassID"]));
 
         expect(result).toContain("var x = ANKHEG;");
         expect(result).not.toContain("ClassID.ANKHEG");
@@ -217,7 +227,7 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
 
     it("strips prefix for multiple members of the same externalized enum", () => {
         const input = `var x = ClassID.ANKHEG;\nvar y = ClassID.BASILISK;`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID"]));
+        const result = expandEnumPropertyAccess(input, new Map(), new Set(["ClassID"]));
 
         expect(result).toContain("var x = ANKHEG;");
         expect(result).toContain("var y = BASILISK;");
@@ -226,7 +236,7 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
 
     it("strips prefix for multiple externalized enums", () => {
         const input = `var x = ClassID.ANKHEG;\nvar y = AnimateID.BASILISK;`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID", "AnimateID"]));
+        const result = expandEnumPropertyAccess(input, new Map(), new Set(["ClassID", "AnimateID"]));
 
         expect(result).toContain("var x = ANKHEG;");
         expect(result).toContain("var y = BASILISK;");
@@ -235,7 +245,11 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
     it("handles mixed bundled and externalized enums", () => {
         // Direction is a bundled enum (has compat object), ClassID is externalized
         const input = `var Direction = { S: 0, N: 8 };\nvar x = Direction.S;\nvar y = ClassID.ANKHEG;`;
-        const result = expandEnumPropertyAccess(input, new Set(["Direction"]), new Set(["ClassID"]));
+        const result = expandEnumPropertyAccess(
+            input,
+            enumRegistry({ Direction: { S: 0, N: 8 } }),
+            new Set(["ClassID"]),
+        );
 
         // Bundled enum: expanded with underscore prefix and value
         expect(result).toContain("Direction_S");
@@ -247,14 +261,14 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
     it("does not strip prefix for unknown identifiers", () => {
         // SomeObj is neither a bundled nor externalized enum
         const input = `var x = SomeObj.prop;`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID"]));
+        const result = expandEnumPropertyAccess(input, new Map(), new Set(["ClassID"]));
 
         expect(result).toContain("SomeObj.prop");
     });
 
     it("strips prefix in expressions and function arguments", () => {
         const input = `Foo(ClassID.ANKHEG, ClassID.BASILISK)`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID"]));
+        const result = expandEnumPropertyAccess(input, new Map(), new Set(["ClassID"]));
 
         expect(result).toContain("Foo(ANKHEG, BASILISK)");
         expect(result).not.toContain("ClassID.");
@@ -262,7 +276,7 @@ describe("expandEnumPropertyAccess - externalized enums", () => {
 
     it("returns input unchanged when externalEnumNames is empty", () => {
         const input = `var x = ClassID.ANKHEG;`;
-        const result = expandEnumPropertyAccess(input, new Set(), new Set());
+        const result = expandEnumPropertyAccess(input, new Map(), new Set());
 
         expect(result).toBe(input);
     });

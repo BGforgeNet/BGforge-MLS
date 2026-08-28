@@ -15,19 +15,41 @@ import {
     transformEnums,
 } from "../common/enum-transform";
 
+/** The registry expandEnumPropertyAccess reads, shaped as transformEnums reports it. */
+function enumRegistry(byName: Record<string, Record<string, number | string>>) {
+    return new Map(
+        Object.entries(byName).map(([name, members]) => [
+            name,
+            Object.entries(members).map(([member, value]) => ({ name: member, value: String(value) })),
+        ]),
+    );
+}
+
 describe("transformEnums", () => {
+    it("reports each enum's members and values, not only its name", () => {
+        // The names alone are not enough to expand a cross-file access later: whoever does that has
+        // to know what Red is worth, and the only other place that fact exists is the emitted compat
+        // object, which a bundler is free to inline out of existence.
+        const result = transformEnums("export enum Color { Red = 0, Green = 1 }\n");
+
+        expect(result.enums.get("Color")).toEqual([
+            { name: "Red", value: "0" },
+            { name: "Green", value: "1" },
+        ]);
+    });
+
     it("returns source unchanged when no 'enum ' text is present (fast path)", () => {
         const src = "const x = 1;\n";
         const result = transformEnums(src);
         expect(result.code).toBe(src);
-        expect(result.enumNames.size).toBe(0);
+        expect(result.enums.size).toBe(0);
     });
 
     it("returns source unchanged when 'enum ' appears in text but no enum declaration parses", () => {
         const src = 'const label = "enum of things";\n';
         const result = transformEnums(src);
         expect(result.code).toBe(src);
-        expect(result.enumNames.size).toBe(0);
+        expect(result.enums.size).toBe(0);
     });
 
     it("flattens a numeric enum into prefixed consts and a compat object, and rewrites property access", () => {
@@ -37,7 +59,7 @@ describe("transformEnums", () => {
         expect(result.code).toContain("const Color_Green = 1;");
         expect(result.code).toContain("const Color = { Red: 0, Green: 1 } as const;");
         expect(result.code).toContain("return Color_Red;");
-        expect(result.enumNames).toEqual(new Set(["Color"]));
+        expect([...result.enums.keys()]).toEqual(["Color"]);
     });
 
     it("flattens a string enum with quoted member values", () => {
@@ -67,19 +89,31 @@ describe("transformEnums", () => {
         expect(result.code).toContain("declare enum Foreign { A, B }");
         expect(result.code).toContain("const Real_X = 0;");
         expect(result.code).toContain("Foreign.A");
-        expect(result.enumNames).toEqual(new Set(["Real"]));
+        expect([...result.enums.keys()]).toEqual(["Real"]);
     });
 });
 
 describe("expandEnumPropertyAccess", () => {
+    it("expands an access from the recorded enum data when the bundle carries no compat object", () => {
+        // The compat object is a channel through the bundler, not a source of truth: a bundler that
+        // inlines a single-use object literal emits no `var Color = {...}` statement at all. The
+        // access is the only thing that has to survive, and the values come from the transform.
+        const code = "function f() { return Color.Red; }\n";
+
+        const out = expandEnumPropertyAccess(code, new Map([["Color", [{ name: "Red", value: "0" }]]]));
+
+        expect(out).toContain("var Color_Red = 0;");
+        expect(out).toContain("return Color_Red;");
+    });
+
     it("returns code unchanged when no enum or external names are given (fast path)", () => {
         const code = "var Color = { Red: 0 };\n";
-        expect(expandEnumPropertyAccess(code, new Set(), new Set())).toBe(code);
+        expect(expandEnumPropertyAccess(code, new Map(), new Set())).toBe(code);
     });
 
     it("keeps only the referenced members of a compat object, dropping the rest", () => {
         const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return Color.Red; }\n";
-        const out = expandEnumPropertyAccess(code, new Set(["Color"]));
+        const out = expandEnumPropertyAccess(code, enumRegistry({ Color: { Red: 0, Green: 1 } }));
         expect(out).toContain("var Color_Red = 0;");
         expect(out).toContain("return Color_Red;");
         expect(out).not.toContain("Green");
@@ -87,13 +121,13 @@ describe("expandEnumPropertyAccess", () => {
 
     it("removes the compat object entirely when none of its members are referenced", () => {
         const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return 42; }\n";
-        const out = expandEnumPropertyAccess(code, new Set(["Color"]));
+        const out = expandEnumPropertyAccess(code, enumRegistry({ Color: { Red: 0, Green: 1 } }));
         expect(out).not.toContain("Color");
     });
 
     it("strips the enum prefix from externalized enum property accesses", () => {
         const code = "function f() { return ClassID.ANKHEG; }\n";
-        const out = expandEnumPropertyAccess(code, new Set(), new Set(["ClassID"]));
+        const out = expandEnumPropertyAccess(code, new Map(), new Set(["ClassID"]));
         expect(out).toContain("return ANKHEG;");
         expect(out).not.toContain("ClassID");
     });
@@ -105,14 +139,14 @@ describe("expandEnumPropertyAccess", () => {
         it("drops the line of a compat object nothing references", () => {
             const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return 42; }\n";
             const survivors: number[] = [];
-            expandEnumPropertyAccess(code, new Set(["Color"]), new Set(), survivors);
+            expandEnumPropertyAccess(code, enumRegistry({ Color: { Red: 0, Green: 1 } }), new Set(), survivors);
             expect(survivors).toEqual([1]);
         });
 
         it("keeps one line per referenced member, all tracing to the statement they replaced", () => {
             const code = "var Color = {Red: 0, Green: 1};\nfunction f() { return Color.Red + Color.Green; }\n";
             const survivors: number[] = [];
-            expandEnumPropertyAccess(code, new Set(["Color"]), new Set(), survivors);
+            expandEnumPropertyAccess(code, enumRegistry({ Color: { Red: 0, Green: 1 } }), new Set(), survivors);
             // Two generated `var Color_<member>` lines, both from input line 0, then the function.
             expect(survivors).toEqual([0, 0, 1]);
         });
@@ -120,14 +154,32 @@ describe("expandEnumPropertyAccess", () => {
         it("maps every line to itself when only prefixes are stripped, which stays on one line", () => {
             const code = "function f() { return ClassID.ANKHEG; }\nfunction g() { return 1; }\n";
             const survivors: number[] = [];
-            expandEnumPropertyAccess(code, new Set(), new Set(["ClassID"]), survivors);
+            expandEnumPropertyAccess(code, new Map(), new Set(["ClassID"]), survivors);
             expect(survivors).toEqual([0, 1]);
+        });
+
+        it("attributes a prepended declaration to the first line", () => {
+            const code = "function f() { return 1; }\nfunction g() { return Color.Red; }\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, enumRegistry({ Color: { Red: 0 } }), new Set(), survivors);
+            // One `var Color_Red` ahead of the file, then both original lines.
+            expect(survivors).toEqual([0, 0, 1]);
+        });
+
+        it("keeps the map consistent when one enum is declared in place and another is prepended", () => {
+            // A has a compat object to be rewritten in place; B does not, so its declaration is
+            // prepended. Both land on line 0, which is the case where the order the two edits are
+            // consumed in decides whether the lines after them are counted once or twice.
+            const code = "var A = {X: 1};\nfunction f() { return A.X + B.Y; }\n";
+            const survivors: number[] = [];
+            expandEnumPropertyAccess(code, enumRegistry({ A: { X: 1 }, B: { Y: 2 } }), new Set(), survivors);
+            expect(survivors).toEqual([0, 0, 1]);
         });
 
         it("maps every line to itself on the fast path, where nothing is rewritten", () => {
             const code = "var Color = { Red: 0 };\nvar x = 1;\n";
             const survivors: number[] = [];
-            expandEnumPropertyAccess(code, new Set(), new Set(), survivors);
+            expandEnumPropertyAccess(code, new Map(), new Set(), survivors);
             expect(survivors).toEqual([0, 1]);
         });
     });

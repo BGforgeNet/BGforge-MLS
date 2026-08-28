@@ -17,7 +17,7 @@ import * as fs from "fs";
 import * as path from "path";
 import type * as esbuild from "esbuild-wasm";
 import { bundleWithEsbuild } from "./esbuild-utils";
-import { transformEnums, collectDeclareEnums } from "./enum-transform";
+import { transformEnums, collectDeclareEnums, type EnumMember } from "./enum-transform";
 import { hasImports } from "./transpiler-utils";
 import { lineCount, type SourcePosition } from "./line-map";
 
@@ -48,8 +48,8 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
         // Nothing was bundled, so every line still belongs to this file - but flattening an enum drops
         // lines, and without the map the ones below it would be reported where the enum used to end.
         const lineMap: number[] = [];
-        const { code, enumNames } = transformEnums(sourceText, lineMap);
-        const transformed = enumNames.size > 0;
+        const { code, enums } = transformEnums(sourceText, lineMap);
+        const transformed = enums.size > 0;
         const lines = transformed ? lineMap : Array.from({ length: lineCount(sourceText) }, (_, i) => i);
         return {
             code: transformed ? code : sourceText,
@@ -57,12 +57,12 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
         };
     }
 
-    // Shared mutable sets for enum accumulation across plugins.
+    // Shared mutable collections for enum accumulation across plugins.
     // The shared bundler's enumTransformPlugin handles .ts files;
     // the tbaf-resolver plugin below handles .tbaf files.
     // The ts-extension-resolver collects external enum names from .d.ts files
     // that esbuild can't resolve (extensionless imports).
-    const sharedEnumNames = new Set<string>();
+    const sharedEnums = new Map<string, ReadonlyArray<EnumMember>>();
     const sharedExternalEnumNames = new Set<string>();
 
     const result = await bundleWithEsbuild({
@@ -70,9 +70,9 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
         sourceText,
         marker: TBAF_CODE_MARKER,
         target: "esnext",
-        sharedEnumNames,
+        sharedEnums,
         sharedExternalEnumNames,
-        extraPlugins: [tbafResolverPlugin(sharedEnumNames), tsExtensionResolverPlugin(sharedExternalEnumNames)],
+        extraPlugins: [tbafResolverPlugin(sharedEnums), tsExtensionResolverPlugin(sharedExternalEnumNames)],
     });
 
     return { code: result.code, origins: result.origins };
@@ -80,10 +80,10 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
 
 /**
  * Resolve and load .tbaf imports as TypeScript, transforming enums.
- * No custom namespace - keeps resolution simple so noSideEffectsPlugin's
- * build.resolve() can use esbuild's default resolver for all imports.
+ * No custom namespace - nothing here needs esbuild to resolve through a plugin, so imports go
+ * through its default resolver.
  */
-function tbafResolverPlugin(sharedEnumNames: Set<string>): esbuild.Plugin {
+function tbafResolverPlugin(sharedEnums: Map<string, ReadonlyArray<EnumMember>>): esbuild.Plugin {
     return {
         name: "tbaf-resolver",
         setup(build) {
@@ -94,9 +94,9 @@ function tbafResolverPlugin(sharedEnumNames: Set<string>): esbuild.Plugin {
             build.onLoad({ filter: /\.tbaf$/ }, (args) => {
                 const source = fs.readFileSync(args.path, "utf-8");
                 if (source.includes("enum ")) {
-                    const { code, enumNames: importedEnums } = transformEnums(source);
-                    for (const name of importedEnums) {
-                        sharedEnumNames.add(name);
+                    const { code, enums } = transformEnums(source);
+                    for (const [name, members] of enums) {
+                        sharedEnums.set(name, members);
                     }
                     return { contents: code, loader: "ts" };
                 }
