@@ -13,6 +13,10 @@
         "allowImportingTsExtensions": true,
         "outDir": "out",
         "sourceMap": true,
+        // Stated rather than inferred: sources here import from ../shared, so the source root is
+        // the repo, not this directory. Inert under the base config's `noEmit`, but TS 6.0 defaults
+        // `rootDir` to the config's own directory and then rejects those files (TS6059).
+        "rootDir": "..",
         "tsBuildInfoFile": "../tmp/scripts.tsbuildinfo"
     },
     "include": [

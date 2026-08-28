@@ -14,6 +14,10 @@
         "verbatimModuleSyntax": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        // Stated rather than inferred: TS 6.0 narrows which @types packages are included
+        // automatically, and without this the Node globals stop resolving across most of the
+        // workspace configs.
+        "types": ["node"]
     }
 }
