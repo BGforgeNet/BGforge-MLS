@@ -2,14 +2,13 @@
  * Enum transformation for TSSL and TBAF/TD transpilers.
  *
  * Transforms TypeScript enum declarations into flat const declarations before
- * esbuild bundling. This avoids esbuild's IIFE conversion of enums, which
- * neither transpiler can handle.
+ * bundling. This avoids the bundler's IIFE conversion of enums, which neither
+ * transpiler can handle.
  *
  * EnumName.Member -> EnumName_Member (prefixed naming)
  */
 
 import * as fs from "fs";
-import type * as esbuild from "esbuild-wasm";
 import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
 import { lineCount, survivorsFromEdits, type LineEdit } from "./line-map";
@@ -320,7 +319,7 @@ export function expandEnumPropertyAccess(
         const decls = varStmt.getDeclarationList().getDeclarations();
 
         // Only handle single-declaration statements to avoid destroying sibling vars.
-        // esbuild always outputs one var per statement, so this is safe.
+        // rolldown splits a multi-declarator statement into one var each, so this is safe.
         if (decls.length !== 1) {
             continue;
         }
@@ -393,7 +392,7 @@ export function expandEnumPropertyAccess(
  * Strip enum prefix from externalized enum property accesses.
  * `ClassID.ANKHEG` -> `ANKHEG` (keeps the symbolic member name for the game engine).
  *
- * Externalized enums come from `declare enum` in .d.ts files. esbuild drops them
+ * Externalized enums come from `declare enum` in .d.ts files. The bundler drops them
  * entirely, leaving bare `Enum.Member` property accesses in the output. Unlike
  * bundled enums (which get `Enum_Member = value` flat vars), externalized enums
  * need to keep the symbolic name - the game engine resolves them at runtime.
@@ -459,8 +458,8 @@ export function collectDeclareEnums(filePath: string, target: Set<string>): void
 /**
  * Resolve an import specifier to an actual .d.ts file path on disk.
  *
- * TypeScript allows omitting `.ts` in import specifiers, so esbuild's
- * `args.path` may arrive as `./class.ids.d` for an actual `class.ids.d.ts` file.
+ * TypeScript allows omitting `.ts` in import specifiers, so the specifier the
+ * resolver sees may be `./class.ids.d` for an actual `class.ids.d.ts` file.
  * This function tries the path as-is first, then with `.ts` appended.
  *
  * @param basePath Absolute path derived from resolveDir + import specifier
@@ -470,44 +469,4 @@ export function resolveDtsPath(basePath: string): string {
     if (fs.existsSync(basePath)) return basePath;
     if (!basePath.endsWith(".ts") && fs.existsSync(basePath + ".ts")) return basePath + ".ts";
     return basePath;
-}
-
-/**
- * Create an esbuild plugin that transforms enums in loaded files.
- * Accumulates discovered enums, with their members and values, into the provided mutable map.
- *
- * @param allEnums Mutable map to accumulate enums into.
- *   Mutated via closure because esbuild's plugin API provides no other way
- *   to communicate data back to the caller.
- * @param filter File filter regex for the onLoad handler
- * @returns esbuild plugin
- */
-export function enumTransformPlugin(allEnums: Map<string, ReadonlyArray<EnumMember>>, filter: RegExp): esbuild.Plugin {
-    return {
-        name: "enum-transform",
-        setup(build: esbuild.PluginBuild) {
-            build.onLoad({ filter }, (args: esbuild.OnLoadArgs) => {
-                // Skip .d.ts files (type declarations, not user code)
-                if (args.path.endsWith(".d.ts")) {
-                    return null;
-                }
-                let source: string;
-                try {
-                    source = fs.readFileSync(args.path, "utf-8");
-                } catch {
-                    // Unreadable path (e.g. a virtual module esbuild resolved with no on-disk
-                    // file): skip the transform and let esbuild's default loader handle it.
-                    return null;
-                }
-                if (!source.includes("enum ")) {
-                    return null;
-                }
-                const { code, enums } = transformEnums(source);
-                for (const [name, members] of enums) {
-                    allEnums.set(name, members);
-                }
-                return { contents: code, loader: "ts" };
-            });
-        },
-    };
 }

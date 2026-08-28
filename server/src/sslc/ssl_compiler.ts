@@ -78,11 +78,9 @@ export async function ssl_compile(opts: {
 
     let p;
     try {
-        // fork() launches process.execPath - the extension host's own runtime - so, unlike
-        // esbuild's internal spawn("node"), this compiler needs no PATH shim. Both of
-        // this extension's child-Node spawns follow one invariant: launch via process.execPath,
-        // never a bare "node" PATH lookup (esbuild reaches it via ensureNodeOnPath in
-        // transpilers/common/node-runtime.ts, which is the documented home of that invariant).
+        // fork() launches process.execPath - the extension host's own runtime - rather than a bare
+        // "node" PATH lookup, which an editor shipping its own runtime may not resolve at all. This is
+        // the extension's only child-Node spawn: the transpiler bundler runs its wasm in-process.
         p = fork(COMPILER_MODULE, cmdArgs, {
             execArgv: [], // Disable Node.js flags like --inspect
             cwd: opts.cwd,

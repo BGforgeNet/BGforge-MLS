@@ -3,7 +3,7 @@
  *
  * Imports `../out/index.js` (the tsdown output) in a child node process.
  * Proves the bundle is self-contained - no missing externals (ts-morph,
- * esbuild-wasm), no broken DTS that tsc would refuse to consume.
+ * rolldown), no broken DTS that tsc would refuse to consume.
  *
  * Runs in addition to api.test.ts (which covers the source). This file
  * specifically targets the published artifact.

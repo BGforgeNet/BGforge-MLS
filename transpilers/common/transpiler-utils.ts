@@ -18,7 +18,7 @@ import QuickLRU from "quick-lru";
 import { safeEvaluate } from "./safe-eval";
 // Generic string-aware text machinery that happens to live in the bundler module; imported rather than
 // re-implemented so quoted arguments are protected by the same walker everywhere.
-import { replaceOutsideStrings } from "./esbuild-utils";
+import { replaceOutsideStrings } from "./bundle-output";
 
 /** Variable substitution context - maps variable names to their compile-time values */
 export type VarsContext = Map<string, string>;
@@ -203,7 +203,7 @@ export function stripQuotes(text: string): string {
  * Uses ts-morph's getLiteralValue() for string and template literals to properly
  * evaluate escape sequences (\n, \t, etc.). Falls back to stripQuotes for other nodes.
  *
- * Without esbuild processing, template literals keep raw escape sequences in getText().
+ * Without bundler processing, template literals keep raw escape sequences in getText().
  * getLiteralValue() evaluates them to their actual values.
  */
 export function resolveStringLiteral(expr: Expression): string {
@@ -218,8 +218,8 @@ export function resolveStringLiteral(expr: Expression): string {
 
 /**
  * Check whether source text contains import/re-export statements.
- * Used by TBAF and TD to skip esbuild bundling for files without imports,
- * because esbuild tree-shakes block-scoped functions and applies number
+ * Used by TBAF and TD to skip bundling for files without imports,
+ * because the bundler tree-shakes block-scoped functions and applies number
  * folding (1000 -> 1e3) that breaks transpiler output.
  */
 export function hasImports(text: string): boolean {
@@ -232,7 +232,7 @@ export function hasImports(text: string): boolean {
  * The @tra tag tells the Translation service which .tra/.msg file provides
  * translation strings for inlay hints, hover, and go-to-definition.
  * It can appear as a single-line JSDoc (`/** @tra file.tra *​/`) or inside
- * a multi-line JSDoc block. We extract it before esbuild bundling (which
+ * a multi-line JSDoc block. We extract it before bundling (which
  * strips comments) and re-emit it in the transpiled output so the
  * Translation service works on both source and output files.
  *
@@ -259,7 +259,7 @@ const MAX_HELPER_FIXUP_INPUT_LENGTH = 4096;
  *
  * These are imported from ielib (e.g., `import { GLOBAL } from "ielib"`), where they
  * are typed as `Scope` and have string values like `"GLOBAL"`. However, ielib cannot be
- * bundled by esbuild because it also exports transpiler-marker functions (tra, obj, etc.)
+ * bundled because it also exports transpiler-marker functions (tra, obj, etc.)
  * that have type declarations but NO runtime implementation. Bare module imports are
  * therefore externalized during bundling, and these constants arrive in transpiler output
  * as bare identifiers. We quote them in post-processing.

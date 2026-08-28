@@ -16,14 +16,17 @@
  * package newly moved from devDependencies to dependencies comes under this gate for free.
  *
  * Resolution is static - `require.resolve`, never `require` - so a package that spawns a child or
- * touches the filesystem on load is inspected without being run.
+ * touches the filesystem on load is inspected without being run. It shares that resolution with
+ * scripts/stage-server-runtime-deps.mjs, which produces the closure this checks, so the two cannot
+ * drift on what counts as reachable.
  *
  * Usage: node scripts/verify-vsix-runtime-deps.mjs <extracted-vsix-dir>
  */
 
 import { createRequire, isBuiltin } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
+import { hasRuntimeEntry, packageDir, readManifest } from "./package-dir.mjs";
 
 const root = process.argv[2];
 if (!root) {
@@ -36,36 +39,37 @@ const HOST_PROVIDED = new Set(["vscode"]);
 
 const nodeRequire = createRequire(import.meta.url);
 
-/** Resolve one package from `fromDir`, then follow what it declares it needs. */
+/** Locate one package from `fromDir`, confirm it is loadable, then follow what it declares it needs. */
 function check(pkgName, fromDir, failures, seen) {
     if (seen.has(pkgName) || HOST_PROVIDED.has(pkgName) || isBuiltin(pkgName)) return;
     seen.add(pkgName);
 
-    let entry;
+    let dir;
     try {
-        entry = nodeRequire.resolve(pkgName, { paths: [fromDir] });
+        dir = packageDir(pkgName, fromDir);
     } catch {
         failures.push(`${pkgName} does not resolve from ${fromDir.replace(root, "") || "/"}`);
         return;
     }
-    if (!entry.startsWith(root)) {
-        failures.push(`${pkgName} resolved outside the package (${entry}) - it would be absent on a user's machine`);
+    if (!dir.startsWith(root)) {
+        failures.push(`${pkgName} resolved outside the package (${dir}) - it would be absent on a user's machine`);
         return;
     }
 
-    // Walk up from the entry to the owning package root, to read what it declares it needs.
-    let dir = dirname(entry);
-    while (dir.startsWith(root)) {
-        const manifestPath = join(dir, "package.json");
-        if (existsSync(manifestPath)) {
-            const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-            if (manifest.name === pkgName) {
-                for (const dep of Object.keys(manifest.dependencies ?? {})) check(dep, dir, failures, seen);
-                return;
-            }
+    // Presence is the check every package gets; requirability only applies where the manifest offers
+    // something to require. A types-only dependency has no entry to resolve in any tree, so demanding
+    // one would fail on a correct install (see hasRuntimeEntry).
+    const manifest = readManifest(dir);
+    if (hasRuntimeEntry(manifest)) {
+        try {
+            nodeRequire.resolve(pkgName, { paths: [fromDir] });
+        } catch {
+            failures.push(`${pkgName} is present at ${dir.replace(root, "")} but its entry point does not resolve`);
+            return;
         }
-        dir = dirname(dir);
     }
+
+    for (const dep of Object.keys(manifest.dependencies ?? {})) check(dep, dir, failures, seen);
 }
 
 const serverManifest = join(root, "extension/server/package.json");

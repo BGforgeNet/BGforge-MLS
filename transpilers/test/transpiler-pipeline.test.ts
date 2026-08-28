@@ -4,7 +4,7 @@
  * build on top of.
  *
  * createTranspiler takes transpileCore as an injected callback and does no
- * bundling/esbuild work itself, so it is exercised directly with a stub
+ * bundling work itself, so it is exercised directly with a stub
  * config rather than through a real language transpiler.
  */
 import { describe, expect, it } from "vitest";

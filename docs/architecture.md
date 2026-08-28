@@ -253,7 +253,7 @@ separate top-level step - it runs inside `build:client`.
    module), and a banner re-creating the CJS globals (`createRequire` / `__filename` /
    `__dirname`) so inlined CJS resolves in the ESM bundle. `fixedExtension: false` keeps the
    `.js` extension the `type: module` packages expect (it defaults to `.mjs` on node). transpile
-   externalizes `esbuild-wasm` (it refuses to be bundled - it inspects its own `__filename`);
+   externalizes `rolldown` (bundling it would cut it off from the binding it loads by path);
    format copies the tree-sitter WASM next to the CLI via an `onSuccess` hook and has a second
    library entry, `out/internal.js` + `.d.ts`, behind the `./internal` subpath export - helpers the
    server and the tests need that are shaped by the grammars and so carry no semver promise.
@@ -275,19 +275,19 @@ separate top-level step - it runs inside `build:client`.
    `server` and typechecks standalone. Server code imports the shim at `./syntax-type` unchanged.
 
 5. **Server runtime dependencies**: `scripts/build-base-server.sh` bundles the LSP server with only
-   `vscode` and `esbuild-wasm` externalized - every other dependency (ts-morph, web-tree-sitter,
+   `vscode` and `rolldown` externalized - every other dependency (ts-morph, web-tree-sitter,
    fast-glob, p-limit, yaml, the LSP libraries) is inlined into `out/server.js`. So
-   `@bgforge/mls-server`'s `package.json` declares only `esbuild-wasm` as a runtime `dependency`
-   (plus the optional `sslc-emscripten-noderawfs` compiler); the build-time-only packages sit in
+   `@bgforge/mls-server`'s `package.json` declares only `rolldown` and its wasm binding as runtime
+   `dependencies` (plus the optional `sslc-emscripten-noderawfs` compiler); the build-time-only packages sit in
    `devDependencies`, keeping `npm install @bgforge/mls-server` lean. The record of what is bundled
    is the release CycloneDX SBOM, not the manifest. fast-glob's inlined fdir carries a guarded
    `require.resolve("picomatch")` that no-ops (try/catch) when picomatch is absent, so the lean
    install still runs - verified by packing the tarball and running its bin against an
-   initialize + workspace-scan handshake in an esbuild-wasm-only environment.
+   initialize + workspace-scan handshake in a bundler-only environment.
 
 ### TypeScript configuration
 
-esbuild emits all production code; `tsc` is used for type-checking only (`noEmit: true`).
+The bundlers emit all production code; `tsc` is used for type-checking only (`noEmit: true`).
 `tsconfig.base.json` reflects this with `module: ESNext`, `moduleResolution: bundler`,
 `verbatimModuleSyntax: true`, and `noEmit: true`. Two exceptions override the base:
 scripts run via tsx/Node and need `module: NodeNext`; TS Language Service plugins require
@@ -454,8 +454,8 @@ The four internal packages (`common`, `tssl`, `tbaf`, `td`) stay private. The
 publishable library lives at the `transpilers/` root as `@bgforge/transpile`
 and bundles all four into a single ESM artifact via `tsdown`. Internal consumers
 (LSP server, TS plugins) keep importing the per-language packages directly;
-external consumers use the bundled library. `esbuild-wasm` is the only runtime
-dependency - it cannot be inlined because it detects bundling at load time.
+external consumers use the bundled library. `rolldown` is the only runtime
+dependency - it cannot be inlined because it loads its binding relative to its own directory.
 
 **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` factory
 handles the common orchestration - extension validation, @tra tag extraction, file I/O,
@@ -468,9 +468,18 @@ custom entry points due to its batch state and non-standard output path.
 (max 1000 iterations), array spread/destructuring, helper fixups (obj/tra/tlk),
 point tuple conversion (`[x, y]` -> `[x.y]`), @tra tag extraction.
 
-**Shared bundler** (`transpilers/common/bundle.ts`): esbuild-wasm with externalized `.d.ts` imports,
-enum transformation plugin, extensionless import resolution. Used by TBAF and TD
-directly; TSSL calls `bundleWithEsbuild()` directly with preserved-function tracking.
+**Shared bundler** (`transpilers/common/bundle.ts`): rolldown with externalized `.d.ts` imports,
+enum transformation and extensionless import resolution in one resolver plugin, and an unresolvable
+import promoted from rolldown's default warn-and-externalize to a build failure. Used by TBAF and TD;
+TSSL compiles through `compilers/tssl` and does not reach this path.
+
+**Line provenance** (`transpilers/common/split-statements.ts`, `line-map.ts`, `source-map.ts`): every
+pass between the bundle and the emitted file reports, per output line, the input line it came from, and
+composing those reports is what turns a position in generated output back into one the author can open.
+That works only while one output line means one place in one source, which rolldown breaks by printing
+`if (x) { y; }` as `if (x) y;`. `splitCollapsedStatements` restores the invariant first, breaking such a
+line at the statement starts the source map identifies - the one place where the text and the map still
+share coordinates, so no later pass has to track columns through its own rewrites.
 TBAF/TD skip bundling for import-free files (`hasImports()` guard); TSSL always bundles
 because enums are a first-class feature, inline function extraction depends on bundling,
 and enum property expansion needs all bundled enum names.
@@ -531,9 +540,8 @@ fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q]
 ```
 
 Transpiles `.tbaf` and `.td` files to their target formats; `.tssl` is compiled by the separate `tssl`
-CLI in `@bgforge/tssl`. Uses ts-morph
-and native esbuild in the standalone CLI build (`--alias:esbuild-wasm=esbuild`).
-Reports orphan warnings for TD files.
+CLI in `@bgforge/tssl`. Uses ts-morph, and resolves `rolldown` from node_modules the same way the
+server does. Reports orphan warnings for TD files.
 
 ### Binary CLI
 
@@ -697,12 +705,13 @@ and rationale.
 
 **Runtime dependencies** that must ship in the VSIX:
 
-| Dependency                | Location               | Why not bundled                       |
-| ------------------------- | ---------------------- | ------------------------------------- |
-| sslc-emscripten-noderawfs | `server/node_modules/` | Loaded via `fork()`, separate process |
-| esbuild-wasm              | `server/node_modules/` | esbuild `--external`, WASM binary     |
-| bgforge-tssl-plugin       | `node_modules/`        | Loaded by tsserver by package name    |
-| bgforge-td-plugin         | `node_modules/`        | Loaded by tsserver by package name    |
+| Dependency                    | Location               | Why not bundled                         |
+| ----------------------------- | ---------------------- | --------------------------------------- |
+| sslc-emscripten-noderawfs     | `server/node_modules/` | Loaded via `fork()`, separate process   |
+| rolldown                      | `server/node_modules/` | `--external`, loads its binding by path |
+| @rolldown/binding-wasm32-wasi | `server/node_modules/` | The WASM binding rolldown loads         |
+| bgforge-tssl-plugin           | `node_modules/`        | Loaded by tsserver by package name      |
+| bgforge-td-plugin             | `node_modules/`        | Loaded by tsserver by package name      |
 
 See [docs/ignore-files.md](ignore-files.md#packaging-notes) for `.vscodeignore` details.
 

@@ -12,7 +12,7 @@ set -eu -o pipefail
 source "$(dirname "$0")/esbuild-lib.sh"
 
 esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js \
-    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --external:vscode --external:rolldown --format=cjs --platform=node \
     --banner:js="$imu_banner_with_shebang" \
     "$imu_define" \
     "$@"
@@ -21,7 +21,7 @@ esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js \
 # started from its own file, and it must sit beside server.js because that is where it is looked up.
 # No shebang - it is loaded by the Worker constructor, never executed directly.
 esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out/compile-worker.js \
-    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --external:vscode --external:rolldown --format=cjs --platform=node \
     --banner:js="$imu_banner" \
     "$imu_define" \
     "$@"
@@ -38,10 +38,11 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
 # ~0.87 MB of a ~10 MB VSIX, because these bundles are minified and deflate-compressed while the
 # node_modules copy would ship unminified. It would also need package.sh to deref a dependency TREE
 # (pnpm stores @ts-morph/common and code-block-writer as siblings of the symlink target, not inside it)
-# and to stop deleting server/node_modules/@*/. If the VSIX ever needs to shrink, esbuild-wasm's
-# esbuild.wasm is 3.79 MB stored - 38% of the artifact and 4x this - and is the better target.
+# and to stop deleting server/node_modules/@*/. The bundler's wasm is the larger target at 3.5 MB
+# stored, but it is not slack: swapping esbuild-wasm for rolldown's wasi binding traded 3.79 MB for
+# 3.56 MB, so a real cut there has to remove the bundler, not re-pick one.
 esbuild ./server/src/tssl/compile-worker.ts --bundle --outfile=server/out/tssl-compile-worker.js \
-    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
+    --external:vscode --external:rolldown --format=cjs --platform=node \
     --banner:js="$imu_banner" \
     "$imu_define" \
     "$@"

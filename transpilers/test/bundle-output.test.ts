@@ -1,66 +1,66 @@
 /**
- * Pure string-manipulation seams of the shared esbuild bundler
- * (transpilers/common/esbuild-utils.ts): the marker-stripping/alias-fixup
+ * The string-manipulation seams of the bundler pipeline
+ * (transpilers/common/bundle-output.ts): the marker-stripping/alias-fixup
  * cleanup pass and its string/comment-aware scanning helpers.
  *
- * These run entirely on plain strings - no esbuild-wasm invocation - so they
+ * These run entirely on plain strings - the bundler is never invoked - so they
  * are unit-tested directly rather than through a real bundling run (which is
  * covered by api.test.ts/bundle.test.ts).
  */
 import { describe, expect, it } from "vitest";
 import {
-    cleanupEsbuildOutput,
+    cleanupBundleOutput,
     forEachCodeSegment,
     replaceOutsideStrings,
     skipBlockComment,
     skipString,
     skipTemplateLiteral,
-} from "../common/esbuild-utils";
+} from "../common/bundle-output";
 
-describe("cleanupEsbuildOutput", () => {
+describe("cleanupBundleOutput", () => {
     const MARKER = "/* __MARK__ */";
 
     it("strips everything before the marker", () => {
         const code = `var __defProp = 1;\n${MARKER}\nconst x = 1;\n`;
-        expect(cleanupEsbuildOutput(code, MARKER)).toBe("const x = 1;\n");
+        expect(cleanupBundleOutput(code, MARKER)).toBe("const x = 1;\n");
     });
 
     it("returns the code unchanged when the marker is absent", () => {
         const code = "const x = 1;\n";
-        expect(cleanupEsbuildOutput(code, MARKER)).toBe(code);
+        expect(cleanupBundleOutput(code, MARKER)).toBe(code);
     });
 
     it("removes import declarations and renames aliased identifiers back to the original", () => {
         const code = `${MARKER}\nimport { See as See2 } from "folib";\nif (See2(Player1)) {\n  Attack(Player1);\n}\n`;
-        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        const cleaned = cleanupBundleOutput(code, MARKER);
         expect(cleaned).not.toContain("import");
         expect(cleaned).toContain("if (See(Player1))");
     });
 
     it("handles multiple import aliases", () => {
         const code = `${MARKER}\nimport { foo as foo2, bar as bar2 } from "mod";\nvar x = foo2 + bar2;`;
-        expect(cleanupEsbuildOutput(code, MARKER)).toContain("var x = foo + bar;");
+        expect(cleanupBundleOutput(code, MARKER)).toContain("var x = foo + bar;");
     });
 
     it("does not rename an alias-like identifier inside a string literal", () => {
         const code = `${MARKER}\nimport { See as See2 } from "folib";\nconst label = "See2 in text";\nSee2(Player1);\n`;
-        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        const cleaned = cleanupBundleOutput(code, MARKER);
         expect(cleaned).toContain('const label = "See2 in text";');
         expect(cleaned).toContain("See(Player1);");
     });
 
     it("does not rename inside block comments", () => {
         const code = `${MARKER}\nimport { original as alias } from "mod";\nalias; /* alias */`;
-        expect(cleanupEsbuildOutput(code, MARKER)).toContain("original; /* alias */");
+        expect(cleanupBundleOutput(code, MARKER)).toContain("original; /* alias */");
     });
 
-    it("handles esbuild's collision pattern (alias2 -> alias22)", () => {
-        // When esbuild imports `See as See2`, and the code already uses `See22`
-        // (the original `See2` renamed by esbuild to avoid collision), the cleanup
+    it("handles the collision pattern (alias2 -> alias22)", () => {
+        // When the bundler imports `See as See2`, and the code already uses `See22`
+        // (the original `See2`, renamed to avoid the collision), the cleanup
         // should detect the collision: rename See22 -> See2, drop the See2 -> See alias.
         // See22 is the code's original identifier that got an extra digit appended.
         const code = `${MARKER}\nimport { See as See2 } from "mod";\nvar a = See2;\nvar b = See22;`;
-        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        const cleaned = cleanupBundleOutput(code, MARKER);
         // See2 (the import alias) stays as See2 because the collision was detected
         expect(cleaned).toContain("var a = See2;");
         // See22 (the collision-renamed original) gets restored to See2
@@ -74,7 +74,7 @@ describe("cleanupEsbuildOutput", () => {
         it("reports the input line each surviving line came from", () => {
             const code = `var __defProp = 1;\n${MARKER}\nconst x = 1;\nconst y = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, survivors);
+            cleanupBundleOutput(code, MARKER, survivors);
             // Input lines 0 and 1 are the prelude and the marker; the two survivors are lines 2 and 3.
             expect(survivors).toEqual([2, 3]);
         });
@@ -82,21 +82,21 @@ describe("cleanupEsbuildOutput", () => {
         it("accounts for a removed import declaration between surviving lines", () => {
             const code = `${MARKER}\nconst a = 1;\nimport { See } from "folib";\nconst b = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, survivors);
+            cleanupBundleOutput(code, MARKER, survivors);
             expect(survivors).toEqual([1, 3]);
         });
 
         it("accounts for an import declaration spanning several lines", () => {
             const code = `${MARKER}\nimport {\n  See,\n  Attack\n} from "folib";\nconst b = 2;\n`;
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, survivors);
+            cleanupBundleOutput(code, MARKER, survivors);
             expect(survivors).toEqual([5]);
         });
 
         it("maps every line to itself when there is nothing to strip", () => {
             const code = "const x = 1;\nconst y = 2;\n";
             const survivors: number[] = [];
-            cleanupEsbuildOutput(code, MARKER, survivors);
+            cleanupBundleOutput(code, MARKER, survivors);
             expect(survivors).toEqual([0, 1]);
         });
     });

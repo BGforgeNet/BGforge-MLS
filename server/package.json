@@ -37,7 +37,7 @@
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
-        "esbuild-wasm": "catalog:",
+        "@rolldown/binding-wasm32-wasi": "catalog:",
         "rolldown": "catalog:"
     },
     "devDependencies": {
@@ -59,6 +59,6 @@
         "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=20.19"
     }
 }

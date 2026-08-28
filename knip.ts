@@ -85,15 +85,16 @@ const config: KnipConfig = {
                 // is irrelevant to production analysis.
                 ...(isProductionKnip ? ["src/**", "vitest.integration.config.mts", "test/**"] : []),
             ],
-            // esbuild-wasm is required at runtime: the server bundle imports
+            // rolldown is required at runtime: the server bundle imports
             // transpilers/common/bundle.ts via filesystem path and externalises
-            // esbuild-wasm in scripts/build-base-server.sh, so the dep must be
+            // rolldown in scripts/build-base-server.sh, so the dep must be
             // declared directly in server's package.json for strict-pnpm consumers
-            // to resolve `require("esbuild-wasm")` from server's node_modules at
+            // to resolve `require("rolldown")` from server's node_modules at
             // runtime. Knip's per-workspace static analysis can't see the import
             // chain through the bundled-in non-workspace source.
-            // rolldown is the same shape, for the same reason, while the bundler swap is prototyped.
-            ignoreDependencies: ["esbuild-wasm", "rolldown"],
+            // The wasi binding is declared for a different reason: nothing imports it by name, but it
+            // is the binding the VSIX ships, so it has to be in the closure package.sh deploys.
+            ignoreDependencies: ["rolldown", "@rolldown/binding-wasm32-wasi"],
         },
         "plugins/tssl-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
@@ -123,7 +124,7 @@ const config: KnipConfig = {
         },
         transpilers: {
             entry: ["test/**/*.test.ts"],
-            // esbuild-wasm is listed as a runtime dependency so the published bundle can
+            // rolldown is listed as a runtime dependency so the published bundle can
             // resolve it from node_modules (it refuses to be inlined - see tsdown.config.ts).
             // Knip sees no TS import within this workspace because the import lives in
             // transpilers/common (a separate workspace); ignoreDependencies suppresses the
@@ -131,10 +132,9 @@ const config: KnipConfig = {
             // cac and diff are imported via shared/cli/cli-utils.ts, which is not part of
             // any workspace; knip's per-workspace dep tracing doesn't reach across that
             // non-workspace boundary, so suppress the false positive.
-            // rolldown sits here for the same reason as esbuild-wasm, while the swap is prototyped.
-            ignoreDependencies: ["esbuild-wasm", "rolldown", "cac", "diff"],
-            // test/fixtures holds bundler inputs, which the tests hand to esbuild as file PATHS rather
-            // than importing - so no TS import reaches them and knip reads them as unused files.
+            ignoreDependencies: ["rolldown", "cac", "diff"],
+            // test/fixtures holds bundler inputs, which the tests hand to the bundler as file PATHS
+            // rather than importing - so no TS import reaches them and knip reads them as unused files.
             ignore: ["test/fixtures/**"],
         },
         format: {

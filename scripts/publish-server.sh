@@ -20,7 +20,7 @@ cd "$ROOT_DIR"
 source "$SCRIPT_DIR/publish-lib.sh"
 
 # No @bgforge/* preflight: the server bundles @bgforge/format and the transpilers into
-# server/out/server.js (esbuild externalizes only vscode and esbuild-wasm), and format is a
+# server/out/server.js (esbuild externalizes only vscode and rolldown), and format is a
 # devDependency, so the published manifest declares no @bgforge/* runtime dependency. A fresh
 # `npm install @bgforge/mls-server` resolves nothing from this repo, so the server publishes
 # independently of the library tags.

@@ -2,7 +2,7 @@
 
 TD is a TypeScript DSL that transpiles to WeiDU D dialog files for Infinity Engine games (Baldur's Gate, Icewind Dale, Planescape: Torment). Functions are dialog states, method chains define transitions, and the transpiler handles state collection, text references, and patch operations.
 
-`.td` files are bundled with esbuild, converted to `.d` via the transpiler, then compiled by WeiDU.
+`.td` files are bundled with rolldown, converted to `.d` via the transpiler, then compiled by WeiDU.
 
 ## How It Works
 

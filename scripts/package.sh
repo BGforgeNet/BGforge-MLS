@@ -5,7 +5,7 @@
 #
 # Flow:
 # 1. Run prepublish build (needs full pnpm deps)
-# 2. Strip pnpm artifacts from server/node_modules (symlinks crash vsce's zip writer)
+# 2. Replace server/node_modules with a flat prod closure (symlinks crash vsce's zip writer)
 # 3. Package with SKIP_PREPUBLISH=1 to avoid rebuilding after strip
 # 4. Inject TS plugins into VSIX (vsce's .vscodeignore re-include patterns don't
 #    work for node_modules/ with --no-dependencies, so we add them post-packaging)
@@ -50,19 +50,9 @@ rm -rf client/out
 git clean -fdX server/out
 ./scripts/prepublish.sh
 
-# Step 2: Deref pnpm symlinks for server runtime deps.
-for dep in server/node_modules/sslc-emscripten-noderawfs server/node_modules/esbuild-wasm; do
-    if [ -L "$dep" ]; then
-        target=$(readlink -f "$dep")
-        rm "$dep"
-        cp -rL "$target" "$dep"
-        echo "Dereffed: $dep"
-    fi
-done
-
-# Record workspace package symlinks (target outside the pnpm store) before the
-# strip removes them, so restore_node_modules can recreate them. Dev-dep symlinks
-# (targets in .pnpm/) are left for pnpm install to handle and are not recorded.
+# Record workspace package symlinks (target outside the pnpm store) before step 2 replaces the
+# directory, so restore_node_modules can recreate them. Dev-dep symlinks (targets in .pnpm/) are left
+# for pnpm install to handle and are not recorded.
 for entry in server/node_modules/@*/*; do
     [ -L "$entry" ] || continue
     target=$(readlink "$entry")
@@ -72,20 +62,12 @@ for entry in server/node_modules/@*/*; do
     esac
 done
 
-# Strip all remaining pnpm symlinks from server/node_modules.
-for entry in server/node_modules/*; do
-    [ -L "$entry" ] && rm "$entry"
-done
-
-# Strip pnpm internal real dirs from server/node_modules.
-# @scoped dirs here are pnpm symlinks to dev deps (@types, @supercharge, etc) plus
-# any @bgforge/* workspace links. All are stripped so vsce's zip writer does not
-# choke on symlinks; the workspace links are recreated afterward by the EXIT trap
-# (see workspace_links above), which the publish step needs.
-rm -rf server/node_modules/.bin server/node_modules/.vite
-for dir in server/node_modules/@*/; do
-    [ -d "$dir" ] && rm -rf "$dir"
-done
+# Step 2: Replace server/node_modules with a flat, symlink-free copy of the server's runtime closure.
+# The staging script explains the shape and why pnpm's own `deploy` is not usable from in here.
+stage_dir="tmp/pkg-server-deps"
+node scripts/stage-server-runtime-deps.mjs "$stage_dir"
+rm -rf server/node_modules
+mv "$stage_dir" server/node_modules
 
 # Step 3: Package without re-running prepublish.
 mkdir -p dist

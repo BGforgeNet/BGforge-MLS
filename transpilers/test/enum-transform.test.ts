@@ -1,6 +1,6 @@
 /**
  * Enum transformation tests (common/enum-transform.ts): flattening TypeScript
- * enums into prefixed consts + a compat object before esbuild bundling, and
+ * enums into prefixed consts + a compat object before bundling, and
  * expanding/pruning that compat object in post-bundled code.
  */
 import * as fs from "fs";

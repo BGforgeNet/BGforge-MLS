@@ -7,7 +7,6 @@
         "quick-lru": "catalog:"
     },
     "devDependencies": {
-        "esbuild-wasm": "catalog:",
         "rolldown": "catalog:",
         "ts-morph": "catalog:"
     }

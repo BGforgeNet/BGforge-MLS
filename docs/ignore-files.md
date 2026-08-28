@@ -99,15 +99,16 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 
 ### Excluded: node_modules
 
-| Pattern                                                    | What it excludes                                                           |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `server/node_modules/esbuild-wasm/esm/`                    | ESM browser builds (not used in Node.js)                                   |
-| `server/node_modules/esbuild-wasm/lib/browser*`            | CJS browser builds (not used in Node.js)                                   |
-| `server/node_modules/esbuild-wasm/**/*.d.ts`               | TypeScript definitions (not needed at runtime)                             |
-| `server/node_modules/esbuild-wasm/LICENSE.md`, `README.md` | Documentation files                                                        |
-| `server/node_modules/.ignored*/`                           | pnpm internal dirs surviving after symlink strip                           |
-| `node_modules/`                                            | All root dependencies (TS plugins injected by `package.sh` post-packaging) |
-| `.pkg-inject/`                                             | Temp directory used by `package.sh` for zip injection                      |
+| Pattern                                                       | What it excludes                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `server/node_modules/rolldown/bin/`, `cli/`                   | The rolldown CLI (the server calls the JS API)                             |
+| `server/node_modules/rolldown/**/*.d.mts`, `*.d.ts`           | TypeScript definitions (not needed at runtime)                             |
+| `server/node_modules/@rolldown/binding-wasm32-wasi/*.d.cts`   | TypeScript definitions (not needed at runtime)                             |
+| `server/node_modules/@rolldown/binding-wasm32-wasi/*browser*` | Browser builds (not used in Node.js)                                       |
+| rolldown `LICENSE`, `THIRD-PARTY-LICENSE`, `README.md`        | Documentation files                                                        |
+| `server/node_modules/.ignored*/`                              | pnpm internal dirs surviving after symlink strip                           |
+| `node_modules/`                                               | All root dependencies (TS plugins injected by `package.sh` post-packaging) |
+| `.pkg-inject/`                                                | Temp directory used by `package.sh` for zip injection                      |
 
 ### Included: runtime files (not excluded, ship by default)
 
@@ -118,7 +119,7 @@ These are included implicitly (not excluded by any pattern):
 - `client/src/**/*.html`, `client/src/**/*.css` - webview HTML/CSS templates
 - `server/package.json`, `server/out/` - LSP server bundle, data JSONs, WASM parsers, td-runtime.d.ts
 - `server/node_modules/sslc-emscripten-noderawfs/` - Fallout SSL compiler (WASM), loaded via `fork()`
-- `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`, `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
+- `server/node_modules/rolldown/` and `server/node_modules/@rolldown/binding-wasm32-wasi/` - the transpiler bundler and the WASM binding it loads, plus that binding's own dependencies (`@napi-rs/wasm-runtime`, `@emnapi/*`, `@tybys/*`, `tslib`). The wasi binding rather than a native one because the VSIX is a single platform-neutral artifact.
 - `language-configurations/*.json` - language bracket/comment rules
 - `snippets/*.json` - code snippets
 - `syntaxes/*.json` - TextMate grammars
@@ -129,7 +130,7 @@ These are included implicitly (not excluded by any pattern):
 
 `scripts/package.sh` handles three pnpm/vsce compatibility issues:
 
-1. **pnpm symlinks**: `server/node_modules/` entries are pnpm symlinks that vsce's zip writer (yazl) crashes on. The script derefs runtime deps (`sslc-emscripten-noderawfs`, `esbuild-wasm`), strips all remaining symlinks and pnpm internal dirs, then restores via `pnpm install` after packaging.
+1. **pnpm symlinks**: `server/node_modules/` entries are pnpm symlinks that vsce's zip writer (yazl) crashes on, and pnpm's isolated layout stores a package's own dependencies as siblings of the symlink target rather than inside it. `scripts/stage-server-runtime-deps.mjs` walks what each package declares and copies the closure into one flat symlink-free tree, which replaces the directory; `pnpm install` restores it after packaging. Following only `dependencies` is also what keeps rolldown's platform-native bindings (its `optionalDependencies`, ~20 MB each) out of a platform-neutral VSIX.
 
 2. **`--no-dependencies`**: vsce's `npm list --production` check fails with pnpm's node_modules layout. The `--no-dependencies` flag skips this check.
 

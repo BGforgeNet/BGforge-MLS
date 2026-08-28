@@ -7,9 +7,8 @@
  * (wm_chaos.tbaf -> ./lib.wm_chaos). A .td importing another .td is not a shape the corpus has.
  *
  * `SetGlobal` is left bare rather than imported from `@bgforge/iets/bg2` the way real mod files do:
- * that package is not installed here, and only one of the two bundlers fails loudly on it - rolldown
- * externalises an unresolvable bare specifier, esbuild errors - so importing it would make the fixture
- * pass or fail depending on which engine is wired in rather than on what it is testing.
+ * that package is not installed here, and an unresolvable import now fails the transpile
+ * (bundle-unresolved.test.ts), so importing it would test that instead of the fold.
  */
 
 import { Lib, OFFSET } from "./lib";

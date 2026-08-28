@@ -2,7 +2,7 @@
  * transpilers/common/bundle.ts's no-imports path: bundling is skipped for
  * files without imports (see the function's doc comment), but a local enum
  * still needs pre-transforming to a flat const before parsing. This is a
- * pure seam (transformEnums only, no esbuild) distinct from the esbuild
+ * pure seam (transformEnums only, no bundler) distinct from the bundled
  * bundling path already covered by api.test.ts/bundle.test.ts.
  */
 import { describe, expect, it } from "vitest";

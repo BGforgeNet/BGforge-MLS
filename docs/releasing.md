@@ -71,7 +71,7 @@ The four library packages version independently of the extension and of each oth
 
 ### The server and VSIX bundle their libraries (no release ordering)
 
-Neither the published `@bgforge/mls-server` nor the VSIX declares an `@bgforge/*` package as a runtime dependency. The server bundles `@bgforge/format` and the transpilers into `server/out/server.js`, and the VSIX bundles `@bgforge/binary` and `@bgforge/binary-editor` into the client bundle (esbuild externalizes only `vscode` and `esbuild-wasm`); `@bgforge/format` is a `devDependency` of `server/`, consumed at build time. So a fresh `npm install @bgforge/mls-server` resolves no `@bgforge/*` packages, and the extension and the libraries can release in any order. A library bump is needed only to publish that library's own npm package and CLI for external consumers.
+Neither the published `@bgforge/mls-server` nor the VSIX declares an `@bgforge/*` package as a runtime dependency. The server bundles `@bgforge/format` and the transpilers into `server/out/server.js`, and the VSIX bundles `@bgforge/binary` and `@bgforge/binary-editor` into the client bundle (the build externalizes only `vscode` and `rolldown`); `@bgforge/format` is a `devDependency` of `server/`, consumed at build time. So a fresh `npm install @bgforge/mls-server` resolves no `@bgforge/*` packages, and the extension and the libraries can release in any order. A library bump is needed only to publish that library's own npm package and CLI for external consumers.
 
 ## npm authentication (tokens and trusted publishing)
 

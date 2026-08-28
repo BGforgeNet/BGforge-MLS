@@ -15,14 +15,13 @@ export default defineConfig({
     // out/cli.js / out/index.js. Rolldown shares the heavy ts-morph + transpiler
     // code between the two entries via an automatic chunk.
     fixedExtension: false,
-    // esbuild-wasm detects at runtime whether it has been bundled by checking that
-    // __filename/path.basename(__dirname) equal "main.js"/"lib". Bundling it breaks
-    // that check, so it must stay external and resolve from node_modules with its
-    // real filesystem path. It is therefore a runtime dependency in package.json.
+    // rolldown resolves its own native or wasm binding relative to its package directory, so bundling
+    // it would cut it off from the file it has to load. It stays external and resolves from
+    // node_modules, and is therefore a runtime dependency in package.json.
     // onlyBundle: false says the inlining is intended (it otherwise hints once per build, listing the
     // ts-morph tree). The allowlist form is the alternative, but it errors on any dependency outside
     // it, so it would have to name ts-morph's transitive set and be re-checked on every bump.
-    deps: { neverBundle: ["esbuild-wasm"], onlyBundle: false },
+    deps: { neverBundle: ["rolldown"], onlyBundle: false },
     // ts-morph bundles typescript.js (CJS), which references require/__filename/
     // __dirname at module-evaluation time. Rolldown injects its own `require`/
     // `createRequire` for the inlined CJS, so the banner must NOT redeclare those

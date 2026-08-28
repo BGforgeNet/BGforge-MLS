@@ -30,8 +30,12 @@ catalog:
   "@types/node": ^24.13.3
   cac: ^7.0.0
   diff: ^9.0.0
-  esbuild-wasm: ^0.28.2
-  rolldown: ^1.2.5
+  # Pinned exactly, and as a pair: a napi binding is ABI-locked to the version that generated it, and
+  # a caret on either side lets a `pnpm update` move one without the other. Bumping means editing both
+  # lines and the packageExtensions copy below; transpilers/test/bundler-runtime.test.ts fails if they
+  # ever disagree, so the drift surfaces in CI rather than on a user's machine.
+  rolldown: 1.2.5
+  "@rolldown/binding-wasm32-wasi": 1.2.5
   fast-check: ^4.9.0
   quick-lru: ^7.3.0
   tsdown: ^0.22.14
@@ -88,6 +92,20 @@ overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
   qs: ">=6.15.2"
+
+# rolldown resolves its wasm32-wasi binding as a plain package specifier from inside its own
+# directory, but does not declare it - the native bindings are its optionalDependencies and the wasi
+# one is opt-in. Adding it here is what puts it where that lookup lands under pnpm's isolated layout,
+# which resolves from a requiring file's realpath and so never reaches server/node_modules. The VSIX
+# ships only this binding, so a shipped server always loads it; a dev machine keeps the native one,
+# which the loader tries first. The range is spelled out rather than referencing the catalog entry
+# above: packageExtensions applies to a package outside the workspace, where the catalog protocol is
+# refused. Both copies, and the napi ABI requirement that they match rolldown's own version, are
+# pinned by transpilers/test/bundler-runtime.test.ts.
+packageExtensions:
+  rolldown:
+    dependencies:
+      "@rolldown/binding-wasm32-wasi": 1.2.5
 
 # pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
 # SSL compiler ships as a GitHub-release tarball (server/package.json

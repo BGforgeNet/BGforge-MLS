@@ -59,10 +59,10 @@ export class TBAFTransformer implements TransformerContext {
 
     /**
      * Collect variable declarations (const/var/let) and function declarations.
-     * Note: esbuild converts const to var, so we collect all variable declarations.
+     * Every kind, deliberately: this runs on bundled output, where the keyword a declaration ends up
+     * with is the bundler's choice rather than the author's.
      */
     private collectDeclarations() {
-        // Collect all variable declarations (esbuild converts const to var)
         for (const varDecl of this.sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
             const name = varDecl.getName();
             const init = varDecl.getInitializer();
@@ -109,7 +109,10 @@ export class TBAFTransformer implements TransformerContext {
             if (Node.isCallExpression(expr)) {
                 const funcName = expr.getExpression().getText();
 
-                // Skip esbuild helper calls
+                // esbuild's helper names. rolldown emits its own helpers above the marker, which the
+                // output cleanup strips, so this may now be unreachable - kept because proving that
+                // needs a corpus sweep of what rolldown can emit into a body, and the cost of the
+                // guard is two string comparisons.
                 if (funcName === "__name" || funcName === "__defProp") {
                     return;
                 }

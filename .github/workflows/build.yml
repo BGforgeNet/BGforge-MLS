@@ -237,7 +237,7 @@ jobs:
           skipDuplicate: true
 
       # The server bundles @bgforge/format and the transpilers into server/out/server.js
-      # (esbuild externalizes only vscode and esbuild-wasm), so @bgforge/mls-server declares
+      # (esbuild externalizes only vscode and rolldown), so @bgforge/mls-server declares
       # no @bgforge runtime dependency and publishes independently of the <lib>/vX.Y.Z library
       # tags - no library needs to be on npm first, and publish-server.sh does no @bgforge preflight.
       - name: Publish server to npm

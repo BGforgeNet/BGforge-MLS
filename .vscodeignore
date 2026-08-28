@@ -50,7 +50,7 @@ test/
 tmp/
 transpilers/
 
-# Bundled library workspaces: esbuild inlines their src/data into client/out and
+# Bundled library workspaces: the client/server builds inline their src/data into client/out and
 # server/out at build time, so nothing under them is read from disk at runtime.
 # (binary/binary-editor/format each had per-subdir excludes before; the wholesale
 # form fails closed - a newly added file under them cannot silently ship.)
@@ -78,10 +78,10 @@ vitest.workspace.ts
 zizmor.yml
 
 # Per-workspace node_modules under binary/binary-editor/format are covered by the
-# wholesale excludes above; their pnpm symlinks are dev-only (esbuild inlines all deps
+# wholesale excludes above; their pnpm symlinks are dev-only (the build inlines all deps
 # into out/) and some are directory symlinks yazl rejects with "not a file" anyway.
-# server/node_modules is the exception that DOES ship - package.sh derefs the externalised
-# esbuild-wasm and strips all other symlinks before vsce runs (see esbuild-wasm block below).
+# server/node_modules is the exception that DOES ship - package.sh replaces it with a flat, symlink-free
+# copy of the server's runtime closure before vsce runs (see the rolldown block below).
 
 # Source YAML for TextMate grammars (only .json ships)
 syntaxes/*.yml
@@ -120,13 +120,21 @@ server/tsconfig*.json
 server/vitest*.config.*
 server/coverage/
 
-# esbuild-wasm: only keep runtime files (wasm, bin, lib/main.js, wasm_exec*)
-server/node_modules/esbuild-wasm/esm/
-server/node_modules/esbuild-wasm/lib/browser*
-server/node_modules/esbuild-wasm/lib/main.d.ts
-server/node_modules/esbuild-wasm/**/*.d.ts
-server/node_modules/esbuild-wasm/LICENSE.md
-server/node_modules/esbuild-wasm/README.md
+# rolldown: keep the ESM entry and the wasm32-wasi binding it loads; drop the CLI, the typings and
+# the browser builds. The .wasm is the payload - everything excluded here is under 200 KB together -
+# but the exclusions keep the shipped tree to what the server can actually reach.
+# Only .d.mts/.d.cts are dropped, not .d.ts: @oxc-project/types is a runtime dependency of rolldown
+# whose ONLY file is a .d.ts, so excluding that extension removes the package and its resolution fails
+# (caught by verify-vsix-runtime-deps.mjs, which cannot tell a types-only package from a broken one).
+server/node_modules/rolldown/bin/
+server/node_modules/rolldown/cli/
+server/node_modules/**/*.d.mts
+server/node_modules/**/*.d.cts
+server/node_modules/rolldown/LICENSE
+server/node_modules/rolldown/THIRD-PARTY-LICENSE
+server/node_modules/rolldown/README.md
+server/node_modules/@rolldown/binding-wasm32-wasi/*browser*
+server/node_modules/@rolldown/binding-wasm32-wasi/README.md
 
 # Root node_modules: exclude entirely (TS plugins injected by package.sh)
 # (pnpm .ignored*/ dirs and the .pkg-inject/ staging dir are covered by the dotfile glob.)

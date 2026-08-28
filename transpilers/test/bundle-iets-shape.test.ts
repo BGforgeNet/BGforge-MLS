@@ -21,7 +21,7 @@ describe("bundling a dependency that mixes declarations with runtime values", ()
     it("inlines the runtime half, so the transpiler sees the value bodies", async () => {
         const { code } = await bundle(ENTRY, source);
 
-        // Asserted on the lowered form esbuild actually emits (`var X = class {`), not on the source
+        // Asserted on the lowered form the bundler actually emits (`var X = class {`), not on the source
         // spelling: the transpiler reads this text, so the test is pinned to what it will be handed.
         // Externalising the dependency would leave a bare import here and no body at all.
         expect(code).toContain("ObjectRef = class");
@@ -57,7 +57,7 @@ describe("bundling a dependency that mixes declarations with runtime values", ()
 
         // The transpiler emits BAF, so a retained module's top-level call would land in the script as a
         // stray action. Measured note for whoever touches the plugin list: this holds with or without
-        // noSideEffectsPlugin - esbuild drops the module either way, here and across the real corpus -
+        // noSideEffectsPlugin - the bundler drops the module either way, here and across the real corpus -
         // so the test pins the OUTPUT, and is not evidence that the plugin is doing the dropping.
         expect(code).not.toContain("39321");
         expect(code).not.toContain("0x9999");

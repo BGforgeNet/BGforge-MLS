@@ -2,7 +2,7 @@
 
 TBAF is a TypeScript subset that transpiles to BAF (Infinity Engine AI scripts). It lets you use TypeScript abstractions -- variables, functions, loops, enums -- that are fully resolved at compile time into flat `IF/THEN/END` blocks. BAF has no runtime variables or control flow; TBAF provides those at compile time.
 
-`.tbaf` files are bundled with esbuild, converted to `.baf` via the transpiler, then compiled by WeiDU.
+`.tbaf` files are bundled with rolldown, converted to `.baf` via the transpiler, then compiled by WeiDU.
 
 ## How It Works
 

@@ -1,9 +1,9 @@
 /**
  * Line-provenance arithmetic (transpilers/common/line-map.ts).
  *
- * Pure array and string work - the passes that produce these maps are covered in esbuild-utils.test.ts
+ * Pure array and string work - the passes that produce these maps are covered in bundle-output.test.ts
  * and enum-transform.test.ts, and their composition through a real bundling run is not asserted here
- * because the map only names a line of esbuild's own output until its source map is read.
+ * because the map only names a line of the bundler's own output until its source map is read.
  */
 import { describe, expect, it } from "vitest";
 import { composeLineMaps, lineCount } from "../common/line-map";

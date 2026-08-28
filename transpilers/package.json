@@ -48,7 +48,6 @@
     "dependencies": {
         "cac": "catalog:",
         "diff": "catalog:",
-        "esbuild-wasm": "catalog:",
         "rolldown": "catalog:"
     },
     "devDependencies": {
@@ -56,6 +55,6 @@
         "tsdown": "catalog:"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=20.19"
     }
 }

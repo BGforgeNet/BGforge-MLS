@@ -4,7 +4,7 @@
  * of the bundler step.
  *
  * Each transpiler requires a real filesystem path - they call ts-morph's
- * esbuild resolvers (TD) against disk.
+ * module resolvers (TD) against disk.
  * Fixtures are written to os.tmpdir() in beforeAll and cleaned up in afterAll.
  */
 
