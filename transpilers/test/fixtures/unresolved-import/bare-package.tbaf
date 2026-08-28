@@ -1,0 +1,11 @@
+/**
+ * An import of a package that is not installed - the shape a typo'd or missing dependency takes in a
+ * real mod file, which reaches for `@bgforge/iets/bg2` and `folib` the same way.
+ *
+ * The name is deliberately one nothing will ever publish: a fixture that started resolving would stop
+ * testing anything, silently.
+ */
+
+import { Missing } from "@bgforge/no-such-package-exists";
+
+SetGlobal("unresolved", "GLOBAL", Missing);
