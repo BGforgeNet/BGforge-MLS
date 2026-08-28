@@ -1,0 +1,15 @@
+/**
+ * The .tbaf half. TBAF renders one argument at a time through fixupArgs, so the same fold has to reach
+ * both granularities. Covers three shapes in one file: an imported enum member, an imported plain
+ * const, and a locally declared enum member.
+ */
+
+import { Lib, OFFSET } from "./lib";
+
+enum Local {
+    Red = 1,
+}
+
+SetGlobal("imported_enum", "GLOBAL", Lib.Base + 1);
+SetGlobal("imported_const", "GLOBAL", OFFSET + 1);
+SetGlobal("local_enum", "GLOBAL", Local.Red + 333);

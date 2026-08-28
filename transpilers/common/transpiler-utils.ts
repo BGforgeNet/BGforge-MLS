@@ -16,6 +16,9 @@ import {
 } from "ts-morph";
 import QuickLRU from "quick-lru";
 import { safeEvaluate } from "./safe-eval";
+// Generic string-aware text machinery that happens to live in the bundler module; imported rather than
+// re-implemented so quoted arguments are protected by the same walker everywhere.
+import { replaceOutsideStrings } from "./esbuild-utils";
 
 /** Variable substitution context - maps variable names to their compile-time values */
 export type VarsContext = Map<string, string>;
@@ -302,6 +305,40 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  * strings - they don't contain function-call-like patterns that would cause
  * false matches.
  */
+/**
+ * Two or more integer literals joined by arithmetic operators - `10 + 1`, `2 * 3 - 4`.
+ *
+ * Point notation is deliberately not matched: `[-1.-1]` and `[869.340]` separate their coordinates with
+ * a dot, which is not in the operator set, so neither half can start a match that reaches the other.
+ */
+const CONSTANT_ARITHMETIC = /-?\d+(?:\s*[+\-*/%]\s*-?\d+)+/g;
+
+/**
+ * Evaluate constant arithmetic so it reaches the mod file as one operand.
+ *
+ * A WeiDU argument is an operand, not an expression: `SetGlobal("g", "GLOBAL", 1 + 333)` does not parse
+ * as BAF. Nothing upstream guarantees the arithmetic is gone - a bundler's optimiser folds a same-module
+ * constant and leaves an imported one whole - so the transpiler folds it here rather than depending on
+ * which bundler is underneath and how it was configured.
+ *
+ * `safeEvaluate` is the evaluator the loop-unroller already uses; it throws on identifiers, calls and
+ * strings, which is the gate that keeps this to genuine constants.
+ */
+function foldConstantArithmetic(text: string): string {
+    return replaceOutsideStrings(text, CONSTANT_ARITHMETIC, (match) => {
+        let value: number | boolean;
+        try {
+            value = safeEvaluate(match);
+        } catch {
+            // Not a constant after all; leave the text exactly as it was.
+            return match;
+        }
+        // Only integers are valid operands, so a division that does not divide evenly is left alone
+        // rather than emitted as `2.5`. Folding it would turn one invalid form into another.
+        return typeof value === "number" && Number.isInteger(value) ? String(value) : match;
+    });
+}
+
 export function applyHelperFixups(text: string): string {
     if (text.length > MAX_HELPER_FIXUP_INPUT_LENGTH) {
         throw new Error(
@@ -326,6 +363,8 @@ export function applyHelperFixups(text: string): string {
     // [2791, 831] => [2791.831] (BAF point notation: dot-separated, not comma)
     // Supports negative coordinates (e.g. [-1, -1] for "current location")
     result = result.replaceAll(/\[(-?\d+),\s*(-?\d+)\]/g, "[$1.$2]");
+
+    result = foldConstantArithmetic(result);
 
     return result;
 }

@@ -66,6 +66,11 @@ function check(pkgName, fromDir, failures, seen) {
         }
         dir = dirname(dir);
     }
+
+    // Reaching here means the entry resolved but no manifest above it names the package. Reported
+    // rather than passed over: the walk is also how this package's own dependencies are discovered, so
+    // a silent return marks it checked while never looking at the subtree beneath it.
+    failures.push(`${pkgName} resolved to ${entry.replace(root, "")} but no package.json above it names it`);
 }
 
 const serverManifest = join(root, "extension/server/package.json");
