@@ -169,7 +169,11 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
             // by other transpiler files. Placed after extraPlugins so language-specific
             // resolvers run first.
             enumTransformPlugin(allEnumNames, /\.ts$/),
-            noSideEffectsPlugin(),
+            // No plugin marks modules `sideEffects: false` here. One used to, for TSSL, which now
+            // compiles through compilers/tssl and never reaches this function. It matched every import
+            // and awaited build.resolve() per module - 18 nested round-trips into the wasm on a real
+            // mod file, ~150ms of a ~270ms bundle - while esbuild's own tree-shaking already dropped
+            // the same modules: output was byte-identical across the external corpus without it.
         ],
     });
 
@@ -504,31 +508,6 @@ export function skipBlockComment(code: string, start: number): number {
 
 function escapeRegex(s: string): string {
     return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Create an esbuild plugin that marks all modules as side-effect-free.
- * Enables aggressive tree-shaking for transpilers with no JS runtime.
- * https://github.com/evanw/esbuild/issues/1895
- */
-function noSideEffectsPlugin(): esbuild.Plugin {
-    return {
-        name: "no-side-effects",
-        setup(build) {
-            build.onResolve({ filter: /.*/ }, async (args) => {
-                if (args.kind === "entry-point") return null;
-                // Use pluginData to prevent infinite recursion (pluginData is typed as any by esbuild)
-                if (args.pluginData?.fromNoSideEffectsPlugin === true) return null;
-                const result = await build.resolve(args.path, {
-                    resolveDir: args.resolveDir,
-                    kind: args.kind,
-                    pluginData: { fromNoSideEffectsPlugin: true },
-                });
-                if (result.errors.length > 0) return result;
-                return { ...result, sideEffects: false };
-            });
-        },
-    };
 }
 
 /**
