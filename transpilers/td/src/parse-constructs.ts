@@ -32,6 +32,7 @@ import {
     transformFunctionToState,
 } from "./state-transitions";
 import { processChainStatements } from "./chain-processing";
+import { lineNumberOfNode } from "../../common/line-index";
 
 /**
  * Transform begin(filename, [states]) or begin(filename, s1, s2, ...) to BEGIN.
@@ -123,7 +124,7 @@ export function transformReplaceState(
     }
 
     const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
-    const stateNum = parseRequiredNumber(args[1]!, "replaceState stateNum", call.getStartLineNumber());
+    const stateNum = parseRequiredNumber(args[1]!, "replaceState stateNum", lineNumberOfNode(call));
     const bodyArg = args[2];
 
     if (!Node.isArrowFunction(bodyArg) && !Node.isFunctionExpression(bodyArg)) {
@@ -142,7 +143,7 @@ export function transformReplaceState(
         say: [],
         transitions: [],
         // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
-        line: call.getStartLineNumber() - 1,
+        line: lineNumberOfNode(call) - 1,
     };
 
     for (const s of body.getStatements()) {

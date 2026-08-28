@@ -23,6 +23,7 @@ import { TranspileError } from "../../common/transpile-error";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
 import { unrollForOf, unrollFor } from "./inline-and-unroll";
+import { lineNumberOfNode } from "../../common/line-index";
 
 /**
  * Process a transition-modifying call (reply, goTo, action, journal, etc.)
@@ -44,7 +45,7 @@ export function processTransitionCall(
     },
     vars: VarsContext,
 ): boolean {
-    const lineNumber = expr.getStartLineNumber();
+    const lineNumber = lineNumberOfNode(expr);
 
     switch (funcName) {
         case "reply":
@@ -147,7 +148,7 @@ function setTransitionTextField(
     funcName: string,
     vars: VarsContext,
 ): void {
-    const lineNumber = callExpr.getStartLineNumber();
+    const lineNumber = lineNumberOfNode(callExpr);
     validateArgs(funcName, args, 1, lineNumber);
     const lastTrans = context.getLastTransition();
     if (!lastTrans) {
@@ -208,7 +209,7 @@ export function processTransitionStatement(
 
             // Special handling for reply() in single transition context
             if (funcName === "reply") {
-                validateArgs("reply", args, 1, expr.getStartLineNumber());
+                validateArgs("reply", args, 1, lineNumberOfNode(expr));
                 trans.reply = expressionToText(getCallArg(args, 0, expr), vars);
                 return;
             }

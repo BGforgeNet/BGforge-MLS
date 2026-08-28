@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 import * as fc from "fast-check";
 import * as fs from "fs";
 import * as path from "path";
-import { LineIndex } from "../common/line-index";
+import { LineIndex, lineIndexFor, lineNumberOfNode } from "../common/line-index";
 import { REPO_ROOT } from "./repo-root";
 
 /** The behaviour being preserved: 1-based, counting newlines strictly before `pos`. */
@@ -62,6 +62,21 @@ describe("LineIndex", () => {
         expect(new LineIndex(text).lineNumberAt(text.length)).toBe(3);
     });
 
+    it("reports a 1-based column measured from the start of the line", () => {
+        // ts-morph's shape: column = pos - lineStart + 1. The call sites subtract 1 for a 0-based
+        // column, so this has to be 1-based for the same reason lineNumberAt is.
+        const index = new LineIndex("ab\ncdef");
+        expect(index.lineAndColumnAt(0)).toEqual({ line: 1, column: 1 });
+        expect(index.lineAndColumnAt(1)).toEqual({ line: 1, column: 2 });
+        expect(index.lineAndColumnAt(3)).toEqual({ line: 2, column: 1 });
+        expect(index.lineAndColumnAt(6)).toEqual({ line: 2, column: 4 });
+    });
+
+    it("reports column 1 on an empty line", () => {
+        const text = "a\n\nb";
+        expect(new LineIndex(text).lineAndColumnAt(2)).toEqual({ line: 2, column: 1 });
+    });
+
     it("rejects a position outside the text rather than answering a wrong line", () => {
         const index = new LineIndex("a\nb");
         expect(() => index.lineNumberAt(-1)).toThrow(/range/i);
@@ -91,5 +106,58 @@ describe("LineIndex", () => {
                 },
             ),
         );
+    });
+});
+
+/**
+ * The accessor is driven here through a stub rather than a real SourceFile: this package's tests do not
+ * depend on ts-morph, and the behaviour under test is the invalidation, which is defined purely in terms
+ * of what getFullText() returns. Real ts-morph nodes reach it through the td and tbaf source-map suites.
+ */
+describe("lineIndexFor", () => {
+    it("answers from the file's own text", () => {
+        const file = { getFullText: () => "a\nb\nc" };
+        expect(lineIndexFor(file).lineNumberAt(4)).toBe(3);
+    });
+
+    it("reuses one index while the text is unchanged", () => {
+        const file = { getFullText: () => "a\nb\nc" };
+        expect(lineIndexFor(file)).toBe(lineIndexFor(file));
+    });
+
+    it("rebuilds after the file's text changes", () => {
+        // ts-morph hands back a new string once a manipulation reparses the file, and an index kept from
+        // before would answer against text that no longer exists. This is the case that makes the cache
+        // safe to use next to code that mutates a source file.
+        let text = "a\nb\nc";
+        const file = { getFullText: () => text };
+        const first = lineIndexFor(file);
+        expect(first.lineNumberAt(4)).toBe(3);
+
+        text = "\n\n\n\na\nb\nc";
+        const second = lineIndexFor(file);
+        expect(second).not.toBe(first);
+        expect(second.lineNumberAt(4)).toBe(5);
+    });
+
+    it("keeps separate indexes for separate files", () => {
+        const one = { getFullText: () => "a\nb" };
+        const two = { getFullText: () => "\n\n\na\nb" };
+        expect(lineIndexFor(one).lineNumberAt(2)).toBe(2);
+        expect(lineIndexFor(two).lineNumberAt(2)).toBe(3);
+    });
+});
+
+describe("lineNumberOfNode", () => {
+    it("answers the 1-based line a node starts on", () => {
+        const sourceFile = { getFullText: () => "a\nb\ntarget" };
+        expect(lineNumberOfNode({ getStart: () => 4, getSourceFile: () => sourceFile })).toBe(3);
+    });
+
+    it("counts from 1, so the callers' existing minus-one arithmetic still lands on a 0-based line", () => {
+        // Every call site subtracts 1 from what ts-morph returned. A helper counting from 0 would
+        // shift every diagnostic and source-map entry by a line, silently and everywhere at once.
+        const sourceFile = { getFullText: () => "first\nsecond" };
+        expect(lineNumberOfNode({ getStart: () => 0, getSourceFile: () => sourceFile })).toBe(1);
     });
 });

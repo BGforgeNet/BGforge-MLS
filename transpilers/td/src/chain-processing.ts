@@ -22,6 +22,7 @@ import type { VarsContext } from "../../common/transpiler-utils";
 import { getCallArg, getCallArgs, resolveStringExpr, expressionToActionString, validateArgs } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
+import { lineNumberOfNode } from "../../common/line-index";
 
 /** TD say keyword constant */
 const SAY_KEYWORD = "say";
@@ -233,7 +234,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
         switch (funcName) {
             case "from": {
                 // from("SPEAKER") - switch speaker, no condition
-                validateArgs("from", args, 1, expr.getStartLineNumber());
+                validateArgs("from", args, 1, lineNumberOfNode(expr));
                 if (currentEntry) {
                     entries.push(currentEntry);
                 }
@@ -247,7 +248,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
 
             case "fromWhen": {
                 // fromWhen("SPEAKER", condition) - switch speaker with condition
-                validateArgs("fromWhen", args, 2, expr.getStartLineNumber());
+                validateArgs("fromWhen", args, 2, lineNumberOfNode(expr));
                 if (currentEntry) {
                     entries.push(currentEntry);
                 }

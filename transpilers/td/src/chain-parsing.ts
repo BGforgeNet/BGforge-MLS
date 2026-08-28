@@ -18,6 +18,7 @@ import {
     parseRequiredNumber,
 } from "./parse-helpers";
 import { expressionToText } from "./expression-eval";
+import { lineNumberOfNode } from "../../common/line-index";
 
 /** Names that start a method chain: reply(...).xxx() or action(...).xxx(). */
 const CHAIN_STARTERS = new Set(["reply", "action"]);
@@ -95,7 +96,7 @@ function collectChainSteps(expr: CallExpression): ChainStep[] {
  */
 function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransition {
     const steps = collectChainSteps(expr);
-    const lineNumber = expr.getStartLineNumber();
+    const lineNumber = lineNumberOfNode(expr);
 
     const trans: TDTransition = {
         next: { type: TDTransitionType.Exit }, // Default terminal

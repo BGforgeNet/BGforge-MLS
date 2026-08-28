@@ -16,6 +16,7 @@ import {
 } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { transformFunctionToState, type FuncsContext } from "./state-transitions";
+import { lineIndexFor } from "../../common/line-index";
 
 /**
  * Collect all goTo target names from a state's transitions.
@@ -134,13 +135,13 @@ export function collectOrphanWarnings(
 
         // Underline the function name identifier
         const nameNode = funcInfo.func.getNameNode();
-        const sf = funcInfo.func.getSourceFile();
-        const startCol = nameNode ? sf.getLineAndColumnAtPos(nameNode.getStart()).column - 1 : 0;
-        const endCol = nameNode ? sf.getLineAndColumnAtPos(nameNode.getEnd()).column - 1 : 0;
+        const index = lineIndexFor(funcInfo.func.getSourceFile());
+        const startCol = nameNode ? index.lineAndColumnAt(nameNode.getStart()).column - 1 : 0;
+        const endCol = nameNode ? index.lineAndColumnAt(nameNode.getEnd()).column - 1 : 0;
 
         warnings.push({
             message: orphanWarningTemplate(name),
-            line: nameNode ? nameNode.getStartLineNumber() : funcInfo.func.getStartLineNumber(),
+            line: index.lineNumberAt((nameNode ?? funcInfo.func).getStart()),
             columnStart: startCol,
             columnEnd: endCol,
         });

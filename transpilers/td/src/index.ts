@@ -23,6 +23,7 @@ import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
 import { orphanWarningTemplate, type TDScript, type TDWarning } from "./types";
+import { lineIndexFor } from "../../common/line-index";
 export type { TDWarning } from "./types";
 
 interface TDTranspileResult {
@@ -149,6 +150,7 @@ export function detectOrphansFromOriginal(originalText: string, ir: TDScript): T
 
     // Collect all function declarations from original source
     const funcs = new Map<string, OriginalFunc>();
+    const index = lineIndexFor(sf);
     for (const func of sf.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
         const name = func.getName();
         if (!name) continue;
@@ -158,9 +160,9 @@ export function detectOrphansFromOriginal(originalText: string, ir: TDScript): T
         funcs.set(name, {
             name,
             paramCount: func.getParameters().length,
-            line: nameNode.getStartLineNumber(),
-            columnStart: sf.getLineAndColumnAtPos(nameNode.getStart()).column - 1,
-            columnEnd: sf.getLineAndColumnAtPos(nameNode.getEnd()).column - 1,
+            line: index.lineNumberAt(nameNode.getStart()),
+            columnStart: index.lineAndColumnAt(nameNode.getStart()).column - 1,
+            columnEnd: index.lineAndColumnAt(nameNode.getEnd()).column - 1,
         });
     }
 

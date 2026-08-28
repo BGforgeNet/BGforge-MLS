@@ -37,6 +37,7 @@ import { isChainExpression, parseTransitionChain } from "./chain-parsing";
 import { processTransitionCall, processTransitionStatement } from "./transition-calls";
 export { processExtendStatements } from "./transition-calls";
 import { unrollForOf, unrollFor } from "./inline-and-unroll";
+import { lineNumberOfNode } from "../../common/line-index";
 
 /** Function info including optional entry trigger from if-wrapping */
 interface FuncInfo {
@@ -94,7 +95,7 @@ function transformFunctionToState(
         say: [],
         transitions: [],
         // ts-morph counts lines from 1; everything downstream of the bundler counts from 0.
-        line: func.getStartLineNumber() - 1,
+        line: lineNumberOfNode(func) - 1,
     };
 
     // Track the "pending" reply transition across statements so that
@@ -142,19 +143,19 @@ function processStateStatement(
 
             // Handle say() - specific to states, supports variadic say(t1, t2, t3)
             if (funcName === SAY_KEYWORD) {
-                validateArgs(SAY_KEYWORD, args, 1, expr.getStartLineNumber());
+                validateArgs(SAY_KEYWORD, args, 1, lineNumberOfNode(expr));
                 for (const arg of getCallArgs(args, expr)) {
                     state.say.push({ text: expressionToText(arg, vars) });
                 }
             }
             // Handle weight() - specific to states
             else if (funcName === "weight") {
-                validateArgs("weight", args, 1, expr.getStartLineNumber());
-                state.weight = parseRequiredNumber(args[0]!, "weight", expr.getStartLineNumber());
+                validateArgs("weight", args, 1, lineNumberOfNode(expr));
+                state.weight = parseRequiredNumber(args[0]!, "weight", lineNumberOfNode(expr));
             }
             // Handle copyTrans() at state level
             else if (funcName === "copyTrans") {
-                validateArgs("copyTrans", args, 2, expr.getStartLineNumber());
+                validateArgs("copyTrans", args, 2, lineNumberOfNode(expr));
                 const filename = resolveStringExpr(getCallArg(args, 0, expr), vars);
                 const target = resolveStringExpr(getCallArg(args, 1, expr), vars);
                 state.transitions.push({
