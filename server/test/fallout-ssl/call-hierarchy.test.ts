@@ -133,6 +133,21 @@ describe("Fallout SSL call hierarchy", () => {
         expect(items![0]!.selectionRange.start.line).toBe(0);
     });
 
+    it("incoming reads each referenced file once, however many references it holds", () => {
+        // refLocations carries one entry per OCCURRENCE, so a text lookup per entry re-reads the same file
+        // N times (a synchronous readFileSync per occurrence in the provider). Read per distinct URI instead.
+        const reads: string[] = [];
+        const countingGetText: TextLookup = (uri) => {
+            reads.push(uri);
+            return getText(uri);
+        };
+        const helper = prepareCallHierarchy(TEXT, posOf("helper", 1), URI, noCrossFile)![0]!;
+        const refs = allRefs("helper");
+        expect(refs.length).toBeGreaterThan(1); // the fixture must actually repeat the name in one file
+        incomingCalls(helper, refs, countingGetText);
+        expect(reads).toEqual([URI]);
+    });
+
     it("outgoing resolves a callee defined in another file via the cross-file lookup", () => {
         const OTHER = "file:///other.ssl";
         const crossFile: DefLookup = (name) =>

@@ -28,6 +28,7 @@ import { SyntaxType } from "./syntax-type";
 import { FUNCTION_DEF_TYPES } from "./variable-symbols";
 import { FUNCTION_CALL_TYPES } from "./callable-symbols";
 import { findAncestorOfType, findNodeAtPosition, stripStringDelimiters } from "./tree-utils";
+import { memoizeTextLookup } from "../shared/text-lookup";
 
 /** Resolve a callable name to its definition Location across the workspace (null if unknown). */
 export type DefLookup = (name: string) => Location | null;
@@ -204,9 +205,11 @@ export function incomingCalls(
 ): CallHierarchyIncomingCall[] {
     if (!isInitialized()) return [];
 
+    // One entry per occurrence, so a bare lookup re-reads a file once per reference it holds.
+    const readText = memoizeTextLookup(getText);
     const byCaller = new Map<string, { from: CallHierarchyItem; ranges: Range[] }>();
     for (const loc of refLocations) {
-        const text = getText(loc.uri);
+        const text = readText(loc.uri);
         if (!text) continue;
         const tree = parseWithCache(text);
         if (!tree) continue;

@@ -100,6 +100,21 @@ describe("TP2 call hierarchy", () => {
             .sort();
         expect(callers).toEqual(["My Component", "caller"]);
     });
+
+    it("incoming reads each referenced file once, however many references it holds", () => {
+        // refLocations carries one entry per OCCURRENCE, so a text lookup per entry re-reads the same file
+        // N times (a synchronous readFileSync per occurrence in the provider). Read per distinct URI instead.
+        const reads: string[] = [];
+        const countingGetText: TextLookup = (uri) => {
+            reads.push(uri);
+            return getText(uri);
+        };
+        const helper = prepareCallHierarchy(TEXT, posOf("helper", 1), URI, noCrossFile)![0]!;
+        const refs = allRefs("helper");
+        expect(refs.length).toBeGreaterThan(1); // the fixture must actually repeat the name in one file
+        incomingCalls(helper, refs, countingGetText);
+        expect(reads).toEqual([URI]);
+    });
 });
 
 const MACRO_URI = "file:///macro.tp2";
