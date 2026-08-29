@@ -43,6 +43,7 @@ export default defineConfig({
             path.resolve(import.meta.dirname, "test/smoke-stdio.test.ts"),
             path.resolve(import.meta.dirname, "test/lsp-probe.test.ts"),
             path.resolve(import.meta.dirname, "test/tssl-worker-smoke.test.ts"),
+            path.resolve(import.meta.dirname, "test/transpile-worker-smoke.test.ts"),
             path.resolve(import.meta.dirname, "test/integration/**"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes

@@ -14,12 +14,14 @@ import { EXT_TBAF, EXT_TD, EXT_TSSL } from "./core/languages";
 import { showError, showInfo, showWarning } from "./user-messages";
 import { registry } from "./provider-registry";
 import { getDocumentSettings } from "./settings-service";
-// Consume the public @bgforge/transpile barrel (the transpile functions + the
-// output-path mapping), not the internal per-language/compile modules. This
-// handler owns the file write and the user-facing message, keeping the library a
-// pure source->string transformation. Imported by relative path so esbuild
-// bundles it into the server rather than treating it as an external npm dependency.
-import { tbafWithSourceMap, td, outputPathFor, TranspileError } from "../../transpilers/src/index";
+// The transpile itself runs on a worker; this handler still owns the file write and the user-facing
+// message, keeping the library a pure source->string transformation. These two imports are deliberately
+// NOT the `@bgforge/transpile` barrel: that barrel imports both transpilers, so reaching it for a path
+// helper or an error class would pull ts-morph back into the server bundle - which is the whole point of
+// the worker. Leaf modules only.
+import { outputPathFor } from "../../transpilers/common/output-path";
+import { TranspileError } from "../../transpilers/common/transpile-error";
+import { transpileOnWorker } from "./transpile/transpile-worker-client";
 // TSSL is a compiler rather than one of the transpilers above, so it does not come from that barrel and
 // does not chain through a generated file: `compileTsslToInt` produces the bytecode itself.
 import { compileTsslToInt } from "./tssl/compile-int";
@@ -91,7 +93,11 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const { output, warnings, sourceMap } = await td(filePath, text);
+                const { output, warnings, sourceMap } = await transpileOnWorker({
+                    kind: "td",
+                    filepath: filePath,
+                    text,
+                });
                 const dPath = outputPathFor(filePath);
                 await fs.promises.writeFile(dPath, output, "utf-8");
                 const dName = path.basename(dPath);
@@ -119,7 +125,11 @@ export async function compile(uri: string, langId: string, interactive = false, 
             clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
-                const { output, sourceMap } = await tbafWithSourceMap(filePath, text);
+                const { output, sourceMap } = await transpileOnWorker({
+                    kind: "tbaf",
+                    filepath: filePath,
+                    text,
+                });
                 const bafPath = outputPathFor(filePath);
                 await fs.promises.writeFile(bafPath, output, "utf-8");
                 const bafName = path.basename(bafPath);

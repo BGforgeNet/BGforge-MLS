@@ -67,13 +67,17 @@ const mockOutputPathFor = vi.fn();
 // so a mock class would silently take the no-location path and the position assertions would pass
 // against a fallback rather than against the error's own line.
 const { TranspileError } = await vi.hoisted(async () => await import("../../transpilers/common/transpile-error"));
-vi.mock("../../transpilers/src/index", () => ({
-    // The handler takes the map-carrying entry points, so those are what the mocks stand in for. TD has
-    // only one: its transpile already returns a result object, and the map rides along on it.
-    tbafWithSourceMap: (...args: unknown[]) => mockTbaf(...args),
-    td: (...args: unknown[]) => mockTd(...args),
+// The transpile itself runs on a worker now, so the seam the dispatcher is tested against is the worker
+// client rather than the transpiler barrel. One entry point covers both languages; `kind` selects which,
+// which is why the stand-in dispatches on it instead of there being two mocked functions.
+vi.mock("../src/transpile/transpile-worker-client", () => ({
+    transpileOnWorker: (request: { kind: string; filepath: string; text: string }) =>
+        request.kind === "td" ? mockTd(request.filepath, request.text) : mockTbaf(request.filepath, request.text),
+    prewarmTranspileWorker: () => undefined,
+    stopTranspileWorker: () => Promise.resolve(),
+}));
+vi.mock("../../transpilers/common/output-path", () => ({
     outputPathFor: (...args: unknown[]) => mockOutputPathFor(...args),
-    TranspileError,
 }));
 // TSSL is a compiler, not one of the transpilers above: it produces the bytecode itself, so the
 // dispatcher has no generated file to write and no second compiler to chain.

@@ -3,8 +3,8 @@ import { COMMAND_compile, compile } from "../compile";
 import { showInfo, showWarning } from "../user-messages";
 import { parseDialog } from "../dialog";
 import { getSSLSideEffectFunctions } from "../fallout-ssl/side-effects";
-import { parseTDSource } from "../td/dialog-source";
-import { parseTSSLSource } from "../tssl/dialog-source";
+import { parseOnWorker } from "../transpile/transpile-worker-client";
+import { uriToPath } from "../uri-utils";
 import { parseDDialog } from "../weidu-d/dialog";
 import { getServerContext } from "../server-context";
 import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
@@ -34,12 +34,22 @@ const dialogHandlers = [
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TD),
         // Source-native parse (ranges into the .td), not transpile-then-parse - so edits round-trip to source.
-        parse: (_uri: string, text: string) => Promise.resolve(parseTDSource(text)),
+        // On the worker, like the transpilers: these two were the server thread's last ts-morph use,
+        // and one importer is enough to keep the whole library in the bundle.
+        parse: (uri: string, text: string) => parseOnWorker({ kind: "parse-td", filepath: uriToPath(uri), text }),
         translationLangId: LANG_WEIDU_D,
     },
     {
         match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TSSL),
-        parse: (_uri: string, text: string) => Promise.resolve(parseTSSLSource(text, getSSLSideEffectFunctions())),
+        // The side-effect set is resolved here and sent: the loader behind it reports through the LSP
+        // connection, which the worker does not have.
+        parse: (uri: string, text: string) =>
+            parseOnWorker({
+                kind: "parse-tssl",
+                filepath: uriToPath(uri),
+                text,
+                sideEffectFns: [...getSSLSideEffectFunctions()],
+            }),
         translationLangId: LANG_FALLOUT_SSL,
     },
 ];

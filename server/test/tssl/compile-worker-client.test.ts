@@ -16,7 +16,7 @@ const { FakeWorker } = vi.hoisted(() => {
     /** Stands in for a real worker thread: records what was posted, and lets a test fire its events. */
     class Fake {
         static instances: Fake[] = [];
-        readonly posted: { id: number }[] = [];
+        readonly posted: { id: number; text?: string; intPath?: string | null; sslPath?: string | null }[] = [];
         terminated = false;
         unrefCalled = false;
         private readonly listeners = new Map<string, ((arg: unknown) => void)[]>();
@@ -34,7 +34,7 @@ const { FakeWorker } = vi.hoisted(() => {
             for (const listener of this.listeners.get(event) ?? []) listener(arg);
         }
 
-        postMessage(message: { id: number }): void {
+        postMessage(message: { id: number; text?: string; intPath?: string | null; sslPath?: string | null }): void {
             this.posted.push(message);
         }
 
@@ -53,7 +53,8 @@ const { FakeWorker } = vi.hoisted(() => {
 vi.mock("worker_threads", () => ({ Worker: FakeWorker }));
 vi.mock("../../src/logger", () => ({ conlog: vi.fn() }));
 
-import { compileOnWorker, stopTsslCompileWorker } from "../../src/tssl/compile-worker-client";
+import { conlog } from "../../src/logger";
+import { compileOnWorker, prewarmTsslCompileWorker, stopTsslCompileWorker } from "../../src/tssl/compile-worker-client";
 
 const REQUEST = {
     text: "function start() {}\n",
@@ -178,6 +179,43 @@ describe("TSSL compile worker client", () => {
 
         await expect(retry).resolves.toBe(true);
         expect(FakeWorker.instances).toHaveLength(2);
+    });
+
+    // The worker is otherwise started by the first compile, which then pays ts-morph module eval and
+    // lib binding inside the author's request - measured at 249 ms and 132 ms of a 698 ms first compile.
+    // The prewarm moves both onto a thread nobody is waiting on.
+    describe("prewarm", () => {
+        it("compiles a throwaway entry that pulls no module and writes no file", () => {
+            prewarmTsslCompileWorker();
+
+            expect(FakeWorker.instances).toHaveLength(1);
+            expect(current().posted).toHaveLength(1);
+            const [request] = current().posted;
+            // Both null, so the prewarm leaves nothing behind on disk; no import, because the point is
+            // the lib set, and the author's own dependencies cannot be resolved from here anyway.
+            expect(request!.intPath).toBeNull();
+            expect(request!.sslPath).toBeNull();
+            expect(request!.text).not.toContain("import");
+        });
+
+        it("does not start a second worker or repeat the compile when called again", () => {
+            prewarmTsslCompileWorker();
+            prewarmTsslCompileWorker();
+
+            expect(FakeWorker.instances).toHaveLength(1);
+            expect(current().posted).toHaveLength(1);
+        });
+
+        // Nobody asked for this compile, so a refusal is not the author's to see - but it is not
+        // swallowed silently either, or a worker that cannot start looks like a slow first compile.
+        it("logs a refusal of its own compile rather than surfacing it", async () => {
+            prewarmTsslCompileWorker();
+            current().emit("message", {
+                id: current().posted[0]!.id,
+                failure: { message: "prewarm went wrong" },
+            });
+            await vi.waitFor(() => expect(conlog).toHaveBeenCalledWith(expect.stringMatching(/prewarm went wrong/)));
+        });
     });
 
     it("fails an in-flight compile on shutdown rather than blocking it", async () => {

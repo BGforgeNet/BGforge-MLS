@@ -9,7 +9,8 @@
  * text is one option of it.
  */
 
-import { EXT_TBAF, EXT_TD, EXT_WEIDU_BAF, EXT_WEIDU_D } from "../common/extensions";
+import { EXT_TBAF, EXT_TD } from "../common/extensions";
+import { UnknownTranspileExtensionError } from "../common/output-path";
 import { transpile as tbafImpl } from "../tbaf/src/index";
 import { transpile as tdImpl, type TDWarning } from "../td/src/index";
 
@@ -40,12 +41,9 @@ export type TranspileResult =
     | { kind: "tbaf"; output: string }
     | { kind: "td"; output: string; warnings: ReadonlyArray<Pick<TDWarning, "line" | "message">> };
 
-export class UnknownTranspileExtensionError extends Error {
-    constructor(filePath: string) {
-        super(`Unknown transpile extension for "${filePath}". Accepted: ${EXT_TBAF}, ${EXT_TD}`);
-        this.name = "UnknownTranspileExtensionError";
-    }
-}
+// Defined in common/output-path so a consumer needing only the output path can reach it without this
+// barrel, which imports both transpilers and so carries ts-morph. Re-exported: the public API is unchanged.
+export { outputPathFor, UnknownTranspileExtensionError } from "../common/output-path";
 
 /**
  * Dispatch by file extension. Throws UnknownTranspileExtensionError for any
@@ -61,19 +59,5 @@ export async function transpile(filePath: string, source: string): Promise<Trans
         const result = await td(filePath, source);
         return { kind: "td", output: result.output, warnings: result.warnings };
     }
-    throw new UnknownTranspileExtensionError(filePath);
-}
-
-/**
- * Compute the compiled-output path for a transpiler source file by swapping the
- * source extension for its target: .tbaf -> .baf, .td -> .d.
- * Throws UnknownTranspileExtensionError for any other extension. The caller owns
- * writing the file - this only names where it goes, single-sourcing the
- * source/target extension mapping that compile consumers would otherwise hardcode.
- */
-export function outputPathFor(filePath: string): string {
-    const lower = filePath.toLowerCase();
-    if (lower.endsWith(EXT_TBAF)) return filePath.slice(0, -EXT_TBAF.length) + EXT_WEIDU_BAF;
-    if (lower.endsWith(EXT_TD)) return filePath.slice(0, -EXT_TD.length) + EXT_WEIDU_D;
     throw new UnknownTranspileExtensionError(filePath);
 }

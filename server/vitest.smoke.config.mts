@@ -14,6 +14,7 @@ export default defineConfig({
             path.resolve(import.meta.dirname, "test/smoke-stdio.test.ts"),
             path.resolve(import.meta.dirname, "test/lsp-probe.test.ts"),
             path.resolve(import.meta.dirname, "test/tssl-worker-smoke.test.ts"),
+            path.resolve(import.meta.dirname, "test/transpile-worker-smoke.test.ts"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
         // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout

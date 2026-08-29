@@ -35,6 +35,16 @@ interface Pending {
 const worker: { instance: Worker | null } = { instance: null };
 const pending = new Map<number, Pending>();
 let nextId = 0;
+let prewarmed = false;
+
+/**
+ * The entry a prewarm compiles. It imports nothing, because the two costs reachable before a document
+ * is open are ts-morph's module eval and binding the lib set; the author's own dependencies resolve
+ * from their project, which is not known yet. The path is never read - it only tells module resolution
+ * where to resolve from, and nothing here resolves.
+ */
+const PREWARM_SOURCE = "function start() {}\n";
+const PREWARM_PATH = path.join(__dirname, "__prewarm__.tssl");
 
 function failAllPending(reason: string): void {
     for (const [, entry] of pending) {
@@ -131,10 +141,41 @@ export function compileOnWorker(request: Omit<CompileRequest, "id">, signal?: Ab
     });
 }
 
+/**
+ * Builds the worker's project before the first compile asks for it.
+ *
+ * Started lazily, the first compile stands the TypeScript program up inside the author's request:
+ * ts-morph module eval and binding `lib.es2022.d.ts` measured at 249 ms and 132 ms of a 698 ms first
+ * compile. Compiling a throwaway entry here moves both onto a thread nobody is waiting on. Nothing is
+ * awaited, and both output paths are null, so the compile runs in full and writes nothing.
+ *
+ * A real compile arriving meanwhile queues behind this one in the worker, which costs it only the
+ * throwaway's own lowering: the setup it waits through is the setup it would otherwise have paid for
+ * itself.
+ */
+export function prewarmTsslCompileWorker(): void {
+    if (prewarmed) return;
+    prewarmed = true;
+    void compileOnWorker({
+        text: PREWARM_SOURCE,
+        filepath: PREWARM_PATH,
+        intPath: null,
+        sslPath: null,
+        level: 0,
+        shortCircuit: false,
+    }).catch((error: unknown) => {
+        // Nobody asked for this compile, so a refusal is not the author's to see. It is still logged:
+        // a worker that cannot start would otherwise show up only as a slow first compile.
+        conlog(`TSSL compile worker prewarm failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
+}
+
 /** Stops the worker, so a shutdown is not held up by a compile the result of which nobody wants. */
 export async function stopTsslCompileWorker(): Promise<void> {
     const instance = worker.instance;
     worker.instance = null;
+    // The next worker starts cold, so it needs the prewarm this one already had.
+    prewarmed = false;
     failAllPending("The TSSL compiler was shut down.");
     if (instance) await instance.terminate();
 }
