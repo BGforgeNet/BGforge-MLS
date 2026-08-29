@@ -29,19 +29,18 @@ const keyBifEntrySpec = {
     locationFlags: { codec: u16 },
 } satisfies Record<string, FieldSpec>;
 
-const keyResEntrySpec = {
-    resref: charsSpec(8),
-    type: { codec: u16 },
-    locator: { codec: u32 },
-} satisfies Record<string, FieldSpec>;
-
 const KEY_HEADER_BYTES = 24;
 const KEY_BIF_ENTRY_BYTES = 12;
+
+// Resource entry: an 8-byte resref (NUL-terminated within the field), u16 resType, u32 locator. Laid out
+// as offsets rather than a spec because this is the one structure read per RESOURCE - see the decode loop.
 const KEY_RES_ENTRY_BYTES = 14;
+const KEY_RESREF_BYTES = 8;
+const KEY_RES_TYPE_OFFSET = 8;
+const KEY_RES_LOCATOR_OFFSET = 10;
 
 const headerCodec = toTypedBinarySchema(keyHeaderSpec);
 const bifEntryCodec = toTypedBinarySchema(keyBifEntrySpec);
-const resEntryCodec = toTypedBinarySchema(keyResEntrySpec);
 
 export interface KeyBifEntry {
     /** BIF path relative to the game dir, separators normalized to '/'. */
@@ -119,48 +118,66 @@ export function parseKey(bytes: Uint8Array): KeyIndex {
     }
 
     requireInBounds(bytes, header.resOffset, header.resCount * KEY_RES_ENTRY_BYTES, "resource entries");
-    const resReader = readerAt(bytes, header.resOffset);
+    // Decoded straight from a DataView rather than through a derived codec like the header and BIF tables
+    // above. This is the one structure read per RESOURCE - tens of thousands of times for a real chitin.key -
+    // and the generic codec's per-entry reader and intermediate object dominated the whole parse there. The
+    // header runs once and the BIF table tens of times, so those keep the declarative spec.
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const resources: KeyResource[] = [];
     for (let i = 0; i < header.resCount; i++) {
-        const e = resEntryCodec.read(resReader);
-        const locator = e.locator >>> 0;
+        const at = header.resOffset + i * KEY_RES_ENTRY_BYTES;
+        let resref = "";
+        for (let c = 0; c < KEY_RESREF_BYTES; c++) {
+            const byte = view.getUint8(at + c);
+            if (byte === 0) break; // NUL-terminated within the fixed 8-byte field
+            resref += String.fromCodePoint(byte);
+        }
+        const type = view.getUint16(at + KEY_RES_TYPE_OFFSET, true);
+        const locator = view.getUint32(at + KEY_RES_LOCATOR_OFFSET, true) >>> 0;
         resources.push({
-            resref: trimNul(e.resref).toUpperCase(),
-            type: e.type,
-            ext: resourceTypeExt(e.type),
+            resref: resref.toUpperCase(),
+            type,
+            ext: resourceTypeExt(type),
             bifIndex: (locator >>> 20) & 0xfff,
             tilesetIndex: (locator >>> 14) & 0x3f,
             fileIndex: locator & 0x3fff,
         });
     }
 
-    // Keep every duplicate in KEY (file) order so precedence is decidable: lookup returns the last, the
-    // biffing/Near-Infinity winner. byKey is exact (resref+type); byRef collapses type for the loose lookup.
-    const byKey = new Map<string, KeyResource[]>();
-    const byRef = new Map<string, KeyResource[]>();
-    const push = (m: Map<string, KeyResource[]>, k: string, v: KeyResource): void => {
-        const list = m.get(k);
-        if (list) list.push(v);
-        else m.set(k, [v]);
-    };
-    for (const r of resources) {
-        push(byKey, `${r.resref}\0${r.type}`, r);
-        push(byRef, r.resref, r);
+    // Every entry for a resref, in KEY (file) order, so precedence is decidable: lookup returns the last -
+    // the biffing/Near-Infinity winner.
+    //
+    // Built on the FIRST lookup rather than at parse time, and as ONE index rather than two. A real
+    // chitin.key names tens of thousands of resources, and eagerly building a resref index plus a second
+    // resref+type index was the bulk of the parse - paid by every caller whether or not it ever looked a
+    // resource up. A typed lookup filters the resref's own list instead, which is a handful of entries.
+    let byRef: Map<string, KeyResource[]> | undefined;
+
+    function index(): Map<string, KeyResource[]> {
+        if (byRef !== undefined) return byRef;
+        const built = new Map<string, KeyResource[]>();
+        for (const r of resources) {
+            const list = built.get(r.resref);
+            if (list) list.push(r);
+            else built.set(r.resref, [r]);
+        }
+        byRef = built;
+        return built;
     }
-    const matches = (resref: string, type?: number): KeyResource[] | undefined => {
-        const key = resref.toUpperCase();
-        return type === undefined ? byRef.get(key) : byKey.get(`${key}\0${type}`);
+
+    const matches = (resref: string, type?: number): readonly KeyResource[] => {
+        const all = index().get(resref.toUpperCase()) ?? [];
+        return type === undefined ? all : all.filter((r) => r.type === type);
     };
 
     return {
         bifs,
         resources,
         lookup(resref, type) {
-            const list = matches(resref, type);
-            return list && list.length > 0 ? list[list.length - 1] : undefined;
+            return matches(resref, type).at(-1);
         },
         lookupAll(resref, type) {
-            return matches(resref, type) ?? [];
+            return matches(resref, type);
         },
     };
 }

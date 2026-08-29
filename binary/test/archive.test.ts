@@ -311,6 +311,43 @@ describe("parseKey", () => {
         expect(key.lookupAll("dup", RESTYPE_ITM).map((r) => r.bifIndex)).toEqual([0, 1]);
     });
 
+    it("decodes a full-width resref and the locator's every bit field", () => {
+        // A resref fills all 8 bytes with no terminator, and the locator packs three fields into one u32.
+        // Each is pinned at its maximum so a mask or shift that is one bit out cannot pass.
+        const key = parseKey(
+            buildKey(
+                [{ name: "x.bif", fileLength: 0 }],
+                [{ resref: "ABCDEFGH", type: RESTYPE_ITM, bifIndex: 0xfff, tilesetIndex: 0x3f, fileIndex: 0x3fff }],
+            ),
+        );
+        const only = key.resources[0]!;
+        expect(only.resref).toBe("ABCDEFGH");
+        expect(only.bifIndex).toBe(0xfff);
+        expect(only.tilesetIndex).toBe(0x3f);
+        expect(only.fileIndex).toBe(0x3fff);
+        expect(only.ext).toBe("itm");
+    });
+
+    it("keeps the types apart for one resref carrying several", () => {
+        // A resref commonly names entries of different types (an ITM and a SPL sharing a name). A typed
+        // lookup must see only its own type's entries, and an untyped one all of them in file order.
+        const key = parseKey(
+            buildKey(
+                [{ name: "base.bif", fileLength: 0 }],
+                [
+                    { resref: "shared", type: RESTYPE_ITM, bifIndex: 0, tilesetIndex: 0, fileIndex: 1 },
+                    { resref: "shared", type: RESTYPE_SPL, bifIndex: 0, tilesetIndex: 0, fileIndex: 2 },
+                    { resref: "shared", type: RESTYPE_ITM, bifIndex: 0, tilesetIndex: 0, fileIndex: 3 },
+                ],
+            ),
+        );
+        expect(key.lookupAll("shared", RESTYPE_ITM).map((r) => r.fileIndex)).toEqual([1, 3]);
+        expect(key.lookupAll("shared", RESTYPE_SPL).map((r) => r.fileIndex)).toEqual([2]);
+        expect(key.lookup("shared", RESTYPE_ITM)!.fileIndex).toBe(3); // last of ITS type, not of the resref
+        expect(key.lookup("shared", RESTYPE_SPL)!.fileIndex).toBe(2);
+        expect(key.lookupAll("shared").map((r) => r.fileIndex)).toEqual([1, 2, 3]);
+    });
+
     it("rejects a non-KEY buffer", () => {
         const bytes = new Uint8Array(24);
         writeStr(new DataView(bytes.buffer), 0, "NOPE");
