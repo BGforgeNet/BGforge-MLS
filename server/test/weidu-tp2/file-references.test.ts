@@ -133,6 +133,50 @@ describe("TP2 definition: COPY/COMPILE file navigation", () => {
     });
 });
 
+describe("TP2 definition: the basename search stays inside the mod, not the whole install", () => {
+    // The OTHER real layout (WeiDU branch 1): setup-mymod.tp2 BESIDE the mod folder, at the game root.
+    // The basename search then rooted at the tp2's directory - the game dir - so it walked the entire
+    // install: every other mod, every override, tens of thousands of entries per go-to-definition. It
+    // also made a same-named file in an unrelated mod count as a rival match, so the search declined.
+    let gameDir: string;
+    let tp2Uri: string;
+
+    beforeEach(() => {
+        gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "tp2-beside-"));
+        const tp2Path = path.join(gameDir, "setup-mymod.tp2");
+        // BACKUP's first segment names the mod folder - the rule that resolves %MOD_FOLDER% here.
+        fs.writeFileSync(tp2Path, "BACKUP ~mymod/backup~\n");
+        fs.mkdirSync(path.join(gameDir, "mymod"), { recursive: true });
+        tp2Uri = pathToFileURL(tp2Path).toString();
+    });
+
+    afterEach(() => {
+        fs.rmSync(gameDir, { recursive: true, force: true });
+    });
+
+    function write(rel: string, content = ""): string {
+        const f = path.join(gameDir, rel);
+        fs.mkdirSync(path.dirname(f), { recursive: true });
+        fs.writeFileSync(f, content);
+        return f;
+    }
+    const at = (text: string, needle: string): Position => ({ line: 0, character: text.indexOf(needle) });
+    const outcome = (text: string, needle: string): string =>
+        classify(getDefinition(text, tp2Uri, at(text, needle)), tp2Uri);
+
+    it("resolves to this mod's file when another mod ships the same basename", () => {
+        write("mymod/items/sword.itm");
+        write("othermod/items/sword.itm"); // a rival only because the search left the mod
+        expect(outcome(`COPY ~%custom_dir%/sword.itm~ ~override~`, "sword.itm")).toBe("sword.itm");
+    });
+
+    it("still declines when the mod itself holds the basename twice", () => {
+        write("mymod/a/dup.itm");
+        write("mymod/b/dup.itm");
+        expect(outcome(`COPY ~%custom_dir%/dup.itm~ ~override~`, "dup.itm")).toBe("self@0");
+    });
+});
+
 describe("TP2 definition: heredoc inline-file navigation", () => {
     const uri = "file:///nonexistent/mymod/mymod.tp2";
 

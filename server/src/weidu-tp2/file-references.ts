@@ -122,8 +122,12 @@ export function tryFileReferenceDefinition(
     if (heredocLine !== null) {
         return { uri, range: { start: { line: heredocLine, character: 0 }, end: { line: heredocLine, character: 0 } } };
     }
+    // Resolved once and shared by both resolvers below: it walks ancestor directories to find the
+    // governing tp2 and reads that tp2 off disk, which neither should pay for twice per request.
+    const modContext = resolveModContext(uriToPath(uri));
+
     // 2. Precise resolution: %MOD_FOLDER% + displayable extension + existence against WeiDU's bases.
-    const precise = resolveAsFile(raw, uri);
+    const precise = resolveAsFile(raw, uri, modContext);
     if (precise) {
         return precise;
     }
@@ -135,7 +139,7 @@ export function tryFileReferenceDefinition(
     }
     // 4. Filename-first: real mods parameterize path prefixes with mutable OUTER_SPRINT/OUTER_SET user
     // variables that have no reliable static value, but the basename is literal - search the mod for it.
-    const byName = resolveByBasename(raw, uri);
+    const byName = resolveByBasename(raw, uri, modContext);
     if (byName) {
         return byName;
     }
@@ -178,8 +182,13 @@ function resolveInTranslationDir(raw: string, traDir: string | undefined): Locat
  * Resolve by the literal basename: search the mod tree for a file with that name. A unique match is the
  * target; 0 or >1 matches yield null (we never guess a single wrong target when the name is ambiguous).
  * This sidesteps variable path prefixes entirely - only the filename, which is literal, has to match.
+ *
+ * Rooted at the MOD folder, which is what "the mod tree" means in both WeiDU layouts. With the tp2 inside
+ * the mod folder its directory already IS that root; with the tp2 beside it, the tp2's directory is the
+ * game dir, and rooting there walked the whole install - every other mod and every override - on each
+ * request, while letting an unrelated mod's same-named file count as a rival and defeat the match.
  */
-function resolveByBasename(raw: string, uri: string): Location | null {
+function resolveByBasename(raw: string, uri: string, ctx: ModContext | null): Location | null {
     const base = raw.replaceAll("\\", "/").split("/").pop() ?? "";
     if (!base || base.includes("%")) {
         return null; // the filename itself is a variable
@@ -189,8 +198,10 @@ function resolveByBasename(raw: string, uri: string): Location | null {
         return null;
     }
     const currentFilePath = uriToPath(uri);
-    const tp2 = findGoverningTp2(currentFilePath);
-    const root = tp2 ? path.dirname(tp2) : path.dirname(currentFilePath);
+    const modRoot = ctx?.modFolder ? path.join(ctx.gameDir, ctx.modFolder) : null;
+    // Fall back to the file's own directory only when no tp2 governs it at all - there is no mod tree
+    // to speak of then, and the file's neighbours are the best available scope.
+    const root = modRoot ?? (ctx ? ctx.gameDir : path.dirname(currentFilePath));
     const matches: string[] = [];
     findByBasename(root, base.toLowerCase(), matches, { count: 0 });
     if (matches.length === 1) {
@@ -245,11 +256,10 @@ function findHeredocLabelLine(text: string, raw: string): number | null {
  * `%var%`, gate on a displayable extension, then existence-check (case-insensitive) against WeiDU's
  * resolution bases.
  */
-function resolveAsFile(raw: string, uri: string): Location | null {
+function resolveAsFile(raw: string, uri: string, ctx: ModContext | null): Location | null {
     const currentFilePath = uriToPath(uri);
     let p = raw.replaceAll("\\", "/").trim();
 
-    const ctx = resolveModContext(currentFilePath);
     if (ctx?.modFolder) {
         p = p.replaceAll(/%MOD_FOLDER%/gi, ctx.modFolder);
     }
