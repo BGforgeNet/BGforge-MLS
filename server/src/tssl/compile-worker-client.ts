@@ -1,46 +1,37 @@
 /**
- * The server's side of the TSSL compile worker.
+ * The server's side of the TSSL compile worker: what is specific to the compile protocol.
+ *
+ * The thread, the id matching, the timeout and the teardown are `../worker/worker-client.ts`, shared
+ * with the transpiler. What is here is adding the `kind` that selects the compiler half of that shared
+ * bundle, rebuilding a refusal as the positioned error a caller reports from, and the startup prewarm.
  *
  * One worker is started at server start by `prewarmTsslCompileWorker` and kept: it holds the ts-morph
- * project, which costs more to build than every compile after the first one takes to run. It is torn
- * down on shutdown, and replaced by the next request if it ever dies.
- *
- * Its bundle is shared with the transpile worker, which runs a second instance of the same file; the
- * two stay separate instances so a dialog parse never queues behind a first compile.
+ * project, which costs more to build than every compile after the first one takes to run. Its bundle is
+ * shared with the transpile worker, which runs a second instance; the two stay separate instances so a
+ * dialog parse never queues behind a first compile.
  */
 
 import * as path from "path";
-import { Worker } from "worker_threads";
 import { TranspileError } from "../../../transpilers/common/transpile-error";
 import { conlog } from "../logger";
+import { createWorkerClient } from "../worker/worker-client";
 import type { CompileRequest, CompileResponse } from "./compile-worker-protocol";
 
 /**
- * Sits beside the server bundle; both are emitted into `server/out` by the same build. Shared with the
- * transpile worker's client, which runs its own instance of it - see `../worker/ts-morph-worker.ts`.
- */
-const WORKER_PATH = path.join(__dirname, "ts-morph-worker.js");
-
-/**
- * How long one compile may take before the worker is presumed wedged.
- *
- * A first compile stands up the TypeScript program and runs about a second; every one after it is well
- * under 100 ms. The bound is a hang detector, not a budget - generous enough that a cold compile on a
- * loaded machine never trips it, and short enough that a wedged worker reports instead of leaving the
+ * Bounds one compile. A first compile stands the TypeScript program up and runs ~690 ms; every one
+ * after it is well under 100 ms. A hang detector, not a budget - generous enough that a cold compile on
+ * a loaded machine never trips it, short enough that a wedged worker reports instead of leaving the
  * document's diagnostics pinned forever.
  */
 const COMPILE_TIMEOUT_MS = 60_000;
 
-interface Pending {
-    /** `true` when the worker wrote what was asked for, `false` when a newer compile displaced this one. */
-    resolve: (completed: boolean) => void;
-    reject: (error: Error) => void;
-    settle: () => void;
-}
+const client = createWorkerClient<CompileRequest, CompileResponse>({
+    // Shared with the transpiler's client, which runs its own instance of the same bundle.
+    fileName: "ts-morph-worker.js",
+    label: "TSSL compiler",
+    timeoutMs: COMPILE_TIMEOUT_MS,
+});
 
-const worker: { instance: Worker | null } = { instance: null };
-const pending = new Map<number, Pending>();
-let nextId = 0;
 let prewarmed = false;
 
 /**
@@ -52,108 +43,36 @@ let prewarmed = false;
 const PREWARM_SOURCE = "function start() {}\n";
 const PREWARM_PATH = path.join(__dirname, "__prewarm__.tssl");
 
-function failAllPending(reason: string): void {
-    for (const [, entry] of pending) {
-        entry.settle();
-        entry.reject(new Error(reason));
-    }
-    pending.clear();
-}
-
-function getWorker(): Worker {
-    if (worker.instance) return worker.instance;
-
-    const instance = new Worker(WORKER_PATH);
-    instance.on("message", (response: CompileResponse) => {
-        const entry = pending.get(response.id);
-        pending.delete(response.id);
-        // Gone means the request was displaced or timed out; the worker finished it anyway, having no
-        // way to be told otherwise, and its answer is what nobody is waiting for.
-        if (!entry) return;
-        entry.settle();
-        const failure = response.failure;
-        if (failure === undefined) {
-            entry.resolve(true);
-            return;
-        }
-        // Rebuilt rather than forwarded: the clone that crossed the thread boundary is plain data, and
-        // the caller reports a refusal by reading the location off a TranspileError.
-        const { message, ...location } = failure;
-        entry.reject(new TranspileError(message, location));
-    });
-    // A worker that dies takes every request in flight with it. They are rejected rather than left
-    // hanging, and the reference is dropped so the next compile starts a fresh one.
-    instance.on("error", (error: Error) => {
-        conlog(`TSSL compile worker error: ${error.message}`);
-        worker.instance = null;
-        failAllPending(`The TSSL compiler failed to run: ${error.message}`);
-    });
-    instance.on("exit", (code) => {
-        worker.instance = null;
-        if (pending.size > 0) failAllPending(`The TSSL compiler stopped unexpectedly (exit ${code}).`);
-    });
-    // The worker must not hold the server open: it is idle between compiles, and the process should be
-    // free to exit whenever everything else is done.
-    instance.unref();
-
-    worker.instance = instance;
-    return instance;
-}
-
 /**
  * Compiles on the worker thread.
  *
  * Resolves `true` once the requested files are written, `false` when `signal` fires because a newer
  * compile of the same document displaced this one - a displaced compile is not a failure and has
  * nothing to report. Rejects on a refusal, on the worker dying, and on the timeout above.
+ *
+ * `kind` is added here rather than asked of every caller: it exists so one bundle can serve both
+ * workers, which is transport, not something a compile site has an opinion on.
  */
-export function compileOnWorker(request: Omit<CompileRequest, "id" | "kind">, signal?: AbortSignal): Promise<boolean> {
-    const id = nextId++;
-    return new Promise<boolean>((resolve, reject) => {
-        if (signal?.aborted) {
-            resolve(false);
-            return;
-        }
-
-        const timer = setTimeout(() => {
-            pending.delete(id);
-            signal?.removeEventListener("abort", onAbort);
-            reject(new Error(`The TSSL compiler did not answer within ${COMPILE_TIMEOUT_MS / 1000}s.`));
-        }, COMPILE_TIMEOUT_MS);
-        // The worker is idle between compiles and must not hold the process open; neither may this.
-        timer.unref?.();
-
-        function onAbort(): void {
-            pending.delete(id);
-            clearTimeout(timer);
-            resolve(false);
-        }
-        signal?.addEventListener("abort", onAbort, { once: true });
-
-        const settle = (): void => {
-            clearTimeout(timer);
-            signal?.removeEventListener("abort", onAbort);
-        };
-
-        pending.set(id, { resolve, reject, settle });
-        try {
-            // `kind` is added here rather than asked of every caller: it exists so one bundle can
-            // serve both workers, which is transport, not something a compile site has an opinion on.
-            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a Worker's postMessage takes no origin; the rule is about window.postMessage.
-            getWorker().postMessage({ ...request, id, kind: "compile" } satisfies CompileRequest);
-        } catch (error) {
-            pending.delete(id);
-            settle();
-            reject(error instanceof Error ? error : new Error(String(error)));
-        }
-    });
+export async function compileOnWorker(
+    request: Omit<CompileRequest, "id" | "kind">,
+    signal?: AbortSignal,
+): Promise<boolean> {
+    const response = await client.send({ ...request, kind: "compile" }, signal);
+    if (response === null) return false;
+    if (response.failure) {
+        // Rebuilt rather than forwarded: the clone that crossed the thread boundary is plain data, and
+        // the caller reports a refusal by reading the location off a TranspileError.
+        const { message, ...location } = response.failure;
+        throw new TranspileError(message, location);
+    }
+    return true;
 }
 
 /**
  * Builds the worker's project before the first compile asks for it.
  *
  * Started lazily, the first compile stands the TypeScript program up inside the author's request:
- * ts-morph module eval and binding `lib.es2022.d.ts` measured at 249 ms and 132 ms of a 698 ms first
+ * ts-morph module eval and binding `lib.es2022.d.ts` measured at 254 ms and 119 ms of a 688 ms first
  * compile. Compiling a throwaway entry here moves both onto a thread nobody is waiting on. Nothing is
  * awaited, and both output paths are null, so the compile runs in full and writes nothing.
  *
@@ -180,10 +99,7 @@ export function prewarmTsslCompileWorker(): void {
 
 /** Stops the worker, so a shutdown is not held up by a compile the result of which nobody wants. */
 export async function stopTsslCompileWorker(): Promise<void> {
-    const instance = worker.instance;
-    worker.instance = null;
     // The next worker starts cold, so it needs the prewarm this one already had.
     prewarmed = false;
-    failAllPending("The TSSL compiler was shut down.");
-    if (instance) await instance.terminate();
+    await client.stop();
 }
