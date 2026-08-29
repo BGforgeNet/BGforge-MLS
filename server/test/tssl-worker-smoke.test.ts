@@ -1,6 +1,6 @@
 /**
- * Smoke test: the TSSL compile worker as the extension actually loads it - the built bundle, on a real
- * thread, over the real message protocol. Requires `pnpm build:base:server` to have run.
+ * Smoke test: the compiler half of the shared ts-morph worker as the extension actually loads it - the
+ * built bundle, on a real thread, over the real message protocol. Requires `pnpm build:base:server`.
  *
  * Everything else about this worker is tested with the thread replaced, so nothing else would notice
  * the bundle being absent, emitted under another name, or failing to load. That break costs the whole
@@ -14,7 +14,7 @@ import { Worker } from "node:worker_threads";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CompileRequest, CompileResponse } from "../src/tssl/compile-worker-protocol";
 
-const WORKER_PATH = join(__dirname, "..", "out", "tssl-compile-worker.js");
+const WORKER_PATH = join(__dirname, "..", "out", "ts-morph-worker.js");
 const SOURCE = "function start(): void {\n    let n = 1;\n    n = n + 1;\n}\n";
 
 let dir: string;
@@ -44,14 +44,15 @@ afterAll(async () => {
     if (dir) await rm(dir, { recursive: true, force: true });
 });
 
-async function compile(request: Omit<CompileRequest, "id">): Promise<CompileResponse> {
+async function compile(request: Omit<CompileRequest, "id" | "kind">): Promise<CompileResponse> {
     if (dead) throw new Error(`the worker cannot run: ${dead.message}`);
     const id = nextId++;
     return new Promise((resolve, reject) => {
         pending.set(id, resolve);
         failed.set(id, reject);
+        // `kind` selects the compiler half of the shared bundle, exactly as the client adds it.
         // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a Worker's postMessage takes no origin; the rule is about window.postMessage.
-        worker.postMessage({ ...request, id } satisfies CompileRequest);
+        worker.postMessage({ ...request, id, kind: "compile" } satisfies CompileRequest);
     });
 }
 

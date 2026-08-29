@@ -54,9 +54,10 @@ const config: KnipConfig = {
             // Test files are explicit entries because
             // knip's vitest plugin cannot derive them from the config's absolute
             // path.resolve(import.meta.dirname, ...) include globs (made absolute for cwd-independence).
-            // Both compile-worker.ts files are bundle entries of their own, started by path from the
-            // matching compile-worker-client.ts rather than imported, so nothing references them in
-            // source.
+            // ts-morph-worker.ts and fallout-ssl/compile-worker.ts are bundle entries of their own,
+            // started by path from the matching client rather than imported, so nothing references them
+            // in source. tssl/compile-worker.ts is NOT one: it is reached through ts-morph-worker.ts,
+            // which serves it and the transpilers from a single bundle.
             // sslc-wrapper.mjs is the same shape one step further out: the build copies it beside the
             // server bundle and ssl_compiler.ts forks it by path, so it is never imported at all.
             entry: [
@@ -68,7 +69,7 @@ const config: KnipConfig = {
                 // default run resolves it through that script, where listing it is redundant.
                 ...(isProductionKnip ? ["scripts/lsp-probe.mts"] : []),
                 "src/fallout-ssl/compile-worker.ts",
-                "src/tssl/compile-worker.ts",
+                "src/worker/ts-morph-worker.ts",
                 "src/sslc/sslc-wrapper.mjs",
             ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs

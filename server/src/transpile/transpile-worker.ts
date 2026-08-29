@@ -7,12 +7,12 @@
  * the notification, relocating diagnostics and handing off to WeiDU all stay with the caller, because
  * the transpilers are pure `(path, text) -> result` and nothing downstream of them needs a thread.
  *
- * `runTranspile` is exported so the work can be tested without a thread; everything below it is
- * message plumbing. The equivalence with an in-process transpile is what `transpile-worker.test.ts`
- * pins, and `transpile-worker-smoke.test.ts` is what proves the built bundle loads and answers.
+ * The thread and its message loop live in `../worker/ts-morph-worker.ts`, which serves this and the
+ * TSSL compiler from one bundle so ts-morph ships once rather than once per entry point. The
+ * equivalence with an in-process transpile is what `transpile-worker.test.ts` pins, and
+ * `transpile-worker-smoke.test.ts` is what proves the built bundle loads and answers.
  */
 
-import { parentPort } from "node:worker_threads";
 import { td, tbafWithSourceMap, TranspileError } from "../../../transpilers/src/index";
 import { parseTDSource } from "../td/dialog-source";
 import { parseTSSLSource } from "../tssl/dialog-source";
@@ -48,15 +48,3 @@ function failureOf(error: unknown): TranspileFailure {
         ...location,
     };
 }
-
-// One at a time, matching the TSSL worker: the transpilers build their own project per call, but
-// serialising keeps a slow transpile from interleaving with the next request's bundling step.
-let queue: Promise<void> = Promise.resolve();
-
-parentPort?.on("message", (request: TranspileRequest) => {
-    queue = queue.then(async () => {
-        const response = await runTranspile(request);
-        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
-        parentPort?.postMessage(response);
-    });
-});

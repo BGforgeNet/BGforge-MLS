@@ -1,9 +1,12 @@
 /**
  * The server's side of the TSSL compile worker.
  *
- * One worker is started on the first compile and kept: it holds the ts-morph project, which costs more
- * to build than every compile after the first one takes to run. It is torn down on shutdown, and
- * replaced by the next request if it ever dies.
+ * One worker is started at server start by `prewarmTsslCompileWorker` and kept: it holds the ts-morph
+ * project, which costs more to build than every compile after the first one takes to run. It is torn
+ * down on shutdown, and replaced by the next request if it ever dies.
+ *
+ * Its bundle is shared with the transpile worker, which runs a second instance of the same file; the
+ * two stay separate instances so a dialog parse never queues behind a first compile.
  */
 
 import * as path from "path";
@@ -12,8 +15,11 @@ import { TranspileError } from "../../../transpilers/common/transpile-error";
 import { conlog } from "../logger";
 import type { CompileRequest, CompileResponse } from "./compile-worker-protocol";
 
-/** Sits beside the server bundle; both are emitted into `server/out` by the same build. */
-const WORKER_PATH = path.join(__dirname, "tssl-compile-worker.js");
+/**
+ * Sits beside the server bundle; both are emitted into `server/out` by the same build. Shared with the
+ * transpile worker's client, which runs its own instance of it - see `../worker/ts-morph-worker.ts`.
+ */
+const WORKER_PATH = path.join(__dirname, "ts-morph-worker.js");
 
 /**
  * How long one compile may take before the worker is presumed wedged.
@@ -101,7 +107,7 @@ function getWorker(): Worker {
  * compile of the same document displaced this one - a displaced compile is not a failure and has
  * nothing to report. Rejects on a refusal, on the worker dying, and on the timeout above.
  */
-export function compileOnWorker(request: Omit<CompileRequest, "id">, signal?: AbortSignal): Promise<boolean> {
+export function compileOnWorker(request: Omit<CompileRequest, "id" | "kind">, signal?: AbortSignal): Promise<boolean> {
     const id = nextId++;
     return new Promise<boolean>((resolve, reject) => {
         if (signal?.aborted) {
@@ -131,8 +137,10 @@ export function compileOnWorker(request: Omit<CompileRequest, "id">, signal?: Ab
 
         pending.set(id, { resolve, reject, settle });
         try {
+            // `kind` is added here rather than asked of every caller: it exists so one bundle can
+            // serve both workers, which is transport, not something a compile site has an opinion on.
             // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a Worker's postMessage takes no origin; the rule is about window.postMessage.
-            getWorker().postMessage({ ...request, id } satisfies CompileRequest);
+            getWorker().postMessage({ ...request, id, kind: "compile" } satisfies CompileRequest);
         } catch (error) {
             pending.delete(id);
             settle();

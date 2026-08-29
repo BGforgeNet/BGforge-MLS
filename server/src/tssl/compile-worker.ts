@@ -1,18 +1,20 @@
 /**
- * Runs the TSSL compiler on a worker thread.
+ * The TSSL compiler's side of the shared ts-morph worker.
  *
- * A first compile is over a second of straight-line CPU, almost all of it inside TypeScript's own
- * parser and binder, and validation runs while the user types - so on the server's own thread it would
- * stall every other request for that whole time. The SSL back end is here for the same reason; see
- * `../fallout-ssl/compile-worker.ts`.
+ * A first compile is ~690 ms of straight-line CPU, two thirds of it standing the TypeScript program up
+ * rather than compiling - and validation runs while the user types, so on the server's own thread it
+ * would stall every other request for that whole time. The SSL back end is off-thread for the same
+ * reason; see `../fallout-ssl/compile-worker.ts`.
  *
- * The ts-morph project is built once and kept, because standing one up is what that second buys: after
- * the first compile the same document recompiles in under 100 ms. Requests are serialised behind one
- * another, since they all mutate that project.
+ * The ts-morph project is built once and kept, because standing one up is what that time buys: after
+ * the first compile the same document recompiles in under 100 ms. `prewarmTsslCompileWorker` pays it at
+ * server start instead of inside the author's first compile.
+ *
+ * The thread and its message loop live in `../worker/ts-morph-worker.ts`, which serves this and the
+ * transpilers from one bundle so ts-morph ships once rather than once per entry point.
  */
 
 import * as fs from "fs";
-import { parentPort } from "worker_threads";
 import { emitProgram } from "../../../compilers/ssl/src/compile";
 import { optimize } from "../../../compilers/ssl/src/optimize";
 import { createBatchState } from "../../../compilers/tssl/src/batch";
@@ -58,20 +60,12 @@ function failureOf(error: unknown): CompileFailure {
     };
 }
 
-// One project, so one compile at a time. Each request waits for the one before it rather than
-// interleaving its own edits to that project with another's.
-let queue: Promise<void> = Promise.resolve();
-
-parentPort?.on("message", (request: CompileRequest) => {
-    queue = queue.then(async () => {
-        let failure: CompileFailure | undefined;
-        try {
-            await runTsslCompile(request);
-        } catch (error) {
-            failure = failureOf(error);
-        }
-        const response: CompileResponse = failure ? { id: request.id, failure } : { id: request.id };
-        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
-        parentPort?.postMessage(response);
-    });
-});
+/** Runs one compile and answers with what the caller reports from. The shared entry does the posting. */
+export async function handleCompile(request: CompileRequest): Promise<CompileResponse> {
+    try {
+        await runTsslCompile(request);
+        return { id: request.id };
+    } catch (error) {
+        return { id: request.id, failure: failureOf(error) };
+    }
+}

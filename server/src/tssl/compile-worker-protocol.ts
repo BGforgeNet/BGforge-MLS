@@ -8,6 +8,11 @@
 export interface CompileRequest {
     /** Matches a response to its request; the worker takes them one at a time but replies out of band. */
     id: number;
+    /**
+     * Discriminates this from a transpile request: one worker bundle serves both, so that ts-morph is
+     * carried once rather than once per entry point. The two run on separate instances of it.
+     */
+    kind: "compile";
     /** The document's text, which may hold edits that were never saved. */
     text: string;
     /** The path that text belongs to. Never read - it resolves imports and names refusals. */

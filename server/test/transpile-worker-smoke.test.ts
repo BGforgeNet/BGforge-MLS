@@ -15,7 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { DDialogData } from "../../shared/dialog-types";
 import type { TranspileRequest, TranspileResponse } from "../src/transpile/transpile-worker-protocol";
 
-const WORKER_PATH = join(__dirname, "..", "out", "transpile-worker.js");
+const WORKER_PATH = join(__dirname, "..", "out", "ts-morph-worker.js");
 const TD_SAMPLE = join(__dirname, "td", "samples", "familiars_v2.td");
 
 let worker: Worker;

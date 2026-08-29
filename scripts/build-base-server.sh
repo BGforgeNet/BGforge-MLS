@@ -26,29 +26,21 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
     "$imu_define" \
     "$@"
 
-# The TSSL compile worker, a third entry point for the same reason: it is started as a worker thread
-# from its own file, beside server.js. It carries ts-morph, which is ~90% of it.
+# The shared ts-morph worker, a third entry point for the same reason: a worker thread is started from
+# its own file, and it must sit beside server.js because that is where it is looked up. It serves the
+# TSSL compiler and the TD/TBAF transpilers both, on two INSTANCES of the one bundle - see
+# server/src/worker/ts-morph-worker.ts for why they stay two.
 #
-# The split was made because a cold compile is ~690ms of synchronous CPU that would otherwise stall hover
-# and completion. It did not keep ts-morph out of server.js on its own - the dialog parsers and compile.ts
-# reached it too - until the transpile worker below took the last of those off the server thread.
+# One entry rather than two because ts-morph is ~90% of it either way, and two entries put it in the
+# VSIX twice: 1,647,506 + 1,683,335 bytes compressed, a third of a 10.2 MB artifact.
 #
-# Externalising ts-morph to server/node_modules so it ships once was measured and rejected: worth
-# ~0.87 MB of a ~10 MB VSIX, because these bundles are minified and deflate-compressed while the
-# node_modules copy would ship unminified. It would also need package.sh to deref a dependency TREE
-# (pnpm stores @ts-morph/common and code-block-writer as siblings of the symlink target, not inside it)
-# and to stop deleting server/node_modules/@*/. If the VSIX ever needs to shrink, esbuild-wasm's
-# esbuild.wasm is 3.79 MB stored - 38% of the artifact and 4x this - and is the better target.
-esbuild ./server/src/tssl/compile-worker.ts --bundle --outfile=server/out/tssl-compile-worker.js \
-    --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
-    --banner:js="$imu_banner" \
-    "$imu_define" \
-    "$@"
-
-# The TD/TBAF transpile worker, a fourth entry point for the same reason as the two above. It carries
-# ts-morph and both transpilers, which `server/src/compile.ts` used to run on the server thread - 80% of
-# server.js by input bytes, and a 51-60 ms cold stall per save on the thread answering hover.
-esbuild ./server/src/transpile/transpile-worker.ts --bundle --outfile=server/out/transpile-worker.js \
+# Externalising ts-morph to server/node_modules instead was measured and rejected: worth only ~0.87 MB,
+# because these bundles are minified and deflate-compressed while the node_modules copy would ship
+# unminified. It would also need package.sh to deref a dependency TREE (pnpm stores @ts-morph/common and
+# code-block-writer as siblings of the symlink target, not inside it) and to stop deleting
+# server/node_modules/@*/. If the VSIX needs to shrink further, esbuild-wasm's esbuild.wasm is
+# 3,785,482 bytes compressed - 37% of the artifact - and is the next target.
+esbuild ./server/src/worker/ts-morph-worker.ts --bundle --outfile=server/out/ts-morph-worker.js \
     --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
     --banner:js="$imu_banner" \
     "$imu_define" \

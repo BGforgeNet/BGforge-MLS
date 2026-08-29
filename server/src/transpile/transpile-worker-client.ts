@@ -18,8 +18,11 @@ import { conlog } from "../logger";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import type { TranspileRequest, TranspileResponse, TranspileWorkerResult } from "./transpile-worker-protocol";
 
-/** Sits beside the server bundle; both are emitted into `server/out` by the same build. */
-const WORKER_PATH = path.join(__dirname, "transpile-worker.js");
+/**
+ * Sits beside the server bundle; both are emitted into `server/out` by the same build. Shared with the
+ * TSSL compiler's client, which runs its own instance of it - see `../worker/ts-morph-worker.ts`.
+ */
+const WORKER_PATH = path.join(__dirname, "ts-morph-worker.js");
 
 /**
  * How long one transpile may take before the worker is presumed wedged. A hang detector, not a
