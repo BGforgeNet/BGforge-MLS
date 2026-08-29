@@ -11,6 +11,10 @@
  * uninterrupted block while the graph lays out stays under a frame budget with generous headroom (the
  * observable a user feels, thresholded loosely so a loaded CI box does not flake).
  *
+ * It also covers the webview's own stall reporting (`observeSlowFrames`), which needs a browser for the same
+ * reason: node has no long-task entry type. The re-render this graph provokes is exactly the kind of block
+ * that reporting exists to name, so the message must reach the (fake) host here.
+ *
  * e2e-tier, run out of process (not under pnpm test):
  *   pnpm exec tsx client/src/dialog-editor/test/harness/build.mts               # rebuild app.html
  *   pnpm exec tsx client/src/dialog-editor/test/harness/render-layout-thread.mts
@@ -29,6 +33,10 @@ declare global {
             workers: number;
             /** Longest gap between heartbeat ticks, i.e. how long the main thread was held. */
             maxGap: number;
+            /** Durations the webview itself reported to the host as slow frames. */
+            slowFrames: number[];
+            /** Every message type the webview posted up, in order - what a silent run is diagnosed from. */
+            posts: string[];
         };
     }
 }
@@ -92,7 +100,7 @@ page.on("console", (m) => {
 // Installed before any page script runs, so it sees the layout engine's own Worker construction. The
 // heartbeat records the longest gap between ticks, which is exactly how long the main thread was held.
 await page.addInitScript(() => {
-    const probe = { workers: 0, maxGap: 0 };
+    const probe = { workers: 0, maxGap: 0, slowFrames: [] as number[], posts: [] as string[] };
     window.layoutProbe = probe;
     const RealWorker = Worker;
     window.Worker = class extends RealWorker {
@@ -108,6 +116,15 @@ await page.addInitScript(() => {
         last = now;
     }, 10);
 });
+
+// A fake host, installed before host.ts takes the handle at bundle init: the webview's stall reports are
+// outbound messages, so with no host to receive them there is nothing to observe. Injected as SOURCE, not a
+// function: this file is transpiled, and a transpiled function carries a `__name` helper the page does not
+// have - the resulting throw is swallowed by host.ts's try/catch and leaves the webview silently hostless.
+await page.addInitScript(`window.acquireVsCodeApi = () => ({ postMessage: (m) => {
+    window.layoutProbe.posts.push(String(m && m.type));
+    if (m && m.type === "slowFrame") window.layoutProbe.slowFrames.push(m.ms);
+} });`);
 
 await page.goto("file://" + appHtml);
 
@@ -127,13 +144,22 @@ await page.evaluate(() => {
 await page.getByRole("button", { name: "Re-layout" }).click();
 await page.waitForTimeout(3000); // long enough for a synchronous layout of this graph to have finished
 
-const probe = await page.evaluate(() => window.layoutProbe ?? { workers: 0, maxGap: 0 });
+const probe = await page.evaluate(() => window.layoutProbe ?? { workers: 0, maxGap: 0, slowFrames: [], posts: [] });
 
 check("the layout runs in a real Worker", probe.workers > 0, `${probe.workers} constructed`);
 check(
     `re-laying out ${STATE_COUNT} states never blocks the main thread for more than ${MAX_BLOCK_MS}ms`,
     probe.maxGap < MAX_BLOCK_MS,
     `longest block ${probe.maxGap.toFixed(0)}ms`,
+);
+// The re-render after the layout returns is a block well past the reporting threshold, so a run that
+// reports nothing means the webview's stall reporting is not reaching the host.
+check(
+    "the webview reports its own stalls to the host",
+    probe.slowFrames.length > 0,
+    probe.slowFrames.length > 0
+        ? `reported ${probe.slowFrames.map((ms) => `${ms}ms`).join(", ")}`
+        : `nothing reported; the webview posted ${probe.posts.join(", ") || "nothing at all"}`,
 );
 check("no CSP violation (worker-src must admit the blob:)", cspViolations.length === 0, cspViolations.join(" | "));
 

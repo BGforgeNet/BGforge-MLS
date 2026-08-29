@@ -14,7 +14,7 @@ vi.mock("../src/logging", () => ({
 }));
 
 // Imported after vi.mock so the mocked logger is in place.
-import { HOST_SLOW_MS, timedHost } from "../src/timing";
+import { HOST_SLOW_MS, reportSlowFrame, timedHost } from "../src/timing";
 
 /** Burn the clock; the point is to measure work that HOLDS the thread, which a sleep would not. */
 function spin(ms: number): void {
@@ -37,5 +37,20 @@ describe("timedHost", () => {
         expect(logged).toHaveLength(1);
         expect(logged[0]?.level).toBe("warn");
         expect(logged[0]?.message).toMatch(/^\[host-timing] openGame took \d+ms$/);
+    });
+});
+
+/**
+ * A webview measures its own stalls (client/src/webview-utils.ts observeSlowFrames) and posts them up,
+ * because nothing outside its frame can see them. The host's job is to put the number somewhere readable,
+ * naming which editor and which file - the two things the log line is useless without.
+ */
+describe("reportSlowFrame", () => {
+    it("logs the editor, the file and the duration as a warning", () => {
+        logged.length = 0;
+        reportSlowFrame("Dialog editor", "bcarl.d", 412);
+        expect(logged).toEqual([
+            { message: "[webview-timing] Dialog editor (bcarl.d) blocked for 412ms", level: "warn" },
+        ]);
     });
 });

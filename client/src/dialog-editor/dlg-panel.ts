@@ -22,6 +22,7 @@ import { neighbourStates, type InboundRef } from "./dlg-references";
 import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportSlowFrame } from "../timing";
 import { isWebviewToHost } from "./webview/messages";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
 import { writeDlgFromModel } from "./dlg-write";
@@ -252,6 +253,11 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                     });
                     break;
                 }
+                // Same reporting as the source dialog editor: the webview measured a block of its own
+                // thread and posted the number up, since nothing out here can see inside its frame.
+                case "slowFrame":
+                    reportSlowFrame("Dialog editor", path.basename(document.uri.path), raw.ms);
+                    break;
                 default:
                     break;
             }

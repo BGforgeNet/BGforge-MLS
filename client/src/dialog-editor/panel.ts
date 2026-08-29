@@ -23,6 +23,7 @@ import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../../../shared
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import type { DialogMessages } from "../../../shared/dialog-model";
 import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportSlowFrame } from "../timing";
 import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { isWebviewToHost } from "./webview/messages";
@@ -126,6 +127,12 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     });
                     break;
                 }
+                // The webview held its own thread long enough to stop painting (observeSlowFrames in
+                // webview-utils.ts). Logged rather than shown: a stall is a diagnostic, and a toast for one
+                // would itself be noise on exactly the machine already struggling.
+                case "slowFrame":
+                    reportSlowFrame("Dialog editor", path.basename(document.uri.fsPath), raw.ms);
+                    break;
             }
         });
 

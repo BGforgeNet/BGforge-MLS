@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { installInitTimeout, isBenignWebviewError } from "../src/webview-utils";
+import { installInitTimeout, isBenignWebviewError, observeSlowFrames } from "../src/webview-utils";
 
 describe("isBenignWebviewError", () => {
     // Chromium fires a window `error` event for "ResizeObserver loop completed with undelivered
@@ -86,5 +86,94 @@ describe("installInitTimeout", () => {
         resolved = true;
         vi.advanceTimersByTime(8000);
         expect(onTimeout).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * A stall inside a webview is invisible from outside its frame, so `observeSlowFrames` subscribes to the
+ * browser's own long-task measurement and hands each block over to the caller (the dialog webview posts it
+ * to the host). Driven here through an injected observer constructor: Node has no "longtask" entry type, so
+ * the real global would report nothing whatever the code did.
+ */
+describe("observeSlowFrames", () => {
+    /** Minimal stand-in for the one PerformanceObserver shape this helper uses. */
+    function fakeObserver() {
+        const state: {
+            callback?: (list: { getEntries: () => { duration: number }[] }) => void;
+            observed?: unknown;
+            disconnected: number;
+        } = { disconnected: 0 };
+        class Fake {
+            constructor(cb: (list: { getEntries: () => { duration: number }[] }) => void) {
+                state.callback = cb;
+            }
+            observe(options: unknown): void {
+                state.observed = options;
+            }
+            disconnect(): void {
+                state.disconnected++;
+            }
+        }
+        const emit = (...durations: number[]): void => {
+            state.callback?.({ getEntries: () => durations.map((duration) => ({ duration })) });
+        };
+        return { Fake, state, emit };
+    }
+
+    test("reports a block at or over the threshold, rounded to whole milliseconds", () => {
+        const { Fake, emit } = fakeObserver();
+        const report = vi.fn();
+        observeSlowFrames(150, report, Fake as never);
+
+        emit(150, 212.4, 999.6);
+        expect(report.mock.calls).toEqual([[150], [212], [1000]]);
+    });
+
+    test("ignores a block under the threshold", () => {
+        const { Fake, emit } = fakeObserver();
+        const report = vi.fn();
+        observeSlowFrames(150, report, Fake as never);
+
+        emit(16, 149.4);
+        expect(report).not.toHaveBeenCalled();
+    });
+
+    test("subscribes to long tasks", () => {
+        const { Fake, state } = fakeObserver();
+        observeSlowFrames(150, vi.fn(), Fake as never);
+
+        expect(state.observed).toEqual({ entryTypes: ["longtask"] });
+    });
+
+    test("the returned cleanup disconnects the observer", () => {
+        const { Fake, state } = fakeObserver();
+        const cleanup = observeSlowFrames(150, vi.fn(), Fake as never);
+
+        cleanup();
+        expect(state.disconnected).toBe(1);
+    });
+
+    // The observer is diagnostics: an engine without it, or one that rejects the entry type, must cost the
+    // webview nothing - not a throw during startup, and not a cleanup that throws on unmount.
+    test("no-ops where PerformanceObserver is unavailable", () => {
+        const report = vi.fn();
+        const cleanup = observeSlowFrames(150, report, undefined);
+
+        expect(() => cleanup()).not.toThrow();
+        expect(report).not.toHaveBeenCalled();
+    });
+
+    test("no-ops where the engine rejects the long-task entry type", () => {
+        class Rejecting {
+            observe(): void {
+                throw new TypeError("unsupported entryTypes");
+            }
+            disconnect(): void {
+                throw new Error("never reached");
+            }
+        }
+        const cleanup = observeSlowFrames(150, vi.fn(), Rejecting as never);
+
+        expect(() => cleanup()).not.toThrow();
     });
 });

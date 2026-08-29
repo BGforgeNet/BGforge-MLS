@@ -27,3 +27,14 @@ export function timedHost<T>(name: string, work: () => T): T {
         work,
     );
 }
+
+/**
+ * Record a stall a webview measured inside its own frame and posted up (`observeSlowFrames` in
+ * webview-utils.ts, threshold `SLOW_FRAME_MS`).
+ *
+ * One place, so both dialog hosts write the same line: `editor` and `file` are what make the number
+ * actionable, since a stall the user reports is always "this file, in this editor".
+ */
+export function reportSlowFrame(editor: string, file: string, ms: number): void {
+    conlog(`[webview-timing] ${editor} (${file}) blocked for ${ms}ms`, "warn");
+}

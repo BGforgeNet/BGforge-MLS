@@ -1,7 +1,7 @@
 import { mount } from "svelte";
 import App from "./App.svelte";
 import { postToHost } from "./host";
-import { installFatalErrorHandler } from "../../webview-utils";
+import { SLOW_FRAME_MS, installFatalErrorHandler, observeSlowFrames } from "../../webview-utils";
 import { initTextmate } from "./highlight/textmate";
 import type { IRawGrammar } from "vscode-textmate";
 import onigWasm from "vscode-oniguruma/release/onig.wasm";
@@ -24,6 +24,11 @@ installFatalErrorHandler({
         if (target) target.textContent = detail;
     },
 });
+
+// Report the webview's own stalls to the host. Layout and re-render of a large dialog run here, on a thread
+// the host cannot see into, so without this a frozen panel is something a user notices and nothing records.
+// Never disconnected: the observer lives as long as the webview, and the webview dies with its panel.
+observeSlowFrames(SLOW_FRAME_MS, (ms) => postToHost({ type: "slowFrame", ms }));
 
 if (target) {
     mount(App, { target });

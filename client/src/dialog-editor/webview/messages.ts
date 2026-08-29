@@ -25,7 +25,13 @@ export type WebviewToHost =
     /** Repoint one line of a compiled dialog at another string, addressed by position. */
     | { type: "pickString"; stateIndex: number; choiceIndex?: number }
     /** Detach one state of a compiled dialog, addressed by position. */
-    | { type: "detach"; stateIndex: number };
+    | { type: "detach"; stateIndex: number }
+    /**
+     * The webview's main thread was held for `ms` in one unbroken block - long enough that it could not
+     * paint or take input. Reported so a stall has a number and a place in the log instead of being
+     * something a user notices and nothing records; the host has no other way to see inside the frame.
+     */
+    | { type: "slowFrame"; ms: number };
 
 /**
  * Runtime narrow of an incoming webview message before the host acts on it. A same-origin webview
@@ -55,6 +61,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             );
         case "detach":
             return typeof m.stateIndex === "number";
+        case "slowFrame":
+            return typeof m.ms === "number";
         default:
             return false;
     }

@@ -106,3 +106,41 @@ export function installInitTimeout(options: InitTimeoutOptions): () => void {
     }, ms);
     return () => clearTimeout(timer);
 }
+
+/**
+ * A block this long or longer is worth reporting. Well above one dropped 16 ms frame: the point is to
+ * surface a stall a user would feel as the panel going unresponsive, not ordinary render churn.
+ */
+export const SLOW_FRAME_MS = 150;
+
+/**
+ * Report every unbroken block of the webview's main thread lasting at least `thresholdMs`.
+ *
+ * A webview runs on its own thread inside its own frame, so a stall there is invisible to the host - a
+ * layout or render that froze the panel left no trace anywhere a log could reach. The browser already
+ * measures this ("longtask"), so this subscribes rather than measures.
+ *
+ * `ctor` is the seam: Node has no long-task entry type, so tests drive a stand-in. Missing or refusing the
+ * entry type yields a no-op and a cleanup that does nothing - the observer is diagnostics and must never
+ * be why a panel fails to come up.
+ */
+export function observeSlowFrames(
+    thresholdMs: number,
+    report: (ms: number) => void,
+    Observer: typeof PerformanceObserver | undefined = globalThis.PerformanceObserver,
+): () => void {
+    const unobserved = (): void => {};
+    if (Observer === undefined) return unobserved;
+    const observer = new Observer((list) => {
+        for (const entry of list.getEntries()) {
+            if (entry.duration >= thresholdMs) report(Math.round(entry.duration));
+        }
+    });
+    try {
+        observer.observe({ entryTypes: ["longtask"] });
+    } catch {
+        // An engine that does not implement the entry type throws here rather than ignoring it.
+        return unobserved;
+    }
+    return () => observer.disconnect();
+}

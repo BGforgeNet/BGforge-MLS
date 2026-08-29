@@ -41,6 +41,7 @@ describe("isWebviewToHost (runtime narrowing)", () => {
             { type: "edit", model: { sourceLang: "weidu-d" } },
             { type: "runtimeError", message: "boom" },
             { type: "runtimeError", message: "boom", stack: "trace" },
+            { type: "slowFrame", ms: 250 },
         ];
         for (const m of valid) expect(isWebviewToHost(m), JSON.stringify(m)).toBe(true);
     });
@@ -62,6 +63,8 @@ describe("isWebviewToHost (runtime narrowing)", () => {
             { type: "edit", model: "m" }, // model not an object
             { type: "edit", model: { sourceLang: "weidu-d" }, seq: "1" }, // seq not a number
             { type: "runtimeError" }, // missing message
+            { type: "slowFrame" }, // missing ms
+            { type: "slowFrame", ms: "250" }, // ms not a number
         ];
         for (const m of invalid) expect(isWebviewToHost(m), JSON.stringify(m)).toBe(false);
     });
