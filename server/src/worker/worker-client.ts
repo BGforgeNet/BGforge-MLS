@@ -9,9 +9,9 @@
  * What stays with each worker is the part that reads its own protocol: which response field carries the
  * answer, and how a refusal becomes the error its callers expect.
  *
- * `../fallout-ssl/compile-worker-client.ts` is the same shape and deliberately has not adopted this: it
- * carries no timeout today, so moving it here would add one, which is a behaviour change rather than a
- * refactor. It is the obvious third caller whenever that change is wanted on its own terms.
+ * All three worker clients use this. The SSL one gained a timeout by adopting it: it had none, so a
+ * worker wedged inside synchronous JS - emitting no message, no error and no exit - left its compile
+ * unsettled and the document's diagnostics pinned, with nothing reported anywhere.
  */
 
 import * as path from "path";

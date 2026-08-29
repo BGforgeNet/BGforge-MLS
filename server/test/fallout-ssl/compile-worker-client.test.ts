@@ -127,6 +127,38 @@ describe("compile worker client", () => {
         expect(FakeWorker.instances).toHaveLength(2);
     });
 
+    // A worker that DIES rejects through its exit handler; one WEDGED inside synchronous JS emits
+    // nothing at all - no message, no error, no exit - so without a bound the compile never settles and
+    // the document's diagnostics stay pinned with nothing reported anywhere. This runs on validate, as
+    // the author types.
+    it("rejects when the worker never answers", async () => {
+        vi.useFakeTimers();
+        try {
+            const pending = compileOnWorker({ ...REQUEST });
+            const settled = expect(pending).rejects.toThrow(/did not answer/);
+            await vi.advanceTimersByTimeAsync(60_000);
+            await settled;
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    // The late answer arrives after nobody is waiting; it must not throw or resurrect the request.
+    it("ignores an answer that arrives after the request timed out", async () => {
+        vi.useFakeTimers();
+        try {
+            const pending = compileOnWorker({ ...REQUEST });
+            const settled = expect(pending).rejects.toThrow(/did not answer/);
+            await vi.advanceTimersByTimeAsync(60_000);
+            await settled;
+            expect(() =>
+                current().emit("message", { id: current().posted[0]!.id, errors: [], warnings: [] }),
+            ).not.toThrow();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("fails an in-flight compile on shutdown rather than blocking it", async () => {
         const pending = compileOnWorker({ ...REQUEST });
         const worker = current();
