@@ -7,6 +7,7 @@ import { compile } from "../compile";
 import { clearAllDiagnostics, setDiagnostics } from "../diagnostic-store";
 import { updateTreeSitterDiagnostics } from "../tree-sitter-validation";
 import { timeHandler } from "../shared/time-handler";
+import { runOrDebounceParse } from "../shared/parse-scheduling";
 import { fireRefresh } from "../shared/lsp-refresh";
 import { handleCompileError } from "./compile-error";
 import {
@@ -136,6 +137,9 @@ export function register(ctx: HandlerContext): void {
                 // `validate` - the parse is in-memory, so it refreshes on every save
                 // regardless of validation mode.
                 if (docSettings.diagnostics) {
+                    // Save runs the pass now, so a pass still pending from the last keystroke would only
+                    // redo it against the same text - cancel it, as the compile below does.
+                    ctx.parseDebouncer.cancel(normUri);
                     updateTreeSitterDiagnostics(uri, langId, text);
                     updateTranslationDiagnostics(uri, langId, text);
                 }
@@ -180,12 +184,15 @@ export function register(ctx: HandlerContext): void {
                 clearAllDiagnostics(uri);
 
                 const docSettings = await ctx.getDocumentSettings(uri);
-                // Tree-sitter parse is synchronous and cheap (no disk I/O): publish parse
-                // errors on every edit when enabled, independent of `validate`, for instant
-                // feedback ahead of (or instead of) the disk-bound external compiler.
+                // The tree-sitter parse is in-memory (no disk I/O): publish parse errors on every edit
+                // when enabled, independent of `validate`, for instant feedback ahead of (or instead of)
+                // the disk-bound external compiler. A LARGE document coalesces instead - the parse is
+                // tens of ms there, and it holds up every other request. See shared/parse-scheduling.ts.
                 if (docSettings.diagnostics) {
-                    updateTreeSitterDiagnostics(uri, langId, text);
-                    updateTranslationDiagnostics(uri, langId, text);
+                    runOrDebounceParse(normUri, text, ctx.parseDebouncer, () => {
+                        updateTreeSitterDiagnostics(uri, langId, text);
+                        updateTranslationDiagnostics(uri, langId, text);
+                    });
                 }
                 if (shouldValidateOnChange(docSettings.validate)) {
                     ctx.compileDebouncer.schedule(normUri, () => {

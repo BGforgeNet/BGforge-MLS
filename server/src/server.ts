@@ -65,6 +65,13 @@ const fileReloadDebouncer = new UriDebouncer<NormalizedUri>(RELOAD_DEBOUNCE_MS);
 const COMPILE_DEBOUNCE_MS = 300;
 const compileDebouncer = new UriDebouncer<NormalizedUri>(COMPILE_DEBOUNCE_MS);
 
+// Coalescing for the in-memory diagnostic pass on a LARGE document only (see shared/parse-scheduling.ts;
+// an ordinary script still parses on every keystroke). Much shorter than the two above: those wait out a
+// typing burst before touching disk or spawning a compiler, where this only has to stop one keystroke's
+// parse from starting before the next arrives, and the squiggles should still feel immediate.
+const PARSE_DEBOUNCE_MS = 120;
+const parseDebouncer = new UriDebouncer<NormalizedUri>(PARSE_DEBOUNCE_MS);
+
 const getDocumentSettings = documentLifecycleHandler.makeGetDocumentSettings(connection);
 
 // Initialize the settings service holder so compile.ts can access settings without importing server.ts
@@ -78,6 +85,7 @@ const handlerCtx: HandlerContext = {
     timingOpts,
     fileReloadDebouncer,
     compileDebouncer,
+    parseDebouncer,
     renameSuppression,
     getDocumentSettings,
 };
@@ -105,6 +113,7 @@ connection.onShutdown(() => {
     handlerCtx.renameSuppression.dispose();
     fileReloadDebouncer.dispose();
     compileDebouncer.dispose();
+    parseDebouncer.dispose();
     // Detach in-flight compilers so they don't continue running after the
     // LSP transport closes. Each compiler honours the AbortSignal it was
     // started with via runProcess; aborting clears the per-URI tracking maps.

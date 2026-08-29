@@ -11,6 +11,10 @@
  * compiler: the parse is in-memory, tree-sitter is fast, and instant feedback is
  * the point - a debounce would defeat it. `collectParseDiagnostics` prunes clean
  * subtrees, so cost tracks the broken regions rather than file size.
+ *
+ * That holds by document size, not everywhere: past `LARGE_DOCUMENT_BYTES` the caller coalesces these
+ * calls instead, because the parse itself is then tens of ms of the event loop per keystroke. The policy
+ * and its measurements live in `shared/parse-scheduling.ts`; this module is unconditional either way.
  */
 
 import { parserManager } from "../../shared/parsers/parser-manager";

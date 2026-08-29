@@ -24,6 +24,8 @@ export interface HandlerContext {
     timingOpts: ReturnType<typeof makeTimingOptions>;
     fileReloadDebouncer: UriDebouncer<NormalizedUri>;
     compileDebouncer: UriDebouncer<NormalizedUri>;
+    /** Coalesces the in-memory diagnostic pass for a large document; see shared/parse-scheduling.ts. */
+    parseDebouncer: UriDebouncer<NormalizedUri>;
     renameSuppression: RenameSuppression;
     getDocumentSettings: (resource: string) => Thenable<MLSsettings>;
 }
