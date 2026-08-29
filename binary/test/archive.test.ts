@@ -438,9 +438,9 @@ describe("TLK (dialog.tlk)", () => {
     describe("search", () => {
         const SAMPLE = ["Sword of Chaos", "a sword +1", null, "Shield", "SWORDFISH", ""];
 
-        it("matches text case-insensitively, reporting each hit's strref", () => {
+        it("matches text case-insensitively, reporting each hit's strref", async () => {
             const tlk = parseTlk(buildTlk(SAMPLE));
-            expect(tlk.search("sword")).toEqual([
+            expect(await tlk.search("sword")).toEqual([
                 { strref: 0, text: "Sword of Chaos" },
                 { strref: 1, text: "a sword +1" },
                 { strref: 4, text: "SWORDFISH" },
@@ -448,39 +448,59 @@ describe("TLK (dialog.tlk)", () => {
             tlk.close();
         });
 
-        it("returns hits in strref order, which is the order the game numbers them", () => {
+        it("returns hits in strref order, which is the order the game numbers them", async () => {
             const tlk = parseTlk(buildTlk(SAMPLE));
-            expect(tlk.search("s").map((hit) => hit.strref)).toEqual([0, 1, 3, 4]);
+            const hits = await tlk.search("s");
+            expect(hits.map((hit) => hit.strref)).toEqual([0, 1, 3, 4]);
             tlk.close();
         });
 
-        it("stops at the requested limit, so a common word cannot return the whole table", () => {
+        it("stops at the requested limit, so a common word cannot return the whole table", async () => {
             const tlk = parseTlk(buildTlk(SAMPLE));
-            expect(tlk.search("s", { limit: 2 }).map((hit) => hit.strref)).toEqual([0, 1]);
+            const hits = await tlk.search("s", { limit: 2 });
+            expect(hits.map((hit) => hit.strref)).toEqual([0, 1]);
             tlk.close();
         });
 
-        it("skips entries the table holds no text for", () => {
+        it("skips entries the table holds no text for", async () => {
             const tlk = parseTlk(buildTlk(SAMPLE));
             // Index 2 is a no-text entry and index 5 an empty string; neither can match anything.
-            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(2);
-            expect(tlk.search("").map((hit) => hit.strref)).not.toContain(5);
+            const hits = await tlk.search("");
+            expect(hits.map((hit) => hit.strref)).not.toContain(2);
+            expect(hits.map((hit) => hit.strref)).not.toContain(5);
             tlk.close();
         });
 
-        it("finds nothing for a query no entry contains", () => {
+        it("hands the event loop back while building its table", async () => {
+            // The first search decodes and case-folds every entry - six figures of strings in a real
+            // dialog.tlk. Done in one synchronous pass that freezes whatever thread called it (the
+            // extension host, i.e. the whole editor). The build must yield between chunks.
+            const tlk = parseTlk(buildTlk(Array.from({ length: 5000 }, (_, i) => `entry ${i}`)));
+            let ranDuringBuild = false;
+            // Scheduled BEFORE the search. A macrotask can only run before the search settles if the
+            // build hands the loop back; a synchronous build (or one resolved on a microtask) beats it.
+            setTimeout(() => {
+                ranDuringBuild = true;
+            }, 0);
+            const hits = await tlk.search("entry 4999");
+            expect(ranDuringBuild).toBe(true);
+            expect(hits.map((hit) => hit.strref)).toEqual([4999]);
+            tlk.close();
+        });
+
+        it("finds nothing for a query no entry contains", async () => {
             const tlk = parseTlk(buildTlk(SAMPLE));
-            expect(tlk.search("halberd")).toEqual([]);
+            expect(await tlk.search("halberd")).toEqual([]);
             tlk.close();
         });
 
-        it("decodes with the configured codepage, so a match is on the text the player sees", () => {
+        it("decodes with the configured codepage, so a match is on the text the player sees", async () => {
             const tlk = parseTlk(buildTlk([Uint8Array.from([0xc0, 0x42])]), { encoding: "windows-1251" });
-            expect(tlk.search("\u0410B")).toEqual([{ strref: 0, text: "\u0410B" }]);
+            expect(await tlk.search("\u0410B")).toEqual([{ strref: 0, text: "\u0410B" }]);
             tlk.close();
         });
 
-        it("reads the table once however many searches are run", () => {
+        it("reads the table once however many searches are run", async () => {
             const bytes = buildTlk(SAMPLE);
             let reads = 0;
             const counting: ByteSource = {
@@ -492,10 +512,10 @@ describe("TLK (dialog.tlk)", () => {
                 close() {},
             };
             const tlk = openTlk(counting);
-            tlk.search("sword");
+            await tlk.search("sword");
             const afterFirst = reads;
-            tlk.search("shield");
-            tlk.search("fish");
+            await tlk.search("shield");
+            await tlk.search("fish");
             expect(reads).toBe(afterFirst);
         });
     });

@@ -59,6 +59,9 @@ export interface PickStrrefOptions {
 /**
  * Show the picker and resolve to the chosen strref, or undefined if it was dismissed. Results are fetched per
  * keystroke rather than up front: a real `dialog.tlk` holds six figures of strings.
+ *
+ * The search is async because the string table is decoded in chunks that yield to the event loop - the editor
+ * stays responsive while it builds, where a single synchronous pass froze the whole extension host.
  */
 export async function pickStrref(
     search: StrrefSearch,
@@ -66,7 +69,7 @@ export async function pickStrref(
     uri: vscode.Uri,
     options: PickStrrefOptions = {},
 ): Promise<number | undefined> {
-    const opening = strrefPickItems("", search(uri, "", PAGE_SIZE), lookup);
+    const opening = strrefPickItems("", await search(uri, "", PAGE_SIZE), lookup);
     // Nothing at all for the empty query means there is no string table to search - an open game answers it
     // with its first entries. Say so before opening anything, rather than showing a picker that reports "no
     // matching results" and so blames the query for a missing game.
@@ -83,8 +86,16 @@ export async function pickStrref(
     quickPick.matchOnDetail = false;
     quickPick.items = opening;
 
+    // Two keystrokes can be in flight at once, and nothing orders their results. Stamp each search and let
+    // only the newest one write: without this a slower earlier query lands last and the list shows results
+    // for text the user has already typed past.
+    let issued = 0;
     const refresh = (query: string): void => {
-        quickPick.items = strrefPickItems(query, search(uri, query, PAGE_SIZE), lookup);
+        const seq = ++issued;
+        void search(uri, query, PAGE_SIZE).then((matches) => {
+            if (seq !== issued) return;
+            quickPick.items = strrefPickItems(query, matches, lookup);
+        });
     };
 
     return new Promise<number | undefined>((resolve) => {

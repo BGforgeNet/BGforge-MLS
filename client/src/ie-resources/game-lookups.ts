@@ -25,7 +25,7 @@ export interface StrrefMatch {
  * Finds strings by what they say, for choosing one without knowing its number. `limit` caps the hits, since a
  * common word matches thousands in a real string table.
  */
-export type StrrefSearch = (uri: vscode.Uri, query: string, limit?: number) => readonly StrrefMatch[];
+export type StrrefSearch = (uri: vscode.Uri, query: string, limit?: number) => Promise<readonly StrrefMatch[]>;
 
 /** Resolves the identifier an IDS table gives a slot, for a document opened from a game. */
 export type SlotLabelResolver = (uri: vscode.Uri, tables: readonly string[], index: number) => string | undefined;
@@ -156,7 +156,7 @@ interface GameSource {
               tlk():
                   | {
                         get(strref: number): string | undefined;
-                        search(query: string, options?: { limit?: number }): readonly StrrefMatch[];
+                        search(query: string, options?: { limit?: number }): Promise<readonly StrrefMatch[]>;
                     }
                   | undefined;
               ids(resref: string): ReadonlyMap<number, string> | undefined;
@@ -179,12 +179,12 @@ interface GameSource {
 const DEFAULT_SEARCH_LIMIT = 100;
 
 export function createStrrefSearch(currentGame: GameSource, fallback?: GameDirFallback): StrrefSearch {
-    return (uri, query, limit = DEFAULT_SEARCH_LIMIT) => {
+    return async (uri, query, limit = DEFAULT_SEARCH_LIMIT) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return [];
         try {
             // gameAt and the male/default table, for the reasons given on the strref resolver below.
-            return currentGame.gameAt(gameDir)?.tlk()?.search(query, { limit }) ?? [];
+            return (await currentGame.gameAt(gameDir)?.tlk()?.search(query, { limit })) ?? [];
         } catch {
             // An unreadable game reads as "no matches" - the picker simply offers nothing to choose.
             return [];

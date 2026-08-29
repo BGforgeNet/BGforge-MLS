@@ -24,8 +24,9 @@ import { GAME_RESOURCE_SCHEME } from "../src/ie-resources/uri";
 
 const LINES: Record<number, string> = { 6348: "Ring of Protection +1", 72909: "" };
 
-/** Stands in for a real dialog.tlk search: substring, case-insensitive, in strref order, capped at `limit`. */
-function searchLines(query: string, limit: number) {
+/** Stands in for a real dialog.tlk search: substring, case-insensitive, in strref order, capped at `limit`.
+ *  Async like the real one, whose first call decodes the table in yielding chunks. */
+async function searchLines(query: string, limit: number) {
     return Object.entries(LINES)
         .map(([strref, text]) => ({ strref: Number(strref), text }))
         .filter((hit) => hit.text !== "" && hit.text.toLowerCase().includes(query.toLowerCase()))
@@ -61,7 +62,7 @@ function gameSource(
         tlk: () =>
             | {
                   get: (n: number) => string | undefined;
-                  search: (q: string, o?: { limit?: number }) => readonly StrrefMatch[];
+                  search: (q: string, o?: { limit?: number }) => Promise<readonly StrrefMatch[]>;
               }
             | undefined;
         ids: (resref: string) => ReadonlyMap<number, string> | undefined;
@@ -245,7 +246,7 @@ describe("createStrrefResolver", () => {
         const get = vi.fn();
         const spySession = {
             gameAt: () => ({
-                tlk: () => ({ get, search: () => [] }),
+                tlk: () => ({ get, search: () => Promise.resolve([]) }),
                 ids: () => undefined,
                 idsAll: () => undefined,
                 twoDa: () => undefined,
@@ -319,14 +320,14 @@ describe("createStringTableProbe", () => {
 });
 
 describe("createStrrefSearch", () => {
-    it("finds strings by what they say, against the game the URI names", () => {
-        expect(createStrrefSearch(gameSource())(gameUri(), "protection")).toEqual([
+    it("finds strings by what they say, against the game the URI names", async () => {
+        expect(await createStrrefSearch(gameSource())(gameUri(), "protection")).toEqual([
             { strref: 6348, text: "Ring of Protection +1" },
         ]);
     });
 
-    it("passes the caller's limit through, so a common word cannot flood a picker", () => {
-        const search = vi.fn(() => []);
+    it("passes the caller's limit through, so a common word cannot flood a picker", async () => {
+        const search = vi.fn(() => Promise.resolve([]));
         const spySession = {
             gameAt: () => ({
                 tlk: () => ({ get: () => undefined, search }),
@@ -343,24 +344,24 @@ describe("createStrrefSearch", () => {
             }),
         };
 
-        createStrrefSearch(spySession)(gameUri(), "sword", 5);
+        await createStrrefSearch(spySession)(gameUri(), "sword", 5);
 
         expect(search).toHaveBeenCalledWith("sword", { limit: 5 });
     });
 
-    it("finds nothing for a document outside a game", () => {
+    it("finds nothing for a document outside a game", async () => {
         const fileUri = { scheme: "file", query: "g=%2Fgames%2Ftob", path: "/mods/sw1h01.itm" } as never;
 
-        expect(createStrrefSearch(gameSource())(fileUri, "protection")).toEqual([]);
+        expect(await createStrrefSearch(gameSource())(fileUri, "protection")).toEqual([]);
     });
 
-    it("finds nothing when the game has no string table", () => {
-        expect(createStrrefSearch(gameSource({ noTlk: true }))(gameUri(), "protection")).toEqual([]);
+    it("finds nothing when the game has no string table", async () => {
+        expect(await createStrrefSearch(gameSource({ noTlk: true }))(gameUri(), "protection")).toEqual([]);
     });
 
     // An unreadable game reads as "no matches", exactly as the strref resolver treats it as "no line".
-    it("finds nothing when the game cannot be opened", () => {
-        expect(createStrrefSearch(gameSource({ throws: true }))(gameUri(), "protection")).toEqual([]);
+    it("finds nothing when the game cannot be opened", async () => {
+        expect(await createStrrefSearch(gameSource({ throws: true }))(gameUri(), "protection")).toEqual([]);
     });
 });
 

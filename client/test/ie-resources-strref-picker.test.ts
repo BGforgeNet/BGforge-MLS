@@ -124,15 +124,26 @@ describe("strrefPickItems", () => {
     });
 });
 
+/** Let every pending microtask and one macrotask run - the shape the yielding table build settles on. */
+function flush(): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, 0);
+    });
+}
+
 describe("pickStrref", () => {
     const uri = { scheme: "bgforge-game" } as never;
     const search = (_uri: unknown, query: string) =>
         matches.filter((match) => match.text.toLowerCase().includes(query.toLowerCase()));
+    const asyncSearch = (uriArg: unknown, query: string): Promise<readonly StrrefMatch[]> =>
+        Promise.resolve(search(uriArg, query));
 
-    function open() {
+    async function open() {
         created.length = 0;
         warned.length = 0;
-        const result = pickStrref(search, lookup, uri);
+        const result = pickStrref(asyncSearch, lookup, uri);
+        // The opening search is awaited before the widget exists, so let it settle first.
+        await flush();
         return { result, pick: created[0]! };
     }
 
@@ -141,7 +152,7 @@ describe("pickStrref", () => {
         warned.length = 0;
         // What a closed game answers with: no strings for any query, the empty one included.
         const result = await pickStrref(
-            () => [],
+            () => Promise.resolve([]),
             () => undefined,
             uri,
         );
@@ -153,44 +164,75 @@ describe("pickStrref", () => {
     });
 
     it("resolves to the chosen string's number", async () => {
-        const { result, pick } = open();
+        const { result, pick } = await open();
         pick.accept(pick.items.find((item) => item.strref === 6348));
         await expect(result).resolves.toBe(6348);
     });
 
     it("resolves to undefined when dismissed without choosing", async () => {
-        const { result, pick } = open();
+        const { result, pick } = await open();
         pick.dismiss();
         await expect(result).resolves.toBeUndefined();
     });
 
-    it("re-runs the search as the query changes", () => {
-        const { pick } = open();
+    it("re-runs the search as the query changes", async () => {
+        const { pick } = await open();
         pick.type("sword");
+        await flush();
         expect(pick.items.map((item) => item.strref)).toEqual([6348]);
         pick.type("ring");
+        await flush();
         expect(pick.items.map((item) => item.strref)).toEqual([12]);
     });
 
-    it("shows the table's opening strings before anything is typed", () => {
-        const { pick } = open();
+    it("shows the table's opening strings before anything is typed", async () => {
+        const { pick } = await open();
         expect(pick.items.map((item) => item.strref)).toEqual([12, 6348]);
         expect(pick.shown).toBe(true);
     });
 
-    it("leaves the client's own filtering off, so a hit cannot be hidden twice over", () => {
-        const { pick } = open();
+    it("shows the newest query's results when an earlier search settles later", async () => {
+        // The string table is decoded in yielding chunks, so a search is async and two keystrokes can be in
+        // flight at once. Without a sequence guard the slower EARLIER query lands last and the list shows
+        // results for text the user has already typed past.
+        created.length = 0;
+        warned.length = 0;
+        const pending: Array<() => void> = [];
+        const slowSearch = (_uri: unknown, query: string): Promise<readonly StrrefMatch[]> =>
+            new Promise((resolve) => {
+                pending.push(() => resolve(search(_uri, query)));
+            });
+        void pickStrref(slowSearch, lookup, uri);
+        pending.shift()?.(); // the opening empty-query search, which gates the widget
+        await flush();
+        const pick = created[0]!;
+
+        pick.type("sword");
+        pick.type("ring");
+        // Settle them in the order they were issued, but with "ring" (the newer) resolving first.
+        const forSword = pending.shift()!;
+        const forRing = pending.shift()!;
+        forRing();
+        await flush();
+        forSword();
+        await flush();
+
+        expect(pick.items.map((item) => item.strref)).toEqual([12]);
+    });
+
+    it("leaves the client's own filtering off, so a hit cannot be hidden twice over", async () => {
+        const { pick } = await open();
         expect(pick.matchOnDescription).toBe(false);
         expect(pick.matchOnDetail).toBe(false);
     });
 
     it("disposes the widget exactly once, whether the pick was accepted or dismissed", async () => {
-        const accepted = open();
+        const accepted = await open();
         accepted.pick.accept(accepted.pick.items[0]);
         await accepted.result;
         expect(accepted.pick.disposed).toBe(1);
 
-        const dismissed = open();
+        const dismissed = await open();
         dismissed.pick.dismiss();
         await dismissed.result;
         expect(dismissed.pick.disposed).toBe(1);

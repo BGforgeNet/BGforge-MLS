@@ -94,8 +94,12 @@ export interface Tlk {
      *
      * Unlike `get`, this has to look at every entry, so the first call reads the whole table and keeps the
      * decoded strings; later searches are answered from that. Entries with no text are never hits.
+     *
+     * Async because that first pass decodes and case-folds six figures of strings: it is built in chunks
+     * that yield to the event loop, so a caller on a UI thread is not frozen for the whole pass. Later
+     * searches resolve off the built table.
      */
-    search(query: string, options?: TlkSearchOptions): TlkMatch[];
+    search(query: string, options?: TlkSearchOptions): Promise<TlkMatch[]>;
     close(): void;
 }
 
@@ -110,6 +114,17 @@ export interface TlkOptions {
 }
 
 const DEFAULT_SEARCH_LIMIT = 100;
+
+/** Entries decoded per chunk of the search-table build, between yields. Sized against a real dialog.tlk so a
+ *  chunk lands under a 16 ms frame - large enough that the yields themselves do not dominate the pass. */
+const BUILD_CHUNK = 2048;
+
+/** Hand the event loop back for one macrotask, so rendering and input run between chunks. */
+function yieldToLoop(): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, 0);
+    });
+}
 
 export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
     const header = headerCodec.read(readerOf(source.read(0, TLK_HEADER_BYTES)));
@@ -138,35 +153,57 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
     // per search means re-lowering the whole table per keystroke; doing it here costs one more pass over a
     // table already in memory.
     let allLower: (string | undefined)[] | undefined;
+    // The in-flight build, so concurrent searches (a picker searches on every keystroke) share one pass
+    // instead of each starting their own and decoding the table N times over.
+    let building: Promise<void> | undefined;
 
-    function readAllText(): (string | undefined)[] {
+    async function buildTable(): Promise<void> {
         // Two bulk reads rather than two per entry: a real dialog.tlk holds six figures of strings, and the
         // positioned-read-per-entry shape that suits `get` costs hundreds of thousands of syscalls here.
         const entries = source.read(TLK_HEADER_BYTES, count * TLK_ENTRY_BYTES);
         const stringBytes = source.read(stringsOffset, source.size - stringsOffset);
+        await yieldToLoop(); // the two reads cover the whole file; do not fold them into the first chunk
         const text: (string | undefined)[] = [];
+        const lower: (string | undefined)[] = [];
         for (let strref = 0; strref < count; strref++) {
+            // Decoding and case-folding six figures of strings in one pass freezes the caller's thread - on
+            // the extension host that is the whole editor. Hand the loop back every chunk so it stays a
+            // background job. `await` on a timer is a macrotask, which is what lets rendering actually run.
+            // Sequential IS the point here: the rule's Promise.all advice would run the chunks concurrently
+            // and never hand the loop back, which is the whole fix.
+            // oxlint-disable-next-line no-await-in-loop
+            if (strref > 0 && strref % BUILD_CHUNK === 0) await yieldToLoop();
             const entry = entryCodec.read(readerOf(entries.subarray(strref * TLK_ENTRY_BYTES)));
             // Pushed for every strref, no-text entries included, so the index stays the strref.
-            text.push(
+            const decoded =
                 (entry.flags & TLK_TEXT_FLAG) === 0 || entry.stringLength === 0
                     ? undefined
                     : decodeString(
                           stringBytes.subarray(entry.stringOffset, entry.stringOffset + entry.stringLength),
                           encoding,
-                      ),
-            );
+                      );
+            text.push(decoded);
+            lower.push(decoded?.toLowerCase());
         }
-        return text;
+        // Published together, at the end: a search that ran between chunks must see either no table or a
+        // whole one, never a partial pair whose indices disagree.
+        allText = text;
+        allLower = lower;
+    }
+
+    function ensureTable(): Promise<void> {
+        building ??= buildTable();
+        return building;
     }
 
     return {
         count,
         languageId: header.languageId,
-        search(query, searchOptions = {}) {
+        async search(query, searchOptions = {}) {
             const limit = searchOptions.limit ?? DEFAULT_SEARCH_LIMIT;
-            const text = (allText ??= readAllText());
-            const lower = (allLower ??= text.map((entry) => entry?.toLowerCase()));
+            await ensureTable();
+            const text = allText ?? [];
+            const lower = allLower ?? [];
             const needle = query.toLowerCase();
             const hits: TlkMatch[] = [];
             for (let strref = 0; strref < count && hits.length < limit; strref++) {
