@@ -7,7 +7,8 @@ import { openGame, type Game } from "@bgforge/binary";
  */
 export type GameOpener = (dir: string, encoding: string | undefined) => Game;
 
-const defaultOpener: GameOpener = (dir, encoding) =>
+/** The one place the open options are built, so a caller wrapping this cannot let them drift. */
+export const defaultOpener: GameOpener = (dir, encoding) =>
     // Engine mode: resolve what the running game sees, so a mod's override files win as they do in play.
     openGame(dir, { mode: "engine", ...(encoding === undefined ? {} : { encoding }) });
 
@@ -44,6 +45,10 @@ export class CurrentGame {
     /**
      * The one place a game is opened. Both entry points route through it so the options cannot drift - a
      * setting honoured by only one of them is a setting that works intermittently.
+     *
+     * The opener is synchronous and proportional to the install, and one of the two entry points below
+     * opens LAZILY - at whatever moment first needs a string - so it is worth timing. That is done by
+     * wrapping the opener at the construction site (register.ts), which keeps this module free of vscode.
      */
     private openAt(dir: string): Game {
         return this.opener(dir, this.tlkEncoding?.());

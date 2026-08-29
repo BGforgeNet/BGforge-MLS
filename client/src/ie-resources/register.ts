@@ -3,7 +3,8 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { conlog } from "../logging";
 import { GameResourceFileSystemProvider } from "./fs-provider";
-import { CurrentGame } from "./current-game";
+import { CurrentGame, defaultOpener } from "./current-game";
+import { timedHost } from "../timing";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
     createNamingTableResolver,
@@ -119,10 +120,16 @@ export function registerIeResources(context: vscode.ExtensionContext): {
 } {
     // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
     // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
-    const currentGame = new CurrentGame(() => {
-        const encoding = vscode.workspace.getConfiguration("bgforge").get<string>("weidu.tlkEncoding", "");
-        return encoding === "" ? undefined : encoding;
-    });
+    const currentGame = new CurrentGame(
+        () => {
+            const encoding = vscode.workspace.getConfiguration("bgforge").get<string>("weidu.tlkEncoding", "");
+            return encoding === "" ? undefined : encoding;
+        },
+        // Opening a game is synchronous and proportional to the install, and one entry point opens lazily
+        // - at whatever moment first needs a string - so a stall here has no obvious cause from the
+        // outside. Report it when it holds the host past the budget, as the server does for its requests.
+        (dir, encoding) => timedHost("openGame", () => defaultOpener(dir, encoding)),
+    );
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured

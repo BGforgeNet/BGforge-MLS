@@ -4,7 +4,12 @@
  * Wraps an LSP handler function and logs a warning when the call exceeds a
  * configurable threshold. The default threshold is 50 ms; override via the
  * BGFORGE_LSP_SLOW_MS environment variable (parsed once at module load).
+ *
+ * The measurement itself lives in `shared/timing.ts`, which the extension host's own timing shares - this
+ * module is the LSP-shaped adapter over it (handler in, wrapped handler out, tagged `lsp-timing`).
  */
+
+import { timed } from "../../../shared/timing";
 
 /** Default slow-request threshold in milliseconds. See docs/architecture.md#latency-budgets for per-operation targets. */
 const ENV_THRESHOLD_MS = parseInt(process.env["BGFORGE_LSP_SLOW_MS"] ?? "", 10);
@@ -39,45 +44,7 @@ export function timeHandler<TArgs extends unknown[], TReturn>(
     const { warn, thresholdMs = DEFAULT_THRESHOLD_MS } = options;
 
     return function (...args: TArgs): TReturn {
-        const start = performance.now();
-
-        let result: TReturn;
-        try {
-            result = fn(...args);
-        } catch (error) {
-            const elapsed = Math.round(performance.now() - start);
-            warn(`[lsp-timing] ${name} threw after ${elapsed}ms`);
-            throw error;
-        }
-
-        // If the result is a Promise, attach timing to its settlement.
-        if (result instanceof Promise) {
-            // `result instanceof Promise` only narrows to Promise<unknown>; the
-            // attached `.then(...)` chain is typed Promise<unknown>. We are in the
-            // branch where TReturn itself is a Promise, so re-asserting back to
-            // TReturn restores the caller-visible signature.
-            return result.then(
-                (value) => {
-                    const elapsed = Math.round(performance.now() - start);
-                    if (elapsed > thresholdMs) {
-                        warn(`[lsp-timing] ${name} took ${elapsed}ms`);
-                    }
-                    return value;
-                },
-                (error: unknown) => {
-                    const elapsed = Math.round(performance.now() - start);
-                    warn(`[lsp-timing] ${name} threw after ${elapsed}ms`);
-                    throw error;
-                },
-            ) as unknown as TReturn;
-        }
-
-        // Sync path: measure after the call returns.
-        const elapsed = Math.round(performance.now() - start);
-        if (elapsed > thresholdMs) {
-            warn(`[lsp-timing] ${name} took ${elapsed}ms`);
-        }
-        return result;
+        return timed(name, { warn, thresholdMs, tag: "lsp-timing" }, () => fn(...args));
     };
 }
 
