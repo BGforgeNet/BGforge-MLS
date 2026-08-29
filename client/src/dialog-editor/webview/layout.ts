@@ -4,11 +4,31 @@
  * starting state lands in the same aligned first column - see layoutFlow.
  */
 
-// elk.bundled.js ships its web-worker inline; safe in a webview/headless context.
 import ELK from "elkjs/lib/elk.bundled.js";
+import elkWorkerSource from "elk-worker-source";
 import type { FlowGraph } from "./model-to-flow";
 
-const elk = new ELK();
+/**
+ * Lay out in a real Worker where the platform has one.
+ *
+ * Constructed with no options, elkjs falls back to an in-process FAKE worker and runs the whole layout on
+ * the calling thread - a few hundred milliseconds for a companion-sized dialog, during which the webview
+ * cannot paint or accept input. The worker script is embedded in the bundle (see
+ * scripts/esbuild-elk-worker.mjs) and handed over as a blob: URL, because a webview's resource URLs are a
+ * different origin and a Worker must be same-origin; `worker-src blob:` in the panel's CSP admits it.
+ *
+ * Node (the unit tests) has no `Worker` global, so there the fallback stands and the layout runs inline -
+ * correct, just synchronous, which is what those tests assert against. The browser path is covered by the
+ * render harness, which is the only tier that can observe the difference.
+ */
+function layoutEngine(): InstanceType<typeof ELK> {
+    if (typeof Worker === "undefined") return new ELK();
+    return new ELK({
+        workerFactory: () => new Worker(URL.createObjectURL(new Blob([elkWorkerSource], { type: "text/javascript" }))),
+    });
+}
+
+const elk = layoutEngine();
 
 export async function layoutFlow(graph: FlowGraph): Promise<void> {
     // A starting state is a card no transition points at (no inbound edge) - the entry

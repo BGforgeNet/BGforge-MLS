@@ -65,6 +65,16 @@ describe("buildDialogWebviewHtml", () => {
         expect(html).toContain("default-src 'none'");
     });
 
+    test("allows a blob-backed worker, which is where the graph layout runs", () => {
+        // elkjs lays out on the calling thread unless it is given a worker, and a dialog of a few hundred
+        // states is a multi-hundred-millisecond freeze of the webview. The worker script is embedded in the
+        // bundle and handed to `new Worker` as a blob: URL, so `worker-src` must admit blob:. `default-src
+        // 'none'` does NOT fall back to script-src for workers - without this directive the Worker is blocked.
+        const html = buildDialogWebviewHtml({ cspSource: CSP_SOURCE, cssUri: CSS_URI, nonce: NONCE, scriptBody: "0;" });
+        const workerSrc = /worker-src ([^;]*);/.exec(html)?.[1] ?? "";
+        expect(workerSrc).toContain("blob:");
+    });
+
     test("links the stylesheet via the passed webview URI", () => {
         const html = buildDialogWebviewHtml({ cspSource: CSP_SOURCE, cssUri: CSS_URI, nonce: NONCE, scriptBody: "0;" });
         expect(html).toContain(`<link rel="stylesheet" href="${CSS_URI}" />`);

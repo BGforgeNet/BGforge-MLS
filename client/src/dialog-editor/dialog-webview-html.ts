@@ -34,9 +34,16 @@ export function buildDialogWebviewHtml(opts: DialogWebviewHtmlOptions): string {
     // the BAF syntax tokenizer compiles a tree-sitter grammar, and WebAssembly compilation is
     // gated by script-src, so a nonce alone leaves the fields flat. No connect-src is needed -
     // the wasm is embedded in the script bundle, not fetched (see webview/main.ts).
+    //
+    // worker-src admits blob: for the graph layout worker. elkjs lays out on the calling thread unless it is
+    // constructed with one, which froze the webview for the length of the layout; its worker script is
+    // embedded in the bundle and handed to `new Worker` as a blob: URL, since a webview resource URL is a
+    // different origin and a Worker must be same-origin. Workers do not fall back to script-src, so without
+    // this directive `default-src 'none'` blocks it.
     const csp =
         `default-src 'none'; img-src ${cspSource} data:; font-src ${cspSource}; ` +
-        `style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval';`;
+        `style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval'; ` +
+        `worker-src blob:;`;
     const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="${csp}" />
 <link rel="stylesheet" href="${cssUri}" /></head>

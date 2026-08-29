@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DARK_THEME_VARS } from "./theme-vars";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../../../../scripts/esbuild-web-tree-sitter.mjs";
+import { elkWorkerAsText } from "../../../../../scripts/esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "../../../../../scripts/esbuild-svelte-warnings.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -31,6 +32,7 @@ await build({
     plugins: [
         esbuildSvelte({ compilerOptions: { dev: true, css: "injected" }, filterWarnings: dropThirdPartyWarnings }),
         stubNodeOnlyImports,
+        elkWorkerAsText,
     ],
 });
 const js = fs.readFileSync(path.join(outdir, "harness-main.js"), "utf8");
@@ -40,10 +42,11 @@ fs.rmSync(outdir, { recursive: true, force: true });
 const flowCss = fs.readFileSync(path.join(repo, "client/node_modules/@xyflow/svelte/dist/style.css"), "utf8");
 
 // Mirror the production CSP *shape* (panel.ts / dialog-webview-html.ts): a nonce'd inline
-// script and style-src 'unsafe-inline' (Svelte Flow positions nodes via inline transform
-// style attributes; elkjs runs inline, no blob: worker). A fixed nonce is fine here - the
-// file is static. 'wasm-unsafe-eval' is here because the tokenizer compiles a grammar and the real
-// policy will need it; no connect-src, because the harness embeds the wasm rather than fetching it.
+// script, style-src 'unsafe-inline' (Svelte Flow positions nodes via inline transform style
+// attributes) and worker-src blob: (elkjs lays out in a worker built from embedded source).
+// A fixed nonce is fine here - the file is static. 'wasm-unsafe-eval' is here because the tokenizer
+// compiles a grammar and the real policy will need it; no connect-src, because the harness embeds
+// the wasm rather than fetching it.
 //
 // This policy is DECORATIVE, and knowing that matters: Chromium does not enforce a <meta>-delivered CSP on
 // a file:// page, so the driver's "no CSP violations" check cannot fail on a script-src mistake here (probed
@@ -53,7 +56,7 @@ const flowCss = fs.readFileSync(path.join(repo, "client/node_modules/@xyflow/sve
 const NONCE = "dlgharnessnonce";
 const csp =
     `default-src 'none'; img-src data:; font-src data:; ` +
-    `style-src 'unsafe-inline'; script-src 'nonce-${NONCE}' 'wasm-unsafe-eval';`;
+    `style-src 'unsafe-inline'; script-src 'nonce-${NONCE}' 'wasm-unsafe-eval'; worker-src blob:;`;
 // The dialog editor's styles consume --vscode-* theme variables (see theme-vars.ts); the real VS Code
 // webview injects these from the active color theme, so the harness needs its own fallback block or
 // every themed color renders unset. Dark+ is the baked-in default here (matching the pre-theming

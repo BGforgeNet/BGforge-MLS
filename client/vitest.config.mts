@@ -22,6 +22,11 @@ export default defineConfig({
             "@bgforge/image/frame-anchor": path.resolve(import.meta.dirname, "../image/src/model/frame-anchor.ts"),
             "@bgforge/image/ie-direction": path.resolve(import.meta.dirname, "../image/src/model/ie-direction.ts"),
             "@bgforge/image": path.resolve(import.meta.dirname, "../image/src/index.ts"),
+            // The dialog editor's layout module imports elkjs's worker source under a virtual specifier
+            // that only the webview build resolves (scripts/esbuild-elk-worker.mjs). vitest runs no
+            // esbuild plugins, so it needs its own mapping. The value is never read here: node has no
+            // `Worker`, so layout.ts keeps its inline engine and never builds a blob from this.
+            "elk-worker-source": path.resolve(import.meta.dirname, "test/stubs/elk-worker-source.ts"),
         },
     },
     test: {

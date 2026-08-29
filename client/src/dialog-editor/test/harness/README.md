@@ -51,6 +51,9 @@ Prereqs: `playwright` is a pinned devDep (resolved by `pnpm install`); install t
   CodeField colours per token (editor-parity hues) with the overlay aligned to the textarea and no CSP violation.
 - `render-ts.mts` - the same for the TypeScript-based languages (`.td`/`.tssl`): a real TSSL parse whose
   condition carries distinctly-TypeScript operators (`&&`, `!`), asserting the TypeScript grammar colours it.
+- `render-layout-thread.mts` - the layout-thread driver: asserts the graph layout runs in a real Worker and
+  that re-laying out a large dialog never blocks the main thread for long. Browser-only - node has no
+  `Worker`, so `dialog-layout.test.ts` exercises the inline fallback and cannot see this.
 - `render-dlg-tree.mts` - the compiled-dialog driver: a model spanning several `.dlg` files, asserting the
   neighbouring states are drawn as cards (so a hand-off out and back closes as one graph), are marked with the
   dialog they belong to, and offer none of the controls that would write a file the editor did not open.

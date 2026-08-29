@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "./esbuild-web-tree-sitter.mjs";
+import { elkWorkerAsText } from "./esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "./esbuild-svelte-warnings.mjs";
 
 const dev = process.argv.includes("--sourcemap");
@@ -34,5 +35,8 @@ await build({
             filterWarnings: dropThirdPartyWarnings,
         }),
         stubNodeOnlyImports,
+        // The dialog webview lays its graph out in a Worker built from this embedded source; the binary and
+        // image entries import nothing from it, so the plugin never fires for them.
+        elkWorkerAsText,
     ],
 });

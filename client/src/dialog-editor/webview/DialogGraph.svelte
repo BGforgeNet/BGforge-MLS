@@ -178,6 +178,12 @@
     const tabPos = new Map<string, Map<string, { x: number; y: number }>>();
     let renderedFile = "";
 
+    // Whether a model has been taken on at all, set SYNCHRONOUSLY when one arrives. Distinct from
+    // `renderedFile`, which the reset effect once read for the same question: that is only assigned once a
+    // rebuild finishes, and a rebuild now waits on the layout worker - so a re-post arriving before the
+    // first layout came back read as a different file and reset the view, discarding the selection.
+    let modelLoaded = false;
+
     // Target dropdown offers same-file states only - a GOTO (kind:state) is within one
     // dialog; cross-file links are EXTERN and handled separately. Deduped: a root can repeat a
     // state label (two CHAIN blocks sharing a terminal label), and a keyed {#each} over the raw
@@ -640,7 +646,14 @@
     // Renders only the active tab's root. Each tab's positions are cached in `tabPos`, so a
     // switch restores a previously-laid-out tab without elk and without inheriting the
     // previous tab's drags (guarded by `renderedFile`).
+    // Rebuilds are fired and not awaited, and one that relayouts now waits on a worker round-trip - so a
+    // later rebuild (an adopt after an external edit, a tab switch) can start and finish while an earlier
+    // one is still out at the layout. Stamp each and let only the newest write: without this the stale
+    // rebuild lands last and overwrites the newer graph, taking the selection with it.
+    let rebuildSeq = 0;
+
     async function rebuild(opts: { frame?: "entry" | "fit" | "none"; focusId?: string; relayout?: boolean } = {}): Promise<void> {
+        const seq = ++rebuildSeq;
         // Flush any live drags on the currently-rendered tab into its cache before we may
         // switch tabs - a drag updates `nodes` but fires no rebuild, so without this the
         // dragged positions are lost when leaving and returning to the tab.
@@ -660,6 +673,9 @@
 
         if (opts.relayout || !cached) {
             await layoutFlow(g);
+            // The layout is a worker round-trip, so a newer rebuild may have run to completion while this
+            // one waited. Writing now would put the stale graph on screen and drop the newer selection.
+            if (seq !== rebuildSeq) return;
         } else {
             // Start from this tab's cached positions; merge live drags only if `nodes` still
             // shows this same tab (otherwise it holds the previous tab's coordinates).
@@ -875,12 +891,13 @@
     $effect(() => {
         const src = model;
         untrack(() => {
-            const sameFile = renderedFile !== "" && src.sourceName === editModel.sourceName;
+            const sameFile = modelLoaded && src.sourceName === editModel.sourceName;
             if (sameFile) {
                 adoptModel(src);
                 return;
             }
             suppressEmit = true;
+            modelLoaded = true;
             editModel = cloneModel(src);
             tabPos.clear();
             renderedFile = "";

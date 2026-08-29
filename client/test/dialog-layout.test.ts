@@ -1,7 +1,8 @@
 /**
  * Tests for layoutFlow: the elkjs layered layout that assigns node positions for the
- * graph render. elkjs's bundled build runs inline (no real web worker), so it executes
- * under node/vitest. Asserts the two contracts that matter for the render: every node
+ * graph render. Node has no `Worker`, so layout.ts falls back to elkjs's inline engine here and these
+ * run in-process; the webview builds a real worker instead, which only the render harness
+ * (render-layout-thread.mts) can observe. Asserts the two contracts that matter for the render: every node
  * gets a position, and start states (no inbound edge) share the leftmost column.
  */
 
