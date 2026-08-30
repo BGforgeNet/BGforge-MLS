@@ -27,6 +27,15 @@ source "$SCRIPT_DIR/parallel-lib.sh"
 step "Phases 1-2: Static Analysis + Unit Tests + Builds"
 TEST_STOP_AFTER_BUILD=1 TEST_COVERAGE=1 "$SCRIPT_DIR/test.sh"
 
+# The server coverage run above defers the two dialog-parser timing assertions. V8 coverage makes
+# their from-scratch ts-morph arm about 7x slower, then the parallel package suites can starve it
+# past Vitest's 60s hang bound on a 4-vCPU runner. Run the file again without instrumentation and
+# without competing suites: the relative speedup remains a close-out gate, under the cost model it
+# is intended to measure. TEST_COVERAGE=0 is explicit in case test-all.sh inherited it from its caller.
+step "Dialog source parser reuse performance (serial, no coverage)"
+TEST_COVERAGE=0 pnpm exec vitest run --config server/vitest.config.mts \
+    server/test/dialog-source-project-reuse.test.ts --maxWorkers=4
+
 # test.sh already reset external repos; propagate the flag so test-external.sh skips
 # its own redundant reset (the export inside test.sh doesn't survive the subprocess).
 export EXTERNAL_REPOS_CLEAN=1

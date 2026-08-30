@@ -59,6 +59,13 @@ function medianMs(runs: number): (fn: () => void) => number {
 
 const median = medianMs(9);
 
+// V8 coverage makes the from-scratch TypeScript project construction about 7x slower, and the
+// close-out coverage phase shares a 4-vCPU runner with the other package suites. That turns this
+// relative benchmark into a stochastic 60s timeout even though its ratio still passes. test-all.sh
+// defers these two timing cases to a dedicated uninstrumented serial step; the functional cases stay
+// in the coverage run.
+const timingIt = process.env.TEST_COVERAGE === "1" ? it.skip : it;
+
 describe("dialog source parsers reuse their ts-morph project", () => {
     describe("TD", () => {
         const familiars = td("familiars_v2.td");
@@ -89,7 +96,7 @@ describe("dialog source parsers reuse their ts-morph project", () => {
             }
         });
 
-        it("parses a repeated document at least 10x faster than parsing it from scratch", () => {
+        timingIt("parses a repeated document at least 3x faster than parsing it from scratch", () => {
             parseTDSource(familiars); // warm up: first call builds whatever is reused
             expect(median(() => void parseTDSource(familiars))).toBeLessThan(fromScratchMs(familiars) / MIN_SPEEDUP);
         });
@@ -107,7 +114,7 @@ describe("dialog source parsers reuse their ts-morph project", () => {
             expect(again.nodes.map((n) => n.name)).toEqual(first.nodes.map((n) => n.name));
         });
 
-        it("parses a repeated document at least 10x faster than parsing it from scratch", () => {
+        timingIt("parses a repeated document at least 3x faster than parsing it from scratch", () => {
             parseTSSLSource(flat); // warm up: first call builds whatever is reused
             expect(median(() => void parseTSSLSource(flat))).toBeLessThan(fromScratchMs(flat) / MIN_SPEEDUP);
         });
