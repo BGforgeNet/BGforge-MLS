@@ -13,9 +13,10 @@
  * error. Both sides of the differential read the SAME install (BGFORGE_IE_GAME) so a construct the install's
  * edition lacks is refused by both sides - agreement, not a false disagreement.
  *
- * Skips cleanly when WeiDU or a game install is unavailable, the way the corpus suites skip on an
- * unchecked-out external/. This never runs in CI: game data is not redistributable, so there is no install
- * to point BGFORGE_IE_GAME at there. Set it to a local install to run this suite.
+ * Skips on an unchecked-out external/ or an unset BGFORGE_IE_GAME, the way the other corpus suites skip on
+ * absent fixtures - this never runs in CI, because game data is not redistributable, so there is no install
+ * to point BGFORGE_IE_GAME at there. Set it to a local install to run this suite. An absent WeiDU is NOT
+ * one of those cases: once the install is there the binary is provisioned, never skipped over.
  */
 
 import { execFileSync } from "child_process";
@@ -28,19 +29,14 @@ import { compileBafText } from "../../src/weidu-baf/compiler";
 import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
 import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
 import { initParser, getParser } from "../../../shared/parsers/weidu-baf";
+import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "./weidu-binary";
 import { IE_FIXTURES } from "./test-helpers";
 
 /** An installed IE game directory whose tables both compilers read. Unset means "skip", not "use --nogame". */
 const GAME = process.env.BGFORGE_IE_GAME;
 
-/** `scripts/ensure-weidu.sh` resolves a pinned WeiDU and exports this; both test scripts already call it. */
-const WEIDU = process.env.WEIDU_BIN ?? "weidu";
-
 /** WeiDU exits 4 on a genuine parse failure. Anything else it throws for is not a verdict, so it is reported. */
 const WEIDU_PARSE_ERROR = 4;
-
-/** A synchronous spawn without an explicit timeout cannot be interrupted by vitest's own timeout. */
-const WEIDU_TIMEOUT_MS = 15000;
 
 /**
  * A `%variable%` (assigned by a tp2 during install) or a `@123` translation reference (whose number the
@@ -52,25 +48,18 @@ const WEIDU_TIMEOUT_MS = 15000;
  */
 const SUBSTITUTION = /%[A-Za-z_][A-Za-z0-9_]*%|@\d+/;
 
-/** Mirrors `compilers/bcs/test/weidu-differential.test.ts`'s own guard: skip cleanly, never fail confusingly. */
-function weiduAvailable(): boolean {
-    try {
-        execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-const available = weiduAvailable();
 const files = fg.sync("**/*.baf", { cwd: IE_FIXTURES, absolute: true, caseSensitiveMatch: false }).sort();
 const selfContained = files.filter((f) => !SUBSTITUTION.test(fs.readFileSync(f, "utf8")));
 const needsInstall = files.filter((f) => SUBSTITUTION.test(fs.readFileSync(f, "utf8")));
 
-describe.skipIf(files.length === 0 || !GAME || !available)("built-in BAF compiler vs the reference", () => {
+/** The binary to drive, resolved once the suite is known to run - see the header on why WeiDU is not a skip. */
+let weidu = "";
+
+describe.skipIf(files.length === 0 || !GAME)("built-in BAF compiler vs the reference", () => {
     let opts: (file: string) => Parameters<typeof compileBafText>[0];
 
     beforeAll(async () => {
+        weidu = resolveWeidu();
         await initParser();
         const parser = getParser();
         // Built ONCE from the same install WeiDU reads, not per file: a `Game` opens archives and caches
@@ -163,14 +152,14 @@ interface WeiduVerdict {
  */
 function weiduVerdict(file: string): WeiduVerdict {
     try {
-        const output = execFileSync(WEIDU, ["--no-exit-pause", "--noautoupdate", "--parse-check", "baf", file], {
+        const output = execFileSync(weidu, ["--no-exit-pause", "--noautoupdate", "--parse-check", "baf", file], {
             cwd: GAME,
             timeout: WEIDU_TIMEOUT_MS,
             stdio: "pipe",
         }).toString();
         return { accepted: !PARSE_ERROR.test(output), output };
     } catch (error) {
-        const status = (error as { status?: number | null }).status;
+        const status = exitStatus(error);
         if (status === WEIDU_PARSE_ERROR) {
             const output = (error as { stdout?: Buffer | string | null }).stdout?.toString() ?? "";
             return { accepted: false, output };
