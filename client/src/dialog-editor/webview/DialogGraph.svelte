@@ -28,6 +28,7 @@
     import { decideReparse, type ReparseMessage } from "./reparse-decision";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
+    import { deepRead } from "./deep-read";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "../../../../shared/dialog-editability";
@@ -920,20 +921,27 @@
     // optimistic edit the user has already made. Plain (non-reactive): it drives no rendering.
     let localSeq = 0;
 
-    // Emit every user edit to the host (production only). A single effect deep-reads editModel via
-    // $state.snapshot, so ANY mutation - structural op OR inline inspector field edit - re-runs it. The host
-    // splices the model into the live document as one WorkspaceEdit (one native undo step) and side-writes
-    // message text to .tra. $state.snapshot yields a plain clone safe for the postMessage boundary (a raw
-    // $state proxy throws DataCloneError). The effect-cleanup clears the pending timer, giving both the
-    // debounce (prior timer cancelled before each re-run) and teardown safety (no post after unmount).
+    // Emit every user edit to the host (production only). A single effect deep-reads editModel, so ANY
+    // mutation - structural op OR inline inspector field edit - re-runs it. The host splices the model into
+    // the live document as one WorkspaceEdit (one native undo step) and side-writes message text to .tra.
+    // The effect-cleanup clears the pending timer, giving both the debounce (prior timer cancelled before
+    // each re-run) and teardown safety (no post after unmount).
+    //
+    // Tracking read and clone are separate calls on purpose: $state.snapshot does both, but the CLONE is
+    // what costs (~500 ms of main-thread block per edit on a 2060-state dialog), so it belongs inside the
+    // debounce while only the read needs to run per mutation. The clone is still required at the
+    // postMessage boundary - a raw $state proxy throws DataCloneError.
     $effect(() => {
-        const snapshot = $state.snapshot(editModel); // deep-read: tracks every nested field
+        deepRead(editModel); // tracks every nested field, without copying the model
         if (!hasHost()) return; // standalone harness: no host to post to
         if (suppressEmit) {
             suppressEmit = false;
             return;
         }
-        const timer = setTimeout(() => postToHost({ type: "edit", model: snapshot, seq: ++localSeq }), EMIT_DEBOUNCE_MS);
+        const timer = setTimeout(
+            () => postToHost({ type: "edit", model: $state.snapshot(editModel), seq: ++localSeq }),
+            EMIT_DEBOUNCE_MS,
+        );
         return () => clearTimeout(timer);
     });
 

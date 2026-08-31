@@ -15,6 +15,13 @@ export const ELK_WORKER_SOURCE_SPECIFIER = "elk-worker-source";
 const ELK_WORKER_FILE = "elkjs/lib/elk-worker.min.js";
 
 /**
+ * The API-only ELK entry a browser build uses in place of the one layout.ts imports. Same ELK class,
+ * without the embedded layout engine that only the in-process fallback worker needs (~10 KB against
+ * ~1.6 MB minified).
+ */
+const ELK_API_ENTRY = "elkjs/lib/elk-api.js";
+
+/**
  * Resolve `elk-worker-source` to elkjs's worker script and load it as TEXT, so the dialog editor can hand
  * its source to `new Worker` through a blob: URL.
  *
@@ -22,12 +29,26 @@ const ELK_WORKER_FILE = "elkjs/lib/elk-worker.min.js";
  * same-origin - so the worker cannot be loaded by URL and has to be embedded and blob-constructed instead.
  * The `.wasm`/`.scm` assets are embedded for the same reason (see esbuild-web-tree-sitter.mjs).
  *
- * `elkjs/lib/elk.bundled.js`, which the layout module also imports, is browserified and already carries its
- * own copy of the worker inline; it is untouched by this and keeps working as an ordinary module.
+ * Since that worker carries the engine, this also redirects `elkjs/lib/elk.bundled.js` - which layout.ts
+ * imports for the ELK class - to the API-only `elkjs/lib/elk-api.js`. elk.bundled.js embeds a SECOND copy
+ * of the engine for the in-process fallback worker the webview never takes, costing ~3.4 MB of JS the main
+ * thread had to compile before first paint; both entries export the same class.
+ *
+ * The redirect lives in THIS plugin, not its own, so a build cannot embed the worker without it and ship
+ * the engine twice again. Node is unaffected: vitest runs no esbuild plugins, so layout.ts resolves
+ * elk.bundled.js there and its no-`Worker` branch keeps a real engine (client/test/dialog-layout.test.ts).
  */
 export const elkWorkerAsText = {
     name: "elk-worker-as-text",
     setup(build) {
+        build.onResolve({ filter: /^elkjs\/lib\/elk\.bundled\.js$/ }, async (args) => {
+            const resolved = await build.resolve(ELK_API_ENTRY, {
+                kind: "import-statement",
+                resolveDir: args.resolveDir,
+            });
+            if (resolved.errors.length > 0) return { errors: resolved.errors };
+            return { path: resolved.path };
+        });
         build.onResolve({ filter: /^elk-worker-source$/ }, async (args) => {
             const resolved = await build.resolve(ELK_WORKER_FILE, {
                 kind: "import-statement",
