@@ -5,10 +5,11 @@
  * with the transpiler. What is here is adding the `kind` that selects the compiler half of that shared
  * bundle, rebuilding a refusal as the positioned error a caller reports from, and the startup prewarm.
  *
- * One worker is started at server start by `prewarmTsslCompileWorker` and kept: it holds the ts-morph
- * project, which costs more to build than every compile after the first one takes to run. Its bundle is
- * shared with the transpile worker, which runs a second instance; the two stay separate instances so a
- * dialog parse never queues behind a first compile.
+ * One worker is started by the first open of a .tssl document (`prewarmWorkerFor` in
+ * handlers/document-lifecycle.ts) and kept: it holds the ts-morph project, which costs more to build
+ * than every compile after the first one takes to run. Its bundle is shared with the transpile worker,
+ * which runs a second instance; the two stay separate instances so a dialog parse never queues behind a
+ * first compile.
  */
 
 import * as path from "path";

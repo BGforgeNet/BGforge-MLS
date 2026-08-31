@@ -10,6 +10,9 @@ import { timeHandler } from "../shared/time-handler";
 import { runOrDebounceParse } from "../shared/parse-scheduling";
 import { fireRefresh } from "../shared/lsp-refresh";
 import { handleCompileError } from "./compile-error";
+import { prewarmTsslCompileWorker } from "../tssl/compile-worker-client";
+import { prewarmTranspileWorker } from "../transpile/transpile-worker-client";
+import { EXT_TBAF, EXT_TD, EXT_TSSL } from "../../../shared/languages";
 import {
     type MLSsettings,
     defaultSettings,
@@ -22,6 +25,26 @@ import type { HandlerContext } from "./context";
 // Keyed by NormalizedUri so a differently-encoded URI for the same file does not
 // leak a duplicate cache entry (or miss the cached settings on close).
 const documentSettings: Map<NormalizedUri, Thenable<MLSsettings>> = new Map();
+
+/**
+ * Start whichever ts-morph worker this document will need, on open rather than at server start.
+ *
+ * Each worker costs ~110 MB resident and ~450 ms of thread and ts-morph setup, and a workspace with no
+ * TypeScript-transpiler sources never uses either - so starting both unconditionally charged every
+ * session for a feature most never reach. Opening still precedes the first compile by a debounce at
+ * minimum (nothing here compiles), so the head start the prewarm exists for survives the move.
+ *
+ * Keyed on the file extension, not the language id: .tssl/.tbaf/.td all register as `typescript`, so a
+ * language-id gate would fire on any plain .ts file in the workspace. Both calls are idempotent.
+ */
+function prewarmWorkerFor(uri: string): void {
+    const lower = uri.toLowerCase();
+    if (lower.endsWith(EXT_TSSL)) {
+        prewarmTsslCompileWorker();
+    } else if (lower.endsWith(EXT_TBAF) || lower.endsWith(EXT_TD)) {
+        prewarmTranspileWorker();
+    }
+}
 
 /**
  * Build the `getDocumentSettings` function used by compile.ts and the
@@ -90,6 +113,8 @@ export function register(ctx: HandlerContext): void {
                 const uri = event.document.uri;
                 const langId = event.document.languageId;
                 const text = event.document.getText();
+
+                prewarmWorkerFor(uri);
 
                 registry.reloadFileData(langId, uri, text);
                 serverCtx.translation.reloadFile(uri, langId, text);

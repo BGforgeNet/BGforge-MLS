@@ -31,8 +31,8 @@ import * as renameHandler from "./handlers/rename";
 import * as documentLifecycleHandler from "./handlers/document-lifecycle";
 import * as executeCommandHandler from "./handlers/execute-command";
 import { abortInFlightSSLCompiles } from "./fallout-ssl/compiler";
-import { prewarmTsslCompileWorker, stopTsslCompileWorker } from "./tssl/compile-worker-client";
-import { prewarmTranspileWorker, stopTranspileWorker } from "./transpile/transpile-worker-client";
+import { stopTsslCompileWorker } from "./tssl/compile-worker-client";
+import { stopTranspileWorker } from "./transpile/transpile-worker-client";
 import { abortInFlightTsslCompiles } from "./tssl/compile-int";
 import { abortInFlightWeiduCompiles } from "./weidu-compile";
 
@@ -126,13 +126,9 @@ connection.onShutdown(() => {
     void stopTranspileWorker();
 });
 
-// Stand the transpile worker up now rather than inside the author's first save. Nothing is awaited:
-// the ~400 ms of thread and ts-morph setup runs on a thread the server is not waiting on, so the cost
-// lands where nobody is watching instead of at the front of a transpile.
-prewarmTranspileWorker();
-// The same for the TSSL compiler, which additionally compiles a throwaway entry: its worker has to
-// bind the lib set as well as evaluate ts-morph, and that is 381 ms of a 698 ms first compile.
-prewarmTsslCompileWorker();
+// The two ts-morph workers are stood up by the first open of a document that needs one, not here - see
+// prewarmWorkerFor in handlers/document-lifecycle.ts. Starting both unconditionally cost every session
+// ~214 MB resident and ~940 ms of setup for a feature only .tssl/.tbaf/.td authors reach.
 
 // Attach the document manager and start the LSP transport.
 documents.listen(connection);
