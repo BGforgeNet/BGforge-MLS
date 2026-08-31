@@ -22,7 +22,7 @@ describe("generate-data CLI", () => {
         fs.rmSync(tmpDir, { recursive: true });
     });
 
-    it("generates completion and hover JSON from YAML", () => {
+    it("generates completion JSON carrying each item's documentation", () => {
         const inputYaml = `funcs:
   type: 3
   items:
@@ -32,20 +32,19 @@ describe("generate-data CLI", () => {
 `;
         const inputFile = path.join(tmpDir, "data.yml");
         const completionFile = path.join(tmpDir, "completion.json");
-        const hoverFile = path.join(tmpDir, "hover.json");
         fs.writeFileSync(inputFile, inputYaml, "utf8");
 
         execSync(
-            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --hover "${hoverFile}" --tooltip-lang test-tooltip`,
+            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --tooltip-lang test-tooltip`,
             { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 
         const completion = JSON.parse(fs.readFileSync(completionFile, "utf8"));
         expect(completion).toHaveLength(1);
         expect(completion[0].label).toBe("my_func");
-
-        const hover = JSON.parse(fs.readFileSync(hoverFile, "utf8"));
-        expect(hover["my_func"]).toBeDefined();
+        // The documentation lives on the completion item - this is what replaced the separate
+        // hover.<lang>.json, and what core/static-loader.ts reads hover content out of.
+        expect(completion[0].documentation.value).toContain("Does things.");
     });
 
     it("generates signature JSON when --signature is provided", () => {
@@ -62,12 +61,11 @@ describe("generate-data CLI", () => {
 `;
         const inputFile = path.join(tmpDir, "data.yml");
         const completionFile = path.join(tmpDir, "completion.json");
-        const hoverFile = path.join(tmpDir, "hover.json");
         const signatureFile = path.join(tmpDir, "signature.json");
         fs.writeFileSync(inputFile, inputYaml, "utf8");
 
         execSync(
-            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --hover "${hoverFile}" --signature "${signatureFile}" --tooltip-lang test-tooltip`,
+            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --signature "${signatureFile}" --tooltip-lang test-tooltip`,
             { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
         );
 

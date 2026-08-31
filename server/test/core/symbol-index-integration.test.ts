@@ -9,7 +9,8 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import * as path from "path";
 import * as fs from "fs";
-import { type CompletionItem, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
+import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
+import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts";
 import { Symbols } from "../../src/core/symbol-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
@@ -82,20 +83,16 @@ function completionToSymbol(item: CompletionItem & { category?: string }): Index
 describe("Symbols integration", () => {
     // Skip if data files don't exist (not built)
     const completionFile = path.join(OUT_DIR, "completion.weidu-baf.json");
-    const hoverFile = path.join(OUT_DIR, "hover.weidu-baf.json");
 
-    const dataFilesExist = fs.existsSync(completionFile) && fs.existsSync(hoverFile);
+    const dataFilesExist = builtArtifactsPresent([completionFile], "pnpm generate-data");
 
     describe.skipIf(!dataFilesExist)("weidu-baf static data", () => {
         let oldCompletions: (CompletionItem & { category?: string })[];
-        let oldHover: Map<string, Hover>;
         let symbols: Symbols;
 
         beforeAll(() => {
             // Load old-style data
             oldCompletions = JSON.parse(fs.readFileSync(completionFile, "utf-8"));
-            const hoverData = JSON.parse(fs.readFileSync(hoverFile, "utf-8")) as Record<string, Hover>;
-            oldHover = new Map(Object.entries(hoverData));
 
             // Convert old completion items to symbols and load into index
             symbols = new Symbols();
@@ -137,34 +134,10 @@ describe("Symbols integration", () => {
             }
         });
 
-        it("should have matching hover content for symbols with documentation", () => {
-            // Names that appear in multiple stanzas (e.g., Help as action + trigger)
-            // have merged hover content in hover.json. Collect overloaded names.
-            const nameCounts = new Map<string, number>();
-            for (const item of oldCompletions) {
-                nameCounts.set(item.label, (nameCounts.get(item.label) ?? 0) + 1);
-            }
-
-            for (const [name, oldHoverItem] of oldHover) {
-                const symbol = symbols.lookup(name);
-                expect(symbol, `Missing symbol for hover: ${name}`).toBeDefined();
-
-                const oldContent = oldHoverItem.contents as MarkupContent;
-                const newContent = symbol!.hover.contents as MarkupContent;
-
-                // Both should be markdown
-                expect(newContent.kind).toBe(oldContent.kind);
-
-                // Overloaded: hover.json has merged content from all stanzas, so the symbol's hover
-                // (from the first completion entry) is CONTAINED in the merged hover rather than equal
-                // to it. A unique name matches exactly. The distinction goes in the expected value, not
-                // in a branch around the expectation.
-                const overloaded = (nameCounts.get(name) ?? 0) > 1;
-                const actual =
-                    overloaded && oldContent.value.includes(newContent.value) ? newContent.value : oldContent.value;
-                expect(actual).toBe(newContent.value);
-            }
-        });
+        // A test comparing the index's hover against a separate hover.weidu-baf.json stood here. That
+        // artifact was generated and shipped for a consumer that no longer existed, and is gone; hover
+        // content now has one source, the completion item's own documentation, which the case below
+        // ("preserved documentation") already asserts the index carries through.
 
         it("should lookup symbol by exact name", () => {
             // Test a few known symbols

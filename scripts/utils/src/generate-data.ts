@@ -1,11 +1,12 @@
 /**
- * Generates LSP completion, hover, and signature JSON files from YAML data.
+ * Generates LSP completion and signature JSON files from YAML data. Hover content has no output of
+ * its own: each completion item carries pre-formatted documentation, which is what the server reads
+ * hover from (server/src/core/static-loader.ts).
  *
  * Usage:
  *   pnpm exec tsx scripts/utils/src/generate-data.ts \
  *     -i file1.yml file2.yml \
  *     --completion out/completion.json \
- *     --hover out/hover.json \
  *     --signature out/signature.json \
  *     --strrefs out/strrefs.json \
  *     --tooltip-lang fallout-ssl-tooltip
@@ -83,10 +84,6 @@ interface CompletionResult {
     readonly detail?: string;
     /** Parameter data for WeiDU callables; enables param name completion at runtime. */
     readonly params?: CompletionParams;
-}
-
-interface HoverResult {
-    readonly contents: MarkupContent;
 }
 
 interface SignatureParam {
@@ -416,63 +413,6 @@ export function generateCompletion(data: DataFile, tooltipLangId: string): reado
 }
 
 /**
- * Generates hover data keyed by symbol name.
- */
-export function generateHover(data: DataFile, langId: string): Record<string, HoverResult> {
-    const sortedData = sortDataFile(data);
-    const result: Record<string, HoverResult> = {};
-    for (const [stanzaName, stanza] of Object.entries(sortedData)) {
-        for (const item of stanza.items) {
-            // Skip items with no data besides the name
-            if (
-                item.detail === undefined &&
-                item.doc === undefined &&
-                item.args === undefined &&
-                item.rets === undefined
-            ) {
-                continue;
-            }
-
-            const label = item.name;
-            const detail = getDetail(item, true, stanzaName);
-
-            let value: string;
-            if (isWeiduFormat(item)) {
-                const paramTable = getWeiduParamTable(item);
-                value = buildWeiduHoverContent({
-                    signature: detail,
-                    langId,
-                    description: item.doc,
-                    paramTable: paramTable || undefined,
-                    deprecated: item.deprecated,
-                });
-            } else {
-                value = buildSignatureBlock(detail, langId);
-                const doc = getFalloutDoc(item);
-                if (doc !== "") {
-                    value += `\n${doc}`;
-                }
-                value += formatDeprecation(item.deprecated);
-            }
-
-            if (result[label]) {
-                // Skip if identical content already present
-                if (result[label].contents.value === value) {
-                    continue;
-                }
-                // Merge overloads: append with separator
-                result[label] = {
-                    contents: markdown(result[label].contents.value + "\n\n---\n\n" + value),
-                };
-            } else {
-                result[label] = { contents: markdown(value) };
-            }
-        }
-    }
-    return result;
-}
-
-/**
  * Generates signature help data for items with args.
  * WeiDU items include INT_VAR/STR_VAR category prefix in parameter docs.
  */
@@ -538,7 +478,6 @@ function main(): void {
     const { values } = parseArgs({
         options: {
             i: { type: "string", multiple: true, short: "i" },
-            hover: { type: "string" },
             completion: { type: "string" },
             signature: { type: "string" },
             strrefs: { type: "string" },
@@ -548,30 +487,25 @@ function main(): void {
     });
 
     const inputYaml = values.i;
-    const hoverFile = values.hover;
     const completionFile = values.completion;
     const signatureFile = values.signature;
     const strrefsFile = values.strrefs;
     const tooltipLangId = values["tooltip-lang"];
 
-    if (
-        inputYaml === undefined ||
-        hoverFile === undefined ||
-        completionFile === undefined ||
-        tooltipLangId === undefined
-    ) {
+    if (inputYaml === undefined || completionFile === undefined || tooltipLangId === undefined) {
         console.error(
-            "Usage: generate-data -i <yaml...> --completion <path> --hover <path> --tooltip-lang <id> " +
+            "Usage: generate-data -i <yaml...> --completion <path> --tooltip-lang <id> " +
                 "[--signature <path>] [--strrefs <path>]",
         );
         process.exit(1);
     }
 
     const inputData = loadData(inputYaml);
+    // No hover output: each completion item carries its own pre-formatted documentation, which is what
+    // the server reads (core/static-loader.ts). A separate hover.<lang>.json was generated and shipped
+    // for a consumer that no longer exists.
     const completionData = generateCompletion(inputData, tooltipLangId);
-    const hoverData = generateHover(inputData, tooltipLangId);
 
-    fs.writeFileSync(hoverFile, JSON.stringify(hoverData, null, 4), "utf8");
     fs.writeFileSync(completionFile, JSON.stringify(completionData, null, 4), "utf8");
 
     if (strrefsFile !== undefined) {

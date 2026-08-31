@@ -1,7 +1,7 @@
 /**
  * Integrity guard for the committed generated static-data JSON in server/out/.
  *
- * These files (completion.*, hover.*, signature.*) are produced by
+ * These files (completion.*, signature.*) are produced by
  * scripts/generate-data.sh from server/data/*.yml and committed to the repo, then
  * loaded verbatim at runtime by core/static-loader.ts. The rest of static-loader's
  * tests mock fs and so never touch the real artifacts; a malformed committed file
@@ -16,7 +16,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const OUT_DIR = path.join(__dirname, "../../out");
-const GENERATED_RE = /^(?:completion|hover|signature)\.[\w.-]+\.json$/;
+const GENERATED_RE = /^(?:completion|signature)\.[\w.-]+\.json$/;
 
 const generatedFiles = readdirSync(OUT_DIR).filter((name) => GENERATED_RE.test(name));
 

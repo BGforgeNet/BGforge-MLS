@@ -1,13 +1,13 @@
 /**
- * Tests for generate-data module: completion, hover, and signature generation
- * from YAML data files.
+ * Tests for generate-data module: completion and signature generation from YAML data files.
+ * Completion items carry their own documentation, which is where hover content comes from.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names.ts";
-import { generateCompletion, generateHover, generateSignatures, getDetail, loadData } from "../src/generate-data.ts";
+import { generateCompletion, generateSignatures, getDetail, loadData } from "../src/generate-data.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -182,88 +182,6 @@ describe("generateCompletion", () => {
         ]);
     });
 });
-
-describe("generateHover", () => {
-    it("generates hover for items with detail", () => {
-        const data = {
-            funcs: { type: 3, items: [{ name: "foo", detail: "void foo()" }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["foo"]).toBeDefined();
-        expect(result["foo"]!.contents.value).toContain("void foo()");
-    });
-
-    it("skips items with only a name", () => {
-        const data = {
-            kw: { type: 14, items: [{ name: "begin" }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["begin"]).toBeUndefined();
-    });
-
-    it("includes doc in hover", () => {
-        const data = {
-            funcs: { type: 3, items: [{ name: "foo", doc: "Does stuff." }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["foo"]!.contents.value).toContain("Does stuff.");
-    });
-
-    it("generates hover for items with args", () => {
-        const data = {
-            funcs: {
-                type: 3,
-                items: [
-                    {
-                        name: "f",
-                        type: "int",
-                        args: [{ name: "x", type: "int", doc: "val" }],
-                        doc: "A function.",
-                    },
-                ],
-            },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["f"]!.contents.value).toContain("int f(int x)");
-    });
-
-    it("merges hover for same-name items across stanzas", () => {
-        const data = {
-            actions: { type: 3, items: [{ name: "Help", detail: "Help()", doc: "Action doc." }] },
-            triggers: { type: 3, items: [{ name: "Help", detail: "Help(O:Object*)", doc: "Trigger doc." }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["Help"]).toBeDefined();
-        const value = result["Help"]!.contents.value;
-        expect(value).toContain("Help()");
-        expect(value).toContain("Help(O:Object*)");
-        expect(value).toContain("Action doc.");
-        expect(value).toContain("Trigger doc.");
-        expect(value).toContain("---");
-    });
-
-    it("emits hover object keys in sorted order", () => {
-        const data = {
-            zeta: {
-                type: 3,
-                items: [
-                    { name: "zed", detail: "zed()" },
-                    { name: "alpha", detail: "alpha()" },
-                ],
-            },
-            alpha: {
-                type: 3,
-                items: [
-                    { name: "zulu", detail: "zulu()" },
-                    { name: "beta", detail: "beta()" },
-                ],
-            },
-        };
-        const result = generateHover(data, "lang");
-        expect(Object.keys(result)).toEqual(["beta", "zulu", "alpha", "zed"]);
-    });
-});
-
 describe("generateCompletion detail propagation", () => {
     it("adds detail for duplicated labels across stanzas", () => {
         const data = {
@@ -373,27 +291,8 @@ describe("getDetail (stanza prefix)", () => {
     });
 });
 
-describe("deprecation in hover output", () => {
-    it("appends boolean deprecation notice to hover", () => {
-        const data = {
-            funcs: { type: 3, items: [{ name: "old_func", detail: "void old_func()", deprecated: true }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["old_func"]!.contents.value).toContain("**Deprecated**");
-    });
-
-    it("appends string deprecation notice to hover", () => {
-        const data = {
-            funcs: {
-                type: 3,
-                items: [{ name: "old_func", detail: "void old_func()", deprecated: "Use new_func instead" }],
-            },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["old_func"]!.contents.value).toContain("**Deprecated:** Use new_func instead");
-    });
-
-    it("appends deprecation notice to completion documentation", () => {
+describe("deprecation in completion documentation", () => {
+    it("appends boolean deprecation notice", () => {
         const data = {
             funcs: { type: 3, items: [{ name: "old_func", detail: "void old_func()", deprecated: true }] },
         };
@@ -401,12 +300,23 @@ describe("deprecation in hover output", () => {
         expect(result[0]!.documentation!.value).toContain("**Deprecated**");
     });
 
+    it("appends string deprecation notice", () => {
+        const data = {
+            funcs: {
+                type: 3,
+                items: [{ name: "old_func", detail: "void old_func()", deprecated: "Use new_func instead" }],
+            },
+        };
+        const result = generateCompletion(data, "lang");
+        expect(result[0]!.documentation!.value).toContain("**Deprecated:** Use new_func instead");
+    });
+
     it("does not add deprecation text when not deprecated", () => {
         const data = {
             funcs: { type: 3, items: [{ name: "func", detail: "void func()" }] },
         };
-        const result = generateHover(data, "lang");
-        expect(result["func"]!.contents.value).not.toContain("Deprecated");
+        const result = generateCompletion(data, "lang");
+        expect(result[0]!.documentation!.value).not.toContain("Deprecated");
     });
 });
 
@@ -434,49 +344,6 @@ describe("generateCompletion (WeiDU)", () => {
         expect(result[0]!.documentation!.value).toContain("|**INT**|**vars**|||");
     });
 });
-
-describe("generateHover (WeiDU)", () => {
-    it("generates hover with WeiDU tables", () => {
-        const data = {
-            dimorphic_functions: {
-                type: 3,
-                items: [
-                    {
-                        name: "SUBSTRING",
-                        type: "dimorphic",
-                        doc: "Returns a substring.",
-                        args: [{ name: "start", type: "int", doc: "offset" }],
-                        rets: [{ name: "result", type: "string", doc: "the substring" }],
-                    },
-                ],
-            },
-        };
-        const result = generateHover(data, "weidu-tp2-tooltip");
-        expect(result["SUBSTRING"]).toBeDefined();
-        const value = result["SUBSTRING"]!.contents.value;
-        expect(value).toContain("dimorphic function SUBSTRING");
-        expect(value).toContain("|**INT**|**vars**|||");
-        expect(value).toContain("|**RET**|**vars**|||");
-    });
-
-    it("generates hover for items with only rets", () => {
-        const data = {
-            patch_functions: {
-                type: 3,
-                items: [
-                    {
-                        name: "GET_AC",
-                        rets: [{ name: "base_ac", type: "int", doc: "base AC" }],
-                    },
-                ],
-            },
-        };
-        const result = generateHover(data, "weidu-tp2-tooltip");
-        expect(result["GET_AC"]).toBeDefined();
-        expect(result["GET_AC"]!.contents.value).toContain("|**RET**|**vars**|||");
-    });
-});
-
 describe("generateSignatures (WeiDU)", () => {
     it("includes category prefix in WeiDU parameter docs", () => {
         const data = {
@@ -694,25 +561,6 @@ describe("loadData validation errors", () => {
         expect(() => loadData([f])).toThrow();
     });
 });
-
-// -- generateHover: skip identical content branch --
-
-describe("generateHover skip-identical branch", () => {
-    it("skips duplicate hover entries with identical content across stanzas", () => {
-        // Two stanzas with the same item name and same content -> keep one
-        const data = {
-            stanza1: { type: 3, items: [{ name: "foo", detail: "foo()" }] },
-            stanza2: { type: 3, items: [{ name: "foo", detail: "foo()" }] },
-        };
-        const result = generateHover(data, "lang");
-        expect(result["foo"]).toBeDefined();
-        // Should contain only one copy, not two merged with separator
-        expect(result["foo"]!.contents.value).not.toContain("---");
-    });
-});
-
-// -- generateSignatures: getCategoryPrefix unknown type --
-
 describe("generateSignatures getCategoryPrefix", () => {
     it("emits no prefix for unknown WeiDU type", () => {
         const data = {
