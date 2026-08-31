@@ -29,7 +29,7 @@ import { compileBafText } from "../../src/weidu-baf/compiler";
 import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
 import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
 import { initParser, getParser } from "../../../shared/parsers/weidu-baf";
-import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "./weidu-binary";
+import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
 import { IE_FIXTURES } from "./test-helpers";
 
 /** An installed IE game directory whose tables both compilers read. Unset means "skip", not "use --nogame". */

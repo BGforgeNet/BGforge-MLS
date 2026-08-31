@@ -1,22 +1,26 @@
 /**
- * Resolving the WeiDU binary the grammar differentials drive.
+ * Resolving the WeiDU binary the differential suites drive.
  *
- * Extracted at the second caller, and shared by the weidu-*-grammar-differential suites beside it: they
- * all need the same answer, and a second copy of this would drift the moment one of them learned about a
- * new way to find the binary.
+ * Lives here rather than beside any one of them because its callers span packages - server integration
+ * tests and compilers/bcs - and a copy per package would drift the moment one learned about a new way to
+ * find the binary. Same reason `vitest-coverage-config.ts` sits in this directory.
  *
  * There is no skip path, deliberately. A gate that passes by never running is the one failure mode a
  * gate must not have - the whole reason scripts/ensure-weidu.sh exists - so an absent binary is
  * provisioned rather than treated as a reason to report green.
  */
 
-import { execFileSync } from "child_process";
-import path from "path";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
 
 /** Root of the project repository - mirrors test-helpers.ts, which keeps its copy private. */
-const ROOT_DIR = path.resolve(__dirname, "../../..");
+const ROOT_DIR = path.resolve(import.meta.dirname, "../../..");
 
-/** A wedged child cannot be interrupted by vitest's own timeout - execFileSync holds the worker thread. */
+/**
+ * Bound for a single `--parse-check` spawn. A wedged child cannot be interrupted by vitest's own timeout,
+ * which is enforced from an event loop execFileSync never yields to. A caller whose spawn does more than
+ * parse one file (compiling a whole directory) sets its own.
+ */
 export const WEIDU_TIMEOUT_MS = 15000;
 
 /** Provisioning may download and unpack an archive, so it gets a longer bound than a parse-check. */

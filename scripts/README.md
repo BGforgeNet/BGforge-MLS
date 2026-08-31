@@ -239,3 +239,7 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
 
 - `scripts/utils/src/vitest-coverage-config.ts`
   Shared vitest `coverage` block factored out of the per-package unit-test configs (library module).
+
+- `scripts/utils/src/weidu-binary.ts`
+  Resolves the WeiDU binary the differential suites drive - WEIDU_BIN, then PATH, then `ensure-weidu.sh` -
+  with no skip path, so an absent binary is provisioned rather than turning a gate green (library module).
