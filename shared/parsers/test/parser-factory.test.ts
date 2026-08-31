@@ -13,7 +13,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Tree } from "web-tree-sitter";
-import { createCachedParserModule } from "../parser-factory";
+import { createCachedParserModule, createParserModule } from "../parser-factory";
 
 /**
  * Count delete() calls on one tree, still performing the real free so the test does not itself
@@ -91,5 +91,54 @@ describe("createCachedParserModule tree lifetime", () => {
         const second = module.parseWithCache(text);
 
         expect(second).toBe(first);
+    });
+
+    it("drops an invalidate for a text it never cached", () => {
+        // The reverse lookup misses, so there is no tree to free - the call still has to be a no-op
+        // rather than throwing on the absent entry.
+        expect(() => module.invalidateCache(source(400))).not.toThrow();
+    });
+
+    it("initialises at most once", async () => {
+        // Second init() returns on the already-initialised guard rather than reloading the grammar.
+        await module.init();
+
+        expect(module.isInitialized()).toBe(true);
+    });
+
+    it("caches nothing when the parser yields no tree", async () => {
+        // web-tree-sitter documents a null parse for a parser with no language assigned. Nothing may be
+        // cached against that text, or a later parse would take the absent entry as a hit.
+        const languageless = createCachedParserModule("tree-sitter-ssl.wasm", "SSL languageless", CACHE_SIZE);
+        await languageless.init();
+        languageless.getParser().setLanguage(null);
+
+        expect(languageless.parseWithCache(source(500))).toBeNull();
+    });
+
+    it("loads a second grammar onto the already-started runtime", async () => {
+        // The tree-sitter runtime is process-wide and started by whichever module inits first, so a
+        // later module must take the already-started path rather than re-initialising the wasm.
+        const baf = createCachedParserModule("tree-sitter-baf.wasm", "BAF test", CACHE_SIZE);
+        await baf.init();
+
+        expect(baf.isInitialized()).toBe(true);
+        expect(baf.parseWithCache("IF\nTrue()\nTHEN\nRESPONSE #100\nEND\n")).not.toBeNull();
+    });
+});
+
+describe("parser modules before init", () => {
+    it("refuses to hand out a parser", () => {
+        const uninitialised = createParserModule("tree-sitter-ssl.wasm", "SSL uninit");
+
+        expect(uninitialised.isInitialized()).toBe(false);
+        expect(() => uninitialised.getParser()).toThrow("SSL uninit parser not initialized");
+    });
+
+    it("parses nothing through the cache", () => {
+        // Returns null rather than throwing: callers treat an uninitialised grammar as "no tree yet".
+        const uninitialised = createCachedParserModule("tree-sitter-ssl.wasm", "SSL uninit");
+
+        expect(uninitialised.parseWithCache(source(0))).toBeNull();
     });
 });
