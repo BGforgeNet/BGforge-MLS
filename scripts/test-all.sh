@@ -11,6 +11,11 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+# This is the close-out gate, so a suite gated on a build artifact must fail rather than skip when the
+# artifact is missing: a silently shrunken run reports the same green as a complete one. The dev-loop
+# tier (test.sh) leaves it unset and skips loudly instead. See shared/cli/test/built-artifacts.ts.
+export MLS_REQUIRE_BUILT_ARTIFACTS=1
+
 # shellcheck source=scripts/timing-lib.sh
 source "$SCRIPT_DIR/timing-lib.sh"
 

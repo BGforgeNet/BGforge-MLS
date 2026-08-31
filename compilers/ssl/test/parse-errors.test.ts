@@ -15,9 +15,10 @@ import { Language, Parser } from "web-tree-sitter";
 import { CompileError, buildProgram } from "../src/compile.ts";
 import { collectParseErrors, findParseError } from "../../../shared/parse-errors.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 
 describe.skipIf(!wasmPresent)("syntax errors", () => {
     let parser: Parser;

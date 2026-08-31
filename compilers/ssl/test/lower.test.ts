@@ -21,9 +21,10 @@ import { engineFunction } from "../src/int/engine-functions.ts";
 import { LowerError, lowerProgram } from "../src/lower.ts";
 import type { Program, Stmt } from "../src/int/ir.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 
 describe("byte writer", () => {
     it("grows past its initial capacity", () => {

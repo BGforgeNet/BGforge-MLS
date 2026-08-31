@@ -20,6 +20,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../../src/compile.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
+import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -34,7 +35,7 @@ function findCompiler(): string | null {
 }
 
 const compiler = findCompiler();
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 const workDir = compiler && wasmPresent ? fs.mkdtempSync(path.join(os.tmpdir(), "ssl-e2e-")) : "";
 
 afterAll(() => {

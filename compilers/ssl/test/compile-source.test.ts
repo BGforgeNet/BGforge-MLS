@@ -12,9 +12,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileSource } from "../src/compile.ts";
 import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 
 describe.skipIf(!wasmPresent)("compileSource", () => {
     let parser: Parser;

@@ -12,10 +12,11 @@
  * grammar.json for Edge 1 (which tokens exist), node-types.json for Edges 2-3 (which appear as tree nodes).
  * CI builds grammars before tests so this always runs there; a fresh un-built local checkout skips cleanly.
  */
-import { existsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
+import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts";
 
 const ROOT = path.resolve(__dirname, "../../..");
 const nodeTypesPath = (id: string) => path.join(ROOT, "grammars", id, "src", "node-types.json");
@@ -167,7 +168,10 @@ const GRAMMARS: GrammarCfg[] = [
     },
 ];
 
-const ARTIFACTS_BUILT = GRAMMARS.every((g) => existsSync(nodeTypesPath(g.id)));
+const ARTIFACTS_BUILT = builtArtifactsPresent(
+    GRAMMARS.map((g) => nodeTypesPath(g.id)),
+    "pnpm build:grammar",
+);
 
 describe.skipIf(!ARTIFACTS_BUILT)("grammar keyword sync (Island B)", () => {
     describe("Edge 1: documented keywords are a subset of grammar tokens", () => {

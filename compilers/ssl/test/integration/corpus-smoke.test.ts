@@ -26,6 +26,7 @@ import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { listScripts, RP_SCRIPTS } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
+import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const FALLOUT = path.join(REPO_ROOT, "external/fallout");
@@ -70,7 +71,7 @@ function sample(all: readonly string[]): string[] {
 
 const scripts = listScripts();
 const manifest = loadManifest();
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 // Same readiness rule as the sweeps: an unfetched corpus or an unbuilt grammar makes this meaningless,
 // while the manifest is committed, so its absence is a deletion to report rather than a reason to skip.
 const ready = wasmPresent && scripts.length > 0;

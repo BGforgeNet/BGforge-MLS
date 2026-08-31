@@ -23,6 +23,7 @@ import { Language, Parser, type Node } from "web-tree-sitter";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
+import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
 
 // The sfall headers the corpus needs are linked in by this project's globalSetup.
 const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");
@@ -92,7 +93,7 @@ function hasGcc(): boolean {
 }
 
 const scripts = listScripts();
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 
 describe.skipIf(scripts.length === 0 || !wasmPresent || !hasGcc())("preprocessed corpus parses sanely", () => {
     let parser: Parser;

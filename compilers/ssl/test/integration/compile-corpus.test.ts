@@ -20,6 +20,7 @@ import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
 import { BROKEN_STEMS, CORPUS_SIZE, listScripts } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
+import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const FALLOUT = path.join(REPO_ROOT, "external/fallout");
@@ -33,7 +34,7 @@ const ORACLE_FLOOR = 1425;
 
 const scripts = listScripts();
 const manifest = loadManifest();
-const wasmPresent = fs.existsSync(path.join(WASM_DIR, "tree-sitter-ssl.wasm"));
+const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
 // The manifest is COMMITTED, so its absence is a deletion to report, not a reason to skip - only a
 // corpus that was never fetched or an unbuilt grammar makes this suite meaningless.
 const ready = wasmPresent && scripts.length > 0;
