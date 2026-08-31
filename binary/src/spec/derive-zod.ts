@@ -35,6 +35,36 @@ export function toZodSchema<S extends Record<string, FieldSpec>>(
     options: ToZodSchemaOptions = {},
 ): z.ZodType<SpecData<S>> {
     const mode = options.mode ?? "strict";
+    let byMode = schemaCache.get(spec);
+    if (byMode === undefined) {
+        byMode = new Map();
+        schemaCache.set(spec, byMode);
+    }
+    const cached = byMode.get(mode);
+    // The cache is keyed by the spec's own object identity, so a hit was derived from this exact spec in
+    // this exact mode; the map cannot be typed per-spec, hence the cast.
+    if (cached !== undefined) return cached as z.ZodType<SpecData<S>>;
+    const built = buildZodSchema(spec, mode);
+    byMode.set(mode, built);
+    return built;
+}
+
+/**
+ * Derived schemas cached per (spec object, mode).
+ *
+ * `buildZodSchema` is a pure function of those two - every branch reads off the spec's own fields, nothing
+ * from the adapter registry - and the shipped formats derive the same spec repeatedly: PRO builds its whole
+ * document schema twice per mode (the snapshot factory re-enters the document factory), and the shared IE
+ * effect spec is derived independently by ITM, SPL and CRE. Sharing one instance is safe because zod schemas
+ * are immutable: a refinement such as `.optional()` returns a new schema rather than mutating this one.
+ * Same reasoning as `zodNumericType` in binary-format-contract.ts, one level up.
+ */
+const schemaCache = new WeakMap<object, Map<string, z.ZodType<unknown>>>();
+
+function buildZodSchema<S extends Record<string, FieldSpec>>(
+    spec: S,
+    mode: "strict" | "permissive",
+): z.ZodType<SpecData<S>> {
     const shape: Record<string, z.ZodType<unknown>> = {};
     const linkedCounts: { arrayKey: string; countField: string }[] = [];
     for (const key of Object.keys(spec)) {
