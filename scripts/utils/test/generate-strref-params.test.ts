@@ -3,13 +3,20 @@
  * rather than a fixture: a hand-written signature would only restate the assumption under test.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { generateStrRefParams, loadData } from "../src/generate-data.ts";
+import { generateStrRefParams, loadData, renderStrRefParamsModule } from "../src/generate-data.ts";
 import { strRefParamIndexes } from "../../../shared/strref-params.ts";
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const BAF_DATA = path.join(repoRoot, "server", "data", "weidu-baf-iesdp.yml");
+
+/** The three YAMLs generate-data.sh feeds the BAF run, and the module it writes from them. */
+const BAF_RUN_INPUTS = ["weidu-baf-base.yml", "weidu-baf-iesdp.yml", "weidu-baf-ids.yml"].map((name) =>
+    path.join(repoRoot, "server", "data", name),
+);
+const GENERATED_MODULE = path.join(repoRoot, "server", "src", "weidu-baf", "strref-params.ts");
 
 describe("strRefParamIndexes", () => {
     it("finds the StrRef parameter wherever the signature puts it", () => {
@@ -51,5 +58,21 @@ describe("generateStrRefParams over the shipped BAF data", () => {
             .filter((item) => item.detail?.includes("StrRef:")).length;
         expect(Object.keys(params)).toHaveLength(declared);
         expect(declared).toBeGreaterThan(0);
+    });
+});
+
+describe("renderStrRefParamsModule", () => {
+    const rendered = renderStrRefParamsModule(generateStrRefParams(loadData(BAF_RUN_INPUTS)));
+
+    it("matches the committed module byte for byte", () => {
+        // The module is checked in and imported by the BAF provider, so an engine-data edit that skips
+        // `pnpm generate-data` would otherwise ship a stale map with nothing to catch it.
+        expect(fs.readFileSync(GENERATED_MODULE, "utf8")).toBe(rendered);
+    });
+
+    it("opens with the marker that keeps it out of the formatter", () => {
+        // oxfmt-generated-exclusions.test.ts keys off this exact first line. Without it the file would be
+        // reformatted and then differ from the generator's own output on the next run.
+        expect(rendered.split("\n", 1)[0]).toMatch(/^\/\/ Auto-generated\b.*\bDo not hand-edit\.$/);
     });
 });

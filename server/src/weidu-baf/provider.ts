@@ -11,7 +11,8 @@ import type { NormalizedUri } from "../core/normalized-uri";
 import { LANG_WEIDU_BAF } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";
-import { loadStaticSymbols, loadStrRefParams } from "../core/static-loader";
+import { loadStaticSymbols } from "../core/static-loader";
+import { STRREF_PARAMS } from "./strref-params";
 import {
     type FormatResult,
     type LanguageProvider,
@@ -62,7 +63,6 @@ class WeiduBafProvider
 {
     readonly id = LANG_WEIDU_BAF;
     private symbolStore: Symbols | undefined;
-    private strRefParams: ReadonlyMap<string, readonly number[]> = new Map();
     private storedContext: ProviderContext | undefined;
 
     async init(context: ProviderContext): Promise<void> {
@@ -71,7 +71,6 @@ class WeiduBafProvider
         await initParser();
 
         this.symbolStore = new Symbols();
-        this.strRefParams = loadStrRefParams(LANG_WEIDU_BAF);
         const staticSymbols = loadStaticSymbols(LANG_WEIDU_BAF);
         this.symbolStore.loadStatic(staticSymbols);
 
@@ -93,10 +92,9 @@ class WeiduBafProvider
      * the engine data, so the set tracks the data rather than a list of action names kept in code.
      */
     strRefs(text: string): StrRefSite[] {
-        if (this.strRefParams.size === 0) return [];
         const tree = parseWithCache(text);
         if (!tree) return [];
-        return findStrRefSites(tree.rootNode, (name) => this.strRefParams.get(name));
+        return findStrRefSites(tree.rootNode, (name) => STRREF_PARAMS.get(name));
     }
 
     foldingRanges(text: string): FoldingRange[] {

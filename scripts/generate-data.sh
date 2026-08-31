@@ -2,6 +2,8 @@
 
 # Regenerate completion JSONs from server/data YAMLs.
 # Must run before build:ts-plugin (which bundles fallout-ssl-engine-proc-docs.json via esbuild).
+# One output is not a JSON under $dest_dir: the BAF strref map is emitted as a TypeScript module into
+# server/src, so the server imports it instead of reading a file at startup.
 
 set -eu -o pipefail
 
@@ -46,7 +48,7 @@ pnpm exec tsx scripts/utils/src/update-tp2-highlight.ts \
 "${generate_data[@]}" \
     -i "$data_dir/weidu-baf-base.yml" -i "$data_dir/weidu-baf-iesdp.yml" -i "$data_dir/weidu-baf-ids.yml" \
     --completion "$dest_dir/completion.weidu-baf.json" \
-    --strrefs "$dest_dir/strrefs.weidu-baf.json" \
+    --strrefs server/src/weidu-baf/strref-params.ts \
     --tooltip-lang weidu-baf-tooltip
 
 pnpm exec tsx scripts/utils/src/update-baf-highlight.ts \

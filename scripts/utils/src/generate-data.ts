@@ -1,14 +1,15 @@
 /**
  * Generates LSP completion and signature JSON files from YAML data. Hover content has no output of
  * its own: each completion item carries pre-formatted documentation, which is what the server reads
- * hover from (server/src/core/static-loader.ts).
+ * hover from (server/src/core/static-loader.ts). `--strrefs` writes a TypeScript module, not JSON -
+ * see renderStrRefParamsModule.
  *
  * Usage:
  *   pnpm exec tsx scripts/utils/src/generate-data.ts \
  *     -i file1.yml file2.yml \
  *     --completion out/completion.json \
  *     --signature out/signature.json \
- *     --strrefs out/strrefs.json \
+ *     --strrefs src/lang/strref-params.ts \
  *     --tooltip-lang fallout-ssl-tooltip
  */
 
@@ -471,6 +472,26 @@ export function generateStrRefParams(data: DataFile): Record<string, number[]> {
     return result;
 }
 
+/**
+ * Render the strref map as a TypeScript module rather than JSON.
+ *
+ * It has one consumer and a few dozen entries, so as source it is typechecked, bundled with the server and
+ * free at startup - where the JSON form cost a read whose only failure mode, an absent file, the loader had
+ * to swallow as normal. Entry order follows `generateStrRefParams`, which sorts, so regeneration is stable.
+ */
+export function renderStrRefParamsModule(params: Record<string, number[]>): string {
+    const entries = Object.entries(params)
+        .map(([name, indexes]) => `    [${JSON.stringify(name)}, [${indexes.join(", ")}]],\n`)
+        .join("");
+    return (
+        "// Auto-generated from server/data/*.yml by scripts/utils/src/generate-data.ts. Do not hand-edit.\n\n" +
+        "/** Which arguments of each callable are TLK string references, by callable name. */\n" +
+        "export const STRREF_PARAMS: ReadonlyMap<string, readonly number[]> = new Map([\n" +
+        entries +
+        "]);\n"
+    );
+}
+
 // -- CLI entry point (tested via subprocess in generate-data-cli.test.ts) --
 
 /* v8 ignore start -- CLI wrapper tested via execSync integration tests */
@@ -509,7 +530,7 @@ function main(): void {
     fs.writeFileSync(completionFile, JSON.stringify(completionData, null, 4), "utf8");
 
     if (strrefsFile !== undefined) {
-        fs.writeFileSync(strrefsFile, JSON.stringify(generateStrRefParams(inputData), null, 4), "utf8");
+        fs.writeFileSync(strrefsFile, renderStrRefParamsModule(generateStrRefParams(inputData)), "utf8");
     }
 
     if (signatureFile !== undefined) {

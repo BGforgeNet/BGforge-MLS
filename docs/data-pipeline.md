@@ -49,7 +49,7 @@ generate-data.sh   (runs at build time - produces all runtime outputs)
 
   weidu-baf-base.yml  ──┐
   weidu-baf-iesdp.yml ──┤──► completion.weidu-baf.json
-  weidu-baf-ids.yml   ──┘──► strrefs.weidu-baf.json
+  weidu-baf-ids.yml   ──┘──► server/src/weidu-baf/strref-params.ts
   weidu-baf-iesdp.yml    ──► update-baf-highlight.ts ──► weidu-baf.tmLanguage.yml
 
   weidu-d-base.yml ──► completion.weidu-d.json
@@ -62,9 +62,12 @@ syntaxes-to-json.sh   (runs after any tmLanguage.yml change)
   *.tmLanguage.yml ──► *.tmLanguage.json
 ```
 
-`strrefs.weidu-baf.json` maps each action that takes a TLK string reference to the argument positions holding
-one, read off the `StrRef:` parameter types in its signature. The server uses it to annotate strrefs with the
-text they resolve to, so the set of annotated actions follows the engine data rather than a list kept in code.
+`server/src/weidu-baf/strref-params.ts` maps each action that takes a TLK string reference to the argument
+positions holding one, read off the `StrRef:` parameter types in its signature. The server uses it to annotate
+strrefs with the text they resolve to, so the set of annotated actions follows the engine data rather than a
+list kept in code. Alone among these outputs it is a TypeScript module rather than JSON: it has one consumer
+and a few dozen entries, so importing it beats a startup file read whose only failure mode was an absent file
+the loader had to treat as normal.
 
 ## Generated tree-sitter type declarations
 

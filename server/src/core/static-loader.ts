@@ -144,22 +144,6 @@ export function loadStaticSymbols(langId: string): IndexedSymbol[] {
 }
 
 /**
- * Which arguments of each callable are TLK string references, by callable name. Generated from the same data
- * as the completions; a language with none has no file and gets an empty map.
- */
-export function loadStrRefParams(langId: string): ReadonlyMap<string, readonly number[]> {
-    try {
-        // __dirname in bundled code points to server/out/
-        const filePath = path.join(__dirname, `strrefs.${langId}.json`);
-        const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as Record<string, number[]>;
-        return new Map(Object.entries(parsed));
-    } catch {
-        // Absent for every language whose data declares no StrRef parameter - the common case, not a fault.
-        return new Map();
-    }
-}
-
-/**
  * Load raw completion items from JSON file.
  */
 function loadCompletionJson(langId: string): StaticCompletionItem[] | undefined {

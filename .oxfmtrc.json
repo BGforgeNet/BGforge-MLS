@@ -25,6 +25,7 @@
         "binary/src/eff/specs/header.ts",
         "binary/src/eff/specs/body.ts",
         "server/src/*/tree-sitter.d.ts",
+        "server/src/weidu-baf/strref-params.ts",
         "grammars/*/src/tree-sitter.d.ts",
         "shared/syntax-types/fallout-ssl.ts",
         "shared/syntax-types/weidu-baf.ts",
