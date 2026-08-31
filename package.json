@@ -29,7 +29,7 @@
     "scripts": {
         "vscode:prepublish": "./scripts/prepublish.sh",
         "prepare": "lefthook install",
-        "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary && pnpm build:ssl && pnpm build:tssl",
+        "build": "./scripts/build-packages.sh",
         "build:dev": "./scripts/build-dev.sh",
         "dev:web": "./scripts/dev-web.sh",
         "build:all": "pnpm build:grammar && pnpm build && pnpm build:editors",

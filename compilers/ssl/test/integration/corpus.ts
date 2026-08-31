@@ -28,6 +28,16 @@ export const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restor
 const FALLOUT = path.join(REPO_ROOT, "external/fallout");
 
 /**
+ * How a script is named wherever one must be identified across runs - oracle keys, pinned exclusion
+ * lists, sweep reports. Relative to the corpus root so the name is stable across checkouts, and a PATH
+ * rather than a stem because stems are not unique: two directories each hold a `waypnt.ssl`, and keying
+ * those together would silently merge two scripts into one entry.
+ */
+export function corpusKey(script: string): string {
+    return path.relative(FALLOUT, script);
+}
+
+/**
  * The other pinned mods' scripts. Twenty-eight against RP's fifteen hundred, and worth more than that
  * ratio suggests: a corpus of one mod is a corpus of one house style, and three defects found by first
  * compiling these - a negated parameter default, a map keyed by a PID constant, an argument list split

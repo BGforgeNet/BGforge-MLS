@@ -24,12 +24,11 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { listScripts, RP_SCRIPTS } from "./corpus.ts";
+import { corpusKey, listScripts, RP_SCRIPTS } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
 import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
-const FALLOUT = path.join(REPO_ROOT, "external/fallout");
 
 /** How many scripts the canary compiles. Sized to keep it under the dev loop's existing critical path. */
 const SAMPLE = 24;
@@ -105,7 +104,7 @@ describe.skipIf(!ready)("corpus canary", () => {
         const errors: string[] = [];
 
         for (const script of sampled) {
-            const key = path.relative(FALLOUT, script);
+            const key = corpusKey(script);
             const digest = oracles.entries.get(key)?.[0];
             if (digest === undefined) {
                 unlisted++;

@@ -11,11 +11,16 @@
  * and a variable, which TP2 alone keeps inside a string because `%var%` resolves there.
  *
  * Requires external repos (`pnpm test:integration`, which needs `pnpm test:external` first).
+ *
+ * Sharded by file, because vitest schedules FILES and this sweep was one of them: 60.5s of a 62.3s suite,
+ * all of it inside `beforeAll`, on one core while nine sat idle. The work and the assertions are split so a
+ * shard can run a slice; `shard-coverage.test.ts` checks that every declared shard is present.
  */
 
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as fg from "fast-glob";
+import { shardScripts } from "../../../shared/cli/test/shard.ts";
 import { CompletionItemKind, type CompletionItem, type Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import * as dParser from "../../../shared/parsers/weidu-d";
@@ -47,12 +52,16 @@ const ITEMS: Tp2CompletionItem[] = [
  * alphabetically-first N). What is measured is a RATE, which a sample answers; the totals are asserted so a
  * cap that silently collected nothing cannot read as a pass.
  */
-interface Coverage {
+export interface Coverage {
     /** Files to sample, evenly spaced; undefined sweeps every file. */
     readonly sampleFiles?: number;
     readonly probesPerFile: number;
-    /** Floor on the probes each kind must collect, so a sweep that found nothing cannot read as a pass. */
-    readonly minProbes: number;
+    /**
+     * Floor on the FILES the language must offer, asserted by every shard against the full list. This is
+     * the corpus-collapse guard: the probe floor it replaced could not survive being split across shards,
+     * where each shard sees a fraction of the probes but the whole corpus.
+     */
+    readonly minFiles: number;
 }
 
 function sample(files: readonly string[], coverage: Coverage): readonly string[] {
@@ -62,7 +71,7 @@ function sample(files: readonly string[], coverage: Coverage): readonly string[]
     return Array.from({ length: sampleFiles }, (_, i) => files[Math.floor(i * stride)]!);
 }
 
-interface LanguageSweep {
+export interface LanguageSweep {
     readonly name: string;
     readonly root: string;
     readonly glob: string;
@@ -88,7 +97,7 @@ interface LanguageSweep {
     readonly coverage: Coverage;
 }
 
-const SWEEPS: readonly LanguageSweep[] = [
+export const SWEEPS: readonly LanguageSweep[] = [
     {
         name: "weidu-d",
         root: IE_FIXTURES,
@@ -99,7 +108,7 @@ const SWEEPS: readonly LanguageSweep[] = [
         keywordNodes: new Set([DType.State, DType.TransitionFull, DType.AddStateTrigger, DType.ReplaceSay]),
         stringNodes: new Set([DType.TildeString, DType.DoubleString]),
         keepsVarsInStrings: false,
-        coverage: { probesPerFile: 25, minProbes: 5000 },
+        coverage: { probesPerFile: 25, minFiles: 400 },
     },
     {
         name: "fallout-ssl",
@@ -111,7 +120,7 @@ const SWEEPS: readonly LanguageSweep[] = [
         keywordNodes: new Set([SslType.Procedure, SslType.CallStmt, SslType.IfStmt, SslType.WhileStmt]),
         stringNodes: new Set([SslType.String]),
         keepsVarsInStrings: false,
-        coverage: { sampleFiles: 200, probesPerFile: 4, minProbes: 300 },
+        coverage: { sampleFiles: 200, probesPerFile: 4, minFiles: 1000 },
     },
     {
         name: "weidu-tp2",
@@ -123,11 +132,11 @@ const SWEEPS: readonly LanguageSweep[] = [
         keywordNodes: new Set([Tp2Type.Component, Tp2Type.ActionCopy]),
         stringNodes: new Set([Tp2Type.TildeString, Tp2Type.DoubleString, Tp2Type.FiveTildeString]),
         keepsVarsInStrings: true,
-        coverage: { sampleFiles: 200, probesPerFile: 4, minProbes: 100 },
+        coverage: { sampleFiles: 200, probesPerFile: 4, minFiles: 300 },
     },
 ];
 
-interface Result {
+export interface Result {
     /** Keyword positions that kept the action - the correct outcome. */
     keywordOffered: number;
     /** Keyword positions that dropped it: the false positive this suite exists for. */
@@ -143,6 +152,16 @@ interface Result {
     /** String positions the variable claim was actually measured at (declaration sites excluded). */
     stringVarChecked: number;
 }
+
+export const emptyResult = (): Result => ({
+    keywordOffered: 0,
+    keywordSuppressed: [],
+    stringGated: 0,
+    stringLeaked: [],
+    stringKeptVar: 0,
+    stringDroppedVar: [],
+    stringVarChecked: 0,
+});
 
 function walk(root: SyntaxNode, visit: (node: SyntaxNode) => void): void {
     const stack: SyntaxNode[] = [root];
@@ -190,43 +209,66 @@ function sweepFile(sweep: LanguageSweep, file: string, result: Result): void {
     });
 }
 
-describe.each(SWEEPS)("$name completion gate against the real corpus", (sweep) => {
+/**
+ * The language's whole file list and the subset it probes. Both matter to a shard: it slices the SAMPLE,
+ * but asserts the floor against the full list, so a corpus that went missing fails inside every shard
+ * rather than yielding a small slice of a small population.
+ */
+export function population(sweep: LanguageSweep): { all: string[]; sampled: readonly string[] } {
     const all = fg.sync(sweep.glob, { cwd: sweep.root, absolute: true, caseSensitiveMatch: false }).sort();
-    const files = sample(all, sweep.coverage);
-    const result: Result = {
-        keywordOffered: 0,
-        keywordSuppressed: [],
-        stringGated: 0,
-        stringLeaked: [],
-        stringKeptVar: 0,
-        stringDroppedVar: [],
-        stringVarChecked: 0,
-    };
+    return { all, sampled: sample(all, sweep.coverage) };
+}
 
-    beforeAll(async () => {
-        if (files.length === 0) return;
-        await sweep.parser.initParser();
-        for (const file of files) {
-            sweepFile(sweep, file, result);
-        }
-        // Each probe re-enters the real completion path, so the sweep runs in tens of seconds, not the
-        // default hook budget.
-    }, 120000);
+/** Probes `files` through the real completion path, collecting rather than asserting. */
+export async function sweepFiles(sweep: LanguageSweep, files: readonly string[], result: Result): Promise<void> {
+    if (files.length === 0) return;
+    await sweep.parser.initParser();
+    for (const file of files) {
+        sweepFile(sweep, file, result);
+    }
+}
 
-    it.skipIf(files.length === 0)("never suppresses the vocabulary at a structural keyword", () => {
-        expect(result.keywordSuppressed).toEqual([]);
-        // The floor guards against a sweep that silently collected nothing, not against corpus growth.
-        expect(result.keywordOffered).toBeGreaterThan(sweep.coverage.minProbes);
+/**
+ * Registers one shard's tests, for every language.
+ *
+ * The corpus-wide probe floors the single-file version carried (5000 keyword probes for D, 300 and 100
+ * for SSL and TP2) could not survive the split: a shard sees a fraction of the probes, and dividing the
+ * floor by the shard count would put a guard one unlucky slice away from a false red - worse than no
+ * guard. What those floors were really watching for is a corpus that is not there, so each shard asserts
+ * the language's FULL file count against `minFiles` instead, plus that its own slice collected probes of
+ * every kind. Together those fail on the same collapse and cannot fail on a thin slice.
+ */
+export function registerCompletionGateShard(index: number, count: number): void {
+    describe.each(SWEEPS)(`$name completion gate against the real corpus (${index}/${count})`, (sweep) => {
+        const { all, sampled } = population(sweep);
+        const mine = shardScripts(sampled, index, count);
+        const result = emptyResult();
+
+        beforeAll(async () => {
+            await sweepFiles(sweep, mine, result);
+            // Each probe re-enters the real completion path, so the sweep runs in tens of seconds, not
+            // the default hook budget.
+        }, 120000);
+
+        const gate = it.skipIf(all.length === 0);
+
+        gate("never suppresses the vocabulary at a structural keyword", () => {
+            expect(result.keywordSuppressed).toEqual([]);
+            expect(all.length, `${sweep.name}: corpus is short`).toBeGreaterThan(sweep.coverage.minFiles);
+            expect(result.keywordOffered, `${sweep.name}: shard ${index}/${count} probed no keyword`).toBeGreaterThan(
+                0,
+            );
+        });
+
+        gate("never offers the general vocabulary inside a string", () => {
+            expect(result.stringLeaked).toEqual([]);
+            expect(result.stringGated, `${sweep.name}: shard ${index}/${count} probed no string`).toBeGreaterThan(0);
+        });
+
+        gate("keeps variables inside a string only where they interpolate", () => {
+            expect(result.stringKeptVar).toBe(sweep.keepsVarsInStrings ? result.stringVarChecked : 0);
+            // Not vacuous: the declaration-site exception must not have swallowed the whole slice.
+            expect(result.stringVarChecked, `${sweep.name}: shard ${index}/${count} checked no var`).toBeGreaterThan(0);
+        });
     });
-
-    it.skipIf(files.length === 0)("never offers the general vocabulary inside a string", () => {
-        expect(result.stringLeaked).toEqual([]);
-        expect(result.stringGated).toBeGreaterThan(sweep.coverage.minProbes);
-    });
-
-    it.skipIf(files.length === 0)("keeps variables inside a string only where they interpolate", () => {
-        expect(result.stringKeptVar).toBe(sweep.keepsVarsInStrings ? result.stringVarChecked : 0);
-        // Not vacuous: the declaration-site exception must not have swallowed the whole sample.
-        expect(result.stringVarChecked).toBeGreaterThan(sweep.coverage.minProbes);
-    });
-});
+}

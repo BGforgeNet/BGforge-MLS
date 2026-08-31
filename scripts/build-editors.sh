@@ -2,22 +2,41 @@
 
 # Build editor-specific syntax highlighting bundles from YAML data and static files.
 # Produces versioned zip archives for TextMate (Sublime/JetBrains), Kate, Notepad++, and Geany.
+#
+# The four are independent - separate generators, separate staging directories, separate zips - and three
+# of them each pay a `tsx` startup, so they run in parallel rather than one after another.
 
 set -eu -o pipefail
 
-version=${ARTIFACT_VERSION:-$(node -p "require('./package.json').version")}
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT_DIR"
+
+# shellcheck source=scripts/timing-lib.sh
+source "$SCRIPT_DIR/timing-lib.sh"
+
+LOG_DIR="$ROOT_DIR/tmp/editor-build-logs"
+rm -rf "$LOG_DIR"
+mkdir -p "$LOG_DIR"
+
+# shellcheck source=scripts/parallel-lib.sh
+source "$SCRIPT_DIR/parallel-lib.sh"
+
+VERSION=${ARTIFACT_VERSION:-$(node -p "require('./package.json').version")}
 mkdir -p dist
 
 # -- TextMate bundle (Sublime Text / JetBrains) --
 
-tmbundle_name="bgforge-mls"
-tmbundle_dir="${tmbundle_name}.tmbundle"
-tmbundle_zip="dist/${tmbundle_name}-${version}.tmbundle.zip"
+build_tmbundle() {
+    local name="bgforge-mls"
+    local dir="${name}.tmbundle"
+    local zip="dist/${name}-${VERSION}.tmbundle.zip"
 
-rm -rf "$tmbundle_dir" "$tmbundle_zip"
-mkdir -p "$tmbundle_dir/Syntaxes"
+    rm -rf "$dir" "$zip"
+    mkdir -p "$dir/Syntaxes"
 
-cat >"$tmbundle_dir/info.plist" <<'PLIST'
+    cat >"$dir/info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -34,80 +53,98 @@ cat >"$tmbundle_dir/info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Copy language grammars, excluding VSCode-specific injection and tooltip grammars.
-for f in syntaxes/*.tmLanguage.json; do
-    base=$(basename "$f")
-    case "$base" in
-        bgforge-mls-* | *-tooltip.*) continue ;;
-    esac
-    cp "$f" "$tmbundle_dir/Syntaxes/"
-done
+    # Copy language grammars, excluding VSCode-specific injection and tooltip grammars.
+    local f base
+    for f in syntaxes/*.tmLanguage.json; do
+        base=$(basename "$f")
+        case "$base" in
+            bgforge-mls-* | *-tooltip.*) continue ;;
+        esac
+        cp "$f" "$dir/Syntaxes/"
+    done
 
-zip -rq "$tmbundle_zip" "$tmbundle_dir"
-rm -rf "$tmbundle_dir"
-echo "Created $tmbundle_zip"
+    zip -rq "$zip" "$dir"
+    rm -rf "$dir"
+    echo "Created $zip"
+}
 
 # -- Kate KSyntaxHighlighting --
 
-ksh_name="bgforge-mls-kate"
-ksh_dir="${ksh_name}"
-ksh_zip="dist/${ksh_name}-${version}.zip"
+build_kate() {
+    local name="bgforge-mls-kate"
+    local dir="${name}"
+    local zip="dist/${name}-${VERSION}.zip"
 
-rm -rf "$ksh_dir" "$ksh_zip"
-pnpm exec tsx scripts/utils/src/generate-ksh.ts --out-dir "$ksh_dir"
-cp editors/kate/*.ksh.xml "$ksh_dir/"
+    rm -rf "$dir" "$zip"
+    pnpm exec tsx scripts/utils/src/generate-ksh.ts --out-dir "$dir"
+    cp editors/kate/*.ksh.xml "$dir/"
 
-# File icons: shared-mime-info definitions plus matching icons, installed into the
-# XDG MIME database and icon theme (see docs/editors/kate.md). Icons reuse the shared
-# theme assets (single source: themes/icons). BAF/TP2 are raster-only upstream, so they
-# ship no scalable icon here and fall back to the generic file icon.
-mkdir -p "$ksh_dir/mimetypes"
-cp editors/kate/bgforge-mls.mime.xml "$ksh_dir/mimetypes/"
-cp themes/icons/fallout-ssl.svg "$ksh_dir/mimetypes/application-x-fallout-ssl.svg"
-cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-weidu-tra.svg"
-cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-fallout-msg.svg"
-cp themes/icons/infinity-2da.svg "$ksh_dir/mimetypes/application-x-infinity-2da.svg"
-cp themes/icons/fallout-pro.svg "$ksh_dir/mimetypes/application-x-fallout-pro.svg"
-cp themes/icons/fallout-map.svg "$ksh_dir/mimetypes/application-x-fallout-map.svg"
-cp themes/icons/infinity-itm.svg "$ksh_dir/mimetypes/application-x-infinity-itm.svg"
-cp themes/icons/infinity-spl.svg "$ksh_dir/mimetypes/application-x-infinity-spl.svg"
-cp themes/icons/infinity-eff.svg "$ksh_dir/mimetypes/application-x-infinity-eff.svg"
-cp themes/icons/infinity-cre.svg "$ksh_dir/mimetypes/application-x-infinity-cre.svg"
+    # File icons: shared-mime-info definitions plus matching icons, installed into the
+    # XDG MIME database and icon theme (see docs/editors/kate.md). Icons reuse the shared
+    # theme assets (single source: themes/icons). BAF/TP2 are raster-only upstream, so they
+    # ship no scalable icon here and fall back to the generic file icon.
+    mkdir -p "$dir/mimetypes"
+    cp editors/kate/bgforge-mls.mime.xml "$dir/mimetypes/"
+    cp themes/icons/fallout-ssl.svg "$dir/mimetypes/application-x-fallout-ssl.svg"
+    cp themes/icons/seti-msg-tra.svg "$dir/mimetypes/application-x-weidu-tra.svg"
+    cp themes/icons/seti-msg-tra.svg "$dir/mimetypes/application-x-fallout-msg.svg"
+    cp themes/icons/infinity-2da.svg "$dir/mimetypes/application-x-infinity-2da.svg"
+    cp themes/icons/fallout-pro.svg "$dir/mimetypes/application-x-fallout-pro.svg"
+    cp themes/icons/fallout-map.svg "$dir/mimetypes/application-x-fallout-map.svg"
+    cp themes/icons/infinity-itm.svg "$dir/mimetypes/application-x-infinity-itm.svg"
+    cp themes/icons/infinity-spl.svg "$dir/mimetypes/application-x-infinity-spl.svg"
+    cp themes/icons/infinity-eff.svg "$dir/mimetypes/application-x-infinity-eff.svg"
+    cp themes/icons/infinity-cre.svg "$dir/mimetypes/application-x-infinity-cre.svg"
 
-zip -rq "$ksh_zip" "$ksh_dir"
-rm -rf "$ksh_dir"
-echo "Created $ksh_zip"
+    zip -rq "$zip" "$dir"
+    rm -rf "$dir"
+    echo "Created $zip"
+}
 
 # -- Notepad++ UDL --
 
-udl_name="bgforge-mls-notepadpp"
-udl_dir="${udl_name}"
-udl_zip="dist/${udl_name}-${version}.zip"
+build_notepadpp() {
+    local name="bgforge-mls-notepadpp"
+    local dir="${name}"
+    local zip="dist/${name}-${VERSION}.zip"
 
-rm -rf "$udl_dir" "$udl_zip"
-pnpm exec tsx scripts/utils/src/generate-udl.ts --out-dir "$udl_dir"
-cp editors/notepadpp/*.udl.xml "$udl_dir/"
+    rm -rf "$dir" "$zip"
+    pnpm exec tsx scripts/utils/src/generate-udl.ts --out-dir "$dir"
+    cp editors/notepadpp/*.udl.xml "$dir/"
 
-zip -rq "$udl_zip" "$udl_dir"
-rm -rf "$udl_dir"
-echo "Created $udl_zip"
+    zip -rq "$zip" "$dir"
+    rm -rf "$dir"
+    echo "Created $zip"
+}
 
 # -- Geany --
 
-geany_name="bgforge-mls-geany"
-geany_dir="${geany_name}"
-geany_zip="dist/${geany_name}-${version}.zip"
+build_geany() {
+    local name="bgforge-mls-geany"
+    local dir="${name}"
+    local zip="dist/${name}-${VERSION}.zip"
 
-rm -rf "$geany_dir" "$geany_zip"
-pnpm exec tsx scripts/utils/src/generate-geany.ts --out-dir "$geany_dir"
+    rm -rf "$dir" "$zip"
+    pnpm exec tsx scripts/utils/src/generate-geany.ts --out-dir "$dir"
 
-# Copy hand-written conf files: editors/geany/<name>.conf -> filetypes.<name>.conf
-for f in editors/geany/*.conf; do
-    [ -e "$f" ] || continue
-    base=$(basename "$f" .conf)
-    cp "$f" "$geany_dir/filetypes.${base}.conf"
-done
+    # Copy hand-written conf files: editors/geany/<name>.conf -> filetypes.<name>.conf
+    local f base
+    for f in editors/geany/*.conf; do
+        [ -e "$f" ] || continue
+        base=$(basename "$f" .conf)
+        cp "$f" "$dir/filetypes.${base}.conf"
+    done
 
-zip -rq "$geany_zip" "$geany_dir"
-rm -rf "$geany_dir"
-echo "Created $geany_zip"
+    zip -rq "$zip" "$dir"
+    rm -rf "$dir"
+    echo "Created $zip"
+}
+
+step "Building editor bundles"
+parallel \
+    "TextMate" "build_tmbundle" \
+    "Kate" "build_kate" \
+    "Notepad++" "build_notepadpp" \
+    "Geany" "build_geany"
+
+timing_summary "Editor bundles built"

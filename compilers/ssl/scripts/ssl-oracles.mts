@@ -18,7 +18,13 @@ import { createRequire } from "node:module";
 import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../src/compile.ts";
 import { preprocess } from "../src/preprocess.ts";
-import { CORPUS_SIZE, ReferenceRefusedError, listScripts, runReference } from "../test/integration/corpus.ts";
+import {
+    CORPUS_SIZE,
+    ReferenceRefusedError,
+    corpusKey,
+    listScripts,
+    runReference,
+} from "../test/integration/corpus.ts";
 import linkHeaders from "../test/integration/global-setup.ts";
 import {
     LEVELS,
@@ -32,7 +38,6 @@ import {
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
-const FALLOUT = path.join(REPO_ROOT, "external/fallout");
 
 async function main(): Promise<void> {
     const compiler = createRequire(path.join(REPO_ROOT, "server/package.json")).resolve(
@@ -69,7 +74,7 @@ async function main(): Promise<void> {
 
     try {
         for (const script of scripts) {
-            const key = path.relative(FALLOUT, script);
+            const key = corpusKey(script);
             const stem = path.basename(script, path.extname(script));
             const digests: OracleDigest[] = [];
             let text: string | null = null;
