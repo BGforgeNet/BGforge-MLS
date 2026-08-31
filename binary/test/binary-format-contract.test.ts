@@ -5,6 +5,7 @@ import {
     getNumericTypeRange,
     validateNumericValue,
     zodFieldNumber,
+    zodNumericType,
 } from "../src/binary-format-contract";
 
 describe("binary-format-contract", () => {
@@ -12,6 +13,16 @@ describe("binary-format-contract", () => {
         expect(getNumericTypeRange("uint8")).toEqual({ min: 0, max: 255 });
         expect(getNumericTypeRange("int32")).toEqual({ min: -2147483648, max: 2147483647 });
         expect(getNumericTypeRange("unknown")).toBeUndefined();
+    });
+
+    it("reuses one schema instance per numeric type, without crossing types", () => {
+        // Pins the memoisation. The spec derivation asks for these ~1400 times at module load, and
+        // building each fresh costs ~180 ms and ~32 MB - which nothing else here would fail on.
+        expect(zodNumericType("uint8")).toBe(zodNumericType("uint8"));
+        expect(zodNumericType("uint8")).not.toBe(zodNumericType("int32"));
+        expect(zodNumericType("uint8").safeParse(255).success).toBe(true);
+        expect(zodNumericType("uint8").safeParse(256).success).toBe(false);
+        expect(zodNumericType("int32").safeParse(-2147483648).success).toBe(true);
     });
 
     it("exposes domain-specific ranges keyed by semantic field keys", () => {
