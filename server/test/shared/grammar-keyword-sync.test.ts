@@ -116,7 +116,7 @@ interface GrammarCfg {
  * Reason shared by every alias below: WeiDU still accepts these older spellings, so the grammar parses them
  * rather than reporting a false error - but only the canonical spelling is highlighted and offered in
  * completion, so the tooling keeps nudging toward one way of writing it. Each alias is checked against the
- * real binary by server/test/integration/weidu-grammar-differential.test.ts.
+ * real binary by server/test/integration/weidu-tp2-grammar-differential.test.ts.
  */
 const LEGACY_ALIAS = "legacy WeiDU alias; canonical spelling is the highlighted one";
 

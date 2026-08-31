@@ -9,10 +9,8 @@
  * invisible to a corpus sweep, but is still syntax a user can write. FORCED_SUBCOMPONENT's predicate,
  * MENU_STYLE and LOAD were all found this way, with zero corpus occurrences between them.
  *
- * Skips cleanly when no WeiDU binary can be found, the way the corpus suites skip on an unchecked-out
- * external/ - but that path is now the exception rather than the norm: `scripts/ensure-weidu.sh`, run by
- * both test scripts and by CI, downloads a pinned WeiDU when the host has none, so a skip means an
- * offline first run rather than an ordinary machine.
+ * Sibling: weidu-d-grammar-differential.test.ts, which does the same for D; both find their binary
+ * through weidu-binary.ts, which has no skip path.
  */
 
 import { execFileSync } from "child_process";
@@ -20,6 +18,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "./weidu-binary";
 import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
 
 /**
@@ -28,16 +27,6 @@ import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
  */
 const WEIDU_OK = 0;
 const WEIDU_PARSE_ERROR = 4;
-
-/** A wedged child cannot be interrupted by vitest's own timeout - execFileSync holds the worker thread. */
-const WEIDU_TIMEOUT_MS = 15000;
-
-/**
- * The binary to drive. `scripts/ensure-weidu.sh` sets WEIDU_BIN - the host's own WeiDU, or a pinned one
- * it downloaded - so a run through the test scripts does not depend on PATH; a bare vitest invocation
- * still falls back to it.
- */
-const WEIDU = process.env.WEIDU_BIN ?? "weidu";
 
 /** WeiDU rejects a TP2 whose BACKUP is not followed by AUTHOR, so every TP2-context snippet needs both. */
 const TP2_PREAMBLE = "BACKUP ~x~\nAUTHOR ~me~\n\n";
@@ -149,24 +138,8 @@ const CASES: Case[] = [
     },
 ];
 
-let weiduAvailable = false;
+let weidu = "";
 let tmpDir = "";
-
-/** True when a WeiDU binary is on PATH and answers --version. */
-function probeWeidu(): boolean {
-    try {
-        execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-/** Exit status off a thrown execFileSync error, narrowed rather than cast - `catch` binds `unknown`. */
-function exitStatus(error: unknown): number | undefined {
-    if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
-    return typeof error.status === "number" ? error.status : undefined;
-}
 
 interface WeiduVerdict {
     /** The file type that accepted the snippet, or null when all three rejected it. */
@@ -186,7 +159,7 @@ function weiduVerdict(code: string, slug: string): WeiduVerdict {
     writeFileSync(file, code);
     for (const type of ["TP2", "TPA", "TPP"]) {
         try {
-            execFileSync(WEIDU, ["--nogame", "--noautoupdate", "--parse-check", type, file], {
+            execFileSync(weidu, ["--nogame", "--noautoupdate", "--parse-check", type, file], {
                 cwd: tmpDir,
                 timeout: WEIDU_TIMEOUT_MS,
                 stdio: "ignore",
@@ -210,9 +183,8 @@ function grammarAccepts(code: string): boolean {
 }
 
 beforeAll(async () => {
-    weiduAvailable = probeWeidu();
-    if (!weiduAvailable) return;
-    tmpDir = mkdtempSync(path.join(os.tmpdir(), "weidu-differential-"));
+    weidu = resolveWeidu();
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), "weidu-tp2-differential-"));
     await initParser();
 });
 
@@ -220,9 +192,9 @@ afterAll(() => {
     if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe.skipIf(!probeWeidu())("WeiDU differential (grammar vs the real binary)", () => {
+describe("WeiDU TP2 differential (grammar vs the real binary)", () => {
     it("has a WeiDU binary and a case for every construct under test", () => {
-        expect(weiduAvailable).toBe(true);
+        expect(weidu).not.toBe("");
         expect(CASES.length).toBeGreaterThan(0);
         // Case names are the failure labels, so a duplicate would silently hide one of the two.
         expect(new Set(CASES.map((c) => c.name)).size).toBe(CASES.length);

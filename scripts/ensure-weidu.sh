@@ -2,12 +2,11 @@
 
 # Resolve a WeiDU binary, downloading a pinned one if the host has none, and print its path.
 #
-# The grammar differential (server/test/integration/weidu-grammar-differential.test.ts) uses the real
-# parser as the authority on what TP2 syntax is legal, and skips cleanly when WeiDU is absent - so
-# without a binary the suite passes by never running, which is the one failure mode a test gate must not
-# have. WeiDU is open source and publishes prebuilt binaries, so the gate fetches one rather than
-# skipping. Callers export the printed path as WEIDU_BIN; CI additionally gets it on PATH via
-# GITHUB_PATH.
+# The grammar differentials (server/test/integration/weidu-{tp2,d}-grammar-differential.test.ts) use the
+# real parser as the authority on what TP2 and D syntax is legal. They have no skip path: a gate that
+# passes by never running is the one failure mode a gate must not have. WeiDU is open source and
+# publishes prebuilt binaries, so an absent binary is fetched rather than excused. Callers export the
+# printed path as WEIDU_BIN; CI additionally gets it on PATH via GITHUB_PATH.
 #
 # Pinned to an exact release and verified by checksum: the download is an unsigned third-party binary
 # and a tag alone is mutable. Bump WEIDU_VERSION, WEIDU_ASSET_VERSION and the matching sha256 together.

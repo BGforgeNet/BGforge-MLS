@@ -11,10 +11,8 @@
  *
  * A handful of divergences are deliberate; those carry a `divergence` note and the case asserts the
  * disagreement STILL HOLDS, so the day WeiDU or the grammar changes its mind the gate says so rather than
- * quietly agreeing. Sibling: weidu-grammar-differential.test.ts, which does the same for TP2.
- *
- * There is no skip path. A gate that passes by never running is worse than no gate, so when neither
- * WEIDU_BIN nor PATH has a binary this asks scripts/ensure-weidu.sh for the pinned one.
+ * quietly agreeing. Sibling: weidu-tp2-grammar-differential.test.ts, which does the same for TP2; both
+ * find their binary through weidu-binary.ts, which has no skip path.
  */
 
 import { execFileSync } from "child_process";
@@ -22,10 +20,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "./weidu-binary";
 import { initParser, parseWithCache } from "../../../shared/parsers/weidu-d";
-
-/** Root of the project repository - mirrors test-helpers.ts, which keeps its copy private. */
-const ROOT_DIR = path.resolve(__dirname, "../../..");
 
 /**
  * WeiDU exits 0 when the file parsed and 4 on a parse error. Anything else (crash, missing binary,
@@ -33,11 +29,6 @@ const ROOT_DIR = path.resolve(__dirname, "../../..");
  */
 const WEIDU_OK = 0;
 const WEIDU_PARSE_ERROR = 4;
-
-/** A wedged child cannot be interrupted by vitest's own timeout - execFileSync holds the worker thread. */
-const WEIDU_TIMEOUT_MS = 15000;
-/** Provisioning may download and unpack an archive, so it gets a longer bound than a parse-check. */
-const ENSURE_TIMEOUT_MS = 120000;
 
 interface Case {
     name: string;
@@ -182,45 +173,6 @@ const CASES: Case[] = [
 
 let weidu = "";
 let tmpDir = "";
-
-/** True when the given binary answers --version. */
-function canRun(bin: string): boolean {
-    try {
-        execFileSync(bin, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-/**
- * The binary to drive, without a skip path. scripts/test.sh, test-all.sh and CI all export WEIDU_BIN
- * before this runs; a bare vitest invocation falls back to PATH and then to provisioning the pinned,
- * checksum-verified binary. A failure here fails the suite, which is the point.
- */
-function resolveWeidu(): string {
-    const configured = process.env.WEIDU_BIN;
-    if (configured && canRun(configured)) return configured;
-    if (canRun("weidu")) return "weidu";
-
-    const printed = execFileSync(path.join(ROOT_DIR, "scripts/ensure-weidu.sh"), {
-        timeout: ENSURE_TIMEOUT_MS,
-        encoding: "utf8",
-    });
-    // The script prints progress before the path, so the path is the last non-empty line.
-    const lines = printed.split("\n").filter((line) => line.trim() !== "");
-    const resolved = lines.at(-1)?.trim() ?? "";
-    if (!canRun(resolved)) {
-        throw new Error(`ensure-weidu.sh returned "${resolved}", which does not answer --version`);
-    }
-    return resolved;
-}
-
-/** Exit status off a thrown execFileSync error, narrowed rather than cast - `catch` binds `unknown`. */
-function exitStatus(error: unknown): number | undefined {
-    if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
-    return typeof error.status === "number" ? error.status : undefined;
-}
 
 interface WeiduVerdict {
     accepts: boolean;
