@@ -217,17 +217,17 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         }
 
         const changed = result.text !== text;
-        if (mode === "save") {
+        if (mode === "save" || mode === "save-and-check") {
             if (changed) {
                 fs.writeFileSync(filePath, result.text);
                 console.log(`Formatted: ${filePath}`);
             }
-        } else if (mode === "save-and-check") {
-            if (changed) {
-                fs.writeFileSync(filePath, result.text);
-                console.log(`Formatted: ${filePath}`);
-            }
-            // Idempotency check: re-format the result and verify it's stable
+        }
+        // Idempotency check: re-format the result and verify it's stable. It re-formats the in-memory
+        // output rather than reading the file back, which is what lets check-idempotency reach the same
+        // verdict without writing - the corpus sweep wants the verdict, not the formatted tree, and not
+        // writing keeps it from racing the suites that read the same corpus.
+        if (mode === "save-and-check" || mode === "check-idempotency") {
             let reResult: FormatResult;
             try {
                 reResult = parseAndFormat(result.text, fileType, opts);
@@ -242,7 +242,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             }
         } else if (mode === "stdout") {
             process.stdout.write(result.text);
-        } else if (changed) {
+        } else if (mode === "check" && changed) {
             reportDiff(filePath, text, result.text);
             return "changed";
         }
@@ -252,12 +252,15 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
 const HELP = `Usage: fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
   Supported: .ssl, .baf, .d, .tp2 (/.tph/.tpa/.tpp), .tra, .msg, .2da, scripts.lst
-  --save            Write formatted output back to file(s)
-  --check           Check if files are formatted (exit 1 if not)
-  --save-and-check  Save formatted output and verify idempotency in one pass
-  -r                Recursively format all supported files in directory
-  -q                Quiet mode: suppress summary, only print changed files
-  --jobs <n>        Process directory files with N parallel workers
+  --save               Write formatted output back to file(s)
+  --check              Check if files are formatted (exit 1 if not)
+  --save-and-check     Save formatted output and verify idempotency in one pass
+  --check-idempotency  Verify idempotency without writing anything
+  -r                   Recursively format all supported files in directory
+  -q                   Quiet mode: suppress summary, only print changed files
+  --jobs <n>           Process directory files with N parallel workers
+  --exclude-from <p>   Skip the files listed in <p> (# comments and blanks ignored)
+  --exclude-base <d>   Resolve --exclude-from entries against <d> (default: the target)
   Without --save or --check: single file prints to stdout, directory shows what would change`;
 
 async function main() {

@@ -416,6 +416,67 @@ describe("format CLI integration", () => {
         });
     });
 
+    describe("--check-idempotency", () => {
+        // The corpus sweep in scripts/test-external.sh runs this mode against trees that other suites
+        // read at the same time, so "leaves the file byte-identical" is the property that lets those
+        // suites run in parallel at all - not an incidental detail of the mode.
+        it("reaches the same verdict as --save-and-check without writing the file", () => {
+            const unformatted = 'procedure start begin\ndisplay_msg(  "hi"  );\nend\n';
+            const checked = path.join(tmpDir, "check.ssl");
+            const saved = path.join(tmpDir, "saved.ssl");
+            fs.writeFileSync(checked, unformatted);
+            fs.writeFileSync(saved, unformatted);
+
+            const check = run(checked, "--check-idempotency");
+            const save = run(saved, "--save-and-check");
+
+            expect(check.code).toBe(0);
+            expect(save.code).toBe(0);
+            // --save-and-check rewrote its copy; --check-idempotency left its own untouched.
+            expect(fs.readFileSync(saved, "utf-8")).not.toBe(unformatted);
+            expect(fs.readFileSync(checked, "utf-8")).toBe(unformatted);
+        });
+
+        it("drops a file named in --exclude-from from the walk", () => {
+            const excludes = path.join(tmpDir, "excludes.txt");
+            fs.writeFileSync(path.join(tmpDir, "kept.ssl"), "procedure start begin\nend\n");
+            fs.writeFileSync(path.join(tmpDir, "dropped.ssl"), "procedure start begin\nend\n");
+            // A comment and a blank line, so both are covered by the same read.
+            fs.writeFileSync(excludes, "# not this one\n\ndropped.ssl\n");
+
+            const included = run(tmpDir, "-r", "--check-idempotency");
+            const excluded = run(tmpDir, "-r", "--check-idempotency", "--exclude-from", excludes);
+
+            expect(included.stdout).toContain("Found 2 ");
+            expect(excluded.stdout).toContain("Found 1 ");
+            expect(excluded.code).toBe(0);
+        });
+
+        it("resolves --exclude-from entries against --exclude-base, not the target", () => {
+            const nested = path.join(tmpDir, "data");
+            const excludes = path.join(tmpDir, "excludes.txt");
+            fs.mkdirSync(nested, { recursive: true });
+            fs.writeFileSync(path.join(nested, "kept.ssl"), "procedure start begin\nend\n");
+            fs.writeFileSync(path.join(nested, "dropped.ssl"), "procedure start begin\nend\n");
+            // Entry is relative to tmpDir while the walk targets tmpDir/data - the shape the external
+            // corpus uses, where one list serves targets at different depths.
+            fs.writeFileSync(excludes, "data/dropped.ssl\n");
+
+            const { stdout, code } = run(
+                nested,
+                "-r",
+                "--check-idempotency",
+                "--exclude-from",
+                excludes,
+                "--exclude-base",
+                tmpDir,
+            );
+
+            expect(stdout).toContain("Found 1 ");
+            expect(code).toBe(0);
+        });
+    });
+
     describe("weidu-d transition idempotence", () => {
         // Regression: a ~trigger~ string abutting THEN with no source space (valid WeiDU) rendered as
         // ~..~THEN on the first pass but ~..~ THEN once the broken transition line was reparsed, so the

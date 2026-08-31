@@ -88,8 +88,8 @@ describe.skipIf(scripts.length === 0 || !gccAvailable)("preprocessor vs gcc over
 
         // A silent collapse in `compared` would let this pass while testing almost nothing, so assert the
         // denominator too - gcc skipping the whole corpus must fail rather than read as a clean run. The
-        // corpus size is exact rather than a floor: it shrinks mid-run under `test-external.sh` (see
-        // corpus.ts), and a floor 25 below the real count cannot tell that from a couple of lost files.
+        // corpus size is exact rather than a floor: a floor set below the real count cannot tell a healthy
+        // corpus from one missing a couple of files (see corpus.ts).
         expect(scripts.length).toBe(CORPUS_SIZE);
         expect(failures, `preprocessor errors:\n${failures.slice(0, 10).join("\n")}`).toEqual([]);
         expect(mismatches, `token mismatches:\n${mismatches.slice(0, 10).join("\n")}`).toEqual([]);

@@ -148,10 +148,9 @@ fi
 # green here cannot read as a swept corpus. Close-out keeps the full corpus sweeps and
 # transpile-external, plus the format/idempotency sweep.
 #
-# Every job in this block READS external/ and none writes it, which is what lets them run together - the
-# format sweep MUTATES those trees (hence the reset trap in test-external.sh) and stays in test-all.sh
-# for that reason, and bin-cli tests that read external/ are gated behind RUN_EXTERNAL_CLI_TESTS and skip
-# cleanly here. Adding a job that writes there, or setting that variable, breaks both sides at once.
+# Every job in this block READS external/ and none writes it, which is what lets them run together.
+# transpile-external is the only suite that writes there, and it stays in test-all.sh, alone. Adding a
+# job here that writes external/ breaks every other job in the block.
 step "Phase 3: Smoke + Samples + CLI + Grammars + Integration + Corpus canary"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.mts)" \

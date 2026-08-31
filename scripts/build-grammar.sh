@@ -47,10 +47,7 @@ step "Building grammar WASMs"
 for dir in "${LSP_GRAMMARS[@]}" "${DIAG_GRAMMARS[@]}"; do
     echo "[$dir]"
     generate_grammar_cached "$ROOT_DIR/grammars/$dir" "$TREE_SITTER"
-    (
-        cd "$ROOT_DIR/grammars/$dir"
-        "$TREE_SITTER" build --wasm
-    )
+    build_grammar_wasm_cached "$ROOT_DIR/grammars/$dir" "$TREE_SITTER"
 done
 
 # LSP grammar WASMs go to both the server and the format CLI bundle.

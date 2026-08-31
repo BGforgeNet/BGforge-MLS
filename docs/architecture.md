@@ -515,7 +515,7 @@ Standalone command-line tools that reuse server modules without VSCode dependenc
 ### Format CLI
 
 ```
-fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+fgfmt <file|dir> [--save] [--check] [--save-and-check] [--check-idempotency] [-r] [-q]
 ```
 
 Formats Fallout SSL, WeiDU BAF/D/TP2, WeiDU TRA, Fallout MSG, Infinity Engine 2DA, and
@@ -660,7 +660,7 @@ authoritative threshold values live in each package's own `vitest.config.ts`
 so they cannot drift out of sync as thresholds are ratcheted. Two packages run
 intentionally low floors because their broader behaviour is verified by other layers:
 
-- **`@bgforge/format`** (`format/vitest.config.ts`): the tree-sitter-driven formatters (`src/{fallout-ssl,weidu-baf,weidu-d,weidu-tp2}/`) are exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test-external.sh` (run by `pnpm test:all`), so they are excluded from this gate's coverage scope; the threshold measures only the standalone unit slice (the pure formatters, utilities, helpers, dispatch) it actually covers.
+- **`@bgforge/format`** (`format/vitest.config.ts`): the tree-sitter-driven formatters (`src/{fallout-ssl,weidu-baf,weidu-d,weidu-tp2}/`) are exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--check-idempotency` invocation in `scripts/test-external.sh` (run by `pnpm test:all`), so they are excluded from this gate's coverage scope; the threshold measures only the standalone unit slice (the pure formatters, utilities, helpers, dispatch) it actually covers.
 - **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): the bulk of transpiler correctness is enforced by the TD/TBAF fixture-driven integration suites in `scripts/test.sh` (`api.test.ts`, `transpile-cli.test.ts`, and the `test/td` + `test/tbaf` fixture suites). The vitest project here covers the public API, shared helpers, and targeted unit slices of the per-language transformers (TBAF condition algebra, TD expression evaluation, TSSL operator conversion, the shared loop-unroll guard); Stryker mutation testing does not reach this package (it mutates `server/src/core` only - see below), so the rest of the per-language transformer surface is exercised through those integration suites.
 
 Stryker (`stryker.conf.json`) mutates exactly three `server/src/core` files -

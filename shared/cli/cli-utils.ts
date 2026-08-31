@@ -12,7 +12,7 @@ import cac from "cac";
 import { diffLines } from "diff";
 
 export type FileResult = "changed" | "unchanged" | "error";
-export type OutputMode = "save" | "stdout" | "check" | "save-and-check";
+export type OutputMode = "save" | "stdout" | "check" | "save-and-check" | "check-idempotency";
 
 /**
  * Optional source-location metadata that error throwers can attach for
@@ -50,6 +50,8 @@ interface CliArgs {
     quiet: boolean;
     jobs: number;
     filesFrom?: string;
+    excludeFrom?: string;
+    excludeBase?: string;
     /**
      * Values for the options a caller registered through `extraOptions`, keyed by camelCase name.
      * Optional because only `parseCliArgs` produces it: a caller hand-building args for `runCli` has no
@@ -76,10 +78,13 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
         .option("--save", "Write output to files")
         .option("--check", "Check output without writing")
         .option("--save-and-check", "Write output and check for changes")
+        .option("--check-idempotency", "Check output is a fixed point without writing")
         .option("-r, --recursive", "Process directories recursively")
         .option("-q, --quiet", "Suppress informational output")
         .option("--jobs <n>", "Process directory files with N parallel workers")
         .option("--files-from <path>", "Process the newline-separated file list (internal, used by --jobs)")
+        .option("--exclude-from <path>", "Skip the files listed in <path> (# comments and blanks ignored)")
+        .option("--exclude-base <dir>", "Resolve --exclude-from entries against <dir> (default: the target)")
         .action(() => {});
     // cac renders a section as `${title}:\n${body}`, so the text goes in `body`; as a title it would
     // pick up a trailing colon. cac prints it itself on --help, so returning null here - rather than
@@ -90,15 +95,19 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
     if (cli.options.help) return null;
 
     const target = cli.args[0] as string | undefined;
-    const { save, check, saveAndCheck, recursive, quiet, jobs, filesFrom } = cli.options as {
-        save: boolean;
-        check: boolean;
-        saveAndCheck: boolean;
-        recursive: boolean;
-        quiet: boolean;
-        jobs?: number | string;
-        filesFrom?: string;
-    };
+    const { save, check, saveAndCheck, checkIdempotency, recursive, quiet, jobs, filesFrom, excludeFrom, excludeBase } =
+        cli.options as {
+            save: boolean;
+            check: boolean;
+            saveAndCheck: boolean;
+            checkIdempotency: boolean;
+            recursive: boolean;
+            quiet: boolean;
+            jobs?: number | string;
+            filesFrom?: string;
+            excludeFrom?: string;
+            excludeBase?: string;
+        };
 
     if (!target) {
         console.error("Error: No file or directory specified");
@@ -116,7 +125,15 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
         process.exit(1);
     }
 
-    const mode: OutputMode = saveAndCheck ? "save-and-check" : save ? "save" : check ? "check" : "stdout";
+    const mode: OutputMode = checkIdempotency
+        ? "check-idempotency"
+        : saveAndCheck
+          ? "save-and-check"
+          : save
+            ? "save"
+            : check
+              ? "check"
+              : "stdout";
 
     return {
         target,
@@ -125,6 +142,8 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
         quiet: quiet ?? false,
         jobs: jobCount,
         filesFrom,
+        excludeFrom,
+        excludeBase,
         extra: cli.options as Record<string, unknown>,
     };
 }
@@ -150,6 +169,36 @@ export function findFiles(dir: string, extensions: readonly string[]): string[] 
         }
     }
     return files;
+}
+
+/**
+ * Read an exclusion list: one path per line, `#` comments and blank lines ignored, each entry
+ * resolved against `base`. Returns absolute paths so callers compare against `findFiles` output
+ * directly.
+ *
+ * `base` is separate from the walk target because one list can serve several targets: the external
+ * corpus lists paths relative to the corpus root, while the CLIs are pointed at a repo or a data
+ * subdirectory inside it.
+ */
+export function loadExclusions(excludeFrom: string, base: string): ReadonlySet<string> {
+    const excluded = new Set<string>();
+    for (const line of fs.readFileSync(excludeFrom, "utf-8").split("\n")) {
+        const entry = line.trim();
+        if (entry === "" || entry.startsWith("#")) continue;
+        excluded.add(path.resolve(base, entry));
+    }
+    return excluded;
+}
+
+/**
+ * The walk plus the caller's exclusions. Both of `runCli`'s directory paths go through this, so a
+ * `--exclude-from` cannot apply to one and silently miss the other.
+ */
+export function collectFiles(args: CliArgs, extensions: readonly string[]): string[] {
+    const files = findFiles(args.target, extensions);
+    if (args.excludeFrom === undefined) return files;
+    const excluded = loadExclusions(args.excludeFrom, args.excludeBase ?? args.target);
+    return files.filter((file) => !excluded.has(path.resolve(file)));
 }
 
 /**
@@ -398,7 +447,7 @@ export async function runCli(options: RunOptions): Promise<void> {
             console.error("Error: Target is a directory. Use -r for recursive.");
             process.exit(1);
         }
-        const files = findFiles(args.target, extensions);
+        const files = collectFiles(args, extensions);
         if (files.length === 0) {
             console.error(`No ${description} files found in ${args.target}`);
             process.exit(1);
@@ -420,7 +469,7 @@ export async function runCli(options: RunOptions): Promise<void> {
             process.exit(1);
         }
 
-        const files = findFiles(args.target, extensions);
+        const files = collectFiles(args, extensions);
         if (files.length === 0) {
             console.error(`No ${description} files found in ${args.target}`);
             process.exit(1);

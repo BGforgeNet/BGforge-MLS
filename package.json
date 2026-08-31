@@ -57,7 +57,7 @@
         "test:server": "cd server && pnpm test",
         "test:grammars": "./scripts/test-grammars.sh",
         "test:integration": "cd server && pnpm test:integration",
-        "test:external": "./scripts/test-external.sh",
+        "test:external": "./scripts/reset-external.sh && ./scripts/test-external.sh",
         "test:transpile-external": "./scripts/test-transpile-external.sh",
         "test:grammar": "./scripts/test-grammar.sh",
         "lsp-probe": "tsx server/scripts/lsp-probe.mts",

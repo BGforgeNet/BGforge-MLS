@@ -33,14 +33,9 @@ grammar_generate() {
 # than the one under test - which can fail on a correct change or pass on a broken one.
 grammar_build_wasm() {
     step "$GRAMMAR_NAME: Building WASM"
+    build_grammar_wasm_cached "$GRAMMAR_DIR" "$TS"
     local wasm
     wasm=$(find . -maxdepth 1 -name '*.wasm' -print -quit)
-    if [[ -n "$wasm" && "$wasm" -nt src/parser.c ]]; then
-        echo "wasm: cached (newer than src/parser.c)"
-    else
-        "$TS" build --wasm
-        wasm=$(find . -maxdepth 1 -name '*.wasm' -print -quit)
-    fi
 
     # Refresh only the bundle dirs that already ship this grammar, so the diagnostics-only grammars keep
     # build-grammar.sh's policy of going to server/out and not format/out without restating the list here.

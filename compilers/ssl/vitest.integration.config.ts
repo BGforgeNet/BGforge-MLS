@@ -16,13 +16,13 @@ export default defineConfig({
         // Links the sfall headers into the corpus once for the whole project. Both suites need them,
         // and doing it per-file raced when the files ran in parallel.
         globalSetup: [path.resolve(import.meta.dirname, "test/integration/global-setup.ts")],
-        // The corpus differential once obtained 1516 oracles inside the full parallel gate and 1517 with
-        // the machine to itself, for a reason that went uncaptured for a long time. It is captured now:
-        // bounding the child turned the symptom into `killed by SIGTERM`, and the script it struck
-        // compiles in 90ms on its own. The bundled compiler simply hangs on roughly one spawn in several
-        // thousand. The optimise differential retries a KILLED child once for exactly that reason;
-        // serialising here still helps by not multiplying the spawns competing at any moment.
-        fileParallelism: false,
+        // The files run in parallel (281s serial, 110s parallel). This suite once drove the bundled
+        // compiler across the whole corpus, and that compiler hangs on roughly one spawn in several
+        // thousand, so serialising it kept the number of concurrent spawns down; since the oracles were
+        // committed the sweeps compare against those in-process and only switch-differential.test.ts
+        // still spawns it, a few dozen times in one file, which parallelism across files does not
+        // multiply. The optimise differential retries a KILLED child for the same underlying reason.
+        //
         // ~1500 gcc invocations plus the same number of in-process runs, against other suites running in
         // parallel on a contended runner. The timeout guards against hangs, not slowness.
         testTimeout: 600000,

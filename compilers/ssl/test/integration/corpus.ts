@@ -2,11 +2,12 @@
  * The script corpus the differential sweeps - the Restoration Project plus the other pinned mods - shared
  * by the suites that read it.
  *
- * The size is pinned because the corpus is not stable while the test suite runs: `scripts/test-external.sh`
- * deletes every path in `external/fallout-exclude.txt` for the duration of its own run and restores them
- * from git in an EXIT trap. Forty-two of those are scripts under `scripts_src`, so anything reading the
- * corpus inside that window silently sweeps a smaller set - the counts all stay plausible and every gate
- * measured against them quietly weakens. Asserting the size turns that into a named failure.
+ * The size is pinned because a short corpus is otherwise invisible: the counts all stay plausible and
+ * every gate measured against them quietly weakens. Asserting the size turns that into a named failure.
+ * This once guarded a specific window - `scripts/test-external.sh` deleted every path in
+ * `external/fallout-exclude.txt` for the duration of its run - which no longer exists now that it passes
+ * that list to the CLIs as `--exclude-from` instead. A partial or interrupted checkout still produces the
+ * same silent shortfall, so the assertion stays.
  *
  * Raise `CORPUS_SIZE` when the pinned external checkout genuinely grows; never lower it to accommodate a
  * run that saw fewer, which is the symptom this exists to catch.

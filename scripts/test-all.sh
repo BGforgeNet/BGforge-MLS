@@ -41,10 +41,6 @@ step "Dialog source parser reuse performance (serial, no coverage)"
 TEST_COVERAGE=0 pnpm exec vitest run --config server/vitest.config.mts \
     server/test/dialog-source-project-reuse.test.ts --maxWorkers=4
 
-# test.sh already reset external repos; propagate the flag so test-external.sh skips
-# its own redundant reset (the export inside test.sh doesn't survive the subprocess).
-export EXTERNAL_REPOS_CLEAN=1
-
 # test.sh resolves this before its own Phase 1, but that export dies with the subprocess above, and the
 # suites below need it too - so resolve it again here. Cached, so the second call costs nothing.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
@@ -54,22 +50,36 @@ export WEIDU_BIN
 # Each job only needs CLIs built (done above). Grammar tests build format CLI if missing.
 # Keep in sync with test.sh Phase 3 block: what this adds is DEPTH, not new categories -
 # the external-corpus format sweep, transpile-external, and the full SSL corpus sweeps
-# where test.sh runs only their canary. Grammars and server integration are identical in
-# both; integration is chained here rather than parallel only because the format sweep
-# beside it rewrites the trees it reads.
-# External + Integration + Transpile-external are chained: they all touch the same
-# external repos and would race if parallelized. The format step modifies .baf files and
-# transpile-external checks git-clean status; concurrent access corrupts both. The EXIT
-# trap in test-external.sh resets repos between stages.
-# test:cli:external joins this chain (not "Sample + CLI tests"): bin-cli tests that read
-# from external/fallout/.../maps/ race with test-external.sh's reset trap if run in
-# parallel, so they are gated behind RUN_EXTERNAL_CLI_TESTS and skip cleanly in the
-# parallel phase.
+# where test.sh runs only their canary. Grammars and server integration are identical in both.
+#
+# Every job here READS external/ and none writes it, which is what lets them run together. The format
+# sweep used to save its formatted output and delete the excluded files, so everything reading the same
+# corpus had to be chained behind it - a correctness constraint that set this phase's shape. It now runs
+# --check-idempotency with --exclude-from and touches nothing, so what remains is a scheduling decision:
+# a job added here that writes external/ breaks every other job in it.
+#
+# The three corpus suites stay chained to each other for CPU, not correctness. Each already fans out
+# across the whole machine (the format sweep at one worker per core, the other two across their files),
+# so running them together buys no wall time and starves them past their own timeouts - which guard
+# against hangs, not slowness. Measured on a 10-core box: all-parallel finished the phase in ~150s but
+# timed out weidu-tp2-file-references (62s against its 60s budget) and completion-gating-corpus, where
+# chained they cost about what they cost alone. CI has 4 vCPUs, where oversubscribing costs more still.
+# Order puts the integration suite last, so the shortest-fused of the three runs once the light jobs
+# beside it have finished and the box is quiet.
+#
+# test:cli:external is the same suite as test:cli with the external-corpus cases enabled, so this tier
+# runs it INSTEAD of test:cli rather than as a second job - running both compiled the shared cases twice.
 step "Phase 3 + Extended: All remaining tests"
 parallel \
     "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.mts)" \
-    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
-    "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.mts) && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && pnpm test:transpile-external && pnpm test:cli:external" \
+    "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli:external" \
+    "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && (cd server && pnpm exec vitest run --config vitest.integration.config.mts)" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars"
+
+# transpile-external is the one suite that WRITES to external/: it transpiles in place and verifies the
+# result by `git diff` against the committed output, restoring the generated .ssl afterwards. That
+# method needs a clean tree and no concurrent reader, so it runs alone after the block rather than in it.
+step "Transpile external (writes external/, so it runs alone)"
+pnpm test:transpile-external
 
 timing_summary "All tests passed (full suite)"

@@ -11,6 +11,8 @@ import {
     reportDiff,
     safeProcess,
     findFiles,
+    loadExclusions,
+    collectFiles,
     parseCliArgs,
     runCli,
     type FileResult,
@@ -199,6 +201,68 @@ describe("findFiles", () => {
         const basenames = files.map((f) => path.basename(f)).sort();
         expect(basenames).not.toContain("ignored.map");
         expect(basenames).not.toContain("ignored.ssl");
+    });
+});
+
+describe("exclusions", () => {
+    const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-exclusions");
+    const excludeFile = path.join(tmpDir, "excludes.txt");
+
+    beforeEach(() => {
+        fs.mkdirSync(path.join(tmpDir, "sub"), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, "a.ssl"), "");
+        fs.writeFileSync(path.join(tmpDir, "sub", "b.ssl"), "");
+    });
+
+    afterEach(() => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it("resolves entries against the base, ignoring comments and blank lines", () => {
+        fs.writeFileSync(excludeFile, "# a comment\n\n  sub/b.ssl  \n");
+        const excluded = loadExclusions(excludeFile, tmpDir);
+        expect([...excluded]).toEqual([path.join(tmpDir, "sub", "b.ssl")]);
+    });
+
+    it("drops excluded files from the walk", () => {
+        fs.writeFileSync(excludeFile, "sub/b.ssl\n");
+        const files = collectFiles(
+            {
+                target: tmpDir,
+                mode: "check-idempotency",
+                recursive: true,
+                quiet: true,
+                jobs: 1,
+                excludeFrom: excludeFile,
+            },
+            [".ssl"],
+        );
+        expect(files.map((f) => path.basename(f))).toEqual(["a.ssl"]);
+    });
+
+    it("resolves against excludeBase rather than the target when both are given", () => {
+        // The entry is written relative to tmpDir while the walk targets tmpDir/sub - the shape the
+        // external corpus uses, where one list serves targets at different depths. Without excludeBase
+        // the same entry resolves under sub/ and matches nothing.
+        fs.writeFileSync(excludeFile, "sub/b.ssl\n");
+        const args = {
+            target: path.join(tmpDir, "sub"),
+            mode: "check-idempotency" as const,
+            recursive: true,
+            quiet: true,
+            jobs: 1,
+            excludeFrom: excludeFile,
+        };
+        expect(collectFiles({ ...args, excludeBase: tmpDir }, [".ssl"])).toEqual([]);
+        expect(collectFiles(args, [".ssl"]).map((f) => path.basename(f))).toEqual(["b.ssl"]);
+    });
+
+    it("returns the full walk when no exclusion file is given", () => {
+        const files = collectFiles(
+            { target: tmpDir, mode: "check-idempotency", recursive: true, quiet: true, jobs: 1 },
+            [".ssl"],
+        );
+        expect(files).toHaveLength(2);
     });
 });
 

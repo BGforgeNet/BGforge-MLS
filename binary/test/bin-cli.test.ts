@@ -8,14 +8,11 @@
  *   Tests that read only from FIXTURES are safe to run in parallel with any
  *   other phase.
  * - RP_MAPS (`external/fallout/Fallout2_Restoration_Project/data/maps/`) -
- *   populated by `scripts/test-external.sh`, which also resets the external
- *   repos on exit via a trap. Tests that read from RP_MAPS must run in the
- *   same serialized chain as test-external.sh; otherwise the reset trap can
- *   fire mid-test and delete fixtures out from under copyFileSync. They are
- *   gated behind the `RUN_EXTERNAL_CLI_TESTS` env var, which `test-all.sh`
- *   sets only in the External+Integration+Transpile chain. `pnpm test:cli`
- *   (parallel phase) runs without the var, so the RP_MAPS tests are skipped
- *   visibly. `pnpm test:cli:external` runs them.
+ *   cloned by `scripts/test-external.sh`, which no longer writes to the tree,
+ *   so these tests need no serialization against it. They stay gated behind
+ *   the `RUN_EXTERNAL_CLI_TESTS` env var because the corpus is only present
+ *   once it has been cloned: `pnpm test:cli` runs without the var and skips
+ *   them visibly, `pnpm test:cli:external` (run by `test-all.sh`) runs them.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

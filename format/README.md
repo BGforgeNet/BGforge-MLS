@@ -44,16 +44,21 @@ its contents move whenever a grammar does.
 ## `fgfmt` CLI
 
 ```
-fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q] [--jobs <n>]
+fgfmt <file|dir> [--save] [--check] [--save-and-check] [--check-idempotency] [-r] [-q] [--jobs <n>]
 ```
 
 - `--save` - write formatted output back to file(s)
 - `--check` - exit 1 if any file is not already formatted
 - `--save-and-check` - save and verify idempotency in one pass
+- `--check-idempotency` - verify idempotency without writing anything, for sweeping a tree other
+  jobs are reading at the same time
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
 - `--jobs <n>` - process directory files with `n` parallel workers (output order matches the sequential walk;
   with `--check`, all files are checked before the exit code instead of stopping at the first mismatch)
+- `--exclude-from <path>` - skip the files listed in `<path>` (`#` comments and blank lines ignored)
+- `--exclude-base <dir>` - resolve `--exclude-from` entries against `<dir>` rather than the target, for a
+  list shared by targets at different depths
 
 ## Supported file types
 
