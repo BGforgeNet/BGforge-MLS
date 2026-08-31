@@ -45,12 +45,16 @@ const replaceTransAction = (keyword) => ($) =>
 export default grammar({
     name: "weidu_d",
 
+    // The literal and %var% pieces of an interpolated name, scanned in src/scanner.c. As
+    // token.immediate they duplicated the identifier machine into a second lex mode across every
+    // state a filename can reach; see the scanner's header for what that cost at runtime.
+    externals: ($) => [$._immediate_identifier, $._immediate_variable_ref],
+
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
-    conflicts: ($) => [
-        [$.macro_expansion, $._state_label],
-        [$.macro_expansion, $._filename],
-    ],
+    // Keyword extraction: without it every keyword is spelled out character by character in each
+    // lex state that admits an identifier, rather than once in the generated keyword lexer.
+    word: ($) => $.identifier,
 
     rules: {
         source_file: ($) => repeat($._d_action),
@@ -150,7 +154,9 @@ export default grammar({
                 field("label", $._state_label),
                 field("global_var", $.identifier),
                 repeat($.chain_speaker),
-                $.chain_epilogue,
+                // Plain END, not a chain_epilogue: the construct already implies the copy, so WeiDU
+                // gives it no epilogue choice where a bare INTERJECT takes the full set.
+                "END",
             ),
 
         // chainText: [IF trigger THEN] sayText [== ... | BRANCH ...]
@@ -329,11 +335,11 @@ export default grammar({
         // SAY text [= text ...]
         say_text: ($) => seq($._text, repeat(seq("=", $._text))),
 
-        // Transitions
-        transition: ($) => choice($.transition_full, $.transition_short, $.copy_trans, $.macro_expansion),
-
-        // WeiDU macro expansion (bare %var% in transition position)
-        macro_expansion: ($) => $.variable_ref,
+        // Transitions. A bare %var% here stands in for structure this file never states - its value
+        // comes from elsewhere in the install (a variable set in a .tp2 may reach a .d), and WeiDU
+        // rejects such a file parsed on its own. A %var% in a name or text position substitutes a
+        // value rather than structure and stays accepted.
+        transition: ($) => choice($.transition_full, $.transition_short, $.copy_trans),
 
         // IF ~trigger~ [THEN] transFeatures transNext
         transition_full: ($) =>
@@ -386,29 +392,28 @@ export default grammar({
         // Filename can be identifier, string, variable ref, or a %var%-interpolated name
         _filename: ($) => choice($.identifier, $.string, $.variable_ref, $.interpolated_name),
 
-        // A name assembled at COMPILE time by concatenating %var% substitutions with abutting
-        // literal text, e.g. %tutu_var%KELDDA (the value of tutu_var, then "KELDDA") or
-        // TAZOK%eet_var%. WeiDU treats the pieces as one identifier; token.immediate on the
-        // continuation keeps them from combining across whitespace (so `%var% NAME` stays two tokens).
+        // A name assembled by concatenating %var% references with abutting literal text, e.g.
+        // %tutu_var%KELDDA (the value of tutu_var, then "KELDDA") or TAZOK%eet_var%. A DELIBERATE
+        // divergence: WeiDU lexes each %...% run as its own string token, so it reads this as two
+        // arguments where one name was meant and rejects the file; we accept it to stay quiet on
+        // source that installs fine once the variable is resolved. The pieces must abut - the scanner
+        // refuses across whitespace, so `%var% NAME` stays two tokens.
         interpolated_name: ($) =>
             seq(
                 choice($.variable_ref, $.identifier),
                 repeat1(
                     choice(
-                        alias(token.immediate(/[A-Za-z_][A-Za-z0-9_#]*/), $.identifier),
-                        alias(token.immediate(seq("%", /[A-Za-z_][A-Za-z0-9_#]*/, "%")), $.variable_ref),
+                        alias($._immediate_identifier, $.identifier),
+                        alias($._immediate_variable_ref, $.variable_ref),
                     ),
                 ),
             ),
 
         // State label can be number, identifier, alphanumeric (like 4a), variable ref, or string (like ~13~)
-        _state_label: ($) => choice($.state_label_alnum, $.identifier, $.variable_ref, $.string),
-
-        // Alphanumeric state label (can start with digit, like "4a", "100", "foo")
-        // WeiDU allows # in state labels (e.g., RR#ZA00) but not at start (conflicts with #weight syntax).
-        // Dots are valid in labels too (e.g., KHPC1.1, SHRO6.16); `number` is integer-only, so a dotted
-        // run is unambiguously a label here, never a float. Hyphens also occur (e.g., Quayle_Shar-Teel_1).
-        state_label_alnum: ($) => /[A-Za-z0-9_][A-Za-z0-9_#.-]*/,
+        // A label is lexically just an identifier, so it is the same token aliased: two overlapping
+        // identifier-shaped tokens forced the lexer to keep both machines alive wherever either was
+        // admissible, which cost more than the keywords did.
+        _state_label: ($) => choice(alias($.identifier, $.state_label_alnum), $.variable_ref, $.string),
 
         // Weight value: #[-]number
         _weight_value: ($) => seq("#", optional("-"), $.number),
@@ -422,8 +427,10 @@ export default grammar({
         // IF trigger [THEN] pattern
         _if_trigger_then: ($) => seq("IF", field("trigger", $.string), optional("THEN")),
 
-        // Text types
-        _text: ($) => choice($.string, $.tra_ref, $.tlk_ref, $.at_var_ref),
+        // Text types. %var% belongs here because WeiDU lexes a %...% run as a plain string token, so a
+        // variable stands wherever a string does - a say text among them (`CHAIN ... %kivan17%`, which
+        // OUTER_SPRINT sets to a strref). It substitutes a value, not structure.
+        _text: ($) => choice($.string, $.tra_ref, $.tlk_ref, $.at_var_ref, $.variable_ref),
 
         // String literals
         string: ($) => choice($.tilde_string, $.double_string),
@@ -442,9 +449,13 @@ export default grammar({
         // WeiDU variable reference %name% (allows # in names for namespacing)
         variable_ref: ($) => token(seq("%", /[A-Za-z_][A-Za-z0-9_#]*/, "%")),
 
-        // Basic tokens
-        // WeiDU allows # in identifiers for namespacing (e.g., RR#INT01)
-        identifier: ($) => /[A-Za-z_][A-Za-z0-9_#]*/,
+        // Basic tokens. The one identifier-shaped token in the grammar: it also carries state labels
+        // (aliased at _state_label), and its shape is WeiDU's own bare-word token, which WeiDU matches
+        // before looking the text up as a keyword - the same two steps `word:` above sets up. # is
+        // namespacing (RR#INT01); labels contribute the leading digit (4a, 100), the dots (KHPC1.1)
+        // and the hyphens (Quayle_Shar-Teel_1). `number` is integer-only, so a dotted run is a label,
+        // never a float. Splitting these back into two narrower tokens is what made the lexer big.
+        identifier: ($) => /[A-Za-z0-9_][A-Za-z0-9_#.-]*/,
         number: ($) => /[0-9]+/,
 
         // Comments

@@ -31,7 +31,6 @@ export enum SyntaxType {
   InterpolatedName = "interpolated_name",
   JournalFeature = "journal_feature",
   LineComment = "line_comment",
-  MacroExpansion = "macro_expansion",
   ReplaceAction = "replace_action",
   ReplaceActionText = "replace_action_text",
   ReplaceActionTextProcess = "replace_action_text_process",

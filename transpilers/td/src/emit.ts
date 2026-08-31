@@ -487,6 +487,10 @@ function emitInterject(interject: TDChain | TDInterject): string {
 
     if (interject.epilogue) {
         lines.push(emitChainEpilogue(interject.epilogue));
+    } else {
+        // INTERJECT_COPY_TRANS carries no epilogue - the construct implies the copy, and WeiDU
+        // terminates it with a bare END rather than offering the choice a plain INTERJECT gets.
+        lines.push("END");
     }
 
     return lines.join("\n");

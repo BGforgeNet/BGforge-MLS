@@ -205,8 +205,13 @@ BG1NPC/bg1npc/romances/xarom/baf/x#xatire.baf
 # BG1NPC malformed TPA file (unbalanced BEGIN/END - a stray extra END; weidu tolerates it, our grammar does not)
 BG1NPC/bg1npc/core/tpa/a64_beregost.tpa
 
-# BG1NPC malformed D file (weidu rejects it; unresolvable %macro% used as standalone CHAIN content)
-BG1NPC/bg1npc/phase2/dlg/x#kivantazok_ee.d
+# D files using a %macro% as a standalone transition - the same class as the BAF templates above. The
+# value comes from elsewhere in the install (a variable set in a .tp2 may reach a .d), so these are not
+# valid on their own and weidu rejects them too. A %var% substituting a VALUE - a filename, a state
+# label, a say text - is supported and needs no exclusion.
+bg2-tweaks-and-tricks/tnt/components/faster_forging/botsmith.d
+bg2-tweaks-and-tricks/tnt/components/faster_forging/wsmith01.d
+rr/rr/rr_core/compile/rr#scrl.d
 
 # EET vendors two of the BG1NPC template BAFs excluded above, with the same %variable% placeholders
 EET/EET/compat/bg1npc/baf/x#brdwi.baf

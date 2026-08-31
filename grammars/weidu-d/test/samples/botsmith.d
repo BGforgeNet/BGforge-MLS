@@ -17,7 +17,6 @@ END
 APPEND %dlg%
   IF ~~ g_weapon
     SAY @22
-    %cespenar_weapon%
     ++ @10 + g_item_type
     ++ @6 + %START_STATE%
   END
@@ -26,7 +25,6 @@ END
 APPEND %dlg%
   IF ~~ g_armor
     SAY @23
-    %cespenar_armor%
     ++ @10 + g_item_type
     ++ @6 + %START_STATE%
   END
@@ -35,7 +33,6 @@ END
 APPEND %dlg%
   IF ~~ g_trinket
     SAY @24
-    %cespenar_trinket%
     ++ @10 + g_item_type
     ++ @6 + %START_STATE%
   END

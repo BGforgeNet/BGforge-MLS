@@ -208,7 +208,6 @@ APPEND %dialog%
     // Finally, goodberries are finished
 */
     //generated in main.tpa, a state for each potion
-    %action_drink%
     ++ @105 + %state%
   END
 END

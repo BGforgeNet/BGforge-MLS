@@ -24,9 +24,8 @@ IF ~~ THEN BEGIN details
   SAY ~The item lies to the north.~
   IF ~~ THEN REPLY ~Thanks.~ EXIT
 END
-END
 
-ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE
+ALTER_TRANS ~greeter~ BEGIN 0 END BEGIN 0 END BEGIN ACTION ~SetGlobal("met","GLOBAL",1)~ END
 `;
 
 // A file containing a CHAIN: its links flatten into derived states that carry no
@@ -36,7 +35,6 @@ const CHAIN_FIXTURE = `BEGIN ~greeter~
 IF ~~ THEN BEGIN intro
   SAY ~Hello.~
   IF ~~ THEN REPLY ~Hi.~ EXIT
-END
 END
 
 CHAIN ~speakerA~ greet_chain
@@ -86,7 +84,9 @@ describe("applyDDialogEdits", () => {
         expect(result).toContain("/* greeting dialog - do not edit manually */");
 
         // ALTER_TRANS patch block is preserved verbatim.
-        expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
+        expect(result).toContain(
+            'ALTER_TRANS ~greeter~ BEGIN 0 END BEGIN 0 END BEGIN ACTION ~SetGlobal("met","GLOBAL",1)~ END',
+        );
 
         // Untouched state 'details' original text is preserved.
         expect(result).toContain("The item lies to the north.");
@@ -134,7 +134,9 @@ describe("applyDDialogEdits", () => {
         // Comment and other state and patch block survive.
         expect(result).toContain("/* greeting dialog - do not edit manually */");
         expect(result).toContain("Hello, traveller.");
-        expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
+        expect(result).toContain(
+            'ALTER_TRANS ~greeter~ BEGIN 0 END BEGIN 0 END BEGIN ACTION ~SetGlobal("met","GLOBAL",1)~ END',
+        );
     });
 
     it("rename: updated id and referencing goto target appear; surrounding text preserved", () => {
@@ -178,7 +180,9 @@ describe("applyDDialogEdits", () => {
         // Surrounding text preserved.
         expect(result).toContain("/* greeting dialog - do not edit manually */");
         expect(result).toContain("Hello, traveller.");
-        expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
+        expect(result).toContain(
+            'ALTER_TRANS ~greeter~ BEGIN 0 END BEGIN 0 END BEGIN ACTION ~SetGlobal("met","GLOBAL",1)~ END',
+        );
     });
 
     it("inserts a new state's serialized block after the last existing state; other bytes unchanged", () => {
@@ -203,7 +207,9 @@ describe("applyDDialogEdits", () => {
         const upToDetailsEnd = FIXTURE.slice(0, FIXTURE.indexOf("END\n\nALTER_TRANS"));
         expect(result.startsWith(upToDetailsEnd)).toBe(true);
         // The patch block and comment still survive after the insertion.
-        expect(result).toContain('ALTER_TRANS ~greeter~ #0 #0 DO ~SetGlobal("met","GLOBAL",1)~ CONTINUE');
+        expect(result).toContain(
+            'ALTER_TRANS ~greeter~ BEGIN 0 END BEGIN 0 END BEGIN ACTION ~SetGlobal("met","GLOBAL",1)~ END',
+        );
         expect(result).toContain("/* greeting dialog - do not edit manually */");
     });
 
@@ -494,13 +500,11 @@ IF ~~ THEN BEGIN intro
   SAY ~Hello from first.~
   IF ~~ THEN REPLY ~Go deeper.~ EXTERN ~second~ deep
 END
-END
 
 BEGIN ~second~
 IF ~~ THEN BEGIN deep
   SAY ~Hello from second.~
   IF ~~ THEN REPLY ~Bye.~ EXIT
-END
 END
 `;
 
@@ -518,18 +522,17 @@ END
 
     // COPY_TRANS is the sibling of EXTERN: it copies transitions from another dialogue's state and is stored on
     // the same opaque `external` target. Renaming the referenced state must rewrite it too.
+    // Unlike EXTERN it stands alone rather than terminating an `IF ~trigger~ THEN`, a position WeiDU rejects.
     const CROSS_CT = `BEGIN ~first~
 IF ~~ THEN BEGIN intro
   SAY ~Hello from first.~
-  IF ~~ THEN COPY_TRANS ~second~ deep
-END
+  COPY_TRANS ~second~ deep
 END
 
 BEGIN ~second~
 IF ~~ THEN BEGIN deep
   SAY ~Hello from second.~
   IF ~~ THEN REPLY ~Bye.~ EXIT
-END
 END
 `;
 
@@ -553,7 +556,6 @@ IF ~~ THEN BEGIN opening
   SAY ~First line.~ = ~Second line.~ = ~Third line.~
   IF ~~ THEN REPLY ~Continue.~ EXIT
   IF ~~ THEN REPLY ~Leave.~ EXIT
-END
 END
 `;
 

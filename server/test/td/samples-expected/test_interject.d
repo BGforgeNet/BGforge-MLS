@@ -12,4 +12,4 @@ INTERJECT_COPY_TRANS TOLGER 75 AquaTolger
     @200
   == TOLGER IF ~IsValidForPartyDialogue("Aqualung")~ THEN
     @201
-COPY_TRANS TOLGER 75
+END

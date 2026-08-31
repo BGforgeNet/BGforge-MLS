@@ -80,8 +80,6 @@
 
 (state
   label: (state_label_alnum) @label)
-(state
-  label: (identifier) @label)
 
 ; ----- Strings -----
 
@@ -104,9 +102,6 @@
 
 ; Variable references (%varname%)
 (variable_ref) @variable
-
-; Macro expansion (bare %var% in transition position)
-(macro_expansion) @function.macro
 
 ; ----- Operators -----
 

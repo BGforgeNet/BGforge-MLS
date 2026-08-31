@@ -283,7 +283,8 @@ export function transformInterject(
         throw TranspileError.fromNode(call, `${funcName}() chain function must have at least one say()`);
     }
 
-    // Determine epilogue
+    // Determine epilogue. Only a plain INTERJECT has one: INTERJECT_COPY_TRANS already implies the
+    // copy, so WeiDU terminates it with a bare END and accepts no epilogue in that position.
     let epilogue: TDChainEpilogue | undefined;
     if (type === TDConstructType.Interject) {
         const exitFile = resolveStringExpr(getCallArg(args, 4, call), ctx.vars);
@@ -292,12 +293,6 @@ export function transformInterject(
             type: TDEpilogueType.End,
             filename: exitFile,
             target: exitLabel,
-        };
-    } else {
-        epilogue = {
-            type: TDEpilogueType.CopyTrans,
-            filename: entryFile,
-            target: entryLabel,
         };
     }
 

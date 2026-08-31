@@ -209,8 +209,7 @@ END
     (chain_speaker
       file: (string (tilde_string (tilde_content)))
       trigger: (string (tilde_string (tilde_content)))
-      (say_text (tra_ref)))
-    (chain_epilogue)))
+      (say_text (tra_ref)))))
 
 ================================================================================
 Dotted state label (KHPC1.1)
@@ -329,3 +328,27 @@ ADD_TRANS_ACTION myfile BEGIN 1 END BEGIN END ~SetGlobal("a","b",1)~ UNLESS ~x~
       condition: (string
         (tilde_string
           (tilde_content))))))
+
+================================================================================
+%var% as say text
+================================================================================
+
+BEGIN ~file~
+IF ~~ THEN BEGIN start
+  SAY %kivan17%
+  IF ~~ THEN EXIT
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (string (tilde_string (tilde_content)))
+    (state
+      trigger: (string (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text (variable_ref))
+      (transition
+        (transition_full
+          trigger: (string (tilde_string))
+          (exit_next))))))

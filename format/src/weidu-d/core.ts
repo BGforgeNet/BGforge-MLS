@@ -29,8 +29,8 @@ function isComment(node: SyntaxNode): boolean {
     return node.type === SyntaxType.Comment || node.type === SyntaxType.LineComment;
 }
 
-function isCopyOrMacro(node: SyntaxNode): boolean {
-    return node.type === "copy_trans" || node.type === "macro_expansion";
+function isCopyTrans(node: SyntaxNode): boolean {
+    return node.type === SyntaxType.CopyTrans;
 }
 
 // Get the actual transition node (unwrap if wrapped in generic "transition")
@@ -367,7 +367,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         const trans = getTransitionNode(child);
         if (trans) {
             lines.push(formatTransitionNode(trans, indent2, indent2 + indent, lineLimit));
-        } else if (isCopyOrMacro(child)) {
+        } else if (isCopyTrans(child)) {
             lines.push(indent2 + normalizeWhitespaceWeidu(child.text));
         } else if (isComment(child)) {
             lines.push(indent2 + normalizeComment(child.text));
@@ -465,7 +465,7 @@ function getExtendHeader(node: SyntaxNode): string {
             child.type === "transition" ||
             child.type.startsWith("transition_") ||
             isComment(child) ||
-            isCopyOrMacro(child)
+            isCopyTrans(child)
         )
             break;
         if (child.text === "END") break;
@@ -489,7 +489,7 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
         const trans = getTransitionNode(child);
         if (trans) {
             return formatTransitionNode(trans, indent, indent2, lineLimit);
-        } else if (isCopyOrMacro(child)) {
+        } else if (isCopyTrans(child)) {
             return indent + normalizeWhitespaceWeidu(child.text);
         } else if (isComment(child)) {
             return indent + normalizeComment(child.text);
