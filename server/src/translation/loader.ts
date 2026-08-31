@@ -203,6 +203,11 @@ export async function buildConsumerIndex(state: TranslationState): Promise<void>
     const uniqueExts = [...new Set(extsToScan)];
     if (uniqueExts.length === 0) return;
 
+    // A second walk of the tree the provider scan also walks (core/workspace-scanner.ts) - on a Fallout
+    // workspace both globs return the identical file set. Left duplicated on purpose: the walk measures
+    // 58-68 ms against a ~5.0 s startup, and sharing one list means exposing the registry's extension union
+    // and reordering onInitialize, which is a reachability change for ~1% of startup. The ~4.8 s of parsing
+    // inside that scan is where the time actually is.
     const files = await findFilesByExtensions(wsRoot, uniqueExts);
     const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
     await Promise.all(
