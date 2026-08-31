@@ -241,3 +241,15 @@ export const mapCanonicalSnapshotSchema = z.strictObject({
 });
 
 export type MapCanonicalSnapshot = z.infer<typeof mapCanonicalSnapshotSchema>;
+
+/**
+ * The same envelope with `document` passed through rather than re-validated, for callers that assemble a
+ * snapshot around a document this module already validated. `mapCanonicalSnapshotSchema` embeds
+ * `mapCanonicalDocumentSchema`, so validating such a snapshot walks the whole document a second time - on a
+ * real MAP that second walk is the larger half of building the snapshot, and it can only ever reach the
+ * verdict the first walk reached. Anything validating a document it did not build - a loaded JSON snapshot,
+ * a hand-edited file - uses `mapCanonicalSnapshotSchema` instead.
+ */
+export const mapCanonicalSnapshotEnvelopeSchema = mapCanonicalSnapshotSchema.extend({
+    document: z.custom<MapCanonicalDocument>(() => true),
+});

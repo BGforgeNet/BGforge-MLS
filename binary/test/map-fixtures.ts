@@ -12,20 +12,53 @@ import * as fs from "fs";
 import * as path from "path";
 import { REPO_ROOT } from "./repo-root";
 
+const MAPS_DIR = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps");
+
 /** Real Fallout 2 maps from the external corpus; absent unless `pnpm test:external` has run. */
 export const REAL_MAPS = [
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/artemple.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/arvillag.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/navarro.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/vault13.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/newr1.map"),
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/sftanker.map"),
+    path.join(MAPS_DIR, "artemple.map"),
+    path.join(MAPS_DIR, "arvillag.map"),
+    path.join(MAPS_DIR, "denbus1.map"),
+    path.join(MAPS_DIR, "navarro.map"),
+    path.join(MAPS_DIR, "vault13.map"),
+    path.join(MAPS_DIR, "newr1.map"),
+    path.join(MAPS_DIR, "sftanker.map"),
 ] as const;
 
-export const hasExternalMaps = fs.existsSync(
-    path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps"),
-);
+export const hasExternalMaps = fs.existsSync(MAPS_DIR);
+
+/**
+ * `external/fallout-exclude.txt` keeps this one out of the corpus sweep - it is the map strict parsing
+ * rejects (see SNAPSHOT_GRACEFUL_MAPS). The round-trip selection honours the same exclusion so the two
+ * agree on what "the corpus" means.
+ */
+const SWEEP_EXCLUDED_MAPS = new Set(["sfsheng.map"]);
+
+/**
+ * Floor on the corpus population, a margin below the 173 swept today. It is what stops a corpus mid-reset
+ * from silently shrinking the round-trip to a handful of maps that all pass.
+ */
+export const MAP_CORPUS_FLOOR = 150;
+
+/** Every sweepable map in the corpus, sorted - the population `roundTripMaps` samples from. */
+export function listCorpusMaps(): string[] {
+    return fs
+        .readdirSync(MAPS_DIR)
+        .filter((name) => name.toLowerCase().endsWith(".map") && !SWEEP_EXCLUDED_MAPS.has(name.toLowerCase()))
+        .sort();
+}
+
+/**
+ * `count` maps spread evenly across the corpus, deterministic for a given corpus and inclusive of both
+ * ends. A stride rather than the first N because the directory sorts by name and map size and structure
+ * cluster by area prefix, so a head slice would sample one part of the game.
+ */
+export function roundTripMaps(count: number): string[] {
+    const all = listCorpusMaps();
+    if (all.length <= count) return all.map((name) => path.join(MAPS_DIR, name));
+    const step = (all.length - 1) / (count - 1);
+    return Array.from({ length: count }, (_, i) => path.join(MAPS_DIR, all[Math.round(i * step)]!));
+}
 
 /** Committed fixtures, resolved out of `client/testFixture/maps` rather than the external corpus. */
 const LOCAL_FIXTURE_MAPS = new Set([

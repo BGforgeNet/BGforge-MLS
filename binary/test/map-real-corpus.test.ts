@@ -8,10 +8,35 @@
  * Its own file because vitest parallelises across files - see `map-fixtures.ts`.
  */
 
+import * as path from "path";
 import { describe, expect, it } from "vitest";
 import { mapParser } from "../src/map";
 import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
-import { findFieldByName, hasExternalMaps, loadMap, REAL_MAPS } from "./map-fixtures";
+import {
+    findFieldByName,
+    hasExternalMaps,
+    listCorpusMaps,
+    loadMap,
+    MAP_CORPUS_FLOOR,
+    REAL_MAPS,
+    roundTripMaps,
+} from "./map-fixtures";
+
+/**
+ * How many real maps the byte-for-byte round-trip covers. Sized to span the corpus without making this
+ * file - and so the binary suite - wall-clock bound: vitest parallelises across FILES, so every map added
+ * here is serial time. 30 maps cost ~6.6s, in a file that runs in ~9.7s.
+ */
+const ROUNDTRIP_SAMPLE = 30;
+
+/** Offset of the first differing byte, or the shorter length when one buffer is a prefix of the other. */
+function firstDifference(a: Buffer, b: Buffer): number {
+    const shared = Math.min(a.length, b.length);
+    for (let i = 0; i < shared; i++) {
+        if (a[i] !== b[i]) return i;
+    }
+    return shared;
+}
 
 describe("MAP parser - real corpus", () => {
     it
@@ -25,13 +50,40 @@ describe("MAP parser - real corpus", () => {
         },
     );
 
-    it.skipIf(!hasExternalMaps).each(REAL_MAPS)("round-trips %s byte-for-byte", (mapPath) => {
-        const mapData = loadMap(mapPath);
-        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+    it.skipIf(!hasExternalMaps)(`round-trips ${ROUNDTRIP_SAMPLE} maps across the corpus byte-for-byte`, () => {
+        // The corpus sweep in test-external.sh runs the binary CLI with --parse-only, so this is the only
+        // place the canonical writer meets the real corpus. It asserts more than that sweep ever did: the
+        // sweep only required parse -> canonical -> reserialize -> reparse to not throw, where this
+        // requires the bytes back out to equal the bytes that went in.
+        const population = listCorpusMaps();
+        const sampled = roundTripMaps(ROUNDTRIP_SAMPLE);
 
-        expect(result.errors).toBeUndefined();
-        const serialized = mapParser.serialize(result);
-        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+        const failures: string[] = [];
+        for (const mapPath of sampled) {
+            const mapData = loadMap(mapPath);
+            const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+            const name = path.basename(mapPath);
+            if (result.errors !== undefined) {
+                failures.push(`${name}: parse errors: ${result.errors.join("; ")}`);
+                continue;
+            }
+            const serialized = mapParser.serialize(result);
+            const before = Buffer.from(mapData);
+            const after = Buffer.from(serialized);
+            if (!after.equals(before)) {
+                // Name where it diverged: "bytes differ" over a 400 KB map sends the reader back to a
+                // hex editor, and the offset usually identifies the section on its own.
+                const at = firstDifference(before, after);
+                failures.push(`${name}: ${before.length} bytes in, ${after.length} out, first differs at ${at}`);
+            }
+        }
+
+        // The sample size leads, and names the population it came from, so a green here is never misread
+        // as a statement about all of the corpus.
+        const summary = `round-tripped ${sampled.length} of ${population.length} corpus maps`;
+        expect(population.length, summary).toBeGreaterThanOrEqual(MAP_CORPUS_FLOOR);
+        expect(sampled.length, summary).toBe(ROUNDTRIP_SAMPLE);
+        expect(failures, summary).toEqual([]);
     });
 
     it.skipIf(!hasExternalMaps)("can skip loading tile groups for editor-oriented MAP parsing", () => {

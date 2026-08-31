@@ -37,7 +37,7 @@ import {
     type mapObjectSchema,
     type mapObjectsSchema,
     mapCanonicalDocumentSchema,
-    mapCanonicalSnapshotSchema,
+    mapCanonicalSnapshotEnvelopeSchema,
     type MapCanonicalDocument,
     type MapCanonicalSnapshot,
 } from "./canonical-schemas";
@@ -364,9 +364,12 @@ export function getMapCanonicalDocument(parseResult: ParseResult): MapCanonicalD
 }
 
 export function createMapCanonicalSnapshot(parseResult: ParseResult): MapCanonicalSnapshot {
+    // Both branches return a document this module has already validated - `getMapCanonicalDocument`
+    // through `safeParse`, `rebuildMapCanonicalDocument` through `parseWithSchemaValidation` - so the
+    // envelope schema passes it through rather than walking it a second time.
     const document = getMapCanonicalDocument(parseResult) ?? rebuildMapCanonicalDocument(parseResult);
     return parseWithSchemaValidation(
-        mapCanonicalSnapshotSchema,
+        mapCanonicalSnapshotEnvelopeSchema,
         {
             schemaVersion: 1,
             format: "map",

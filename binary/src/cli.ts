@@ -77,6 +77,7 @@ async function processFile(
     quiet: boolean,
     baseOptions: ParseOptions,
     protoDirOverride: string | undefined,
+    parseOnly: boolean,
 ): Promise<FileResult> {
     return safeProcess(filePath, () => {
         const ext = path.extname(filePath);
@@ -124,6 +125,12 @@ async function processFile(
                 console.error(`  ${w}`);
             }
         }
+
+        // Parse-only stops here: a corpus sweep that only wants "did this file parse" pays for the
+        // canonical document, its schema validation and the tile round-trip otherwise, which is ~70% of
+        // the work on a MAP and is then discarded. The writer keeps its own corpus coverage in
+        // map-real-corpus.test.ts, which asserts the round-trip byte-for-byte rather than just no-throw.
+        if (parseOnly) return "unchanged";
 
         const json = createBinaryJsonSnapshot(result).trimEnd();
         const jsonPath = getSnapshotPath(filePath);
@@ -175,6 +182,8 @@ const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
   --extensions    Print supported file extensions (one per line) and exit
+  --parse-only    Parse and report errors without building the JSON snapshot; exit code is the verdict.
+                  For corpus sweeps that only check that files parse. Not valid with --save/--check/--load.
   --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict;
                   required again on --load for JSON snapshots created from ambiguous MAP bytes)
   --proto-dir <dir>  Load MAP proto subtype overrides from <dir>/{items,scenery} instead of the
@@ -304,6 +313,18 @@ async function main() {
     // shared flag and comes from `parseCliArgs` on the normal path (args.quiet).
     const cliParseOptions: ParseOptions = { gracefulMapBoundaries: argv.includes("--graceful-map") };
 
+    // Same argv-read convention as --graceful-map: binary-specific, no value, and it must be visible on
+    // both the --load short-circuit below and the normal path. The output modes all consume the snapshot
+    // this flag skips, so combining them would silently write or compare nothing.
+    const parseOnly = argv.includes("--parse-only");
+    if (parseOnly) {
+        const conflicting = ["--save", "--check", "--save-and-check", "--load"].filter((flag) => argv.includes(flag));
+        if (conflicting.length > 0) {
+            console.error(`Error: --parse-only cannot be combined with ${conflicting.join(", ")}`);
+            process.exit(1);
+        }
+    }
+
     // --extensions: print the registry's extension list one per line and exit.
     // Consumed by the actions/binary/ shell scripts to build their file
     // filters from the same source the parsers register, so a new format
@@ -336,7 +357,8 @@ async function main() {
         // The extensions come from the registry, so the scan message names the kind rather than one
         // format - it used to say ".pro binary" for a sweep of any of the seven.
         description: "binary",
-        processFile: (filePath, mode) => processFile(filePath, mode, args.quiet, cliParseOptions, protoDirOverride),
+        processFile: (filePath, mode) =>
+            processFile(filePath, mode, args.quiet, cliParseOptions, protoDirOverride, parseOnly),
     });
 }
 

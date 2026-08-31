@@ -60,11 +60,13 @@ test_bin() {
     fi
 
     step "Testing Fallout binary assets"
-    # Stdout mode outputs JSON - discard it, we only care about exit code (parse success).
+    # --parse-only: the exit code is the verdict, so the JSON snapshot this used to build and discard is
+    # pure cost - about 70% of the MAP work. The canonical writer keeps its corpus coverage in
+    # map-real-corpus.test.ts, which round-trips a spread of real maps byte-for-byte.
     # --jobs: the map decode is CPU-bound and was the longest single-core stretch of this script.
     # --exclude-base: the list's paths are relative to external/fallout, this target is deeper in.
-    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q --jobs "$(nproc)" \
-        --exclude-from "$exclude_file" --exclude-base "$exclude_base" >/dev/null
+    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q --parse-only --jobs "$(nproc)" \
+        --exclude-from "$exclude_file" --exclude-base "$exclude_base"
 }
 
 step "Building CLIs"
