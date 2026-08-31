@@ -68,9 +68,8 @@ export function createParserModule(wasmFileName: string, name: string): ParserMo
  * Sized for realistic editor workloads: comfortably above a typical set of
  * open tabs plus the header files referenced from each tab. 10 thrashed on
  * any session touching more distinct texts than that; 64 is comfortably
- * above the observed working set without meaningful memory growth
- * (tree-sitter trees hold a reference to their source text, so memory
- * scales with cache size × avg file size). */
+ * above the observed working set. Resident memory scales with this size x avg
+ * file size only because every evicted tree is deleted - see the cache below. */
 const DEFAULT_MAX_CACHE_SIZE = 64;
 
 /**
@@ -97,7 +96,19 @@ export function createCachedParserModule(
     // golden-equivalence tests) is not justified by the saving. If large-file
     // keystroke latency is ever a concern, debouncing the tree-sitter validation is
     // the cheaper mitigation than incremental reparsing.
-    const cache = new QuickLRU<string, Tree>({ maxSize: maxCacheSize });
+    // A Tree owns a wasm allocation that web-tree-sitter frees only on an explicit delete() - it
+    // registers no FinalizationRegistry, so dropping the JS reference reclaims nothing. Every path that
+    // removes a tree from this cache therefore deletes it, or the process leaks one tree per distinct
+    // text it ever parsed: measured at ~115 MB unreclaimable after a 1700-file workspace scan, and
+    // ~0.92 MB per parse while editing a single document, growing linearly with no plateau.
+    //
+    // Safe because no caller holds a tree across a yield: parseWithCache's result is consumed
+    // synchronously at every call site, so a tree cannot be evicted while still in use. A caller that
+    // awaits between parsing and reading the tree would break that and must copy what it needs first.
+    const cache = new QuickLRU<string, Tree>({
+        maxSize: maxCacheSize,
+        onEviction: (_text, tree) => tree.delete(),
+    });
 
     return {
         ...base,
@@ -120,10 +131,15 @@ export function createCachedParserModule(
             return tree;
         },
 
+        // QuickLRU fires onEviction for neither delete() nor clear(), so both branches free explicitly.
         invalidateCache(text?: string): void {
             if (text === undefined) {
+                for (const [, tree] of cache) {
+                    tree.delete();
+                }
                 cache.clear();
             } else {
+                cache.get(text)?.delete();
                 cache.delete(text);
             }
         },
