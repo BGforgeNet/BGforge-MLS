@@ -215,7 +215,7 @@
         ]
     },
     "weidu-d": {
-        "reason": "Decided never-fix: a bare %macro% alone on a line standing in for whole transitions (`%cespenar_weapon%`, `%SpellPackL1%`). That stands in for STRUCTURE rather than D syntax, and its value comes from elsewhere in the install (a variable set in a .tp2 may reach a .d), so WeiDU rejects these three parsed on their own for the same reason we do. A %var% substituting a VALUE is accepted wherever WeiDU takes a string, a say-text slot and a name slot included, so the former entry here (`CHAIN ... %kivan17%`) now parses and has been removed. Not counted toward the allowlist-shrink metric.",
+        "reason": "Decided never-fix: a bare %macro% alone on a line standing in for whole transitions (`%cespenar_weapon%`, `%SpellPackL1%`). That stands in for STRUCTURE rather than D syntax, and its value comes from elsewhere in the install (a variable set in a .tp2 may reach a .d); WeiDU rejects all three on their own too, and has no transition production for a bare string. A %var% substituting a VALUE is accepted wherever WeiDU takes a string, a say-text slot and a name slot included, so the former entry here (`CHAIN ... %kivan17%`) now parses and has been removed. Not counted toward the allowlist-shrink metric.",
         "files": [
             "bg2-tweaks-and-tricks/tnt/components/faster_forging/botsmith.d",
             "bg2-tweaks-and-tricks/tnt/components/faster_forging/wsmith01.d",

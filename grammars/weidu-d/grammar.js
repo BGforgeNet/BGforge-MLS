@@ -275,17 +275,18 @@ export default grammar({
                 field("weight", $._weight_value),
             ),
 
-        // ADD_STATE_TRIGGER filename stateN [dActionWhen] triggerString [stateN ...]
-        // WeiDU allows the trigger to apply to multiple additional states listed after
-        // the trigger string.
+        // ADD_STATE_TRIGGER filename stateN triggerString [stateN ...] [dActionWhen ...]
+        // WeiDU allows the trigger to apply to multiple additional states listed after the trigger
+        // string, and takes the IF/UNLESS guards only AFTER those - not between the state and the
+        // trigger, a position it rejects.
         add_state_trigger: ($) =>
             seq(
                 "ADD_STATE_TRIGGER",
                 field("file", $._filename),
                 field("state", $._state_label),
-                optional($.d_action_when),
                 field("trigger", $.string),
                 repeat($._state_label),
+                repeat($.d_action_when),
             ),
 
         // ADD_TRANS_TRIGGER filename stateN triggerString [moreStates] [DO transNumbers] [dActionWhen]
@@ -336,9 +337,10 @@ export default grammar({
         say_text: ($) => seq($._text, repeat(seq("=", $._text))),
 
         // Transitions. A bare %var% here stands in for structure this file never states - its value
-        // comes from elsewhere in the install (a variable set in a .tp2 may reach a .d), and WeiDU
-        // rejects such a file parsed on its own. A %var% in a name or text position substitutes a
-        // value rather than structure and stays accepted.
+        // comes from elsewhere in the install (a variable set in a .tp2 may reach a .d) - and WeiDU
+        // has no transition production for a bare string either. Where the preceding say text is
+        // itself a string WeiDU absorbs the run instead of erroring, so its silence there is not
+        // acceptance. A %var% in a name or text position substitutes a value and stays accepted.
         transition: ($) => choice($.transition_full, $.transition_short, $.copy_trans),
 
         // IF ~trigger~ [THEN] transFeatures transNext
@@ -456,7 +458,13 @@ export default grammar({
         // and the hyphens (Quayle_Shar-Teel_1). `number` is integer-only, so a dotted run is a label,
         // never a float. Splitting these back into two narrower tokens is what made the lexer big.
         identifier: ($) => /[A-Za-z0-9_][A-Za-z0-9_#.-]*/,
-        number: ($) => /[0-9]+/,
+
+        // Higher lexical precedence than `identifier`, which also matches a digit run now that it
+        // carries state labels. Where both are admissible - the non-pausing flag after `BEGIN file`,
+        // a BEGIN/END number list - a bare digit run has to lex as the number, or the word token wins
+        // and the number position never matches. WeiDU has no number token at all here: it lexes one
+        // bare word and calls int_of_string on it where an integer is wanted.
+        number: ($) => token(prec(1, /[0-9]+/)),
 
         // Comments
         comment: ($) => seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/"),
