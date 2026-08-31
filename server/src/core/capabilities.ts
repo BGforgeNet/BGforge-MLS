@@ -92,6 +92,14 @@ export interface ProviderContext {
      * second answer to "which language directory does this workspace mean".
      */
     getTranslationDir?: () => string | undefined;
+    /**
+     * Gate the startup workspace scan behind this, when set. The scan parses every indexed file in the
+     * workspace - measured at ~4.8 s of a 5.8 s startup on a large mod - and it runs on the same thread as
+     * everything else, so anything started beside it finishes only when it does. Holding it until the
+     * translation load has landed keeps `@N`/message previews at their pre-background timing instead of
+     * pushing them behind the parse.
+     */
+    scanAfter?: Promise<unknown>;
 }
 
 // =============================================================================

@@ -48,6 +48,11 @@ const capabilityFlags = {
 // Workspace root captured in onInitialize, consumed in onInitialized.
 let workspaceRoot: string | undefined;
 
+// The initial translation load, started in onInitialize and picked up in onInitialized - same reason as
+// the flags above, the two handlers are separate closures. Resolved by default so a client that never
+// sends `initialize` (or an onInitialized without one) has nothing to await.
+let translationLoad: Promise<void> = Promise.resolve();
+
 export function register(ctx: HandlerContext): void {
     ctx.connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
         conlog("onInitialize started");
@@ -77,7 +82,28 @@ export function register(ctx: HandlerContext): void {
         const translation = new Translation(projectSettings.translation, workspaceRoot, () => {
             fireRefresh(() => ctx.connection.languages.inlayHint.refresh());
         });
-        await translation.init();
+        // Not awaited: this is ~700 ms of a ~750 ms handshake, and the client cannot send a request until
+        // the initialize response goes out. The provider scan is held behind it (`scanAfter` below), so the
+        // load still lands at its old wall-clock time instead of being starved behind the workspace parse -
+        // backgrounding it alone pushed `@N` previews from ~750 ms out to ~5.3 s.
+        //
+        // The re-apply is chained on because every Translation method returns early while `initialized` is
+        // false: a document opened during the load had its onDidOpen pair dropped, and the load replaces
+        // state.data wholesale. The catch belongs here rather than on the onInitialized consumer - a client
+        // that never sends `initialized` would leave the rejection unhandled, which ends the process.
+        translationLoad = translation
+            .init()
+            .then(() => {
+                // Both calls, not just reloadFile as before: every Translation method returns early while
+                // `initialized` is false, so a document the client opened during the load had its own
+                // onDidOpen pair dropped, and this is the only place that puts either back.
+                for (const document of ctx.documents.all()) {
+                    const text = document.getText();
+                    translation.reloadFile(document.uri, document.languageId, text);
+                    translation.reloadConsumer(document.uri, text, document.languageId);
+                }
+            })
+            .catch((error) => conlog(`Translation load failed: ${error}`, "error"));
 
         // Route parser-init log lines through the LSP connection so they surface
         // in the client's Output panel (the default console.error sink would lose
@@ -121,6 +147,7 @@ export function register(ctx: HandlerContext): void {
             getDocumentText: (uri) => ctx.documents.get(uri)?.getText(),
             getDocumentVersion: (uri) => ctx.documents.get(uri)?.version,
             getTranslationDir: () => translation.directory(),
+            scanAfter: translationLoad,
         });
 
         initServerContext({
@@ -135,11 +162,6 @@ export function register(ctx: HandlerContext): void {
             translation,
             configuredGame: new ConfiguredGame(),
         });
-
-        // Reload translation files for any documents already open
-        for (const document of ctx.documents.all()) {
-            translation.reloadFile(document.uri, document.languageId, document.getText());
-        }
 
         const result: InitializeResult = {
             capabilities: getServerCapabilities(),
@@ -188,6 +210,12 @@ export function register(ctx: HandlerContext): void {
                 "warn",
             );
         }
+
+        // Ask the client to re-pull inlay hints once the translation load lands. It is fired from here,
+        // not from the load's own continuation, because a server->client request is only legal after the
+        // client has the initialize response - and on a workspace with no tra directory the load resolves
+        // within the handshake, so that continuation can run before the response goes out.
+        void translationLoad.then(() => fireRefresh(() => ctx.connection.languages.inlayHint.refresh()));
 
         conlog("onInitialized completed");
     });

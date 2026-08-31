@@ -102,7 +102,9 @@ class ProviderRegistry {
         // Background, not awaited: awaiting would gate the initialize handshake on a full
         // workspace walk (seconds to minutes on large mods). Requests served before it
         // finishes read a partially populated index; failures log, never reject.
-        this.workspaceScan = scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot)
+        // `scanAfter` holds the start; see its doc on ProviderContext for why.
+        this.workspaceScan = (context.scanAfter ?? Promise.resolve())
+            .then(() => scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot))
             .catch((error) => {
                 // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
                 conlog(`Workspace scan failed: ${errorMessage(error)}`, "error");
