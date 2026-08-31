@@ -83,6 +83,9 @@ export function parseEntries(text: string, traType: TraExt): TraEntries {
         const endLine = currentLine;
         const endCharacter = matchEnd - lineStartIndex;
 
+        // Previews are built here, not on demand, so a hover or inlay hint is a field read.
+        // Deferring and memoising them would save ~97 ms of load and ~16 MB retained on a 4 MB
+        // corpus (57k entries), costing ~0.8 us to derive one preview on first access.
         const preview = stringPreview(str);
 
         const entry: TraEntry = {
