@@ -42,10 +42,19 @@ function mapModel() {
 
 // A "Sub Type" field's grandparent is the "Object N (Type)" group; pull the bracketed type so we know which
 // subtype table applies (item codes and scenery codes overlap, e.g. 0 = Armor vs Door).
+// Resolves through the model's own `byId` index, as the editor does: denbus1 flattens to ~135k nodes and
+// this runs per "Sub Type" field, so a linear scan here is two full walks of the model per object.
+function parentOf(
+    m: ReturnType<typeof mapModel>,
+    node: (typeof m.nodes)[number] | undefined,
+): (typeof m.nodes)[number] | undefined {
+    if (node?.parentId === undefined) return undefined;
+    const idx = m.byId.get(node.parentId);
+    return idx === undefined ? undefined : m.nodes[idx];
+}
+
 function ancestorObjectType(m: ReturnType<typeof mapModel>, node: (typeof m.nodes)[number]): string | undefined {
-    const subtypeGroup = m.nodes.find((n) => n.id === node.parentId);
-    const objGroup = subtypeGroup && m.nodes.find((n) => n.id === subtypeGroup.parentId);
-    return objGroup?.name?.match(/\(([^)]+)\)$/)?.[1];
+    return parentOf(m, parentOf(m, node))?.name?.match(/\(([^)]+)\)$/)?.[1];
 }
 
 describe("MAP object Sub Type renders as a named, read-only enum", () => {
