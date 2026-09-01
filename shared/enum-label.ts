@@ -16,7 +16,6 @@
 export function enumValueLabel(value: number, name: string, hexDigits = 0): string {
     // `>>> 0` is unsigned-32-bit coercion (not truncation): a high-bit / i32-negative code renders as unsigned
     // hex (0x80000000, not -0x80000000). Math.trunc would keep it negative - not equivalent.
-    // eslint-disable-next-line unicorn/prefer-math-trunc
     const v = hexDigits > 0 ? `0x${(value >>> 0).toString(16).padStart(hexDigits, "0")}` : String(value);
     if (!name || name.split(/\s+/).includes(v)) return v;
     return `${v} ${name}`;

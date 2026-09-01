@@ -31,7 +31,6 @@ const symbols = new Symbols();
 // Observe results externally so V8 can't dead-code-eliminate the calls.
 // Each bench body does 100 iterations to lift per-call work comfortably above
 // the measurement floor.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- exported-as-side-effect to defeat DCE
 let sink = 0;
 
 describe("symbol-index hot paths", () => {

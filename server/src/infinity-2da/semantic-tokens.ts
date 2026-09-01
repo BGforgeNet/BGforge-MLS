@@ -96,7 +96,7 @@ export function getSemanticTokenSpans(text: string): SemanticTokenSpan[] {
                 startChar: token.start,
                 length: token.length,
                 // Modulo guarantees the index is in range; ! is safe (noUncheckedIndexedAccess can't prove it).
-                tokenType: CELL_2DA_COL_TYPES[colIndex % CELL_2DA_COL_TYPES.length]!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
+                tokenType: CELL_2DA_COL_TYPES[colIndex % CELL_2DA_COL_TYPES.length]!,
                 tokenModifiers: 0,
             });
         }

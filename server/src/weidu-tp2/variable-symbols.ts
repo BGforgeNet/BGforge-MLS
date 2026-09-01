@@ -520,7 +520,8 @@ function findFirstDeclaration(scopeNode: SyntaxNode, varName: string, scopeInfo:
         // Recurse to children
         for (const child of node.children) {
             visit(child);
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions -- TS doesn't track mutations through the visit closure
+            // TS doesn't track mutations through the visit closure, so this reads as
+            // always-falsy to narrowing even though the recursion above can set it.
             if (firstDecl) {
                 return;
             }

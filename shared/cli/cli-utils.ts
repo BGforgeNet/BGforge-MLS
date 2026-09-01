@@ -387,7 +387,6 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
             // eslint-disable-next-line no-await-in-loop
             for await (const data of fs.createReadStream(spool)) {
                 if (!process.stdout.write(data)) {
-                    // eslint-disable-next-line no-await-in-loop
                     await new Promise<void>((resolve) => {
                         process.stdout.once("drain", () => resolve());
                     });

@@ -76,7 +76,6 @@ function roundTrip(input: Uint8Array): Uint8Array {
                 // resolves `subSchema.write` to a union signature accepting none of the individual
                 // `subData` shapes. The cast is bounded by the read above: `subData` was produced by
                 // the same `subSchema` we write through, so the runtime shape matches by construction.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
                 (subSchema as any).write(writer(output, ITEM_SUBTYPE_OFFSET), subData);
             }
             break;
@@ -104,7 +103,6 @@ function roundTrip(input: Uint8Array): Uint8Array {
                 const subData = subSchema.read(reader(input, SCENERY_SUBTYPE_OFFSET));
                 // Same shape-guarantee as the item subtype branch above: `subData` came from this
                 // exact `subSchema`, so the contravariant-write cast is sound by construction.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
                 (subSchema as any).write(writer(output, SCENERY_SUBTYPE_OFFSET), subData);
             }
             break;

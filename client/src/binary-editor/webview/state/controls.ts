@@ -72,7 +72,6 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
     const next = set ? current | mask : current & ~mask;
     // `>>> 0` is unsigned-32-bit coercion (not truncation): it maps a negative signed result from the
     // high-bit bitwise ops back to its unsigned value. Math.trunc would leave it negative - not equivalent.
-    // eslint-disable-next-line unicorn/prefer-math-trunc
     return next >>> 0;
 }
 

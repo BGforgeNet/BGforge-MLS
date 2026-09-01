@@ -67,8 +67,8 @@ export async function activate(context: ExtensionContext) {
     // disposables. First, because it owns the game session the binary editor resolves strrefs through.
     const gameLookups = registerIeResources(context);
 
-    // Register binary file and animation editors
-    // oxlint-disable-next-line unicorn/prefer-single-call -- merging with the push above would reorder the intervening setup.
+    // Register binary file and animation editors. Kept as its own push: merging with the
+    // push above would reorder the intervening setup.
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
         registerImageEditor(context, gameLookups.resourceBytes),
