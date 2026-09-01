@@ -60,8 +60,8 @@ function medianMs(runs: number): (fn: () => void) => number {
 const median = medianMs(9);
 
 // V8 coverage makes the from-scratch TypeScript project construction about 7x slower, and the
-// close-out coverage phase shares a 4-vCPU runner with the other package suites. That turns this
-// relative benchmark into a stochastic 60s timeout even though its ratio still passes. test-all.sh
+// close-out coverage phase shares the machine with the other package suites. That turns this
+// relative benchmark into a stochastic timeout even though its ratio still passes. test-all.sh
 // defers these two timing cases to a dedicated uninstrumented serial step; the functional cases stay
 // in the coverage run.
 const timingIt = process.env.TEST_COVERAGE === "1" ? it.skip : it;

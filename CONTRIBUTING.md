@@ -100,8 +100,8 @@ Cheapest first:
 
 1. `scripts/test-scoped.sh [paths...]` while iterating - maps changed paths (default: uncommitted git changes)
    to the affected suites. `--dry-run` prints the plan.
-2. `pnpm test` (~3 min) when a change outgrows the scoped suites.
-3. `pnpm build:all` + `pnpm test:all` (~15 min) at close-out, and for anything spanning subsystems or touching
+2. `pnpm test` when a change outgrows the scoped suites.
+3. `pnpm build:all` + `pnpm test:all` at close-out, and for anything spanning subsystems or touching
    shared build infra, grammars, transpilers, or the server.
 
 `pnpm test` is not a close-out gate however green: it runs every category but not every gate, because the

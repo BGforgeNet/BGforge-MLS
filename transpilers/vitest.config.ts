@@ -12,7 +12,7 @@ export default defineConfig({
         // CLI bundle to exist; they run from scripts/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(import.meta.dirname, "test/**/*-cli.test.ts")],
         // 60s like every suite in the parallel test.sh block: core saturation makes
-        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // near-threshold tests trip stochastically where cores are scarce; the timeout
         // guards against hangs, not slowness.
         testTimeout: 60000,
         // See binary-editor/vitest.config.ts for the rationale and the constraint it puts on new tests:

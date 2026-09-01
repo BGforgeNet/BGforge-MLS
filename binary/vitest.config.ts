@@ -21,9 +21,9 @@ export default defineConfig({
         // byte-mismatch assertion deep in the suite.
         globalSetup: [path.resolve(import.meta.dirname, "test/global-setup.ts")],
         // v8 coverage instrumentation slows the binary parser tests, and the parallel
-        // suite block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the
-        // slowest MAP round-trip (denbus1.map) runs ~19s under that starvation, so 15s
-        // times out. The timeout guards against hangs, not slowness; keep it generous.
+        // suite block in scripts/test.sh saturates all cores - where cores are scarce the
+        // slowest MAP round-trip (denbus1.map) runs many times its solo time, so a tight
+        // ceiling times out. The timeout guards against hangs, not slowness; keep it generous.
         testTimeout: 60000,
         // Pin the denominator to this package's source so transitive
         // workspace deps (e.g. @bgforge/format aliased above its tests)

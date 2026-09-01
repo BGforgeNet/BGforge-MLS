@@ -47,8 +47,8 @@ export default defineConfig({
             path.resolve(import.meta.dirname, "test/integration/**"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
-        // near-threshold tests trip stochastically on a 4-vCPU runner (the .td cohort
-        // parse ran past 30s there); the timeout guards against hangs, not slowness.
+        // near-threshold tests trip stochastically where cores are scarce (the .td cohort
+        // parse ran well past its old ceiling there); the timeout guards against hangs, not slowness.
         testTimeout: 60000,
         // Separate from the client's coverage output so the parallel
         // server+client coverage runs in scripts/test.sh don't race on

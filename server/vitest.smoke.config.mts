@@ -17,7 +17,7 @@ export default defineConfig({
             path.resolve(import.meta.dirname, "test/transpile-worker-smoke.test.ts"),
         ],
         // 60s like every suite in the parallel test.sh block: core saturation makes
-        // near-threshold tests trip stochastically on a 4-vCPU runner; the timeout
+        // near-threshold tests trip stochastically where cores are scarce; the timeout
         // guards against hangs, not slowness.
         testTimeout: 60000,
     },

@@ -3,9 +3,9 @@
  *
  * Vitest schedules FILES, not tests, so a sweep written as one `it` around a serial loop over a corpus
  * occupies a single core however large the worker pool is - and the suite's wall time is then just its
- * longest file. Measured before this split: one SSL sweep took 99.8s of a 100.5s suite while the suite
- * used 3.2 of 10 cores, and one server sweep took 60.5s of 62.3s. Slicing the file list across thin
- * per-shard files is what lets the pool spread the work.
+ * longest file. Measured before this split: a single SSL sweep accounted for nearly the whole suite's wall
+ * time while leaving most of the pool idle, and one server sweep did the same. Slicing the file list across
+ * thin per-shard files is what lets the pool spread the work.
  *
  * Sharding costs nothing in coverage as long as every shard is present: each one still lists the WHOLE
  * population and asserts its size before taking a slice, so a corpus that shrank mid-checkout fails

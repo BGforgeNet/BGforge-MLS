@@ -2,7 +2,7 @@
 
 # Run ALL tests: main suite phases 1-2, then all remaining tests in one parallel block.
 # This interleaves grammar tests with Phase 3 tests (smoke, samples, external,
-# integration, transpile-external), saving ~30s vs running them sequentially.
+# integration, transpile-external), which is faster than running them sequentially.
 
 set -eu -o pipefail
 
@@ -34,7 +34,7 @@ TEST_STOP_AFTER_BUILD=1 TEST_COVERAGE=1 "$SCRIPT_DIR/test.sh"
 
 # The server coverage run above defers the two dialog-parser timing assertions. V8 coverage makes
 # their from-scratch ts-morph arm about 7x slower, then the parallel package suites can starve it
-# past Vitest's 60s hang bound on a 4-vCPU runner. Run the file again without instrumentation and
+# past Vitest's hang bound where cores are scarce. Run the file again without instrumentation and
 # without competing suites: the relative speedup remains a close-out gate, under the cost model it
 # is intended to measure. TEST_COVERAGE=0 is explicit in case test-all.sh inherited it from its caller.
 step "Dialog source parser reuse performance (serial, no coverage)"
@@ -59,13 +59,18 @@ export WEIDU_BIN
 # a job added here that writes external/ breaks every other job in it.
 #
 # The three corpus suites stay chained to each other for CPU, not correctness. Each already fans out
-# across the whole machine (the format sweep at one worker per core, the other two across their files),
-# so running them together buys no wall time and starves them past their own timeouts - which guard
-# against hangs, not slowness. Measured on a 10-core box: all-parallel finished the phase in ~150s but
-# timed out weidu-tp2-file-references (62s against its 60s budget) and completion-gating-corpus, where
-# chained they cost about what they cost alone. CI has 4 vCPUs, where oversubscribing costs more still.
+# across every core it can get (the format sweep at one worker per core, the other two across their
+# files), so running them together buys no wall time and starves them past their own timeouts - which
+# guard against hangs, not slowness. Measured: all-parallel left the phase no faster and timed out
+# weidu-tp2-file-references and completion-gating-corpus, where chained they cost about what they cost
+# alone. A CI runner has fewer cores than a dev machine, where oversubscribing costs more still.
 # Order puts the integration suite last, so the shortest-fused of the three runs once the light jobs
 # beside it have finished and the box is quiet.
+#
+# Splitting only PART of the chain does not escape that either: measured, the three legs together want
+# well over the cores available, so running the SSL leg beside the other two stretched all three for a
+# negligible net gain and still timed out SSL's corpus beforeAll hooks. They are work-bound, not
+# schedule-bound - there is no split of them that simply having more cores would not serve better.
 #
 # test:cli:external is the same suite as test:cli with the external-corpus cases enabled, so this tier
 # runs it INSTEAD of test:cli rather than as a second job - running both compiled the shared cases twice.

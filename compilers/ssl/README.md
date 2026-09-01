@@ -57,9 +57,9 @@ followed by `-o <path>` - the reference's own grammar. `ssl -O2 a.ssl -o a.int b
 Several inputs are compiled in parallel, one worker per core. Each is its own translation unit, reading
 only its own source and the headers it includes, so nothing is shared between them and the outputs do not
 depend on the schedule; output is buffered per input and printed in input order, so a parallel run reads
-exactly like a sequential one. Over the 1500-script Restoration Project corpus at `-O2` that is 39.2s in
-one thread against 9.2s across eight. Pass `-j1` where a build system already parallelises, or `-j<n>` to
-cap it.
+exactly like a sequential one. Over the 1500-script Restoration Project corpus at `-O2` this scales close
+to linearly with the cores given to it. Pass `-j1` where a build system already parallelises, or `-j<n>`
+to cap it.
 
 ### Where it differs from the reference
 

@@ -18,8 +18,8 @@ export default defineConfig({
         // stayed green. A new test needing a fresh registry must avoid it, or this flag comes off.
         isolate: false,
         // v8 coverage instrumentation roughly doubles per-test time, and the parallel suite
-        // block in scripts/test.sh saturates all cores - on a 4-vCPU CI runner the slowest
-        // MAP-object test runs ~33s under that starvation. Same 60s ceiling as the binary
+        // block in scripts/test.sh saturates all cores - where cores are scarce the slowest
+        // MAP-object test runs many times its solo time. Same 60s ceiling as the binary
         // and client suites: the timeout guards against hangs, not slowness.
         testTimeout: 60000,
         // Pin the denominator to this package's source. The repo-root-relative glob is

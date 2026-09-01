@@ -7,7 +7,7 @@
 # out/. The one real ordering constraint is upstream of this script: `build:grammar` must have run, since
 # the format CLI's post-build step copies the grammar WASMs into format/out.
 #
-# Serially this took 36.7s of wall for 45.5s of CPU; the machine was idle for most of it.
+# Serially this spent well under one core's worth of CPU per second of wall; the machine was idle for most of it.
 
 set -eu -o pipefail
 

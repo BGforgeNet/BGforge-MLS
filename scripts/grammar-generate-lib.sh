@@ -7,7 +7,7 @@
 # no local require()s), tree-sitter.json, and the CLI version; its outputs live
 # in the gitignored src/. A content hash of the inputs therefore decides whether
 # regeneration can be skipped. This matters because LR-table construction is
-# expensive for large grammars (weidu-tp2 alone takes ~80s) and was previously
+# expensive for large grammars (weidu-tp2 alone dominates the build) and was previously
 # paid on every grammar test and grammar build regardless of changes.
 
 # Usage: generate_grammar_cached <grammar-dir> <tree-sitter-bin>
@@ -30,7 +30,7 @@ generate_grammar_cached() {
 # headers - plus tree-sitter.json, which names the output; nothing else reaches it. It is deterministic
 # given those, so a content hash of them decides whether it can be skipped. Worth caching because the
 # compile is several seconds per grammar and ran on every build even where `generate` was already a
-# cache hit - about 50s of a full build for no work.
+# cache hit - a large share of a full build spent on no work.
 #
 # Hashing content rather than comparing mtimes also fixes what the mtime form could not see: a
 # scanner.c-only edit leaves parser.c untouched, so "wasm newer than parser.c" reported a hit and the

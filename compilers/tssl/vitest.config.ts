@@ -14,7 +14,7 @@ export default defineConfig({
         // across files, which matters here because each file builds its own ts-morph project.
         isolate: false,
         // 60s like every suite in the parallel test.sh block: core saturation makes near-threshold tests
-        // trip stochastically on a 4-vCPU runner, and building a ts-morph project per case is not fast.
+        // trip stochastically where cores are scarce, and building a ts-morph project per case is not fast.
         // The timeout guards against hangs, not slowness.
         testTimeout: 60000,
         coverage: coverageConfig({

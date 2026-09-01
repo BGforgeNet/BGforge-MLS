@@ -95,7 +95,7 @@ declare -A suite_cmd=(
     [format]="pnpm exec vitest run --config format/vitest.config.ts"
     [image]="pnpm exec vitest run --config image/vitest.config.ts"
     # The only suite that runs two configs: the compiler's unit tests never touch a real script, so an
-    # ssl change gets the 3.5s corpus canary too - the same probe `pnpm test` runs one tier up.
+    # ssl change gets the corpus canary too - the same probe `pnpm test` runs one tier up.
     [ssl]="pnpm exec vitest run --config compilers/ssl/vitest.config.ts && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
     [tssl]="pnpm exec vitest run --config compilers/tssl/vitest.config.ts"
     [transpilers]="pnpm exec vitest run --config transpilers/vitest.config.ts"

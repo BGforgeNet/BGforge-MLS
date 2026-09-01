@@ -797,4 +797,4 @@ Thresholds: 91% lines, 80% branches, 96% functions, 90% statements - enforced by
 - **Debounced reload**: 300ms delay on document changes
 - **Pre-computed responses**: No computation on LSP requests
 - **File-level updates**: Only changed file re-indexed
-- **Sequential init**: Required by tree-sitter, adds ~100ms startup
+- **Sequential init**: Required by tree-sitter, adds a fixed startup cost

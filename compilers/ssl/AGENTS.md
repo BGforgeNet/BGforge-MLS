@@ -8,9 +8,9 @@ end: `compilers/README.md`.
 
 | Question                            | Probe                     | Cost    |
 | ----------------------------------- | ------------------------- | ------- |
-| Does THIS construct match?          | `pnpm ssl-diff`           | ~1s     |
-| Did anything about the corpus move? | `pnpm ssl-verdicts`       | ~3 min  |
-| Did anything regress? (close-out)   | `test/integration/` sweep | minutes |
+| Does THIS construct match?          | `pnpm ssl-diff`           | seconds |
+| Did anything about the corpus move? | `pnpm ssl-verdicts`       | minutes |
+| Did anything regress? (close-out)   | `test/integration/` sweep | longest |
 
 ```bash
 pnpm ssl-diff -e 'procedure start begin variable a[10]; end'
@@ -33,7 +33,7 @@ pnpm ssl-verdicts --check tmp/verdicts.txt   # after each change
 ## Where a finding graduates to
 
 - **A matching construct worth keeping** -> `test/int/compile.test.ts` (a `-O0` table and a `-O2` table,
-  compared against the reference; runs in ~3s inside the normal unit suite).
+  compared against the reference; runs inside the normal unit suite).
 - **A refusal** -> `test/lower.test.ts`, beside the other lowering guards. Assert the message AND its
   `line:column` prefix.
 

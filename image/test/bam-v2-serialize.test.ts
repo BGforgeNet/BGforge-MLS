@@ -10,7 +10,7 @@ import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
 /**
  * Bound for the corpus sweeps below, which decode every BAM V2 file in the corpus along with the PVRZ
- * pages it references. Measured at ~2-9s per sweep on an idle machine; under the gate's coverage run,
+ * pages it references. Quick on an unloaded machine; under the gate's coverage run,
  * alongside other vitest instances, the same work has exceeded vitest's default 60s and failed a test
  * that was only ever slow. Sized as a hang detector against the LOADED time, not the idle one.
  */

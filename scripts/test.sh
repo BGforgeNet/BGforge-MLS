@@ -30,7 +30,7 @@ step "Resetting External Repos"
 "$SCRIPT_DIR/reset-external.sh"
 
 # Build the transpile library bundle before Phase 1 so bundle.test.ts can load
-# transpilers/out/index.js. The build is fast (~5s) and must precede the parallel block.
+# transpilers/out/index.js. The build is quick and must precede the parallel block.
 step "Building transpile library bundle"
 pnpm build:transpile
 
@@ -77,8 +77,8 @@ parallel \
     "Knip prod" "pnpm knip:prod"
 
 # --- Phase 1.5: Unit tests ---
-# Coverage instrumentation roughly triples the unit-test wall time (server:
-# 22s plain vs 62s instrumented), so the default run skips it for fast dev
+# Coverage instrumentation roughly triples the unit-test wall time, so the
+# default run skips it for fast dev
 # feedback. TEST_COVERAGE=1 (set by test-all.sh) enables it, which is where
 # the coverage thresholds are enforced - the close-out/CI gate.
 if [[ "${TEST_COVERAGE:-}" == "1" ]]; then

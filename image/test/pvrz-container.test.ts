@@ -8,7 +8,7 @@ const pvrzFiles = corpusFiles(IE_CORPUS, ".pvrz");
 
 /**
  * Bound for the corpus sweeps, which decode every .pvrz in the corpus - about 15MB of BC1/BC3 texture.
- * Measured at ~6s on an idle machine, but the gate runs this suite under v8 coverage alongside several
+ * Quick on an unloaded machine, but the gate runs this suite under v8 coverage alongside several
  * other vitest instances, where the same work has exceeded 60s; vitest's default bound then fails a test
  * that was only ever slow. Sized as a hang detector against the LOADED time, not the idle one.
  */
