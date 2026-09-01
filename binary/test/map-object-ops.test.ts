@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
@@ -20,9 +20,15 @@ import { REPO_ROOT } from "./repo-root";
 const DENBUS1 = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
 const hasFixture = fs.existsSync(DENBUS1);
 
+// Parsed once each for the file. Every case below READS its parse result - the structure ops emit fresh
+// bytes and each case reparses its own output - so one parse per fixture serves them all. The afterAll at
+// the foot of the file is what keeps that safe: it fails the moment a case mutates a shared result.
+const denbus1Bytes = hasFixture ? new Uint8Array(fs.readFileSync(DENBUS1)) : new Uint8Array();
+let sharedDenbus1: ReturnType<typeof mapParser.parse> | undefined;
+
 function parseDenbus1() {
-    const data = new Uint8Array(fs.readFileSync(DENBUS1));
-    return mapParser.parse(data, { gracefulMapBoundaries: true });
+    sharedDenbus1 ??= mapParser.parse(denbus1Bytes, { gracefulMapBoundaries: true });
+    return sharedDenbus1;
 }
 
 // cave6.map fully decodes its objects (no opaque objects-tail), so structure ops
@@ -30,10 +36,19 @@ function parseDenbus1() {
 // decode fully) and is used to assert ops are refused - the corruption guard.
 const CLEAN_MAP = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/data/maps/cave6.map");
 
+const cleanBytes = hasFixture ? new Uint8Array(fs.readFileSync(CLEAN_MAP)) : new Uint8Array();
+let sharedClean: ReturnType<typeof mapParser.parse> | undefined;
+
 function parseClean() {
-    const data = new Uint8Array(fs.readFileSync(CLEAN_MAP));
-    return mapParser.parse(data, { gracefulMapBoundaries: true });
+    sharedClean ??= mapParser.parse(cleanBytes, { gracefulMapBoundaries: true });
+    return sharedClean;
 }
+
+afterAll(() => {
+    if (!hasFixture) return;
+    if (sharedDenbus1) expect(sharedDenbus1).toEqual(mapParser.parse(denbus1Bytes, { gracefulMapBoundaries: true }));
+    if (sharedClean) expect(sharedClean).toEqual(mapParser.parse(cleanBytes, { gracefulMapBoundaries: true }));
+});
 
 describe.skipIf(!hasFixture)("map writer object-section helpers", () => {
     it("mapObjectsSectionStart matches the offset where objects begin", () => {

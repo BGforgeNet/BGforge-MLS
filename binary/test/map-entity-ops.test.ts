@@ -3,7 +3,7 @@
  * and inserts the copy immediately after it.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
@@ -16,10 +16,19 @@ const mapFormatAdapter = formatAdapterRegistry.get("map")!;
 // arcaves.map carries 21 global vars; gives headroom for both add and remove tests.
 const MAP_FIXTURE = path.join(REPO_ROOT, "client/testFixture/maps/arcaves.map");
 
+// Parsed once for the file: the duplicate/add helpers read the parse result and emit fresh bytes, and each
+// case reparses its own output. The afterAll below fails if a case mutates the shared result.
+const FIXTURE_BYTES = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+const sharedParse = mapParser.parse(FIXTURE_BYTES);
+
 function loadMap() {
-    const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
-    return { data, parseResult: mapParser.parse(data) };
+    return { data: FIXTURE_BYTES, parseResult: sharedParse };
 }
+
+afterAll(() => {
+    expect(Buffer.from(FIXTURE_BYTES).equals(Buffer.from(fs.readFileSync(MAP_FIXTURE)))).toBe(true);
+    expect(sharedParse).toEqual(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
+});
 
 type GlobalsDoc = { header: { numGlobalVars: number }; globalVariables: number[] };
 type LocalsDoc = { header: { numLocalVars: number }; localVariables: number[] };
