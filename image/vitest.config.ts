@@ -21,7 +21,11 @@ export default defineConfig({
             // is unreachable at runtime (entryCount bounds already guarantee r/g/b and
             // the palette slot are defined) - fewer total uncovered branches, but a
             // smaller branch-count denominator shifts the ratio down slightly.
-            thresholds: { lines: 100, functions: 100, branches: 87.65, statements: 98.34 },
+            // branches rose from 87.65 to 88.71 (and statements from 98.34 to 98.56) when the BC
+            // codecs moved onto reused scratch buffers: their palette/ramp/pixel reads are indexed
+            // by computed block geometry, so they assert with `!` rather than adding a `?? 0`
+            // fallback per channel that nothing can reach.
+            thresholds: { lines: 100, functions: 100, branches: 88.71, statements: 98.56 },
         }),
     },
 });

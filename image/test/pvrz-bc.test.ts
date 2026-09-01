@@ -40,6 +40,39 @@ describe("decodeBc1", () => {
         for (let i = 0; i < 16; i++) expect(pixel(rgba, i)).toEqual([255, 0, 0, 255]);
     });
 
+    it("places each block of a multi-block texture at its own position", () => {
+        // The block walk scatters 4x4 blocks into a row-major buffer, so a texture of one block
+        // cannot tell a correct destination offset from any other. Four blocks, each a distinct
+        // solid colour, pin the mapping from block coordinate to pixel coordinate.
+        const colours = [RED565, 0x07e0, 0x001f, 0xffff]; // red, green, blue, white
+        const expected = [
+            [255, 0, 0, 255],
+            [0, 255, 0, 255],
+            [0, 0, 255, 255],
+            [255, 255, 255, 255],
+        ];
+        const blocks = new Uint8Array(4 * 8);
+        for (const [i, c] of colours.entries()) {
+            blocks.set(
+                bc1Block(
+                    c,
+                    BLACK565,
+                    Array.from({ length: 16 }, () => 0),
+                ),
+                i * 8,
+            );
+        }
+
+        const rgba = decodeBc1(blocks, 8, 8);
+
+        for (let y = 0; y < 8; y++) {
+            for (let x = 0; x < 8; x++) {
+                const block = (y >> 2) * 2 + (x >> 2);
+                expect(pixel(rgba, y * 8 + x), `pixel ${x},${y}`).toEqual(expected[block]);
+            }
+        }
+    });
+
     it("interpolates one midpoint and makes index 3 transparent when c0 <= c1", () => {
         // c0 <= c1 selects the three-colour mode: index 2 is the halfway blend and index 3 is
         // transparent black. The corpus cannot be relied on to contain both orderings, so this
@@ -97,6 +130,32 @@ describe("decodeBc3", () => {
         expect(pixel(rgba, 0)).toEqual([255, 0, 0, 255]);
         expect(pixel(rgba, 1)).toEqual([255, 0, 0, 0]);
         expect(pixel(rgba, 2)).toEqual([255, 0, 0, 219]);
+    });
+
+    it("reads every one of the 16 alpha indices from its own place in the packed 48-bit field", () => {
+        // The 16 three-bit indices span six bytes, so an index is addressed by a bit offset of
+        // 0, 3, ... 45 - and offset 30 is the one that straddles the 32-bit halfway mark. Existing
+        // cases only ever set pixels 0-2, leaving every offset past 6 unpinned; a reader that
+        // mis-shifts anywhere above that stays green without this.
+        //
+        // a0 > a1 selects the eight-value ramp: a0, a1, then six steps of ((7-i)*a0 + i*a1)/7.
+        const ramp = [255, 0, 219, 182, 146, 109, 73, 36];
+        const alphaIndices = Array.from({ length: 16 }, (_, i) => i % 8);
+
+        const rgba = decodeBc3(
+            bc3Block(
+                255,
+                0,
+                alphaIndices,
+                RED565,
+                BLACK565,
+                Array.from({ length: 16 }, () => 0),
+            ),
+            4,
+            4,
+        );
+
+        for (let i = 0; i < 16; i++) expect(pixel(rgba, i)[3], `pixel ${i}`).toBe(ramp[i % 8]);
     });
 
     it("uses the six-step ramp plus explicit 0 and 255 when a0 <= a1", () => {

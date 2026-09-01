@@ -3,9 +3,15 @@
  * DXT1/BC1 and DXT5/BC3. Both address the image as 4x4 blocks in row-major order, differing only
  * in block size and in how each block resolves a pixel - which is what `decodeBlocked` factors out.
  *
- * Colours are passed as fixed-length tuples rather than `number[]` throughout: under
+ * Pixels the caller supplies are carried as fixed-length tuples rather than `number[]`: under
  * `noUncheckedIndexedAccess` an array read is `number | undefined`, and the `?? 0` that silences it
  * at every channel is an unreachable branch that no test can ever cover.
+ *
+ * Palettes, ramps and per-block pixels are the exception: a tuple per palette entry plus a closure
+ * per block is an allocation on every one of the tens of thousands of 4x4 blocks in a texture, so
+ * those are caller-owned `Uint8Array` scratch buffers reused across blocks. Their indices are
+ * computed from block geometry, never read from input, so reads assert with `!` - which keeps the
+ * unreachable branch out rather than trading one uncoverable form for another.
  */
 
 type Rgba4 = readonly [number, number, number, number];
@@ -21,65 +27,90 @@ function rgb565(value: number): { r: number; g: number; b: number } {
 }
 
 /**
- * The four colours a BC1-style colour block addresses. The endpoint ordering is the mode selector:
- * c0 > c1 interpolates four opaque colours, otherwise three plus a transparent slot. BC3's colour
- * block always takes the four-colour rule regardless of ordering, since its alpha lives elsewhere.
+ * The four colours a BC1-style colour block addresses, written into `palette` as four RGBA
+ * quadruples. The endpoint ordering is the mode selector: c0 > c1 interpolates four opaque colours,
+ * otherwise three plus a transparent slot. BC3's colour block always takes the four-colour rule
+ * regardless of ordering, since its alpha lives elsewhere.
+ *
+ * Fills a caller-owned buffer rather than returning tuples: this runs once per 4x4 block, so
+ * allocating a palette per call put six short-lived objects per block on a decode path that handles
+ * tens of thousands of them per texture.
  */
-function colourPalette(c0: number, c1: number, fourColourOnly: boolean): readonly [Rgba4, Rgba4, Rgba4, Rgba4] {
+function colourPalette(palette: Uint8Array, c0: number, c1: number, fourColourOnly: boolean): void {
     const a = rgb565(c0);
     const b = rgb565(c1);
-    const mix = (wa: number, wb: number, den: number): Rgba4 => [
-        Math.round((a.r * wa + b.r * wb) / den),
-        Math.round((a.g * wa + b.g * wb) / den),
-        Math.round((a.b * wa + b.b * wb) / den),
-        255,
-    ];
-    const c0Colour = mix(1, 0, 1);
-    const c1Colour = mix(0, 1, 1);
-    return fourColourOnly || c0 > c1
-        ? [c0Colour, c1Colour, mix(2, 1, 3), mix(1, 2, 3)]
-        : [c0Colour, c1Colour, mix(1, 1, 2), TRANSPARENT];
-}
-
-/**
- * The eight alpha values a BC3 alpha block addresses. Endpoint ordering selects the ramp exactly as
- * it selects the colour mode: a0 > a1 interpolates six steps between the endpoints, otherwise four
- * steps plus a pinned fully-transparent and fully-opaque pair.
- */
-function alphaRamp(a0: number, a1: number): number[] {
-    const ramp = [a0, a1];
-    const steps = a0 > a1 ? 7 : 5;
-    for (let i = 1; i < steps; i++) ramp.push(Math.round((a0 * (steps - i) + a1 * i) / steps));
-    if (steps === 5) ramp.push(0, 255);
-    return ramp;
-}
-
-/**
- * Read one of the 16 two-bit colour indices packed four-per-byte from `base` and resolve it against
- * the block's palette. The switch is what keeps this cast-free: masking to 0..3 proves the range to
- * a reader but not to the checker, and `as 0 | 1 | 2 | 3` would assert exactly what it cannot see.
- */
-function paletteAt(
-    view: DataView,
-    base: number,
-    px: number,
-    py: number,
-    palette: readonly [Rgba4, Rgba4, Rgba4, Rgba4],
-): Rgba4 {
-    switch ((view.getUint8(base + py) >> (px * 2)) & 0x3) {
-        case 0:
-            return palette[0];
-        case 1:
-            return palette[1];
-        case 2:
-            return palette[2];
-        default:
-            return palette[3];
+    palette[0] = a.r;
+    palette[1] = a.g;
+    palette[2] = a.b;
+    palette[3] = 255;
+    palette[4] = b.r;
+    palette[5] = b.g;
+    palette[6] = b.b;
+    palette[7] = 255;
+    if (fourColourOnly || c0 > c1) {
+        palette[8] = Math.round((a.r * 2 + b.r) / 3);
+        palette[9] = Math.round((a.g * 2 + b.g) / 3);
+        palette[10] = Math.round((a.b * 2 + b.b) / 3);
+        palette[11] = 255;
+        palette[12] = Math.round((a.r + b.r * 2) / 3);
+        palette[13] = Math.round((a.g + b.g * 2) / 3);
+        palette[14] = Math.round((a.b + b.b * 2) / 3);
+        palette[15] = 255;
+    } else {
+        palette[8] = Math.round((a.r + b.r) / 2);
+        palette[9] = Math.round((a.g + b.g) / 2);
+        palette[10] = Math.round((a.b + b.b) / 2);
+        palette[11] = 255;
+        palette[12] = 0;
+        palette[13] = 0;
+        palette[14] = 0;
+        palette[15] = 0;
     }
 }
 
-/** Resolves a pixel of one block, by its position within the 4x4 grid, to RGBA. */
-type BlockSampler = (px: number, py: number) => Rgba4;
+/**
+ * The eight alpha values a BC3 alpha block addresses, written into `ramp`. Endpoint ordering selects
+ * the ramp exactly as it selects the colour mode: a0 > a1 interpolates six steps between the
+ * endpoints, otherwise four steps plus a pinned fully-transparent and fully-opaque pair.
+ */
+function alphaRamp(ramp: Uint8Array, a0: number, a1: number): void {
+    ramp[0] = a0;
+    ramp[1] = a1;
+    const steps = a0 > a1 ? 7 : 5;
+    for (let i = 1; i < steps; i++) ramp[i + 1] = Math.round((a0 * (steps - i) + a1 * i) / steps);
+    if (steps === 5) {
+        ramp[6] = 0;
+        ramp[7] = 255;
+    }
+}
+
+/**
+ * Resolve one block's 16 pixels into `pixels` as RGBA quadruples in row-major order. Called once per
+ * block with a buffer the walk reuses, so a decoder allocates nothing per block.
+ */
+type BlockDecoder = (view: DataView, base: number, pixels: Uint8Array) => void;
+
+/**
+ * Write a BC1-shaped colour block's 16 two-bit indices, packed four per byte from `base`, into
+ * `pixels` as RGB. Alpha is left to the caller: BC1 takes it from the palette, BC3 from its own
+ * alpha block.
+ */
+function writeColours(view: DataView, base: number, palette: Uint8Array, pixels: Uint8Array): void {
+    for (let py = 0; py < 4; py++) {
+        const row = view.getUint8(base + py);
+        for (let px = 0; px < 4; px++) {
+            // Asserted, not `?? 0`: a two-bit index times four is 0, 4, 8 or 12 into a 16-byte
+            // palette this module allocates, so the fallback is unreachable - and an unreachable
+            // branch on the hottest line of the decoder is one no test can ever cover.
+            const entry = ((row >> (px * 2)) & 0x3) * 4;
+            const out = (py * 4 + px) * 4;
+            pixels[out] = palette[entry]!;
+            pixels[out + 1] = palette[entry + 1]!;
+            pixels[out + 2] = palette[entry + 2]!;
+            pixels[out + 3] = palette[entry + 3]!;
+        }
+    }
+}
 
 /**
  * Walk a block-compressed texture and write RGBA8. A texture whose dimensions are not multiples of
@@ -91,21 +122,30 @@ function decodeBlocked(
     width: number,
     height: number,
     blockBytes: number,
-    sampler: (view: DataView, base: number) => BlockSampler,
+    decodeBlock: BlockDecoder,
 ): Uint8Array {
     const out = new Uint8Array(width * height * 4);
     const view = new DataView(blocks.buffer, blocks.byteOffset, blocks.byteLength);
     const blocksPerRow = Math.ceil(width / 4);
+    const pixels = new Uint8Array(64);
 
     for (let by = 0; by < Math.ceil(height / 4); by++) {
         for (let bx = 0; bx < blocksPerRow; bx++) {
-            const sample = sampler(view, (by * blocksPerRow + bx) * blockBytes);
+            decodeBlock(view, (by * blocksPerRow + bx) * blockBytes, pixels);
             for (let py = 0; py < 4; py++) {
+                const y = by * 4 + py;
+                if (y >= height) break;
                 for (let px = 0; px < 4; px++) {
                     const x = bx * 4 + px;
-                    const y = by * 4 + py;
-                    if (x >= width || y >= height) continue;
-                    out.set(sample(px, py), (y * width + x) * 4);
+                    if (x >= width) break;
+                    // `src` is at most 63 into the 64-byte scratch buffer, so as above the
+                    // undefined case cannot arise and must not become an uncoverable branch.
+                    const src = (py * 4 + px) * 4;
+                    const dst = (y * width + x) * 4;
+                    out[dst] = pixels[src]!;
+                    out[dst + 1] = pixels[src + 1]!;
+                    out[dst + 2] = pixels[src + 2]!;
+                    out[dst + 3] = pixels[src + 3]!;
                 }
             }
         }
@@ -115,26 +155,38 @@ function decodeBlocked(
 
 /** Decode a BC1 (DXT1) texture to RGBA8. `width`/`height` are the texture's pixel dimensions. */
 export function decodeBc1(blocks: Uint8Array, width: number, height: number): Uint8Array {
-    return decodeBlocked(blocks, width, height, 8, (view, base) => {
-        const palette = colourPalette(view.getUint16(base, true), view.getUint16(base + 2, true), false);
-        return (px, py) => paletteAt(view, base + 4, px, py, palette);
+    const palette = new Uint8Array(16);
+    return decodeBlocked(blocks, width, height, 8, (view, base, pixels) => {
+        colourPalette(palette, view.getUint16(base, true), view.getUint16(base + 2, true), false);
+        writeColours(view, base + 4, palette, pixels);
     });
 }
 
 /** Decode a BC3 (DXT5) texture to RGBA8. `width`/`height` are the texture's pixel dimensions. */
 export function decodeBc3(blocks: Uint8Array, width: number, height: number): Uint8Array {
-    return decodeBlocked(blocks, width, height, 16, (view, base) => {
-        const ramp = alphaRamp(view.getUint8(base), view.getUint8(base + 1));
-        // 16 three-bit indices packed little-endian across the six bytes at base+2.
-        let alphaBits = 0n;
-        for (let k = 0; k < 6; k++) alphaBits |= BigInt(view.getUint8(base + 2 + k)) << BigInt(k * 8);
+    const palette = new Uint8Array(16);
+    const ramp = new Uint8Array(8);
+    return decodeBlocked(blocks, width, height, 16, (view, base, pixels) => {
+        alphaRamp(ramp, view.getUint8(base), view.getUint8(base + 1));
+        // 16 three-bit indices packed little-endian across the six bytes at base+2, read as two
+        // words rather than a BigInt: the field is 48 bits, but no index needs more than three of
+        // them at a time, and a BigInt shift per pixel allocates on every one of them.
+        const alphaLo = view.getUint32(base + 2, true); // bits 0..31
+        const alphaHi = view.getUint16(base + 6, true); // bits 32..47
         // BC3's colour block always takes the four-colour rule; its alpha lives in the block above.
-        const palette = colourPalette(view.getUint16(base + 8, true), view.getUint16(base + 10, true), true);
-        return (px, py) => {
-            const colour = paletteAt(view, base + 12, px, py, palette);
-            const level = ramp[Number((alphaBits >> BigInt((py * 4 + px) * 3)) & 0x7n)];
-            return [colour[0], colour[1], colour[2], level ?? 0];
-        };
+        colourPalette(palette, view.getUint16(base + 8, true), view.getUint16(base + 10, true), true);
+        writeColours(view, base + 12, palette, pixels);
+        for (let i = 0; i < 16; i++) {
+            const bit = i * 3;
+            // Indices sit at bit offsets 0, 3, ... 45, so 30 is the only one straddling the split.
+            const index =
+                bit < 30
+                    ? (alphaLo >>> bit) & 0x7
+                    : bit === 30
+                      ? ((alphaLo >>> 30) | (alphaHi << 2)) & 0x7
+                      : (alphaHi >>> (bit - 32)) & 0x7;
+            pixels[i * 4 + 3] = ramp[index]!; // three-bit index into an 8-byte ramp
+        }
     });
 }
 
@@ -196,12 +248,15 @@ function farthestPair(pixels: readonly Rgba4[]): readonly [Rgba4, Rgba4] {
     return [hi, lo];
 }
 
-/** Index of the palette entry closest to `colour`. */
-function nearestColour(palette: readonly Rgba4[], colour: Rgba4): number {
+/** Index of the entry closest to `colour` in a flat four-RGBA-quadruple palette. */
+function nearestColour(palette: Uint8Array, colour: Rgba4): number {
     let bestIndex = 0;
     let best = Infinity;
-    for (const [i, entry] of palette.entries()) {
-        const dist = distance(entry, colour);
+    for (let i = 0; i < 4; i++) {
+        const dr = palette[i * 4]! - colour[0];
+        const dg = palette[i * 4 + 1]! - colour[1];
+        const db = palette[i * 4 + 2]! - colour[2];
+        const dist = dr * dr + dg * dg + db * db;
         if (dist < best) {
             best = dist;
             bestIndex = i;
@@ -211,7 +266,7 @@ function nearestColour(palette: readonly Rgba4[], colour: Rgba4): number {
 }
 
 /** Write a block's colour endpoints and its 16 two-bit indices at `base`. */
-function writeColourBlock(out: Uint8Array, base: number, rows: readonly Rgba4[][]): void {
+function writeColourBlock(out: Uint8Array, base: number, rows: readonly Rgba4[][], palette: Uint8Array): void {
     const [hi, lo] = farthestPair(rows.flat());
     let c0 = toRgb565(hi);
     let c1 = toRgb565(lo);
@@ -222,7 +277,7 @@ function writeColourBlock(out: Uint8Array, base: number, rows: readonly Rgba4[][
     const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
     view.setUint16(base, c0, true);
     view.setUint16(base + 2, c1, true);
-    const palette = colourPalette(c0, c1, true);
+    colourPalette(palette, c0, c1, true);
     for (const [py, row] of rows.entries()) {
         let packed = 0;
         for (const [px, pixel] of row.entries()) packed |= nearestColour(palette, pixel) << (px * 2);
@@ -239,6 +294,8 @@ export function encodeBc3(rgba: Uint8Array, width: number, height: number): Uint
     const blocksPerRow = Math.ceil(width / 4);
     const blockRowCount = Math.ceil(height / 4);
     const out = new Uint8Array(blocksPerRow * blockRowCount * 16);
+    const palette = new Uint8Array(16);
+    const ramp = new Uint8Array(8);
 
     for (let by = 0; by < blockRowCount; by++) {
         for (let bx = 0; bx < blocksPerRow; bx++) {
@@ -250,23 +307,32 @@ export function encodeBc3(rgba: Uint8Array, width: number, height: number): Uint
             const a1 = Math.min(...alphas);
             out[base] = a0;
             out[base + 1] = a1;
-            const ramp = alphaRamp(a0, a1);
-            let alphaBits = 0n;
+            alphaRamp(ramp, a0, a1);
+            // The 48-bit index field as two words, mirroring the decoder's split at bit 32.
+            let alphaLo = 0;
+            let alphaHi = 0;
             for (const [i, alpha] of alphas.entries()) {
                 let bestIndex = 0;
                 let best = Infinity;
-                for (const [k, level] of ramp.entries()) {
-                    const dist = Math.abs(level - alpha);
+                for (let k = 0; k < 8; k++) {
+                    const dist = Math.abs(ramp[k]! - alpha);
                     if (dist < best) {
                         best = dist;
                         bestIndex = k;
                     }
                 }
-                alphaBits |= BigInt(bestIndex) << BigInt(i * 3);
+                const bit = i * 3;
+                if (bit < 30) alphaLo |= bestIndex << bit;
+                else if (bit === 30) {
+                    alphaLo |= (bestIndex & 0x3) << 30;
+                    alphaHi |= bestIndex >>> 2;
+                } else alphaHi |= bestIndex << (bit - 32);
             }
-            for (let k = 0; k < 6; k++) out[base + 2 + k] = Number((alphaBits >> BigInt(k * 8)) & 0xffn);
+            for (let k = 0; k < 4; k++) out[base + 2 + k] = (alphaLo >>> (k * 8)) & 0xff;
+            out[base + 6] = alphaHi & 0xff;
+            out[base + 7] = (alphaHi >>> 8) & 0xff;
 
-            writeColourBlock(out, base + 8, rows);
+            writeColourBlock(out, base + 8, rows, palette);
         }
     }
     return out;
