@@ -14,7 +14,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
 - [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
 - [**Animations**](#animation-viewer): Fallout FRM; Infinity BAM.
-- [**GitHub Actions**](#github-actions): format, transpile, compile, convert binaries to JSON and back.
+- [**GitHub actions**](#github-actions): format, transpile, compile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
 - **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog editor](#dialog-editor), [animation viewer](#animation-viewer).
