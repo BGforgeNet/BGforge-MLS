@@ -184,22 +184,42 @@ interface WalkOptions {
  *   - `value`: raw number, with `unit: "%"` appended or `format: "hex32"`
  *     applied; enum/flags resolve through their lookup tables.
  */
-export function walkStruct<TSpec, TData extends TSpec>(
-    spec: StructSpec<TSpec>,
-    presentation: StructPresentation<TSpec>,
-    baseOffset: number,
-    data: TData,
-    groupName: string,
-    options: WalkOptions = {},
-): ParsedGroup {
-    const keys = Object.keys(spec) as (keyof TSpec & string)[];
+/**
+ * One field's spec-invariant share of a walk - everything derivable without a record in hand.
+ *
+ * One spec describes every record of its kind in a file (a MAP's objects run to thousands), so deriving
+ * the key order, labels, packed-slot layout and fixed sizes per record repeated identical work once per
+ * instance. The plan is built once per spec+presentation pair and read by every walk.
+ */
+interface WalkStep {
+    readonly key: string;
+    readonly fs: FieldSpec;
+    readonly pres: FieldPresentation | undefined;
+    readonly baseLabel: string;
+    /** Display size where the spec fixes it; `undefined` for a `lengthFrom` array, whose size follows data. */
+    readonly fixedSize: number | undefined;
+    /** Cursor advance after this field; `undefined` means "the field's own size". Zero for a packed part
+     * that is not the last of its slot, so the whole slot advances once. */
+    readonly advance: number | undefined;
+}
 
-    let cursor = baseOffset;
-    const builtFields = new Map<keyof TSpec & string, ParsedField | ParsedGroup>();
+const planCache = new WeakMap<object, WeakMap<object, readonly WalkStep[]>>();
+
+function buildWalkPlan<TSpec>(spec: StructSpec<TSpec>, presentation: StructPresentation<TSpec>): readonly WalkStep[] {
+    const keys = Object.keys(spec) as (keyof TSpec & string)[];
+    const steps: WalkStep[] = [];
     let i = 0;
     while (i < keys.length) {
         const key = keys[i]!;
         const fs = spec[key];
+        const stepFor = (k: keyof TSpec & string, f: FieldSpec, fixedSize: number | undefined, advance?: number) => ({
+            key: k,
+            fs: f,
+            pres: presentation[k],
+            baseLabel: presentation[k]?.label ?? humanize(k),
+            fixedSize,
+            advance,
+        });
 
         // Packed-field parts share one wire slot: all consecutive parts with
         // the same `packedAs` value report the slot's offset+size and the
@@ -209,25 +229,61 @@ export function walkStruct<TSpec, TData extends TSpec>(
         // Chars and array fields never participate in packing.
         if (!isArraySpec(fs) && !isCharsSpec(fs) && fs.packedAs !== undefined) {
             const slot = fs.packedAs;
-            const slotOffset = cursor;
             const slotSize = codecByteLength(fs.codec);
             let j = i;
             while (j < keys.length) {
                 const k = keys[j]!;
                 const f = spec[k];
                 if (isArraySpec(f) || isCharsSpec(f) || f.packedAs !== slot) break;
-                builtFields.set(k, fieldFor(k, f, presentation[k], slotOffset, slotSize, data[k], options.labelPrefix));
+                steps.push(stepFor(k, f, slotSize, 0));
                 j++;
             }
-            cursor += slotSize;
+            // The slot advances once, on its last part.
+            const last = steps[steps.length - 1]!;
+            steps[steps.length - 1] = { ...last, advance: slotSize };
             i = j;
             continue;
         }
 
-        const size = fieldSize(fs, data, key);
-        builtFields.set(key, fieldFor(key, fs, presentation[key], cursor, size, data[key], options.labelPrefix));
-        cursor += size;
+        steps.push(stepFor(key, fs, fixedFieldSize(fs)));
         i++;
+    }
+    return steps;
+}
+
+function walkPlan<TSpec>(spec: StructSpec<TSpec>, presentation: StructPresentation<TSpec>): readonly WalkStep[] {
+    let byPresentation = planCache.get(spec);
+    if (byPresentation === undefined) {
+        byPresentation = new WeakMap();
+        planCache.set(spec, byPresentation);
+    }
+    let plan = byPresentation.get(presentation);
+    if (plan === undefined) {
+        plan = buildWalkPlan(spec, presentation);
+        byPresentation.set(presentation, plan);
+    }
+    return plan;
+}
+
+export function walkStruct<TSpec, TData extends TSpec>(
+    spec: StructSpec<TSpec>,
+    presentation: StructPresentation<TSpec>,
+    baseOffset: number,
+    data: TData,
+    groupName: string,
+    options: WalkOptions = {},
+): ParsedGroup {
+    const keys = Object.keys(spec) as (keyof TSpec & string)[];
+    const plan = walkPlan(spec, presentation);
+
+    let cursor = baseOffset;
+    const builtFields = new Map<keyof TSpec & string, ParsedField | ParsedGroup>();
+    for (const step of plan) {
+        const key = step.key as keyof TSpec & string;
+        const size = step.fixedSize ?? fieldSize(step.fs, data, key);
+        const label = options.labelPrefix ? `${options.labelPrefix} ${step.baseLabel}` : step.baseLabel;
+        builtFields.set(key, fieldFor(label, step.fs, step.pres, cursor, size, data[key]));
+        cursor += step.advance ?? size;
     }
 
     const grouped = new Set<string>();
@@ -267,6 +323,18 @@ export function walkStruct<TSpec, TData extends TSpec>(
     return { name: groupName, fields: out, expanded: options.expanded ?? true };
 }
 
+/**
+ * A field's byte width where the spec alone fixes it. `undefined` for a `lengthFrom` array, whose width is
+ * `data[key].length` and so belongs to the record rather than the spec.
+ */
+function fixedFieldSize(fs: FieldSpec): number | undefined {
+    if (isArraySpec(fs)) {
+        return typeof fs.count === "number" ? fs.count * codecByteLength(fs.element.codec) : undefined;
+    }
+    if (isCharsSpec(fs)) return fs.count;
+    return codecByteLength(fs.codec);
+}
+
 function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
     if (isArraySpec(fs)) {
         if (typeof fs.count === "number") {
@@ -288,6 +356,21 @@ function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
 }
 
 /**
+ * A flags table as number/name pairs, parsed from its string keys once per table. Every flag field of
+ * every record reads this, so rebuilding it per field allocated an array and re-parsed the keys per record.
+ */
+const flagEntriesCache = new WeakMap<object, readonly (readonly [number, string])[]>();
+
+function flagEntries(flags: Readonly<Record<number, string>>): readonly (readonly [number, string])[] {
+    let entries = flagEntriesCache.get(flags);
+    if (entries === undefined) {
+        entries = Object.entries(flags).map(([bit, displayName]) => [Number(bit), displayName] as const);
+        flagEntriesCache.set(flags, entries);
+    }
+    return entries;
+}
+
+/**
  * Apply the spec's display-only `hidden` flag to a built display node. The field/group stays in the tree
  * (so the rebuilder reads it back by label and the byte round-trip is unaffected); the flag only tells the
  * editor view not to render it. Used for reserved/padding/magic fields (`unused*`, `unknown`, duplicated
@@ -299,17 +382,13 @@ function withHidden<T extends ParsedField | ParsedGroup>(node: T, fs: FieldSpec)
 }
 
 function fieldFor(
-    name: string,
+    label: string,
     fs: FieldSpec,
     pres: FieldPresentation | undefined,
     offset: number,
     size: number,
     value: unknown,
-    labelPrefix?: string,
 ): ParsedField | ParsedGroup {
-    const baseLabel = pres?.label ?? humanize(name);
-    const label = labelPrefix ? `${labelPrefix} ${baseLabel}` : baseLabel;
-
     if (isCharsSpec(fs)) {
         // Chars fields preserve all wire bytes (including NULs) in the
         // canonical string for round-trip safety. Display strips trailing
@@ -418,9 +497,10 @@ function scalarFieldValue(
         // number -> use directly.
         const codecBitWidth = codecByteLength(fs.codec) * 8;
         const numeric = typeof value === "number" ? value : flagArrayToInt(fs.flags, value as FlagArray, codecBitWidth);
-        const active = Object.entries(fs.flags)
-            .filter(([bit]) => (numeric & Number(bit)) !== 0)
-            .map(([, displayName]) => displayName);
+        const active: string[] = [];
+        for (const [bit, displayName] of flagEntries(fs.flags)) {
+            if ((numeric & bit) !== 0) active.push(displayName);
+        }
         return {
             name: label,
             value: active.length > 0 ? active.join(", ") : "(none)",

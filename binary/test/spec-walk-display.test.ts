@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { u32, u16, i32 } from "typed-binary";
 import { walkStruct, walkGroup } from "../src/spec/walk-display";
-import { arraySpec, type StructSpec } from "../src/spec/types";
+import { arraySpec, charsSpec, type StructSpec } from "../src/spec/types";
 import { type StructPresentation } from "../src/spec/presentation";
 import type { ParsedGroup } from "../src/types";
 
@@ -327,5 +327,37 @@ describe("walkStruct", () => {
             { name: "Dest Elevation", value: 2, offset: 0x29, size: 4, type: "uint32", rawValue: 2 },
             { name: "Dest Map", value: 0x1234, offset: 0x2d, size: 4, type: "uint32", rawValue: 0x1234 },
         ]);
+    });
+
+    // One spec describes thousands of records in a real file (a MAP's objects), so anything the walker
+    // derives per spec rather than per record is shared between their trees. Sharing the DERIVATION is the
+    // point; sharing a built node would alias two records' display rows, and an editor writing to one would
+    // silently move the other. These two cases pin the values apart and then the nodes apart.
+    it("gives each record of a shared spec its own values", () => {
+        type Data = { kind: number; flags: number; name: string };
+        const spec: StructSpec<Data> = {
+            kind: { codec: u32, enum: { 0: "Zero", 1: "One" } },
+            flags: { codec: u32, flags: { 1: "Alpha", 2: "Beta" } },
+            name: charsSpec(4),
+        };
+        const pres: StructPresentation<Data> = { kind: { label: "Kind" } };
+
+        const first = walkStruct(spec, pres, 0, { kind: 0, flags: 1, name: "AB\0\0" }, "First");
+        const second = walkStruct(spec, pres, 0, { kind: 1, flags: 3, name: "CD\0\0" }, "Second");
+
+        expect(first.fields.map((f) => (f as { value: unknown }).value)).toEqual(["Zero", "Alpha", "AB"]);
+        expect(second.fields.map((f) => (f as { value: unknown }).value)).toEqual(["One", "Alpha, Beta", "CD"]);
+    });
+
+    it("gives each record of a shared spec its own field objects", () => {
+        type Data = { a: number };
+        const spec: StructSpec<Data> = { a: { codec: u32 } };
+
+        const first = walkStruct(spec, {}, 0, { a: 1 }, "First");
+        const second = walkStruct(spec, {}, 0, { a: 2 }, "Second");
+
+        const firstField = first.fields[0] as { name: string; value: unknown };
+        firstField.name = "renamed in place";
+        expect((second.fields[0] as { name: string }).name).toBe("A");
     });
 });
