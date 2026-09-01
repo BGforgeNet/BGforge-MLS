@@ -20,5 +20,6 @@ const layer = createIeJsonSnapshot<SplCanonicalSnapshot>({
     getParser: () => splParser,
 });
 
+export const buildCanonicalSplJsonSnapshot = layer.buildJson;
 export const createCanonicalSplJsonSnapshot = layer.createJson;
 export const loadCanonicalSplJsonSnapshot = layer.loadJson;

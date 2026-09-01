@@ -2,7 +2,11 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildSplCanonicalDocument } from "./canonical";
-import { createCanonicalSplJsonSnapshot, loadCanonicalSplJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalSplJsonSnapshot,
+    createCanonicalSplJsonSnapshot,
+    loadCanonicalSplJsonSnapshot,
+} from "./json-snapshot";
 import { splCompiledPatternFields, splDomainRanges, splPresentationSchema } from "./presentation-schema";
 import { splLayout } from "./layout-schema";
 import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
@@ -48,6 +52,10 @@ export const splFormatAdapter: BinaryFormatAdapter = {
     documentCacheStrategy: "clear",
     layout: splLayout,
     crossRefRelationships: splCrossRefRelationships,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalSplJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalSplJsonSnapshot(parseResult);

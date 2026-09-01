@@ -1,7 +1,11 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildEffCanonicalDocument } from "./canonical";
-import { createCanonicalEffJsonSnapshot, loadCanonicalEffJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalEffJsonSnapshot,
+    createCanonicalEffJsonSnapshot,
+    loadCanonicalEffJsonSnapshot,
+} from "./json-snapshot";
 import { effCompiledPatternFields, effDomainRanges, effPresentationSchema } from "./presentation-schema";
 import { effLayout } from "./layout-schema";
 import { slugify } from "../spec/presentation";
@@ -27,6 +31,10 @@ export const effFormatAdapter: BinaryFormatAdapter = {
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
     layout: effLayout,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalEffJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalEffJsonSnapshot(parseResult);

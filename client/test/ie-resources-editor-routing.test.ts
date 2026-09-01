@@ -99,6 +99,7 @@ describe("viewTypeForResource", () => {
             formatId: "routing-test-ie",
             documentCacheStrategy: "clear",
             layout: { variants: [] } as never,
+            buildJsonSnapshot: () => ({}),
             createJsonSnapshot: () => "",
             loadJsonSnapshot: () => ({ parseResult: {} as never }),
             rebuildCanonicalDocument: () => undefined,

@@ -67,9 +67,17 @@ function ensureSupportedMapSnapshotEncoding(snapshot: MapCanonicalSnapshot): voi
     }
 }
 
+/**
+ * The snapshot itself, unserialized. Split from `createCanonicalMapJsonSnapshot` for callers that only
+ * need to know whether building one throws: the editor's validate pass discards the JSON, and on a
+ * large map that string is several megabytes of garbage per keystroke burst.
+ */
+export function buildCanonicalMapJsonSnapshot(parseResult: ParseResult): MapCanonicalSnapshot {
+    return normalizeMapSnapshotForPersistence(createMapCanonicalSnapshot(parseResult));
+}
+
 export function createCanonicalMapJsonSnapshot(parseResult: ParseResult): string {
-    const snapshot = normalizeMapSnapshotForPersistence(createMapCanonicalSnapshot(parseResult));
-    return `${JSON.stringify(snapshot, null, 2)}\n`;
+    return `${JSON.stringify(buildCanonicalMapJsonSnapshot(parseResult), null, 2)}\n`;
 }
 
 export function loadCanonicalMapJsonSnapshot(

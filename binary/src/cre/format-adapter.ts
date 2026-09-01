@@ -2,7 +2,11 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildCreCanonicalDocument } from "./canonical";
-import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalCreJsonSnapshot,
+    createCanonicalCreJsonSnapshot,
+    loadCanonicalCreJsonSnapshot,
+} from "./json-snapshot";
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
 import { creLayout } from "./layout-schema";
 import { slugify } from "../spec/presentation";
@@ -103,6 +107,10 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     documentCacheStrategy: "clear",
     layout: creLayout,
     crossRefRelationships: creCrossRefRelationships,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalCreJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);

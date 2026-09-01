@@ -66,6 +66,36 @@ describe("validate", () => {
         if (!session) throw new Error("session missing despite openSession succeeding");
         expect(validate(session)).toEqual([]);
     });
+
+    it("reports a file-level warning when the snapshot builder throws", () => {
+        // The snapshot pass is the third diagnostic source, and it is the only one whose signal is a
+        // THROW rather than a returned value - so nothing else here notices if validate stops invoking
+        // it. DLG refuses to snapshot a parse result carrying no canonical document, which makes that
+        // branch reachable without mocking anything the editor owns.
+        const session: EditorSession = {
+            id: "sv-dlg",
+            uri: "file:///x.dlg",
+            parserId: "dlg",
+            parseOptions: {},
+            // Cast as the sibling helper above does: a ParseResult carries parser-internal fields this
+            // fixture deliberately omits, and omitting `document` is the condition under test.
+            model: buildModel({
+                format: "dlg",
+                formatName: "DLG",
+                root: { name: "DLG File", fields: [] },
+            } as unknown as ParseResult),
+            undo: [],
+            redo: [],
+            dirty: false,
+        };
+
+        const diags = validate(session);
+
+        expect(diags).toHaveLength(1);
+        expect(diags[0]?.severity).toBe("warning");
+        expect(diags[0]?.nodeId).toBe("");
+        expect(diags[0]?.message).toContain("carries no canonical document");
+    });
 });
 
 describe("validate - string charset", () => {

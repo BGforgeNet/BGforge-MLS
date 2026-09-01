@@ -18,7 +18,8 @@ import { serializeDlgCanonicalSnapshot } from "./canonical-writer";
 import { sectionsEnd, serializeDlg } from "./index";
 import type { ParseOpaqueRange, ParseResult } from "../types";
 
-export function createCanonicalDlgJsonSnapshot(parseResult: ParseResult): string {
+/** The snapshot itself, unserialized - see `buildCanonicalMapJsonSnapshot` for why the split exists. */
+export function buildCanonicalDlgJsonSnapshot(parseResult: ParseResult): DlgCanonicalSnapshot {
     const document = parseResult.document as DlgCanonicalDocument | undefined;
     if (!document) throw new Error("Cannot snapshot DLG: parse result carries no canonical document");
 
@@ -31,7 +32,11 @@ export function createCanonicalDlgJsonSnapshot(parseResult: ParseResult): string
         ...(parseResult.warnings ? { warnings: parseResult.warnings } : {}),
         ...(parseResult.errors ? { errors: parseResult.errors } : {}),
     };
-    return serializeDlgCanonicalSnapshot(snapshot);
+    return snapshot;
+}
+
+export function createCanonicalDlgJsonSnapshot(parseResult: ParseResult): string {
+    return serializeDlgCanonicalSnapshot(buildCanonicalDlgJsonSnapshot(parseResult));
 }
 
 export function loadCanonicalDlgJsonSnapshot(jsonText: string): { parseResult: ParseResult; bytes?: Uint8Array } {

@@ -20,5 +20,6 @@ const layer = createIeJsonSnapshot<ItmCanonicalSnapshot>({
     getParser: () => itmParser,
 });
 
+export const buildCanonicalItmJsonSnapshot = layer.buildJson;
 export const createCanonicalItmJsonSnapshot = layer.createJson;
 export const loadCanonicalItmJsonSnapshot = layer.loadJson;

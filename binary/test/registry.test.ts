@@ -17,6 +17,7 @@ function makeAdapter(formatId: string): BinaryFormatAdapter {
     return {
         formatId,
         documentCacheStrategy: "none",
+        buildJsonSnapshot: () => ({}),
         createJsonSnapshot: () => "",
         loadJsonSnapshot: () =>
             ({ parseResult: { fields: [] } }) as unknown as ReturnType<BinaryFormatAdapter["loadJsonSnapshot"]>,

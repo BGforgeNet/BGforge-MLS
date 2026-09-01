@@ -2,7 +2,11 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildItmCanonicalDocument } from "./canonical";
-import { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalItmJsonSnapshot,
+    createCanonicalItmJsonSnapshot,
+    loadCanonicalItmJsonSnapshot,
+} from "./json-snapshot";
 import { itmCompiledPatternFields, itmDomainRanges, itmPresentationSchema } from "./presentation-schema";
 import { itmLayout } from "./layout-schema";
 import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
@@ -48,6 +52,10 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
     documentCacheStrategy: "clear",
     layout: itmLayout,
     crossRefRelationships: itmCrossRefRelationships,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalItmJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalItmJsonSnapshot(parseResult);

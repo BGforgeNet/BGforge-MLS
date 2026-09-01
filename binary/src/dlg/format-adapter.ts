@@ -1,7 +1,11 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
 import type { ParseResult } from "../types";
 import { slugify } from "../spec/presentation";
-import { createCanonicalDlgJsonSnapshot, loadCanonicalDlgJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalDlgJsonSnapshot,
+    createCanonicalDlgJsonSnapshot,
+    loadCanonicalDlgJsonSnapshot,
+} from "./json-snapshot";
 
 /**
  * DLG carries no presentation schema, layout, or domain ranges by decision: it renders in the dialog
@@ -14,6 +18,10 @@ export const dlgFormatAdapter: BinaryFormatAdapter = {
     // The canonical document is authoritative for DLG - the graph editor mutates it directly rather than
     // editing a display tree - so it must not be cleared on edit.
     documentCacheStrategy: "none",
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalDlgJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalDlgJsonSnapshot(parseResult);

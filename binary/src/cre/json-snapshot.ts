@@ -19,5 +19,6 @@ const layer = createIeJsonSnapshot<CreCanonicalSnapshot>({
     getParser: () => creParser,
 });
 
+export const buildCanonicalCreJsonSnapshot = layer.buildJson;
 export const createCanonicalCreJsonSnapshot = layer.createJson;
 export const loadCanonicalCreJsonSnapshot = layer.loadJson;

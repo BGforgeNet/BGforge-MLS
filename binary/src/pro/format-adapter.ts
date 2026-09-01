@@ -1,5 +1,9 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
-import { createCanonicalProJsonSnapshot, loadCanonicalProJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalProJsonSnapshot,
+    createCanonicalProJsonSnapshot,
+    loadCanonicalProJsonSnapshot,
+} from "./json-snapshot";
 import { rebuildProCanonicalDocument } from "./canonical";
 import { proLayout } from "./layout-schema";
 import { proCompiledPatternFields, proDomainRanges, proPresentationSchema } from "./presentation-schema";
@@ -16,6 +20,10 @@ export const proFormatAdapter: BinaryFormatAdapter = {
     documentCacheStrategy: "clear",
     // Declarative single-page layout covering every PRO object/sub type (see layout-schema.ts).
     layout: proLayout,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalProJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalProJsonSnapshot(parseResult);

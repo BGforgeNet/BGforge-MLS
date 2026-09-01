@@ -1,6 +1,10 @@
 import type { BinaryFormatAdapter, ProjectedEntry } from "../format-adapter";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "../types";
-import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./json-snapshot";
+import {
+    buildCanonicalMapJsonSnapshot,
+    createCanonicalMapJsonSnapshot,
+    loadCanonicalMapJsonSnapshot,
+} from "./json-snapshot";
 import { rebuildMapCanonicalDocument } from "./canonical";
 import {
     buildMapAddEntryBytes,
@@ -268,6 +272,10 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
     // MAP caches its canonical document behind a lazy getter+setter; assigning undefined resets that cache.
     documentCacheStrategy: "clear",
     layout: mapLayout,
+
+    buildJsonSnapshot(parseResult: ParseResult): unknown {
+        return buildCanonicalMapJsonSnapshot(parseResult);
+    },
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalMapJsonSnapshot(parseResult);

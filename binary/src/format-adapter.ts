@@ -76,6 +76,12 @@ export interface BinaryFormatAdapter {
     readonly layout?: FormatLayout;
 
     // -- Snapshots -------------------------------------------------------------
+    /**
+     * Build the snapshot without serializing it, for callers that only need to know whether building
+     * one throws. `createJsonSnapshot` is this plus serialization, so the two never diverge; a
+     * validation pass that took the string form would allocate megabytes it immediately discards.
+     */
+    buildJsonSnapshot(parseResult: ParseResult): unknown;
     createJsonSnapshot(parseResult: ParseResult): string;
     loadJsonSnapshot(jsonText: string, parseOptions?: ParseOptions): { parseResult: ParseResult; bytes?: Uint8Array };
 

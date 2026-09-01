@@ -42,6 +42,11 @@ export interface IeLoadedJsonSnapshot<Snap> {
 }
 
 export interface IeJsonSnapshot<Snap> {
+    /**
+     * The snapshot itself, unserialized, for callers that only need to know whether building one
+     * throws - the editor's validate pass discards the JSON it would otherwise stringify.
+     */
+    readonly buildJson: (result: ParseResult) => Snap;
     readonly createJson: (result: ParseResult) => string;
     readonly loadJson: (jsonText: string, parseOptions?: ParseOptions) => IeLoadedJsonSnapshot<Snap>;
 }
@@ -49,8 +54,10 @@ export interface IeJsonSnapshot<Snap> {
 export function createIeJsonSnapshot<Snap>(config: IeJsonSnapshotConfig<Snap>): IeJsonSnapshot<Snap> {
     const { formatLabel, snapshotSchemaPermissive, createSnapshot, serializeSnapshot, getParser } = config;
 
+    const buildJson = (result: ParseResult): Snap => createSnapshot(result);
+
     const createJson = (result: ParseResult): string => {
-        return `${JSON.stringify(createSnapshot(result), null, 2)}\n`;
+        return `${JSON.stringify(buildJson(result), null, 2)}\n`;
     };
 
     const loadJson = (jsonText: string, parseOptions?: ParseOptions): IeLoadedJsonSnapshot<Snap> => {
@@ -71,5 +78,5 @@ export function createIeJsonSnapshot<Snap>(config: IeJsonSnapshotConfig<Snap>): 
         return { snapshot, bytes, parseResult: reparsed };
     };
 
-    return { createJson, loadJson };
+    return { buildJson, createJson, loadJson };
 }

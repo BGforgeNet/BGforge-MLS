@@ -14,8 +14,13 @@ interface LoadedCanonicalProSnapshot {
     readonly parseResult: ParseResult;
 }
 
+/** The snapshot itself, unserialized - see `buildCanonicalMapJsonSnapshot` for why the split exists. */
+export function buildCanonicalProJsonSnapshot(parseResult: ParseResult): ProCanonicalSnapshot {
+    return createProCanonicalSnapshot(parseResult);
+}
+
 export function createCanonicalProJsonSnapshot(parseResult: ParseResult): string {
-    return `${JSON.stringify(createProCanonicalSnapshot(parseResult), null, 2)}\n`;
+    return `${JSON.stringify(buildCanonicalProJsonSnapshot(parseResult), null, 2)}\n`;
 }
 
 export function loadCanonicalProJsonSnapshot(

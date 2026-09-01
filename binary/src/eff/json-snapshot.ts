@@ -20,5 +20,6 @@ const layer = createIeJsonSnapshot<EffCanonicalSnapshot>({
     getParser: () => effParser,
 });
 
+export const buildCanonicalEffJsonSnapshot = layer.buildJson;
 export const createCanonicalEffJsonSnapshot = layer.createJson;
 export const loadCanonicalEffJsonSnapshot = layer.loadJson;

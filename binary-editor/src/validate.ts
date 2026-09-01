@@ -75,7 +75,9 @@ export function validate(session: EditorSession): Diagnostic[] {
     const adapter = formatAdapterRegistry.get(session.parserId);
     if (!adapter) return diags;
     try {
-        adapter.createJsonSnapshot(session.model.parseResult);
+        // Build only: the JSON string is never read here, and on a large MAP serializing it is several
+        // megabytes allocated and dropped on every debounced validate.
+        adapter.buildJsonSnapshot(session.model.parseResult);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         // Best-effort NodeId from the first issue's path if the error carries issues[].
