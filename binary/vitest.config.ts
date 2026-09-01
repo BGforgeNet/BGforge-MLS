@@ -25,6 +25,11 @@ export default defineConfig({
         // slowest MAP round-trip (denbus1.map) runs many times its solo time, so a tight
         // ceiling times out. The timeout guards against hangs, not slowness; keep it generous.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason. vitest defaults hookTimeout to 10s
+        // regardless of testTimeout, and the fixture-sharing files here re-parse and deep-compare
+        // their fixture in afterAll to prove no case mutated it - test-scale work that outran the
+        // default under CI contention while every test in the file passed.
+        hookTimeout: 60000,
         // Pin the denominator to this package's source so transitive
         // workspace deps (e.g. @bgforge/format aliased above its tests)
         // cannot dilute the ratio.
