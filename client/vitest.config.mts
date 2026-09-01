@@ -42,6 +42,10 @@ export default defineConfig({
         // only limits how long a genuine hang takes to fail; green runs finish
         // in seconds regardless of the value.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         // Separate from the server's coverage output so the parallel
         // server+client coverage runs in scripts/test.sh don't race on
         // coverage/.tmp shard files.

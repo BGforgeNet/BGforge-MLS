@@ -50,6 +50,10 @@ export default defineConfig({
         // near-threshold tests trip stochastically where cores are scarce (the .td cohort
         // parse ran well past its old ceiling there); the timeout guards against hangs, not slowness.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         // Separate from the client's coverage output so the parallel
         // server+client coverage runs in scripts/test.sh don't race on
         // coverage/.tmp shard files.

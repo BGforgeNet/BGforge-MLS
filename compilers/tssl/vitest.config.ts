@@ -17,6 +17,10 @@ export default defineConfig({
         // trip stochastically where cores are scarce, and building a ts-morph project per case is not fast.
         // The timeout guards against hangs, not slowness.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         coverage: coverageConfig({
             reportsDirectory: "coverage/tssl",
             // Scoped to this package. Without it v8 measures whatever the tests LOAD, which drags in the

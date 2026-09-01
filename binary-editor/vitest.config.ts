@@ -22,6 +22,10 @@ export default defineConfig({
         // MAP-object test runs many times its solo time. Same 60s ceiling as the binary
         // and client suites: the timeout guards against hangs, not slowness.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         // Pin the denominator to this package's source. The repo-root-relative glob is
         // deliberate: the coverage phase runs from the repo root (scripts/test.sh), and the
         // @bgforge/binary alias above instruments the sibling binary/src tree at test time, so

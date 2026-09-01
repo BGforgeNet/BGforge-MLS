@@ -21,6 +21,10 @@ export default defineConfig({
         // near-threshold tests trip stochastically where cores are scarce; the timeout
         // guards against hangs, not slowness.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         // The tree-sitter-driven formatters (one dir per grammar) are
         // exercised by the grammar format-check fixtures run from
         // scripts/test.sh / test:grammars, not by vitest unit tests, so they

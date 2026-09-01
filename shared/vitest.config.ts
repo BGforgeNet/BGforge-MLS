@@ -10,6 +10,10 @@ export default defineConfig({
         // near-threshold tests trip stochastically where cores are scarce (the CLI fan-out
         // tests spawn child processes); the timeout guards against hangs, not slowness.
         testTimeout: 60000,
+        // Hooks get the same budget for the same reason: vitest defaults hookTimeout to 10s
+        // whatever testTimeout is, so a hook that builds or checks a fixture trips it while
+        // every test in the file passes.
+        hookTimeout: 60000,
         // The shared/ tree contains a few small library-style helpers used
         // across packages. Threshold reflects the floor measured today.
         coverage: coverageConfig({
