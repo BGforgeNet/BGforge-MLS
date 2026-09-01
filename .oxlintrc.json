@@ -12,6 +12,10 @@
     // shape has - a new rule in an oxlint minor fires and forces a decision, which is where most of the
     // reasoning recorded below came from. An allowlist is silent about everything added after it is
     // written. Keep the categories; keep writing the reason next to each `off`.
+    //
+    // `--report-unused-disable-directives` stays out of the lint script: oxlint does not run
+    // `prefer-const` inside `.svelte` at all, so it calls 28 live disables there unused. Run it by
+    // hand after an oxlint bump and read only its non-`.svelte` rows.
     "categories": {
         "correctness": "error",
         "suspicious": "error",
@@ -107,15 +111,11 @@
         // on every run.
         "unicorn/number-literal-case": "off",
 
-        // The rule's actual subject is MUTATION - `.sort()` orders the receiver in
-        // place - not modernization. It is off because its fix, `.toSorted()`, is
-        // ES2023 while `tsconfig.base.json` targets es2022, so all ~177 sites would
-        // need a hand-written copy instead of the autofix. The shipped-package sites
-        // were read when this was written and every one sorts an array the function
-        // itself built (a spread, a `.map()` result, a local accumulator); none sorts
-        // an array its caller owns. That is convention, not enforcement. Re-enable
-        // when `target`/`lib` in tsconfig.base.json reaches es2023 - the same move
-        // that makes the autofix valid.
+        // Off for what the rule reaches, not for availability (`lib` is es2023 everywhere, so
+        // `.toSorted()` compiles and `--fix-suggestions` rewrites it). Of its 189 sites, 89 already
+        // spread-copy the receiver, where the rewrite adds a second copy; the one shape that would be
+        // a defect - a bare `xs.sort()` in statement position on a possibly caller-owned array - is
+        // never flagged. Revisit if the fix learns to drop the redundant spread.
         "unicorn/no-array-sort": "off",
 
         // Sequential-condition ternaries (`a ? X : b ? Y : Z`) are used

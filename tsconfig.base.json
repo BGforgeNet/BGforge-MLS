@@ -1,6 +1,9 @@
 {
     "compilerOptions": {
-        "target": "es2022",
+        // Matches the `lib: ["es2023"]` every package config already sets; the runtime floor
+        // (`engines.node` >=20, `engines.vscode` ^1.91) carries the ES2023 methods. Emit is
+        // unaffected - `noEmit` here, and the bundles are built by tsdown/esbuild at node20.
+        "target": "es2023",
         "module": "ESNext",
         "moduleResolution": "bundler",
         "strict": true,
