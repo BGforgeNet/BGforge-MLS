@@ -21,9 +21,9 @@ import { parseFile } from "./header-parser";
 import { isInitialized } from "../../../shared/parsers/weidu-tp2";
 
 /** Cached local symbols data: symbols array + name lookup map */
-interface LocalSymbolsData {
+export interface LocalSymbolsData {
     symbols: readonly IndexedSymbol[];
-    byName: Map<string, IndexedSymbol>;
+    byName: ReadonlyMap<string, IndexedSymbol>;
 }
 
 /** LRU cache for local symbols */
@@ -67,7 +67,24 @@ export function getLocalSymbols(text: string, version: number | undefined, uri: 
 }
 
 /**
- * Look up a local symbol by name. O(1) via cached map.
+ * The document's local symbols as both an ordered list and a name index, from ONE parse.
+ *
+ * A request needing both - completion offers the list, then decorates each offer from the index - takes
+ * this once. The single-value accessors below each re-parse the whole document when `version` is undefined,
+ * so reaching for them per consumer, or per item, multiplies the parse by the number of calls.
+ *
+ * @param text Document text
+ * @param version Document version counter (LSP `TextDocument.version`) used as
+ *   cache key; pass `undefined` to bypass the cache.
+ * @param uri Document URI
+ */
+export function getLocalSymbolsData(text: string, version: number | undefined, uri: string): LocalSymbolsData {
+    return cache.getOrParse(uri, version, text, parseLocalSymbols) ?? { symbols: [], byName: new Map() };
+}
+
+/**
+ * Look up a single local symbol by name. Costs a full parse of `text` unless the cache holds this
+ * `version`; for several names use `getLocalSymbolsData`.
  *
  * @param name Symbol name to find
  * @param text Document text

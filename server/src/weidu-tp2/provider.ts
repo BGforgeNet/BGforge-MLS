@@ -80,7 +80,13 @@ import { renameSymbol, prepareRenameSymbol } from "./rename";
 import { buildFunctionCallSnippet, getKeywordSnippet } from "./snippets";
 import { getFunctionParamHover } from "./hover";
 import { localCompletion, isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
-import { getLocalSymbols as extractLocalSymbols, lookupLocalSymbol, clearLocalSymbolsCache } from "./local-symbols";
+import {
+    getLocalSymbols as extractLocalSymbols,
+    getLocalSymbolsData,
+    lookupLocalSymbol,
+    clearLocalSymbolsCache,
+    type LocalSymbolsData,
+} from "./local-symbols";
 import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
@@ -169,8 +175,7 @@ function addParamCompletions(
 function applySnippets(
     items: Tp2CompletionItem[],
     contexts: CompletionContext[],
-    text: string,
-    version: number | undefined,
+    localByName: ReadonlyMap<string, IndexedSymbol>,
     uri: NormalizedUri,
     symbolStore: Symbols | undefined,
 ): Tp2CompletionItem[] {
@@ -201,7 +206,7 @@ function applySnippets(
         }
 
         const funcName = item.label;
-        const symbol = symbolStore?.lookup(funcName) ?? lookupLocalSymbol(funcName, text, version, uri);
+        const symbol = symbolStore?.lookup(funcName) ?? localByName.get(funcName);
         if (!symbol || !isCallableSymbol(symbol)) {
             return item;
         }
@@ -257,16 +262,15 @@ function getSnippetPrefixFromSymbol(
  *   when tree-sitter parses an incomplete declaration).
  */
 function collectLocalCompletions(
+    local: LocalSymbolsData,
     text: string,
-    version: number | undefined,
-    uri: NormalizedUri,
     options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
     const { variablesOnly = false, excludeWord } = options ?? {};
     const seen = new Set<string>();
     const result: Tp2CompletionItem[] = [];
 
-    for (const s of extractLocalSymbols(text, version, uri)) {
+    for (const s of local.symbols) {
         if (seen.has(s.name)) continue;
         if (excludeWord && s.name === excludeWord) continue;
         if (variablesOnly && s.completion.kind !== CompletionItemKind.Variable) continue;
@@ -393,12 +397,15 @@ class WeiduTp2Provider
         const currentWord = getLinePrefix(text, position).match(/(\S+)$/)?.[1] ?? "";
 
         const version = this.storedContext?.getDocumentVersion?.(uri);
+        // One parse for the whole request: without a version every accessor re-parses, so resolving per
+        // consumer - or per item, as the snippet pass once did - multiplies a large file's parse by N.
+        const local = getLocalSymbolsData(text, version, uri);
 
         if (declSite === "assignment") {
-            return collectLocalCompletions(text, version, uri, { variablesOnly: true, excludeWord: currentWord });
+            return collectLocalCompletions(local, text, { variablesOnly: true, excludeWord: currentWord });
         }
 
-        const localCompletions = collectLocalCompletions(text, version, uri, { excludeWord: currentWord });
+        const localCompletions = collectLocalCompletions(local, text, { excludeWord: currentWord });
         const baseItems: Tp2CompletionItem[] = [...items, ...localCompletions];
 
         // Inside a string the only thing that resolves is a `%var%` interpolation, so keep the variables and
@@ -410,7 +417,7 @@ class WeiduTp2Provider
         }
 
         const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols);
-        const withSnippets = applySnippets(withParams, contexts, text, version, uri, this.fileIndex?.symbols);
+        const withSnippets = applySnippets(withParams, contexts, local.byName, uri, this.fileIndex?.symbols);
 
         return filterItemsByContext(withSnippets, contexts);
     }
