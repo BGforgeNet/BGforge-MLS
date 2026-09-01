@@ -2,6 +2,9 @@
 
 The index of every document in the repo. Start here.
 
+That first sentence is a promise, not a description: `scripts/utils/test/doc-index-complete.test.ts` fails on any
+tracked `*.md` not listed below, not under a directory listed below, and not in the test's exclusion map.
+
 ## For Users
 
 | Document                                                       | Contents                                                                               |
@@ -13,6 +16,7 @@ The index of every document in the repo. Start here.
 | [theme.md](theme.md)                                           | Syntax theme documentation                                                             |
 | [icon-theme.md](icon-theme.md)                                 | Icon theme setup                                                                       |
 | [changelog.md](changelog.md)                                   | Release changelog                                                                      |
+| [../SECURITY.md](../SECURITY.md)                               | How to report a security vulnerability                                                 |
 
 ## For Developers
 
@@ -51,24 +55,36 @@ The index of every document in the repo. Start here.
 | [../image/README.md](../image/README.md)   | Animation library: FRM/BAM codecs, conversions, PNG/APNG import/export       |
 | [binary-editor-ui.md](binary-editor-ui.md) | Binary editor UI: layout schema, render layer, screenshot review brief       |
 
+## Test harnesses
+
+| Document                                                                                                 | Contents                                             |
+| -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| [../binary-editor/test/harness/README.md](../binary-editor/test/harness/README.md)                       | Binary-editor webview render harness and its drivers |
+| [../binary-editor/test/fixtures/README.md](../binary-editor/test/fixtures/README.md)                     | Where the binary-editor fixtures come from           |
+| [../client/src/dialog-editor/test/harness/README.md](../client/src/dialog-editor/test/harness/README.md) | Dialog-editor webview harness                        |
+
 ## Data, grammars, and assets
 
 | Document                                                                     | Contents                                               |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------ |
 | [../server/data/README.md](../server/data/README.md)                         | YAML engine-data format for completion and hover       |
 | [../grammars/README.md](../grammars/README.md)                               | Tree-sitter grammars: building, WASM, type generation  |
+| [../grammars/](../grammars/)                                                 | Per-grammar `README.md` and `formatter.md`, one each   |
+| [../binary/data/README.md](../binary/data/README.md)                         | Generated IE opcode and structure data                 |
 | [../syntaxes/README.md](../syntaxes/README.md)                               | TextMate grammars (YAML source, compiled JSON)         |
 | [../themes/README.md](../themes/README.md)                                   | Color and icon theme sources                           |
 | [../language-configurations/README.md](../language-configurations/README.md) | Brackets, comments, and indentation rules per language |
 
 ## Build, release, and CI
 
-| Document                                       | Contents                                                                     |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| [../scripts/README.md](../scripts/README.md)   | Build and test scripts reference                                             |
-| [../scripts/dev-web.md](../scripts/dev-web.md) | Running the extension in code-server (`pnpm dev:web`)                        |
-| [releasing.md](releasing.md)                   | Tag-driven release procedures per stream (extension, libraries, Action)      |
-| [dependencies.md](dependencies.md)             | Pinned dependency version constraints and hold rationale                     |
-| [ignore-files.md](ignore-files.md)             | Ignore file reference (gitignore, vscodeignore, editorconfig, oxfmt, oxlint) |
-| [supply-chain.md](supply-chain.md)             | SBOM/SLSA provenance, CodeQL + Scorecard, and two deliberate non-additions   |
-| [../actions/README.md](../actions/README.md)   | Reusable composite GitHub Actions: shared contract, plus one README each     |
+| Document                                       | Contents                                                                                                                                             |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [../scripts/README.md](../scripts/README.md)   | Build and test scripts reference                                                                                                                     |
+| [../scripts/dev-web.md](../scripts/dev-web.md) | Running the extension in code-server (`pnpm dev:web`)                                                                                                |
+| [releasing.md](releasing.md)                   | Tag-driven release procedures per stream (extension, libraries, Action)                                                                              |
+| [dependencies.md](dependencies.md)             | Pinned dependency version constraints and hold rationale                                                                                             |
+| [ignore-files.md](ignore-files.md)             | Ignore file reference (gitignore, vscodeignore, editorconfig, oxfmt, oxlint)                                                                         |
+| [supply-chain.md](supply-chain.md)             | SBOM/SLSA provenance, CodeQL + Scorecard, and two deliberate non-additions                                                                           |
+| [../actions/README.md](../actions/README.md)   | Reusable composite GitHub Actions: shared contract, plus one README each                                                                             |
+| [../actions/](../actions/)                     | The per-Action READMEs, and `development.md` for changing them                                                                                       |
+| Per-package changelogs                         | [binary](../binary/CHANGELOG.md), [format](../format/CHANGELOG.md), [tssl](../compilers/tssl/CHANGELOG.md), [transpile](../transpilers/CHANGELOG.md) |
