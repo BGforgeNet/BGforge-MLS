@@ -50,12 +50,26 @@ const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
 const critterDataCodec = toTypedBinarySchema(critterDataSpec);
 const exitGridCodec = toTypedBinarySchema(exitGridSpec);
 
+/**
+ * One reader per underlying buffer, repositioned per read rather than reconstructed. A MAP's objects
+ * (and their nested inventories) issue tens of thousands of these, and `new BufferReader` re-derives
+ * the system endianness and allocates a fresh DataView every time. Weakly keyed so a parsed buffer is
+ * still collectable; `seekTo` is absolute within the buffer, which is what the old `byteOffset`
+ * option computed.
+ */
+const readersByBuffer = new WeakMap<ArrayBufferLike, BufferReader>();
+
 function readSpec<T>(
     codec: { read(input: import("typed-binary").ISerialInput): T },
     data: Uint8Array,
     offset: number,
 ): T {
-    const reader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
+    let reader = readersByBuffer.get(data.buffer);
+    if (!reader) {
+        reader = new BufferReader(data.buffer, { endianness: "big" });
+        readersByBuffer.set(data.buffer, reader);
+    }
+    reader.seekTo(data.byteOffset + offset);
     return codec.read(reader);
 }
 
