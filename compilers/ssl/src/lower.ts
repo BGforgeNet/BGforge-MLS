@@ -1526,12 +1526,19 @@ class Lowering {
  * from the line down.
  */
 function hasShortCircuitPragma(root: SyntaxNode): boolean {
+    // Every node's text is a slice of the root's, so a source with no `#pragma sce` anywhere cannot hold a
+    // node that starts with one - and almost none do. Without this the walk below crossed the parser
+    // boundary once per node of every script compiled, to answer "no" for nearly all of them.
+    if (!PRAGMA_SCE_ANYWHERE.test(root.text)) return false;
     const visit = (node: SyntaxNode): boolean => {
         if (node.type === "other_preprocessor" && /^#\s*pragma\s+sce\b/i.test(node.text)) return true;
         return node.namedChildren.some((child) => Boolean(child) && visit(child));
     };
     return visit(root);
 }
+
+/** The per-node test below, unanchored: what the source must contain for any node to be able to match. */
+const PRAGMA_SCE_ANYWHERE = /#\s*pragma\s+sce\b/i;
 
 /**
  * String constants in the order the source writes them, which is the order the table is built in.

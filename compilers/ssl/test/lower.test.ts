@@ -649,6 +649,50 @@ describe.skipIf(!wasmPresent)("name resolution when a variable shadows a procedu
     });
 });
 
+/**
+ * `#pragma sce` reaching the lowered program.
+ *
+ * The emitter's own short-circuit cases pass the flag in directly, and the corpus carries no pragma at all
+ * (its five real uses live outside the Restoration Project), so nothing here held the step that reads the
+ * pragma OUT of the source - a lowering that stopped seeing it would compile `and`/`or` the other way with
+ * every suite still green.
+ */
+describe.skipIf(!wasmPresent)("#pragma sce read from the source", () => {
+    let parser: Parser;
+
+    beforeAll(async () => {
+        await Parser.init({ wasmBinary: fs.readFileSync(path.join(WASM_DIR, "web-tree-sitter.wasm")) });
+        parser = new Parser();
+        parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
+    });
+
+    const shortCircuitOf = (source: string): boolean | undefined => {
+        const tree = parser.parse(source);
+        if (!tree) throw new Error("no tree");
+        try {
+            return lowerProgram(tree).shortCircuit;
+        } finally {
+            tree.delete();
+        }
+    };
+
+    const body = "procedure start begin\n   variable x;\n   if (x and 1) then begin\n      x := 1;\n   end\nend\n";
+
+    it("turns short-circuit on for a source carrying the pragma", () => {
+        expect(shortCircuitOf(`#pragma sce\n${body}`)).toBe(true);
+    });
+
+    it("leaves it off for the same source without the pragma", () => {
+        expect(shortCircuitOf(body)).not.toBe(true);
+    });
+
+    // Position does not matter - the pragma turns the operators on for the whole program, not from its
+    // own line down - so a pragma the source reaches only at the end must still be found.
+    it("finds a pragma written after the code it affects", () => {
+        expect(shortCircuitOf(`${body}#pragma sce\n`)).toBe(true);
+    });
+});
+
 describe.skipIf(!wasmPresent)("the critical procedure modifier", () => {
     let parser: Parser;
 
