@@ -7,18 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { buildConversationTree, type ConversationTree } from "../src/dialog-editor/webview/conversation-tree";
 import { collectMatches } from "../src/dialog-editor/webview/tree-search";
-import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "../../shared/dialog-model";
-
-function st(id: string, text: string, choices: DialogChoice[], extra: Partial<DialogState> = {}): DialogState {
-    return { id, speaker: "NPC", text, choices, ...extra };
-}
-function ch(id: string, target: DialogTarget, extra: Partial<DialogChoice> = {}): DialogChoice {
-    return { id, target, ...extra };
-}
-function root(states: DialogState[]): DialogRoot {
-    return { id: "dialog:NPC", label: "NPC", kind: "dialog", states };
-}
-const noJump = (): undefined => undefined;
+import { ch, noJump, root, st } from "./dialog-fixtures";
 
 function flatTree(): ConversationTree {
     const r = root([

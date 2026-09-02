@@ -10,18 +10,8 @@ import {
     type ConvTarget,
 } from "../src/dialog-editor/webview/conversation-tree";
 import { resolveJumpTarget } from "../src/dialog-editor/webview/jump-resolve";
-import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "../../shared/dialog-model";
-
-function st(id: string, text: string, choices: DialogChoice[], extra: Partial<DialogState> = {}): DialogState {
-    return { id, speaker: "NPC", text, choices, ...extra };
-}
-function ch(id: string, target: DialogTarget, extra: Partial<DialogChoice> = {}): DialogChoice {
-    return { id, target, ...extra };
-}
-function root(states: DialogState[]): DialogRoot {
-    return { id: "dialog:NPC", label: "NPC", kind: "dialog", states };
-}
-const noJump = (): undefined => undefined;
+import type { DialogChoice, DialogState } from "../../shared/dialog-model";
+import { ch, noJump, root, st } from "./dialog-fixtures";
 
 describe("resolveJumpTarget", () => {
     const stateToRoot = new Map([
