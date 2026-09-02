@@ -6,8 +6,9 @@
 *.zip
 dist/
 syntaxes-to-json.sh.err
-bgforge-mls-notepadpp*/
-bgforge-mls-kate*/
+# Editor-bundle staging dirs. build-editors.sh now stages them under dist/, so this only
+# catches one left at the root by a build from before that change.
+/bgforge-mls*/
 .reports/
 .vscode-test/
 .dev/

@@ -7,4 +7,4 @@ set -eu -o pipefail
 # ignorePatterns), so a second, narrower oxlint invocation here was redundant
 # and additionally missed files nested more than one level deep (the `**`
 # glob is single-level without bash's globstar option).
-pnpm exec tsc --project scripts/tsconfig.json
+tsc --project scripts/tsconfig.json

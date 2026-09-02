@@ -5,6 +5,11 @@
 #
 # The four are independent - separate generators, separate staging directories, separate zips - and three
 # of them each pay a `tsx` startup, so they run in parallel rather than one after another.
+#
+# Each stages under dist/, which is gitignored, rather than at the repo root: the staging directory exists
+# only between its generator and its zip, and a `git add -A` landing in that window used to sweep it into a
+# commit. Each zip is written from inside dist/ so the archive still has <bundle>/ at its root - the layout
+# docs/editors/*.md tell users to extract.
 
 set -eu -o pipefail
 
@@ -30,8 +35,10 @@ mkdir -p dist
 
 build_tmbundle() {
     local name="bgforge-mls"
-    local dir="${name}.tmbundle"
-    local zip="dist/${name}-${VERSION}.tmbundle.zip"
+    local bundle="${name}.tmbundle"
+    local archive="${name}-${VERSION}.tmbundle.zip"
+    local dir="dist/${bundle}"
+    local zip="dist/${archive}"
 
     rm -rf "$dir" "$zip"
     mkdir -p "$dir/Syntaxes"
@@ -63,7 +70,7 @@ PLIST
         cp "$f" "$dir/Syntaxes/"
     done
 
-    zip -rq "$zip" "$dir"
+    (cd dist && zip -rq "$archive" "$bundle")
     rm -rf "$dir"
     echo "Created $zip"
 }
@@ -72,8 +79,9 @@ PLIST
 
 build_kate() {
     local name="bgforge-mls-kate"
-    local dir="${name}"
-    local zip="dist/${name}-${VERSION}.zip"
+    local archive="${name}-${VERSION}.zip"
+    local dir="dist/${name}"
+    local zip="dist/${archive}"
 
     rm -rf "$dir" "$zip"
     pnpm exec tsx scripts/utils/src/generate-ksh.ts --out-dir "$dir"
@@ -96,7 +104,7 @@ build_kate() {
     cp themes/icons/infinity-eff.svg "$dir/mimetypes/application-x-infinity-eff.svg"
     cp themes/icons/infinity-cre.svg "$dir/mimetypes/application-x-infinity-cre.svg"
 
-    zip -rq "$zip" "$dir"
+    (cd dist && zip -rq "$archive" "$name")
     rm -rf "$dir"
     echo "Created $zip"
 }
@@ -105,14 +113,15 @@ build_kate() {
 
 build_notepadpp() {
     local name="bgforge-mls-notepadpp"
-    local dir="${name}"
-    local zip="dist/${name}-${VERSION}.zip"
+    local archive="${name}-${VERSION}.zip"
+    local dir="dist/${name}"
+    local zip="dist/${archive}"
 
     rm -rf "$dir" "$zip"
     pnpm exec tsx scripts/utils/src/generate-udl.ts --out-dir "$dir"
     cp editors/notepadpp/*.udl.xml "$dir/"
 
-    zip -rq "$zip" "$dir"
+    (cd dist && zip -rq "$archive" "$name")
     rm -rf "$dir"
     echo "Created $zip"
 }
@@ -121,8 +130,9 @@ build_notepadpp() {
 
 build_geany() {
     local name="bgforge-mls-geany"
-    local dir="${name}"
-    local zip="dist/${name}-${VERSION}.zip"
+    local archive="${name}-${VERSION}.zip"
+    local dir="dist/${name}"
+    local zip="dist/${archive}"
 
     rm -rf "$dir" "$zip"
     pnpm exec tsx scripts/utils/src/generate-geany.ts --out-dir "$dir"
@@ -135,7 +145,7 @@ build_geany() {
         cp "$f" "$dir/filetypes.${base}.conf"
     done
 
-    zip -rq "$zip" "$dir"
+    (cd dist && zip -rq "$archive" "$name")
     rm -rf "$dir"
     echo "Created $zip"
 }
