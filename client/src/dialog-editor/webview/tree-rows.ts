@@ -58,6 +58,52 @@ export type FlatRow =
     | (RowBase & { kind: "addOption"; stateId: string });
 
 /**
+ * The level a row is announced at, or undefined for a row that carries no `treeitem` role.
+ *
+ * An option sits one level below the state that owns it, and the state an option leads to is emitted at the
+ * SAME level as that option - the two read as siblings under their common parent, which is how the outline
+ * indents them. One home for the rule, because `ariaPositions` has to group by exactly the levels the view
+ * renders.
+ */
+export function rowAriaLevel(row: FlatRow): number | undefined {
+    if (row.kind === "state") return row.depth + 1;
+    if (row.kind === "reply") return row.depth + 2;
+    return undefined;
+}
+
+/**
+ * `aria-posinset` and `aria-setsize` for every treeitem row, keyed by row key.
+ *
+ * Both attributes describe the set of nodes at ONE level under ONE parent, which is the whole reason a
+ * virtualized tree owes them: the DOM holds a window, so assistive tech cannot count the set itself. The
+ * whole row list's length is not that number - it counts rows carrying no treeitem role at all, and it
+ * announces a deeply nested option as one of thousands rather than one of its siblings.
+ */
+export function ariaPositions(rows: readonly FlatRow[]): Map<string, { pos: number; size: number }> {
+    // Sibling sets, in row order, keyed by parent row and level. A row's parent is the nearest preceding
+    // treeitem at a lower level, which the ancestor stack tracks as the walk goes.
+    const sets = new Map<string, string[]>();
+    const ancestors: { level: number; key: string }[] = [];
+    for (const row of rows) {
+        const level = rowAriaLevel(row);
+        if (level === undefined) continue;
+        while ((ancestors.at(-1)?.level ?? 0) >= level) ancestors.pop();
+        // NUL separates the two parts so a parent key ending in digits cannot collide with a deeper level.
+        const setKey = `${ancestors.at(-1)?.key ?? ""}\0${level}`;
+        const members = sets.get(setKey);
+        if (members) members.push(row.key);
+        else sets.set(setKey, [row.key]);
+        ancestors.push({ level, key: row.key });
+    }
+
+    const positions = new Map<string, { pos: number; size: number }>();
+    for (const members of sets.values()) {
+        for (const [index, key] of members.entries()) positions.set(key, { pos: index + 1, size: members.length });
+    }
+    return positions;
+}
+
+/**
  * An option's key identity: its id plus the SHAPE of its target, and for a `state` target the destination's
  * id.
  *

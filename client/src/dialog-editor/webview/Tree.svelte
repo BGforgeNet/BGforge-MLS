@@ -4,7 +4,7 @@
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
     import { optionRemoveLockReason } from "./inspector-edit";
-    import { flattenRows, type FlatRow } from "./tree-rows";
+    import { ariaPositions, flattenRows, rowAriaLevel, type FlatRow } from "./tree-rows";
     import { visibleRange } from "../../virtual-window";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
@@ -104,7 +104,7 @@
     // the window is pure arithmetic on it, so a row that renders taller would drift out of its slot.
     const ROW_H = 22;
     const OVERSCAN = 8;
-    // eslint-disable-next-line prefer-const -- reassigned by the scroll handler
+    // eslint-disable-next-line prefer-const -- reassigned by the scroll handler and by ensureVisible
     let scrollTop = $state(0);
     // eslint-disable-next-line prefer-const -- reassigned via bind:clientHeight
     let viewportHeight = $state(600);
@@ -125,6 +125,9 @@
         }
         return byId;
     });
+    // aria-posinset/aria-setsize per treeitem row. Both describe the set of siblings at one level under one
+    // parent - the count assistive tech cannot take from the DOM, because the DOM holds only the window.
+    const ariaPos = $derived(ariaPositions(rows));
     // The rows ArrowUp/Down step through, in screen order: state rows and option rows, exactly the set that
     // carries role="treeitem". Derived from the row list rather than the DOM so nav does not stop at the
     // edge of the mounted window.
@@ -139,10 +142,15 @@
         // Rows sit inside `.sizer`, which begins below the tree's own top padding, so a row's scroll offset
         // is that offset plus its slot. Read rather than hardcoded: the padding lives in the CSS below.
         const top = (sizerEl?.offsetTop ?? 0) + index * ROW_H;
-        if (top < treeEl.scrollTop) treeEl.scrollTop = top;
-        else if (top + ROW_H > treeEl.scrollTop + treeEl.clientHeight) {
-            treeEl.scrollTop = top + ROW_H - treeEl.clientHeight;
-        }
+        const at = treeEl.scrollTop;
+        const target =
+            top < at ? top : top + ROW_H > at + treeEl.clientHeight ? top + ROW_H - treeEl.clientHeight : undefined;
+        if (target === undefined) return;
+        treeEl.scrollTop = target;
+        // The tracked offset too, not just the DOM one: the window is derived from `scrollTop`, which the
+        // scroll EVENT otherwise updates - and that event lands after the microtask `focusRow` waits on, so a
+        // reveal would look for its row before the window that holds it had been recomputed.
+        scrollTop = target;
     }
     function rowElement(id: string): HTMLElement | null {
         return treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"], [data-choice="${CSS.escape(id)}"]`) ?? null;
@@ -548,9 +556,9 @@
         style="--lvl:{depth * 2}; top:{top}px"
         data-sid={st.id}
         role="treeitem"
-        aria-level={depth + 1}
-        aria-setsize={rows.length}
-        aria-posinset={rowIndexById.get(st.id)! + 1}
+        aria-level={rowAriaLevel(row)}
+        aria-setsize={ariaPos.get(row.key)?.size}
+        aria-posinset={ariaPos.get(row.key)?.pos}
         aria-selected={st.id === selectedId && !selectedChoiceId}
         aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
         title={st.pending ? "Unsaved draft - this node isn't in the source file yet (it lands on the next save)" : undefined}
@@ -734,9 +742,9 @@
         data-owner={ownerId}
         data-choice={r.id}
         role="treeitem"
-        aria-level={depth + 2}
-        aria-setsize={rows.length}
-        aria-posinset={rowIndexById.get(r.id)! + 1}
+        aria-level={rowAriaLevel(row)}
+        aria-setsize={ariaPos.get(row.key)?.size}
+        aria-posinset={ariaPos.get(row.key)?.pos}
         title={r.pending ? "Unsaved draft - this option isn't in the source file yet (add its text; it lands on save)" : undefined}
         aria-selected={ownerId === selectedId && r.id === selectedChoiceId}
         tabindex={r.id === treeFocusId ? 0 : -1}

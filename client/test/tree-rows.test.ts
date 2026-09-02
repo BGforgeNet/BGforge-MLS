@@ -5,24 +5,12 @@
  * become one ordered array first. This is that projection: the row sequence here must match, one for one and
  * in order, what the recursive snippets in Tree.svelte used to emit.
  *
- * Fixture builders replicate client/test/conversation-tree.test.ts so both suites describe a dialog the same
- * way, and the input is built through the real `buildConversationTree` rather than hand-written ConvStates.
+ * The input is built through the real `buildConversationTree` rather than hand-written ConvStates.
  */
 import { describe, expect, it } from "vitest";
 import { buildConversationTree } from "../src/dialog-editor/webview/conversation-tree";
-import { flattenRows } from "../src/dialog-editor/webview/tree-rows";
-import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "../../shared/dialog-model";
-
-function st(id: string, text: string, choices: DialogChoice[], extra: Partial<DialogState> = {}): DialogState {
-    return { id, speaker: "NPC", text, choices, ...extra };
-}
-function ch(id: string, target: DialogTarget, extra: Partial<DialogChoice> = {}): DialogChoice {
-    return { id, target, ...extra };
-}
-function root(states: DialogState[]): DialogRoot {
-    return { id: "dialog:NPC", label: "NPC", kind: "dialog", states };
-}
-const noJump = (): undefined => undefined;
+import { ariaPositions, flattenRows, rowAriaLevel } from "../src/dialog-editor/webview/tree-rows";
+import { ch, noJump, root, st } from "./dialog-fixtures";
 
 describe("flattenRows", () => {
     it("emits a state row followed by its reply rows, in render order", () => {
@@ -346,5 +334,141 @@ describe("flattenRows", () => {
         expect(keyToState).toBeDefined();
         expect(keyToExit).toBeDefined();
         expect(keyToState).not.toBe(keyToExit);
+    });
+});
+
+describe("a deep linear conversation", () => {
+    // The outline used to draw through mutually recursive snippets, one component frame per nesting level,
+    // and a chain this deep blew the browser stack outright. The projection replaced that recursion, so this
+    // pins the depth the projection itself survives. It does NOT prove the VIEW stays flat - that property
+    // lives in Tree.svelte's window and only a browser tier can observe it.
+    const DEPTH = 150;
+
+    function chain(depth: number) {
+        return root(
+            Array.from({ length: depth }, (_, i) =>
+                st(
+                    `s${i}`,
+                    `Line ${i}`,
+                    i === depth - 1 ? [] : [ch(`s${i}#0`, { kind: "state", stateId: `s${i + 1}` }, { text: "on" })],
+                ),
+            ),
+        );
+    }
+
+    it("projects every state and option, at full nesting depth", () => {
+        const tree = buildConversationTree(chain(DEPTH), undefined, noJump);
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+
+        expect(rows.filter((r) => r.kind === "state")).toHaveLength(DEPTH);
+        expect(rows.filter((r) => r.kind === "reply")).toHaveLength(DEPTH - 1);
+        expect(Math.max(...rows.map((r) => r.depth))).toBe(DEPTH - 1);
+        // A collision here would silently drop rows from the keyed {#each} the outline renders.
+        expect(new Set(rows.map((r) => r.key)).size).toBe(rows.length);
+    });
+
+    it("numbers each link's option and next state as one sibling pair, however deep", () => {
+        const tree = buildConversationTree(chain(DEPTH), undefined, noJump);
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+        const pos = ariaPositions(rows);
+        const deepest = rows.filter((r) => r.depth >= DEPTH - 2 && rowAriaLevel(r) !== undefined);
+
+        // Every link is a pair: the option, then the state it leads to, both under the state above them.
+        // So the second-to-last state is item 2 of ITS parent's pair, and it in turn parents the last pair.
+        expect(deepest.map((r) => pos.get(r.key))).toEqual([
+            { pos: 2, size: 2 },
+            { pos: 1, size: 2 },
+            { pos: 2, size: 2 },
+        ]);
+    });
+});
+
+describe("ariaPositions", () => {
+    // aria-setsize/aria-posinset describe the set of nodes at one level under one parent - that is the
+    // whole reason a virtualized tree has to supply them, since the DOM holds only a window. Reporting the
+    // flat row list's own length and index instead announces a deeply nested node as "item N of <everything>",
+    // and counts rows that are not treeitems at all.
+    it("numbers the root states among themselves", () => {
+        const tree = buildConversationTree(root([st("A", "one", []), st("B", "two", [])]), undefined, noJump);
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+        const pos = ariaPositions(rows);
+
+        expect(rows.map((r) => pos.get(r.key))).toEqual([
+            { pos: 1, size: 2 },
+            { pos: 2, size: 2 },
+        ]);
+    });
+
+    it("groups a state's options and their target states into one sibling set, in row order", () => {
+        // A target state is emitted straight after the option that leads to it and carries the SAME
+        // aria-level, so the two are siblings: the set is [option, its target, next option].
+        const tree = buildConversationTree(
+            root([
+                st("A", "hi", [
+                    ch("A#0", { kind: "state", stateId: "B" }, { text: "go" }),
+                    ch("A#1", { kind: "exit" }, { text: "bye" }),
+                ]),
+                st("B", "there", []),
+            ]),
+            undefined,
+            noJump,
+        );
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+        const pos = ariaPositions(rows);
+        const under = rows.filter((r) => rowAriaLevel(r) === 2);
+
+        expect(under).toHaveLength(3);
+        expect(under.map((r) => pos.get(r.key))).toEqual([
+            { pos: 1, size: 3 },
+            { pos: 2, size: 3 },
+            { pos: 3, size: 3 },
+        ]);
+    });
+
+    it("counts a nested state's own options against that state, not against its grandparent", () => {
+        const tree = buildConversationTree(
+            root([
+                st("A", "hi", [ch("A#0", { kind: "state", stateId: "B" }, { text: "go" })]),
+                st("B", "there", [
+                    ch("B#0", { kind: "exit" }, { text: "one" }),
+                    ch("B#1", { kind: "exit" }, { text: "two" }),
+                ]),
+            ]),
+            undefined,
+            noJump,
+        );
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+        const pos = ariaPositions(rows);
+        const bReplies = rows.filter((r) => r.kind === "reply" && r.ownerId === "B");
+
+        expect(bReplies.map((r) => pos.get(r.key))).toEqual([
+            { pos: 1, size: 2 },
+            { pos: 2, size: 2 },
+        ]);
+    });
+
+    it("skips rows that are not treeitems, so they never inflate a sibling count", () => {
+        // A "+ option" row and a continuation SAY line render inside the tree but carry no treeitem role.
+        const tree = buildConversationTree(
+            root([st("A", "hi", [ch("A#0", { kind: "exit" }, { text: "bye" })], { sayTexts: ["hi", "second line"] })]),
+            undefined,
+            noJump,
+        );
+
+        const rows = flattenRows(tree.roots, new Set(), new Set(["A"]));
+        const pos = ariaPositions(rows);
+
+        const plain = rows.filter((r) => rowAriaLevel(r) === undefined);
+        expect(plain.map((r) => r.kind)).toEqual(["sayCont", "addOption"]);
+        expect(plain.map((r) => pos.get(r.key))).toEqual([undefined, undefined]);
+
+        // The one option is alone in its set - neither of the two plain rows was counted into it.
+        const reply = rows.find((r) => r.kind === "reply")!;
+        expect(pos.get(reply.key)).toEqual({ pos: 1, size: 1 });
     });
 });
