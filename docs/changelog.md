@@ -54,6 +54,8 @@
 - Past 100 KB, diagnostics wait for a short pause in typing rather than running on every keystroke. Smaller
   files keep their immediate squiggles.
 - Go to definition on an unresolvable tp2 path searches the mod folder rather than the whole install.
+- The dialog outline draws only the rows in view. A long conversation opens without the pause it used to
+  cost, and scrolling, folding and keyboard navigation stay smooth however many nodes a file holds.
 
 ### Data
 
@@ -65,6 +67,8 @@
   one, and real scripts carry them.
 - IDS names are read to the end of their line, so a table that annotates a value in prose - `MISSILE.IDS`
   worst hit - no longer loses most of its rows.
+- A state pulled in by `CHAIN`, `INTERJECT` or `EXTEND` no longer reads as an unsaved draft in the dialog
+  tree and graph. It is written elsewhere, not unsaved.
 
 ## 3.14.0
 
