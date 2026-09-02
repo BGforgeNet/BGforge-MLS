@@ -203,5 +203,5 @@ function on_combat() {
 .tssl -> (tssl compiler) -> .int
 No SSL text is produced or read on the way, and no external compiler is involved.
 Press Ctrl+R in VSCode, or run: tssl script.tssl
-Readable SSL is optional: `tssl script.tssl --transpile`, or the bgforge.tssl.emitSsl setting.
+Readable SSL is optional: `tssl script.tssl --ssl`, or the bgforge.tssl.emitSsl setting.
 Anything the compiler cannot render is refused with the line it sits on, never emitted as guessed output.

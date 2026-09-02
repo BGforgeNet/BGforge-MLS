@@ -309,19 +309,19 @@ describe("parseCliArgs", () => {
     it("registers a caller's own options and returns their values in `extra`", () => {
         // Options belonging to one CLI rather than to all of them: registered here so cac still
         // validates them and --help still lists them, with the values kept out of CliArgs proper.
-        process.argv = ["node", "cli.js", __filename, "--transpile", "--opt", "2"];
+        process.argv = ["node", "cli.js", __filename, "--sample", "--opt", "2"];
         const args = parseCliArgs("help", [
-            ["--transpile", "Also write the readable text output"],
+            ["--sample", "An option belonging to one CLI rather than to all of them"],
             ["--opt <level>", "Optimisation level"],
         ]);
-        expect(args?.extra?.transpile).toBe(true);
+        expect(args?.extra?.sample).toBe(true);
         expect(String(args?.extra?.opt)).toBe("2");
     });
 
     it("leaves a caller option absent from `extra` when it is not passed", () => {
         process.argv = ["node", "cli.js", __filename];
-        const args = parseCliArgs("help", [["--transpile", "Also write the readable text output"]]);
-        expect(args?.extra?.transpile).toBeUndefined();
+        const args = parseCliArgs("help", [["--sample", "An option belonging to one CLI rather than to all of them"]]);
+        expect(args?.extra?.sample).toBeUndefined();
     });
 
     it("parses save-and-check mode", () => {

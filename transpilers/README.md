@@ -93,7 +93,7 @@ Without `--save`, the transpiled output is printed to stdout.
 
 `.tssl` is compiled by [`@bgforge/tssl`](../compilers/tssl/), which installs its own `tssl` binary. It is
 a compiler rather than a transpiler: its default output is Fallout INT bytecode with no intermediate SSL,
-and emitting the readable `.ssl` is one option of it (`tssl --transpile`). See
+and emitting the readable `.ssl` is one option of it (`tssl --ssl`). See
 [CHANGELOG](./CHANGELOG.md) 0.3.0 for the migration.
 
 ## Per-language transpiler guides

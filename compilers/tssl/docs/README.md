@@ -18,7 +18,7 @@ declarations.
 
 ## The readable SSL is an option
 
-`tssl script.tssl --transpile` also writes `script.ssl` -- for a mod that still ships generated SSL, for an
+`tssl script.tssl --ssl` also writes `script.ssl` -- for a mod that still ships generated SSL, for an
 external compiler to be pointed at, or just to read what a script became. It is written from the source rather
 than decompiled from the bytecode, and the repo's external gate byte-compares the two routes across a real mod
 at every optimisation level, so the `.ssl` beside the bytecode does compile to those bytes.

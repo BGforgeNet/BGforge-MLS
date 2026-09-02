@@ -2,9 +2,24 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
-## 0.1.1
+## 0.2.0
+
+### Added
+
+- `tssl --no-int` skips the bytecode, so `--ssl --no-int` writes the readable `.ssl` alone - for a tree
+  that commits the SSL and has no use for the `.int`. Passing it without `--ssl` is an error, since the
+  run would write nothing. `--opt` and `-s` steer the bytecode emitter it skips, so passing either
+  alongside warns and carries on rather than failing the run.
 
 ### Changed
+
+- **`--transpile` is now `--ssl`.** The old spelling is gone rather than aliased. The two output switches
+  now name their outputs: `--ssl` adds the `.ssl` (off by default) and `--no-int` drops the `.int` (written
+  by default), which also gives the SSL-only combination a spelling the old flag could not express.
+
+  The `actions/tssl` inputs follow: `transpile: "true"` becomes `ssl: "true"`, and the new `int` input
+  (default `true`) turns the bytecode off. With `int: "false"` the action drops the `opt` and
+  `short-circuit` inputs, reporting that it did, since neither reaches an emitter that does not run.
 
 - `types` is pinned empty, so the compile no longer discovers and binds every `@types/*` package reachable
   from the entry file. Ambient declarations from an installed `@types` package are no longer in scope in a

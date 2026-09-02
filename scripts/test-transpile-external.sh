@@ -60,7 +60,7 @@ test_repo() {
     fi
 
     # One process per language family, and only where that family has sources. `.tssl` belongs to the
-    # tssl compiler, which emits bytecode by default - `--transpile` is what asks it for the .ssl this
+    # tssl compiler, which emits bytecode by default - `--ssl` is what asks it for the .ssl this
     # gate compares. `fgtp` covers the rest.
     if [[ -n "$(git -C "$dir" ls-files '*.td' '*.tbaf')" ]]; then
         if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
@@ -69,7 +69,7 @@ test_repo() {
         fi
     fi
     if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
-        if ! node --no-warnings "$TSSL_CLI" "$dir" -r --transpile 2>&1; then
+        if ! node --no-warnings "$TSSL_CLI" "$dir" -r --ssl 2>&1; then
             echo "FAIL: $repo (tssl compilation errors)"
             return 1
         fi

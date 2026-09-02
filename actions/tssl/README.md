@@ -8,13 +8,13 @@ the job.
 TSSL is a compiler, not a transpiler: the TypeScript source becomes bytecode directly, with no SSL text produced
 or read on the way.
 
-| Source  | Output | When                     | Committed                |
-| ------- | ------ | ------------------------ | ------------------------ |
-| `.tssl` | `.int` | always                   | never - a build artifact |
-| `.tssl` | `.ssl` | with `transpile: "true"` | yes                      |
+| Source  | Output | When               | Committed                |
+| ------- | ------ | ------------------ | ------------------------ |
+| `.tssl` | `.int` | always             | never - a build artifact |
+| `.tssl` | `.ssl` | with `ssl: "true"` | yes                      |
 
 The `.ssl` is the readable equivalent of what was compiled, for a mod that still ships generated SSL. That is the
-one output worth committing, so `transpile: "true"` is what turns this action into a committing one. The emitted
+one output worth committing, so `ssl: "true"` is what turns this action into a committing one. The emitted
 text is checked to compile to the same bytes the compiler wrote directly.
 
 Every run compiles the whole `paths` tree rather than just the files an event touched: TSSL has imports, so a
@@ -50,13 +50,13 @@ Needs `permissions: contents: write`, since this is the mode that pushes.
 ```yaml
 - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
   with:
-    transpile: "true"
+    ssl: "true"
 ```
 
 ### Check mode: verify the committed SSL is current
 
-Set `check: true` alongside `transpile: "true"` to verify the committed `.ssl` matches a fresh compile. The action
-exits non-zero (failing the job) if any is stale, and never commits or pushes. With `transpile` off there is
+Set `check: true` alongside `ssl: "true"` to verify the committed `.ssl` matches a fresh compile. The action
+exits non-zero (failing the job) if any is stale, and never commits or pushes. With `ssl` off there is
 nothing committed to compare, so check mode adds nothing over the default compile.
 
 ```yaml
@@ -73,7 +73,7 @@ jobs:
       - uses: BGforgeNet/BGforge-MLS/actions/tssl@actions/tssl/v1
         with:
           check: "true"
-          transpile: "true"
+          ssl: "true"
 ```
 
 The switches must match the ones the committed `.ssl` was built with, or every file reports as stale - pass the
@@ -101,17 +101,18 @@ particular.
 
 ## Inputs
 
-| Name                  | Default                                                 | Description                                                                                                             |
-| --------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `paths`               | `.`                                                     | Path passed to the tssl CLI (single path; recursive scan).                                                              |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/tssl`.                                                                              |
-| `transpile`           | `false`                                                 | If `true`, also write the readable `.ssl` beside each `.int` and commit it. The `.int` is never committed.              |
-| `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                                                |
-| `short-circuit`       | `false`                                                 | If `true`, compile `and`/`or` to skip the right operand once the left decides the result.                               |
-| `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                                            |
-| `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                                        |
-| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                              |
-| `check`               | `false`                                                 | If `true`, verify the committed `.ssl` is up to date (exit 1 if stale) and skip push. Only meaningful with `transpile`. |
+| Name                  | Default                                                 | Description                                                                                                          |
+| --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `paths`               | `.`                                                     | Path passed to the tssl CLI (single path; recursive scan).                                                           |
+| `version`             | `latest`                                                | npm version specifier for `@bgforge/tssl`.                                                                           |
+| `ssl`                 | `false`                                                 | If `true`, also write the readable `.ssl` beside each `.int` and commit it. The `.int` is never committed.           |
+| `int`                 | `true`                                                  | If `false`, skip the bytecode and write only the `.ssl`. Needs `ssl: "true"`, and makes `opt`/`short-circuit` inert. |
+| `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                                             |
+| `short-circuit`       | `false`                                                 | If `true`, compile `and`/`or` to skip the right operand once the left decides the result.                            |
+| `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                                         |
+| `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                                     |
+| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                           |
+| `check`               | `false`                                                 | If `true`, verify the committed `.ssl` is up to date (exit 1 if stale) and skip push. Only meaningful with `ssl`.    |
 
 ## Outputs
 
@@ -122,7 +123,7 @@ particular.
 
 ## Notes
 
-- Only a run with `transpile: "true"` and `check` off pushes, and that one MUST be granted
+- Only a run with `ssl: "true"` and `check` off pushes, and that one MUST be granted
   `permissions: contents: write` (job-level or workflow-level) so the default `GITHUB_TOKEN` can push. The default
   compile-only mode and check mode need no extra permissions; in those the `changed` / `changed-files` outputs are
   empty.

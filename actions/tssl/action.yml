@@ -1,5 +1,5 @@
 name: "Compile TSSL"
-description: "Compile TSSL sources to Fallout INT bytecode with @bgforge/tssl, and commit the generated .ssl when transpile is on."
+description: "Compile TSSL sources to Fallout INT bytecode with @bgforge/tssl, and commit the generated .ssl when ssl is on."
 author: "BGforge"
 
 inputs:
@@ -11,10 +11,14 @@ inputs:
     description: "npm version specifier for @bgforge/tssl."
     required: false
     default: "latest"
-  transpile:
+  ssl:
     description: 'If "true", also write the readable .ssl beside each .int and commit it. The .int is never committed.'
     required: false
     default: "false"
+  int:
+    description: 'If "false", skip the bytecode and write only the .ssl. Needs ssl: "true", since otherwise the run has nothing to write.'
+    required: false
+    default: "true"
   opt:
     description: "Optimisation level passed to the compiler (0, 1 or 2). Empty uses the compiler's default."
     required: false
@@ -36,7 +40,7 @@ inputs:
     required: false
     default: "41898282+github-actions[bot]@users.noreply.github.com"
   check:
-    description: 'If "true", verify the committed .ssl is up to date with its source (exit 1 if stale) and skip commit/push. Only meaningful with transpile: "true" - with it off, compiling is already the check.'
+    description: 'If "true", verify the committed .ssl is up to date with its source (exit 1 if stale) and skip commit/push. Only meaningful with ssl: "true" - with it off, compiling is already the check.'
     required: false
     default: "false"
 
@@ -52,7 +56,7 @@ runs:
   using: "composite"
   steps:
     - name: Guard against fork pull_request (read-only token cannot push)
-      if: inputs.check != 'true' && inputs.transpile == 'true'
+      if: inputs.check != 'true' && inputs.ssl == 'true'
       shell: bash
       env:
         EVENT_NAME: ${{ github.event_name }}
@@ -77,7 +81,8 @@ runs:
       id: switches
       shell: bash
       env:
-        TRANSPILE: ${{ inputs.transpile }}
+        SSL: ${{ inputs.ssl }}
+        INT: ${{ inputs.int }}
         OPT: ${{ inputs.opt }}
         SHORT_CIRCUIT: ${{ inputs.short-circuit }}
       run: ${{ github.action_path }}/scripts/switches.sh
@@ -94,7 +99,7 @@ runs:
       shell: bash
       env:
         SCAN_PATH: ${{ inputs.paths }}
-        TRANSPILE: ${{ inputs.transpile }}
+        SSL: ${{ inputs.ssl }}
         CHECK_MODE: ${{ inputs.check }}
         COMMIT_MESSAGE: ${{ inputs.commit-message }}
         COMMIT_AUTHOR_NAME: ${{ inputs.commit-author-name }}

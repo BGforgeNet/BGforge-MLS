@@ -20,17 +20,22 @@ Requires Node 20 or newer.
 ```bash
 tssl myscript.tssl                # write myscript.int
 tssl src/ -r --opt 2 -s           # what a mod build wants
-tssl src/ -r --transpile          # bytecode, keeping the readable .ssl beside it
+tssl src/ -r --ssl                # bytecode, keeping the readable .ssl beside it
+tssl src/ -r --ssl --no-int       # the readable .ssl alone, for a tree that commits it
 ```
 
-- `--transpile` - also write the `.ssl`
+- `--ssl` - also write the `.ssl`. Off by default
+- `--no-int` - skip the bytecode, leaving only the `.ssl`. The `.int` is written unless this is passed,
+  and passing it without `--ssl` is an error, since the run would write nothing. `--opt` and `-s` steer
+  the bytecode emitter it skips, so passing either alongside warns and carries on: the optimisation
+  choice belongs to whatever compiles the generated `.ssl`.
 - `--opt <0|1|2>` - optimisation level (default 1, matching the `ssl` compiler's own default)
 - `-s` - short-circuit `and`/`or`: skip the right operand once the left decides the result
 - `-r`, `-q`, `--jobs <n>`, `--check` - as the repo's other CLIs
 
 ## The two outputs agree, and that is checked
 
-`--transpile` is a guarantee rather than an offer. The repo's external gate compiles the emitted `.ssl`
+`--ssl` is a guarantee rather than an offer. The repo's external gate compiles the emitted `.ssl`
 with the `ssl` compiler and byte-compares it against what this writes, across every optimisation level and
 with short-circuiting both ways, over a whole real mod. The two routes cannot drift apart unnoticed.
 

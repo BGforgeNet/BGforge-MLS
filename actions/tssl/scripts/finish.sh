@@ -4,13 +4,13 @@
 #
 # The .int is never staged: a mod does not commit Fallout bytecode, so compiling it is the
 # check and the file stays a build artifact. The .ssl is a committed artifact only for a mod
-# that ships generated SSL, which is exactly what `transpile: true` asks for - so it is the
-# only thing this step can commit, and with transpile off there is nothing to do.
+# that ships generated SSL, which is exactly what `ssl: true` asks for - so it is the
+# only thing this step can commit, and with it off there is nothing to do.
 #
 # Outputs are derived from the sources found under SCAN_PATH, never globbed: a hand-written
 # .ssl with no .tssl beside it must not be claimed as generated output.
 #
-# Inputs (env): SCAN_PATH, TRANSPILE, CHECK_MODE, COMMIT_MESSAGE, COMMIT_AUTHOR_NAME,
+# Inputs (env): SCAN_PATH, SSL, CHECK_MODE, COMMIT_MESSAGE, COMMIT_AUTHOR_NAME,
 #               COMMIT_AUTHOR_EMAIL, GITHUB_OUTPUT.
 set -euo pipefail
 # Sourced at runtime from a path only known then ($GITHUB_ACTION_PATH); lib.sh is
@@ -25,8 +25,8 @@ emit_unchanged() {
     } >>"$GITHUB_OUTPUT"
 }
 
-if [[ "$TRANSPILE" != "true" ]]; then
-    echo "transpile is off: the compile was the check, and there is no generated .ssl to commit."
+if [[ "$SSL" != "true" ]]; then
+    echo "ssl is off: the compile was the check, and there is no generated .ssl to commit."
     emit_unchanged
     exit 0
 fi

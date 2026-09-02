@@ -512,4 +512,4 @@ Press **Ctrl+R** in VSCode (with the extension active) to compile the current `.
 Set `bgforge.tssl.emitSsl` to also write the readable `.ssl` beside the source.
 
 From the command line, `tssl script.tssl` does the same thing, and `tssl src/ -r --opt 2 -s` is what a mod build
-wants. Add `--transpile` for the `.ssl`. (`fgtp` handles TBAF and TD; it does not accept `.tssl`.)
+wants. Add `--ssl` for the `.ssl`. (`fgtp` handles TBAF and TD; it does not accept `.tssl`.)

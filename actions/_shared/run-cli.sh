@@ -5,7 +5,7 @@
 # --save (write the result). Shared by all actions/* composite actions.
 #
 # EXTRA_ARGS carries switches only some CLIs take (the tssl compiler's --opt and
-# --transpile). It is optional and word-split deliberately: an action builds it
+# --ssl). It is optional and word-split deliberately: an action builds it
 # from its own validated inputs, so it is a list of tokens rather than one
 # argument. Callers that pass nothing get the same command line as before.
 # Inputs (env): CLI (fgbin|fgfmt|fgtp|tssl), LIST, COUNT, CHECK_MODE, EXTRA_ARGS

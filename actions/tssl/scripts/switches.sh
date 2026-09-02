@@ -7,11 +7,21 @@
 # can carry between steps; every token here is a fixed flag or a single digit
 # validated below, so the word-splitting run.sh does on it cannot surprise.
 #
-# Inputs (env): TRANSPILE, OPT, SHORT_CIRCUIT, GITHUB_OUTPUT.
+# Inputs (env): SSL, INT, OPT, SHORT_CIRCUIT, GITHUB_OUTPUT.
 set -euo pipefail
 
+# Both opt and short-circuit steer the bytecode emitter, which int: "false" never reaches - the CLI
+# would take them and warn. Dropped before they are built, and said out loud rather than silently, so
+# a caller setting the level globally can see which inputs this run ignored.
+if [[ "$INT" == "false" ]] && { [[ -n "$OPT" ]] || [[ "$SHORT_CIRCUIT" == "true" ]]; }; then
+    echo "int is off, so no bytecode is compiled: ignoring the opt and short-circuit inputs."
+    OPT=""
+    SHORT_CIRCUIT="false"
+fi
+
 args=()
-[[ "$TRANSPILE" == "true" ]] && args+=(--transpile)
+[[ "$SSL" == "true" ]] && args+=(--ssl)
+[[ "$INT" == "false" ]] && args+=(--no-int)
 [[ "$SHORT_CIRCUIT" == "true" ]] && args+=(-s)
 
 if [[ -n "$OPT" ]]; then
