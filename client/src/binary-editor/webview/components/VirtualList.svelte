@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import { visibleRange } from "../state/virtual-window";
+    import { visibleRange } from "../../../virtual-window";
 
     // When `rows` is provided (filtered mode), VirtualList renders that fixed array directly
     // without fetching its own window. This keeps the virtualized fetch path for large unfiltered

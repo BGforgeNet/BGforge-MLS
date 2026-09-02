@@ -4,7 +4,7 @@
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
-    import { isPendingState } from "./inspector-edit";
+    import { isUnsavedDraftState } from "./inspector-edit";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
@@ -36,7 +36,7 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    {@const pending = !data.sourceless && isPendingState(data.state)}
+    {@const pending = !data.sourceless && isUnsavedDraftState(data.state)}
     <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged} class:pending class:foreign={data.external}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">

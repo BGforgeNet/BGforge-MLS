@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { visibleRange } from "../../../src/binary-editor/webview/state/virtual-window";
+import { visibleRange } from "../src/virtual-window";
 
 const cfg = { rowHeight: 20, viewportHeight: 200, overscan: 3, total: 10000 };
 

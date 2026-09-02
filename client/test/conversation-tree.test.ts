@@ -579,3 +579,35 @@ describe("a format with no source spans at all", () => {
         expect(roots[0]!.replies[0]!.pending).toBeUndefined();
     });
 });
+
+describe("a derived state in a format that does have spans", () => {
+    // The sibling of the sourceless case above, found by driving BG1NPC's p#corlt.d: all 9 CHAIN-derived
+    // states wore the amber "unsaved draft" accent, against 0 of the 686 authored ones. A derived state is
+    // synthesised from a CHAIN/INTERJECT/EXTEND written elsewhere, so it legitimately has no span of its own -
+    // which `isPendingState` alone reads as "the user just added this". It is in the source, just not here.
+    const derived = root([
+        st("chained", "hi", [ch("chained#0", { kind: "exit" }, { text: "bye" })], { derivedFrom: "CHAIN" }),
+    ]);
+
+    it("does not mark a derived state as an unsaved draft", () => {
+        const { roots } = buildConversationTree(derived, undefined, noJump, { ssl: false, fieldEditable: () => true });
+
+        expect(roots[0]!.pending).toBeUndefined();
+    });
+
+    it("does not mark a derived state's options as unsaved drafts", () => {
+        const { roots } = buildConversationTree(derived, undefined, noJump, { ssl: false, fieldEditable: () => true });
+
+        expect(roots[0]!.replies[0]!.pending).toBeUndefined();
+    });
+
+    it("still marks a genuinely just-added state pending", () => {
+        // The guard against over-fixing: absence of a span with no derivedFrom really is a new node.
+        const fresh = root([st("new", "hi", [ch("new#0", { kind: "exit" }, { text: "bye" })])]);
+
+        const { roots } = buildConversationTree(fresh, undefined, noJump, { ssl: false, fieldEditable: () => true });
+
+        expect(roots[0]!.pending).toBe(true);
+        expect(roots[0]!.replies[0]!.pending).toBe(true);
+    });
+});

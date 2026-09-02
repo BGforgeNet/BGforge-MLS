@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import { visibleRange } from "../state/virtual-window";
+    import { visibleRange } from "../../../virtual-window";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import Field from "./Field.svelte";
     import RowActions from "./RowActions.svelte";

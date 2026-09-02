@@ -1,9 +1,11 @@
 <script lang="ts">
     import { tick, untrack } from "svelte";
-    import { childStates, type ConversationTree, type ConvState, type ConvReply, type ConvBranch, type ConvBlock } from "./conversation-tree";
+    import { childStates, type ConversationTree, type ConvState, type ConvReply } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
     import { optionRemoveLockReason } from "./inspector-edit";
+    import { flattenRows, type FlatRow } from "./tree-rows";
+    import { visibleRange } from "../../virtual-window";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
     // their player replies as a nested outline; clicking a state selects it for the
@@ -94,6 +96,68 @@
     } = $props();
 
     let treeEl: HTMLDivElement | undefined = $state();
+    let sizerEl: HTMLDivElement | undefined = $state();
+
+    // Virtualization. The outline is one flat row list (tree-rows.ts) of which only the rows near the
+    // viewport are mounted: the widest real dialog in the corpus is 3123 rows, and mounting them all is the
+    // stall this exists to remove. ROW_H must equal the height every row kind is pinned to in the CSS below -
+    // the window is pure arithmetic on it, so a row that renders taller would drift out of its slot.
+    const ROW_H = 22;
+    const OVERSCAN = 8;
+    // eslint-disable-next-line prefer-const -- reassigned by the scroll handler
+    let scrollTop = $state(0);
+    // eslint-disable-next-line prefer-const -- reassigned via bind:clientHeight
+    let viewportHeight = $state(600);
+
+    const rows = $derived(flattenRows(tree.roots, collapsed, editableStateIds));
+    const range = $derived(
+        visibleRange({ scrollTop, viewportHeight, rowHeight: ROW_H, overscan: OVERSCAN, total: rows.length }),
+    );
+    const windowRows = $derived(rows.slice(range.start, range.end));
+    // Row position by the id the rest of the component addresses rows with - a state's id or an option's
+    // choice id, which are disjoint id spaces (see treeFocusId). Reveal, focus and arrow-nav all resolve
+    // through this instead of querying the DOM, which now only holds the mounted window.
+    const rowIndexById = $derived.by(() => {
+        const byId = new Map<string, number>();
+        for (const [index, row] of rows.entries()) {
+            if (row.kind === "state") byId.set(row.state.id, index);
+            else if (row.kind === "reply") byId.set(row.reply.id, index);
+        }
+        return byId;
+    });
+    // The rows ArrowUp/Down step through, in screen order: state rows and option rows, exactly the set that
+    // carries role="treeitem". Derived from the row list rather than the DOM so nav does not stop at the
+    // edge of the mounted window.
+    const navIds = $derived(
+        rows.flatMap((row) => (row.kind === "state" ? [row.state.id] : row.kind === "reply" ? [row.reply.id] : [])),
+    );
+
+    // Scroll the row at `index` just inside the viewport. Used before focusing, since an unmounted row has
+    // no element to focus.
+    function ensureVisible(index: number): void {
+        if (index < 0 || !treeEl) return;
+        // Rows sit inside `.sizer`, which begins below the tree's own top padding, so a row's scroll offset
+        // is that offset plus its slot. Read rather than hardcoded: the padding lives in the CSS below.
+        const top = (sizerEl?.offsetTop ?? 0) + index * ROW_H;
+        if (top < treeEl.scrollTop) treeEl.scrollTop = top;
+        else if (top + ROW_H > treeEl.scrollTop + treeEl.clientHeight) {
+            treeEl.scrollTop = top + ROW_H - treeEl.clientHeight;
+        }
+    }
+    function rowElement(id: string): HTMLElement | null {
+        return treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"], [data-choice="${CSS.escape(id)}"]`) ?? null;
+    }
+    // Put DOM focus on a row, scrolling it into the window first and waiting for that render - the single
+    // path for every focus move, because a row outside the window is not in the DOM to focus.
+    function focusRow(id: string): void {
+        const index = rowIndexById.get(id);
+        if (index === undefined) return;
+        ensureVisible(index);
+        void tick().then(() => {
+            const el = rowElement(id);
+            if (el && el !== el.ownerDocument.activeElement) el.focus();
+        });
+    }
 
     // Search-highlight helpers: a row is a hit when its key is in searchHits; the current match is emphasized.
     // Keyed by state id (node/flat-line rows), choice id (option rows), or branch key (branch-line rows).
@@ -135,10 +199,11 @@
     function reveal(id: string): void {
         const collapsedAncestors = ancestorsOf(id)?.filter((a) => collapsed.has(a)) ?? [];
         if (collapsedAncestors.length > 0) {
+            // Expanding changes the row list, so the target's index only exists after the re-derive.
             onExpand(collapsedAncestors);
-            void tick().then(() => treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }));
+            void tick().then(() => ensureVisible(rowIndexById.get(id) ?? -1));
         } else {
-            treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
+            ensureVisible(rowIndexById.get(id) ?? -1);
         }
     }
     // Reveal whatever is selected whenever the SELECTION changes: covers clicking a ref leaf, a cross-file jump
@@ -167,42 +232,23 @@
     // re-runs on a selection change, so it never steals focus from the docked inspector while you type there.
     $effect(() => {
         if (searchActive || editingChoiceId || editingStateId || renamingStateId) return;
-        const sel = selectedChoiceId
-            ? `[data-choice="${CSS.escape(selectedChoiceId)}"]`
-            : selectedId
-              ? `[data-sid="${CSS.escape(selectedId)}"]`
-              : null;
-        if (!sel) return;
-        const el = treeEl?.querySelector<HTMLElement>(sel);
-        if (el && el !== el.ownerDocument.activeElement) el.focus();
+        const id = selectedChoiceId ?? selectedId;
+        if (id) focusRow(id);
     });
 
-    // Visible navigation targets in DOM (top-to-bottom) order, for ArrowUp/Down movement. Both state rows
-    // (data-sid) and selectable option rows (data-owner + data-choice) are `[role=treeitem]`; a read-only
-    // bundle-branch option row has no role and so is skipped. They interleave exactly as they read on screen
-    // - Down off a state steps into its first option, Down off the last option steps to the next state.
-    // Collapsed rows' children are absent from the DOM, so this naturally walks only what is on screen.
-    function navTargets(): HTMLElement[] {
-        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"]')] : [];
-    }
-    // Move SELECTION (not just focus) to a target: focus it and select it so the docked inspector follows the
-    // keyboard, matching a click. A state row selects via onSelect; an option row via onSelectReply.
-    function selectNav(el: HTMLElement): void {
-        const { sid, owner, choice } = el.dataset;
-        if (owner && choice) onSelectReply(owner, choice);
-        else if (sid) onSelect(sid);
-    }
-    // ArrowUp/Down step to the previous/next target and select it. .focus() scrolls the target into view, so
-    // the arrows move focus instead of scrolling the panel (the browser default when focus sits on a control
-    // - e.g. an option's text button - that does not itself handle the arrows).
-    function moveNav(current: HTMLElement, dir: 1 | -1): void {
-        const rows = navTargets();
-        const i = rows.indexOf(current);
-        const next = rows[i + dir];
-        if (next) {
-            next.focus();
-            selectNav(next);
-        }
+    // ArrowUp/Down step through state rows and option rows in screen order (see navIds), which interleave
+    // exactly as they read - Down off a state steps into its first option, Down off the last option steps to
+    // the next state. A collapsed state contributes no descendants to the row list, so this walks only what
+    // the user can see.
+    // Move SELECTION (not just focus) to the neighbouring row so the docked inspector follows the keyboard,
+    // matching a click. Selecting is enough to move focus: the selection effect above routes through
+    // focusRow, which scrolls the target into the window first.
+    function moveNav(currentId: string, dir: 1 | -1): void {
+        const nextId = navIds[navIds.indexOf(currentId) + dir];
+        if (nextId === undefined) return;
+        const row = rows[rowIndexById.get(nextId) ?? -1];
+        if (row?.kind === "reply") onSelectReply(row.ownerId, row.reply.id);
+        else if (row?.kind === "state") onSelect(row.state.id);
     }
     function onRowKeydown(e: KeyboardEvent, st: ConvState): void {
         const hasKids = st.replies.length > 0 || (st.branches?.length ?? 0) > 0;
@@ -245,11 +291,11 @@
                 break;
             case "ArrowDown":
                 e.preventDefault();
-                moveNav(e.currentTarget as HTMLElement, 1);
+                moveNav(st.id, 1);
                 break;
             case "ArrowUp":
                 e.preventDefault();
-                moveNav(e.currentTarget as HTMLElement, -1);
+                moveNav(st.id, -1);
                 break;
             case "ArrowRight":
                 // Expand a collapsed row with children.
@@ -314,14 +360,14 @@
         if (refocusChoiceId != null && editingChoiceId == null) {
             const id = refocusChoiceId;
             refocusChoiceId = undefined;
-            treeEl?.querySelector<HTMLElement>(`.rep[data-choice="${CSS.escape(id)}"]`)?.focus();
+            focusRow(id);
         }
         // Wait for BOTH inline-state edits to clear (NPC-line edit AND rename) before refocusing the row - only
         // one is ever active, so this returns focus once whichever finished unmounts its input.
         if (refocusStateId != null && editingStateId == null && renamingStateId == null) {
             const id = refocusStateId;
             refocusStateId = undefined;
-            treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
+            focusRow(id);
         }
     });
     function autofocusSelect(el: HTMLInputElement) {
@@ -393,24 +439,6 @@
             onJump(t.jump.file, t.jump.stateId);
         }
     }
-    // Keyed-each identity for a reply ROW. Beyond `r.id` it folds in the target's shape - and, for a `state`
-    // target, the child node's id - so a live re-parse that flips a reply's target (e.g. `state` -> `external`
-    // when its destination node vanishes from a mid-edit parse) gives the row a NEW key. That forces the reused
-    // row and its recursive child `stateBlock` to be torn down and rebuilt instead of updated in place. In-place
-    // reuse re-ran the child block's deriveds against the now-stale `r.target.node` (undefined) during the same
-    // reactive flush, threw reading `.id`, and aborted the whole flush - wedging the tree until the panel was
-    // reopened. The key expression is evaluated only against a consistent freshly-parsed reply, so it never
-    // dereferences a stale union member itself.
-    function replyKey(r: ConvReply): string {
-        return r.target.kind === "state" ? `${r.id}@${r.target.node.id}` : `${r.id}#${r.target.kind}`;
-    }
-    // Keyed-each identity for a structured node's block item, for the same reason as `replyKey`: a `reply` item
-    // recurses into `stateBlock` (via replyRow), so it must remount rather than reuse when its target flips on a
-    // re-parse. Reply items key on `replyKey`; line/group items key on their kind+index (a group's own nested
-    // reply items are re-keyed by the recursive convBlock, so it needs no target-awareness itself).
-    function blockKey(it: ConvBlock[number], i: number): string {
-        return it.kind === "reply" ? `r:${replyKey(it.reply)}` : `${it.kind}:${i}`;
-    }
     // Keyboard on a focused option ROW, mirroring onRowKeydown for states: Space selects the option;
     // Enter/F2/E begin inline edit (Enter falls back to select when the option is not editable - a locked
     // SSL @N / read-only node has no inline input); G takes the transition (go to the target, like clicking
@@ -447,11 +475,11 @@
                 break;
             case "ArrowDown":
                 e.preventDefault();
-                moveNav(e.currentTarget as HTMLElement, 1);
+                moveNav(r.id, 1);
                 break;
             case "ArrowUp":
                 e.preventDefault();
-                moveNav(e.currentTarget as HTMLElement, -1);
+                moveNav(r.id, -1);
                 break;
         }
     }
@@ -473,13 +501,38 @@
     }
 </script>
 
-<div class="tree" role="tree" aria-label="Conversation tree" bind:this={treeEl}>
-    {#each tree.roots as st (st.id)}
-        {@render stateBlock(st, 0)}
-    {/each}
+<!-- The outline scrolls itself so it owns the viewport its window is measured against. `.sizer` reserves the
+     full height of the row list; only the rows near the viewport are mounted, each absolutely positioned at
+     its index. `role="none"` on the sizer keeps the treeitems owned by the tree despite the wrapper. -->
+<div
+    class="tree"
+    role="tree"
+    aria-label="Conversation tree"
+    bind:this={treeEl}
+    bind:clientHeight={viewportHeight}
+    onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)}
+>
+    <div class="sizer" role="none" bind:this={sizerEl} style="height:{rows.length * ROW_H}px">
+        {#each windowRows as row, i (row.key)}
+            {@const top = (range.start + i) * ROW_H}
+            {#if row.kind === "state"}
+                {@render stateRow(row, top)}
+            {:else if row.kind === "sayCont"}
+                {@render sayContRow(row, top)}
+            {:else if row.kind === "branchLine"}
+                {@render branchLineRow(row, top)}
+            {:else if row.kind === "reply"}
+                {@render replyRow(row, top)}
+            {:else}
+                {@render addOptionRow(row, top)}
+            {/if}
+        {/each}
+    </div>
 </div>
 
-{#snippet stateBlock(st: ConvState, depth: number)}
+{#snippet stateRow(row: Extract<FlatRow, { kind: "state" }>, top: number)}
+    {@const st = row.state}
+    {@const depth = row.depth}
     {@const hasChildren = st.replies.length > 0 || (st.branches?.length ?? 0) > 0 || (st.block?.length ?? 0) > 0}
     <!-- When an individual option of this state is selected (selectedChoiceId set), the option row carries the
          selection highlight (.rep.repsel) and the Inspector focuses that option - so the owner node is NOT
@@ -492,10 +545,12 @@
         class:sel={st.id === selectedId && !selectedChoiceId}
         class:searchhit={isHit(st.id)}
         class:searchcurrent={isCurrent(st.id)}
-        style="--lvl:{depth * 2}"
+        style="--lvl:{depth * 2}; top:{top}px"
         data-sid={st.id}
         role="treeitem"
         aria-level={depth + 1}
+        aria-setsize={rows.length}
+        aria-posinset={rowIndexById.get(st.id)! + 1}
         aria-selected={st.id === selectedId && !selectedChoiceId}
         aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
         title={st.pending ? "Unsaved draft - this node isn't in the source file yet (it lands on the next save)" : undefined}
@@ -621,83 +676,44 @@
             </span>
         {/if}
     </div>
-    {#if !collapsed.has(st.id)}
-        <!-- Continuation SAY lines of a multisay monologue (line 1 shows on the node row above): the NPC speaks
-             several lines before the player replies. Rendered as muted, non-interactive rows so the whole speech
-             is visible instead of truncated to the first line. Editing them lives in the inspector. -->
-        {#if st.sayLines}
-            {#each st.sayLines as line, li (li)}
-                <div class="saycont" style="--lvl:{depth * 2}"><span class="line saymore" use:clipTitle={{ label: st.id, text: line }}>{line || "(no line)"}</span></div>
-            {/each}
-        {/if}
-        {#if st.block}
-            <!-- When the block opens with a top-level line, it is shown on the state row above, so skip it here. -->
-            {@render convBlock(st.block[0]?.kind === "line" ? st.block.slice(1) : st.block, depth, st.id)}
-        {:else if st.branches}
-            {#each st.branches as b, bi (bi)}
-                {@render branchBlock(b, depth, st.id)}
-            {/each}
-        {:else}
-            {#each st.replies as r, i (replyKey(r))}
-                {@render replyRow(r, depth, st.id, i, st.replies.length, false)}
-            {/each}
-            <!-- Trailing "+" that appends an option to this state's list (editable states only). Shown even
-                 with zero replies, so a dead-end line can gain its first player option. Indented to the reply
-                 column so it reads as "append to this list". -->
-            {#if editableStateIds.has(st.id)}
-                <div class="addopt" style="--lvl:{depth * 2 + 1}">
-                    <button class="addbtn" title="Add an option" onclick={(e) => (e.stopPropagation(), onAddReply(st.id))}>+ option</button>
-                </div>
-            {/if}
-        {/if}
-    {/if}
 {/snippet}
 
-{#snippet branchBlock(b: ConvBranch, depth: number, ownerId: string)}
-    <!-- No group-header line: each branch renders its NPC line and its option rows, and every option carries
-         its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
-         The condition lives on the options it gates, not a separate header. -->
-    <div class="brep" class:branchhl={inBranch(b.branchKey)} class:searchhit={isHit(b.branchKey)} class:searchcurrent={isCurrent(b.branchKey)} style="--lvl:{depth * 2 + 1}">
-        {#if b.condition}<span class="cond" title={b.condition}>{b.kind === "else" ? "[else]" : "[if]"}</span>{/if}
-        <!-- Clicking a branch's NPC line selects the owner state AND highlights this branch (its line + options)
-             in the tree - a bundle/structured node's structure is read-only, so the line is a select/inspect
-             target, not an edit target. Rendered as a <button> so it is a real, keyboard-operable target,
-             matching the state row's own line (linebtn) and the option rows. -->
-        <button class="line linebtn" use:clipTitle={{ label: ownerId, text: b.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(ownerId, b.branchKey))}>{b.npc || "(no line)"}</button>
+{#snippet sayContRow(row: Extract<FlatRow, { kind: "sayCont" }>, top: number)}
+    <!-- Continuation SAY line of a multisay monologue (line 1 shows on the node row): the NPC speaks several
+         lines before the player replies. Muted and non-interactive; editing them lives in the inspector. -->
+    <div class="saycont" style="--lvl:{row.depth * 2}; top:{top}px">
+        <span class="line saymore" use:clipTitle={{ label: row.stateId, text: row.line }}>{row.line || "(no line)"}</span>
     </div>
-    {#each b.replies as r, i (replyKey(r))}
-        {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
-    {/each}
 {/snippet}
 
-<!-- Recursive render for a `structured` node (arbitrarily nested if/else). The gate is NOT a separate header
-     line: each option carries its own `[if]` chip (the full conjoined condition, incl. `not (...)` for an else
-     branch, in the tooltip) on its own row - see replyRow. So a group renders its branches inline (NPC line +
-     option rows) with no header; the condition lives on the options it gates. This keeps the else NPC line
-     (unlike a fully flat projection, which drops it - dialog-nested-flatten-bug-class). Read-only this slice. -->
-{#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
-    {#each block as it, i (blockKey(it, i))}
-        {#if it.kind === "line"}
-            <div class="brep" class:branchhl={inBranch(it.branchKey)} class:searchhit={isHit(it.branchKey)} class:searchcurrent={isCurrent(it.branchKey)} style="--lvl:{depth * 2 + 1}">
-                <!-- A branch's opening NPC line carries its gate: the if-branch reads [if], the else-branch reads
-                     [else] (it.isElse), both with the full condition in the tooltip. Unconditional lines have none. -->
-                {#if it.condition}<span class="cond" title={it.condition}>{it.isElse ? "[else]" : "[if]"}</span>{/if}
-                <!-- Clicking selects the owner state AND highlights this branch (same as branchBlock above). A
-                     top-level unconditional line has no branchKey, so it just selects the state (no highlight). -->
-                <button class="line linebtn" use:clipTitle={{ label: ownerId, text: it.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(ownerId, it.branchKey))}>{it.npc || "(no line)"}</button>
-            </div>
-        {:else if it.kind === "reply"}
-            {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
-        {:else if it.kind === "group"}
-            {@render convBlock(it.thenBlock, depth, ownerId)}
-            {#if it.elseBlock}
-                {@render convBlock(it.elseBlock, depth, ownerId)}
-            {/if}
-        {/if}
-    {/each}
+<!-- A branch's opening NPC line, for a bundle node's branches and a structured node's block lines alike. The
+     gate is NOT a separate header: each option carries its own [if] chip (see replyRow), and this line carries
+     the branch's own [if]/[else]. Keeping the else line is what a fully flat projection drops. -->
+{#snippet branchLineRow(row: Extract<FlatRow, { kind: "branchLine" }>, top: number)}
+    <div class="brep" class:branchhl={inBranch(row.branchKey)} class:searchhit={isHit(row.branchKey)} class:searchcurrent={isCurrent(row.branchKey)} style="--lvl:{row.depth * 2 + 1}; top:{top}px">
+        {#if row.condition}<span class="cond" title={row.condition}>{row.isElse ? "[else]" : "[if]"}</span>{/if}
+        <!-- Clicking selects the owner state AND highlights this branch (its line + options). A bundle or
+             structured node's structure is read-only, so the line is a select/inspect target, not an edit one.
+             A top-level unconditional line has no branchKey, so it just selects the state. -->
+        <button class="line linebtn" use:clipTitle={{ label: row.ownerId, text: row.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(row.ownerId, row.branchKey))}>{row.npc || "(no line)"}</button>
+    </div>
 {/snippet}
 
-{#snippet replyRow(r: ConvReply, depth: number, ownerId: string, index: number, count: number, branchReadonly: boolean)}
+{#snippet addOptionRow(row: Extract<FlatRow, { kind: "addOption" }>, top: number)}
+    <!-- Trailing "+" appending an option to this state's list. Shown even with zero replies, so a dead-end line
+         can gain its first player option. Indented to the reply column so it reads as "append to this list". -->
+    <div class="addopt" style="--lvl:{row.depth * 2 + 1}; top:{top}px">
+        <button class="addbtn" title="Add an option" onclick={(e) => (e.stopPropagation(), onAddReply(row.stateId))}>+ option</button>
+    </div>
+{/snippet}
+
+{#snippet replyRow(row: Extract<FlatRow, { kind: "reply" }>, top: number)}
+    {@const r = row.reply}
+    {@const depth = row.depth}
+    {@const ownerId = row.ownerId}
+    {@const index = row.index}
+    {@const count = row.count}
+    {@const branchReadonly = row.branchReadonly}
     <!-- The whole option row is the selection/focus/nav unit (mirroring a state row): a click anywhere on it
          selects the option, double-click / F2 edits its text, ArrowUp/Down move to the neighbouring row. It
          is a treeitem so it can hold the inner controls (target jump, remove) without a nested-button clash.
@@ -714,11 +730,13 @@
         class:branchhl={inBranch(r.branchKey)}
         class:searchhit={isHit(r.id)}
         class:searchcurrent={isCurrent(r.id)}
-        style="--lvl:{depth * 2 + 1}"
+        style="--lvl:{depth * 2 + 1}; top:{top}px"
         data-owner={ownerId}
         data-choice={r.id}
         role="treeitem"
         aria-level={depth + 2}
+        aria-setsize={rows.length}
+        aria-posinset={rowIndexById.get(r.id)! + 1}
         title={r.pending ? "Unsaved draft - this option isn't in the source file yet (add its text; it lands on save)" : undefined}
         aria-selected={ownerId === selectedId && r.id === selectedChoiceId}
         tabindex={r.id === treeFocusId ? 0 : -1}
@@ -779,9 +797,6 @@
             >
         {/if}
     </div>
-    {#if r.target.kind === "state"}
-        {@render stateBlock(r.target.node, depth + 1)}
-    {/if}
 {/snippet}
 
 {#snippet leaf(r: ConvReply)}
@@ -812,18 +827,41 @@
 {/snippet}
 
 <style>
+    /* The outline is its own scrollport: the virtual window is measured against this element's scrollTop and
+       clientHeight, so it must be the thing that scrolls rather than an ancestor. */
     .tree {
         font-size: 12px;
         color: var(--vscode-foreground);
         padding: 8px 8px 40px;
         user-select: none;
+        height: 100%;
+        overflow: auto;
+    }
+    /* Reserves the full height of the row list so the scrollbar reflects the whole conversation, and is the
+       containing block the mounted rows are positioned within. */
+    .sizer {
+        position: relative;
+    }
+    /* Every row kind is pinned to the SAME height as ROW_H in the script: the window maps an index to a pixel
+       offset arithmetically, so a row that rendered taller would drift out of its slot. Height is what makes
+       the rows uniform - the text inside each already clips to one line (see .line / .rtext / .saymore). */
+    .st,
+    .rep,
+    .brep,
+    .saycont,
+    .addopt {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 22px;
+        box-sizing: border-box;
     }
     /* Indent both state and reply rows by their depth; replies sit one notch in
        from their NPC line, child states one notch in from their reply. */
     .st,
     .rep {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         gap: 6px;
         padding: 2px 6px;
         border-radius: 4px;
@@ -1035,7 +1073,7 @@
     }
     .brep {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         gap: 6px;
         padding: 2px 6px;
         padding-left: calc(var(--lvl) * 14px + 8px);
@@ -1049,6 +1087,7 @@
        - editing every line lives in the inspector. */
     .saycont {
         display: flex;
+        align-items: center;
         padding: 1px 6px;
         padding-left: calc(var(--lvl) * 14px + 30px);
         line-height: 1.35;

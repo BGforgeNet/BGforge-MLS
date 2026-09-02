@@ -24,7 +24,7 @@ import {
     type DialogRoot,
     type DialogState,
 } from "../../../../shared/dialog-model";
-import { isPendingChoice, isPendingState, textEditability } from "./inspector-edit";
+import { isUnsavedDraftChoice, isUnsavedDraftState, textEditability } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -236,7 +236,7 @@ export function buildConversationTree(
         reaction: c.reaction,
         lowIq: c.lowIq,
         textEditable: textEditability({ state: owner, choice: c, messages, ssl, textRO, dlg: sourceless }).editable,
-        ...(!sourceless && isPendingChoice(c) ? { pending: true } : {}),
+        ...(!sourceless && isUnsavedDraftChoice(c, owner) ? { pending: true } : {}),
         target: buildTarget(c),
         // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
         // `sourceRange` (the SSL fields are absent for D), so F4 resolves on a D option too - parity with the
@@ -334,7 +334,7 @@ export function buildConversationTree(
             ...(branches ? { branches } : {}),
             ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
-            ...(!sourceless && isPendingState(s) ? { pending: true } : {}),
+            ...(!sourceless && isUnsavedDraftState(s) ? { pending: true } : {}),
             textEditable: textEditability({ state: s, choice: null, messages, ssl, textRO, dlg: sourceless }).editable,
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };

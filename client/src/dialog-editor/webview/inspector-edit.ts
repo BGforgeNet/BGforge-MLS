@@ -54,6 +54,25 @@ export function isPendingState(s: DialogState): boolean {
 }
 
 /**
+ * Whether a state should read to the writer as an UNSAVED DRAFT - the condition for the amber accent and its
+ * "isn't in the source file yet" tooltip.
+ *
+ * Narrower than `isPendingState`, which only asks whether a span is missing. A CHAIN/INTERJECT/EXTEND-derived
+ * state is synthesised from source written ELSEWHERE, so it legitimately has no span of its own while being
+ * perfectly saved: driving BG1NPC's p#corlt.d, all 9 derived states wore the accent against 0 of the 686
+ * authored ones. Kept separate from `isPendingState` rather than folded into it because editability keys on
+ * that one and must not shift with a display fix.
+ */
+export function isUnsavedDraftState(s: DialogState): boolean {
+    return isPendingState(s) && s.derivedFrom === undefined;
+}
+
+/** The option-level twin: an option inside a derived state is no more a draft than the state holding it. */
+export function isUnsavedDraftChoice(c: DialogChoice, owner: DialogState): boolean {
+    return isPendingChoice(c) && owner.derivedFrom === undefined;
+}
+
+/**
  * Whether a node's NPC line has no `.msg` entry yet but may be authored fresh - the `isNew` input to
  * `textFieldLocked` for the node-level reply field. True for a just-added (pending) node, AND for a faithful
  * SSL node adopted from source that carries no Reply (`replyless`): once a pending node is spliced and the

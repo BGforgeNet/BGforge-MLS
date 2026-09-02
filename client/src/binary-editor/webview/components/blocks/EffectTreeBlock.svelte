@@ -12,7 +12,7 @@
     import type { Diagnostic, DetailRow, EffectTreeEntry, EffectTreeGroup, EffectTreeView, NodeId } from "@bgforge/binary-editor";
     import type { Bridge } from "../../state/bridge";
     import { rowActions, type SectionCaps } from "../../state/structure-actions";
-    import { visibleRange } from "../../state/virtual-window";
+    import { visibleRange } from "../../../../virtual-window";
     import ListEntryDetail from "../ListEntryDetail.svelte";
     import RowActions from "../RowActions.svelte";
     import Icon from "../Icon.svelte";
