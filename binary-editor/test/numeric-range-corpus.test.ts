@@ -5,7 +5,7 @@
  * coding.md "A guard that false-positives is worse than no guard"). This walks every committed PRO/MAP/ITM
  * fixture (client/testFixture/**, grammars/weidu-tp2/test/samples) plus the same gitignored external/ mod
  * fixtures other suites in this package already parse for SPL/EFF/CRE (external/ is reproducible via
- * `pnpm test:external` - see CONTRIBUTING.md "Testing against real external files"; each external entry is
+ * `pnpm test:external` - see docs/development.md "Testing against real external files"; each external entry is
  * existence-gated so the run skips cleanly when not checked out) and asserts every projected field's
  * rawValue falls within its own row.min/row.max.
  */

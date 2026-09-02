@@ -1,14 +1,12 @@
 # AGENTS.md
 
-Project documentation is not here. Index: `docs/README.md`. Contributor workflow (build, test, debug, submit):
-`CONTRIBUTING.md`. Architecture: `docs/architecture.md`, `server/INTERNALS.md`, `binary/INTERNALS.md`.
+Project documentation is not here. Index: `docs/README.md`. Contributor workflow (build, test, debug):
+`docs/development.md`. Architecture: `docs/architecture.md`, `server/INTERNALS.md`, `binary/INTERNALS.md`.
 
 ## Toolchain
 
 - **pnpm only.** Never `npx`, `npm`, or any npm-series command - one-off commands, scripts, subagents and delegated
   tasks included. `pnpm exec playwright`, not `npx playwright`.
-- Transient test/build files go under the repo-level `tmp/` (or `os.tmpdir()` when system temp is genuinely required).
-  Never under `server/test/`, `binary/test/`, or `scripts/**`.
 - Before any dependency bump, read `docs/dependencies.md` - the pins carry per-dependency rationale.
 - Before adding security tooling, read `docs/supply-chain.md` - the two non-additions (no self-hosted secret scanner,
   no `dependabot.yml`) are recorded choices, not gaps.
@@ -43,13 +41,13 @@ Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run`
 -> `pnpm build:all` + `pnpm test:all` at close-out.
 
 **`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
-Full tier guidance, and the rule that every vitest config runs from any cwd: `CONTRIBUTING.md`.
+Full tier guidance, and the rule that every vitest config runs from any cwd: `docs/development.md`.
 
 ## Testing against real external files
 
 `external/` is gitignored but reproducible (`pnpm test:external`), so real-corpus coverage belongs in a
 **committed test under `server/test/integration/`, never a throwaway script**. Fixture helpers, the `skipIf`
-gate and the sibling to copy: `CONTRIBUTING.md`.
+gate and the sibling to copy: `docs/development.md`.
 
 ## Code conventions
 

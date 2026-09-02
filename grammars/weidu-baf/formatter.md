@@ -4,8 +4,6 @@ The WeiDU BAF formatter preserves the line-based structure of BAF files while no
 
 **Implementation:** [`../../format/src/weidu-baf/core.ts`](../../format/src/weidu-baf/core.ts)
 
-> **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
-
 ## Formatting Principles
 
 ### 1. Line-Based Structure Preservation

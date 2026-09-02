@@ -55,5 +55,5 @@ actually write this"), and the probe to confirm what you read.
 ## Do not
 
 - **Cite the reference compiler's source files or internal symbols**, or vendor its tables. Describe what it
-  does. See `CONTRIBUTING.md` (Describing external tools).
+  does.
 - **Ship a deliberate difference without a row** in the README's differences table.

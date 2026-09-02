@@ -1,6 +1,6 @@
 # Scripts
 
-See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs/architecture.md)
+See also: [docs/development.md](../docs/development.md) | [docs/architecture.md](../docs/architecture.md)
 
 ## Main commands
 
@@ -75,12 +75,6 @@ What DID pay, for contrast: cutting the work itself (memoizing the spec-derived 
 change review, with the repo loaded as an unpacked extension so iterating is just rebuild + reload the window. See
 [dev-web.md](dev-web.md) for launching, the localhost secure-context requirement (the binary editor is a webview), and
 configuration.
-
-## Temporary Artifacts
-
-Store transient logs, generated scratch files, and test temp directories under the repo-level `tmp/` directory.
-
-Avoid writing temporary data into source and fixture trees such as `server/test/`, `binary/test/`, `scripts/**`, or `grammars/**`.
 
 ## Running individual tests
 

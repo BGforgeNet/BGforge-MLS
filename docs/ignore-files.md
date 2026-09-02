@@ -1,128 +1,40 @@
 # Ignore Files
 
-This project uses six ignore mechanisms. Each serves a different purpose: what goes into git, what ships in the VSIX, what gets linted, and what gets formatted.
+Each ignore mechanism explains itself at the site: `.gitignore`, `.vscodeignore` and `.oxlintrc.json` carry a
+comment beside every non-obvious pattern, and those files are the authority on what is excluded. Read them first.
 
-## .gitignore
+This document holds only what no single file can state - facts that span two of them, behaviour of the tools that
+read them, and measurements someone would otherwise have to redo.
 
-Controls what git tracks. Most build output is ignored; checked-in data JSONs are exceptions.
+| Mechanism        | Controls                                                                          |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `.gitignore`     | What git tracks (plus a `.gitignore` per grammar directory, for test artifacts)   |
+| `.vscodeignore`  | What ships in the VSIX                                                            |
+| `.editorconfig`  | Indent and line width; oxfmt reads it, so it is where the 120-column limit lives  |
+| `.oxfmtrc.json`  | Per-filetype indent, and the authoritative list of files excluded from formatting |
+| `.oxlintrc.json` | Lint categories, per-rule severity, and per-directory idiom exemptions            |
 
-### Build output
+## What ships in the VSIX
 
-| Pattern                                       | What it ignores                                                  |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| `client/out`                                  | Client esbuild bundles (extension.js, webviews, etc.)            |
-| `server/out/*`                                | Server esbuild bundle, WASM files, generated runtime files       |
-| `transpilers/out`, `format/out`, `binary/out` | Library + CLI bundles for the published `@bgforge/*` packages    |
-| `plugins/*/out`                               | TypeScript Language Service plugin bundles                       |
-| `*.wasm`                                      | Tree-sitter WASM files (built from C sources by `build:grammar`) |
-| `coverage/`                                   | Vitest coverage reports                                          |
-
-### Checked-in data (exceptions to `server/out/*`)
-
-These JSON files are generated from `server/data/*.yml` by `generate-data.sh` but are checked in so that tests and typechecks work on a clean checkout without a build step.
-
-| Pattern                                         | Contents                                             |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| `!server/out/completion.*.json`                 | Autocomplete item lists (one per language)           |
-| `!server/out/signature.*.json`                  | Signature help parameter hints                       |
-| `!server/out/fallout-ssl-engine-proc-docs.json` | Engine procedure docs for the TSSL TypeScript plugin |
-
-### Generated source
-
-| Pattern                         | What it ignores                                                                       |
-| ------------------------------- | ------------------------------------------------------------------------------------- |
-| `grammars/*/src/`               | Tree-sitter generated C parser sources                                                |
-| `server/src/*/tree-sitter.d.ts` | Generated node-type declarations (all four LSP grammars; rebuilt by `generate:types`) |
-
-### Third-party and temporary
-
-| Pattern                                      | What it ignores                                    |
-| -------------------------------------------- | -------------------------------------------------- |
-| `node_modules`                               | pnpm dependencies (root and all workspaces)        |
-| `client/node_modules`, `server/node_modules` | Workspace-specific node_modules                    |
-| `external/*`                                 | Cloned third-party mod repos used as test fixtures |
-| `.vscode-test/`                              | Downloaded VSCode binaries for E2E tests           |
-| `tmp`                                        | Scratch directory                                  |
-| `/test`                                      | Root-level test directory                          |
-| `.reports/`                                  | Analysis reports                                   |
-| `dist/`                                      | Build artifact directory (VSIX, editor bundles)    |
-| `*.log`, `*.vsix`                            | Log files and built extension packages             |
-
-The `external/` directory has four allowlisted text files (`!external/fallout.txt`, etc.) that list which repos to clone and what to exclude.
-
-## .vscodeignore
-
-Controls what ships in the VSIX extension package. Uses a **blocklist** strategy: everything is included by default, then patterns exclude what shouldn't ship.
-
-### Excluded: dev infrastructure
-
-| Pattern                                         | What it excludes                                |
-| ----------------------------------------------- | ----------------------------------------------- |
-| `.claude/`                                      | AI assistant config                             |
-| `.editorconfig`                                 | Editor config                                   |
-| `.oxlintrc.json`                                | Linting configuration                           |
-| `.github/`                                      | CI workflows                                    |
-| `.reports/`, `.vscode/`, `.vscode-test/`        | Dev/test directories                            |
-| `CONTRIBUTING.md`, agent instruction files      | Dev documentation                               |
-| `knip.ts`, `tsconfig.json`                      | Linting and build config                        |
-| `pnpm-lock.yaml`, `pnpm-workspace.yaml`         | Package manager files                           |
-| `dist/`                                         | Build artifact directory (VSIX, editor bundles) |
-| `*.vsix`, `*.tgz`, `*.log`, `**/*.map`          | Built packages, logs, source maps               |
-| `*.tmbundle`, `*.zip`                           | Generated bundles (tmbundle, UDL, KSH archives) |
-| `bgforge-mls-notepadpp*/`, `bgforge-mls-kate*/` | Generated editor asset directories              |
-
-### Excluded: dev-only directories
-
-| Pattern                     | What it excludes                                                    |
-| --------------------------- | ------------------------------------------------------------------- |
-| `coverage/`, `docs/`        | Coverage reports, documentation                                     |
-| `external/`, `grammars/`    | Test fixtures (~70 MB), tree-sitter grammar sources                 |
-| `plugins/`                  | TypeScript plugin sources (injected by `package.sh` post-packaging) |
-| `scripts/`, `test/`, `tmp/` | Build scripts, tests, scratch                                       |
-| `transpilers/`              | Transpiler sources and per-package docs                             |
-
-### Excluded: source code and dev files
-
-| Pattern                                                                | What it excludes                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `client/src/**/*.ts`                                                   | Client TypeScript source (HTML/CSS webview assets are kept)   |
-| `client/test/`, `client/testFixture/`, `client/out/test/`              | Client test files and fixtures                                |
-| `client/scripts/`, `client/tsconfig*.json`, `client/vitest.config.mts` | Client dev files                                              |
-| `client/node_modules/`, `client/coverage/`                             | Client dev dependencies and coverage reports                  |
-| `server/src/`, `server/data/`                                          | Server TypeScript source, YAML data files                     |
-| `server/test/`, `server/scripts/`, `server/coverage/`                  | Server test files and dev artifacts                           |
-| `server/tsconfig*.json`, `server/vitest.config.mts`                    | Server dev config                                             |
-| `syntaxes/*.yml`                                                       | Source YAML for TextMate grammars (only .json ships)          |
-| `themes/vscode-monokai.json`, `themes/vs-seti-icon-theme.json`         | Upstream theme sources                                        |
-| `**/README.md`                                                         | READMEs in subdirectories (root README auto-included by vsce) |
-
-### Excluded: node_modules
-
-| Pattern                                                    | What it excludes                                                           |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `server/node_modules/esbuild-wasm/esm/`                    | ESM browser builds (not used in Node.js)                                   |
-| `server/node_modules/esbuild-wasm/lib/browser*`            | CJS browser builds (not used in Node.js)                                   |
-| `server/node_modules/esbuild-wasm/**/*.d.ts`               | TypeScript definitions (not needed at runtime)                             |
-| `server/node_modules/esbuild-wasm/LICENSE.md`, `README.md` | Documentation files                                                        |
-| `server/node_modules/.ignored*/`                           | pnpm internal dirs surviving after symlink strip                           |
-| `node_modules/`                                            | All root dependencies (TS plugins injected by `package.sh` post-packaging) |
-| `.pkg-inject/`                                             | Temp directory used by `package.sh` for zip injection                      |
-
-### Included: runtime files (not excluded, ship by default)
-
-These are included implicitly (not excluded by any pattern):
+`.vscodeignore` is a **denylist**: everything ships unless a pattern excludes it, so the interesting half - what
+ships - appears nowhere in that file. These are included because nothing excludes them:
 
 - `package.json`, `README.md`, `LICENSE.txt` - auto-included by vsce
 - `client/package.json`, `client/out/` - extension entry point, webview bundles, codicons
 - `client/src/**/*.html`, `client/src/**/*.css` - webview HTML/CSS templates
 - `server/package.json`, `server/out/` - LSP server bundle, data JSONs, WASM parsers, td-runtime.d.ts
 - `server/node_modules/sslc-emscripten-noderawfs/` - Fallout SSL compiler (WASM), loaded via `fork()`
-- `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`, `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
+- `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`,
+  `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
 - `language-configurations/*.json` - language bracket/comment rules
 - `snippets/*.json` - code snippets
 - `syntaxes/*.json` - TextMate grammars
 - `themes/bgforge-*.json`, `themes/seti.woff`, `themes/icons/` - BGforge themes
 - `resources/bgforge.png` - extension icon
+
+A denylist fails open, so this list is orientation, not a guarantee: `scripts/verify-package-contents.sh` runs at
+the end of `package.sh` and fails the build when an unexpected path or size appears in the VSIX. That guard, not
+this list, is what actually holds.
 
 ### Packaging notes
 
@@ -136,24 +48,13 @@ These are included implicitly (not excluded by any pattern):
 
 The script runs the prepublish build first (with full deps available), then uses `SKIP_PREPUBLISH=1` to skip the rebuild when vsce invokes `vscode:prepublish` after the strip.
 
-## .editorconfig
+## Formatting exclusions
 
-Oxfmt (and VSCode) use `.editorconfig` for formatting.
-
-| Pattern             | Setting                                                            |
-| ------------------- | ------------------------------------------------------------------ |
-| `[*]`               | `indent_style = space`, `indent_size = 4`, `max_line_length = 120` |
-| `[*.{yml,yaml,md}]` | `indent_size = 2`                                                  |
-
-## .oxfmtrc.json
-
-Oxfmt configuration. `overrides` set the indent width per file type: 2-space for YAML and Markdown, 4-space for JSON
-and TypeScript. Line width comes from `.editorconfig` above.
-
-`ignorePatterns` is the authoritative list of files excluded from formatting. It holds the repo's generated artifacts,
-so their canonical format stays whatever their generator emits - running `oxfmt` over them would only be undone on the
-next regeneration. Generated source and data files carry an `Auto-generated ... Do not hand-edit` marker on their first
-line.
+`.oxfmtrc.json` `ignorePatterns` is the authoritative list of files excluded from formatting. It holds the repo's
+generated artifacts, so their canonical format stays whatever their generator emits - running `oxfmt` over them
+would only be undone on the next regeneration. Generated source and data files carry an `Auto-generated ... Do not
+hand-edit` marker on their first line. The file is strict JSON and cannot carry comments, which is why its
+rationale lives here rather than beside the patterns.
 
 Two guards keep the list honest:
 
@@ -174,17 +75,7 @@ full-tree run ever reaches them however the lint config is written - linting the
 The asymmetry therefore covers generated files that are **tracked** (the `server/out/` data JSONs, the
 `shared/syntax-types/` modules), not gitignored build output.
 
-## .oxlintrc.json
-
-Oxlint configuration.
-
-| Field            | Purpose                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| `categories`     | `correctness`, `suspicious`, `pedantic`, `perf`, `style`, all set to `error`          |
-| `rules`          | Per-rule severity and the disabled set, each entry carrying its reason inline         |
-| `overrides`      | Grammar globals, the custom `no-showmessage` rule, and per-directory idiom exemptions |
-| `ignorePatterns` | Excludes `node_modules` and `out` - build output only                                 |
-| `jsPlugins`      | Custom plugin for banning direct LSP showMessage calls                                |
+## Relaxing a lint rule
 
 A rule that must be relaxed for one file gets an `overrides` entry naming that rule, never an `ignorePatterns`
 entry: the latter drops the file from every enabled rule to silence one. `server/src/user-messages.ts` is the worked
@@ -198,8 +89,7 @@ exclusions to rule-scoped overrides for the same reason.
 exactly three rules - `no-floating-promises`, `no-misused-promises`, `await-thenable` - and allows everything else,
 because the full type-aware set is dominated by `prefer-readonly-parameter-types` and the `no-unsafe-*` family
 (~14000 findings, almost all style). The three it does run cannot be expressed syntactically, and they found four
-real defects when first enabled. It takes about four seconds and is wired into `scripts/test.sh` Phase 1 and
-pre-commit.
+real defects when first enabled. It is wired into `scripts/test.sh` Phase 1 and pre-commit.
 
 It covers every workspace. It briefly did not: both TS Language Service plugins pinned `moduleResolution: node`,
 removed in TS 7, so their programs failed to construct and neither `src` tree was analysed. They now use `node16`,
@@ -243,24 +133,3 @@ from the `promise` and `node` plugins, which are likewise not enabled wholesale:
 | `vitest/expect-expect`  | 154      | False positives. Assertions in this suite routinely sit in a per-file helper (`expectSite(...)`), which the rule cannot follow, so it reports the calling test as assertion-free.                                                                                                                                                                                            |
 | `promise/always-return` | 19       | False positives against this codebase's fire-and-forget idiom, `void promise.then(sideEffect)`. A terminal `.then` doing work has nothing to return, and the `void` already states the intent the rule is asking for.                                                                                                                                                        |
 | `node/no-sync`          | 1763     | Correct in the CLIs, scripts and tests that make up most of it. The ~50 under `server/src` are the ones that could matter, and they sit on on-demand handler paths (call hierarchy, static loading) behind a provider interface that is synchronous by design - converting them is an architecture change, not a lint fix. Re-open if the server ever shows request latency. |
-
-### Tree-sitter globals
-
-Grammar files (`grammars/**/*.js`) need these globals: `grammar`, `seq`, `choice`, `repeat`, `repeat1`, `optional`, `prec`, `token`, `field`, `alias`, `LANGUAGE`, `LRULE`.
-
-### Custom rule
-
-The project has a custom oxlint plugin (`.oxlint/oxlint-plugin-no-showmessage.mjs`) that bans direct `connection.window.showMessage` calls in server code. Use the wrapper functions from `user-messages.ts` instead.
-
-## Grammar .gitignore files
-
-Each grammar directory (`grammars/fallout-ssl/`, `grammars/weidu-baf/`, `grammars/weidu-d/`, `grammars/weidu-tp2/`) has its own `.gitignore` for test artifacts.
-
-All grammar `.gitignore` files exclude:
-
-| Pattern                     | Purpose                                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------------------------- |
-| `test/samples-formatted/`   | Temporary output from format tests (compared against `test/samples-expected/` which IS committed) |
-| `test/samples-formatted-2/` | Second-pass format output for idempotency testing                                                 |
-
-The `fallout-ssl` grammar has additional ignores for tree-sitter's multi-language build artifacts (Rust, Go, Python, Swift, Zig, C compiled objects, etc.) since it serves as the primary grammar development workspace.

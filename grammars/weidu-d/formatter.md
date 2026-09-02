@@ -4,8 +4,6 @@ The WeiDU D formatter preserves comments exactly while normalizing code whitespa
 
 **Implementation:** [`../../format/src/weidu-d/core.ts`](../../format/src/weidu-d/core.ts)
 
-> **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
-
 ## Comment Preservation
 
 ### Decorative Separators

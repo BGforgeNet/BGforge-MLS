@@ -22,7 +22,7 @@ tracked `*.md` not listed below, not under a directory listed below, and not in 
 
 | Document                                         | Contents                                                                   |
 | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md)         | Quick start, build/test commands, debugging, submitting changes            |
+| [development.md](development.md)                 | Quick start, verification tiers, public surfaces, debugging                |
 | [architecture.md](architecture.md)               | System overview, build pipeline, client/server/CLI structure, packaging    |
 | [lsp-api.md](lsp-api.md)                         | Public LSP commands, custom requests, notifications, and integration notes |
 | [../server/INTERNALS.md](../server/INTERNALS.md) | Server internals: provider registry, symbol system, data flow, tree-sitter |
@@ -83,7 +83,7 @@ tracked `*.md` not listed below, not under a directory listed below, and not in 
 | [../scripts/dev-web.md](../scripts/dev-web.md) | Running the extension in code-server (`pnpm dev:web`)                                                                                                |
 | [releasing.md](releasing.md)                   | Tag-driven release procedures per stream (extension, libraries, Action)                                                                              |
 | [dependencies.md](dependencies.md)             | Pinned dependency version constraints and hold rationale                                                                                             |
-| [ignore-files.md](ignore-files.md)             | Ignore file reference (gitignore, vscodeignore, editorconfig, oxfmt, oxlint)                                                                         |
+| [ignore-files.md](ignore-files.md)             | What ships in the VSIX, the oxfmt/oxlint exclusion asymmetry, and lint rules measured and rejected                                                   |
 | [supply-chain.md](supply-chain.md)             | SBOM/SLSA provenance, CodeQL + Scorecard, and two deliberate non-additions                                                                           |
 | [../actions/README.md](../actions/README.md)   | Reusable composite GitHub Actions: shared contract, plus one README each                                                                             |
 | [../actions/](../actions/)                     | The per-Action READMEs, and `development.md` for changing them                                                                                       |

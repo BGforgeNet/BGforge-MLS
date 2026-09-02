@@ -21,7 +21,6 @@
 
 # Dev files
 CLAUDE.md
-CONTRIBUTING.md
 knip.ts
 tsconfig.json
 pnpm-lock.yaml

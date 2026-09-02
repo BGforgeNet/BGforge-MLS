@@ -1,6 +1,6 @@
 # Architecture
 
-See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [server/INTERNALS.md](../server/INTERNALS.md) | [scripts/README.md](../scripts/README.md)
+See also: [development.md](development.md) | [server/INTERNALS.md](../server/INTERNALS.md) | [scripts/README.md](../scripts/README.md)
 
 High-level architecture of the BGforge MLS extension. For server-specific details
 (provider registry, symbol system, data flow), see [server/INTERNALS.md](../server/INTERNALS.md).
@@ -684,8 +684,9 @@ Ratchet upward when the unit slice in any package widens.
 
 ## Extension Packaging
 
-`.vscodeignore` uses a **blocklist** strategy (exclude dev files, keep runtime files by default). See [docs/ignore-files.md](ignore-files.md) for the full list
-and rationale.
+`.vscodeignore` uses a **blocklist** strategy (exclude dev files, keep runtime files by default). The file itself
+is the list, with a comment beside each non-obvious exclusion; [docs/ignore-files.md](ignore-files.md) covers what
+ships and why the packaging step is shaped the way it is.
 
 **Packaging pipeline** (`scripts/package.sh`):
 

@@ -339,7 +339,6 @@
             // public `.event` as `onDidX`. The pattern is used by `vscode.d.ts`
             // itself; renaming would diverge from the host API style.
             "files": [
-                "client/src/editors/binaryEditor*.ts",
                 "client/src/binary-editor/**/*.ts",
                 "client/src/dialog-editor/**/*.ts",
                 "client/src/image-editor/**/*.ts"
@@ -429,7 +428,6 @@
             // `worker_threads` `parentPort.postMessage()` are not the browser's
             // `window.postMessage`; none take a `targetOrigin`.
             "files": [
-                "client/src/editors/**",
                 "client/src/webview-utils.ts",
                 "client/src/binary-editor/**",
                 "client/src/dialog-editor/**",
@@ -460,8 +458,8 @@
             // `x | 0` (32-bit truncation) and `x >>> 0` (unsigned 32-bit coercion) are
             // deliberate binary-codec idioms; `Math.trunc` is not equivalent at the bytecode
             // level. Applies inside `binary/` and `image/` (the FRM/BAM parsers and the
-            // hand-rolled PNG codec) and the editor's binary-formatting helper.
-            "files": ["binary/**", "image/**", "client/src/editors/binaryEditor-formatting.ts"],
+            // hand-rolled PNG codec).
+            "files": ["binary/**", "image/**"],
             "rules": {
                 "unicorn/prefer-math-trunc": "off"
             }

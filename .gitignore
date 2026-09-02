@@ -13,12 +13,16 @@ syntaxes-to-json.sh.err
 .vscode-test/
 .dev/
 .playwright-mcp/
+# package.sh removes this staging dir on both entry and exit; a run that dies in between leaves it.
+.pkg-inject/
 
 client/node_modules
 client/out
 
 server/node_modules
 server/out/*
+# Generated from server/data/*.yml by generate-data.sh, but tracked so that tests and typechecks
+# work on a clean checkout with no build step.
 !server/out/completion.*.json
 !server/out/signature.*.json
 !server/out/fallout-ssl-engine-proc-docs.json
@@ -33,6 +37,8 @@ compilers/tssl/out
 
 plugins/*/out
 
+# Cloned third-party mod repos used as test fixtures. The tracked .txt files say which repos to
+# clone and what to exclude; reset-external.sh reads them.
 external/*
 !external/fallout.txt
 !external/fallout-exclude.txt
