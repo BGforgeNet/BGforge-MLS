@@ -2707,7 +2707,7 @@
         "category": "actions",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-baf-tooltip\nRestParty()\n```\nThis action duplicates the effects of resting. Such resting is not interruptible, and functions even if enemies are nearby."
+            "value": "```weidu-baf-tooltip\nRestParty()\n```\nThis action duplicates the effects of resting. Such resting is not interruptible, and functions even if enemies are nearby. The second variant allows to specify the amount of gold to spend on the rest, a HP bonus in addition to natural healing, as well as an option to suppress the rest movie. A non-zero amount of gold forces the \"Rest at Inn\" movie to play, regardless of the current area type."
         }
     },
     {
@@ -2717,7 +2717,7 @@
         "category": "actions",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-baf-tooltip\nRestPartyEx(I:Gold, I:HpBonus, I:DisableMovie*Boolean)\n```\nThis action duplicates the effects of resting. Such resting is not interruptible, and functions even if enemies are nearby."
+            "value": "```weidu-baf-tooltip\nRestPartyEx(I:Gold, I:HpBonus, I:DisableMovie*Boolean)\n```\nThis action duplicates the effects of resting. Such resting is not interruptible, and functions even if enemies are nearby. The second variant allows to specify the amount of gold to spend on the rest, a HP bonus in addition to natural healing, as well as an option to suppress the rest movie. A non-zero amount of gold forces the \"Rest at Inn\" movie to play, regardless of the current area type."
         }
     },
     {

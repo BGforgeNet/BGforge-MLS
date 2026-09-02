@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/binary",
-    "version": "0.6.1",
+    "version": "0.7.0",
     "description": "Library and CLI for parsing and serialising Fallout (PRO, MAP) and Infinity Engine (ITM, SPL, EFF, CRE, DLG) binary files (round-trip to canonical JSON snapshots), and reading installed IE games (KEY, BIF, TLK, IDS, 2DA).",
     "keywords": [
         "binary",

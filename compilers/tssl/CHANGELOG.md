@@ -2,6 +2,14 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
+## 0.1.1
+
+### Changed
+
+- `types` is pinned empty, so the compile no longer discovers and binds every `@types/*` package reachable
+  from the entry file. Ambient declarations from an installed `@types` package are no longer in scope in a
+  `.tssl`, and a compile in a project that has them does less work.
+
 ## 0.1.0
 
 First release.

@@ -53,8 +53,10 @@ allowBuilds:
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version
 # and `pnpm audit` re-flags the advisory. All three re-verified that way on
-# 2026-08-27, after mocha moved to 11.8.0 - it still bundles both vulnerable
-# versions, so the mocha bump did not make its two pins redundant.
+# 2026-09-01: without them the resolution falls back to diff 7.0.0,
+# serialize-javascript 6.0.2 and qs 6.15.1, and `pnpm audit` reports all four
+# advisories again. mocha 11.8.0 still bundles both vulnerable versions, so its
+# bump did not make its two pins redundant.
 #   - mocha's bundled diff (GHSA-73rr-hh4g-fpgx: parsePatch/applyPatch DoS; fixed
 #     in 8.0.3) and serialize-javascript (GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v
 #     DoS; fixed in 7.0.5).

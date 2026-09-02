@@ -2,6 +2,23 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## 0.7.0
+
+### Added
+
+- `fgfmt --check-idempotency` verifies that formatting is stable without writing anything, where
+  `--save-and-check` had to write first to reach the same verdict.
+- `fgfmt --exclude-from <path>` skips the files listed in `<path>`, one per line, blank lines and `#`
+  comments ignored.
+
+### Changed
+
+- WeiDU D: a `%variable%` is accepted where a name or say text goes, and `INTERJECT_COPY_TRANS` takes the
+  bare `END` WeiDU expects. A bare `%macro%` standing in for a whole transition is no longer parsed as one.
+- WeiDU BAF: a `RESPONSE` with no actions is accepted rather than reported as a syntax error. The
+  reference compiler takes one, and real scripts carry them.
+- The first `.d` parse in a process takes a small fraction of the memory it used to, and parses faster.
+
 ## 0.6.0
 
 ### Added

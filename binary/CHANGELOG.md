@@ -2,6 +2,38 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## 0.7.0
+
+### Added
+
+- DLG support, alongside the other formats: `readDlg`, `buildDlg`, `toDlgBuildInput` and `serializeDlg`,
+  the `Dlg`, `DlgState`, `DlgTransition` and `DlgBuildInput` types, and `DlgTransitionFlag`. `dlgParser`
+  is registered with the parser registry, so `fgbin` reads and writes a `.dlg` through the same canonical
+  JSON snapshot round-trip as the rest. A document that does not fit the file it came from is refused
+  rather than truncated.
+- `Tlk.search(query, options)` finds entries by what they say, returning `TlkMatch[]` in strref order and
+  capped by `TlkSearchOptions.limit` (100 by default). The first call yields to the event loop as it
+  decodes, so a caller on a UI thread is not frozen; later searches are answered from the built table.
+- `Game.looseFile(resref, type, { folder })` gives the loose file a `write` would replace, or `undefined`
+  when it would create one - what a caller needs to confirm a destructive overwrite. `Game.auxFile(fileName)`
+  answers the same for an auxiliary file.
+- `Game.idsAll(resref)` gives every row of an IDS table keyed by value, for the values a table names more
+  than once; `ids` keeps only one. `parseIdsAll` is exported beside `parseIds`.
+- `./archive` is an entry point of its own, for a consumer that wants the KEY/BIF/TLK/IDS/2DA surface
+  without the format parsers.
+
+### Fixed
+
+- An IDS identifier is read to the end of its line rather than to its first token, so a table that
+  annotates a value in prose keeps its rows. `MISSILE.IDS` was worst hit: 250 of its 279 rows were dropped
+  while the table still reported as present.
+
+### Changed
+
+- `openGame` returns markedly sooner on a full Enhanced Edition install: `chitin.key` is indexed lazily
+  instead of every lookup being built up front.
+- Parsing and validating are faster on large files, MAP most of all.
+
 ## 0.6.1
 
 ### Changed

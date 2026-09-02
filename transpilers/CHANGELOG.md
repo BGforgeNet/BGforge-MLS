@@ -2,6 +2,20 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## 0.4.0
+
+### Fixed
+
+- Constant arithmetic is folded before it reaches the emitted `.baf` or `.d`. A WeiDU argument is an
+  operand, not an expression, so `SetGlobal("g", "GLOBAL", 1 + 333)` does not parse. Only integer results
+  are folded - a division that does not divide evenly is left as written rather than emitted as a decimal.
+- TD emits `INTERJECT_COPY_TRANS` with the bare `END` WeiDU expects, instead of an epilogue WeiDU rejects.
+
+### Changed
+
+- Bundling a `.tbaf` or `.td` that imports other files is roughly twice as fast, with output
+  byte-identical across the external mod corpus.
+
 ## 0.3.0
 
 ### Fixed

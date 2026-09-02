@@ -1,9 +1,8 @@
 {
     "name": "@bgforge/transpile",
-    "version": "0.3.0",
-    "description": "Library for transpiling TSSL, TBAF, and TD source files to Fallout SSL, WeiDU BAF, and WeiDU D",
+    "version": "0.4.0",
+    "description": "Library for transpiling TBAF and TD source files to WeiDU BAF and WeiDU D",
     "keywords": [
-        "fallout",
         "infinity-engine",
         "modding",
         "transpiler",

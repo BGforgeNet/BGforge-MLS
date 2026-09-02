@@ -1,24 +1,17 @@
 # Changelog
 
-## Unreleased
+## 3.15.0
 
 ### Animation editor
 
-- BAM V2 files open, play and save. Their frames live in separate `MOSxxxx.PVRZ` pages, which are read
-  from beside the `.bam` first and from the open game second, so a modded page shadows the installed one.
-  - True colour with per-pixel alpha, so soft edges survive where a palette could only round them off.
-  - An untouched file saves back byte for byte and its pages are left alone: block compression is lossy,
-    and re-encoding on every save would degrade the art a little each time.
-  - Saving elsewhere carries the pages along, since the `.bam` addresses them by number and the new
-    folder has none of them.
-  - Editing the frames means the pages have to be rebuilt, so the editor asks which page number to start
-    at. Pick a range your mod owns - reusing one the game ships corrupts its graphics.
-  - Saving asks before replacing any `MOSxxxx.PVRZ` already in the target folder.
-- BAM V2 joins FRM, BAM V1 and BAMC as a "Save as" target, in both directions: a palette-indexed
-  animation converts up to true colour, and a true-colour one converts down by quantizing, warning first
-  about the colours and the per-pixel alpha it cannot keep.
-- A true-colour animation exports to PNG and APNG in true colour, and imports back the same way, rather
-  than being flattened onto a palette on the way through.
+- Full support for BAM v2, whose frames live in separate `MOSxxxx.PVRZ` pages: read from beside the `.bam`
+  first and from the open game second, so a modded page shadows the installed one.
+- True colour with per-pixel alpha throughout - editing, conversion, and PNG and APNG import and export -
+  never flattened onto a palette on the way through. Converting down to a palette format warns first about
+  the colours and the alpha it cannot keep.
+- An untouched file saves back byte for byte with its pages left alone, and saving elsewhere carries them
+  along. Editing frames rebuilds them, so the editor asks which page number to start at - pick a range your
+  mod owns - and asks again before replacing a `MOSxxxx.PVRZ` already in the target folder.
 - The frame rate is editable for every format, not only FRM. Only an FRM header stores one, so on a BAM
   it retunes playback in the editor and is not saved - the field says so.
 - A BAM V2 whose header claims more pixels than any real animation is reported as malformed rather than
@@ -26,14 +19,52 @@
 
 ### Infinity Engine
 
-- DLG, BCS and BS get first-class IDE experience. They are automatically decoded on click and presented for
-  editing, and compiled back on save. That includes both standalone files and those in IE game view. Of course,
-  both cases require an IE game open.
-- All these also got theme icons.
+- DLG, BCS and BS get first-class IDE experience: decoded on click, presented for editing, compiled back on
+  save, and given theme icons. Standalone files and IE game view alike, both requiring an open IE game.
 - New `bgforge.weidu.tlkEncoding` setting, for Classic installs with non-cp1252 encoding.
 - BAF diagnostics get an alternative compiler alongside the existing WeiDU one. Enable with
   `bgforge.weidu.compiler: built-in`. It needs no WeiDU binary and reports every problem in a file at once,
   but cannot resolve variables nor TRA references for now.
+- BAF scripts show what a string reference resolves to - an inline preview beside the number, the full text
+  on hover - from the `dialog.tlk` of the game at `bgforge.weidu.gamePath`.
+- Files opened from the game resources tree get the language support their tab promises: completion, hover,
+  outline and signature help on a script, the column grid and formatter on a `.2da`. Both previously worked
+  only on a file on disk.
+- Saving an edited game resource asks first when it would replace a file already in the game's `override`
+  folder.
+- One game is open at a time: opening another closes the tabs of the one it replaces. Changing
+  `bgforge.weidu.gamePath` reopens the view against the new install.
+
+### WeiDU
+
+- A `%variable%` is accepted in a `.d` where a name or say text goes.
+- A bare `%macro%` standing in for a whole transition is no longer parsed as one.
+
+### Transpilers
+
+- Constant arithmetic is folded before it reaches the emitted `.baf` or `.d`.
+- `INTERJECT_COPY_TRANS` ends with the bare `END` WeiDU expects. TD used to emit an epilogue WeiDU rejects.
+- TypeScript sources compile against the TypeScript 6.0 line.
+
+### Performance
+
+- Large mod workspaces start responding sooner, and stay responsive while heavy work runs. Memory no longer
+  grows without bound over long sessions and large scans. `.d` files open much faster and far leaner, and
+  bundling a `.tbaf` or `.td` that imports other files is about twice as fast.
+- Past 100 KB, diagnostics wait for a short pause in typing rather than running on every keystroke. Smaller
+  files keep their immediate squiggles.
+- Go to definition on an unresolvable tp2 path searches the mod folder rather than the whole install.
+
+### Data
+
+- Refreshed Infinity Engine BAF documentation from IESDP (2026-09-01).
+
+### Fixes
+
+- WeiDU BAF no longer reports a syntax error on a `RESPONSE` with no actions. The reference compiler accepts
+  one, and real scripts carry them.
+- IDS names are read to the end of their line, so a table that annotates a value in prose - `MISSILE.IDS`
+  worst hit - no longer loses most of its rows.
 
 ## 3.14.0
 
