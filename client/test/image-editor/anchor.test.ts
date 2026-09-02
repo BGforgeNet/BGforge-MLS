@@ -151,8 +151,8 @@ test("the offset marker sits on each format's anchor: BAM at the tile centre, FR
 });
 
 test("tileSizePx keeps the 96px floor for small sprites and ignores unreferenced frames", () => {
-    const small = { width: 30, height: 30, pixels: "", offsetX: 15, offsetY: 15 };
-    const huge = { width: 400, height: 400, pixels: "", offsetX: 200, offsetY: 200 };
+    const small = { width: 30, height: 30, offsetX: 15, offsetY: 15 };
+    const huge = { width: 400, height: 400, offsetX: 200, offsetY: 200 };
     const view = {
         sourceFormat: "bam" as const,
         frames: [small, huge],
@@ -166,7 +166,7 @@ test("tileSizePx stretches the tile to contain an oversized anchored frame", () 
     // x [-95, 94], y [-99, 99]; the far edge needs 100px of half-tile, so the tile is 200.
     const view = {
         sourceFormat: "bam" as const,
-        frames: [{ width: 190, height: 199, pixels: "", offsetX: 95, offsetY: 99 }],
+        frames: [{ width: 190, height: 199, offsetX: 95, offsetY: 99 }],
         sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
     };
     expect(tileSizePx(view)).toBe(200);
@@ -177,7 +177,7 @@ test("tileSizePx accounts for an off-centre anchor, not just frame size", () => 
     // so the tile needs 2*53 even though the frame is only 60 tall.
     const view = {
         sourceFormat: "bam" as const,
-        frames: [{ width: 30, height: 60, pixels: "", offsetX: 15, offsetY: 53 }],
+        frames: [{ width: 30, height: 60, offsetX: 15, offsetY: 53 }],
         sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
     };
     expect(tileSizePx(view)).toBe(106);

@@ -8,6 +8,7 @@
     // tile (single-orientation FRM).
     const {
         view,
+        loadedPixels,
         tiles,
         frame,
         zoom,
@@ -16,6 +17,7 @@
         columns = 0,
     }: {
         view: AnimationView;
+        loadedPixels: ReadonlyMap<number, Uint8Array>;
         tiles: GridTile[];
         frame: number;
         zoom: number;
@@ -32,7 +34,7 @@
 >
     {#each tiles as tile (tile.index)}
         <div class="cycle-cell">
-            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
+            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
             {#if tiles.length > 1}
                 <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
                      there is nothing to distinguish it from. -->

@@ -16,6 +16,7 @@ function makeView(facings: Facing[]): AnimationView {
         colorModel: "indexed",
         palette: [],
         frames: [],
+        pixels: new ArrayBuffer(0),
         sequences,
         meta: { sourceFormat: "frm" },
         basename: "test",

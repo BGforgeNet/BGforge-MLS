@@ -87,6 +87,29 @@ export function makeMiniBam(): IndexedAnimation {
 }
 
 /**
+ * Two cycles of three frames each. Unlike `makeMiniBam` and `makeMiniFrm`, whose sequences hold a
+ * single frame apiece, this one has frames that no sequence shows FIRST - which is what makes lazy
+ * frame delivery distinguishable from eager delivery at all.
+ */
+export function makeMultiFrameBam(): IndexedAnimation {
+    return {
+        palette: emptyPalette(),
+        sequences: [
+            { frameRefs: [0, 1, 2], facing: "none" },
+            { frameRefs: [3, 4, 5], facing: "none" },
+        ],
+        frames: Array.from({ length: 6 }, (_, i) => ({
+            width: 2,
+            height: 1,
+            pixels: Uint8Array.from([i, i + 10]),
+            offsetX: 0,
+            offsetY: 0,
+        })),
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+}
+
+/**
  * The view as an indexed one, for suites that build palette-indexed documents. Throws rather than
  * casting, so a document that unexpectedly became true-colour fails here instead of at a missing
  * palette three assertions later.

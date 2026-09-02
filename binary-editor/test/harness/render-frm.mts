@@ -12,6 +12,7 @@ import type { HostToWebview, WebviewToHost } from "../../../client/src/image-edi
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { buildFrmFixture, TILE_SIZE } from "./image-fixtures";
+import { postHarnessWire, toHarnessWire } from "./image-wire";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const view = buildFrmFixture();
@@ -30,7 +31,10 @@ const page: Page = await browser.newPage({ viewport: { width: 1280, height: 900 
 const assertPageClean = installPageGate(page, "FRM");
 
 await page.exposeFunction("__hostUpImage", async (m: WebviewToHost) => {
-    for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
+    for (const reply of hostUp(m)) {
+        // eslint-disable-next-line no-await-in-loop -- replies must reach the page in order
+        await page.evaluate(postHarnessWire, toHarnessWire(reply));
+    }
 });
 await page.goto("file://" + path.join(here, "image-app.html"));
 await page.waitForSelector(".compass-rose canvas", { timeout: 5000 });

@@ -27,7 +27,14 @@ import {
 } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
 import { ieGroupLabels, ieGroupOptionText } from "./webview/render/cycle-grouping";
-import { type HostToWebview, type SaveAsTarget, type WebviewToHost, isWebviewToHost } from "./webview/messages";
+import {
+    type AnimationView,
+    type HostToWebview,
+    type SaveAsTarget,
+    type WebviewToHost,
+    isWebviewToHost,
+    packFramePixels,
+} from "./webview/messages";
 
 /**
  * The hot-exit backup for `backupId`, or undefined when there is none or it cannot be used.
@@ -52,6 +59,23 @@ const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
+
+/**
+ * The view an open (or a post-edit refresh) sends: geometry for every frame, pixels only for the one
+ * each sequence shows first. Playback starts at frame 0, so that subset is exactly the first paint;
+ * the webview asks for the rest as it needs them.
+ *
+ * MAPICONS.BAM is the case this exists for - 5888 frames decoding to 107 MB of RGBA, of which its
+ * 183 cycles display 183 at a time.
+ */
+function initialView(document: ImageEditorDocument): AnimationView {
+    const include = new Set<number>();
+    for (const sequence of document.animation.sequences) {
+        const first = sequence.frameRefs[0];
+        if (first !== undefined) include.add(first);
+    }
+    return document.toView({ include });
+}
 
 /**
  * Custom editor for Fallout FRM / Infinity Engine BAM animations. Unlike the binary editor,
@@ -93,7 +117,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         const backup = await readBackup(uri, openContext.backupId);
         const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
-        document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: document.toView() }));
+        document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: initialView(document) }));
         return document;
     }
 
@@ -130,8 +154,22 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     ): Promise<void> {
         switch (message.type) {
             case "ready":
-                this.post(panel, { type: "init", view: document.toView() });
+                // Before the decode, not after: this is what tells the webview's deadline that the
+                // host is alive, and building the view is the part that outlasts the budget.
+                this.post(panel, { type: "loading" });
+                this.post(panel, { type: "init", view: initialView(document) });
                 break;
+            case "requestFrames": {
+                const all = document.animation.frames;
+                const indices = message.indices.filter((i) => Number.isInteger(i) && i >= 0 && i < all.length);
+                const sources = indices.flatMap((i) => {
+                    const frame = all[i];
+                    return frame ? [frame] : [];
+                });
+                const { frames, pixels } = packFramePixels(sources);
+                this.post(panel, { type: "frames", indices, frames, pixels });
+                break;
+            }
             case "save":
                 // Route through VS Code's own save so its dirty tracking clears - scoped to this
                 // document's URI, so it saves the right one even if focus moved since the click.
@@ -528,7 +566,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     async revertCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {
         await document.reload();
-        this.postToDocumentPanels(document, { type: "init", view: document.toView() });
+        this.postToDocumentPanels(document, { type: "init", view: initialView(document) });
     }
 
     async backupCustomDocument(

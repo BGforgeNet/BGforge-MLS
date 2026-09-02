@@ -84,14 +84,14 @@
     });
 
     $effect(() => {
-        const clearInitTimeout = installInitTimeout({
+        const initWait = installInitTimeout({
             ms: DEFAULT_INIT_TIMEOUT_MS,
             isResolved: () => open !== undefined,
             onTimeout: () => {
                 initTimedOut = true;
             },
         });
-        return clearInitTimeout;
+        return initWait.cancel;
     });
 
     const edit = (id: string, v: number | string) => bridge.editField(id, v);

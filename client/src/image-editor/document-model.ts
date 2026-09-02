@@ -25,13 +25,7 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { chooseActivePalette } from "./sidecar";
-import {
-    encodeFramePixels,
-    type AnimationView,
-    type FrameView,
-    type MetaPatch,
-    type SequenceView,
-} from "./webview/messages";
+import { packFramePixels, type AnimationView, type MetaPatch, type SequenceView } from "./webview/messages";
 
 function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     if (a === b) return true;
@@ -269,14 +263,13 @@ export class ImageDocumentModel {
         });
     }
 
-    toView(): AnimationView {
-        const frames: FrameView[] = this.animationValue.frames.map((f) => ({
-            width: f.width,
-            height: f.height,
-            pixels: encodeFramePixels(f.pixels),
-            offsetX: f.offsetX,
-            offsetY: f.offsetY,
-        }));
+    /**
+     * The webview's view of this document. `include` limits which frames' PIXELS are packed - every
+     * frame's geometry crosses regardless - so an open can paint from the frames it shows and fetch
+     * the rest on demand.
+     */
+    toView(options?: { include?: ReadonlySet<number> }): AnimationView {
+        const { frames, pixels } = packFramePixels(this.animationValue.frames, options?.include);
         // FRM sequences are built in header-direction order, so the sequence index selects its
         // dirOffsets entry; BAM/BAMC have none, so the anchor's direction shift is 0.
         const { dirOffsetsX, dirOffsetsY } = this.animationValue.meta;
@@ -288,6 +281,7 @@ export class ImageDocumentModel {
         }));
         const shared = {
             frames,
+            pixels,
             sequences,
             meta: this.animationValue.meta,
             basename: this.basename,

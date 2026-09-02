@@ -356,11 +356,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.fireEdit(mode === "append" ? "Import cycles" : "Replace cycles");
     }
 
-    toView(): AnimationView {
+    toView(options?: { include?: ReadonlySet<number> }): AnimationView {
         // dirName lives here, not in the model: the model is deliberately path-free, and the
         // document owns the file identity (see saveUri). Only FRM naming reads it, and an FRM is
         // always a real file, so the filesystem path is the right form to take the folder from.
-        return { ...this.model.toView(), dirName: path.basename(path.dirname(this.saveUri.fsPath)) };
+        return { ...this.model.toView(options), dirName: path.basename(path.dirname(this.saveUri.fsPath)) };
     }
 
     getBytes(): Uint8Array {

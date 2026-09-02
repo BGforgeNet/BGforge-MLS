@@ -84,7 +84,7 @@ export function installFatalErrorHandler(options: FatalErrorHandlerOptions): voi
 export const DEFAULT_INIT_TIMEOUT_MS = 8000;
 
 export interface InitTimeoutOptions {
-    /** Deadline in milliseconds. */
+    /** How long the host may stay SILENT before `onTimeout` fires; each `bump()` restarts it. */
     readonly ms: number;
     /** Checked at the deadline: true means the expected reply already arrived, so onTimeout is skipped. */
     readonly isResolved: () => boolean;
@@ -92,19 +92,49 @@ export interface InitTimeoutOptions {
     readonly onTimeout: () => void;
 }
 
+/** Handle for a pending bounded wait. */
+export interface InitWait {
+    /** Restart the deadline: the host has shown it is alive, so the clock on SILENCE starts over. */
+    bump: () => void;
+    /** Cancel the pending timer - on unmount/dispose, or once the wait resolves. */
+    cancel: () => void;
+}
+
 /**
- * Start a one-shot bounded wait: if `isResolved()` is still false when `ms` elapses, call `onTimeout()`.
- * A loading state that waits on an out-of-process reply (host/LSP round-trip) must fail visibly rather
- * than hang forever - this is the timer mechanics each webview root (the editors' App.svelte files)
- * wires into its own reactive state. Returns a cleanup that cancels the pending timer (call on
- * unmount/dispose, or once the wait resolves early).
+ * Start a bounded wait on the host's reply: if `isResolved()` is still false `ms` after the last sign
+ * of life, call `onTimeout()`.
+ *
+ * The deadline bounds SILENCE, not slowness. A host that is working produces liveness signals and the
+ * caller `bump()`s on each, so a legitimately slow open never reports failure - MAPICONS.BAM decodes
+ * to 5888 frames and takes longer than the whole budget to cross the webview boundary, and a fixed
+ * deadline told the user the file did not open while it was opening. Only a host that says nothing at
+ * all still trips it.
+ *
+ * Only the animation editor bumps. The dialog and binary editors were measured against the slowest
+ * inputs their corpora hold - the largest WeiDU dialog and the largest area file - and both mount
+ * with several times the budget to spare, so their deadline cannot fire on a healthy open and
+ * wiring a liveness signal into them would guard a failure that does not exist.
  */
-export function installInitTimeout(options: InitTimeoutOptions): () => void {
+export function installInitTimeout(options: InitTimeoutOptions): InitWait {
     const { ms, isResolved, onTimeout } = options;
-    const timer = setTimeout(() => {
-        if (!isResolved()) onTimeout();
-    }, ms);
-    return () => clearTimeout(timer);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+        timer = setTimeout(() => {
+            if (!isResolved()) onTimeout();
+        }, ms);
+    };
+    const cancel = () => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = undefined;
+    };
+    arm();
+    return {
+        bump: () => {
+            cancel();
+            arm();
+        },
+        cancel,
+    };
 }
 
 /**

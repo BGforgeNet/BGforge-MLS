@@ -27,7 +27,7 @@
         // (or the "ready" handshake never reached the host). Surface it rather than sit
         // on "Parsing dialog..." forever. The timer mechanics are shared with the binary
         // editor's App.svelte via installInitTimeout (webview-utils.ts).
-        const clearInitTimeout = installInitTimeout({
+        const initWait = installInitTimeout({
             ms: DEFAULT_INIT_TIMEOUT_MS,
             isResolved: () => !shouldTimeOut({ model, error }),
             onTimeout: () => {
@@ -36,7 +36,7 @@
         });
         return () => {
             window.removeEventListener("message", onMessage);
-            clearInitTimeout();
+            initWait.cancel();
         };
     });
 </script>

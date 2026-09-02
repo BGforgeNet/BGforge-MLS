@@ -69,11 +69,27 @@ describe("installInitTimeout", () => {
 
     test("the returned cleanup cancels the pending timer", () => {
         const onTimeout = vi.fn();
-        const cleanup = installInitTimeout({ ms: 8000, isResolved: () => false, onTimeout });
+        const wait = installInitTimeout({ ms: 8000, isResolved: () => false, onTimeout });
 
-        cleanup();
+        wait.cancel();
         vi.advanceTimersByTime(8000);
         expect(onTimeout).not.toHaveBeenCalled();
+    });
+
+    test("a liveness signal restarts the deadline instead of letting it expire", () => {
+        // The deadline exists to catch a host that never answers, not one that answers slowly. A
+        // large file (MAPICONS.BAM decodes to 5888 frames) legitimately takes longer than the whole
+        // budget, and the old fixed deadline reported "the file did not open" while it was opening.
+        const onTimeout = vi.fn();
+        const wait = installInitTimeout({ ms: 8000, isResolved: () => false, onTimeout });
+
+        vi.advanceTimersByTime(7000);
+        wait.bump();
+        vi.advanceTimersByTime(7000);
+        expect(onTimeout).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(1000);
+        expect(onTimeout).toHaveBeenCalledTimes(1);
     });
 
     test("isResolved is evaluated at the deadline, not at install time", () => {

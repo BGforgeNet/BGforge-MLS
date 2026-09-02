@@ -3,16 +3,37 @@ import { isRecord } from "../../is-record";
 
 /**
  * A single decoded frame, trimmed for the wire: no rawEncoding/rleEncoded (re-encoding is host-side).
- * `pixels` holds palette indices or RGBA quads depending on the view's colorModel.
+ * The pixels themselves live in the view's shared `pixels` buffer; `start`/`length` is this frame's
+ * span within it, holding palette indices or RGBA quads depending on the view's colorModel.
  */
 export interface FrameView {
     width: number;
     height: number;
-    // base64-encoded indexed bytes: a raw Uint8Array does not survive VS Code webview postMessage in
-    // the web host (arrives as `{}`), so pixels cross the wire as a JSON/structured-clone-safe string.
-    pixels: string;
+    /**
+     * This frame's span within the view's shared buffer (`length` is w*h indexed, w*h*4 rgba),
+     * ABSENT while its pixels have not been delivered yet.
+     *
+     * One optional field rather than two: an offset without a length is not a state this can be in,
+     * and two co-varying optionals would let it be written.
+     */
+    span?: FrameSpan;
     offsetX: number;
     offsetY: number;
+}
+
+/** Where one frame's pixels sit inside a view's shared buffer. */
+export interface FrameSpan {
+    start: number;
+    length: number;
+}
+
+/** What `packFramePixels` accepts: a decoded frame still holding its own bytes. */
+export interface SourceFrame {
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+    pixels: Uint8Array;
 }
 
 export interface SequenceView {
@@ -26,6 +47,8 @@ export interface SequenceView {
 
 interface AnimationViewBase {
     frames: FrameView[];
+    /** Every frame's pixels concatenated; each frame's own bytes are its `start`/`length` span. */
+    pixels: ArrayBuffer;
     sequences: SequenceView[];
     meta: AnimationMeta;
     basename: string;
@@ -35,7 +58,7 @@ interface AnimationViewBase {
     sourceFormat: SourceFormat;
 }
 
-/** FRM, BAM v1 and BAMC: FrameView.pixels holds palette indices. */
+/** FRM, BAM v1 and BAMC: each frame's span of the shared buffer holds palette indices. */
 export interface IndexedAnimationView extends AnimationViewBase {
     colorModel: "indexed";
     palette: Rgba[]; // 256, the ACTIVE palette (sidecar/default/embedded already chosen host-side)
@@ -44,7 +67,7 @@ export interface IndexedAnimationView extends AnimationViewBase {
 }
 
 /**
- * BAM v2: FrameView.pixels holds RGBA quads, and there is no palette at all.
+ * BAM v2: each frame's span of the shared buffer holds RGBA quads, and there is no palette at all.
  *
  * Carrying a placeholder palette instead would be worse than absent: the palette controls key off
  * it, so they would render for a format that cannot store their result.
@@ -55,23 +78,52 @@ export interface RgbaAnimationView extends AnimationViewBase {
 
 export type AnimationView = IndexedAnimationView | RgbaAnimationView;
 
-/** Universal base64 codec for FrameView.pixels: btoa/atob are global in the extension host (including
- *  the web-worker host code-server runs it in, where Node's Buffer is unavailable), the webview, and Node. */
-export function encodeFramePixels(bytes: Uint8Array): string {
-    let s = "";
-    // oxlint-disable-next-line unicorn/prefer-code-point -- btoa needs one char per raw byte, not a code point.
-    for (const byte of bytes) s += String.fromCharCode(byte);
-    return btoa(s);
+/**
+ * Lay every frame's pixels end to end in ONE ArrayBuffer and record each frame's span.
+ *
+ * One buffer, not one per frame: VS Code recreates a single `ArrayBuffer` natively on the webview
+ * side (its `postMessage` doc, 1.57+), but an array of thousands of them arrives as empty objects -
+ * measured at 5888 frames, where every buffer came through with zero bytes. Base64, the format this
+ * replaces, cost 4/3 the payload plus an encode and a decode pass over every byte.
+ */
+export function packFramePixels(
+    sources: readonly SourceFrame[],
+    include?: ReadonlySet<number>,
+): { frames: FrameView[]; pixels: ArrayBuffer } {
+    const wanted = (i: number): boolean => include === undefined || include.has(i);
+
+    let total = 0;
+    for (const [i, source] of sources.entries()) if (wanted(i)) total += source.pixels.length;
+
+    const packed = new Uint8Array(total);
+    const frames: FrameView[] = [];
+    let at = 0;
+    for (const [i, source] of sources.entries()) {
+        // Geometry always crosses, even for an excluded frame: the layout sizes every tile from it
+        // (tileSizePx walks all frames), and it is a handful of numbers against megabytes of pixels.
+        const geometry = {
+            width: source.width,
+            height: source.height,
+            offsetX: source.offsetX,
+            offsetY: source.offsetY,
+        };
+        if (!wanted(i)) {
+            frames.push(geometry);
+            continue;
+        }
+        packed.set(source.pixels, at);
+        frames.push({ ...geometry, span: { start: at, length: source.pixels.length } });
+        at += source.pixels.length;
+    }
+    return { frames, pixels: packed.buffer };
 }
 
-export function decodeFramePixels(b64: string): Uint8Array {
-    const bin = atob(b64);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) {
-        // oxlint-disable-next-line unicorn/prefer-code-point -- atob's output is a byte-string; read raw bytes, not code points.
-        out[i] = bin.charCodeAt(i);
-    }
-    return out;
+/**
+ * This frame's pixels as a VIEW into the shared buffer - never a copy, at 5888 frames - or undefined
+ * while the frame has not been delivered.
+ */
+export function framePixels(pixels: ArrayBuffer, frame: FrameView): Uint8Array | undefined {
+    return frame.span && new Uint8Array(pixels, frame.span.start, frame.span.length);
 }
 
 // directionLayout is deliberately NOT patchable: it is resolved at parse (BAM fingerprint detection)
@@ -110,6 +162,8 @@ export type WebviewToHost =
     // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
     // the library decoder (importApng in @bgforge/image) is still present.
     | { type: "import"; mode: "replace" | "append" }
+    // Frames whose pixels the open did not carry, asked for as the view comes to need them.
+    | { type: "requestFrames"; indices: number[] }
     | { type: "runtimeError"; message: string; stack?: string };
 
 function isValidMetaPatch(patch: unknown): patch is MetaPatch {
@@ -143,6 +197,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             );
         case "import":
             return typeof m.mode === "string" && IMPORT_MODES.has(m.mode);
+        case "requestFrames":
+            return Array.isArray(m.indices) && m.indices.every((i) => typeof i === "number");
         case "runtimeError":
             return typeof m.message === "string";
         default:
@@ -150,5 +206,15 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
     }
 }
 
-/** Messages the host posts down to the webview. */
-export type HostToWebview = { type: "init"; view: AnimationView } | { type: "error"; message: string };
+/**
+ * Messages the host posts down to the webview.
+ *
+ * `loading` is a liveness signal and carries nothing: the webview's init deadline bounds SILENCE, so
+ * the message only has to arrive. Progress is counted webview-side from the tiles that have pixels.
+ */
+export type HostToWebview =
+    | { type: "loading" }
+    | { type: "init"; view: AnimationView }
+    // Answer to `requestFrames`: `frames[i]` is the frame at `indices[i]`, spanning `pixels`.
+    | { type: "frames"; indices: number[]; frames: FrameView[]; pixels: ArrayBuffer }
+    | { type: "error"; message: string };

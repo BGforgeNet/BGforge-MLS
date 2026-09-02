@@ -8,10 +8,10 @@
  */
 import { emptyPalette, FRM_FACINGS, type Rgba } from "../../../image/src/model/animation";
 import {
-    encodeFramePixels,
+    packFramePixels,
     type AnimationView,
-    type FrameView,
     type SequenceView,
+    type SourceFrame,
 } from "../../../client/src/image-editor/webview/messages";
 
 export const TILE_SIZE = 24;
@@ -30,7 +30,7 @@ function colorAt(colors: [number, number, number][], i: number): [number, number
 
 /** frameIndex flips the marker corner (top-left on even frames, bottom-right on odd) so consecutive
  *  frames in a sequence are visibly different without ever rendering a uniform, un-marked tile. */
-function makeFrame(baseIndex: number, frameIndex: number): FrameView {
+function makeFrame(baseIndex: number, frameIndex: number): SourceFrame {
     const pixels = new Uint8Array(TILE_SIZE * TILE_SIZE).fill(baseIndex);
     const start = frameIndex % 2 === 1 ? TILE_SIZE - MARKER_SIZE : 0;
     for (let y = 0; y < MARKER_SIZE; y++) {
@@ -38,7 +38,7 @@ function makeFrame(baseIndex: number, frameIndex: number): FrameView {
             pixels[(start + y) * TILE_SIZE + (start + x)] = MARKER_INDEX;
         }
     }
-    return { width: TILE_SIZE, height: TILE_SIZE, pixels: encodeFramePixels(pixels), offsetX: 0, offsetY: 0 };
+    return { width: TILE_SIZE, height: TILE_SIZE, pixels, offsetX: 0, offsetY: 0 };
 }
 
 const FRM_COLORS: [number, number, number][] = [
@@ -54,14 +54,14 @@ const FRM_COLORS: [number, number, number][] = [
 export function buildFrmFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
-    const frames: FrameView[] = [];
+    const sources: SourceFrame[] = [];
     const sequences: SequenceView[] = FRM_FACINGS.map((facing, i) => {
         const baseIndex = i + 1;
         const [r, g, b] = colorAt(FRM_COLORS, i);
         setColor(palette, baseIndex, r, g, b);
         const frameRefs = [0, 1].map((frameIndex) => {
-            frames.push(makeFrame(baseIndex, frameIndex));
-            return frames.length - 1;
+            sources.push(makeFrame(baseIndex, frameIndex));
+            return sources.length - 1;
         });
         return { frameRefs, facing, dirOffsetX: 0, dirOffsetY: 0 };
     });
@@ -69,7 +69,7 @@ export function buildFrmFixture(): AnimationView {
     return {
         colorModel: "indexed",
         palette,
-        frames,
+        ...packFramePixels(sources),
         sequences,
         meta: { sourceFormat: "frm", fps: 10 },
         basename: "harness-fixture",
@@ -91,20 +91,20 @@ const BAM_COLORS: [number, number, number][] = [
 export function buildMultiSequenceBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
-    const frames: FrameView[] = [];
+    const sources: SourceFrame[] = [];
     const sequences: SequenceView[] = Array.from({ length: 12 }, (_, i) => {
         const colorIdx = i % BAM_COLORS.length;
         const baseIndex = colorIdx + 1;
         const [r, g, b] = colorAt(BAM_COLORS, colorIdx);
         setColor(palette, baseIndex, r, g, b);
-        frames.push(makeFrame(baseIndex, 0));
-        return { frameRefs: [frames.length - 1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 };
+        sources.push(makeFrame(baseIndex, 0));
+        return { frameRefs: [sources.length - 1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 };
     });
 
     return {
         colorModel: "indexed",
         palette,
-        frames,
+        ...packFramePixels(sources),
         sequences,
         meta: { sourceFormat: "bam", transparentIndex: 0 },
         basename: "harness-fixture-multi",
@@ -121,10 +121,10 @@ export function buildMultiSequenceBamFixture(): AnimationView {
 export function buildDirectionalBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
-    const frames: FrameView[] = [];
+    const sources: SourceFrame[] = [];
     // Frame 0 is the shared east-slot filler (dark gray).
     setColor(palette, 30, 60, 60, 60);
-    frames.push(makeFrame(30, 0));
+    sources.push(makeFrame(30, 0));
     const sequences: SequenceView[] = [];
     for (let block = 0; block < 2; block++) {
         for (let slot = 0; slot < 8; slot++) {
@@ -137,8 +137,8 @@ export function buildDirectionalBamFixture(): AnimationView {
             const bright = block === 0 ? 0.55 : 1; // block 0 dimmed, block 1 full - distinct per block
             setColor(palette, baseIndex, Math.round(r * bright), Math.round(g * bright), Math.round(b * bright));
             const frameRefs = [0, 1].map((frameIndex) => {
-                frames.push(makeFrame(baseIndex, frameIndex));
-                return frames.length - 1;
+                sources.push(makeFrame(baseIndex, frameIndex));
+                return sources.length - 1;
             });
             sequences.push({ frameRefs, facing: "none", dirOffsetX: 0, dirOffsetY: 0 });
         }
@@ -147,7 +147,7 @@ export function buildDirectionalBamFixture(): AnimationView {
     return {
         colorModel: "indexed",
         palette,
-        frames,
+        ...packFramePixels(sources),
         sequences,
         meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8", fps: 15 },
         basename: "harness-fixture-directional",
@@ -164,7 +164,7 @@ export function buildDirectionalBamFixture(): AnimationView {
  * has a single all-or-nothing transparent index - so it is what separates a working true-colour draw
  * path from one that silently fell through to the indexed reader.
  */
-function makeRgbaFrame(colour: [number, number, number], frameIndex: number): FrameView {
+function makeRgbaFrame(colour: [number, number, number], frameIndex: number): SourceFrame {
     const pixels = new Uint8Array(TILE_SIZE * TILE_SIZE * 4);
     for (let i = 0; i < TILE_SIZE * TILE_SIZE; i++) {
         const x = i % TILE_SIZE;
@@ -178,7 +178,7 @@ function makeRgbaFrame(colour: [number, number, number], frameIndex: number): Fr
             pixels.set([255, 255, 255, 255], ((start + y) * TILE_SIZE + (start + x)) * 4);
         }
     }
-    return { width: TILE_SIZE, height: TILE_SIZE, pixels: encodeFramePixels(pixels), offsetX: 0, offsetY: 0 };
+    return { width: TILE_SIZE, height: TILE_SIZE, pixels, offsetX: 0, offsetY: 0 };
 }
 
 /**
@@ -188,18 +188,18 @@ function makeRgbaFrame(colour: [number, number, number], frameIndex: number): Fr
  * indexed sibling is what makes a difference in the rendered output attributable to it.
  */
 export function buildRgbaBamFixture(): AnimationView {
-    const frames: FrameView[] = [];
+    const sources: SourceFrame[] = [];
     const sequences: SequenceView[] = BAM_COLORS.map((_colour, i) => {
         const frameRefs = [0, 1].map((frameIndex) => {
-            frames.push(makeRgbaFrame(colorAt(BAM_COLORS, i), frameIndex));
-            return frames.length - 1;
+            sources.push(makeRgbaFrame(colorAt(BAM_COLORS, i), frameIndex));
+            return sources.length - 1;
         });
         return { frameRefs, facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 };
     });
 
     return {
         colorModel: "rgba",
-        frames,
+        ...packFramePixels(sources),
         sequences,
         meta: { sourceFormat: "bamv2", fps: 15 },
         basename: "harness-fixture",
@@ -210,14 +210,14 @@ export function buildRgbaBamFixture(): AnimationView {
 export function buildBamFixture(): AnimationView {
     const palette = emptyPalette();
     setColor(palette, MARKER_INDEX, 255, 255, 255);
-    const frames: FrameView[] = [];
+    const sources: SourceFrame[] = [];
     const sequences: SequenceView[] = BAM_COLORS.map((_color, i) => {
         const baseIndex = i + 1;
         const [r, g, b] = colorAt(BAM_COLORS, i);
         setColor(palette, baseIndex, r, g, b);
         const frameRefs = [0, 1].map((frameIndex) => {
-            frames.push(makeFrame(baseIndex, frameIndex));
-            return frames.length - 1;
+            sources.push(makeFrame(baseIndex, frameIndex));
+            return sources.length - 1;
         });
         return { frameRefs, facing: "none", dirOffsetX: 0, dirOffsetY: 0 };
     });
@@ -225,7 +225,7 @@ export function buildBamFixture(): AnimationView {
     return {
         colorModel: "indexed",
         palette,
-        frames,
+        ...packFramePixels(sources),
         sequences,
         meta: { sourceFormat: "bam", transparentIndex: 0 },
         basename: "harness-fixture",

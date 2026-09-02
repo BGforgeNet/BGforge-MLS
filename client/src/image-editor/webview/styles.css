@@ -63,6 +63,17 @@ body {
     padding: 0.75rem;
     font-style: italic;
 }
+/* Frame-fetch progress, overlaid on the stage rather than placed in the flow: it appears and
+   disappears as frames arrive, and a element in the flow would reflow the tiles each time. */
+.frame-progress {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.75rem;
+    margin: 0;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    pointer-events: none;
+}
 .error-state {
     padding: 1rem 1.25rem;
     color: var(--vscode-errorForeground);
@@ -274,6 +285,8 @@ select {
     min-width: 0;
     overflow: auto;
     padding: 0.75rem;
+    /* Containing block for .frame-progress, which overlays the stage instead of joining its flow. */
+    position: relative;
     /* Flex + margin:auto on the child centres the content on BOTH axes and stays scroll-safe when the
        content is larger than the stage (align-items:center would clip the overflowing top). Applies to
        the compass rose AND the cycle grid (non-creature animations). */

@@ -7,6 +7,7 @@
     // yield different roses (an FRM's tagged facings, or one direction block of an IE-interpreted BAM).
     const {
         view,
+        loadedPixels,
         tiles,
         frame,
         zoom,
@@ -14,6 +15,7 @@
         showOffsetMarker = false,
     }: {
         view: AnimationView;
+        loadedPixels: ReadonlyMap<number, Uint8Array>;
         tiles: RoseTile[];
         frame: number;
         zoom: number;
@@ -39,7 +41,7 @@
             style:left="calc(50% + {tile.pos.dx * radiusPx - tilePx / 2}px)"
             style:top="calc(50% + {tile.pos.dy * radiusPx - tilePx / 2}px)"
         >
-            <SequenceTile {view} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
+            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
         </div>
     {/each}
 </div>

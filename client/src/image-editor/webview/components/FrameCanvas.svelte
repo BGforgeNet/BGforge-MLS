@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Rgba, SourceFormat } from "@bgforge/image";
-    import { decodeFramePixels, type FrameView } from "../messages";
+    import type { FrameView } from "../messages";
     import { frameToRgba, rgbaFrameToRgba } from "../render/indexed-to-rgba";
     import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
 
@@ -11,6 +11,7 @@
     // alpha-0 in the bitmap and show the backdrop through.
     const {
         frame,
+        bytes,
         colorModel,
         palette,
         transparentIndex,
@@ -23,7 +24,10 @@
         ariaLabel = "Animation frame",
     }: {
         frame: FrameView;
-        // Decides how frame.pixels is read: palette indices, or RGBA quads that need no palette.
+        // This frame's delivered pixels. The caller renders nothing until they arrive, so the tile
+        // never paints a half-loaded frame.
+        bytes: Uint8Array;
+        // Decides how those bytes are read: palette indices, or RGBA quads that need no palette.
         colorModel: "indexed" | "rgba";
         palette: Rgba[] | undefined;
         transparentIndex: number;
@@ -87,11 +91,10 @@
         // variant, which the constructor's ImageDataArray overload rejects, but .set() accepts any
         // ArrayLike<number> regardless of buffer type.
         const imageData = nctx.createImageData(frame.width, frame.height);
-        const pixels = decodeFramePixels(frame.pixels);
         imageData.data.set(
             colorModel === "rgba" || palette === undefined
-                ? rgbaFrameToRgba(pixels)
-                : frameToRgba(pixels, frame.width, frame.height, palette, transparentIndex),
+                ? rgbaFrameToRgba(bytes)
+                : frameToRgba(bytes, frame.width, frame.height, palette, transparentIndex),
         );
         nctx.putImageData(imageData, 0, 0);
 

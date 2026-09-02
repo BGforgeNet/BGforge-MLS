@@ -1,7 +1,7 @@
 <script lang="ts">
     import { tick as svelteTick } from "svelte";
     import type { Bridge } from "../state/bridge";
-    import type { AnimationView } from "../messages";
+    import { framePixels, type AnimationView } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
@@ -10,7 +10,8 @@
     import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
     import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
-    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
+    import { framesNeededFor, seedLoadedPixels } from "../render/frame-loading";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
@@ -34,6 +35,11 @@
     // "Loading..." forever. Timer mechanics shared with the binary/dialog editors' App.svelte
     // via installInitTimeout (webview-utils.ts).
     let initTimedOut = $state(false);
+    let initWait: InitWait | undefined;
+    /** Pixels delivered so far, by frame index. Replaced wholesale per batch (see the message handler). */
+    let loadedPixels = $state(new Map<number, Uint8Array>());
+    /** Frame indices already asked for, so a re-render never re-requests one in flight. */
+    let requestedFrames = new Set<number>();
 
     let playback = $state<PlaybackState | null>(null);
     // eslint-disable-next-line prefer-const -- reassigned via onZoomChange in the ViewControls markup
@@ -107,9 +113,26 @@
 
     $effect(() => {
         return bridge.onMessage((m) => {
+            // Any word from the host restarts the deadline: it bounds SILENCE, not slowness, and a
+            // large animation legitimately takes longer than the whole budget to arrive.
+            // `loading` needs no branch of its own - arriving IS its whole effect, above.
+            initWait?.bump();
             if (m.type === "init") {
                 view = m.view;
+                // A refresh replaces the document's frames, so anything cached is stale.
+                loadedPixels = seedLoadedPixels(m.view);
+                requestedFrames = new Set(loadedPixels.keys());
                 errorMessage = undefined;
+            } else if (m.type === "frames") {
+                const next = new Map(loadedPixels);
+                for (const [at, index] of m.indices.entries()) {
+                    const frame = m.frames[at];
+                    const bytes = frame && framePixels(m.pixels, frame);
+                    if (bytes) next.set(index, bytes);
+                }
+                // One reassignment per batch, never per frame: $state does not proxy a Map, so the
+                // view only re-renders on the replacement.
+                loadedPixels = next;
             } else if (m.type === "error") {
                 errorMessage = m.message;
             }
@@ -117,13 +140,45 @@
     });
 
     $effect(() => {
-        return installInitTimeout({
+        const wait = installInitTimeout({
             ms: DEFAULT_INIT_TIMEOUT_MS,
             isResolved: () => view !== null,
             onTimeout: () => {
                 initTimedOut = true;
             },
         });
+        initWait = wait;
+        return wait.cancel;
+    });
+
+    // Progress over the tiles ON SCREEN, not over every frame in the file: with lazy delivery the
+    // file's own total never reaches 100% unless the user plays every cycle through, which would read
+    // as a load that never finishes.
+    const tileCount = $derived(view?.sequences.length ?? 0);
+    const tilesAwaitingPixels = $derived.by(() => {
+        if (!view || !playback) return 0;
+        const frame = playback.frame;
+        return view.sequences.filter((sequence) => {
+            const ref = sequence.frameRefs[Math.min(frame, sequence.frameRefs.length - 1)];
+            return ref !== undefined && !loadedPixels.has(ref);
+        }).length;
+    });
+
+    // Fetch the frames the current playback position needs and does not have. The open carries only
+    // each cycle's first frame, so this is what fills in the rest as playback advances - one batched
+    // request per tick, never one per tile.
+    $effect(() => {
+        if (!view || !playback) return;
+        const wanted: number[] = [];
+        for (const sequence of view.sequences) {
+            for (const ref of framesNeededFor(sequence.frameRefs, playback.frame)) {
+                if (!requestedFrames.has(ref)) {
+                    requestedFrames.add(ref);
+                    wanted.push(ref);
+                }
+            }
+        }
+        if (wanted.length > 0) bridge.send({ type: "requestFrames", indices: wanted });
     });
 
     // The whole rose steps on ONE shared timeline: a single requestAnimationFrame loop advances one
@@ -202,8 +257,7 @@
         <div class="error-state">
             <h2>No response from the host</h2>
             <p>
-                No response from the host within {DEFAULT_INIT_TIMEOUT_MS / 1000}s - the file did not open. Check the
-                "BGforge MLS" output channel.
+                Nothing from the host for {DEFAULT_INIT_TIMEOUT_MS / 1000}s. Check the "BGforge MLS" output channel.
             </p>
         </div>
     {:else}
@@ -222,10 +276,19 @@
         <div class="stage" bind:this={stageEl} style:--tile-bg={tileBackground}>
             {#if playback}
                 {#if layoutMode === "rose"}
-                    <CompassRose {view} tiles={roseTiles} frame={playback.frame} {zoom} {tileBase} {showOffsetMarker} />
+                    <CompassRose
+                        {view}
+                        {loadedPixels}
+                        tiles={roseTiles}
+                        frame={playback.frame}
+                        {zoom}
+                        {tileBase}
+                        {showOffsetMarker}
+                    />
                 {:else}
                     <CycleGrid
                         {view}
+                        {loadedPixels}
                         tiles={gridTiles}
                         frame={playback.frame}
                         {zoom}
@@ -234,6 +297,11 @@
                         columns={cycleColumns}
                     />
                 {/if}
+            {/if}
+            {#if tilesAwaitingPixels > 0}
+                <p class="frame-progress" aria-live="polite">
+                    Loading frames {tileCount - tilesAwaitingPixels}/{tileCount}
+                </p>
             {/if}
         </div>
         <aside class="controls-column">

@@ -10,7 +10,7 @@ import {
 } from "@bgforge/image";
 import { ImageDocumentModel } from "../../src/image-editor/document-model";
 import { decodeBackup, encodeBackup } from "../../src/image-editor/backup";
-import { decodeFramePixels } from "../../src/image-editor/webview/messages";
+import { framePixels } from "../../src/image-editor/webview/messages";
 
 function rgbaAnimation(): RgbaAnimation {
     const pixels = new Uint8Array(2 * 2 * 4);
@@ -53,9 +53,11 @@ describe("ImageDocumentModel with a true-colour animation", () => {
     it("sends the frame's RGBA bytes over the wire intact, alpha included", () => {
         const model = ImageDocumentModel.fromRgbaAnimation(rgbaAnimation(), "MAPICONS.BAM");
 
-        const frame = model.toView().frames[0];
+        const view = model.toView();
+        const frame = view.frames[0];
         if (frame === undefined) throw new Error("expected one frame");
-        const pixels = decodeFramePixels(frame.pixels);
+        const pixels = framePixels(view.pixels, frame);
+        if (!pixels) throw new Error("expected the frame's pixels to have been delivered");
 
         expect(pixels).toHaveLength(2 * 2 * 4);
         expect([...pixels.subarray(0, 8)]).toEqual([255, 0, 0, 255, 0, 0, 0, 0]);
@@ -92,9 +94,12 @@ describe("ImageDocumentModel with a true-colour animation", () => {
 
         model.replaceSequences(convertToRgba(indexed), "replace");
 
-        const frame = model.toView().frames[0];
+        const view = model.toView();
+        const frame = view.frames[0];
         if (frame === undefined) throw new Error("expected one frame");
-        expect([...decodeFramePixels(frame.pixels).subarray(0, 4)]).toEqual([7, 8, 9, 255]);
+        const pixels = framePixels(view.pixels, frame);
+        if (!pixels) throw new Error("expected the frame's pixels to have been delivered");
+        expect([...pixels.subarray(0, 4)]).toEqual([7, 8, 9, 255]);
     });
 
     it("saves an untouched v2 back byte-for-byte, rewriting none of its pages", () => {
@@ -173,9 +178,12 @@ describe("ImageDocumentModel with a true-colour animation", () => {
 
         // The decoded pixel, not the frame count: a restore that resolved pages from the wrong place
         // still produces a frame, it just produces the pre-edit one (red, from openedV2's fixture).
-        const frame = restored.toView().frames[0];
+        const view = restored.toView();
+        const frame = view.frames[0];
         if (frame === undefined) throw new Error("expected one frame");
-        expect([...decodeFramePixels(frame.pixels).subarray(0, 4)]).toEqual([16, 20, 24, 255]);
+        const pixels = framePixels(view.pixels, frame);
+        if (!pixels) throw new Error("expected the frame's pixels to have been delivered");
+        expect([...pixels.subarray(0, 4)]).toEqual([16, 20, 24, 255]);
     });
 
     it("applies a playback-rate edit to a true-colour document without calling it a document change", () => {
