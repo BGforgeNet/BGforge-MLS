@@ -31,6 +31,30 @@ export function framesNeededFor(frameRefs: readonly number[], frame: number): nu
     return [...new Set(wanted)];
 }
 
+/**
+ * The frames to ask the host for at this playback position, and the record that stops asking twice.
+ *
+ * Every cycle on screen contributes what it needs next; a frame two cycles share is asked for once.
+ * `requested` gains the batch, so the effect this runs in - which re-runs on any reactive read, not
+ * only on a frame change - sends nothing for a position already covered or already answered by the
+ * open. Nothing is ever removed from it; what makes that safe is argued where it is declared.
+ */
+export function framesToRequest(
+    sequences: readonly { readonly frameRefs: readonly number[] }[],
+    frame: number,
+    requested: Set<number>,
+): number[] {
+    const wanted: number[] = [];
+    for (const sequence of sequences) {
+        for (const ref of framesNeededFor(sequence.frameRefs, frame)) {
+            if (requested.has(ref)) continue;
+            requested.add(ref);
+            wanted.push(ref);
+        }
+    }
+    return wanted;
+}
+
 /** What a tile is currently drawing: a frame's geometry paired with the pixels to draw it from. */
 export interface DrawnFrame<F> {
     frame: F;

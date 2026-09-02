@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
     createFrameFallback,
     framesNeededFor,
+    framesToRequest,
     seedLoadedPixels,
 } from "../../src/image-editor/webview/render/frame-loading";
 import { packFramePixels } from "../../src/image-editor/webview/messages";
@@ -89,5 +90,49 @@ describe("framesNeededFor", () => {
 
     it("does not repeat a frame the sequence shows twice in a row", () => {
         expect(framesNeededFor([10, 10, 10], 0)).toEqual([10]);
+    });
+});
+
+describe("framesToRequest", () => {
+    /** Two cycles that overlap on frame 5, so a shared ref is visible as one request or two. */
+    const sequences = [{ frameRefs: [0, 5, 6] }, { frameRefs: [5, 7] }];
+
+    it("asks once for a frame two cycles both need", () => {
+        const requested = new Set<number>();
+
+        const wanted = framesToRequest(sequences, 1, requested);
+
+        // Cycle A at 1 needs 5 and 6; cycle B at 1 needs 7 and, clamped, 7 again. 5 is shared.
+        expect(wanted).toEqual([5, 6, 7]);
+    });
+
+    it("asks for nothing on a re-render at the same position", () => {
+        const requested = new Set<number>();
+        framesToRequest(sequences, 1, requested);
+
+        const again = framesToRequest(sequences, 1, requested);
+
+        // The effect re-runs on every reactive read; without this the webview floods the host with
+        // duplicate requests for frames already in flight.
+        expect(again).toEqual([]);
+    });
+
+    it("asks only for what advancing actually added", () => {
+        const requested = new Set<number>();
+        framesToRequest(sequences, 0, requested);
+
+        const wanted = framesToRequest(sequences, 1, requested);
+
+        // Position 0 already claimed 0, 5 and 7; stepping to 1 newly needs only 6.
+        expect(wanted).toEqual([6]);
+    });
+
+    it("skips the frames the open already delivered", () => {
+        // What App seeds from `loadedPixels` after an init: pixels arrived, so no request is owed.
+        const requested = new Set([5, 6]);
+
+        const wanted = framesToRequest(sequences, 1, requested);
+
+        expect(wanted).toEqual([7]);
     });
 });

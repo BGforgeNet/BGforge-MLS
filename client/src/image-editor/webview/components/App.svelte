@@ -10,7 +10,7 @@
     import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
     import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
-    import { framesNeededFor, seedLoadedPixels } from "../render/frame-loading";
+    import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
@@ -171,20 +171,11 @@
         }).length;
     });
 
-    // Fetch the frames the current playback position needs and does not have. The open carries only
-    // each cycle's first frame, so this is what fills in the rest as playback advances - one batched
-    // request per tick, never one per tile.
+    // The open carries only each cycle's first frame, so this is what fills in the rest as playback
+    // advances.
     $effect(() => {
         if (!view || !playback) return;
-        const wanted: number[] = [];
-        for (const sequence of view.sequences) {
-            for (const ref of framesNeededFor(sequence.frameRefs, playback.frame)) {
-                if (!requestedFrames.has(ref)) {
-                    requestedFrames.add(ref);
-                    wanted.push(ref);
-                }
-            }
-        }
+        const wanted = framesToRequest(view.sequences, playback.frame, requestedFrames);
         if (wanted.length > 0) bridge.send({ type: "requestFrames", indices: wanted });
     });
 
