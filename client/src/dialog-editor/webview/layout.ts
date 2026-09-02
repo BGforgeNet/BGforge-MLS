@@ -30,6 +30,28 @@ function layoutEngine(): InstanceType<typeof ELK> {
 
 const elk = layoutEngine();
 
+/**
+ * Edge count at which `considerModelOrder` stops paying for itself.
+ *
+ * Below it the option costs nothing measurable - a few hundred edges lay out in a fraction of a second
+ * whatever it is set to. At corpus-scale edge counts it dominates, costing an order of magnitude more
+ * time than the whole rest of the layout combined.
+ */
+export const MODEL_ORDER_EDGE_LIMIT = 400;
+
+/**
+ * Whether to ask elk to preserve model order, which it honours only where doing so adds no edge crossing.
+ *
+ * That condition is why the option is worth dropping on a dense graph rather than tuning: as edges
+ * multiply, nearly every order it would preserve now costs a crossing, so it declines the preservation and
+ * still pays the full extra search. Measured across the widest real dialogs, disabling it above this limit
+ * took roughly three quarters off the graph's first draw while moving reply-order fidelity by a couple of
+ * points in each direction - better on one file, worse on the other.
+ */
+export function modelOrderStrategy(edgeCount: number): "NODES_AND_EDGES" | "NONE" {
+    return edgeCount < MODEL_ORDER_EDGE_LIMIT ? "NODES_AND_EDGES" : "NONE";
+}
+
 export async function layoutFlow(graph: FlowGraph): Promise<void> {
     // A starting state is a card no transition points at (no inbound edge) - the entry
     // point of a conversation thread. Pin every one to elk's first layer so they share a
@@ -76,7 +98,8 @@ export async function layoutFlow(graph: FlowGraph): Promise<void> {
             // Use input order (edges are in reply order) as the secondary objective after
             // crossing count, so a card's targets follow its reply order where the primary
             // crossing-minimization is otherwise indifferent - further cutting crossings.
-            "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+            // Dropped on dense graphs; see modelOrderStrategy.
+            "elk.layered.considerModelOrder.strategy": modelOrderStrategy(graph.edges.length),
         },
         children: graph.nodes.map((n) => {
             const child: ElkChild = { id: n.id, width: n.width, height: n.height };

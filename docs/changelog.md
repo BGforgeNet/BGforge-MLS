@@ -56,6 +56,8 @@
 - Go to definition on an unresolvable tp2 path searches the mod folder rather than the whole install.
 - The dialog outline draws only the rows in view. A long conversation opens without the pause it used to
   cost, and scrolling, folding and keyboard navigation stay smooth however many nodes a file holds.
+- The dialog graph lays out densely connected conversations several times faster, and re-lays them out just
+  as quickly. Smaller dialogs keep the tighter reply-order arrangement they had.
 
 ### Data
 

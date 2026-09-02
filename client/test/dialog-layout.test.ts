@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { layoutFlow } from "../src/dialog-editor/webview/layout";
+import { MODEL_ORDER_EDGE_LIMIT, layoutFlow, modelOrderStrategy } from "../src/dialog-editor/webview/layout";
 import type { FlowGraph } from "../src/dialog-editor/webview/model-to-flow";
 
 function card(id: string): FlowGraph["nodes"][number] {
@@ -65,6 +65,14 @@ describe("layoutFlow", () => {
         await layoutFlow(graph);
         expect(Number.isFinite(graph.nodes[0]!.position.x)).toBe(true);
         expect(Number.isFinite(graph.nodes[0]!.position.y)).toBe(true);
+    });
+
+    test("keeps model order under the edge limit and drops it above", () => {
+        expect(modelOrderStrategy(0)).toBe("NODES_AND_EDGES");
+        expect(modelOrderStrategy(MODEL_ORDER_EDGE_LIMIT - 1)).toBe("NODES_AND_EDGES");
+        // At the limit itself the graph is already dense enough to pay the search cost; "below" excludes it.
+        expect(modelOrderStrategy(MODEL_ORDER_EDGE_LIMIT)).toBe("NONE");
+        expect(modelOrderStrategy(MODEL_ORDER_EDGE_LIMIT + 1)).toBe("NONE");
     });
 
     test("lays out a cycle (back edge) without hanging, every node finite and distinct", async () => {
