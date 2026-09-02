@@ -213,4 +213,29 @@ describe("frames fetched after the open", () => {
             expect(framePixels(reply.pixels, frame)).toEqual(expected.pixels);
         }
     });
+
+    it("answers only for indices the document actually has, keeping the two lists in step", async () => {
+        // The webview zips `indices` to `frames` by position, so a request carrying junk must not be
+        // answered with lists of different lengths - and an index the document has no frame for must not
+        // shift every later frame onto the wrong index.
+        const provider = new ImageEditorProvider(context);
+        const document = await provider.openCustomDocument(
+            fileUri("/hero.frm"),
+            { backupId: undefined, untitledDocumentData: undefined },
+            token,
+        );
+        const { panel, posts, deliver } = makePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+        await deliver({ type: "ready" });
+        posts.length = 0;
+        const frameCount = makeMiniFrm().frames.length;
+
+        await deliver({ type: "requestFrames", indices: [frameCount, -1, 0.5, Number.NaN, 0] });
+
+        const reply = posts[0] as { type: string; indices: number[]; frames: FrameView[]; pixels: ArrayBuffer };
+        expect(reply.type).toBe("frames");
+        expect(reply.indices).toEqual([0]);
+        expect(reply.frames).toHaveLength(reply.indices.length);
+        expect(framePixels(reply.pixels, reply.frames[0]!)).toEqual(makeMiniFrm().frames[0]!.pixels);
+    });
 });

@@ -38,7 +38,14 @@
     let initWait: InitWait | undefined;
     /** Pixels delivered so far, by frame index. Replaced wholesale per batch (see the message handler). */
     let loadedPixels = $state(new Map<number, Uint8Array>());
-    /** Frame indices already asked for, so a re-render never re-requests one in flight. */
+    /**
+     * Frame indices already asked for, so a re-render never re-requests one in flight.
+     *
+     * Deliberately unbounded - no deadline, no retry. An index is never removed, so a reply that never
+     * arrived would strand its frame; the panel is registered without `retainContextWhenHidden`, so the
+     * only way to miss one is a post to a hidden webview, and showing it again reloads this bundle and
+     * reseeds both maps from a fresh `init`.
+     */
     let requestedFrames = new Set<number>();
 
     let playback = $state<PlaybackState | null>(null);

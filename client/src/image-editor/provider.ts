@@ -161,13 +161,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 break;
             case "requestFrames": {
                 const all = document.animation.frames;
-                const indices = message.indices.filter((i) => Number.isInteger(i) && i >= 0 && i < all.length);
-                const sources = indices.flatMap((i) => {
-                    const frame = all[i];
-                    return frame ? [frame] : [];
+                // Pairs, not two lists filtered separately: the webview zips `indices` to `frames` by
+                // position, so anything that can shorten one without the other silently maps every later
+                // frame onto the wrong index. Indexing is the whole check - a non-integer, a negative and
+                // an out-of-range index all miss the array alike.
+                const answered = message.indices.flatMap((index) => {
+                    const frame = Number.isInteger(index) && index >= 0 ? all[index] : undefined;
+                    return frame ? [{ index, frame }] : [];
                 });
-                const { frames, pixels } = packFramePixels(sources);
-                this.post(panel, { type: "frames", indices, frames, pixels });
+                const { frames, pixels } = packFramePixels(answered.map((a) => a.frame));
+                this.post(panel, { type: "frames", indices: answered.map((a) => a.index), frames, pixels });
                 break;
             }
             case "save":
