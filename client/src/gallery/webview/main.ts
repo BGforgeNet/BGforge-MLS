@@ -32,4 +32,10 @@ if (target) {
     });
 }
 
+// The serializer that restores this panel after a window reload reads exactly what is stored here, so which
+// corpus the panel was showing has to be persisted the moment the host says.
+globalThis.addEventListener("message", (event: MessageEvent<{ type?: string; source?: string }>) => {
+    if (event.data.type === "init") vscode.setState({ source: event.data.source });
+});
+
 vscode.postMessage({ type: "ready" } satisfies WebviewToHost);

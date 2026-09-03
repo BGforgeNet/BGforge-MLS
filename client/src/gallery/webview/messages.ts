@@ -21,4 +21,6 @@ export type WebviewToHost =
     | { type: "ready" }
     /** Only what the viewport needs, so opening a game-wide grid does not decode thousands of files. */
     | { type: "requestThumbnails"; ids: string[]; size: number }
-    | { type: "open"; id: string };
+    | { type: "open"; id: string }
+    /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
+    | { type: "runtimeError"; message: string; stack?: string };

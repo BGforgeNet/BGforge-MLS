@@ -118,6 +118,8 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     bcsSymbols: BcsSymbolResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
     revealResource: (resref: string, ext: string) => Promise<void>;
+    /** The open install, for a consumer that needs the `Game` itself rather than one resolved lookup. */
+    gameSession: () => { dir: string; game: Game } | undefined;
 } {
     // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
     // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
@@ -461,6 +463,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
          * Silent when the resource is not in the open game: the gallery can be showing a workspace file, or a
          * game the user has since switched away from, and neither is an error worth a popup.
          */
+        gameSession: () => currentGame.current,
         revealResource: async (resref: string, ext: string): Promise<void> => {
             const node = tree.resourceNode(resref, ext);
             if (node === undefined) return;

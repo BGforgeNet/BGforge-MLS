@@ -34,6 +34,13 @@ export interface GallerySource {
      * avoid. Undefined for an item the source can no longer find.
      */
     stamp(id: string): string | undefined;
+    /**
+     * Where an auxiliary resource for `forItem` lives - a PVRZ page a BAM v2's pixels are stored in.
+     *
+     * Separate from `locate` because a page is not a gallery ITEM: it is never listed and never drawn on its
+     * own. `forItem` is what a workspace resolves against, where a mod ships its pages beside the `.bam`.
+     */
+    locateAux(name: string, forItem: string): Locator | undefined;
     /** Show the item where it lives - the resource tree for a game, the Explorer for the workspace. */
     reveal(id: string): Promise<void>;
 }

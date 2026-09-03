@@ -26,6 +26,7 @@ import { registerScriptViews } from "./script-view/register";
 import { LSP_DOCUMENT_SELECTOR } from "./document-selector";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
+import { registerGallery } from "./gallery/register";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
@@ -74,6 +75,12 @@ export async function activate(context: ExtensionContext) {
         registerImageEditor(context, gameLookups.resourceBytes),
         registerScriptViews(context, gameLookups.bcsSymbols),
     );
+
+    // The image gallery. After the resource viewer, whose game session and reveal it borrows.
+    registerGallery(context, {
+        gameSession: gameLookups.gameSession,
+        revealResource: gameLookups.revealResource,
+    });
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used

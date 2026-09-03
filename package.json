@@ -422,6 +422,16 @@
                 "title": "BGforge MLS: compile"
             },
             {
+                "command": "bgforge.gallery.showGame",
+                "title": "BGforge: Browse Game Images",
+                "icon": "$(symbol-color)"
+            },
+            {
+                "command": "bgforge.gallery.showWorkspace",
+                "title": "BGforge: Browse Workspace Images",
+                "icon": "$(symbol-color)"
+            },
+            {
                 "command": "extension.bgforge.dialogEditor",
                 "title": "BGforge MLS: Dialog Editor",
                 "icon": "$(type-hierarchy)"
@@ -881,6 +891,7 @@
         "onLanguage:weidu-tp2",
         "onLanguage:weidu-tra",
         "onView:bgforge.ieResources",
+        "onWebviewPanel:bgforge.gallery",
         "workspaceContains:**/*.tbaf",
         "workspaceContains:**/*.td",
         "workspaceContains:**/*.tssl"

@@ -52,6 +52,14 @@ export function gameSource(game: GalleryGame, deps: GameSourceDeps): GallerySour
                 return undefined; // deleted between the listing and now - the caller draws nothing
             }
         },
+        locateAux(name: string): Locator | undefined {
+            // "MOS0012.PVRZ" - the resource name the library hands back, split into the resref and extension
+            // the archive is keyed on. Split here rather than making the library return the two halves: the
+            // name is what a sibling-file lookup needs whole.
+            const dot = name.lastIndexOf(".");
+            if (dot <= 0) return undefined;
+            return game.locate(name.slice(0, dot), name.slice(dot + 1).toLowerCase());
+        },
         async reveal(id: string): Promise<void> {
             const ref = refs().get(id);
             if (ref?.ext === undefined) return;

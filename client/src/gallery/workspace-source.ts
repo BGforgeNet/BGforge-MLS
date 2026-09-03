@@ -81,6 +81,22 @@ export function workspaceSource(folders: readonly GalleryFolder[], deps: Workspa
                 return undefined;
             }
         },
+        locateAux(name: string, forItem: string): Locator | undefined {
+            const owner = files().get(forItem);
+            if (owner === undefined) return undefined;
+            // Beside the file that names it - how a mod folder ships its own pages, and the same priority the
+            // animation editor's resolver uses. Matched case-insensitively: IE ships uppercase names and a
+            // case-sensitive host would otherwise miss them.
+            const dir = path.dirname(owner);
+            let entries: string[];
+            try {
+                entries = fs.readdirSync(dir);
+            } catch {
+                return undefined;
+            }
+            const hit = entries.find((entry) => entry.toLowerCase() === name.toLowerCase());
+            return hit === undefined ? undefined : { kind: "file", path: path.join(dir, hit) };
+        },
         async reveal(id: string): Promise<void> {
             const abs = files().get(id);
             if (abs === undefined) return;
