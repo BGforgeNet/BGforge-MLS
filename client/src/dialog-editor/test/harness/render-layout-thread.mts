@@ -12,8 +12,11 @@
  * observable a user feels, thresholded loosely so a loaded CI box does not flake).
  *
  * It also covers the webview's own stall reporting (`observeSlowFrames`), which needs a browser for the same
- * reason: node has no long-task entry type. The re-render this graph provokes is exactly the kind of block
- * that reporting exists to name, so the message must reach the (fake) host here.
+ * reason: node has no long-task entry type. That check drives the observer SEAM rather than waiting for a
+ * real stall: the re-render this graph provokes was the trigger until 2026-09-03, when it came in under
+ * `SLOW_FRAME_MS` on CI and the check failed on a machine where nothing was wrong. How long a re-render
+ * takes is a property of the box, so asserting on it tests the box; the wiring the check exists for -
+ * long-task entry to `report` to `postToHost` to the host - is driven directly instead.
  *
  * e2e-tier, run out of process (not under pnpm test):
  *   pnpm exec tsx client/src/dialog-editor/test/harness/build.mts               # rebuild app.html
@@ -23,6 +26,7 @@
 
 import { chromium } from "playwright";
 import type { DialogModel } from "../../../../../shared/dialog-model";
+import { SLOW_FRAME_MS } from "../../../webview-utils";
 import { harnessPaths, makeChecker } from "./driver-util";
 
 declare global {
@@ -38,6 +42,10 @@ declare global {
             /** Every message type the webview posted up, in order - what a silent run is diagnosed from. */
             posts: string[];
         };
+        /** Delivers a synthetic long-task entry to whatever the bundle registered for `longtask`. */
+        __injectLongTask?: (durationMs: number) => void;
+        /** Whether the REAL PerformanceObserver accepted the `longtask` entry type in this browser. */
+        __realLongTaskObserved?: boolean;
     }
 }
 
@@ -58,6 +66,13 @@ const STATE_COUNT = 150;
  * the re-render cost is left to whoever takes that on.
  */
 const MAX_BLOCK_MS = 400;
+
+/**
+ * The duration of the synthetic long task fed to the observer seam. Clear of `SLOW_FRAME_MS` so a run that
+ * reports nothing means the wiring is broken, never that the value sat on the threshold - and asserted back
+ * exactly, which is what proves the reported number is the entry's own duration rather than a constant.
+ */
+const INJECTED_STALL_MS = SLOW_FRAME_MS + 100;
 
 /** A hub offering every other state, each returning to it - the shape a busy conversation node really has. */
 function bigModel(): DialogModel {
@@ -117,6 +132,40 @@ await page.addInitScript(() => {
     }, 10);
 });
 
+// The observer seam. `observeSlowFrames` takes `globalThis.PerformanceObserver` by default, so replacing it
+// before the bundle runs is how a driver reaches the seam its docstring describes. It WRAPS the real
+// observer rather than standing in for it - genuine long tasks still flow, and `__realLongTaskObserved`
+// records whether this browser accepted the entry type at all, which is the half a synthetic entry cannot
+// prove. Injected as SOURCE for the same reason as the host below.
+await page.addInitScript(`(() => {
+    const Real = window.PerformanceObserver;
+    const longTaskCallbacks = [];
+    window.__realLongTaskObserved = false;
+    window.PerformanceObserver = class {
+        constructor(callback) {
+            this.callback = callback;
+            this.real = Real ? new Real(callback) : undefined;
+        }
+        observe(options) {
+            const types = (options && options.entryTypes) || [];
+            if (types.indexOf("longtask") !== -1) longTaskCallbacks.push(this.callback);
+            if (!this.real) return;
+            try {
+                this.real.observe(options);
+                if (types.indexOf("longtask") !== -1) window.__realLongTaskObserved = true;
+            } catch (e) {
+                // An engine that does not implement the entry type throws rather than ignoring it. Swallowed
+                // so the wiring under test still runs; __realLongTaskObserved is what records the refusal.
+            }
+        }
+        disconnect() { if (this.real) this.real.disconnect(); }
+    };
+    window.__injectLongTask = (durationMs) => {
+        const list = { getEntries: () => [{ duration: durationMs, entryType: "longtask", name: "self" }] };
+        for (const callback of longTaskCallbacks) callback(list);
+    };
+})();`);
+
 // A fake host, installed before host.ts takes the handle at bundle init: the webview's stall reports are
 // outbound messages, so with no host to receive them there is nothing to observe. Injected as SOURCE, not a
 // function: this file is transpiled, and a transpiled function carries a `__name` helper the page does not
@@ -144,6 +193,11 @@ await page.evaluate(() => {
 await page.getByRole("button", { name: "Re-layout" }).click();
 await page.waitForTimeout(3000); // long enough for a synchronous layout of this graph to have finished
 
+// Drive the seam: one synthetic long task, delivered to whatever the bundle registered for `longtask`. The
+// callback and the post it makes are synchronous, so the probe carries the result by the time this returns.
+await page.evaluate((ms) => window.__injectLongTask?.(ms), INJECTED_STALL_MS);
+const realLongTaskObserved = await page.evaluate(() => window.__realLongTaskObserved === true);
+
 const probe = await page.evaluate(() => window.layoutProbe ?? { workers: 0, maxGap: 0, slowFrames: [], posts: [] });
 
 check("the layout runs in a real Worker", probe.workers > 0, `${probe.workers} constructed`);
@@ -152,14 +206,21 @@ check(
     probe.maxGap < MAX_BLOCK_MS,
     `longest block ${probe.maxGap.toFixed(0)}ms`,
 );
-// The re-render after the layout returns is a block well past the reporting threshold, so a run that
-// reports nothing means the webview's stall reporting is not reaching the host.
+// Two halves, because a synthetic entry cannot prove the first: that this browser reports long tasks at all,
+// and that an entry over the threshold reaches the host carrying its own duration.
+check(
+    "the browser accepts the longtask entry type (the observer is really subscribed)",
+    realLongTaskObserved,
+    realLongTaskObserved
+        ? "observe() accepted longtask"
+        : "nothing subscribed to longtask - either the call was dropped or the engine refused the entry type",
+);
 check(
     "the webview reports its own stalls to the host",
-    probe.slowFrames.length > 0,
-    probe.slowFrames.length > 0
+    probe.slowFrames.includes(INJECTED_STALL_MS),
+    probe.slowFrames.includes(INJECTED_STALL_MS)
         ? `reported ${probe.slowFrames.map((ms) => `${ms}ms`).join(", ")}`
-        : `nothing reported; the webview posted ${probe.posts.join(", ") || "nothing at all"}`,
+        : `expected ${INJECTED_STALL_MS}ms; got [${probe.slowFrames.join(", ")}] and the webview posted ${probe.posts.join(", ") || "nothing at all"}`,
 );
 check("no CSP violation (worker-src must admit the blob:)", cspViolations.length === 0, cspViolations.join(" | "));
 
