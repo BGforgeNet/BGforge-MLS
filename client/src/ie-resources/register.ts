@@ -117,6 +117,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     engine: EngineResolver;
     bcsSymbols: BcsSymbolResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
+    revealResource: (resref: string, ext: string) => Promise<void>;
 } {
     // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
     // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
@@ -453,5 +454,17 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         engine: createEngineResolver(currentGame, fallbackGameDir),
         bcsSymbols: createBcsSymbolResolver(currentGame, fallbackGameDir),
         isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),
+        /**
+         * Show a resource in the resource tree. Exported from here rather than from the provider because the
+         * `TreeView` - the only object that can reveal - is a closure of this function.
+         *
+         * Silent when the resource is not in the open game: the gallery can be showing a workspace file, or a
+         * game the user has since switched away from, and neither is an error worth a popup.
+         */
+        revealResource: async (resref: string, ext: string): Promise<void> => {
+            const node = tree.resourceNode(resref, ext);
+            if (node === undefined) return;
+            await treeView.reveal(node, { select: true, focus: false, expand: true });
+        },
     };
 }
