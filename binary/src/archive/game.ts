@@ -33,6 +33,16 @@ export interface GameResourceRef {
     readonly bif: string;
 }
 
+/**
+ * A resource's physical home, resolved enough for a caller to read it without this `Game`.
+ *
+ * A BIF holds files and tilesets in separate tables, so `tileset` says which one `entry` indexes -
+ * the same split `read` dispatches on internally.
+ */
+export type ResourceLocation =
+    | { kind: "file"; path: string }
+    | { kind: "bif"; archivePath: string; entry: number; tileset: boolean };
+
 export interface Game {
     readonly key: KeyIndex;
     /** Detected game type/edition (WeiDU-style), for display and for the TLK-encoding default. */
@@ -51,6 +61,12 @@ export interface Game {
      * `PROGTEST.BIF`). Cheap and memoized - use it to skip or flag unopenable resources instead of failing.
      */
     canRead(resref: string, type: number | string): boolean;
+    /**
+     * Where a resource's winning copy physically lives, for a caller that will read it itself rather than
+     * through `read` - a worker thread, say, which cannot share this handle. Undefined in exactly the cases
+     * `canRead` reports false: no such resource, or a winning BIF that is not installed.
+     */
+    locate(resref: string, type?: number | string): ResourceLocation | undefined;
     /**
      * Install a resource as a loose file (atomically) and update the tree in place, so a later `read` returns
      * it without any re-scan. Writes to the `override` folder by default; `options.folder` must be one of the
@@ -532,22 +548,32 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         );
     }
 
+    function resolveTypeCode(resref: string, type?: number | string): number | undefined {
+        // No type given: recover it from the KEY (a loose-only resource needs an explicit type).
+        if (type === undefined) return key.lookup(resref)?.type;
+        const code = typeof type === "string" ? resourceTypeCode(type) : type;
+        if (typeof type === "string" && code === undefined) throw new Error(`Unknown resource extension "${type}"`);
+        return code;
+    }
+
+    /** The source that wins for a resource. `read` and `locate` share it so they cannot disagree. */
+    function winningSource(resref: string, type?: number | string): Source | undefined {
+        const typeCode = resolveTypeCode(resref, type);
+        const entry = typeCode === undefined ? undefined : tree.get(keyOf(resref, typeCode));
+        return entry?.sources[0];
+    }
+
     // Shared by the `read` method and the `ids`/`twoDa` table readers. A closure rather than `this.read`, so
     // every member of the returned object reaches its state the same way and none of them depends on being
     // called as a method.
     function readResource(resref: string, type?: number | string): Uint8Array {
-        let typeCode = type === undefined ? undefined : typeof type === "string" ? resourceTypeCode(type) : type;
-        if (typeof type === "string" && typeCode === undefined) {
-            throw new Error(`Unknown resource extension "${type}"`);
-        }
-        // No type given: recover it from the KEY (a loose-only resource needs an explicit type).
-        if (typeCode === undefined) typeCode = key.lookup(resref)?.type;
-        const entry = typeCode === undefined ? undefined : tree.get(keyOf(resref, typeCode));
-        if (!entry || entry.sources.length === 0) {
+        const source = winningSource(resref, type);
+        if (source === undefined) {
+            const typeCode = resolveTypeCode(resref, type);
             const suffix = typeCode !== undefined ? ` (type 0x${typeCode.toString(16)})` : "";
             throw new Error(`Resource not found: ${resref}${suffix}`);
         }
-        return materialize(entry.sources[0]!);
+        return materialize(source);
     }
 
     return {
@@ -576,6 +602,15 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             const winner = entry?.sources[0];
             // A loose override wins outright; a biffed winner is readable only if its archive is installed.
             return winner !== undefined && (winner.kind === "file" || resolveBifPath(winner.bifIndex) !== undefined);
+        },
+        locate(resref, type) {
+            const source = winningSource(resref, type);
+            if (source === undefined) return;
+            if (source.kind === "file") return { kind: "file", path: source.path };
+            const archivePath = resolveBifPath(source.bifIndex);
+            if (archivePath === undefined) return; // the same absent-archive case canRead reports
+            const tileset = source.type === RESOURCE_TYPE_TIS;
+            return { kind: "bif", archivePath, entry: tileset ? source.tilesetIndex : source.fileIndex, tileset };
         },
         write(resref, type, bytes, writeOptions) {
             const typeCode = typeCodeOf(type);

@@ -1091,6 +1091,58 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    it("locates a biffed resource as an installed archive path plus entry index", () => {
+        const game = openGame(makeGameDir(), { mode: "engine" });
+        try {
+            const at = game.locate("item01", "itm");
+            expect(at?.kind).toBe("bif");
+            if (at?.kind !== "bif") return;
+            expect(fs.existsSync(at.archivePath)).toBe(true);
+            expect(at.entry).toBe(0);
+            expect(at.tileset).toBe(false);
+            // The located entry is the one `read` materializes: a caller reading the archive itself
+            // must land on the same bytes, or the two resolutions have drifted apart.
+            expect(arr(openBif(bufferSource(fs.readFileSync(at.archivePath))).readFile(at.entry))).toEqual(
+                arr(game.read("item01", "itm")),
+            );
+        } finally {
+            game.close();
+        }
+    });
+
+    it("locates a tileset by its tileset index, flagged so a reader picks the right table", () => {
+        const game = openGame(makeGameDir(), { mode: "engine" });
+        try {
+            const at = game.locate("area01", RESTYPE_TIS);
+            expect(at).toMatchObject({ kind: "bif", entry: 3, tileset: true });
+        } finally {
+            game.close();
+        }
+    });
+
+    it("locates an override resource as the loose file that wins", () => {
+        const loose = Uint8Array.from([0xde, 0xad, 0xbe, 0xef]);
+        const game = openGame(makeGameDir({ "override/item01.itm": loose }), { mode: "engine" });
+        try {
+            const at = game.locate("item01", "itm");
+            expect(at?.kind).toBe("file");
+            if (at?.kind !== "file") return;
+            expect(fs.existsSync(at.path)).toBe(true);
+            expect(arr(fs.readFileSync(at.path))).toEqual(arr(loose));
+        } finally {
+            game.close();
+        }
+    });
+
+    it("returns undefined for a resource the game does not have", () => {
+        const game = openGame(makeGameDir(), { mode: "engine" });
+        try {
+            expect(game.locate("nosuchresource", "itm")).toBeUndefined();
+        } finally {
+            game.close();
+        }
+    });
+
     it("finds a biff under a CD data root, and canRead reflects present vs absent archives", () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-bifroot-"));
         tmpDirs.push(dir);
@@ -1121,6 +1173,9 @@ describe("openGame (real filesystem)", () => {
             // Absent archive: canRead is false and read throws the biff-not-found error (handled gracefully upstream).
             expect(game.canRead("missres", "itm")).toBe(false);
             expect(() => game.read("missres", "itm")).toThrow(/BIF file not found/);
+            // locate answers the same question canRead does: an uninstalled archive has no location.
+            expect(game.locate("goodres", "itm")?.kind).toBe("bif");
+            expect(game.locate("missres", "itm")).toBeUndefined();
         } finally {
             game.close();
         }

@@ -155,6 +155,7 @@ export type {
     ByteSource,
     Game,
     GameResourceRef,
+    ResourceLocation,
     OpenGameOptions,
     GameIdentity,
     IeVariant,
