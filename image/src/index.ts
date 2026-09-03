@@ -38,6 +38,9 @@ export { parseFrm } from "./frm/parse.ts";
 export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";
 export { parseBamV1 } from "./bam/parse.ts";
+// Thumbnail-shaped read: the tables without the pixels, then only the frames the caller names.
+export { type BamV1Tables } from "./bam/parse.ts";
+export { decodeBamV1Frames, readBamV1Tables } from "./bam/selective.ts";
 // BAM v2 reads in two phases: the structure names the PVRZ pages, the caller resolves them, then
 // decodeBamV2 composes the frames. See v2-parse.ts for why the resolver is injected.
 export { type BamV2Cycle, type BamV2DataBlock, type BamV2FrameEntry, type BamV2Structure } from "./bam/v2-structure.ts";

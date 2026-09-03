@@ -30,7 +30,24 @@ function tag(bytes: Uint8Array, start: number): string {
     return String.fromCodePoint(bytes[start] ?? 0, bytes[start + 1] ?? 0, bytes[start + 2] ?? 0, bytes[start + 3] ?? 0);
 }
 
-export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
+/**
+ * Every BAM v1 table, with no pixel data decoded.
+ *
+ * Split out so a caller that needs only a few frames (a thumbnail samples one per cycle) can read the
+ * cycle table and then decode just those, instead of paying for every frame. `parseBamV1` is the
+ * decode-everything caller; both read the file through this one definition.
+ */
+export interface BamV1Tables {
+    palette: Rgba[];
+    sequences: Sequence[];
+    frameCount: number;
+    transparentIndex: number;
+    /** Where the frame entry table starts; `decodeFrameAt` locates each entry from it. */
+    frameEntryOffset: number;
+}
+
+/** Reads the header, palette, frame entry table and cycle table. `bytes` must be uncompressed v1. */
+export function readV1Tables(bytes: Uint8Array): BamV1Tables {
     if (bytes.byteLength < 0x18) throw new Error("parseBamV1: BAM header truncated");
     const signature = tag(bytes, 0x00);
     if (signature !== "BAM ") throw new Error(`parseBamV1: not a BAM file (signature "${signature}")`);
@@ -87,42 +104,6 @@ export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
         );
     }
 
-    const frames: Frame[] = [];
-    for (let i = 0; i < frameCount; i++) {
-        const e = frameEntryOffset + i * 12;
-        const width = view.getUint16(e + 0x00, le);
-        const height = view.getUint16(e + 0x02, le);
-        const centerX = view.getInt16(e + 0x04, le);
-        const centerY = view.getInt16(e + 0x06, le);
-        const packed = view.getUint32(e + 0x08, le);
-        const dataOffset = packed & 0x7fffffff;
-        const uncompressed = (packed & 0x80000000) !== 0;
-
-        const expected = width * height; // already bounded by the pre-decode pass above
-        let pixels: Uint8Array;
-        let rawEncoding: Uint8Array;
-        if (uncompressed) {
-            if (dataOffset + expected > bytes.byteLength) {
-                throw new Error(`parseBamV1: frame ${i} pixel data out of range`);
-            }
-            pixels = bytes.slice(dataOffset, dataOffset + expected);
-            rawEncoding = pixels;
-        } else {
-            const { decoded, consumed } = decodeRleTracked(view, dataOffset, transparentIndex, expected);
-            pixels = decoded;
-            rawEncoding = bytes.slice(dataOffset, dataOffset + consumed);
-        }
-        frames.push({
-            width,
-            height,
-            pixels,
-            offsetX: centerX,
-            offsetY: centerY,
-            rawEncoding,
-            rleEncoded: !uncompressed,
-        });
-    }
-
     // Cycles + frame lookup table (cycle entries immediately follow the frame entries).
     const cycleEntryOffset = frameEntryOffset + frameCount * 12;
     if (cycleEntryOffset + cycleCount * 4 > bytes.byteLength) {
@@ -143,17 +124,57 @@ export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
         sequences.push({ frameRefs, facing: "none" });
     }
 
+    return { palette, sequences, frameCount, transparentIndex, frameEntryOffset };
+}
+
+/** Decodes one frame's pixels. `index` must be in range; `bytes` must be uncompressed v1. */
+export function decodeFrameAt(bytes: Uint8Array, index: number, tables: BamV1Tables): Frame {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const le = true;
+    const e = tables.frameEntryOffset + index * 12;
+    const width = view.getUint16(e + 0x00, le);
+    const height = view.getUint16(e + 0x02, le);
+    const centerX = view.getInt16(e + 0x04, le);
+    const centerY = view.getInt16(e + 0x06, le);
+    const packed = view.getUint32(e + 0x08, le);
+    const dataOffset = packed & 0x7fffffff;
+    const uncompressed = (packed & 0x80000000) !== 0;
+
+    const expected = width * height; // already bounded by readV1Tables' pre-decode pass
+    let pixels: Uint8Array;
+    let rawEncoding: Uint8Array;
+    if (uncompressed) {
+        if (dataOffset + expected > bytes.byteLength) {
+            throw new Error(`parseBamV1: frame ${index} pixel data out of range`);
+        }
+        pixels = bytes.slice(dataOffset, dataOffset + expected);
+        rawEncoding = pixels;
+    } else {
+        const { decoded, consumed } = decodeRleTracked(view, dataOffset, tables.transparentIndex, expected);
+        pixels = decoded;
+        rawEncoding = bytes.slice(dataOffset, dataOffset + consumed);
+    }
+    return { width, height, pixels, offsetX: centerX, offsetY: centerY, rawEncoding, rleEncoded: !uncompressed };
+}
+
+export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
+    const tables = readV1Tables(bytes);
+    const frames: Frame[] = [];
+    for (let i = 0; i < tables.frameCount; i++) frames.push(decodeFrameAt(bytes, i, tables));
+
     // Resolve the direction layout at the source: the BAM container carries no direction tag, but the
     // IE creature base-file fingerprint (stride-8 blocks, dummy east slots) is detectable from the cycle
     // structure. Every consumer (editor layout default, metadata display, manifests) reads this one value.
-    const directionLayout = interpretIeDirections(sequences, frames.length)?.detected ? "ie8" : "non-directional";
+    const directionLayout = interpretIeDirections(tables.sequences, frames.length)?.detected
+        ? "ie8"
+        : "non-directional";
 
     return {
-        palette,
-        sequences,
+        palette: tables.palette,
+        sequences: tables.sequences,
         frames,
         // A BAM stores no frame rate; the engine plays them at a fixed 15 fps. Resolved here so every
         // consumer (playback, APNG export, FRM conversion) reads one value instead of re-defaulting.
-        meta: { sourceFormat: "bam", transparentIndex, directionLayout, fps: 15 },
+        meta: { sourceFormat: "bam", transparentIndex: tables.transparentIndex, directionLayout, fps: 15 },
     };
 }
