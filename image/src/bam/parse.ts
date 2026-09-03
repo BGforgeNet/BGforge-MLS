@@ -1,6 +1,6 @@
 import { type IndexedAnimation, type Frame, type Rgba, type Sequence, emptyPalette } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
-import { MAX_FRAME_PIXELS } from "../limits.ts";
+import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 
 // RLE decode that also reports how many source bytes were consumed, so the caller can
 // capture the exact on-disk frame-data slice for rawEncoding (byte-identical re-serialize).
@@ -65,6 +65,28 @@ export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
     if (frameEntryOffset + frameCount * 12 > bytes.byteLength) {
         throw new Error("parseBamV1: frame entry table out of range");
     }
+
+    // Both size bounds are checked against the DECLARED entry table before any frame is decoded. A
+    // running total inside the decode loop cannot work for the aggregate: it is 4x MAX_FRAME_PIXELS, so
+    // it first trips at frame 4 - by which point frames 0-3 are already allocated, which is the
+    // allocation the bound exists to prevent. The per-frame bound moves here for the same reason.
+    let declaredPixels = 0;
+    for (let i = 0; i < frameCount; i++) {
+        const e = frameEntryOffset + i * 12;
+        const width = view.getUint16(e + 0x00, le);
+        const height = view.getUint16(e + 0x02, le);
+        if (width * height > MAX_FRAME_PIXELS) {
+            throw new Error(`parseBamV1: frame ${i} claims ${width}x${height} pixels - implausibly large for a sprite`);
+        }
+        declaredPixels += width * height;
+    }
+    if (declaredPixels > MAX_ANIMATION_PIXELS) {
+        throw new Error(
+            `parseBamV1: frames claim ${declaredPixels} pixels in total - more than the ` +
+                `${MAX_ANIMATION_PIXELS} a whole animation may hold`,
+        );
+    }
+
     const frames: Frame[] = [];
     for (let i = 0; i < frameCount; i++) {
         const e = frameEntryOffset + i * 12;
@@ -76,10 +98,7 @@ export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
         const dataOffset = packed & 0x7fffffff;
         const uncompressed = (packed & 0x80000000) !== 0;
 
-        const expected = width * height;
-        if (expected > MAX_FRAME_PIXELS) {
-            throw new Error(`parseBamV1: frame ${i} claims ${width}x${height} pixels - implausibly large for a sprite`);
-        }
+        const expected = width * height; // already bounded by the pre-decode pass above
         let pixels: Uint8Array;
         let rawEncoding: Uint8Array;
         if (uncompressed) {
