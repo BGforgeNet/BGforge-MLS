@@ -42,6 +42,15 @@ vi.mock("vscode", () => {
     };
 });
 
+// The webview bundle is a BUILD ARTIFACT, and the gate runs `pnpm test:all` before `pnpm build`, so on a
+// clean checkout it does not exist and the real read throws ENOENT. These tests assert the host's message
+// ORDER, not the panel's HTML, so only the bundle is stubbed - index.html and styles.css are committed
+// sources and are still read for real, which is what the extension path below exists for.
+vi.mock("../../src/webview-assets", async () => {
+    const actual = await vi.importActual<typeof import("../../src/webview-assets")>("../../src/webview-assets");
+    return { ...actual, getCachedJsAsset: () => "/* webview bundle stubbed: see the mock above */" };
+});
+
 const { ImageEditorProvider } = await import("../../src/image-editor/provider");
 
 // The real repo root: resolveCustomEditor builds the panel HTML by reading the webview's actual
