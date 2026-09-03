@@ -4,8 +4,17 @@
  * bytes arrive from the second.
  */
 import { describe, expect, it } from "vitest";
-import { decodeIndexedPng, serializeBamV1, type IndexedAnimation, type Rgba } from "@bgforge/image";
-import { canThumbnail, composeCells, thumbnailDataUri } from "../src/ie-resources/thumbnails";
+import {
+    decodeIndexedPng,
+    decodeTruecolourPng,
+    serializeBamV1,
+    serializeBamV2,
+    serializeFrm,
+    type IndexedAnimation,
+    type Rgba,
+    type RgbaAnimation,
+} from "@bgforge/image";
+import { canThumbnail, composeCells, requiredPvrzPages, thumbnailDataUri } from "../src/ie-resources/thumbnails";
 
 /** A real BAM, built through the library's own serializer rather than typed by hand - the decode under test is
  *  the one that reads what a game ships, so its input has to be a genuine BAM and not a fixture of assumptions. */
@@ -93,13 +102,66 @@ function pngSize(dataUri: string): { width: number; height: number } {
     return { width: view.getUint32(16, false), height: view.getUint32(20, false) };
 }
 
+/** A real BAM v2 plus the PVRZ pages it names, both produced by the library's own writer - the decode under
+ *  test reads what that writer emits, so a hand-built header would only pin my assumptions about it. */
+function bamV2WithPages(basePage: number): { bam: Uint8Array; pages: Map<number, Uint8Array> } {
+    const pixels = new Uint8Array(8 * 8 * 4);
+    for (let i = 0; i < 8 * 8; i++) {
+        pixels.set([(i * 4) % 256, 255 - ((i * 4) % 256), 128, 255], i * 4);
+    }
+    const animation: RgbaAnimation = {
+        colorModel: "rgba",
+        frames: [{ width: 8, height: 8, pixels, offsetX: 0, offsetY: 0 }],
+        sequences: [{ frameRefs: [0], facing: "none" }],
+        meta: { sourceFormat: "bamv2" },
+    };
+    const saved = serializeBamV2(animation, { basePage });
+    return { bam: saved.bam, pages: new Map(saved.pages.map((p) => [p.page, p.bytes])) };
+}
+
+/** An FRM, which carries no palette of its own - the case a black `emptyPalette()` would silently pass. */
+function frmBytes(): Uint8Array {
+    const animation: IndexedAnimation = {
+        palette: Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 })),
+        frames: Array.from({ length: 6 }, () => ({
+            width: 8,
+            height: 8,
+            pixels: Uint8Array.from({ length: 64 }, (_, i) => (i % 7) + 1),
+            offsetX: 0,
+            offsetY: 0,
+        })),
+        sequences: Array.from({ length: 6 }, (_, i) => ({ frameRefs: [i], facing: "none" as const })),
+        meta: { sourceFormat: "frm", transparentIndex: 0 },
+    };
+    return serializeFrm(animation);
+}
+
+/** How many distinct colours a rendered tile actually contains. One means it came out flat. */
+function distinctColoursOf(dataUri: string): Set<string> {
+    const base64 = dataUri.slice(dataUri.indexOf(",") + 1);
+    const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+    const out = new Set<string>();
+    try {
+        const png = decodeIndexedPng(bytes);
+        for (const index of png.pixels) {
+            const c = png.palette[index]!;
+            out.add(`${c.r},${c.g},${c.b},${c.a}`);
+        }
+    } catch {
+        const png = decodeTruecolourPng(bytes);
+        for (let i = 0; i < png.pixels.length; i += 4) out.add(png.pixels.slice(i, i + 4).join(","));
+    }
+    return out;
+}
+
 describe("canThumbnail", () => {
     /**
-     * The set is these two because these are what a resref field actually points at: every icon field on an ITM
-     * or SPL declares BAM, and a CRE's portraits declare BMP.
+     * BAM and BMP are what a resref field points at - every icon field on an ITM or SPL declares BAM, and a
+     * CRE's portraits declare BMP. FRM joins them for the gallery, which browses Fallout art the binary
+     * editor's resref fields never name.
      */
     it("claims the icon and portrait formats, case-insensitively", () => {
-        for (const ext of ["bam", "BAM", "bmp", "BMP"]) expect(canThumbnail(ext)).toBe(true);
+        for (const ext of ["bam", "BAM", "bmp", "BMP", "frm", "FRM"]) expect(canThumbnail(ext)).toBe(true);
     });
 
     // Everything else a record points at is data, not a picture - and a false claim here is worse than a missing
@@ -259,5 +321,50 @@ describe("composed tiles", () => {
         const uri = thumbnailDataUri(serializeBamV1(animation), "BAM", 64)!;
         expect(pngSize(uri)).toEqual({ width: 8, height: 8 });
         expect(indexAt(uri, 4, 4)).toBe(1);
+    });
+});
+
+describe("BAM v2", () => {
+    it("names the pages it needs without decoding", () => {
+        // pvrzResourceName(12) is "MOS0012.PVRZ" - the suffix is part of the name it returns, so a caller
+        // resolving these must key on that whole string rather than rebuilding the name itself.
+        expect(requiredPvrzPages(bamV2WithPages(12).bam)).toEqual(["MOS0012.PVRZ"]);
+    });
+
+    it("returns no pages for anything that is not a v2, so a caller need not sniff first", () => {
+        expect(requiredPvrzPages(bam(32))).toEqual([]);
+        expect(requiredPvrzPages(new Uint8Array([1, 2, 3, 4]))).toEqual([]);
+    });
+
+    it("draws a v2 BAM when the resolver supplies its pages", () => {
+        const { bam: v2, pages } = bamV2WithPages(12);
+        const uri = thumbnailDataUri(v2, "BAM", 64, (page) => pages.get(page));
+        expect(uri?.startsWith("data:image/png;base64,")).toBe(true);
+        expect(pngSize(uri!)).toEqual({ width: 8, height: 8 });
+        // A v2 frame is real colour; a tile that came out flat means the pages never reached the compose.
+        expect(distinctColoursOf(uri!).size).toBeGreaterThan(1);
+    });
+
+    it("returns undefined - not a throw - when a page is missing", () => {
+        expect(thumbnailDataUri(bamV2WithPages(12).bam, "BAM", 64, () => undefined)).toBeUndefined();
+    });
+
+    it("returns undefined when no resolver is supplied at all", () => {
+        expect(thumbnailDataUri(bamV2WithPages(12).bam, "BAM", 64)).toBeUndefined();
+    });
+});
+
+describe("FRM", () => {
+    it("draws an FRM by its real extension", () => {
+        expect(thumbnailDataUri(frmBytes(), "FRM", 64)?.startsWith("data:image/png;base64,")).toBe(true);
+    });
+
+    /**
+     * `parseFrm` returns `emptyPalette()` - 256 entries of opaque black - because an FRM carries no palette of
+     * its own. Handing that to the encoder renders every FRM tile solid black, and an assertion that merely
+     * checks a PNG came out cannot see it.
+     */
+    it("gives an FRM a real palette, not the parser's black placeholder", () => {
+        expect(distinctColoursOf(thumbnailDataUri(frmBytes(), "FRM", 64)!).size).toBeGreaterThan(1);
     });
 });
