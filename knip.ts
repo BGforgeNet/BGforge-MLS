@@ -29,6 +29,7 @@ const config: KnipConfig = {
                 // esbuild entry points (moved from package.json to scripts/*.sh)
                 "src/extension.ts",
                 "src/binary-editor/worker.ts",
+                "src/gallery/worker.ts",
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
                 "src/image-editor/webview/main.ts",

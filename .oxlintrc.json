@@ -431,7 +431,8 @@
                 "client/src/webview-utils.ts",
                 "client/src/binary-editor/**",
                 "client/src/dialog-editor/**",
-                "client/src/image-editor/**"
+                "client/src/image-editor/**",
+                "client/src/gallery/**"
             ],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
