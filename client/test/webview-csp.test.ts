@@ -83,6 +83,28 @@ describe("webview CSP", () => {
     });
 
     /**
+     * The gallery is ALL thumbnails, so a missing `img-src data:` is not one empty box there but an entire
+     * panel of them - and, as above, silently. It follows the same style/script policy as every other panel.
+     */
+    it("gallery CSP allows thumbnail data URIs and follows the shared style/script policy", () => {
+        const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/gallery/webview/index.html"), "utf8");
+        expect(html).toContain("img-src data:");
+        expect(html).toContain("default-src 'none'");
+        expect(html).toContain("style-src {{cspSource}}");
+        expect(html).not.toContain("style-src 'nonce-{{nonce}}'");
+        expect(html).not.toContain("'unsafe-inline'");
+        expect(html).toContain("script-src 'nonce-{{nonce}}'");
+    });
+
+    it("gallery bundle installs the fatal runtime-error handler", () => {
+        const built = path.join(REPO_ROOT, "client/out/gallery/webview/main.js");
+        if (!fs.existsSync(built)) return; // build artifact absent in lint-only stages
+        const out = fs.readFileSync(built, "utf8");
+        expect(out).toContain("runtimeError");
+        expect(out).toContain("unhandledrejection");
+    });
+
+    /**
      * The harness renders the same components behind its own policy, so a laxer one there would false-green
      * exactly this class of bug: the picture draws in every screenshot and the shipped panel shows an empty box.
      * Only the directives that differ by construction (nonce vs cspSource for style/script) are exempt.

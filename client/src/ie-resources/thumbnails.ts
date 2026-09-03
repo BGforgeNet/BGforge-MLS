@@ -54,15 +54,6 @@ export function canThumbnail(ext: string): boolean {
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
 /**
- * The sizes a thumbnail is encoded at, in CSS pixels before device-pixel scaling.
- *
- * A ladder rather than the exact box size so the cache keys on a handful of values instead of every layout
- * width a panel can take; a caller rounds its box UP to the first step that covers it.
- */
-export const TILE_SIZES = [32, 64, 96, 128] as const;
-export type TileSize = (typeof TILE_SIZES)[number];
-
-/**
  * A `data:` URI for the resource's bytes drawn at `size`, or undefined when it cannot be drawn.
  *
  * Undefined rather than a throw for every failure - a corrupt or unparseable icon is a missing picture, not a

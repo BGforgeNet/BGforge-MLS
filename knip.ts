@@ -33,6 +33,7 @@ const config: KnipConfig = {
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
                 "src/image-editor/webview/main.ts",
+                "src/gallery/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
