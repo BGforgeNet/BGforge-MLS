@@ -60,9 +60,14 @@ allowBuilds:
 #   - mocha's bundled diff (GHSA-73rr-hh4g-fpgx: parsePatch/applyPatch DoS; fixed
 #     in 8.0.3) and serialize-javascript (GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v
 #     DoS; fixed in 7.0.5).
-#   - qs via typed-rest-client under @vscode/vsce and the Stryker packages
-#     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2). Still load-bearing
-#     as of 2026-08-04: without it one typed-rest-client copy resolves qs 6.15.1.
+#   - qs via typed-rest-client under @vscode/vsce and the Stryker packages. Raised
+#     from ">=6.15.2" to ">=6.16.0" on 2026-09-03: the pin's original advisory
+#     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2) was joined by two more
+#     that 6.15.3 does not answer - GHSA-4mjr-xmp4-gh2g (DoS via attacker-controlled
+#     isBuffer, <6.16.0) and GHSA-x5fp-wj9c-mxmx (array-limit bypass via bracket-key
+#     comma parsing, 6.14.2 to 6.15.3). Both fixed in 6.16.0, which was five days old
+#     when pinned - inside the usual maturity preference, taken because the
+#     alternative was leaving two open advisories on a dev-only path.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
@@ -88,7 +93,7 @@ allowBuilds:
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
-  qs: ">=6.15.2"
+  qs: ">=6.16.0"
 
 # pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
 # SSL compiler ships as a GitHub-release tarball (server/package.json
