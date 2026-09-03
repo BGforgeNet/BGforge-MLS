@@ -71,11 +71,12 @@ export function wireGalleryPanel(
     const source = deps.sourceFor(state.source);
     const port = (deps.makePort ?? defaultPort)(context.extensionUri);
 
-    if (source === undefined) {
-        // Nothing to show is a legitimate state, not a failure: the user can open a game or a folder and
-        // reopen the gallery. Say so in the panel rather than leaving an empty grid that looks broken.
-        panel.webview.postMessage({ type: "init", source: state.source, title: state.source, items: [] });
-    }
+    // Nothing to browse is a legitimate state, not a failure - and the panel must say WHICH state, because
+    // "no pictures here" and "you have not opened a game" send the reader in opposite directions.
+    const emptyNote =
+        state.source === "game"
+            ? 'No game is open. Run "BGforge: Open IE Game..." to browse an install.'
+            : "No folder is open. Open a folder to browse the images in it.";
 
     const pump =
         source &&
@@ -95,14 +96,13 @@ export function wireGalleryPanel(
     panel.webview.onDidReceiveMessage((message: WebviewToHost) => {
         switch (message.type) {
             case "ready":
-                if (source) {
-                    panel.webview.postMessage({
-                        type: "init",
-                        source: state.source,
-                        title: state.source === "game" ? "resources" : "files",
-                        items: source.list(),
-                    } satisfies HostToWebview);
-                }
+                panel.webview.postMessage({
+                    type: "init",
+                    source: state.source,
+                    title: state.source === "game" ? "resources" : "files",
+                    items: source?.list() ?? [],
+                    ...(source === undefined ? { note: emptyNote } : {}),
+                } satisfies HostToWebview);
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);

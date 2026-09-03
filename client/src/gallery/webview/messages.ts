@@ -13,7 +13,12 @@ export interface GalleryTile {
 }
 
 export type HostToWebview =
-    | { type: "init"; source: "game" | "workspace"; title: string; items: GalleryTile[] }
+    /**
+     * `note` explains an EMPTY list when the reason is not "this corpus has no pictures" - no game open, no
+     * folder open. Without it both states read as "there is nothing here", which sends the reader looking for
+     * missing art instead of opening the thing they have not opened.
+     */
+    | { type: "init"; source: "game" | "workspace"; title: string; items: GalleryTile[]; note?: string }
     /** `dataUri` absent means the item cannot be drawn - the tile keeps its box and shows its label. */
     | { type: "thumbnail"; id: string; dataUri?: string };
 

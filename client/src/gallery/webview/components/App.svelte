@@ -15,6 +15,7 @@
 
     let title = $state("resources");
     let items: GalleryTile[] = $state([]);
+    let note: string | undefined = $state();
     let query = $state("");
     /**
      * Every item the host has answered for, including the ones it could not draw - hence the `undefined`
@@ -31,6 +32,7 @@
         if (message.type === "init") {
             title = message.title;
             items = message.items;
+            note = message.note;
             loaded = true;
             return;
         }
@@ -48,7 +50,7 @@
 <div class="gallery">
     <Toolbar {query} shown={shown.length} total={items.length} {title} onQuery={(v) => (query = v)} />
     {#if loaded && items.length === 0}
-        <p class="empty">No drawable resources here.</p>
+        <p class="empty">{note ?? "No drawable resources here."}</p>
     {:else}
         <Grid
             tiles={shown}
