@@ -52,7 +52,7 @@ export { serializeBamV1 } from "./bam/serialize.ts";
 export { combineIeBamPair, splitIeBamPair } from "./bam/pair.ts";
 export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";
 export { encodeIndexedPng, encodeTruecolourPng } from "./png/encode.ts";
-export { decodeTruecolourPng } from "./png/decode.ts";
+export { type DecodedIndexedPng, decodeIndexedPng, decodeTruecolourPng } from "./png/decode.ts";
 export { parsePal, serializePal } from "./palette/pal.ts";
 export { DEFAULT_FALLOUT_PALETTE } from "./palette/default-palette.ts";
 export { loadImage } from "./load.ts";

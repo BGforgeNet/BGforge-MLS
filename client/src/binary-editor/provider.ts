@@ -228,7 +228,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 // bytes are far larger than the row, and the view caches per resource - several rows commonly
                 // name the same icon.
                 const bytes = this.gameLookups.resourceBytes(document.uri, message.resref, message.ext);
-                const dataUri = bytes === undefined ? undefined : thumbnailDataUri(bytes, message.ext, message.resref);
+                // 64, not the box's 22px: the icon is drawn at up to 2x device pixels, and 64 is the first
+                // ladder step that covers 44.
+                const dataUri = bytes === undefined ? undefined : thumbnailDataUri(bytes, message.ext, 64);
                 this.post(panel, { type: "thumbnail", requestId: message.requestId, dataUri });
                 break;
             }

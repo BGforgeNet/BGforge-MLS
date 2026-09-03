@@ -4,7 +4,7 @@
  * bytes arrive from the second.
  */
 import { describe, expect, it } from "vitest";
-import { serializeBamV1, type IndexedAnimation, type Rgba } from "@bgforge/image";
+import { decodeIndexedPng, serializeBamV1, type IndexedAnimation, type Rgba } from "@bgforge/image";
 import { canThumbnail, thumbnailDataUri } from "../src/ie-resources/thumbnails";
 
 /** A real BAM, built through the library's own serializer rather than typed by hand - the decode under test is
@@ -25,6 +25,34 @@ function bam(edge: number, frames = 1): Uint8Array {
         meta: { sourceFormat: "bam", transparentIndex: 0 },
     };
     return serializeBamV1(animation);
+}
+
+/** A 2x2 BAM of four distinct palette indices, for asserting which sample a downscale keeps. */
+function fourColour2x2(): Uint8Array {
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
+    for (const i of [1, 2, 3, 4]) palette[i] = { r: i * 40, g: 255 - i * 40, b: i * 10, a: 255 };
+    const animation: IndexedAnimation = {
+        palette,
+        frames: [{ width: 2, height: 2, pixels: Uint8Array.from([1, 2, 3, 4]), offsetX: 0, offsetY: 0 }],
+        sequences: [{ frameRefs: [0], facing: "none" }],
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    return serializeBamV1(animation);
+}
+
+/** Pad a serialized BAM out to a byte length. The zeros sit past every offset the header declares, so the
+ *  file still parses - which is the point: this grows the SOURCE size without changing the picture. */
+function padded(bytes: Uint8Array, toBytes: number): Uint8Array {
+    const out = new Uint8Array(toBytes);
+    out.set(bytes);
+    return out;
+}
+
+/** The palette index of a 1x1 result - the property a blend cannot preserve, where size alone cannot tell a
+ *  nearest-neighbour pick from an average. */
+function soleIndexOf(dataUri: string): number {
+    const base64 = dataUri.slice(dataUri.indexOf(",") + 1);
+    return decodeIndexedPng(Uint8Array.from(Buffer.from(base64, "base64"))).pixels[0]!;
 }
 
 /** The decoded PNG's declared dimensions, read out of IHDR - the only part of a data URI that proves an image
@@ -58,7 +86,7 @@ describe("canThumbnail", () => {
 
 describe("thumbnailDataUri", () => {
     it("re-encodes a BAM's first frame as a PNG of that frame's size", () => {
-        const uri = thumbnailDataUri(bam(32), "BAM", "ISW1H01");
+        const uri = thumbnailDataUri(bam(32), "BAM", 64);
         expect(uri?.startsWith("data:image/png;base64,")).toBe(true);
         expect(pngSize(uri!)).toEqual({ width: 32, height: 32 });
     });
@@ -70,14 +98,14 @@ describe("thumbnailDataUri", () => {
      */
     it("hands a BMP through as its own bytes", () => {
         const bytes = new Uint8Array([0x42, 0x4d, 1, 2, 3, 4]);
-        const uri = thumbnailDataUri(bytes, "bmp", "IMOENM");
+        const uri = thumbnailDataUri(bytes, "bmp", 64);
         expect(uri).toBe(`data:image/bmp;base64,${Buffer.from(bytes).toString("base64")}`);
     });
 
     // The one place the two halves could drift: a type this refuses must be one `canThumbnail` never claimed,
     // or a row reserves a slot that stays empty forever.
     it("draws nothing for a type it does not claim", () => {
-        expect(thumbnailDataUri(bam(32), "ITM", "SW1H01")).toBeUndefined();
+        expect(thumbnailDataUri(bam(32), "ITM", 64)).toBeUndefined();
         expect(canThumbnail("ITM")).toBe(false);
     });
 
@@ -86,27 +114,49 @@ describe("thumbnailDataUri", () => {
      * editable - so a bad decode is a missing picture, never a thrown error that would take the row with it.
      */
     it("returns nothing rather than throwing on bytes that are not a BAM", () => {
-        expect(thumbnailDataUri(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), "BAM", "JUNK")).toBeUndefined();
+        expect(thumbnailDataUri(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), "BAM", 64)).toBeUndefined();
     });
 
     // The source cap is about what crosses the message boundary base64-encoded; a real icon is tens of KB.
     it("declines a source larger than the cap", () => {
-        expect(thumbnailDataUri(new Uint8Array(3 * 1024 * 1024), "BMP", "HUGE")).toBeUndefined();
+        expect(thumbnailDataUri(new Uint8Array(9 * 1024 * 1024), "BMP", 64)).toBeUndefined();
     });
 
     /**
-     * The cap the source-size one cannot enforce: a real BAM stores its frames RLE-compressed, so a small file
-     * can decode to a huge picture, and a resref field is free text - an icon field really can be pointed at a
-     * creature animation.
-     *
-     * The 1400px edge is chosen to sit BETWEEN the two caps (its ~1.96 MB of pixels clears the 2 MiB source
-     * bound while its edge exceeds 1024), so this fails if the frame cap goes and cannot pass on the source
-     * cap's behalf - which is exactly what an earlier 2048px fixture did, silently.
+     * The gallery reads whole game archives, where a mod's full-screen art is ordinary. 3 MB sat above the old
+     * 2 MiB bound and below the 8 MiB one, so this is the case that moved when the cap was raised.
      */
-    it("declines a BAM whose frame is far larger than any icon, on the frame and not the file", () => {
-        expect(bam(1400).length).toBeLessThan(2 * 1024 * 1024);
-        expect(thumbnailDataUri(bam(1400), "BAM", "MBEHOLD")).toBeUndefined();
-        // ...and the bound really is at the edge length: the same BAM at the limit still draws.
-        expect(thumbnailDataUri(bam(1024), "BAM", "MBEHOLD")).toBeDefined();
+    it("accepts a source between the old cap and the new one", () => {
+        expect(thumbnailDataUri(padded(bam(64), 3 * 1024 * 1024), "BAM", 64)).toBeDefined();
+    });
+});
+
+/**
+ * A frame is re-encoded at the size it will be DRAWN at, not its native size. This replaces the old
+ * `MAX_FRAME_EDGE` guard, which refused an oversized frame outright: the encode is now bounded by the
+ * requested tile whatever the source dimensions, so a large frame draws instead of vanishing.
+ *
+ * Note the aggregate bound added to `parseBamV1` does NOT stand in for that guard - it is 67.1M pixels and one
+ * 1400x1400 frame is 1.96M, so it never fires here. The downscale is what makes the encode cheap.
+ */
+describe("downscaling", () => {
+    it("emits at the requested size when the source is larger", () => {
+        expect(pngSize(thumbnailDataUri(bam(256), "BAM", 64)!)).toEqual({ width: 64, height: 64 });
+    });
+
+    it("draws a frame that the old edge guard refused outright", () => {
+        expect(pngSize(thumbnailDataUri(bam(1400), "BAM", 64)!)).toEqual({ width: 64, height: 64 });
+    });
+
+    it("never upscales a small source", () => {
+        expect(pngSize(thumbnailDataUri(bam(16), "BAM", 128)!)).toEqual({ width: 16, height: 16 });
+    });
+
+    it("picks nearest-neighbour samples, not averages", () => {
+        // Size alone does not discriminate - an averaging filter emits 1x1 too. The emitted palette INDEX is
+        // what a blend cannot preserve, because averaging leaves the palette entirely.
+        const uri = thumbnailDataUri(fourColour2x2(), "BAM", 1)!;
+        expect(pngSize(uri)).toEqual({ width: 1, height: 1 });
+        expect([1, 2, 3, 4]).toContain(soleIndexOf(uri));
     });
 });

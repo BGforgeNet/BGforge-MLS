@@ -6,7 +6,7 @@
  * field reserves a thumbnail slot nothing ever fills.
  */
 
-import { encodeIndexedPng, loadImage, transparentIndexOf } from "@bgforge/image";
+import { decodeBamV1Frames, encodeIndexedPng, readBamV1Tables } from "@bgforge/image";
 
 /**
  * How each drawable type reaches an `<img>`. A format a browser decodes itself needs only its media type;
@@ -37,23 +37,31 @@ export function canThumbnail(ext: string): boolean {
  * real asset trips it and tight enough that a mod's full-screen BMP does not put a megabyte on the wire for an
  * 18px box.
  */
-const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
-
-/** Longest edge of a decoded BAM frame worth re-encoding; see `bamFramePng`. */
-const MAX_FRAME_EDGE = 1024;
+const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
 /**
- * A `data:` URI for the resource's bytes, or undefined when it cannot be drawn.
+ * The sizes a thumbnail is encoded at, in CSS pixels before device-pixel scaling.
+ *
+ * A ladder rather than the exact box size so the cache keys on a handful of values instead of every layout
+ * width a panel can take; a caller rounds its box UP to the first step that covers it.
+ */
+export const TILE_SIZES = [32, 64, 96, 128] as const;
+export type TileSize = (typeof TILE_SIZES)[number];
+
+/**
+ * A `data:` URI for the resource's bytes drawn at `size`, or undefined when it cannot be drawn.
  *
  * Undefined rather than a throw for every failure - a corrupt or unparseable icon is a missing picture, not a
  * reason to fail the field it sits beside, and a mod archive is exactly where a malformed BAM turns up.
  */
-export function thumbnailDataUri(bytes: Uint8Array, ext: string, resref: string): string | undefined {
+export function thumbnailDataUri(bytes: Uint8Array, ext: string, size: number): string | undefined {
     if (bytes.length > MAX_SOURCE_BYTES) return;
     const how = DRAWABLE.get(ext.toLowerCase());
     if (how === undefined) return;
     try {
-        if (how === "bam") return dataUri("image/png", bamFramePng(bytes, resref));
+        if (how === "bam") return dataUri("image/png", bamFramePng(bytes, size));
+        // BMP crosses unchanged and so is not downscaled: there is no BMP decoder here to downscale WITH, and
+        // re-encoding it would undo the passthrough this branch exists for.
         return dataUri(how.slice("passthrough:".length), bytes);
     } catch {
         // Deliberately swallowed, per the contract above: a malformed icon leaves the field with no picture,
@@ -69,21 +77,39 @@ export function thumbnailDataUri(bytes: Uint8Array, ext: string, resref: string)
  * pressed, disabled) over the same artwork, so frame 0 is the representative image either way - and a BAM whose
  * sequence table is empty still has frames to show.
  */
-function bamFramePng(bytes: Uint8Array, resref: string): Uint8Array {
-    const animation = loadImage(bytes, `${resref}.bam`);
-    const frame = animation.frames[0];
+function bamFramePng(bytes: Uint8Array, size: number): Uint8Array {
+    // Only frame 0 is decoded, not the whole animation: a creature BAM has hundreds of frames and a thumbnail
+    // shows one. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
+    const tables = readBamV1Tables(bytes);
+    const frame = decodeBamV1Frames(bytes, [0]).get(0);
     if (frame === undefined) throw new Error("BAM has no frames");
-    // The source cap above bounds the file, not the picture: BAM frames are RLE-compressed, and a resref field
-    // is free text, so an icon field pointed at a creature animation would re-encode a huge frame for an 18px
-    // box. No icon or portrait approaches this.
-    if (frame.width > MAX_FRAME_EDGE || frame.height > MAX_FRAME_EDGE) throw new Error("frame too large to preview");
-    return encodeIndexedPng(
-        frame.width,
-        frame.height,
-        frame.pixels,
-        animation.palette,
-        transparentIndexOf(animation.meta),
-    );
+    const small = downscaleIndexed(frame.pixels, frame.width, frame.height, size);
+    return encodeIndexedPng(small.width, small.height, small.pixels, tables.palette, tables.transparentIndex);
+}
+
+/**
+ * Nearest-neighbour, not averaging: the result stays palette-indexed (averaging blends across palette entries
+ * and would force a truecolour re-encode) and it is the right filter for pixel art. Downscale only - a small
+ * icon in a large tile draws at its own size rather than being smeared up to fill it.
+ */
+function downscaleIndexed(
+    src: Uint8Array,
+    w: number,
+    h: number,
+    max: number,
+): { pixels: Uint8Array; width: number; height: number } {
+    const scale = Math.min(1, max / Math.max(w, h));
+    if (scale >= 1) return { pixels: src, width: w, height: h };
+    const width = Math.max(1, Math.round(w * scale));
+    const height = Math.max(1, Math.round(h * scale));
+    const out = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+        const sy = Math.min(h - 1, Math.floor((y * h) / height));
+        for (let x = 0; x < width; x++) {
+            out[y * width + x] = src[sy * w + Math.min(w - 1, Math.floor((x * w) / width))]!;
+        }
+    }
+    return { pixels: out, width, height };
 }
 
 /** base64 without `Buffer`: the extension host is a web worker under some hosts, where only `btoa` exists. */
