@@ -78,13 +78,65 @@ export function thumbnailDataUri(bytes: Uint8Array, ext: string, size: number): 
  * sequence table is empty still has frames to show.
  */
 function bamFramePng(bytes: Uint8Array, size: number): Uint8Array {
-    // Only frame 0 is decoded, not the whole animation: a creature BAM has hundreds of frames and a thumbnail
-    // shows one. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
+    // Only the sampled frames are decoded, not the whole animation: a creature BAM has hundreds of frames and
+    // a tile shows at most four. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
     const tables = readBamV1Tables(bytes);
-    const frame = decodeBamV1Frames(bytes, [0]).get(0);
-    if (frame === undefined) throw new Error("BAM has no frames");
-    const small = downscaleIndexed(frame.pixels, frame.width, frame.height, size);
-    return encodeIndexedPng(small.width, small.height, small.pixels, tables.palette, tables.transparentIndex);
+    const cells = composeCells(firstFrameOfEachCycle(tables));
+    const frames = decodeBamV1Frames(
+        bytes,
+        cells.map((c) => c.index),
+    );
+
+    const drawn = cells.flatMap((cell) => {
+        const frame = frames.get(cell.index);
+        if (frame === undefined) return [];
+        // One cell is the whole tile; four cells are half of it each.
+        const box = cells.length === 1 ? size : Math.max(1, Math.floor(size / 2));
+        return [{ cell: cell.cell, ...downscaleIndexed(frame.pixels, frame.width, frame.height, box) }];
+    });
+    const first = drawn[0];
+    if (first === undefined) throw new Error("BAM has no frames");
+    if (drawn.length === 1) {
+        return encodeIndexedPng(first.width, first.height, first.pixels, tables.palette, tables.transparentIndex);
+    }
+
+    // The cell edge comes from the largest picture actually drawn, not from `size`: small art must not be
+    // stranded in the corner of a mostly-empty canvas just because the tile box is large.
+    const edge = Math.max(...drawn.map((d) => Math.max(d.width, d.height)));
+    const canvas = new Uint8Array(edge * 2 * edge * 2).fill(tables.transparentIndex);
+    for (const d of drawn) {
+        // Centred in its cell, so cells of unequal art still read as a 2x2 grid.
+        const originX = (d.cell % 2) * edge + Math.floor((edge - d.width) / 2);
+        const originY = Math.floor(d.cell / 2) * edge + Math.floor((edge - d.height) / 2);
+        for (let y = 0; y < d.height; y++) {
+            canvas.set(d.pixels.subarray(y * d.width, (y + 1) * d.width), (originY + y) * edge * 2 + originX);
+        }
+    }
+    return encodeIndexedPng(edge * 2, edge * 2, canvas, tables.palette, tables.transparentIndex);
+}
+
+/**
+ * The frame each cycle opens on, in cycle order. A cycle with no frames contributes nothing, and a BAM with no
+ * usable cycle table falls back to frame 0 - such a file still has frames to show, and refusing to draw it
+ * would be a blank tile for a picture that exists.
+ */
+function firstFrameOfEachCycle(tables: { sequences: readonly { frameRefs: readonly number[] }[] }): number[] {
+    const opens = tables.sequences.flatMap((s) => (s.frameRefs[0] === undefined ? [] : [s.frameRefs[0]]));
+    return opens.length > 0 ? opens : [0];
+}
+
+/**
+ * Which frames a tile shows and where, from the frame each cycle opens on.
+ *
+ * Counted by DISTINCT frame: an icon BAM's cycles are its states (enabled, pressed, disabled) over the same
+ * artwork, so four cycles of one frame is one picture, not a grid of four identical ones. Two go on the
+ * diagonal, which reads as two things rather than as a half-empty grid.
+ */
+export function composeCells(firstFrames: readonly number[]): { index: number; cell: 0 | 1 | 2 | 3 }[] {
+    const CELLS = { 1: [0], 2: [0, 3], 3: [0, 1, 2], 4: [0, 1, 2, 3] } as const;
+    const distinct = [...new Set(firstFrames)].slice(0, 4);
+    const layout = CELLS[Math.max(1, distinct.length) as 1 | 2 | 3 | 4];
+    return distinct.map((index, at) => ({ index, cell: layout[at]! }));
 }
 
 /**

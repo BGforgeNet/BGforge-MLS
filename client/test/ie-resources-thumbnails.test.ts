@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { decodeIndexedPng, serializeBamV1, type IndexedAnimation, type Rgba } from "@bgforge/image";
-import { canThumbnail, thumbnailDataUri } from "../src/ie-resources/thumbnails";
+import { canThumbnail, composeCells, thumbnailDataUri } from "../src/ie-resources/thumbnails";
 
 /** A real BAM, built through the library's own serializer rather than typed by hand - the decode under test is
  *  the one that reads what a game ships, so its input has to be a genuine BAM and not a fixture of assumptions. */
@@ -25,6 +25,33 @@ function bam(edge: number, frames = 1): Uint8Array {
         meta: { sourceFormat: "bam", transparentIndex: 0 },
     };
     return serializeBamV1(animation);
+}
+
+/** A BAM of `count` cycles, cycle i starting on a frame filled with palette index i+1 - so a composed tile's
+ *  quadrants can be told apart by the index they carry. */
+function multiCycle(edge: number, count: number): Uint8Array {
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
+    for (let i = 1; i <= count; i++) palette[i] = { r: i * 50, g: 255 - i * 50, b: i * 20, a: 255 };
+    const animation: IndexedAnimation = {
+        palette,
+        frames: Array.from({ length: count }, (_, i) => ({
+            width: edge,
+            height: edge,
+            pixels: new Uint8Array(edge * edge).fill(i + 1),
+            offsetX: 0,
+            offsetY: 0,
+        })),
+        sequences: Array.from({ length: count }, (_, i) => ({ frameRefs: [i], facing: "none" as const })),
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    return serializeBamV1(animation);
+}
+
+/** The palette index at one pixel of a decoded indexed PNG. */
+function indexAt(dataUri: string, x: number, y: number): number {
+    const base64 = dataUri.slice(dataUri.indexOf(",") + 1);
+    const png = decodeIndexedPng(Uint8Array.from(Buffer.from(base64, "base64")));
+    return png.pixels[y * png.width + x]!;
 }
 
 /** A 2x2 BAM of four distinct palette indices, for asserting which sample a downscale keeps. */
@@ -158,5 +185,79 @@ describe("downscaling", () => {
         const uri = thumbnailDataUri(fourColour2x2(), "BAM", 1)!;
         expect(pngSize(uri)).toEqual({ width: 1, height: 1 });
         expect([1, 2, 3, 4]).toContain(soleIndexOf(uri));
+    });
+});
+
+describe("composeCells", () => {
+    it("collapses identical cycle art to a single picture", () => {
+        expect(composeCells([7, 7, 7, 7])).toEqual([{ index: 7, cell: 0 }]);
+    });
+
+    it("places two distinct frames on the TL/BR diagonal", () => {
+        expect(composeCells([1, 2])).toEqual([
+            { index: 1, cell: 0 },
+            { index: 2, cell: 3 },
+        ]);
+    });
+
+    it("places three in reading order, leaving BR empty", () => {
+        expect(composeCells([1, 2, 3])).toEqual([
+            { index: 1, cell: 0 },
+            { index: 2, cell: 1 },
+            { index: 3, cell: 2 },
+        ]);
+    });
+
+    it("fills the quadrants from the first four cycles", () => {
+        expect(composeCells([1, 2, 3, 4, 5])).toHaveLength(4);
+    });
+
+    it("treats a repeat among four as fewer cells", () => {
+        expect(composeCells([1, 1, 2, 2])).toEqual([
+            { index: 1, cell: 0 },
+            { index: 2, cell: 3 },
+        ]);
+    });
+});
+
+/**
+ * The composition the cell chooser feeds, asserted on the emitted picture rather than the chooser's return -
+ * a correct layout that never reaches the encoder is the failure this catches.
+ */
+describe("composed tiles", () => {
+    it("puts each of four cycles in its own quadrant", () => {
+        const uri = thumbnailDataUri(multiCycle(32, 4), "BAM", 64)!;
+        expect(pngSize(uri)).toEqual({ width: 64, height: 64 });
+        expect(indexAt(uri, 16, 16)).toBe(1); // TL - cycle 0's first frame
+        expect(indexAt(uri, 48, 16)).toBe(2); // TR
+        expect(indexAt(uri, 16, 48)).toBe(3); // BL
+        expect(indexAt(uri, 48, 48)).toBe(4); // BR
+    });
+
+    it("leaves the other diagonal transparent when there are two cycles", () => {
+        const uri = thumbnailDataUri(multiCycle(32, 2), "BAM", 64)!;
+        expect(indexAt(uri, 16, 16)).toBe(1); // TL
+        expect(indexAt(uri, 48, 48)).toBe(2); // BR
+        expect(indexAt(uri, 48, 16)).toBe(0); // TR - transparent index
+        expect(indexAt(uri, 16, 48)).toBe(0); // BL
+    });
+
+    it("draws a single-cycle BAM whole, not shrunk into one quadrant", () => {
+        const uri = thumbnailDataUri(multiCycle(32, 1), "BAM", 64)!;
+        expect(pngSize(uri)).toEqual({ width: 32, height: 32 });
+    });
+
+    // Cells come from the cycle table, but a BAM with no usable cycles still has frames to show - drawing
+    // nothing there would be a blank tile for a picture that exists.
+    it("falls back to frame 0 when the cycle table is empty", () => {
+        const animation: IndexedAnimation = {
+            palette: Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 })),
+            frames: [{ width: 8, height: 8, pixels: new Uint8Array(64).fill(1), offsetX: 0, offsetY: 0 }],
+            sequences: [],
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+        const uri = thumbnailDataUri(serializeBamV1(animation), "BAM", 64)!;
+        expect(pngSize(uri)).toEqual({ width: 8, height: 8 });
+        expect(indexAt(uri, 4, 4)).toBe(1);
     });
 });
