@@ -63,6 +63,23 @@ export function gridWindow(input: {
 }
 
 /**
+ * Which of `ids` have not been asked for at `size` yet, recording them as asked.
+ *
+ * The condition is what has been ASKED, never what has been ANSWERED: the grid re-examines its window on
+ * every reactive change and an arriving thumbnail is one, so an answered-based filter re-sends every
+ * outstanding id once per arrival. The host replies to each from its cache, so on a channel slower than the
+ * arrival rate those repeated replies queue with nothing to drain them.
+ *
+ * `asked` is the caller's, and deliberately not reactive: this writes it, and a reactive record would
+ * re-trigger the very effect that recorded the request.
+ */
+export function takeUnrequested(ids: readonly string[], size: number, asked: Set<string>): string[] {
+    const fresh = ids.filter((id) => !asked.has(`${size}|${id}`));
+    for (const id of fresh) asked.add(`${size}|${id}`);
+    return fresh;
+}
+
+/**
  * The ladder step to encode at, for a tile drawn `cssPixels` wide on a display with `dpr` device pixels.
  *
  * Rounded UP to a step so the cache keys on a handful of sizes instead of every layout width a panel can

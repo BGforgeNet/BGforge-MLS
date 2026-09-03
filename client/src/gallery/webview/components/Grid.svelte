@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { columnsFor, gridWindow, ladderSize } from "../grid-window";
+    import { columnsFor, gridWindow, ladderSize, takeUnrequested } from "../grid-window";
     import { type GalleryTile } from "../messages";
     import Tile from "./Tile.svelte";
 
@@ -44,11 +44,19 @@
         viewportWidth = scroller.clientWidth;
     }
 
-    // Ask only for what is mounted, and only for what has not been asked for yet - the host caches per
-    // item+stamp, but a request still costs a message and a worker turn.
+    /**
+     * Ids already asked for. Plain, not `$state`: the effect below writes it, and a reactive record would
+     * re-run that effect - which is the loop `takeUnrequested` exists to prevent.
+     */
+    const asked = new Set<string>();
+
+    // Ask only for what is mounted, and only once per item. Deliberately does not read `thumbnails`: this
+    // must not re-run when one arrives - see takeUnrequested.
     $effect(() => {
-        const wanted = tiles.slice(mounted.start, mounted.end).map((t) => t.id).filter((id) =>
-            !thumbnails.has(id)
+        const wanted = takeUnrequested(
+            tiles.slice(mounted.start, mounted.end).map((t) => t.id),
+            size,
+            asked,
         );
         if (wanted.length > 0) onNeed(wanted, size);
     });

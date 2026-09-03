@@ -3,7 +3,7 @@
  * show forty of them.
  */
 import { describe, expect, it } from "vitest";
-import { columnsFor, filterTiles, gridWindow, ladderSize } from "../src/gallery/webview/grid-window";
+import { columnsFor, filterTiles, gridWindow, ladderSize, takeUnrequested } from "../src/gallery/webview/grid-window";
 import { type GalleryTile } from "../src/gallery/webview/messages";
 
 const tiles: GalleryTile[] = [
@@ -75,6 +75,27 @@ describe("gridWindow", () => {
         expect(w.start).toBe(0);
         expect(w.end).toBe(0);
         expect(w.totalHeight).toBe(0);
+    });
+});
+
+describe("takeUnrequested", () => {
+    // The grid re-examines its window on every reactive change, and a thumbnail arriving IS one. Filtering on
+    // what has not been ANSWERED therefore re-asks for everything still outstanding, once per arrival: the
+    // host answers each from its cache, and on a channel slower than the arrival rate those repeated replies
+    // queue without bound. Asking once per item is what makes the window's request count O(items).
+    it("returns an id once, however many times the same window is re-examined", () => {
+        const asked = new Set<string>();
+        expect(takeUnrequested(["a", "b"], 64, asked)).toEqual(["a", "b"]);
+        expect(takeUnrequested(["a", "b"], 64, asked)).toEqual([]);
+        expect(takeUnrequested(["a", "b", "c"], 64, asked)).toEqual(["c"]);
+    });
+
+    // A cached answer is per (item, size), so a size change is a genuinely different picture to ask for.
+    it("asks again at a size it has not asked at", () => {
+        const asked = new Set<string>();
+        takeUnrequested(["a"], 64, asked);
+        expect(takeUnrequested(["a"], 128, asked)).toEqual(["a"]);
+        expect(takeUnrequested(["a"], 64, asked)).toEqual([]);
     });
 });
 
