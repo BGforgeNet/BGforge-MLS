@@ -12,6 +12,7 @@ import { workspaceSource } from "../src/gallery/workspace-source";
 
 const BAM = 0x03e8;
 const ITM = 0x03ed;
+const BMP = 0x0001;
 
 function ref(resref: string, ext: string, type: number): GameResourceRef {
     return { resref, type, ext, bif: "data/test.bif" };
@@ -83,6 +84,36 @@ describe("gameSource", () => {
         expect(src.locate("GONE.bam")).toBeUndefined();
     });
 
+    // An override file CAN change while the gallery is open, unlike a biffed resource, so its stamp is read
+    // from the metadata a write moves rather than from its address.
+    it("stamps a loose override file from its metadata, and drops the stamp once it is gone", () => {
+        const dir = tmpDir({ "portrait.bmp": "x" });
+        const loosePath = path.join(dir, "portrait.bmp");
+        const game = {
+            list: vi.fn(() => [ref("PORTRAIT", "bmp", BMP)]),
+            locate: vi.fn(() => ({ kind: "file", path: loosePath }) as ResourceLocation),
+        };
+        const src = gameSource(game, { reveal: vi.fn() });
+        const before = src.stamp("PORTRAIT.bmp");
+        expect(before).toMatch(/^file:/);
+        fs.writeFileSync(loosePath, "much longer contents");
+        expect(src.stamp("PORTRAIT.bmp")).not.toBe(before);
+        fs.rmSync(loosePath);
+        expect(src.stamp("PORTRAIT.bmp")).toBeUndefined();
+    });
+
+    it("locates a PVRZ page through the archive, splitting the resource name", () => {
+        const game = fakeGame([ref("ICON", "bam", BAM)]);
+        const src = gameSource(game, { reveal: vi.fn() });
+        src.locateAux("MOS0012.PVRZ", "ICON.bam");
+        expect(game.locate).toHaveBeenCalledWith("MOS0012", "pvrz");
+    });
+
+    it("has no page for a name carrying no extension to split on", () => {
+        const src = gameSource(fakeGame([]), { reveal: vi.fn() });
+        expect(src.locateAux("MOS0012", "ICON.bam")).toBeUndefined();
+    });
+
     it("reveals through the injected action, by resref and type", async () => {
         const reveal = vi.fn(async () => {});
         const src = gameSource(fakeGame([ref("ICON", "bam", BAM)]), { reveal });
@@ -148,6 +179,41 @@ describe("workspaceSource", () => {
         const [item] = src.list();
         fs.rmSync(path.join(dir, "icon.bam"));
         expect(src.stamp(item!.id)).toBeUndefined();
+    });
+
+    /**
+     * A mod folder ships its BAM v2 pages beside the `.bam` that names them, and IE names them in uppercase
+     * while a modder's folder may not - so the match has to ignore case or every v2 in the workspace goes
+     * blank on a case-sensitive host.
+     */
+    it("finds a PVRZ page beside the file that names it, whatever its case", () => {
+        const dir = tmpDir({ "art/icon.bam": "x", "art/mos0012.pvrz": "page" });
+        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        expect(src.locateAux("MOS0012.PVRZ", "art/icon.bam")).toEqual({
+            kind: "file",
+            path: path.join(dir, "art", "mos0012.pvrz"),
+        });
+    });
+
+    it("has no page when none sits beside the file, or the item is unknown", () => {
+        const dir = tmpDir({ "art/icon.bam": "x" });
+        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        expect(src.locateAux("MOS0012.PVRZ", "art/icon.bam")).toBeUndefined();
+        expect(src.locateAux("MOS0012.PVRZ", "nosuch.bam")).toBeUndefined();
+    });
+
+    it("reveals nothing for an item it does not have", async () => {
+        const dir = tmpDir({ "icon.bam": "x" });
+        const reveal = vi.fn(async () => {});
+        const src = workspaceSource([{ name: "mod", path: dir }], { reveal });
+        await src.reveal("nosuch.bam");
+        expect(reveal).not.toHaveBeenCalled();
+    });
+
+    it("skips directories that never hold art", () => {
+        const dir = tmpDir({ "node_modules/pkg/icon.bam": "x", ".git/icon.bam": "x", "real.bam": "x" });
+        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        expect(src.list().map((i) => i.label)).toEqual(["real.bam"]);
     });
 
     it("reveals through the injected action, by path", async () => {

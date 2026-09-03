@@ -143,6 +143,26 @@ describe("ThumbnailPump", () => {
         expect(posted).toEqual([{ type: "thumbnail", id: "ICON.bam", dataUri: undefined }]);
     });
 
+    // Distinct from a vanished STAMP: the source still knows the item but can no longer say where it is - an
+    // uninstalled archive, say. Answered once and cached, so the tile stops asking.
+    it("answers an item it cannot locate once, and caches that answer", () => {
+        const { pump, sent, posted } = harness({ locate: vi.fn(() => undefined) });
+        pump.request(["ICON.bam"], 64);
+        pump.request(["ICON.bam"], 64);
+        expect(sent).toEqual([]);
+        expect(posted).toHaveLength(2);
+        expect(posted[0]).toEqual({ type: "thumbnail", id: "ICON.bam" });
+    });
+
+    it("gives up cleanly if the item stops being locatable between the two v2 phases", () => {
+        const locate = vi.fn(() => AT as Locator | undefined);
+        const { pump, posted } = harness({ locate });
+        pump.request(["ICON.bam"], 64);
+        locate.mockReturnValue(undefined); // the game was closed while the worker was reading
+        pump.handle({ id: 1, kind: "needPages", item: "ICON.bam", pages: ["MOS0012.PVRZ"] });
+        expect(posted).toEqual([{ type: "thumbnail", id: "ICON.bam", dataUri: undefined }]);
+    });
+
     it("ignores a reply whose job it no longer has", () => {
         const { pump, posted } = harness();
         pump.handle({ id: 99, kind: "thumbnail", item: "GHOST.bam", dataUri: "x" } satisfies GalleryResponse);

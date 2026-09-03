@@ -95,6 +95,17 @@ export default defineConfig({
                 "client/src/ie-resources/fs-provider.ts",
                 "client/src/ie-resources/tree-provider.ts",
                 "client/src/ie-resources/register.ts",
+                // Image gallery: the panel, its command/serializer registration, the worker entry and its
+                // transport are all framework or runtime wiring - vscode.WebviewPanel, vscode.commands and
+                // worker_threads - and mocking them would recreate the framework, exactly as above. Every
+                // decision they make is extracted and unit-tested instead: the dispatch/cache routing
+                // (panel-core.ts), the two corpora (source.ts, game-source.ts, workspace-source.ts), the
+                // worker's job logic (worker-core.ts) and the grid's windowing (webview/grid-window.ts).
+                "client/src/gallery/panel.ts",
+                "client/src/gallery/register.ts",
+                "client/src/gallery/worker.ts",
+                "client/src/gallery/worker-port.ts",
+                "client/src/gallery/webview/main.ts",
                 // Shared webview-context helpers (navigator/globalThis/document); like the
                 // bundle entry points above, they run only inside the webview, not in vitest.
                 "client/src/webview-utils.ts",
