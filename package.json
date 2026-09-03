@@ -424,12 +424,12 @@
             },
             {
                 "command": "bgforge.gallery.showGame",
-                "title": "BGforge: Browse Game Images",
+                "title": "BGforge: Game Image Gallery",
                 "icon": "$(symbol-color)"
             },
             {
                 "command": "bgforge.gallery.showWorkspace",
-                "title": "BGforge: Browse Workspace Images",
+                "title": "BGforge: Workspace Image Gallery",
                 "icon": "$(symbol-color)"
             },
             {

@@ -61,7 +61,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     const show = (kind: "game" | "workspace"): void => {
         const panel = vscode.window.createWebviewPanel(
             GALLERY_VIEW_TYPE,
-            kind === "game" ? "Game Images" : "Workspace Images",
+            kind === "game" ? "Game Image Gallery" : "Workspace Image Gallery",
             vscode.ViewColumn.Active,
             { enableScripts: true, retainContextWhenHidden: true },
         );
