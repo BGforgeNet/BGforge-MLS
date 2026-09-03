@@ -93,26 +93,39 @@ describe.skipIf(files.length === 0)("thumbnails over the real corpora", () => {
      * E1: what is emitted never exceeds what was asked for. The whole memory argument for the gallery rests
      * on this - a grid holds hundreds of these at once, and one file that ignored the bound would not show up
      * as a wrong picture, only as a larger process.
+     *
+     * No type is exempt. BMP was, while it passed through undecoded, and that exemption is why this gate
+     * stayed green over a game gallery whose screenshot tiles were ~900 KB each.
      */
     it("never emits a picture larger than the requested size", () => {
+        // Spread across the sorted corpus rather than taking a prefix of it. The list sorts by path, so a
+        // prefix is whatever extension happens to sort first - the previous `slice(0, 400)` held no BMP at
+        // all, which is a second, quieter reason this gate could not see the passthrough.
+        const stride = Math.max(1, Math.ceil(files.length / 400));
+        const sample = files.filter((_, i) => i % stride === 0);
+        const perExt = new Map<string, number>();
         let checked = 0;
-        for (const file of files.slice(0, 400)) {
+
+        for (const file of sample) {
             const bytes = new Uint8Array(fs.readFileSync(file));
             if (bytes.length > MAX_SOURCE_BYTES || requiredPvrzPages(bytes).length > 0) continue;
-            const ext = path.extname(file).replace(".", "");
+            const ext = path.extname(file).replace(".", "").toLowerCase();
             for (const size of TILE_SIZES) {
                 const uri = thumbnailDataUri(bytes, ext, size);
                 if (uri === undefined) continue;
-                // BMP passes through undecoded, so it is exempt by construction - there is no BMP decoder
-                // here to downscale with, which is the documented trade in `thumbnailDataUri`.
-                if (ext.toLowerCase() === "bmp") continue;
                 const png = Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64");
                 const width = png.readUInt32BE(16);
                 const height = png.readUInt32BE(20);
                 expect(Math.max(width, height), `${file} at ${size}`).toBeLessThanOrEqual(size);
+                perExt.set(ext, (perExt.get(ext) ?? 0) + 1);
                 checked++;
             }
         }
+
+        console.log(`size bound: ${checked} encodes over ${[...perExt].map(([e, n]) => `${n} ${e}`).join(", ")}`);
         expect(checked).toBeGreaterThan(0); // the sweep must actually have measured something
+        // Named individually: a sample that reached only one format would pass this bound while leaving the
+        // others' downscale unexercised, which is exactly the state BMP was in.
+        for (const ext of ["bam", "bmp", "frm"]) expect(perExt.get(ext) ?? 0, `${ext} encodes`).toBeGreaterThan(0);
     }, 180_000);
 });

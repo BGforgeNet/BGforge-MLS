@@ -9,6 +9,7 @@ import { canThumbnail, composeCells, requiredPvrzPages, thumbnailDataUri } from 
 import {
     bam,
     bamV2WithPages,
+    bmpBytes,
     distinctColoursOf,
     fourColour2x2,
     frmBytes,
@@ -46,14 +47,19 @@ describe("thumbnailDataUri", () => {
     });
 
     /**
-     * A BMP crosses unchanged: browsers decode BMP, so re-encoding it would be work to arrive back where we
-     * started. Asserted on the payload, not just the media type - a passthrough that quietly re-encoded would
-     * still announce itself as a BMP.
+     * A BMP is decoded and re-encoded at the requested size, not passed through.
+     *
+     * The passthrough this replaces cost the gallery its extension host: a game's screenshots are 640x480
+     * BMPs, so every tile put ~900 KB on the wire and the webview held it, against ~2 KB for a real
+     * thumbnail. Both halves are asserted, because a downscale that returned the source bytes under a PNG
+     * media type would still be the old behaviour.
      */
-    it("hands a BMP through as its own bytes", () => {
-        const bytes = new Uint8Array([0x42, 0x4d, 1, 2, 3, 4]);
+    it("decodes and downscales a BMP rather than passing it through", () => {
+        const bytes = bmpBytes(640, 480);
         const uri = thumbnailDataUri(bytes, "bmp", 64);
-        expect(uri).toBe(`data:image/bmp;base64,${Buffer.from(bytes).toString("base64")}`);
+        expect(uri?.startsWith("data:image/png;base64,")).toBe(true);
+        expect(pngSize(uri!)).toEqual({ width: 64, height: 48 });
+        expect(uri!.length).toBeLessThan(bytes.length / 10);
     });
 
     // The one place the two halves could drift: a type this refuses must be one `canThumbnail` never claimed,

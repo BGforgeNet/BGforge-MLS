@@ -103,6 +103,32 @@ export function frmBytes(): Uint8Array {
     return serializeFrm(animation);
 }
 
+/**
+ * A 24-bit uncompressed BMP of one solid colour - the shape a game's portraits and screenshots take, and the
+ * one whose full-size bytes used to reach the webview unchanged.
+ */
+export function bmpBytes(width: number, height: number, rgb: [number, number, number] = [255, 0, 0]): Uint8Array {
+    const stride = Math.ceil((width * 3) / 4) * 4;
+    const pixelOffset = 14 + 40;
+    const out = new Uint8Array(pixelOffset + stride * height);
+    const view = new DataView(out.buffer);
+    out[0] = 0x42;
+    out[1] = 0x4d;
+    view.setUint32(2, out.length, true);
+    view.setUint32(10, pixelOffset, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, width, true);
+    view.setInt32(22, height, true);
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 24, true);
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            out.set([rgb[2], rgb[1], rgb[0]], pixelOffset + y * stride + x * 3);
+        }
+    }
+    return out;
+}
+
 /** Pad a serialized image out to a byte length. The zeros sit past every offset the header declares, so the
  *  file still parses - which is the point: this grows the SOURCE size without changing the picture. */
 export function padded(bytes: Uint8Array, toBytes: number): Uint8Array {

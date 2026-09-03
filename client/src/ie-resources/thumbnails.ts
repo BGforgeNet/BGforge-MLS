@@ -17,19 +17,20 @@ import {
     pvrzResourceName,
     readBamV1Tables,
     readBamV2Structure,
+    readBmpRgba,
     transparentIndexOf,
 } from "@bgforge/image";
 import { chooseActivePalette } from "../image-editor/sidecar";
 
 /**
- * How each drawable type reaches an `<img>`. A format a browser decodes itself needs only its media type;
- * anything else needs a decoder, so the value carries which.
+ * How each drawable type is decoded on the way to an `<img>`.
  *
- * BMP is the whole reason this is not just "formats we decode": IE portraits are BMP, Chromium reads BMP, and
- * re-encoding them would be work to arrive back where we started.
+ * BMP is decoded and re-encoded rather than passed through, even though a browser reads BMP unaided: a
+ * passed-through file is the FULL-SIZE image, so a game's screenshots and portraits reached the webview at
+ * megabytes apiece for a tile a few dozen pixels wide. Every type here now answers at the requested size.
  */
-const DRAWABLE = new Map<string, "passthrough:image/bmp" | "bam" | "frm">([
-    ["bmp", "passthrough:image/bmp"],
+const DRAWABLE = new Map<string, "bmp" | "bam" | "frm">([
+    ["bmp", "bmp"],
     ["bam", "bam"],
     ["frm", "frm"],
 ]);
@@ -46,10 +47,9 @@ export function canThumbnail(ext: string): boolean {
 /**
  * A cap on what will be turned into a thumbnail, applied to the SOURCE bytes.
  *
- * Every drawable resource crosses a `postMessage` boundary base64-encoded, so its bytes cost ~4/3 their size in
- * a string the webview then holds. Real icons and portraits are tens of KB; the bound is loose enough that no
- * real asset trips it and tight enough that a mod's full-screen BMP does not put a megabyte on the wire for an
- * 18px box.
+ * A bound on DECODE work, not on what crosses the wire - the downscale is what keeps the payload small, at
+ * whatever size the caller asked for. This is the ceiling on reading and decoding a file at all, loose enough
+ * that no shipped asset trips it and tight enough to refuse a crafted header before allocating for it.
  */
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
@@ -76,9 +76,7 @@ export function thumbnailDataUri(
             if (isBamV2(bytes)) return dataUri("image/png", bamV2FramePng(bytes, size, pvrz));
             return dataUri("image/png", bamFramePng(bytes, size));
         }
-        // BMP crosses unchanged and so is not downscaled: there is no BMP decoder here to downscale WITH, and
-        // re-encoding it would undo the passthrough this branch exists for.
-        return dataUri(how.slice("passthrough:".length), bytes);
+        return dataUri("image/png", bmpFramePng(bytes, size));
     } catch {
         // Deliberately swallowed, per the contract above: a malformed icon leaves the field with no picture,
         // which is the same state as a field whose type has none.
@@ -203,6 +201,18 @@ function frmFramePng(bytes: Uint8Array, size: number): Uint8Array {
     });
     const small = downscaleIndexed(frame.pixels, frame.width, frame.height, size);
     return encodeIndexedPng(small.width, small.height, small.pixels, palette, transparentIndexOf(animation.meta));
+}
+
+/**
+ * A BMP at `size`, as a truecolour PNG.
+ *
+ * Truecolour whatever the source depth: a 4- or 8-bit BMP's palette is per file and means nothing outside it,
+ * so carrying it through would oblige the encoder to rebuild one for a picture this small.
+ */
+function bmpFramePng(bytes: Uint8Array, size: number): Uint8Array {
+    const image = readBmpRgba(bytes);
+    const small = downscaleRgba(image.rgba, image.width, image.height, size);
+    return encodeTruecolourPng(small.width, small.height, small.pixels);
 }
 
 /** The RGBA twin of `downscaleIndexed` - same nearest-neighbour rule over 4 bytes per pixel. */

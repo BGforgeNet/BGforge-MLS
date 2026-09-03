@@ -34,6 +34,7 @@ export {
 } from "./model/ie-direction.ts";
 
 // Format codecs.
+export { type BmpImage, readBmpRgba } from "./bmp/parse.ts";
 export { parseFrm } from "./frm/parse.ts";
 export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";
