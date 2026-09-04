@@ -75,9 +75,9 @@ check("picker: webview-ui/primitives.css reaches this panel", boxed === "relativ
 
 check("picker: nothing is fetched before the list is opened", creatureRequests === 0, `requests=${creatureRequests}`);
 
-const onlyMatching = page.getByRole("checkbox", { name: "Only this animation" });
+const onlyMatching = page.getByRole("checkbox", { name: "Only creatures using this animation" });
 check(
-    "filter: 'only this animation' is on by default",
+    "filter: 'only creatures using this animation' is on by default",
     (await onlyMatching.count()) === 1 && (await onlyMatching.isChecked()),
     "",
 );

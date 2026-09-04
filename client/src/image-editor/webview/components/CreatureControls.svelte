@@ -71,7 +71,7 @@
         </div>
     </div>
     <Checkbox
-        label="Only this animation"
+        label="Only creatures using this animation"
         checked={onlyMatching}
         onchange={(next) => {
             onlyMatching = next;
