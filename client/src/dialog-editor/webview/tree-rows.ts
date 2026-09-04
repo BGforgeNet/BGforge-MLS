@@ -140,7 +140,12 @@ export function flattenRows(
         // option came from, so branch options and flat options must not drift apart.
         const emitReply = (reply: ConvReply, index: number, count: number, branchReadonly: boolean): void => {
             rows.push({
-                key: `r:${state.id}:${replyIdentity(reply)}`,
+                // Position within the owner leads the key, for the same reason branch lines carry theirs: one
+                // CHOICE can be drawn several times. An SSL node's call-choices are deduped per target, so a
+                // node calling one target from several branches references that single choice id once per call
+                // site - and only the first expands it, leaving the rest identical `ref`s. Identity alone
+                // repeated then, and a repeat in the keyed `{#each}` throws and blanks the panel.
+                key: `r:${state.id}:${replySeq++}:${replyIdentity(reply)}`,
                 kind: "reply",
                 depth,
                 reply,
@@ -154,6 +159,9 @@ export function flattenRows(
         // Branch lines are keyed by position within their owner, not by `branchKey`: an unconditional
         // top-level line has none, so two of them under one state would collide on a shared fallback.
         let branchLineSeq = 0;
+        // Same for option rows (see emitReply): a monotonic per-state sequence, so nested blocks cannot
+        // collide the way two `index` 0s in a then- and an else-block would.
+        let replySeq = 0;
 
         if (state.block) {
             // A group contributes no row of its own: its gate rides on the branch lines and options inside it,

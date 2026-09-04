@@ -237,6 +237,41 @@ describe("flattenRows", () => {
         expect(rows.filter((r) => r.kind === "branchLine").map((r) => r.npc)).toEqual(["then line", "else line"]);
     });
 
+    /**
+     * A structured node's block references a CHOICE, and an SSL node's call-choices are deduped by target -
+     * so a node calling one target from several branches emits several rows carrying one choice id. Only the
+     * first expands the target; the rest resolve to `ref`, which used to make their keys identical and threw
+     * `each_key_duplicate` in the keyed `{#each}`, blanking the whole panel. Real instance: Node096 of the
+     * Restoration Project's prmtribe/tribec7.ssl, whose four `call Node097` branches produced three
+     * colliding rows.
+     */
+    it("keys every row of a node that calls one target from several branches apart", () => {
+        const callChoice = { kind: "choice" as const, choiceId: "A#call0" };
+        const tree = buildConversationTree(
+            root([
+                st("A", "opening", [ch("A#call0", { kind: "state", stateId: "B" })], {
+                    structured: true,
+                    block: [
+                        { kind: "line", text: "opening" },
+                        { kind: "group", condition: "(x)", thenBlock: [callChoice], elseBlock: [callChoice] },
+                        { kind: "group", condition: "(y)", thenBlock: [callChoice] },
+                    ],
+                }),
+                st("B", "target", [ch("B#0", { kind: "exit" })]),
+            ]),
+            undefined,
+            noJump,
+        );
+
+        const rows = flattenRows(tree.roots, new Set(), new Set());
+
+        // Three call sites, three rows - only the first expands B, so the other two resolve to `ref`.
+        const callRows = rows.filter((r) => r.kind === "reply" && r.ownerId === "A");
+        expect(callRows).toHaveLength(3);
+        // The property the renderer needs: Svelte's keyed each throws on a repeat, blanking the panel.
+        expect(new Set(rows.map((r) => r.key)).size).toBe(rows.length);
+    });
+
     it("carries each flat option's position in its own state's option list", () => {
         // The context menu acts on position ("move up", "move down"), so a row needs its index and the size
         // of the list it sits in.
