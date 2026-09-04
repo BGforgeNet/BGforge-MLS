@@ -13,7 +13,7 @@ import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
-import { type HostToWebview, type WebviewToHost } from "./webview/messages";
+import { type HostToWebview, type SetTile, type WebviewToHost } from "./webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
@@ -34,6 +34,15 @@ export interface GalleryDeps {
     sourceFor(kind: "game" | "workspace"): GallerySource | undefined;
     /** Open an item in its editor. */
     open(source: GallerySource, id: string): Promise<void>;
+    /**
+     * The open game's animations, or an empty list with no game.
+     *
+     * Its own dep rather than a `GallerySource` method: a source lists drawable FILES, and the workspace
+     * source has no game behind it to answer for. Empty is what hides the tab strip.
+     */
+    sets(): readonly SetTile[];
+    /** Open the BAM an animation set draws, by set id. */
+    openSet(id: number): Promise<void>;
     /** Injected so a test can drive the panel without spawning a thread. */
     makePort?(extensionUri: vscode.Uri): GalleryPort;
 }
@@ -101,6 +110,7 @@ export function wireGalleryPanel(
                     source: state.source,
                     title: state.source === "game" ? "resources" : "files",
                     items: source?.list() ?? [],
+                    sets: [...deps.sets()],
                     ...(source === undefined ? { note: emptyNote } : {}),
                 } satisfies HostToWebview);
                 break;
@@ -109,6 +119,9 @@ export function wireGalleryPanel(
                 break;
             case "open":
                 if (source) void deps.open(source, message.id);
+                break;
+            case "openSet":
+                void deps.openSet(message.id);
                 break;
             // Parity with the other panels: a fatal error in the webview reaches the output channel and a
             // toast instead of leaving a silently blank panel.

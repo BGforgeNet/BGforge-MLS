@@ -11,6 +11,9 @@ import { GALLERY_VIEW_TYPE, type GalleryPanelState, wireGalleryPanel } from "./p
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
+import { createAnimationIndexResolver } from "../ie-resources/animation-index";
+import { setTile } from "./set-tiles";
+import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
 
 export interface GalleryHostDeps {
@@ -21,6 +24,26 @@ export interface GalleryHostDeps {
 }
 
 export function registerGallery(context: vscode.ExtensionContext, deps: GalleryHostDeps): void {
+    const animationIndex = createAnimationIndexResolver({
+        gameAt: (dir) => (deps.gameSession()?.dir === dir ? deps.gameSession()?.game : undefined),
+    });
+
+    const sets = (): readonly SetTile[] => {
+        const current = deps.gameSession();
+        if (current === undefined) return [];
+        return (animationIndex(current.dir) ?? []).map((set) => setTile(set));
+    };
+
+    /** Open the BAM a set draws, through the same resource URI every other game item opens by. */
+    const openSet = async (id: number): Promise<void> => {
+        const current = deps.gameSession();
+        if (current === undefined) return;
+        const set = (animationIndex(current.dir) ?? []).find((entry) => entry.id === id);
+        const resref = set === undefined ? undefined : setTile(set).resref;
+        if (resref === undefined) return;
+        await vscode.commands.executeCommand("vscode.open", resourceUri(current.dir, resref, "bam"));
+    };
+
     const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
         if (kind === "game") {
             const current = deps.gameSession();
@@ -65,7 +88,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
             vscode.ViewColumn.Active,
             { enableScripts: true, retainContextWhenHidden: true },
         );
-        wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open });
+        wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openSet });
     };
 
     context.subscriptions.push(
@@ -76,7 +99,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
                 // A restored panel whose state VS Code could not persist falls back to the workspace, which
                 // is the source that needs no game open - a blank panel would be the alternative.
                 const kind = (state as GalleryPanelState | undefined)?.source === "game" ? "game" : "workspace";
-                wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open });
+                wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openSet });
             },
         }),
     );
