@@ -1,8 +1,9 @@
 <script lang="ts">
     // Thin wrapper over bits-ui's compound Combobox. The rest of the webview imports THIS, never bits-ui
-    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in styles.css
-    // (.bb-combobox*); a component <style> block is intentionally avoided because the webview runs under a
-    // strict nonce CSP that blocks non-nonced injected <style> tags.
+    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in primitives.css
+    // beside this file (.bb-combobox*), which every panel mounting this control links; a component <style>
+    // block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
+    // non-nonced injected <style> tags.
     //
     // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/combobox):
     //   Combobox.Root     - props: type="single", bind:value (STRING), onValueChange, bind:open (bool);
@@ -277,7 +278,7 @@
             onblur={handleBlur}
             onkeydown={handleKeydown}
         />
-        <!-- The chevron is purely decorative: pointer-events:none (see styles.css) lets a click fall through to
+        <!-- The chevron is purely decorative: pointer-events:none (see primitives.css) lets a click fall through to
              the input, which owns opening (on focus). A real Combobox.Trigger toggles `open`, which fights the
              focus-to-open and closed the list on click. The input (role=combobox, aria-expanded) carries the a11y. -->
         <span class="bb-combobox-trigger" aria-hidden="true"></span>
@@ -288,7 +289,7 @@
         <Combobox.Content class="bb-combobox-content bb-popup-content" align="start">
             <!-- The Viewport is required for item layout. bits-ui's "highlight first match" filters candidates to
                  those FULLY inside the viewport rect (strict >/<), so the top item must be INSET from the viewport
-                 edges or it never highlights - the viewport carries padding (styles.css) to provide that inset.
+                 edges or it never highlights - the viewport carries padding (primitives.css) to provide that inset.
                  Keyed by query + value so the filtered items REMOUNT each keystroke - bits-ui re-highlights off an
                  item-mount watch, which reused nodes never fire, so the changing key drives the default highlight. -->
             <Combobox.Viewport bind:ref={viewportEl} class="bb-combobox-viewport">

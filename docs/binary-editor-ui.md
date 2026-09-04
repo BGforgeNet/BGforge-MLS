@@ -352,11 +352,14 @@ The `Combobox` caps how many options it RENDERS and states the overflow in the l
 it is given, so the cap is what keeps a ~12300-entry BAM list from mounting 12300 nodes; keep the notice if you
 touch it - a silently truncated list reads as a complete one.
 
-It is not this panel's control: it lives in `client/src/webview-ui/` with its own stylesheet, because the
-animation editor's creature-palette picker is the same search-and-pick problem over the same order of
-magnitude of entries. Anything changed here changes there - both panels link `webview-ui/primitives.css`
-alongside their own, and a panel that mounts a shared primitive without linking it renders bare browser
-chrome (guarded in `client/test/webview-csp.test.ts`).
+It is not this panel's control. `client/src/webview-ui/` holds the controls both editors mount - the combobox,
+the dropdown menu, the codicon span - plus `primitives.css`, which carries their theming AND the page baseline
+every panel shares (reset, button, focus ring, placeholder and error-state rules that were byte-identical
+copies in the two panel sheets). Anything changed there changes both editors: the animation editor's
+creature-palette picker is this combobox, and its Save-as/Import toolbar menus are this `Menu`. Each panel
+links the shared sheet BEFORE its own, so panel-specific overrides win on load order, and a panel that mounts
+a shared control without linking it renders bare browser chrome (guarded in
+`client/test/webview-csp.test.ts`).
 
 ### A grid fits columns to the panel; the schema count is a maximum
 

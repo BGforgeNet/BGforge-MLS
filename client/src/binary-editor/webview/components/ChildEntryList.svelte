@@ -8,7 +8,7 @@
     import type { Bridge } from "../state/bridge";
     import { fetchAllRows } from "../state/list-window";
     import FormSection from "./FormSection.svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     const { ownerId, childList, bridge, version, onedit, byNode }: {
         ownerId: NodeId;

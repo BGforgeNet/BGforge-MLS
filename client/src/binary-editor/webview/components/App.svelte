@@ -6,7 +6,7 @@
     import { clearSelectionMemory } from "../state/list-selection-memory";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import LayoutRenderer from "./LayoutRenderer.svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
 

@@ -14,12 +14,22 @@ describe("binary-editor styles loading", () => {
         expect(html).not.toContain("<style");
         expect(html).not.toMatch(/\.field\s*\{/); // CSS lives in styles.css, not inlined here
     });
+    /**
+     * The panel's theme is what the two sheets it links add up to: the shared one (webview-ui/primitives.css)
+     * carries the baseline and the primitives, its own carries everything format-specific. Read the union -
+     * checking either alone reports a gap that is covered, or a coverage the other sheet actually provides.
+     */
+    const panelTheme = (): string =>
+        ["client/src/webview-ui/primitives.css", "client/src/binary-editor/webview/styles.css"]
+            .map((file) => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"))
+            .join("\n");
+
     it("styles.css is themed with vscode variables", () => {
         const css = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/styles.css"), "utf8");
         expect(css).toContain("var(--vscode-");
     });
     it("theme covers the core vscode surfaces", () => {
-        const css = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/styles.css"), "utf8");
+        const css = panelTheme();
         for (const v of [
             "--vscode-foreground",
             "--vscode-input-background",

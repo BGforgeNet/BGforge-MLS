@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { codiconClass } from "../../../src/binary-editor/webview/components/icon-name";
+import { codiconClass } from "../../src/webview-ui/icon-name";
 
 describe("codicon mapping", () => {
     it("maps a name to the codicon class", () => {

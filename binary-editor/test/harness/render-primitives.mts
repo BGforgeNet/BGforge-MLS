@@ -208,6 +208,21 @@ await disabledItem.click({ force: true });
 await page.waitForTimeout(100);
 const menuSelectedAfterDisabled = await page.locator("#menu-selected").getAttribute("data-value");
 
+// The danger item reads as dangerous at REST, which is the state the cascade decides: .bb-menu-item-danger
+// and .bb-popup-item both set `color` at equal specificity, so only the shared sheet's section order makes
+// the danger rule win. (Its highlighted state is safe either way - that rule carries an extra attribute
+// selector - so hovering first would measure the one state a reordering cannot break.)
+const dangerColours = await page.evaluate(() => {
+    const items = Array.from(document.querySelectorAll<HTMLElement>(".bb-menu-item"));
+    const danger = items.find((el) => el.textContent?.includes("Delete"));
+    const plain = items.find((el) => el.textContent?.includes("Add above"));
+    return {
+        danger: danger ? getComputedStyle(danger).color : "",
+        plain: plain ? getComputedStyle(plain).color : "",
+    };
+});
+const dangerKeepsItsColour = dangerColours.danger !== "" && dangerColours.danger !== dangerColours.plain;
+
 // Close the menu before the screenshot.
 await page.keyboard.press("Escape");
 
@@ -377,6 +392,13 @@ console.log("Menu: items rendered (" + menuItemCount + " >= 5): " + menuItemsRen
 console.log("Menu: onselect fired with 'add-above': " + menuOnselectFired + " (got: " + menuSelectedAfterAdd + ")");
 console.log("Menu: disabled item present: " + menuDisabledItemPresent);
 console.log("Menu: disabled item does not fire onselect: " + menuDisabledNoFire);
+console.log(
+    "Menu: the danger item reads as dangerous at rest: " +
+        dangerKeepsItsColour +
+        " (" +
+        JSON.stringify(dangerColours) +
+        ")",
+);
 console.log("Tabs H: initial active=general: " + tabsHInitialCorrect + " (got: " + tabsHInitial + ")");
 console.log("Tabs H: click Abilities moves selection: " + tabsHClickWorks + " (got: " + tabsHAfterClick + ")");
 console.log("Tabs H: ArrowRight moves to Effects: " + tabsHArrowWorks + " (got: " + tabsHAfterArrow + ")");
@@ -461,6 +483,14 @@ if (!menuDisabledNoFire) {
             "', after: '" +
             menuSelectedAfterDisabled +
             "')",
+    );
+    process.exit(1);
+}
+if (!dangerKeepsItsColour) {
+    console.log(
+        "\nMENU DANGER COLOUR FAILED: the Delete item renders like an ordinary row - " +
+            JSON.stringify(dangerColours) +
+            " (check the shared sheet's section order: .bb-menu-item-danger must follow .bb-popup-item)",
     );
     process.exit(1);
 }

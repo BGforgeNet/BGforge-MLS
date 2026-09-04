@@ -10,7 +10,7 @@
     import type { Bridge } from "../../state/bridge";
     import Tabs, { type TabItem } from "../primitives/Tabs.svelte";
     import Checkbox from "../primitives/Checkbox.svelte";
-    import Icon from "../Icon.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     const { bridge, version, onedit }: {
         bridge: Bridge;

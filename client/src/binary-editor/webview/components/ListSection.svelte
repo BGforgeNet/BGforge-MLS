@@ -8,7 +8,7 @@
     import VirtualList from "./VirtualList.svelte";
     import ListEntryDetail from "./ListEntryDetail.svelte";
     import RowActions from "./RowActions.svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     // Initial bounded window fetched to resolve a selection's index and learn `total`. A target within it
     // resolves immediately; a target beyond it (a cross-record jump to a deep entry in a large list) triggers a

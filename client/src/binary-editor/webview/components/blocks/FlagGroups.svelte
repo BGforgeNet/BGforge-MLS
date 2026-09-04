@@ -7,7 +7,7 @@
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { composeFlags } from "../../state/controls";
     import Checkbox from "../primitives/Checkbox.svelte";
-    import Icon from "../Icon.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     interface Item {
         field: FieldRef;

@@ -6,23 +6,6 @@
  */
 
 /* ---- root / layout (re-themed; layout sizing preserved from the working baseline) ---- */
-html,
-body {
-    height: 100%;
-    margin: 0;
-}
-body {
-    font-family: var(--vscode-font-family, sans-serif);
-    font-size: var(--vscode-font-size, 13px);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-}
-#app {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
 
 /* ---- toolbar ---- */
 .toolbar {
@@ -65,29 +48,6 @@ body {
 }
 
 /* ---- buttons (toolbar / actions): primary by default, secondary variant for low-emphasis controls ---- */
-button {
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    padding: 0.25rem 0.7rem;
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    line-height: 1.3;
-    white-space: nowrap;
-}
-button:hover {
-    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
-}
-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
-}
 
 /* Row actions, quick-fixes, and the section-tab buttons are low-emphasis: render them as secondary. */
 .row-actions-btn,
@@ -700,52 +660,6 @@ input[type="text"]::placeholder {
     background: transparent;
 }
 
-/* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
- * Generic, format-agnostic theming for the headless DropdownMenu primitive. bits-ui sets
- * data-highlighted and data-disabled on items; there is no data-selected (menus are not selection
- * controls). The menu surface uses .bb-popup-content for the shared floating panel rules.
- * Content/item rules are shared via .bb-popup-content and .bb-popup-item (webview-ui/primitives.css).
- * Floating positioning is applied via CSSOM, CSP-safe under the strict nonce policy. */
-.bb-menu-trigger {
-    /* Secondary button: icon-only "more actions" affordance. */
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.1rem 0.3rem;
-    background: var(--vscode-button-secondaryBackground, transparent);
-    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-    border: 1px solid var(--vscode-button-border, transparent);
-    border-radius: 2px;
-    line-height: 1;
-}
-.bb-menu-trigger:hover {
-    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
-}
-.bb-menu-trigger[data-state="open"] {
-    outline: none;
-    border-color: var(--vscode-focusBorder);
-}
-.bb-menu-content {
-    /* Menu panels do not need an anchor-width constraint; they size to their widest item. */
-    min-width: 10rem;
-}
-.bb-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.bb-menu-item-danger {
-    color: var(--vscode-errorForeground);
-}
-.bb-menu-item-danger[data-highlighted] {
-    /* Keep the highlighted background but keep the danger color. */
-    background: var(--vscode-list-hoverBackground);
-    color: var(--vscode-errorForeground);
-}
-
 /* ---- bb-checkbox (themed boolean control via the Checkbox primitive wrapper) ----
  * Generic, format-agnostic theming for the headless Checkbox primitive. bits-ui sets data-state="checked"
  * | "unchecked" | "indeterminate" on the Root button, and data-disabled when the control is disabled.
@@ -1105,25 +1019,6 @@ input[type="text"]::placeholder {
 }
 
 /* ---- placeholder / error / loading states ---- */
-.placeholder {
-    color: var(--vscode-descriptionForeground);
-    padding: 0.75rem;
-    font-style: italic;
-}
-.error-state {
-    padding: 1rem 1.25rem;
-    color: var(--vscode-errorForeground);
-}
-.error-state h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15em;
-    font-weight: 600;
-    color: var(--vscode-errorForeground);
-}
-.error-state p {
-    margin: 0;
-    color: var(--vscode-foreground);
-}
 
 /* ============================================================================
  * Declarative layout renderer (single dense page; PRO and future migrated formats).

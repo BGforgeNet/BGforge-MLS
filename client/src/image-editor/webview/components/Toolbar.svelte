@@ -2,11 +2,12 @@
     import type { Bridge } from "../state/bridge";
     import type { AnimationView, SaveAsTarget } from "../messages";
     import type { SourceFormat } from "@bgforge/image";
-    import ActionMenu from "./ActionMenu.svelte";
+    import Menu from "../../../webview-ui/Menu.svelte";
 
     const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
 
-    // "Save as" and "Import" are both ActionMenu dropdowns: picking an entry immediately runs the action
+    // "Save as" and "Import" are both dropdown menus - the shared Menu primitive every panel uses, opened
+    // upward because this toolbar sits at the bottom. Picking an entry immediately runs the action
     // (host-side, auto-named next to the source). Every save format is offered EXCEPT the source's own
     // exact format - plain "Save" already writes that in place. FRM is split by palette mode (sidecar
     // writes a .pal, nearest remaps to the default Fallout palette). THREE different formats share the
@@ -92,16 +93,20 @@
     <button type="button" onclick={handleSave} title={`Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`}>
         Save
     </button>
-    <ActionMenu
-        label="Save as..."
+    <Menu
         ariaLabel="Save as"
-        items={saveAsOptions.map((o) => ({ value: o.value, label: o.label }))}
+        side="top"
+        items={saveAsOptions.map((o) => ({ id: o.value, label: o.label }))}
         onselect={chooseSaveAs}
-    />
-    <ActionMenu
-        label="Import PNG directory..."
+    >
+        {#snippet trigger()}Save as...{/snippet}
+    </Menu>
+    <Menu
         ariaLabel="Import PNG directory"
-        items={IMPORT_ITEMS}
+        side="top"
+        items={IMPORT_ITEMS.map((i) => ({ id: i.value, label: i.label, title: i.title }))}
         onselect={chooseImport}
-    />
+    >
+        {#snippet trigger()}Import PNG directory...{/snippet}
+    </Menu>
 </div>

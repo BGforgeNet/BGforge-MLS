@@ -3,7 +3,7 @@
     import { controlWidthClass, showsOpenChip, thumbnailOpens } from "../state/controls";
     import CellControl from "./CellControl.svelte";
     import DocLink from "./DocLink.svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
     import JumpLink from "./JumpLink.svelte";
     import OpenResourceLink from "./OpenResourceLink.svelte";
     import ResourceThumbnail from "./ResourceThumbnail.svelte";

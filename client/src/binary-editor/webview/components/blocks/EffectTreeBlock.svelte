@@ -15,7 +15,7 @@
     import { visibleRange } from "../../../../virtual-window";
     import ListEntryDetail from "../ListEntryDetail.svelte";
     import RowActions from "../RowActions.svelte";
-    import Icon from "../Icon.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     const { bridge, version, selection, onedit, byNode, abilityDetail, effectDetail, canModify, childSection, labels }: {
         bridge: Bridge;

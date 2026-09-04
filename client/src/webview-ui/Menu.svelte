@@ -1,8 +1,9 @@
 <script lang="ts">
     // Thin wrapper over bits-ui's compound DropdownMenu. The rest of the webview imports THIS, never bits-ui
-    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in styles.css
-    // (.bb-menu*, .bb-popup-*); a component <style> block is intentionally avoided because the webview runs
-    // under a strict nonce CSP that blocks non-nonced injected <style> tags.
+    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in primitives.css
+    // beside this file (.bb-menu*, .bb-popup-*), which every panel mounting this control links; a component
+    // <style> block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
+    // non-nonced injected <style> tags.
     //
     // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/dropdown-menu):
     //   DropdownMenu.Root     - shared menu Root (menu.svelte); props: open (bool), onOpenChange, dir.
@@ -19,12 +20,14 @@
     // No per-item value: items carry string ids; onselect fires with the item id on selection.
     import { DropdownMenu } from "bits-ui";
     import type { Snippet } from "svelte";
-    import Icon from "../Icon.svelte";
+    import Icon from "./Icon.svelte";
 
     export interface MenuItem {
         id: string;
         label: string;
         icon?: string;
+        /** Tooltip, for an item whose label cannot carry what picking it will do. */
+        title?: string;
         disabled?: boolean;
         danger?: boolean;
     }
@@ -34,11 +37,15 @@
         onselect,
         ariaLabel,
         trigger,
+        side = "bottom",
     }: {
         items: MenuItem[];
         onselect: (id: string) => void;
         ariaLabel?: string;
         trigger?: Snippet;
+        /** Which side of the trigger the menu opens on - "top" for a trigger sitting in a bottom toolbar.
+         *  bits-ui reverses it anyway when the preferred side would collide with the viewport edge. */
+        side?: "top" | "bottom";
     } = $props();
 </script>
 
@@ -54,11 +61,15 @@
     </DropdownMenu.Trigger>
     <DropdownMenu.Portal>
         <!-- preventScroll={false}: row-action menus are not modal dialogs; body scroll-lock is unnecessary. -->
-        <DropdownMenu.Content class="bb-menu-content bb-popup-content" preventScroll={false}>
+        <!-- align="start": line the menu up with the trigger's leading edge rather than bits-ui's centred
+             default, which hangs a menu wider than its trigger out over both neighbours. Collisions still
+             flip it - avoidCollisions is on by default. -->
+        <DropdownMenu.Content class="bb-menu-content bb-popup-content" preventScroll={false} {side} align="start">
             {#each items as item (item.id)}
                 <DropdownMenu.Item
                     class="bb-menu-item bb-popup-item{item.danger ? ' bb-menu-item-danger' : ''}"
                     disabled={item.disabled ?? false}
+                    title={item.title}
                     onSelect={() => onselect(item.id)}
                 >
                     {#if item.icon}

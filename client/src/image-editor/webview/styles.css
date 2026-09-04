@@ -2,24 +2,6 @@
  * Animation-editor webview theme. Theme-token based (--vscode-* vars) like the binary-editor webview.
  */
 
-html,
-body {
-    height: 100%;
-    margin: 0;
-}
-body {
-    font-family: var(--vscode-font-family, sans-serif);
-    font-size: var(--vscode-font-size, 13px);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-}
-#app {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
 /* Decoded filename meaning (critter/avatar naming schemes - see render/naming.ts): a slim
    informational strip above the stage, rendered only when a scheme matched. */
 .name-banner {
@@ -58,11 +40,6 @@ body {
     flex-direction: column;
 }
 
-.placeholder {
-    color: var(--vscode-descriptionForeground);
-    padding: 0.75rem;
-    font-style: italic;
-}
 /* Frame-fetch progress, overlaid on the stage rather than placed in the flow: it appears and
    disappears as frames arrive, and a element in the flow would reflow the tiles each time. */
 .frame-progress {
@@ -74,42 +51,9 @@ body {
     font-style: italic;
     pointer-events: none;
 }
-.error-state {
-    padding: 1rem 1.25rem;
-    color: var(--vscode-errorForeground);
-}
-.error-state h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15em;
-    font-weight: 600;
-    color: var(--vscode-errorForeground);
-}
-.error-state p {
-    margin: 0;
-    color: var(--vscode-foreground);
-}
 
 /* ---- generic form controls (buttons/select/inputs/checkbox) - themed, matches the binary-editor
    webview's convention of one shared control theme rather than per-instance styling ---- */
-button {
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    padding: 0.25rem 0.7rem;
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    line-height: 1.3;
-    white-space: nowrap;
-}
-button:hover {
-    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
-}
-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
 select,
 input[type="number"] {
     font: inherit;
@@ -126,10 +70,6 @@ input[type="number"] {
 }
 input[type="checkbox"] {
     accent-color: var(--vscode-button-background);
-}
-:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
 }
 
 /* ---- control groups: each stacks vertically as a section in the right-hand column ---- */
@@ -247,14 +187,20 @@ select {
     line-height: 1;
 }
 
-/* Action-menu dropdown (Save as / Import - see ActionMenu.svelte): a button that opens an upward menu
-   (the toolbar sits at the bottom). A native <select> always highlights its current option on open, so
-   the trigger label reads as pre-selected; a hand-rolled menu opens with nothing highlighted. */
-.dropdown {
-    position: relative;
-    display: inline-flex;
+/* Save as / Import open the shared Menu primitive (webview-ui/Menu.svelte), whose trigger is themed as a
+   low-emphasis secondary button. In this toolbar it sits beside the primary "Save", so it takes the same
+   filled button look, plus the caret that says it opens a menu. The upward drop is the primitive's
+   side="top", not a position here. */
+.toolbar .bb-menu-trigger {
+    padding: 0.25rem 0.7rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    line-height: 1.3;
 }
-.dropdown-trigger::after {
+.toolbar .bb-menu-trigger:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+.toolbar .bb-menu-trigger::after {
     content: "";
     display: inline-block;
     margin-left: 0.4rem;
@@ -262,36 +208,6 @@ select {
     border-right: 0.3em solid transparent;
     border-top: 0.3em solid currentColor;
     vertical-align: middle;
-}
-.dropdown-menu {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    margin-bottom: 0.25rem;
-    min-width: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 0.15rem;
-    background: var(--vscode-menu-background, var(--vscode-input-background));
-    color: var(--vscode-menu-foreground, var(--vscode-foreground));
-    border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
-    border-radius: 3px;
-    box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
-    white-space: nowrap;
-    z-index: 10;
-}
-/* Menu items read as menu rows, not filled buttons: override the generic button fill. */
-.dropdown-item {
-    background: transparent;
-    color: inherit;
-    border: none;
-    border-radius: 2px;
-    text-align: left;
-    padding: 0.25rem 0.6rem;
-}
-.dropdown-item:hover {
-    background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
-    color: var(--vscode-menu-selectionForeground, inherit);
 }
 
 /* ---- stage (the compass rose / cycle grid player) ---- */

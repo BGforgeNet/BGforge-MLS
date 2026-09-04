@@ -23,7 +23,9 @@ const view = buildBamFixture();
 // Swapped before the reload below, so the same host stub serves both fixtures.
 let currentView = view;
 
+const sentToHost: WebviewToHost[] = [];
 function hostUp(m: WebviewToHost): HostToWebview[] {
+    sentToHost.push(m);
     return m.type === "ready" ? [{ type: "init", view: currentView }] : [];
 }
 
@@ -72,6 +74,27 @@ const colors = await page.evaluate(() =>
     }),
 );
 check("grid: every sequence renders a distinct color", new Set(colors).size === colors.length, JSON.stringify(colors));
+
+// The toolbar's "Save as" is the shared Menu primitive (webview-ui), the same control the binary editor's
+// row actions use. It opens UPWARD - the toolbar sits at the bottom of the panel - and a picked item must
+// reach the host, which is the half a rendered screenshot cannot show.
+const saveAs = page.getByRole("button", { name: "Save as", exact: true });
+check("toolbar: the save-as menu mounts as the shared primitive", (await saveAs.count()) === 1, "");
+await saveAs.click();
+await page.waitForSelector(".bb-menu-item", { timeout: 3000 });
+const menuBox = await page.locator(".bb-menu-content").boundingBox();
+const triggerBox = await saveAs.boundingBox();
+check(
+    "toolbar: the menu opens above its trigger, not off the bottom of the panel",
+    menuBox !== null && triggerBox !== null && menuBox.y + menuBox.height <= triggerBox.y + 1,
+    `menu=${JSON.stringify(menuBox)} trigger=${JSON.stringify(triggerBox)}`,
+);
+await page.screenshot({ path: shotPath("shot-bam-saveas.png"), fullPage: true });
+
+await page.locator(".bb-menu-item").first().click();
+await page.waitForFunction(() => true, undefined, { timeout: 1000 });
+const saved = sentToHost.filter((m) => m.type === "saveAs");
+check("toolbar: picking an entry sends its saveAs to the host", saved.length === 1, JSON.stringify(saved));
 
 await page.screenshot({ path: shotPath("shot-bam.png"), fullPage: true });
 
