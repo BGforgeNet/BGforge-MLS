@@ -27,6 +27,41 @@ export interface SetTile {
     unsupported: string | undefined;
 }
 
+/**
+ * The five facet controls.
+ *
+ * The first three re-resolve WHICH animation is selected; the last two pick a file within it - one union
+ * because the view sends them through one message and the host answers all five together.
+ */
+export type FacetFamily = "race" | "gender" | "charClass" | "armour" | "action";
+
+/** One option of a facet control, as the webview draws it. Disabled options keep their reason. */
+export interface FacetOption {
+    value: string;
+    label: string;
+    available: boolean;
+    reason?: string;
+}
+
+/**
+ * Everything the facet browser draws, resolved by the host.
+ *
+ * The host resolves rather than the webview because availability is decided against files in the archive,
+ * which only the host can see. The webview holds a selection and renders this answer.
+ */
+export interface FacetState {
+    selection: { race: string; gender: string; charClass: string; armour: number; action: string };
+    races: FacetOption[];
+    genders: FacetOption[];
+    classes: FacetOption[];
+    armours: FacetOption[];
+    /** Only the actions this set actually ships at this armour level. */
+    actions: FacetOption[];
+    /** The file the selection resolves to, or undefined with `unavailable` saying why. */
+    resref: string | undefined;
+    unavailable: string | undefined;
+}
+
 export type HostToWebview =
     /**
      * `note` explains an EMPTY list when the reason is not "this corpus has no pictures" - no game open, no
@@ -43,14 +78,23 @@ export type HostToWebview =
           sets: SetTile[];
       }
     /** `dataUri` absent means the item cannot be drawn - the tile keeps its box and shows its label. */
-    | { type: "thumbnail"; id: string; dataUri?: string };
+    | { type: "thumbnail"; id: string; dataUri?: string }
+    /** The facet browser's whole state, sent on open and after every selection change. */
+    | { type: "facets"; state: FacetState };
 
 export type WebviewToHost =
     | { type: "ready" }
     /** Only what the viewport needs, so opening a game-wide grid does not decode thousands of files. */
     | { type: "requestThumbnails"; ids: string[]; size: number }
     | { type: "open"; id: string }
-    /** Open the BAM a set draws at its lowest armour level - the same effect as opening a file tile. */
-    | { type: "openSet"; id: number }
+    /**
+     * Open a BAM by resref.
+     *
+     * One message for both entry points - a set row and the facet browser's resolved file - so the two
+     * cannot drift into opening resources by different routes.
+     */
+    | { type: "openResref"; resref: string }
+    /** A facet control changed; the host re-resolves and answers with a whole `FacetState`. */
+    | { type: "selectFacet"; family: FacetFamily; value: string }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };

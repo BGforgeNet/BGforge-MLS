@@ -3,7 +3,7 @@
 
     interface Props {
         sets: SetTile[];
-        onOpen: (id: number) => void;
+        onOpen: (resref: string) => void;
     }
 
     const { sets, onOpen }: Props = $props();
@@ -22,7 +22,7 @@
                 class="setopen"
                 disabled={set.resref === undefined}
                 title={set.unsupported ?? `Open ${set.resref}`}
-                onclick={() => onOpen(set.id)}
+                onclick={() => set.resref && onOpen(set.resref)}
             >
                 <span class="setname">{set.label}</span>
                 <span class="setid">{hex(set.id)}</span>

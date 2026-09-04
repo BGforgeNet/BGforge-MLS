@@ -12,6 +12,7 @@ import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
 import { createAnimationIndexResolver } from "../ie-resources/animation-index";
+import { createFacetBrowser, type FacetBrowser } from "./facet-state";
 import { setTile } from "./set-tiles";
 import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
@@ -34,14 +35,25 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         return (animationIndex(current.dir) ?? []).map((set) => setTile(set));
     };
 
-    /** Open the BAM a set draws, through the same resource URI every other game item opens by. */
-    const openSet = async (id: number): Promise<void> => {
+    /** Open an animation's BAM, through the same resource URI every other game item opens by. */
+    const openResref = async (resref: string): Promise<void> => {
         const current = deps.gameSession();
         if (current === undefined) return;
-        const set = (animationIndex(current.dir) ?? []).find((entry) => entry.id === id);
-        const resref = set === undefined ? undefined : setTile(set).resref;
-        if (resref === undefined) return;
         await vscode.commands.executeCommand("vscode.open", resourceUri(current.dir, resref, "bam"));
+    };
+
+    /**
+     * A facet browser over the open game, or undefined with none.
+     *
+     * Availability is asked of the archive rather than of the index, because a table can name a combination
+     * whose files the install does not ship - and the browser must not offer a file that will not open.
+     */
+    const facets = (): FacetBrowser | undefined => {
+        const current = deps.gameSession();
+        if (current === undefined) return undefined;
+        const animations = animationIndex(current.dir);
+        if (animations === undefined) return undefined;
+        return createFacetBrowser(animations, (resref) => current.game.canRead(resref, "bam"));
     };
 
     const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
@@ -88,7 +100,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
             vscode.ViewColumn.Active,
             { enableScripts: true, retainContextWhenHidden: true },
         );
-        wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openSet });
+        wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openResref, facets });
     };
 
     context.subscriptions.push(
@@ -99,7 +111,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
                 // A restored panel whose state VS Code could not persist falls back to the workspace, which
                 // is the source that needs no game open - a blank panel would be the alternative.
                 const kind = (state as GalleryPanelState | undefined)?.source === "game" ? "game" : "workspace";
-                wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openSet });
+                wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openResref, facets });
             },
         }),
     );

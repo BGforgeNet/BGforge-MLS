@@ -10,6 +10,7 @@ import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
+import { DEFAULT_SELECTION, type FacetBrowser, type FacetSelection } from "./facet-state";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
@@ -41,8 +42,10 @@ export interface GalleryDeps {
      * source has no game behind it to answer for. Empty is what hides the tab strip.
      */
     sets(): readonly SetTile[];
-    /** Open the BAM an animation set draws, by set id. */
-    openSet(id: number): Promise<void>;
+    /** Open a BAM by resref - what both the set rows and the facet browser open through. */
+    openResref(resref: string): Promise<void>;
+    /** The facet browser over the open game's animations, or undefined with no game. */
+    facets(): FacetBrowser | undefined;
     /** Injected so a test can drive the panel without spawning a thread. */
     makePort?(extensionUri: vscode.Uri): GalleryPort;
 }
@@ -95,6 +98,15 @@ export function wireGalleryPanel(
             send: (request) => port.postMessage(request),
         });
 
+    // The selection lives with the panel, not the browser: two gallery panels over one game browse
+    // independently, and a restored panel starts from the default rather than inheriting a stale pick.
+    const browser = deps.facets();
+    let selection: FacetSelection = DEFAULT_SELECTION;
+    const postFacets = (): void => {
+        if (browser === undefined) return;
+        void panel.webview.postMessage({ type: "facets", state: browser.state(selection) } satisfies HostToWebview);
+    };
+
     port.onMessage((response) => pump?.handle(response));
     port.onError((err) => {
         // A dead worker cannot answer anything still in flight, so say so once rather than leaving every
@@ -113,6 +125,12 @@ export function wireGalleryPanel(
                     sets: [...deps.sets()],
                     ...(source === undefined ? { note: emptyNote } : {}),
                 } satisfies HostToWebview);
+                postFacets();
+                break;
+            case "selectFacet":
+                if (browser === undefined) break;
+                selection = browser.select(selection, message.family, message.value);
+                postFacets();
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);
@@ -120,8 +138,8 @@ export function wireGalleryPanel(
             case "open":
                 if (source) void deps.open(source, message.id);
                 break;
-            case "openSet":
-                void deps.openSet(message.id);
+            case "openResref":
+                void deps.openResref(message.resref);
                 break;
             // Parity with the other panels: a fatal error in the webview reaches the output channel and a
             // toast instead of leaving a silently blank panel.

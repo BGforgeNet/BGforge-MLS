@@ -198,3 +198,71 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* The facet browser. Every control is a native select themed with VS Code's dropdown tokens - left
+   unthemed it renders as OS chrome, a light box punched into a dark panel. */
+.facetbar {
+    align-items: end;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 8px;
+}
+.facet {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.facetlabel {
+    color: var(--vscode-descriptionForeground);
+    font-size: 11px;
+}
+.facet select {
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border, transparent);
+    border-radius: 2px;
+    color: var(--vscode-dropdown-foreground);
+    font-family: inherit;
+    font-size: var(--vscode-font-size);
+    padding: 3px 4px;
+}
+.facet select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+/* Fixed height: this line swaps between a file plus its button and a one-line reason on every selection
+   change, and a reflow here would shift the whole list below it each time. */
+.facetresult {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    margin: 0;
+    min-height: 30px;
+    padding: 0 8px;
+}
+.facetfile {
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.facetopen {
+    background: var(--vscode-button-background);
+    border: none;
+    border-radius: 2px;
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--vscode-font-size);
+    padding: 3px 10px;
+}
+.facetopen:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+.facetopen:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+.facetnone {
+    color: var(--vscode-descriptionForeground);
+}

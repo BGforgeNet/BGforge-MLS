@@ -1,7 +1,8 @@
 <script lang="ts">
     import { filterTiles } from "../grid-window";
-    import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
+    import { type FacetState, type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
+    import FacetBar from "./FacetBar.svelte";
     import Grid from "./Grid.svelte";
     import SetList from "./SetList.svelte";
     import Tabs from "./Tabs.svelte";
@@ -28,6 +29,7 @@
      * already been tried and failed, once per scroll past it.
      */
     let thumbnails: Map<string, string | undefined> = $state(new Map());
+    let facets: FacetState | undefined = $state();
     let loaded = $state(false);
 
     const shown = $derived(filterTiles(items, query));
@@ -48,6 +50,10 @@
             // stored value.
             tab = resolveTab(tab, message.sets.length > 0);
             loaded = true;
+            return;
+        }
+        if (message.type === "facets") {
+            facets = message.state;
             return;
         }
         // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
@@ -73,7 +79,27 @@
         onQuery={(v) => (query = v)}
     />
     {#if tab === "sets"}
-        <SetList sets={shownSets} onOpen={(id) => post({ type: "openSet", id })} />
+        {#if facets}
+            <FacetBar
+                state={facets}
+                onSelect={(family, value) => post({ type: "selectFacet", family, value })}
+            />
+            <p class="facetresult">
+                {#if facets.resref}
+                    <span class="facetfile">{facets.resref}.BAM</span>
+                    <button
+                        type="button"
+                        class="facetopen"
+                        onclick={() => facets?.resref && post({ type: "openResref", resref: facets.resref })}
+                    >
+                        Open in editor
+                    </button>
+                {:else}
+                    <span class="facetnone">{facets.unavailable}</span>
+                {/if}
+            </p>
+        {/if}
+        <SetList sets={shownSets} onOpen={(resref) => post({ type: "openResref", resref })} />
     {:else if loaded && items.length === 0}
         <p class="empty">{note ?? "No drawable resources here."}</p>
     {:else}
