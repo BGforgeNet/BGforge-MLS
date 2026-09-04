@@ -1,0 +1,81 @@
+import { describe, expect, it } from "vitest";
+import { openGame } from "@bgforge/binary";
+import { parseAnimationIni } from "../src/ie-resources/animation-ini";
+import { miniGame } from "./ie-game-fixtures";
+
+const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
+
+/**
+ * An installed Enhanced Edition game, whose animations ship their own INIs.
+ *
+ * Unset means skip: game data is not redistributable, so there is nothing to point this at in CI. Point it
+ * at a local install to run the suite. A CLASSIC install is the wrong target and would report a false
+ * failure - it ships no animation INIs at all, which is why the vendored table exists.
+ */
+const EE_GAME = process.env.BGFORGE_IE_GAME;
+
+describe("parseAnimationIni", () => {
+    it("reads the drawing declaration, which need not match the animation's own code", () => {
+        const ini = parseAnimationIni(miniGame().read("6004", "ini"));
+        expect(ini.animationType).toBe(0x6000);
+        expect(ini.section).toBe("character");
+        expect(ini.resref).toBe("CDMB");
+        expect(ini.resrefPaperdoll).toBe("CGMC");
+        expect(ini.armorBase).toBe("B");
+        expect(ini.armorSpecific).toBe("C");
+        expect(ini.armorMax).toBe(4);
+        expect(ini.splitBams).toBe(true);
+        expect(ini.falseColor).toBe(true);
+    });
+
+    it("reads a hex animation_type that is not all digits", () => {
+        const ini = parseAnimationIni(miniGame().read("A000", "ini"));
+        expect(ini.animationType).toBe(0xa000);
+        expect(ini.section).toBe("monster_large16");
+        expect(ini.resref).toBe("MWYV");
+    });
+
+    it("leaves an undeclared field undefined rather than defaulting it", () => {
+        const ini = parseAnimationIni(encode("[general]\nanimation_type=1000\n"));
+        expect(ini.resref).toBeUndefined();
+        expect(ini.armorMax).toBeUndefined();
+        expect(ini.splitBams).toBeUndefined();
+        expect(ini.section).toBeUndefined();
+    });
+
+    it("ignores comment lines and blank lines", () => {
+        const ini = parseAnimationIni(encode("// MWYV wyvern\n\n[general]\nanimation_type=1000\n"));
+        expect(ini.animationType).toBe(0x1000);
+    });
+
+    it("takes the drawing section as the first that is neither general nor sounds", () => {
+        const ini = parseAnimationIni(
+            encode("[general]\nanimation_type=1000\n\n[monster_quadrant]\nquadrants=4\n\n[sounds]\nattack=\n"),
+        );
+        expect(ini.section).toBe("monster_quadrant");
+        expect(ini.quadrants).toBe(4);
+    });
+});
+
+describe.skipIf(EE_GAME === undefined)("over a real install's animation INIs", () => {
+    it("reads a declared type and a drawing section from every one", () => {
+        const game = openGame(EE_GAME!);
+        expect(game, `no game at ${EE_GAME}`).toBeDefined();
+        // Animation INIs are named after the id in hex; an install may ship other .ini resources too.
+        const inis = game!.list().filter((r) => r.ext?.toLowerCase() === "ini" && /^[0-9a-f]{1,4}$/i.test(r.resref));
+        const undeclared: string[] = [];
+        const sectionless: string[] = [];
+        for (const ref of inis) {
+            const ini = parseAnimationIni(game!.read(ref.resref, "ini"));
+            if (ini.animationType === undefined) undeclared.push(ref.resref);
+            if (ini.section === undefined) sectionless.push(ref.resref);
+        }
+        // The population is reported beside the verdict rather than asserted against a floor: the count is
+        // the install's number, not ours, and a floor set at one install's ceiling reds on the next.
+        expect({ inis: inis.length, undeclared, sectionless }).toEqual({
+            inis: inis.length,
+            undeclared: [],
+            sectionless: [],
+        });
+    });
+});
