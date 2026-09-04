@@ -59,6 +59,42 @@ export function multiCycle(edge: number, count: number): Uint8Array {
     return serializeBamV1(animation);
 }
 
+/**
+ * A BAM shaped like a shipped character STAND animation: many cycles, the first of them opening on a 1x1
+ * placeholder frame, with the real art further in.
+ *
+ * Measured on a shipped install, not invented: `CHMB1G1` and `CEFB1G1` each carry 99 cycles whose first four
+ * open on 1x1 frames, while an attack BAM's cycles open on real 27x64 art. A thumbnail that samples the first
+ * cycles alone therefore draws a blank tile for exactly the animations a reader most wants to look at.
+ */
+export function blankOpeningCycles(edge: number, blanks: number, real: number): Uint8Array {
+    const palette = greyPalette();
+    for (let i = 1; i <= blanks + real; i++) palette[i] = { r: i * 30, g: 255 - i * 30, b: i * 10, a: 255 };
+    const frames = [
+        ...Array.from({ length: blanks }, () => ({
+            width: 1,
+            height: 1,
+            pixels: new Uint8Array(1).fill(0),
+            offsetX: 0,
+            offsetY: 0,
+        })),
+        ...Array.from({ length: real }, (_, i) => ({
+            width: edge,
+            height: edge,
+            pixels: new Uint8Array(edge * edge).fill(blanks + i + 1),
+            offsetX: 0,
+            offsetY: 0,
+        })),
+    ];
+    const animation: IndexedAnimation = {
+        palette,
+        frames,
+        sequences: frames.map((_, i) => ({ frameRefs: [i], facing: "none" as const })),
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    return serializeBamV1(animation);
+}
+
 /** A 2x2 BAM of four distinct palette indices, for asserting which sample a downscale keeps. */
 export function fourColour2x2(): Uint8Array {
     const palette = greyPalette();

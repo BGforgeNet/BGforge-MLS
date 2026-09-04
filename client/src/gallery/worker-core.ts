@@ -10,7 +10,7 @@
  */
 import { type ResourceLocation } from "@bgforge/binary";
 import { pvrzResourceName, type PvrzResolver } from "@bgforge/image";
-import { requiredPvrzPages, thumbnailDataUri } from "../ie-resources/thumbnails";
+import { requiredPvrzPages, type Thumbnail, thumbnailOf } from "../ie-resources/thumbnails";
 
 /** What a tile needs drawn. `item` is the gallery's own id, echoed back so a reply routes without the view
  *  tracking request ids itself. */
@@ -29,8 +29,9 @@ export type GalleryRequest =
     | ({ kind: "pages"; pages: Record<string, ResourceLocation | null> } & ThumbnailJob);
 
 export type GalleryResponse =
-    /** `dataUri` absent means the resource cannot be drawn - a malformed or over-cap file, not a failure. */
-    | { id: number; kind: "thumbnail"; item: string; dataUri?: string }
+    /** `dataUri` absent means the resource cannot be drawn - a malformed or over-cap file, not a failure.
+     *  `directional` says the source is a creature animation, which is why its picture holds one frame. */
+    | { id: number; kind: "thumbnail"; item: string; dataUri?: string; directional?: boolean }
     | { id: number; kind: "needPages"; item: string; pages: string[] }
     | { id: number; kind: "error"; item: string; message: string };
 
@@ -56,17 +57,26 @@ export function runJob(request: GalleryRequest, io: GalleryIo): GalleryResponse 
             // the host answers with a `pages` request carrying a locator for each.
             const pages = requiredPvrzPages(bytes);
             if (pages.length > 0) return { id, kind: "needPages", item, pages };
-            return { id, kind: "thumbnail", item, dataUri: thumbnailDataUri(bytes, request.ext, request.size) };
+            return { id, kind: "thumbnail", item, ...drawn(thumbnailOf(bytes, request.ext, request.size)) };
         }
         const resolve: PvrzResolver = (page) => {
             const at = request.pages[pvrzResourceName(page)];
             if (at === undefined || at === null) return;
             return io.readPage?.(pvrzResourceName(page), at) ?? io.readBytes(at);
         };
-        return { id, kind: "thumbnail", item, dataUri: thumbnailDataUri(bytes, request.ext, request.size, resolve) };
+        return { id, kind: "thumbnail", item, ...drawn(thumbnailOf(bytes, request.ext, request.size, resolve)) };
     } catch (error) {
         return { id, kind: "error", item, message: error instanceof Error ? error.message : String(error) };
     }
+}
+
+/**
+ * The answer's picture fields, flattened - and absent entirely when nothing could be drawn, which is what a
+ * missing `dataUri` means.
+ */
+function drawn(thumbnail: Thumbnail | undefined): { dataUri?: string; directional?: boolean } {
+    if (thumbnail === undefined) return {};
+    return { dataUri: thumbnail.dataUri, ...(thumbnail.directional ? { directional: true } : {}) };
 }
 
 /**

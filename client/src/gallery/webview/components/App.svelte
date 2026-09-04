@@ -1,6 +1,6 @@
 <script lang="ts">
     import { iconTags, tagsFor } from "../../icon-tags";
-    import { filterTiles } from "../grid-window";
+    import { filterTiles, ladderSize } from "../grid-window";
     import { type FacetState, type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
     import FacetBar from "./FacetBar.svelte";
@@ -18,6 +18,12 @@
 
     const { post, ladder, tileSize = 64 }: Props = $props();
 
+    /**
+     * The preview's drawn size: the ladder's top step, since this is the one picture the animations tab is
+     * about rather than one tile among hundreds.
+     */
+    const PREVIEW_PX = 128;
+
     let title = $state("resources");
     let items: GalleryTile[] = $state([]);
     let sets: SetTile[] = $state([]);
@@ -31,6 +37,8 @@
      * already been tried and failed, once per scroll past it.
      */
     let thumbnails: Map<string, string | undefined> = $state(new Map());
+    /** Which answered items are creature animations, so a tile can say why its picture holds one frame. */
+    let directional: Set<string> = $state(new Set());
     let facets: FacetState | undefined = $state();
     /** The animation this panel was opened on, if any: the sets tab marks its row. */
     let focusSet: number | undefined = $state();
@@ -48,6 +56,29 @@
     const hasSets = $derived(sets.length > 0);
 
     const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
+
+    /**
+     * The Files tile for the animation the facets resolve to.
+     *
+     * Found among the tiles the host already sent rather than requested by name: the thumbnail pump is keyed
+     * by tile id, so going through the tile is what lets the preview reuse the same decode path - and the
+     * archive's own spelling of the resref, which need not be the one the animation table gave.
+     */
+    const facetTile = $derived(
+        facets?.resref === undefined
+            ? undefined
+            : items.find(
+                  (tile) => tile.ext === "bam" && tile.label.toUpperCase() === facets?.resref?.toUpperCase(),
+              ),
+    );
+    const previewSize = $derived(ladderSize(PREVIEW_PX, globalThis.devicePixelRatio ?? 1, ladder));
+
+    // Ask once per file: the map holds an entry even for a picture that could not be drawn, so a second
+    // request for the same failure never goes out.
+    $effect(() => {
+        const id = facetTile?.id;
+        if (id !== undefined && !thumbnails.has(id)) post({ type: "requestThumbnails", ids: [id], size: previewSize });
+    });
 
     function onMessage(event: MessageEvent<HostToWebview>): void {
         const message = event.data;
@@ -70,6 +101,7 @@
         // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
         // waiting on this picture would never re-render - a bug that only shows up in the live panel.
         thumbnails = new Map([...thumbnails, [message.id, message.dataUri]]);
+        if (message.directional === true) directional = new Set([...directional, message.id]);
     }
 
     $effect(() => {
@@ -98,6 +130,14 @@
                 state={facets}
                 onSelect={(family, value) => post({ type: "selectFacet", family, value })}
             />
+            <div class="facetpreview" style="width: {PREVIEW_PX}px; height: {PREVIEW_PX}px">
+                {#if facetTile && thumbnails.get(facetTile.id)}
+                    <img src={thumbnails.get(facetTile.id)} alt={`${facets.resref} frame`} />
+                    {#if directional.has(facetTile.id)}
+                        <span class="rose" title="Creature animation: one frame of several directions"></span>
+                    {/if}
+                {/if}
+            </div>
             <p class="facetresult">
                 {#if facets.resref}
                     <span class="facetfile">{facets.resref}.BAM</span>
@@ -123,6 +163,7 @@
         <Grid
             tiles={shown}
             {thumbnails}
+            {directional}
             {tileSize}
             {ladder}
             onOpen={(id) => post({ type: "open", id })}

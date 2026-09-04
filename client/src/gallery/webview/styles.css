@@ -94,6 +94,8 @@ body {
    reflow every row below it on every scroll. */
 .thumb {
     display: flex;
+    /* Anchors the creature-animation marker over the picture. */
+    position: relative;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
@@ -183,9 +185,16 @@ body {
 .setfocus {
     box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
 }
+/* Fixed tracks, not content-sized ones: over hundreds of rows an auto-width name column puts every id and
+   every reason at a different x, and the eye cannot scan a column that moves per row. Sized past the
+   longest name either shipped install's tables carry, so the track holds without truncating. */
 .setname {
     flex: 0 0 auto;
+    /* Monospace like the other two identifier columns, which also makes the `ch` track exact rather than an
+       estimate over a proportional font. */
+    font-family: var(--vscode-editor-font-family, monospace);
     font-size: 12px;
+    width: 30ch;
 }
 .setid,
 .setresref {
@@ -193,6 +202,12 @@ body {
     flex: 0 0 auto;
     font-family: var(--vscode-editor-font-family, monospace);
     font-size: 11px;
+}
+.setid {
+    width: 7ch;
+}
+.setresref {
+    width: 6ch;
 }
 /* The reason takes the remaining width and stays on one line: it is an explanation, not the row's subject. */
 .setnote {
@@ -244,6 +259,25 @@ body {
     color: var(--vscode-descriptionForeground);
     font-size: 11px;
 }
+/* The box is sized by the component and reserved before any picture arrives, for the same reason a grid
+   tile's is: a preview that appeared with its bytes would shift the list under the reader's cursor. */
+.facetpreview {
+    align-items: center;
+    position: relative;
+    background: var(--vscode-editorWidget-background);
+    border-radius: 2px;
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    margin: 6px 8px 0;
+}
+.facetpreview img {
+    max-width: 100%;
+    max-height: 100%;
+    /* Pixel art: the browser must not smooth it back into the blur the downscale avoided. */
+    image-rendering: pixelated;
+}
+
 /* Fixed height: this line swaps between a file plus its button and a one-line reason on every selection
    change, and a reflow here would shift the whole list below it each time. */
 .facetresult {
@@ -257,6 +291,25 @@ body {
 }
 .facetfile {
     font-family: var(--vscode-editor-font-family, monospace);
+}
+
+/* A creature animation's picture is ONE frame on purpose - its other cycles are the same pose turned round.
+   Three dots read as a row of facings and say the file is directional, which a bare still cannot. Text would
+   not fit a 64px tile, and a colour alone would carry meaning nothing else states. */
+.rose {
+    /* Dots over their own backdrop, because the art beneath is arbitrary: bare dots vanished into a dark
+       figure exactly where a creature's feet are drawn. */
+    background:
+        radial-gradient(circle at 50% 50%, var(--vscode-foreground) 40%, transparent 46%) 2px 2px / 5px 5px repeat-x,
+        var(--vscode-editorWidget-background);
+    border-radius: 4px;
+    bottom: 1px;
+    box-shadow: 0 0 0 1px var(--vscode-panel-border);
+    height: 8px;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 19px;
 }
 .facetopen {
     background: var(--vscode-button-background);

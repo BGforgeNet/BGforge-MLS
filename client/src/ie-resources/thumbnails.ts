@@ -17,6 +17,7 @@ import {
     pvrzResourceName,
     readBamV1Tables,
     readBamV2Structure,
+    interpretIeDirections,
     readBmpRgba,
     transparentIndexOf,
 } from "@bgforge/image";
@@ -59,29 +60,50 @@ const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
  * Undefined rather than a throw for every failure - a corrupt or unparseable icon is a missing picture, not a
  * reason to fail the field it sits beside, and a mod archive is exactly where a malformed BAM turns up.
  */
+export interface Thumbnail {
+    dataUri: string;
+    /**
+     * The source is a creature animation - cycles laid out as direction blocks.
+     *
+     * Carried out of the decode rather than re-derived by a caller, because the same answer also decides
+     * how many frames the picture shows: a viewer badging one file and a picture drawn as the other would
+     * be two answers to one question.
+     */
+    directional: boolean;
+}
+
+/** The picture plus what the decode learned about the source. */
+export function thumbnailOf(bytes: Uint8Array, ext: string, size: number, pvrz?: PvrzResolver): Thumbnail | undefined {
+    if (bytes.length > MAX_SOURCE_BYTES) return;
+    const how = DRAWABLE.get(ext.toLowerCase());
+    if (how === undefined) return;
+    try {
+        if (how === "frm") return { dataUri: dataUri("image/png", frmFramePng(bytes, size)), directional: false };
+        if (how === "bam") {
+            // v1 and v2 share the "BAM " tag and are entirely different formats behind it; dispatch on the
+            // signature rather than the caller's extension, which cannot tell them apart.
+            if (isBamV2(bytes)) {
+                return { dataUri: dataUri("image/png", bamV2FramePng(bytes, size, pvrz)), directional: false };
+            }
+            const drawn = bamFramePng(bytes, size);
+            return { dataUri: dataUri("image/png", drawn.png), directional: drawn.directional };
+        }
+        return { dataUri: dataUri("image/png", bmpFramePng(bytes, size)), directional: false };
+    } catch {
+        // Deliberately swallowed, per the contract above: a malformed icon leaves the field with no picture,
+        // which is the same state as a field whose type has none.
+        return undefined;
+    }
+}
+
+/** Just the picture, for the callers that show one without saying anything about the source. */
 export function thumbnailDataUri(
     bytes: Uint8Array,
     ext: string,
     size: number,
     pvrz?: PvrzResolver,
 ): string | undefined {
-    if (bytes.length > MAX_SOURCE_BYTES) return;
-    const how = DRAWABLE.get(ext.toLowerCase());
-    if (how === undefined) return;
-    try {
-        if (how === "frm") return dataUri("image/png", frmFramePng(bytes, size));
-        if (how === "bam") {
-            // v1 and v2 share the "BAM " tag and are entirely different formats behind it; dispatch on the
-            // signature rather than the caller's extension, which cannot tell them apart.
-            if (isBamV2(bytes)) return dataUri("image/png", bamV2FramePng(bytes, size, pvrz));
-            return dataUri("image/png", bamFramePng(bytes, size));
-        }
-        return dataUri("image/png", bmpFramePng(bytes, size));
-    } catch {
-        // Deliberately swallowed, per the contract above: a malformed icon leaves the field with no picture,
-        // which is the same state as a field whose type has none.
-        return undefined;
-    }
+    return thumbnailOf(bytes, ext, size, pvrz)?.dataUri;
 }
 
 /**
@@ -91,27 +113,36 @@ export function thumbnailDataUri(
  * pressed, disabled) over the same artwork, so frame 0 is the representative image either way - and a BAM whose
  * sequence table is empty still has frames to show.
  */
-function bamFramePng(bytes: Uint8Array, size: number): Uint8Array {
+function bamFramePng(bytes: Uint8Array, size: number): { png: Uint8Array; directional: boolean } {
     // Only the sampled frames are decoded, not the whole animation: a creature BAM has hundreds of frames and
-    // a tile shows at most four. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
+    // a tile shows one or two. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
     const tables = readBamV1Tables(bytes);
-    const cells = composeCells(firstFrameOfEachCycle(tables));
-    const frames = decodeBamV1Frames(
-        bytes,
-        cells.map((c) => c.index),
-    );
+    // A creature animation's cycles are the same pose in every direction, so more than one of them is the
+    // same picture turned round - it shows the reader nothing the marker does not say. Everything else gets
+    // two, which distinguishes an animation from a still without cutting the art down to quarters.
+    //
+    // Either signal, not the strong one alone: `detected` needs every cycle of a block to carry frames, which
+    // a stand animation's placeholder cycles break - so the 99-cycle files, the ones this matters most for,
+    // interpret as eleven direction blocks while failing the fingerprint. An icon has one block and fails
+    // both (measured across the shipped icon families, which carry one or two cycles each).
+    const directions = interpretIeDirections(tables.sequences, tables.frameCount);
+    const directional = directions !== undefined && (directions.detected || directions.groups.length > 1);
+    const candidates = [...new Set(firstFrameOfEachCycle(tables))].slice(0, CANDIDATE_FRAMES);
+    const frames = decodeBamV1Frames(bytes, candidates);
+    const cells = composeCells(drawable(candidates, frames), directional ? 1 : 2);
 
     const drawn = cells.flatMap((cell) => {
         const frame = frames.get(cell.index);
         if (frame === undefined) return [];
-        // One cell is the whole tile; four cells are half of it each.
+        // One cell is the whole tile; two share it on the diagonal, half of it each.
         const box = cells.length === 1 ? size : Math.max(1, Math.floor(size / 2));
         return [{ cell: cell.cell, ...downscaleIndexed(frame.pixels, frame.width, frame.height, box) }];
     });
     const first = drawn[0];
     if (first === undefined) throw new Error("BAM has no frames");
     if (drawn.length === 1) {
-        return encodeIndexedPng(first.width, first.height, first.pixels, tables.palette, tables.transparentIndex);
+        const png = encodeIndexedPng(first.width, first.height, first.pixels, tables.palette, tables.transparentIndex);
+        return { png, directional };
     }
 
     // The cell edge comes from the largest picture actually drawn, not from `size`: small art must not be
@@ -126,7 +157,34 @@ function bamFramePng(bytes: Uint8Array, size: number): Uint8Array {
             canvas.set(d.pixels.subarray(y * d.width, (y + 1) * d.width), (originY + y) * edge * 2 + originX);
         }
     }
-    return encodeIndexedPng(edge * 2, edge * 2, canvas, tables.palette, tables.transparentIndex);
+    return { png: encodeIndexedPng(edge * 2, edge * 2, canvas, tables.palette, tables.transparentIndex), directional };
+}
+
+/**
+ * How many cycle-opening frames are decoded before choosing which to draw.
+ *
+ * Far more than the one or two a tile shows, because a shipped character STAND animation opens most of its
+ * cycles on a 1x1 placeholder: `CHFW2G1` and its siblings each carry 99 cycles with 81 distinct opening
+ * frames, of which just 9 hold art - and WHERE those nine sit differs per file, from candidate 9 in one to
+ * past candidate 16 in the next. A window that stopped early drew a blank tile for the later ones.
+ *
+ * One decode call rather than chunks: the reader decompresses the file per call, so scanning in batches would
+ * pay that repeatedly. The placeholders it decodes on the way are a pixel each.
+ */
+const CANDIDATE_FRAMES = 128;
+
+/**
+ * The candidates worth drawing, in cycle order, falling back to all of them when none has real art.
+ *
+ * A 1x1 frame is the placeholder above, not a picture. The fallback keeps a file whose every sampled cycle is
+ * a placeholder drawing SOMETHING - it is a real frame, and a blank tile is what this rule exists to avoid.
+ */
+function drawable(candidates: readonly number[], frames: Map<number, { width: number; height: number }>): number[] {
+    const real = candidates.filter((index) => {
+        const frame = frames.get(index);
+        return frame !== undefined && frame.width > 1 && frame.height > 1;
+    });
+    return real.length > 0 ? real : [...candidates];
 }
 
 /**
@@ -146,10 +204,9 @@ function firstFrameOfEachCycle(tables: { sequences: readonly { frameRefs: readon
  * artwork, so four cycles of one frame is one picture, not a grid of four identical ones. Two go on the
  * diagonal, which reads as two things rather than as a half-empty grid.
  */
-export function composeCells(firstFrames: readonly number[]): { index: number; cell: 0 | 1 | 2 | 3 }[] {
-    const CELLS = { 1: [0], 2: [0, 3], 3: [0, 1, 2], 4: [0, 1, 2, 3] } as const;
-    const distinct = [...new Set(firstFrames)].slice(0, 4);
-    const layout = CELLS[Math.max(1, distinct.length) as 1 | 2 | 3 | 4];
+export function composeCells(firstFrames: readonly number[], most: 1 | 2 = 2): { index: number; cell: 0 | 3 }[] {
+    const distinct = [...new Set(firstFrames)].slice(0, most);
+    const layout = distinct.length > 1 ? ([0, 3] as const) : ([0] as const);
     return distinct.map((index, at) => ({ index, cell: layout[at]! }));
 }
 

@@ -9,6 +9,7 @@ import { canThumbnail, composeCells, requiredPvrzPages, thumbnailDataUri } from 
 import {
     bam,
     bamV2WithPages,
+    blankOpeningCycles,
     bmpBytes,
     distinctColoursOf,
     fourColour2x2,
@@ -121,6 +122,23 @@ describe("downscaling", () => {
     });
 });
 
+describe("a BAM whose leading cycles open on placeholder frames", () => {
+    // A shipped stand animation opens most of its cycles on a 1x1 frame (see the fixture's own note), so
+    // sampling the first cycles alone yields a tile of blanks - a 2x2 speck for the very animation the
+    // animations tab resolves to by default.
+    it("draws the art rather than the placeholders", () => {
+        const uri = thumbnailDataUri(blankOpeningCycles(16, 4, 4), "bam", 64);
+
+        expect(pngSize(uri!)).toEqual({ width: 32, height: 32 });
+    });
+
+    it("still draws a BAM whose every cycle opens on a placeholder, rather than nothing", () => {
+        const uri = thumbnailDataUri(blankOpeningCycles(16, 4, 0), "bam", 64);
+
+        expect(uri).toBeDefined();
+    });
+});
+
 describe("composeCells", () => {
     it("collapses identical cycle art to a single picture", () => {
         expect(composeCells([7, 7, 7, 7])).toEqual([{ index: 7, cell: 0 }]);
@@ -133,16 +151,19 @@ describe("composeCells", () => {
         ]);
     });
 
-    it("places three in reading order, leaving BR empty", () => {
+    it("takes only the first two, however many cycles the file has", () => {
         expect(composeCells([1, 2, 3])).toEqual([
             { index: 1, cell: 0 },
-            { index: 2, cell: 1 },
-            { index: 3, cell: 2 },
+            { index: 2, cell: 3 },
         ]);
     });
 
+    it("shows a single picture when the caller asks for one - a creature's cycles are one pose turned round", () => {
+        expect(composeCells([1, 2, 3], 1)).toEqual([{ index: 1, cell: 0 }]);
+    });
+
     it("fills the quadrants from the first four cycles", () => {
-        expect(composeCells([1, 2, 3, 4, 5])).toHaveLength(4);
+        expect(composeCells([1, 2, 3, 4, 5])).toHaveLength(2);
     });
 
     it("treats a repeat among four as fewer cells", () => {
@@ -158,13 +179,15 @@ describe("composeCells", () => {
  * a correct layout that never reaches the encoder is the failure this catches.
  */
 describe("composed tiles", () => {
-    it("puts each of four cycles in its own quadrant", () => {
+    // Two, not four: past a second sample the tile is showing quarter-size art to say something the first
+    // two already said, and the quarters are what made a creature's frames unreadable.
+    it("shows the first two cycles on the diagonal however many the file has", () => {
         const uri = thumbnailDataUri(multiCycle(32, 4), "BAM", 64)!;
         expect(pngSize(uri)).toEqual({ width: 64, height: 64 });
         expect(indexAt(uri, 16, 16)).toBe(1); // TL - cycle 0's first frame
-        expect(indexAt(uri, 48, 16)).toBe(2); // TR
-        expect(indexAt(uri, 16, 48)).toBe(3); // BL
-        expect(indexAt(uri, 48, 48)).toBe(4); // BR
+        expect(indexAt(uri, 48, 48)).toBe(2); // BR - cycle 1's
+        expect(indexAt(uri, 48, 16)).toBe(0); // TR - transparent index
+        expect(indexAt(uri, 16, 48)).toBe(0); // BL
     });
 
     it("leaves the other diagonal transparent when there are two cycles", () => {

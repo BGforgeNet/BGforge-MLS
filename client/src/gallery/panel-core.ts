@@ -18,6 +18,12 @@ export interface PumpIo {
 }
 
 /**
+ * What one answered item carries. Empty means it could not be drawn - the same state a tile shows for a file
+ * whose type has no picture.
+ */
+type Answer = { dataUri?: string; directional?: boolean };
+
+/**
  * Dispatches thumbnail work and routes replies back, at most once per (item, stamp, size).
  *
  * The cache is keyed on the source's stamp rather than the bytes: a stamp costs no read, so a re-scroll over
@@ -26,8 +32,9 @@ export interface PumpIo {
 export class ThumbnailPump {
     private readonly io: PumpIo;
     private nextId = 1;
-    /** Answered items, by cache key. Holds `undefined` for one that could not be drawn, so it is not retried. */
-    private readonly done = new Map<string, string | undefined>();
+    /** Answered items, by cache key. Holds an EMPTY answer for one that could not be drawn, so it is not
+     *  retried - hence a key check rather than a truthiness one at every read. */
+    private readonly done = new Map<string, Answer>();
     /** Dispatched but unanswered, by cache key - what stops a second scroll re-sending in-flight work. */
     private readonly inFlight = new Map<number, { item: string; key: string; size: number }>();
     private readonly pending = new Set<string>();
@@ -51,13 +58,13 @@ export class ThumbnailPump {
                 continue;
             }
             if (this.done.has(key)) {
-                this.io.post({ type: "thumbnail", id: item, dataUri: this.done.get(key) });
+                this.io.post({ type: "thumbnail", id: item, ...this.done.get(key) });
                 continue;
             }
             if (this.pending.has(key)) continue;
             const at = this.io.source.locate(item);
             if (at === undefined) {
-                this.done.set(key, undefined);
+                this.done.set(key, {});
                 this.io.post({ type: "thumbnail", id: item });
                 continue;
             }
@@ -79,7 +86,7 @@ export class ThumbnailPump {
             this.inFlight.delete(response.id);
             const at = this.io.source.locate(job.item);
             if (at === undefined) {
-                this.settle(job.key, job.item, undefined);
+                this.settle(job.key, job.item, {});
                 return;
             }
             const pages: Record<string, Locator | null> = {};
@@ -93,13 +100,19 @@ export class ThumbnailPump {
         this.inFlight.delete(response.id);
         // An error and an undrawable file reach the tile the same way - as no picture. The difference matters
         // to a log, not to the grid, which has one way to show "nothing here".
-        this.settle(job.key, job.item, response.kind === "thumbnail" ? response.dataUri : undefined);
+        this.settle(
+            job.key,
+            job.item,
+            response.kind === "thumbnail"
+                ? { dataUri: response.dataUri, ...(response.directional === true ? { directional: true } : {}) }
+                : {},
+        );
     }
 
-    private settle(key: string, item: string, dataUri: string | undefined): void {
+    private settle(key: string, item: string, answer: Answer): void {
         this.pending.delete(key);
-        this.done.set(key, dataUri);
-        this.io.post({ type: "thumbnail", id: item, dataUri });
+        this.done.set(key, answer);
+        this.io.post({ type: "thumbnail", id: item, ...answer });
     }
 }
 

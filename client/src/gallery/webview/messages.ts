@@ -85,8 +85,10 @@ export type HostToWebview =
            */
           focusSet?: number;
       }
-    /** `dataUri` absent means the item cannot be drawn - the tile keeps its box and shows its label. */
-    | { type: "thumbnail"; id: string; dataUri?: string }
+    /** `dataUri` absent means the item cannot be drawn - the tile keeps its box and shows its label.
+     *  `directional` says the source is a creature animation, so the picture is ONE frame by design and the
+     *  view marks it as such rather than leaving it looking like a still. */
+    | { type: "thumbnail"; id: string; dataUri?: string; directional?: boolean }
     /** The facet browser's whole state, sent on open and after every selection change. */
     | { type: "facets"; state: FacetState };
 
