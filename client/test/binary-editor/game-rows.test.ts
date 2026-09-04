@@ -683,6 +683,25 @@ describe("withGameContext", () => {
         expect(out.rows[0]).toMatchObject({ name: "22 AREA_FOREST", strrefText: LINE });
     });
 
+    // A bitfield's bit names come from the install's own tables, the same way a value's name does.
+    describe("flag bit names", () => {
+        const flagsRow = { id: "b1", kind: "field", name: "Flags", flagsRef: { kind: "ids", byte: 0 }, rawValue: 3 };
+        const BITS = { "0": ["ITEM_UNSELLABLE"], "1": ["ITEM_TWO_HANDED"] };
+        const withBits = { ...lookups, flagBitNames: () => BITS };
+
+        it("fills the bit names the game supplies", () => {
+            const out = withGameContext({ rows: [flagsRow] }, withBits);
+
+            expect(out.rows[0]).toMatchObject({ flagBitNames: BITS });
+        });
+
+        it("leaves the row bare when the game names no bits, so the raw bits still show", () => {
+            const out = withGameContext({ rows: [flagsRow] }, lookups);
+
+            expect(out.rows[0]).not.toHaveProperty("flagBitNames");
+        });
+    });
+
     // A creature's seven colour bytes each select a gradient from the install's own table, so the number
     // alone tells the user nothing - the colours are the value.
     describe("creature colour gradients", () => {

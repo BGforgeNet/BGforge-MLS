@@ -134,6 +134,9 @@ export default defineConfig({
                 // ResourceThumbnail and the LayoutRenderer that provides it, and end-to-end by the
                 // resource-picker render harness, which asserts the picture draws and opens.
                 "client/src/binary-editor/webview/state/thumbnail-context.ts",
+                // And the fetch-the-colour-gradient-table wrapper, same shape again. Exercised in-context by
+                // NumberField's colour picker and the LayoutRenderer that provides it.
+                "client/src/binary-editor/webview/state/gradient-table-context.ts",
                 // Dialog editor: the render harness (mounts the real App in Chromium via Playwright,
                 // delivers the model through the real postMessage channel) is e2e-tier and run out of
                 // process, not under in-process vitest. Same category as client/src/test/**.

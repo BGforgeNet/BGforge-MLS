@@ -18,7 +18,14 @@ function cre(input: { strref: number; animationId: number; colors: readonly numb
     return bytes;
 }
 
-const ANISND = ["IDS", "0x5011 CEFC CGAMEANIMATIONTYPE_CLERIC_FEMALE_ELF", "0x6100 CHMB SOME_FIGHTER"].join("\n");
+const ANISND = [
+    "IDS",
+    "0x5011 CEFC CGAMEANIMATIONTYPE_CLERIC_FEMALE_ELF",
+    "0x6100 CHMB SOME_FIGHTER",
+    // A second row for an id already listed, and a decimal-looking row: both are ignored.
+    "0x6100 CHMC A_LATER_OVERRIDE",
+    "6100 NOPE NOT_HEX",
+].join("\n");
 
 const LINES: Record<number, string> = { 100: "Agnasia", 200: "Elminster" };
 
@@ -29,7 +36,9 @@ const RECORDS: Record<string, Uint8Array> = {
     "nameless.cre": cre({ strref: -1, animationId: 0x9999, colors: [0, 0, 0, 0, 0, 0, 0] }),
 };
 
-function gameSource(overrides: { missing?: string[]; truncated?: boolean; noAnisnd?: boolean } = {}) {
+function gameSource(
+    overrides: { missing?: string[]; truncated?: boolean; noAnisnd?: boolean; unreadable?: string[] } = {},
+) {
     const resources = Object.keys(RECORDS).filter((n) => !(overrides.missing ?? []).includes(n));
     return {
         gameAt: () => ({
@@ -42,12 +51,20 @@ function gameSource(overrides: { missing?: string[]; truncated?: boolean; noAnis
             read: (resref: string, type: string) => {
                 const name = `${resref}.${type}`.toLowerCase();
                 if (name === "anisnd.ids") return new TextEncoder().encode(ANISND);
+                if ((overrides.unreadable ?? []).includes(name)) throw new Error(`corrupt ${name}`);
                 const bytes = RECORDS[name];
                 if (!bytes) throw new Error(`no ${name}`);
                 return overrides.truncated === true ? bytes.slice(0, 8) : bytes;
             },
-            list: () =>
-                resources.map((name) => ({ resref: name.slice(0, name.lastIndexOf(".")).toUpperCase(), ext: "cre" })),
+            list: () => [
+                // The archive lists every resource, not only creatures.
+                { resref: "AGNASI", ext: "bam" },
+                { resref: "SOMEAREA", ext: undefined },
+                ...resources.map((name) => ({
+                    resref: name.slice(0, name.lastIndexOf(".")).toUpperCase(),
+                    ext: "cre",
+                })),
+            ],
         }),
     };
 }
@@ -94,6 +111,37 @@ describe("createCreatureIndexResolver", () => {
         const index = createCreatureIndexResolver(gameSource({ truncated: true }))(gameUri());
 
         expect(index).toEqual([]);
+    });
+
+    // An install with one damaged record still has thousands of good ones; losing the whole picker over it
+    // would be the worse failure.
+    it("keeps indexing past a record the archive cannot read", () => {
+        const index = createCreatureIndexResolver(gameSource({ unreadable: ["elmin.cre"] }))(gameUri());
+
+        expect(index?.map((e) => e.resref)).toEqual(["AGNASI", "NAMELESS"]);
+    });
+
+    it("indexes only the creature resources the archive lists", () => {
+        const index = createCreatureIndexResolver(gameSource())(gameUri());
+
+        expect(index?.map((e) => e.resref)).toEqual(["AGNASI", "ELMIN", "NAMELESS"]);
+    });
+
+    // Same posture as the other game lookups: an install nothing can be read out of is "no creatures", and
+    // the failed attempt is remembered so the dropdown does not re-probe it on every keystroke.
+    it("treats an unreadable game as no creatures, without re-probing it", () => {
+        let asked = 0;
+        const failing = {
+            gameAt: () => {
+                asked += 1;
+                throw new Error("unreadable");
+            },
+        };
+        const resolve = createCreatureIndexResolver(failing);
+
+        expect(resolve(gameUri())).toBeUndefined();
+        expect(resolve(gameUri())).toBeUndefined();
+        expect(asked).toBe(1);
     });
 
     it("resolves nothing for a document outside a game", () => {
