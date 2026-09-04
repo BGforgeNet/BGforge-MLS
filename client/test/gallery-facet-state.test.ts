@@ -112,6 +112,18 @@ describe("createFacetBrowser", () => {
         expect(createFacetBrowser(sets, exists).state(elfSelection).resref).toBe("CEFW2SA");
     });
 
+    it("seats the selection on an animation named by its id, at its lowest armour level", () => {
+        expect(createFacetBrowser(sets, exists).seat(0x6211)).toEqual({
+            ...elfMage,
+            armour: 1,
+            action: { kind: "misc", detail: 1 },
+        });
+    });
+
+    it("cannot seat an id that carries no facets, so the caller keeps the selection it had", () => {
+        expect(createFacetBrowser(sets, exists).seat(0xe030)).toBeUndefined();
+    });
+
     it("moves a control and re-seats the rest of the selection", () => {
         expect(createFacetBrowser(sets, exists).select(elfSelection, "race", "human")).toEqual({
             ...humanMage,

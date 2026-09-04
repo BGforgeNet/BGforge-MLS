@@ -43,6 +43,9 @@ const withGradients = {
 const gradientsOf = (row: unknown): readonly string[] | undefined =>
     (row as { gradientColors?: readonly string[] }).gradientColors;
 
+const animationOf = (row: unknown): { id: number } | undefined =>
+    (row as { animationTarget?: { id: number } }).animationTarget;
+
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
 const withRaceIds = {
     ...lookups,
@@ -747,6 +750,46 @@ describe("withGameContext", () => {
             );
 
             expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+    });
+
+    describe("a field whose value names a creature animation", () => {
+        const animationRow = {
+            id: "a1",
+            kind: "field",
+            name: "Animation",
+            ref: { kind: "ids", tables: ["ANIMATE"], animationIds: true },
+            rawValue: 0x6211,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => one("ANIMATE", [[0x6211, "MAGE_FEMALE_ELF"]]),
+        };
+
+        it("carries the animation as a link target", () => {
+            const out = withGameContext({ rows: [animationRow] }, named);
+
+            expect(animationOf(out.rows[0])).toEqual({ id: 0x6211 });
+        });
+
+        it("links an id no table names, which is the one most worth going to look at", () => {
+            const out = withGameContext({ rows: [{ ...animationRow, rawValue: 0x6543 }] }, named);
+
+            expect(animationOf(out.rows[0])).toEqual({ id: 0x6543 });
+        });
+
+        it("leaves the row bare outside a game, where there is nothing to browse", () => {
+            const out = withGameContext({ rows: [animationRow] }, lookups);
+
+            expect(animationOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not link an IDS row whose table does not hold animation ids", () => {
+            const raceRow = { ...animationRow, ref: { kind: "ids", tables: ["RACE"] } };
+
+            const out = withGameContext({ rows: [raceRow] }, named);
+
+            expect(animationOf(out.rows[0])).toBeUndefined();
         });
     });
 });

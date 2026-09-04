@@ -24,6 +24,7 @@ export type WebviewToHost =
     | { type: "structureOp"; op: StructureOpRequest }
     | { type: "spellbookEdit"; op: SpellbookEditOp }
     | { type: "openResource"; resref: string; ext: string }
+    | { type: "openAnimation"; id: number }
     | { type: "dumpJson" }
     | { type: "loadJson" }
     | { type: "runtimeError"; message: string; stack?: string };
@@ -44,6 +45,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             return true;
         case "openResource":
             return typeof m.resref === "string" && typeof m.ext === "string";
+        case "openAnimation":
+            return typeof m.id === "number";
         case "requestSpellbook":
         case "requestEffectTree":
         case "requestGradientTable":

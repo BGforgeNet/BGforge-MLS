@@ -120,7 +120,10 @@ export const creHeaderSpecAnnotated = {
      * entries in BG2:ToB) and a bare `0x6100` names nothing on its own. So this field shows a plain hex number
      * outside a game and gains names only from the install - see the hex `format` in the presentation below.
      */
-    animationId: { ...creHeaderSpec.animationId, ref: { kind: "ids", tables: ["ANIMATE"] } },
+    animationId: {
+        ...creHeaderSpec.animationId,
+        ref: { kind: "ids", tables: ["ANIMATE"], animationIds: true },
+    },
     // The 20 weapon-proficiency bytes are split into 40 packed scalar fields in the base spec (each byte ->
     // active/original sub-values per IESDP cre_v1.htm); they pass through here with no per-field overrides and
     // are surfaced as a 2-column matrix by the layout.

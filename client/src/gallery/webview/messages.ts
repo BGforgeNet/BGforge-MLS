@@ -76,6 +76,14 @@ export type HostToWebview =
           note?: string;
           /** Empty when the panel has no game behind it, which is what hides the tab strip. */
           sets: SetTile[];
+          /**
+           * The animation the panel was opened ON - a link from a creature's animation field.
+           *
+           * Opens the sets tab and marks the row. Present even for an id this install names nothing for:
+           * the browser saying it has no such animation is the answer to that click, and a link that
+           * quietly did nothing would not be.
+           */
+          focusSet?: number;
       }
     /** `dataUri` absent means the item cannot be drawn - the tile keeps its box and shows its label. */
     | { type: "thumbnail"; id: string; dataUri?: string }

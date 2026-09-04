@@ -77,6 +77,15 @@ export type ExternalRef =
            * sits beside PROJECTL.IDS and its symbols are labels with no file behind them.
            */
           readonly symbolResource?: { readonly table: string; readonly type: string };
+          /**
+           * The table's KEYS are creature-animation ids, so the value names a whole animation - a family of
+           * BAMs across armour levels and actions - rather than one resource.
+           *
+           * Distinct from `symbolResource`, where a symbol resolves to a single resref: here the id itself is
+           * the target and the symbol is only its name. A consumer offers to browse it; the field stays a
+           * numeric named list.
+           */
+          readonly animationIds?: true;
       }
     /**
      * Value is a row INDEX in a 2DA table, whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Same

@@ -76,6 +76,11 @@ export interface Row {
      *  first paint - a thumbnail that appeared once its bytes arrived would reflow the field grid. The bytes
      *  themselves are fetched lazily by the view, keyed on this. */
     thumbnail?: { resref: string; ext: string };
+    /** The creature animation this field's value names, when its ref declares the table's keys to be animation
+     *  ids. Set whenever the record was opened from a game, WHETHER OR NOT any table names this id: an id no
+     *  table covers is exactly the one worth going to look at, and the browser says so there rather than
+     *  leaving a dead chip here. */
+    animationTarget?: { id: number };
     /** The extension a `resource` ref points at IN THIS GAME (the declared type, or this flavour's override),
      *  set whenever the record was opened from a game - unlike `openTarget`, which additionally requires the
      *  current value to resolve. It is what makes the field pickable: the view offers the game's resources of

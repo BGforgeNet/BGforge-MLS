@@ -18,6 +18,7 @@ interface ValueRefRow {
         tables?: readonly string[];
         keyEncoding?: Readonly<Record<string, string>>;
         symbolResource?: { readonly table: string; readonly type: string };
+        animationIds?: true;
     };
     rawValue: number;
     enumOptions?: Record<string, string>;
@@ -311,8 +312,15 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
             // Read before the spread: `row` is re-typed to the merged shape below, and the value the resource
             // is derived from is the one this row already holds.
             const offers = resourceNamedByValue(row, tables, lookups);
+            // Read before the spread, like `offers` above: the row is re-typed to the merged shape below.
+            // Read at all inside the tables-resolved branch because that is what says a game is open - there
+            // is nothing to browse without one. Deliberately NOT conditional on the id being NAMED: an id no
+            // table covers still identifies an animation, and the browser is where that gets said.
+            const animation =
+                row.ref.kind === "ids" && row.ref.animationIds === true ? { id: row.rawValue } : undefined;
             row = { ...row, ...namedByGame(row, tables) };
             if (offers !== undefined) row = { ...row, ...offers };
+            if (animation !== undefined) row = { ...row, animationTarget: animation };
         }
     }
     if (isColorGradientRow(row)) {

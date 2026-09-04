@@ -32,6 +32,8 @@
      */
     let thumbnails: Map<string, string | undefined> = $state(new Map());
     let facets: FacetState | undefined = $state();
+    /** The animation this panel was opened on, if any: the sets tab marks its row. */
+    let focusSet: number | undefined = $state();
     let loaded = $state(false);
 
     const shown = $derived(
@@ -45,6 +47,8 @@
     );
     const hasSets = $derived(sets.length > 0);
 
+    const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
+
     function onMessage(event: MessageEvent<HostToWebview>): void {
         const message = event.data;
         if (message.type === "init") {
@@ -52,9 +56,10 @@
             items = message.items;
             sets = message.sets;
             note = message.note;
+            focusSet = message.focusSet;
             // A restored panel can ask for a tab this source cannot fill; resolveTab decides, not the
-            // stored value.
-            tab = resolveTab(tab, message.sets.length > 0);
+            // stored value. A panel opened ON an animation asks for the sets tab.
+            tab = resolveTab(message.focusSet === undefined ? tab : "sets", message.sets.length > 0);
             loaded = true;
             return;
         }
@@ -108,7 +113,10 @@
                 {/if}
             </p>
         {/if}
-        <SetList sets={shownSets} onOpen={(resref) => post({ type: "openResref", resref })} />
+        {#if focusSet !== undefined && !sets.some((set) => set.id === focusSet)}
+            <p class="facetnone">This install has no animation {hex(focusSet)}.</p>
+        {/if}
+        <SetList sets={shownSets} focus={focusSet} onOpen={(resref) => post({ type: "openResref", resref })} />
     {:else if loaded && items.length === 0}
         <p class="empty">{note ?? "No drawable resources here."}</p>
     {:else}

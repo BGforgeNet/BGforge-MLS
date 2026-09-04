@@ -5,6 +5,7 @@
     import { useJump } from "../../state/jump-context";
     import CellControl from "../CellControl.svelte";
     import DocLink from "../DocLink.svelte";
+    import AnimationLink from "../AnimationLink.svelte";
     import OpenResourceLink from "../OpenResourceLink.svelte";
     import ResourceThumbnail from "../ResourceThumbnail.svelte";
 
@@ -96,6 +97,9 @@
             {/if}
             {#if showsOpenChip(cell.row)}
                 <OpenResourceLink target={cell.row.openTarget!} />
+            {/if}
+            {#if cell.row.animationTarget}
+                <AnimationLink target={cell.row.animationTarget} />
             {/if}
         </div>
     {/each}

@@ -168,6 +168,10 @@ export class Bridge {
         this.post({ type: "dumpJson" });
     }
 
+    openAnimation(id: number): void {
+        this.post({ type: "openAnimation", id });
+    }
+
     openResource(resref: string, ext: string): void {
         this.post({ type: "openResource", resref, ext });
     }

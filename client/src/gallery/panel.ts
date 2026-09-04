@@ -28,6 +28,13 @@ export const GALLERY_VIEW_TYPE = "bgforge.gallery";
 /** What a restored panel needs to rebuild itself. Structured-clone safe - VS Code persists it as JSON. */
 export interface GalleryPanelState {
     source: "game" | "workspace";
+    /**
+     * The animation to open on, when the panel was opened by a link rather than by the command.
+     *
+     * Deliberately not restored: the serializer rebuilds a panel from its source alone, so a reloaded
+     * window shows the gallery rather than re-answering a click made an hour ago.
+     */
+    focusSet?: number;
 }
 
 export interface GalleryDeps {
@@ -101,7 +108,10 @@ export function wireGalleryPanel(
     // The selection lives with the panel, not the browser: two gallery panels over one game browse
     // independently, and a restored panel starts from the default rather than inheriting a stale pick.
     const browser = deps.facets();
-    let selection: FacetSelection = DEFAULT_SELECTION;
+    // Seated before the first `facets` message, so a link lands with its animation already selected rather
+    // than showing the default and moving under the reader.
+    let selection: FacetSelection =
+        (state.focusSet === undefined ? undefined : browser?.seat(state.focusSet)) ?? DEFAULT_SELECTION;
     const postFacets = (): void => {
         if (browser === undefined) return;
         void panel.webview.postMessage({ type: "facets", state: browser.state(selection) } satisfies HostToWebview);
@@ -123,6 +133,7 @@ export function wireGalleryPanel(
                     title: state.source === "game" ? "resources" : "files",
                     items: source?.list() ?? [],
                     sets: [...deps.sets()],
+                    ...(state.focusSet === undefined ? {} : { focusSet: state.focusSet }),
                     ...(source === undefined ? { note: emptyNote } : {}),
                 } satisfies HostToWebview);
                 postFacets();

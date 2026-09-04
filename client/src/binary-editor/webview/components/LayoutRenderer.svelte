@@ -7,6 +7,7 @@
     import type { Diagnostic, LayoutRow, NodeId, ResolvedLayout, ResolvedTab, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { provideJump } from "../state/jump-context";
+    import { provideOpenAnimation } from "../state/open-animation-context";
     import { provideOpenResource } from "../state/open-resource-context";
     import { provideResourceList } from "../state/resource-list-context";
     import { provideGradientTable } from "../state/gradient-table-context";
@@ -86,6 +87,8 @@
     provideJump(navigate);
     // Opening another resource is the host's to do (it owns the game session and the editor commands).
     provideOpenResource((target) => bridge.openResource(target.resref, target.ext));
+    // Same reason: the gallery panel is the host's to open.
+    provideOpenAnimation((id) => bridge.openAnimation(id));
     // Same reason for listing what the install holds; the bridge caches per type, so a field asks freely.
     provideResourceList((ext) => bridge.requestResourceList(ext));
     provideGradientTable(() => bridge.requestGradientTable());

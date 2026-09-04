@@ -339,6 +339,11 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     ext: message.ext,
                 });
                 break;
+            case "openAnimation":
+                // Forwarded for the same reason as `openResource`: the gallery owns the animation browser
+                // and the game session it needs.
+                await vscode.commands.executeCommand("bgforge.gallery.showAnimation", message.id);
+                break;
             case "dumpJson":
                 await this.dumpJson(document);
                 break;

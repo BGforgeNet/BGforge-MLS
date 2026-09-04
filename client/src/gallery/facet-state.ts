@@ -125,12 +125,30 @@ export function facetState(
 export interface FacetBrowser {
     state(selection: FacetSelection): FacetState;
     select(selection: FacetSelection, family: FacetFamily, value: string): FacetSelection;
+    /**
+     * The selection pointing at one animation id - what a link from a creature's animation field lands on.
+     *
+     * Undefined for an id carrying no facets: a monster or a named individual is a real animation the list
+     * still shows, but there is no race/gender/class combination that reaches it, so the browser leaves its
+     * controls where they were rather than moving them somewhere unrelated.
+     */
+    seat(id: number): FacetSelection | undefined;
 }
 
 export function createFacetBrowser(sets: readonly AnimationSet[], exists: (resref: string) => boolean): FacetBrowser {
     const index = facetIndex(sets);
+    const byId = new Map(sets.map((set) => [set.id, set]));
     return {
         state: (selection) => facetState(index, selection, exists),
         select: (selection, family, value) => selectFacet(index, selection, family, value, exists),
+        seat: (id) => {
+            const set = byId.get(id);
+            if (set?.facets === undefined) return;
+            // Through `select` rather than assembled here, so a seated selection is re-seated by the same
+            // rules a user's own click would apply - the armour level the set has, an action it ships.
+            const level = armourLevels(set)[0] ?? DEFAULT_SELECTION.armour;
+            const from: FacetSelection = { ...DEFAULT_SELECTION, ...set.facets };
+            return selectFacet(index, from, "armour", String(level), exists);
+        },
     };
 }

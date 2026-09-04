@@ -4,9 +4,11 @@
     interface Props {
         sets: SetTile[];
         onOpen: (resref: string) => void;
+        /** The animation the panel was opened on - its row is marked so the reader can see where they landed. */
+        focus?: number;
     }
 
-    const { sets, onOpen }: Props = $props();
+    const { sets, onOpen, focus }: Props = $props();
 
     const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
 </script>
@@ -20,6 +22,8 @@
             <button
                 type="button"
                 class="setopen"
+                class:setfocus={set.id === focus}
+                aria-current={set.id === focus ? "true" : undefined}
                 disabled={set.resref === undefined}
                 title={set.unsupported ?? `Open ${set.resref}`}
                 onclick={() => set.resref && onOpen(set.resref)}

@@ -5,6 +5,7 @@
     import DocLink from "./DocLink.svelte";
     import Icon from "../../../webview-ui/Icon.svelte";
     import JumpLink from "./JumpLink.svelte";
+    import AnimationLink from "./AnimationLink.svelte";
     import OpenResourceLink from "./OpenResourceLink.svelte";
     import ResourceThumbnail from "./ResourceThumbnail.svelte";
     const { row, onedit, diagnostics = [] }:
@@ -59,6 +60,9 @@
              JumpLink renders nothing when no jump handler is in context (a view with no navigable sections). -->
         {#if showsOpenChip(row)}
             <OpenResourceLink target={row.openTarget!} />
+        {/if}
+        {#if row.animationTarget}
+            <AnimationLink target={row.animationTarget} />
         {/if}
         {#if row.link}
             <JumpLink link={row.link} />

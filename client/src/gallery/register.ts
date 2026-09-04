@@ -93,19 +93,25 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         await source.reveal(id);
     };
 
-    const show = (kind: "game" | "workspace"): void => {
+    const show = (kind: "game" | "workspace", focusSet?: number): void => {
         const panel = vscode.window.createWebviewPanel(
             GALLERY_VIEW_TYPE,
             kind === "game" ? "Game Image Gallery" : "Workspace Image Gallery",
             vscode.ViewColumn.Active,
             { enableScripts: true, retainContextWhenHidden: true },
         );
-        wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openResref, facets });
+        const state = { source: kind, ...(focusSet === undefined ? {} : { focusSet }) };
+        wireGalleryPanel(panel, state, context, { sourceFor, open, sets, openResref, facets });
     };
 
     context.subscriptions.push(
         vscode.commands.registerCommand("bgforge.gallery.showGame", () => show("game")),
         vscode.commands.registerCommand("bgforge.gallery.showWorkspace", () => show("workspace")),
+        // Takes the id rather than a resolved set: the caller is a creature's animation field, which holds a
+        // number and cannot say whether this install names it.
+        vscode.commands.registerCommand("bgforge.gallery.showAnimation", (id: unknown) => {
+            if (typeof id === "number") show("game", id);
+        }),
         vscode.window.registerWebviewPanelSerializer(GALLERY_VIEW_TYPE, {
             async deserializeWebviewPanel(panel: vscode.WebviewPanel, state: unknown): Promise<void> {
                 // A restored panel whose state VS Code could not persist falls back to the workspace, which
