@@ -17,7 +17,8 @@ import type { GameHandle } from "../src/ie-resources/creature-index";
 
 /** Which real resource each fixture row was copied from. Read this before changing any value here. */
 export const MINI_GAME_PROVENANCE = {
-    "ANISND.IDS": "the six rows below are verbatim rows of an EE install's ANISND.IDS",
+    "ANISND.IDS":
+        "verbatim rows of an EE install's ANISND.IDS - including a FEMALE row, without which a\n        gender defect cannot fail against this fixture",
     "ANIMATE.IDS": "verbatim, including the two ids ANISND.IDS does not name",
     "6000.INI": "cleric male human - the armour-family split (body CHMB, level 4 CHMC)",
     "6004.INI": "cleric male gnome - the aliasing case (body CDMB, paperdoll CGMC)",
@@ -30,6 +31,7 @@ const ANISND = `IDS
 0x6000 CHMC     CGAMEANIMATIONTYPE_CLERIC_MALE_HUMAN
 0x6004 CGMC     CGAMEANIMATIONTYPE_CLERIC_MALE_GNOME
 0x6005 COMC     CGAMEANIMATIONTYPE_CLERIC_MALE_HALFORC
+0x6010 CHFC     CGAMEANIMATIONTYPE_CLERIC_FEMALE_HUMAN
 0x6500 CHMM     CGAMEANIMATIONTYPE_MONK_MALE_HUMAN
 0xA000 MWYV     CGAMEANIMATIONTYPE_WYVERN
 `;
@@ -40,6 +42,7 @@ const ANIMATE = `IDS
 0x6000 CLERIC_MALE_HUMAN
 0x6004 CLERIC_MALE_GNOME
 0x6005 CLERIC_MALE_HALFORC
+0x6010 CLERIC_FEMALE_HUMAN
 0x6500 MONK_MALE_HUMAN
 0xA000 WYVERN
 0xE440 MKHIIN
