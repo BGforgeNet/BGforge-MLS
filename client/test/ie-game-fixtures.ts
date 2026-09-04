@@ -23,7 +23,9 @@ export const MINI_GAME_PROVENANCE = {
     "6000.INI": "cleric male human - the armour-family split (body CHMB, level 4 CHMC)",
     "6004.INI": "cleric male gnome - the aliasing case (body CDMB, paperdoll CGMC)",
     "A000.INI": "wyvern - a hex animation_type and a scheme with no implementation",
-    bams: "presence checked against an EE install: CHMB1G1 exists, CHMB4G1 does not, CHMC4G1 does",
+    bams:
+        "presence checked against an EE install: CHMB1G1 exists, CHMB4G1 does not, CHMC4G1 does. The gnome " +
+        "cleric draws CDMB1-3 and CDMC4 - only its PAPERDOLL is CGMC1INV, and CGMC4G1 does not exist.",
 } as const;
 
 const ANISND = `IDS
@@ -113,7 +115,7 @@ const BAMS = [
     "CDMB1G1",
     "CDMB2G1",
     "CDMB3G1",
-    "CGMC4G1",
+    "CDMC4G1",
     "CGMC1INV",
     "CHMM1G1",
     "MWYVG1",
