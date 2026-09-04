@@ -36,6 +36,10 @@ export const DEFAULT_SELECTION: FacetSelection = {
     action: { kind: "misc", detail: 1 },
 };
 
+/**
+ * An unavailable choice stays in its dropdown, disabled, carrying why. Dropping it would read as the picker
+ * having forgotten the combination rather than the install not shipping it.
+ */
 function option(value: string, label: string, available: boolean, reason?: string): FacetOption {
     return { value, label, available, ...(reason === undefined ? {} : { reason }) };
 }

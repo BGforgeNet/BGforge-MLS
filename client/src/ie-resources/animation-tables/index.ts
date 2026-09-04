@@ -12,6 +12,12 @@ import { type AnimationTable } from "./table";
 /**
  * The Enhanced Editions are absent on purpose: they declare every animation in their own INIs, so nothing
  * reaches a table there. Listing them would put a second answer behind the one the install already gives.
+ *
+ * The other classic games are absent for their own reasons, all measured rather than assumed. Planescape and
+ * both Icewind Dales sit on a different CRE format, the larger job a table would rest on; of those, Icewind
+ * Dale and Planescape have no character-scheme animation at all, so a table alone would draw none of them,
+ * while Icewind Dale II has 82. Classic BG1 has two, and both invert the armour split - the FIRST level is
+ * the odd one out rather than the fourth, which `TableAnimation` expresses but nothing yet produces.
  */
 const BY_FLAVOUR: Readonly<Record<string, AnimationTable>> = {
     bg2: BG2_TABLE,
