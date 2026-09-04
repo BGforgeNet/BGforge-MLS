@@ -32,7 +32,8 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     const sets = (): readonly SetTile[] => {
         const current = deps.gameSession();
         if (current === undefined) return [];
-        return (animationIndex(current.dir) ?? []).map((set) => setTile(set));
+        const exists = (resref: string): boolean => current.game.canRead(resref, "bam");
+        return (animationIndex(current.dir) ?? []).map((set) => setTile(set, exists));
     };
 
     /** Open an animation's BAM, through the same resource URI every other game item opens by. */

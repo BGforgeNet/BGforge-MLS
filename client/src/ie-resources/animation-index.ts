@@ -16,6 +16,7 @@ import { type AnimationIni, parseAnimationIni } from "./animation-ini";
 import { characterFacetsOf, type CharacterFacets } from "./animation-facets";
 import { type AnimationTable, type TableAnimation } from "./animation-tables/table";
 import { tableForFlavour } from "./animation-tables";
+import { type Layout, layoutOf } from "./animation-schemes/layout";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
@@ -42,6 +43,11 @@ export interface AnimationSet {
     /** `resref_paperdoll`. Separate from the body: an aliasing set keeps its own inventory image. */
     paperdollPrefix: string | undefined;
     scheme: AnimationScheme;
+    /**
+     * Which file-naming family this animation draws under, where one is known. Separate from `scheme`: the
+     * section names the scheme, the layout decides what to open, and several sections share a layout.
+     */
+    layout?: Layout;
     /** Present only where the id declares them - a monster or a named individual has none. */
     facets?: CharacterFacets;
 }
@@ -95,6 +101,14 @@ function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | unde
 }
 
 /**
+ * The layout an animation draws under. A table row carries no `split_bams`, so a tabled `monster` resolves to
+ * the unsplit layout - which is what `layoutOf` returns for an undeclared split.
+ */
+function layoutFor(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): Layout | undefined {
+    return ini === undefined ? layoutOf(tabled?.section) : layoutOf(ini.section, ini.splitBams);
+}
+
+/**
  * Every animation the game declares, in id order.
  *
  * `table` is the fallback for an install that declares none - a classic one ships no animation INIs, so
@@ -138,6 +152,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             prefixByArmour: ini === undefined ? prefixesOfTable(tabled) : prefixesFrom(ini),
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
             scheme: schemeFrom(ini, tabled),
+            ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),
         });
     }
