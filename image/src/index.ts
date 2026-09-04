@@ -55,6 +55,13 @@ export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";
 export { encodeIndexedPng, encodeTruecolourPng } from "./png/encode.ts";
 export { type DecodedIndexedPng, decodeIndexedPng, decodeTruecolourPng } from "./png/decode.ts";
 export { parsePal, serializePal } from "./palette/pal.ts";
+export {
+    type CreatureColors,
+    type CreatureRange,
+    CREATURE_RANGES,
+    applyCreatureColors,
+    parseGradientTable,
+} from "./palette/creature-colors.ts";
 export { DEFAULT_FALLOUT_PALETTE } from "./palette/default-palette.ts";
 export { loadImage } from "./load.ts";
 
