@@ -9,6 +9,7 @@
 import type * as vscode from "vscode";
 import { type CreatureColors, CREATURE_RANGES, creatureColorsAt } from "@bgforge/image";
 import { gameDirOf, type GameDirFallback } from "./game-lookups";
+import { readIdsCodes } from "./ids-tables";
 
 export interface CreatureEntry {
     readonly resref: string;
@@ -31,19 +32,6 @@ const HEADER_BYTES = FIRST_COLOR + CREATURE_RANGES.length;
 /** The resource an install publishes its animation-id to animation-code mapping in. */
 const ANIMATION_TABLE = "ANISND";
 
-/** `<hex id> <code> <comment>` per line, after a leading `IDS` line. Codes are the animation resref prefix. */
-function readAnimationCodes(bytes: Uint8Array): Map<number, string> {
-    const codes = new Map<number, string>();
-    for (const line of new TextDecoder("latin1").decode(bytes).split(/\r?\n/)) {
-        const [id, code] = line.trim().split(/\s+/);
-        if (id === undefined || code === undefined) continue;
-        const value = Number.parseInt(id, 16);
-        // The first key wins: an install can name one id twice, and the earlier row is the one it ships for.
-        if (Number.isFinite(value) && /^0x/i.test(id) && !codes.has(value)) codes.set(value, code.toUpperCase());
-    }
-    return codes;
-}
-
 /** A `Game` handle, named structurally so this module does not depend on the archive library's own type. */
 interface GameHandle {
     tlk: () => { get: (strref: number) => string | undefined } | undefined;
@@ -58,7 +46,7 @@ interface GameSource {
 
 function buildIndex(game: GameHandle): CreatureEntry[] {
     const codes = game.canRead(ANIMATION_TABLE, "ids")
-        ? readAnimationCodes(game.read(ANIMATION_TABLE, "ids"))
+        ? readIdsCodes(game.read(ANIMATION_TABLE, "ids"))
         : new Map<number, string>();
     const tlk = game.tlk();
     const entries: CreatureEntry[] = [];
