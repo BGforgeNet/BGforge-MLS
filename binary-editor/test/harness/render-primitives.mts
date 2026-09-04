@@ -55,7 +55,11 @@ fs.rmSync(outdir, { recursive: true, force: true });
 
 // Both sheets, in the order the real panel links them: the shared primitive theming (webview-ui) first, the
 // panel's own sheet after. Without the first, every primitive here renders as bare unthemed browser chrome.
-const css = ["client/src/webview-ui/primitives.css", "client/src/binary-editor/webview/styles.css"]
+const css = [
+    "client/src/webview-ui/base.css",
+    "client/src/webview-ui/primitives.css",
+    "client/src/binary-editor/webview/styles.css",
+]
     .map((file) => fs.readFileSync(path.join(here, "../../..", file), "utf8"))
     .join("\n");
 

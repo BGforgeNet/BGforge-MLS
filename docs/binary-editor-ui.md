@@ -352,14 +352,19 @@ The `Combobox` caps how many options it RENDERS and states the overflow in the l
 it is given, so the cap is what keeps a ~12300-entry BAM list from mounting 12300 nodes; keep the notice if you
 touch it - a silently truncated list reads as a complete one.
 
-It is not this panel's control. `client/src/webview-ui/` holds the controls both editors mount - the combobox,
-the dropdown menu, the codicon span - plus `primitives.css`, which carries their theming AND the page baseline
-every panel shares (reset, button, focus ring, placeholder and error-state rules that were byte-identical
-copies in the two panel sheets). Anything changed there changes both editors: the animation editor's
-creature-palette picker is this combobox, and its Save-as/Import toolbar menus are this `Menu`. Each panel
-links the shared sheet BEFORE its own, so panel-specific overrides win on load order, and a panel that mounts
-a shared control without linking it renders bare browser chrome (guarded in
-`client/test/webview-csp.test.ts`).
+It is not this panel's control. `client/src/webview-ui/` holds what more than one panel mounts - the combobox,
+the dropdown menu, the checkbox, the codicon span - and two stylesheets: `primitives.css` for those controls'
+theming, `base.css` for the page baseline (reset, button, focus ring, placeholder and error state) that was a
+byte-identical copy in two panel sheets. Anything changed there changes every panel that links it: the
+animation editor's creature-palette picker is this combobox, its Save-as/Import menus are this `Menu`, and its
+toggles are this `Checkbox`.
+
+The two sheets are separate because a panel can want the controls without the baseline. The dialog editor is
+that panel - it styles itself with component-scoped blocks and has no global sheet, and adding the baseline's
+`body` font shifted its text metrics enough to clip an option label that had fit, so it imports
+`primitives.css` alone into its bundle. Panels link the shared sheets BEFORE their own so their overrides win
+on load order, and a panel that mounts a shared control without linking its sheet renders bare browser chrome
+(guarded in `client/test/webview-csp.test.ts`).
 
 ### A grid fits columns to the panel; the schema count is a maximum
 

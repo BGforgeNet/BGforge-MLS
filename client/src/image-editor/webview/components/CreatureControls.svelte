@@ -9,6 +9,7 @@
     // there is no second dropdown-plus-search to keep in step with it.
     import type { CreatureOption } from "../messages";
     import Combobox from "../../../webview-ui/Combobox.svelte";
+    import Checkbox from "../../../webview-ui/Checkbox.svelte";
 
     const {
         creatures,
@@ -69,18 +70,15 @@
             />
         </div>
     </div>
-    <label class="view-field view-checkbox">
-        <input
-            type="checkbox"
-            checked={onlyMatching}
-            onchange={() => {
-                onlyMatching = !onlyMatching;
-                // Its own state says nothing until the list exists, and the note below counts it.
-                load();
-            }}
-        />
-        <span class="view-label">Only this animation</span>
-    </label>
+    <Checkbox
+        label="Only this animation"
+        checked={onlyMatching}
+        onchange={(next) => {
+            onlyMatching = next;
+            // Its own state says nothing until the list exists, and the note below counts it.
+            load();
+        }}
+    />
     {#if !requested}
         <!-- Nothing is known before the list is asked for, and a count of an unfetched list would be a lie. -->
     {:else if creatures.length === 0}

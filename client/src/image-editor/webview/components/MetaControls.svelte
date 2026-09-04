@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
 
@@ -54,20 +55,15 @@
         <!-- Absent, not disabled, for a true-colour document: the format has no palette, so a
              greyed-out control would still offer an edit that could never be represented. -->
         {#if view.colorModel === "indexed"}
-            <label
-                class="meta-field meta-checkbox"
+            <Checkbox
+                label="Use external palette"
+                checked={view.externalPaletteActive}
+                disabled={!view.hasSidecarPal}
+                onchange={(enabled) => bridge.send({ type: "setExternalPalette", enabled })}
                 title={view.hasSidecarPal
                     ? "Render with the sidecar .pal palette instead of the default Fallout palette"
                     : "Disabled: no sidecar .pal file found next to this .frm"}
-            >
-                <input
-                    type="checkbox"
-                    checked={view.externalPaletteActive}
-                    disabled={!view.hasSidecarPal}
-                    onchange={(e) => bridge.send({ type: "setExternalPalette", enabled: e.currentTarget.checked })}
-                />
-                <span class="meta-label">Use external palette</span>
-            </label>
+            />
         {/if}
     {:else if view.colorModel === "indexed"}
         <!-- A transparent INDEX is a palette concept: BAM v2 carries real per-pixel alpha instead,

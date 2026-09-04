@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Checkbox from "../../webview-ui/Checkbox.svelte";
     import {
         SvelteFlow,
         Background,
@@ -1443,10 +1444,14 @@
                 <!-- Same blanket-editable caveat as the "+ State" gate above: ssl/td/tssl are per-node
                      editable though `editable` is false, so this toggle shows for every editable family. -->
                 {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
-                    <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time.">
-                        <input type="checkbox" bind:checked={autoNodeNames} />
-                        Auto node names
-                    </label>
+                    <span class="tbtoggle">
+                        <Checkbox
+                            label="Auto node names"
+                            checked={autoNodeNames}
+                            onchange={(next) => (autoNodeNames = next)}
+                            title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time."
+                        />
+                    </span>
                 {/if}
             </div>
             {#if viewMode === "tree"}
@@ -1493,10 +1498,17 @@
                          see tree-search.ts). Reruns the search and jumps to the first match on toggle, same as
                          find-as-you-type (onQueryChanged's reset-and-jump applies equally to a match-set change
                          from this toggle). -->
-                    <label class="tbtoggle" title="On: also search node triggers, choice conditions/actions, and branch conditions. Off: dialogue text only.">
-                        <input type="checkbox" bind:checked={searchIncludeCode} onchange={onQueryChanged} />
-                        Code
-                    </label>
+                    <span class="tbtoggle">
+                        <Checkbox
+                            label="Code"
+                            checked={searchIncludeCode}
+                            onchange={(next) => {
+                                searchIncludeCode = next;
+                                onQueryChanged();
+                            }}
+                            title="On: also search node triggers, choice conditions/actions, and branch conditions. Off: dialogue text only."
+                        />
+                    </span>
                 </div>
             {/if}
         </div>
@@ -1994,8 +2006,10 @@
         margin-right: 4px;
         white-space: nowrap;
     }
-    .tbtoggle input {
-        cursor: pointer;
+    /* The toggle itself is the shared Checkbox primitive, whose text is a global class - reach it through
+       :global so this toolbar's compact size still applies. */
+    .tbtoggle :global(.bb-checkbox-text) {
+        font-size: 12px;
     }
     .treescroll {
         flex: 1;

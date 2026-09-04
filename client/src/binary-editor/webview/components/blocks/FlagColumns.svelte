@@ -3,7 +3,7 @@
     // shared decompose/compose helpers (state/controls.ts) so bit semantics match the rest of the editor.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { decomposeFlags, composeFlags } from "../../state/controls";
-    import Checkbox from "../primitives/Checkbox.svelte";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
 
     // `boxed`: wrap the checkboxes in a titled group box (the field's display name as legend). Set when the
     // flags share a panel with other blocks, so the bitfield reads as one labelled set - matching the

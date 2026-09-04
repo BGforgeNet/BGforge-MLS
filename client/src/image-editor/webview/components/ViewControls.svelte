@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Background } from "../render/indexed-to-rgba";
 
     const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
@@ -119,11 +120,10 @@
             {/each}
         </div>
     </div>
-    <label
-        class="view-field view-checkbox"
+    <Checkbox
+        label="Offset marker"
+        checked={showOffsetMarker}
+        onchange={onToggleOffsetMarker}
         title="Show a crosshair at each frame's anchor point - the offset origin the frame is positioned from in the preview"
-    >
-        <input type="checkbox" checked={showOffsetMarker} onchange={onToggleOffsetMarker} />
-        <span class="view-label">Offset marker</span>
-    </label>
+    />
 </div>

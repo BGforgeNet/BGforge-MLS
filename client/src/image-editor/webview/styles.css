@@ -68,9 +68,6 @@ input[type="number"] {
 input[type="number"] {
     width: 4rem;
 }
-input[type="checkbox"] {
-    accent-color: var(--vscode-button-background);
-}
 
 /* ---- control groups: each stacks vertically as a section in the right-hand column ---- */
 .view-controls,
@@ -117,12 +114,11 @@ input[type="checkbox"] {
     font-size: 0.9em;
     white-space: nowrap;
 }
-/* Checkbox rows keep the box next to its text (not split to opposite edges). */
-.view-checkbox,
-.meta-checkbox {
-    cursor: pointer;
-    justify-content: flex-start;
-    gap: 0.4rem;
+/* Toggles are the shared Checkbox primitive (webview-ui), which brings its own row and box; only its label
+   text needs this panel's treatment, so a toggle row reads like the label/value rows above it. */
+.controls-column .bb-checkbox-text {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
 }
 select {
     max-width: 100%;

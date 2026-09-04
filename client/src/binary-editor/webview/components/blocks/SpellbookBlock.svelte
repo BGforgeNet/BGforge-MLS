@@ -9,7 +9,7 @@
     import type { SpellbookView } from "@bgforge/binary-editor";
     import type { Bridge } from "../../state/bridge";
     import Tabs, { type TabItem } from "../primitives/Tabs.svelte";
-    import Checkbox from "../primitives/Checkbox.svelte";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
     import Icon from "../../../../webview-ui/Icon.svelte";
 
     const { bridge, version, onedit }: {

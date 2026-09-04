@@ -25,7 +25,7 @@ const codiconCss = fs
         `src: url("data:font/ttf;base64,${codiconTtf}") format("truetype")`,
     );
 
-const SHARED_CSS = "client/src/webview-ui/primitives.css";
+const SHARED_CSS = ["client/src/webview-ui/base.css", "client/src/webview-ui/primitives.css"];
 
 /**
  * Bundles one harness entry (UI only: the App component + Bridge + components. No @bgforge value imports
@@ -52,9 +52,7 @@ async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: str
 
     // Both sheets, in the order the real panels link them: the shared primitives first, the panel's own
     // sheet after, so its sizing rules win over the primitive defaults exactly as they do in production.
-    const css = [path.join(repo, SHARED_CSS), path.join(repo, cssFile)]
-        .map((file) => fs.readFileSync(file, "utf8"))
-        .join("\n");
+    const css = [...SHARED_CSS, cssFile].map((file) => fs.readFileSync(path.join(repo, file), "utf8")).join("\n");
 
     // Strict nonce CSP mirrors the real webview (provider.ts). font-src allows data: so the inlined codicon
     // @font-face (data: URI above) loads; the same nonce is applied to both the inlined <style> and the

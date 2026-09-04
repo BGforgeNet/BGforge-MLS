@@ -1,4 +1,7 @@
 import { mount } from "svelte";
+// The shared primitive theming (Checkbox and friends). Side-effect import: esbuild folds it into the
+// bundle's main.css, which the panel already links - this panel has no global sheet of its own.
+import "../../webview-ui/primitives.css";
 import App from "./App.svelte";
 import { postToHost } from "./host";
 import { SLOW_FRAME_MS, installFatalErrorHandler, observeSlowFrames } from "../../webview-utils";

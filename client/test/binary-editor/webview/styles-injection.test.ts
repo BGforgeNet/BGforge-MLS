@@ -20,7 +20,11 @@ describe("binary-editor styles loading", () => {
      * checking either alone reports a gap that is covered, or a coverage the other sheet actually provides.
      */
     const panelTheme = (): string =>
-        ["client/src/webview-ui/primitives.css", "client/src/binary-editor/webview/styles.css"]
+        [
+            "client/src/webview-ui/base.css",
+            "client/src/webview-ui/primitives.css",
+            "client/src/binary-editor/webview/styles.css",
+        ]
             .map((file) => fs.readFileSync(path.join(REPO_ROOT, file), "utf8"))
             .join("\n");
 

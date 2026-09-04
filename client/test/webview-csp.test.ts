@@ -75,12 +75,15 @@ describe("webview CSP", () => {
     it.each([
         ["binary editor", "client/src/binary-editor/webview/index.html", "client/src/binary-editor/provider.ts"],
         ["animation editor", "client/src/image-editor/webview/index.html", "client/src/image-editor/provider.ts"],
-    ])("%s links the shared primitives stylesheet through asWebviewUri", (_name, htmlPath, providerPath) => {
+    ])("%s links both shared stylesheets through asWebviewUri", (_name, htmlPath, providerPath) => {
         const html = fs.readFileSync(path.join(REPO_ROOT, htmlPath), "utf8");
+        expect(html).toContain('<link href="{{baseUri}}" rel="stylesheet" />');
         expect(html).toContain('<link href="{{primitivesUri}}" rel="stylesheet" />');
 
         const provider = fs.readFileSync(path.join(REPO_ROOT, providerPath), "utf8");
+        expect(provider).toContain("SHARED_UI_BASE_CSS");
         expect(provider).toContain("SHARED_UI_CSS");
+        expect(provider).toContain('html.replace("{{baseUri}}"');
         expect(provider).toContain('html.replace("{{primitivesUri}}"');
         expect(provider).toContain("localResourceRoots: [codiconsDir, webviewDir, sharedUiDir]");
     });

@@ -1,8 +1,9 @@
 <script lang="ts">
     // Thin wrapper over bits-ui's Checkbox.Root. The rest of the webview imports THIS, never bits-ui
-    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in styles.css
-    // (.bb-checkbox*); a component <style> block is intentionally avoided because the webview runs under a
-    // strict nonce CSP that blocks non-nonced injected <style> tags.
+    // directly (enforced by an oxlint no-restricted-imports rule). Theming lives entirely in primitives.css
+    // beside this file (.bb-checkbox*), which every panel mounting this control links; a component <style>
+    // block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
+    // non-nonced injected <style> tags.
     //
     // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/checkbox):
     //   Checkbox.Root  - renders a <button role="checkbox">; props: checked ($bindable bool, default false),

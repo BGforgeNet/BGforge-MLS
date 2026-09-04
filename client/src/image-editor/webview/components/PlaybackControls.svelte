@@ -1,5 +1,6 @@
 <script lang="ts">
     import { pause, play, setFrame, stop, toggleLoop, type PlaybackState } from "../render/playback";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     const { state, onChange }: { state: PlaybackState; onChange: (next: PlaybackState) => void } = $props();
 
@@ -19,7 +20,7 @@
             title={canPlay ? "Play" : disabledReason}
             aria-label="Play"
         >
-            <span class="codicon codicon-play" aria-hidden="true"></span>
+            <Icon name="play" />
         </button>
         <button
             type="button"
@@ -28,7 +29,7 @@
             title={canPlay ? "Pause" : disabledReason}
             aria-label="Pause"
         >
-            <span class="codicon codicon-debug-pause" aria-hidden="true"></span>
+            <Icon name="debug-pause" />
         </button>
         <button
             type="button"
@@ -37,7 +38,7 @@
             title={canPlay ? "Stop" : disabledReason}
             aria-label="Stop"
         >
-            <span class="codicon codicon-debug-stop" aria-hidden="true"></span>
+            <Icon name="debug-stop" />
         </button>
         <button
             type="button"
@@ -49,7 +50,7 @@
             title={canPlay ? "Loop" : disabledReason}
             aria-label="Loop"
         >
-            <span class="codicon codicon-sync" aria-hidden="true"></span>
+            <Icon name="sync" />
         </button>
     </div>
     <label class="playback-field">

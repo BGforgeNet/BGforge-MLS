@@ -66,6 +66,7 @@ const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
 const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
+const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
 const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
@@ -832,11 +833,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // nonce - the wrapped webview silently drops a nonce-only style-src.
         const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
         const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
+        const baseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_BASE_CSS));
         const primitivesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_CSS));
         // Function replacers: the URIs contain `$`-adjacent characters that String.replace would
         // otherwise interpret as `$&`/`$'` patterns.
         html = html.replace("{{stylesUri}}", () => stylesUri.toString());
         html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
+        html = html.replace("{{baseUri}}", () => baseUri.toString());
         html = html.replace("{{primitivesUri}}", () => primitivesUri.toString());
         const script = getCachedJsAsset("animation-editor", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();

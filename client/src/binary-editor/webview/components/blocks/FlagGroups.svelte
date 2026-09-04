@@ -6,7 +6,7 @@
     // compose/decompose helpers FlagColumns uses, so the round-trip identity is unchanged.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { composeFlags } from "../../state/controls";
-    import Checkbox from "../primitives/Checkbox.svelte";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
     import Icon from "../../../../webview-ui/Icon.svelte";
 
     interface Item {

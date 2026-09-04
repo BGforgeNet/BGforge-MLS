@@ -40,6 +40,9 @@ fs.rmSync(outdir, { recursive: true, force: true });
 
 // Svelte Flow's base stylesheet (node/edge/handle/viewport rules).
 const flowCss = fs.readFileSync(path.join(repo, "client/node_modules/@xyflow/svelte/dist/style.css"), "utf8");
+// The shared primitive theming the production bundle imports in main.ts; the harness bundles its own
+// entry, so it inlines the same sheet rather than inheriting that import.
+const sharedCss = fs.readFileSync(path.join(repo, "client/src/webview-ui/primitives.css"), "utf8");
 
 // Mirror the production CSP *shape* (panel.ts / dialog-webview-html.ts): a nonce'd inline
 // script, style-src 'unsafe-inline' (Svelte Flow positions nodes via inline transform style
@@ -70,6 +73,7 @@ const html = `<!doctype html>
   ${DARK_THEME_VARS}
   body{background:var(--vscode-editor-background);}
   ${flowCss}
+  ${sharedCss}
 </style></head>
 <body><div id="app"></div><script nonce="${NONCE}">${js}</script></body></html>`;
 
