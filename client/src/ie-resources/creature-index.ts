@@ -33,14 +33,14 @@ const HEADER_BYTES = FIRST_COLOR + CREATURE_RANGES.length;
 const ANIMATION_TABLE = "ANISND";
 
 /** A `Game` handle, named structurally so this module does not depend on the archive library's own type. */
-interface GameHandle {
+export interface GameHandle {
     tlk: () => { get: (strref: number) => string | undefined } | undefined;
     canRead: (resref: string, type: string) => boolean;
     read: (resref: string, type: string) => Uint8Array;
     list: () => readonly { resref: string; ext: string | undefined }[];
 }
 
-interface GameSource {
+export interface GameSource {
     gameAt: (dir: string) => GameHandle | undefined;
 }
 
