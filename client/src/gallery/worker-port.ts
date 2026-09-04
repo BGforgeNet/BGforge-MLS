@@ -19,6 +19,9 @@ export interface GalleryPort {
 }
 
 export function galleryWorkerPort(worker: Worker): GalleryPort {
+    // `terminate()` exits with code 1 - the same code a crash reports - so the exit code cannot tell our own
+    // teardown from a real death. Without this flag, closing a gallery panel raised an error toast every time.
+    let disposing = false;
     return {
         postMessage: (request) => worker.postMessage(request),
         onMessage: (cb) => {
@@ -26,12 +29,12 @@ export function galleryWorkerPort(worker: Worker): GalleryPort {
         },
         onError: (cb) => {
             worker.on("error", (err) => cb(err instanceof Error ? err : new Error(String(err))));
-            // A non-zero exit means the worker died; code 0 is our own terminate() during teardown.
             worker.on("exit", (code) => {
-                if (code !== 0) cb(new Error(`Gallery worker exited unexpectedly (code ${code})`));
+                if (!disposing && code !== 0) cb(new Error(`Gallery worker exited unexpectedly (code ${code})`));
             });
         },
         dispose: () => {
+            disposing = true;
             void worker.terminate();
         },
     };
