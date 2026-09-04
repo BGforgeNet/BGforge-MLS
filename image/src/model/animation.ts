@@ -1,6 +1,29 @@
 export type Rgba = { r: number; g: number; b: number; a: number };
-export type Facing = "NE" | "E" | "SE" | "SW" | "W" | "NW" | "N" | "S" | "none";
-export type DirectionLayout = "frm6" | "ie8" | "non-directional";
+/**
+ * A stored orientation. The eight 45-degree points cover Fallout's hexagonal set and the IE's coarse
+ * scheme; the four-letter half-steps are the rest of the IE's 16-point wheel, which finer creature
+ * animations store nine of (the western arc) and mirror for the east.
+ */
+export type Facing =
+    | "NE"
+    | "E"
+    | "SE"
+    | "SW"
+    | "W"
+    | "NW"
+    | "N"
+    | "S"
+    | "NNE"
+    | "ENE"
+    | "ESE"
+    | "SSE"
+    | "SSW"
+    | "WSW"
+    | "WNW"
+    | "NNW"
+    | "none";
+/** `ie8` is the 45-degree scheme; `ie9` the western arc of the 22.5-degree one. */
+export type DirectionLayout = "frm6" | "ie8" | "ie9" | "non-directional";
 /** The palette-indexed formats. Split out so an indexed-only consumer's exhaustiveness proofs hold. */
 export type IndexedSourceFormat = "frm" | "bam" | "bamc";
 export type SourceFormat = IndexedSourceFormat | "bamv2";
@@ -123,6 +146,38 @@ export function isRgbaAnimation(animation: Animation): animation is RgbaAnimatio
 
 // Fallout's 6 hexagonal rotations, in header index order 0..5. No due-N or due-S.
 export const FRM_FACINGS: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
+
+// Keyed by the union rather than listed as an array, so adding a facing or a layout fails to compile
+// until it is named here - the validators below read these, and a hand-kept copy of a union drifts.
+const FACING_KEYS: Record<Facing, true> = {
+    NE: true,
+    E: true,
+    SE: true,
+    SW: true,
+    W: true,
+    NW: true,
+    N: true,
+    S: true,
+    NNE: true,
+    ENE: true,
+    ESE: true,
+    SSE: true,
+    SSW: true,
+    WSW: true,
+    WNW: true,
+    NNW: true,
+    none: true,
+};
+const DIRECTION_LAYOUT_KEYS: Record<DirectionLayout, true> = {
+    frm6: true,
+    ie8: true,
+    ie9: true,
+    "non-directional": true,
+};
+
+/** Every value the corresponding union admits - the one source a validator or picker reads. */
+export const ALL_FACINGS = Object.keys(FACING_KEYS) as Facing[];
+export const ALL_DIRECTION_LAYOUTS = Object.keys(DIRECTION_LAYOUT_KEYS) as DirectionLayout[];
 
 export function emptyPalette(): Rgba[] {
     return Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));

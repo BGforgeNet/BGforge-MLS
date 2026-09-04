@@ -2,7 +2,16 @@
 // This is a FROZEN wire format, deliberately decoupled from the internal `Animation` IR so the IR
 // can evolve without breaking directories exported by older builds. No palette and no colour model
 // here - both live in the exported PNGs themselves.
-import type { Animation, AnimationMeta, DirectionLayout, Facing, Sequence, SourceFormat } from "../model/animation.ts";
+import {
+    type Animation,
+    type AnimationMeta,
+    type DirectionLayout,
+    type Facing,
+    type Sequence,
+    type SourceFormat,
+    ALL_DIRECTION_LAYOUTS,
+    ALL_FACINGS,
+} from "../model/animation.ts";
 
 // Owned by this module, deliberately NOT `AnimationMeta` itself: the wire format is
 // frozen, so a new `AnimationMeta` field must be a conscious mapping decision below
@@ -34,9 +43,12 @@ type ManifestSequence = ManifestV1["sequences"][number];
 
 // Sets typed <string> (not <Facing>/etc.) so membership checks accept an arbitrary
 // unknown-derived string without a cast; Facing[] -> Iterable<string> is a safe widening.
-const FACINGS = new Set<string>(["NE", "E", "SE", "SW", "W", "NW", "N", "S", "none"] satisfies Facing[]);
+// Facings and layouts come from the model's own exhaustive lists: the wire format is frozen against
+// RESTRUCTURING, but a value the IR can hold and the reader rejects makes the exporter's own output
+// unimportable, which is not compatibility with anything.
+const FACINGS = new Set<string>(ALL_FACINGS);
 const SOURCE_FORMATS = new Set<string>(["frm", "bam", "bamc", "bamv2"] satisfies SourceFormat[]);
-const DIRECTION_LAYOUTS = new Set<string>(["frm6", "ie8", "non-directional"] satisfies DirectionLayout[]);
+const DIRECTION_LAYOUTS = new Set<string>(ALL_DIRECTION_LAYOUTS);
 
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === "object" && v !== null;

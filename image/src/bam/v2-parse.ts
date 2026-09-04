@@ -1,5 +1,5 @@
 import { type RgbaAnimation, type RgbaFrame, type Sequence } from "../model/animation.ts";
-import { interpretIeDirections } from "../model/ie-direction.ts";
+import { directionLayoutOf, interpretIeDirections } from "../model/ie-direction.ts";
 import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 import { decodePvrz } from "../pvrz/container.ts";
 import { type PvrTexture } from "../pvrz/texture.ts";
@@ -110,7 +110,7 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, so
         meta: {
             sourceFormat: "bamv2",
             fps: 15,
-            directionLayout: interpretIeDirections(sequences, frames.length)?.detected ? "ie8" : "non-directional",
+            directionLayout: directionLayoutOf(interpretIeDirections(sequences, frames.length)),
         },
     };
 }

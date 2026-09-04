@@ -1,5 +1,6 @@
-import { type IndexedAnimation, type Frame, type Sequence } from "../model/animation.ts";
+import { type Facing, type IndexedAnimation, type Frame, type Sequence } from "../model/animation.ts";
 import { offsetToAnchor } from "../model/frame-anchor.ts";
+import { IE8_FACINGS } from "./directions.ts";
 import { LossReport } from "./loss-report.ts";
 
 // Converts an FRM-shaped IndexedAnimation to a BAM-shaped one. Already-BAM input is a no-op
@@ -11,7 +12,7 @@ export function convertToBam(anim: IndexedAnimation): { animation: IndexedAnimat
         return { animation: { ...anim, meta: { ...anim.meta } }, report };
     }
 
-    const sequences: Sequence[] = anim.sequences.map((seq) => ({ ...seq, frameRefs: [...seq.frameRefs] }));
+    const sequences = placeFrmRotations(anim);
 
     // Each frame's FRM per-direction header offset, needed to translate its anchor: a frame belongs to
     // the first direction (sequence) that references it; the sequences are in FRM header-slot order, so
@@ -93,8 +94,37 @@ export function convertToBam(anim: IndexedAnimation): { animation: IndexedAnimat
         palette,
         sequences,
         frames,
-        meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "frm6" },
+        meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8" },
     };
 
     return { animation, report };
+}
+
+/**
+ * Lay the FRM rotations out as IE direction cycles.
+ *
+ * A BAM stores no facing field - a cycle's direction IS its index - so keeping the FRM's own header
+ * order would silently rotate every direction the moment the file is written and read back: the engine
+ * takes cycle 0 as South, and FRM's cycle 0 is NE. Each rotation is therefore placed at the IE slot
+ * naming the same compass point. S and N stay empty: FRM's rotations are hexagonal and include neither,
+ * and filling them from a neighbour would invent a direction the source never had. That is deliberately
+ * not a reported loss - nothing of the source is dropped, the target simply has two slots it cannot
+ * fill - matching how the reverse conversion treats losing N/S as structural.
+ */
+function placeFrmRotations(anim: IndexedAnimation): Sequence[] {
+    const copy = (seq: Sequence, facing: Facing): Sequence => ({ frameRefs: [...seq.frameRefs], facing });
+    const [first] = anim.sequences;
+    if (first === undefined) return [];
+    // Every rotation pointing at the same frames is FRM's way of saying "one orientation, shown for all
+    // six" (equal data offsets); that sprite belongs in every IE slot, S and N included. Read from the
+    // frames rather than the facing tags, which parseFrm fills in for all six slots either way.
+    const oneOrientation = anim.sequences.every(
+        (s) => s.frameRefs.length === first.frameRefs.length && s.frameRefs.every((r, i) => r === first.frameRefs[i]),
+    );
+    if (oneOrientation) return IE8_FACINGS.map((facing) => copy(first, facing));
+    const byFacing = new Map(anim.sequences.map((seq) => [seq.facing, seq]));
+    return IE8_FACINGS.map((facing) => {
+        const seq = byFacing.get(facing);
+        return seq === undefined ? { frameRefs: [], facing } : copy(seq, facing);
+    });
 }

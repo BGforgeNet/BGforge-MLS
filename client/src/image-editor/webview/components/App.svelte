@@ -67,29 +67,34 @@
     // (many cycles -> lay out as rows=sequences x columns=directions), then user-overridable.
     let cycleColumns = $state(0);
     let columnsSeededView: AnimationView | undefined;
-    const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length) : undefined);
     // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
     const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
-    // Decoded filename meaning (critter/avatar naming schemes) - shown in a banner when a scheme matches.
-    const nameMeaning = $derived(view ? describeAnimationName(view) : undefined);
+
+    // Stage layout (rose vs grid). The default derives from tagged compass facings (FRM), or from the
+    // parser's stamped layout agreeing with the scheme this interpretation chose - both run the same
+    // fingerprint, so agreement means the file's block structure is unambiguous. A fresh open shows
+    // that choice; the selector writes `layoutChoice`, which then wins for the webview's lifetime.
+    const facingLayout = $derived(view ? layoutSequences(view) : null);
+    const ieRose = $derived(view ? interpretIeDirections(view.sequences, view.frames.length) : undefined);
+    const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
+    const defaultLayoutMode: LayoutMode = $derived(
+        facingLayout?.mode === "compass" || (ieRose && view?.meta.directionLayout === ieRose.scheme)
+            ? "rose"
+            : "grid",
+    );
+    // Seeded from the interpretation's block size, so the flat grid falls into rows=sequences x
+    // columns=directions with whichever stride the file actually uses.
+    const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length, ieRose?.scheme) : undefined);
+    // Decoded filename meaning (critter/avatar naming schemes) - shown in a banner when a scheme
+    // matches. The block scheme goes in too: some name families are only readable under one of them.
+    const nameMeaning = $derived(view ? describeAnimationName({ ...view, scheme: ieRose?.scheme }) : undefined);
     $effect(() => {
         const v = view;
         if (!v || v === columnsSeededView) return;
         columnsSeededView = v;
         cycleColumns = cycleAnalysis?.multiSequence ? cycleAnalysis.suggestedColumns : 0;
     });
-
-    // Stage layout (rose vs grid). The default derives from tagged compass facings (FRM) or from
-    // meta.directionLayout === "ie8" - which the BAM parser resolves via the same fingerprint the
-    // interpretation uses - so a fresh open shows the detected choice; the selector writes
-    // `layoutChoice`, which then wins for the webview's lifetime.
-    const facingLayout = $derived(view ? layoutSequences(view) : null);
-    const ieRose = $derived(view ? interpretIeDirections(view.sequences, view.frames.length) : undefined);
-    const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
-    const defaultLayoutMode: LayoutMode = $derived(
-        facingLayout?.mode === "compass" || (ieRose && view?.meta.directionLayout === "ie8") ? "rose" : "grid",
-    );
     // eslint-disable-next-line prefer-const -- reassigned via onModeChange in the LayoutModeControls markup
     let layoutChoice = $state<LayoutMode | undefined>();
     const layoutMode = $derived.by((): LayoutMode => {
@@ -102,7 +107,7 @@
     let roseGroup = $state(0);
     const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
     const roseGroupLabels = $derived(
-        view && roseGroupCount > 1 ? ieGroupLabels(view.basename, roseGroupCount) : undefined,
+        view && roseGroupCount > 1 ? ieGroupLabels(view.basename, roseGroupCount, ieRose?.scheme) : undefined,
     );
     const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
@@ -319,6 +324,7 @@
                     groupCount={roseGroupCount}
                     group={clampedRoseGroup}
                     groupLabels={roseGroupLabels}
+                    scheme={ieRose?.scheme}
                     onGroupChange={(g) => (roseGroup = g)}
                 />
             {/if}

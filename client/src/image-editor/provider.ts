@@ -2,6 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import {
     type Animation,
+    type DirectionLayout,
     type IndexedAnimation,
     DEFAULT_FALLOUT_PALETTE,
     convertToBamV2,
@@ -10,6 +11,7 @@ import {
     needsFreshPages,
     serializeBamV2,
 } from "@bgforge/image";
+import { ieSchemeOf } from "@bgforge/image/ie-direction";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
@@ -378,7 +380,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         const groupCount = ieGroupCount(anim);
         if (groupCount !== undefined) {
             if (groupCount === 1) return { ieGroup: 0 };
-            const ieGroup = await this.pickDirectionGroup(sourceName, groupCount);
+            const ieGroup = await this.pickDirectionGroup(sourceName, groupCount, anim.meta.directionLayout);
             return ieGroup === undefined ? undefined : { ieGroup };
         }
         if (needsCyclePick(anim)) {
@@ -390,9 +392,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     /** Ask which direction block a directional FRM should use; undefined if the user dismisses the
      *  picker. Options carry the same scheme names as the webview's group select. */
-    private async pickDirectionGroup(sourceName: string, groupCount: number): Promise<number | undefined> {
-        const labels = ieGroupLabels(sourceName, groupCount);
-        const items = Array.from({ length: groupCount }, (_, i) => ieGroupOptionText(labels, i));
+    private async pickDirectionGroup(
+        sourceName: string,
+        groupCount: number,
+        layout: DirectionLayout | undefined,
+    ): Promise<number | undefined> {
+        const scheme = ieSchemeOf(layout);
+        const labels = ieGroupLabels(sourceName, groupCount, scheme);
+        const items = Array.from({ length: groupCount }, (_, i) => ieGroupOptionText(labels, i, scheme));
         const picked = await vscode.window.showQuickPick(items, {
             title: "Which direction group should the FRM use? (its north/south cycles have no FRM rotation)",
         });

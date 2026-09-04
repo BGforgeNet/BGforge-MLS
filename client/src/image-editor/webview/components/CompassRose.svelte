@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { AnimationView } from "../messages";
-    import type { RoseTile } from "../render/compass-layout";
+    import { type RoseTile, roseGeometry } from "../render/compass-layout";
     import SequenceTile from "./SequenceTile.svelte";
 
     // Presentational: the caller (App) owns the layout decision and tile derivation - the same view can
@@ -23,25 +23,35 @@
         showOffsetMarker?: boolean;
     } = $props();
 
-    // Tiles sit on a circle of this radius (in tile-widths) around the rose centre. 1.5 keeps the
-    // 45-degree-adjacent tiles (e.g. E and NE) from overlapping while staying compact.
-    const RADIUS_TILES = 1.5;
+    // Radius and box both depend on which facings are present - see roseGeometry.
     const tilePx = $derived(tileBase * zoom);
-    const radiusPx = $derived(tilePx * RADIUS_TILES);
-    // Square box big enough for a tile centred at the far edge of the circle: 2*radius + one tile.
-    const rosePx = $derived(radiusPx * 2 + tilePx);
+    const geometry = $derived(roseGeometry(tiles));
 </script>
 
 <!-- Radial layout (not a grid): each facing sits at its true compass angle so FRM's 6 facings render
-     as a hexagon (no N/S) and 8 as an octagon - a real rose, not two columns. See compass-layout.ts. -->
-<div class="compass-rose" style:width="{rosePx}px" style:height="{rosePx}px">
-    {#each tiles as tile (tile.facing)}
+     as a hexagon (no N/S), 8 as an octagon, and a stored western arc as the half-wheel the file
+     actually holds - a real rose, not two columns. See compass-layout.ts. -->
+<div
+    class="compass-rose"
+    style:width="{geometry.widthTiles * tilePx}px"
+    style:height="{geometry.heightTiles * tilePx}px"
+>
+    {#each tiles as tile, i (tile.facing)}
         <div
             class="compass-cell"
-            style:left="calc(50% + {tile.pos.dx * radiusPx - tilePx / 2}px)"
-            style:top="calc(50% + {tile.pos.dy * radiusPx - tilePx / 2}px)"
+            style:left="{(geometry.centers[i]?.x ?? 0) * tilePx - tilePx / 2}px"
+            style:top="{(geometry.centers[i]?.y ?? 0) * tilePx - tilePx / 2}px"
         >
-            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
+            <SequenceTile
+                {view}
+                {loadedPixels}
+                seq={tile.seq}
+                facing={tile.facing}
+                {frame}
+                {zoom}
+                {tileBase}
+                {showOffsetMarker}
+            />
         </div>
     {/each}
 </div>

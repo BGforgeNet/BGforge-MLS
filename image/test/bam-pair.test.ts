@@ -96,6 +96,18 @@ describe("combineIeBamPair", () => {
 });
 
 describe("splitIeBamPair", () => {
+    // A fine-scheme animation stores nine cycles per block and mirrors the east in-engine, so it has no
+    // companion to split into. Its cycle count can still be a multiple of eight (72 is 8 blocks of 9),
+    // and splitting on that alone would carve an east file out of real west-arc cycles.
+    it("refuses a fine-scheme animation, whose east is mirrored rather than stored", () => {
+        const frames: Frame[] = Array.from({ length: 72 }, (_, i) => px(i % 200));
+        const sequences: Sequence[] = Array.from({ length: 72 }, (_, i) => ({
+            frameRefs: [i],
+            facing: "none" as const,
+        }));
+        expect(splitIeBamPair(bam(sequences, frames))).toBeUndefined();
+    });
+
     it("round-trips through the real serializer: split, serialize, parse, recombine", () => {
         const combined = combineIeBamPair(makeBase(2), makeEast(2));
         if (!combined) throw new Error("expected a combined animation");

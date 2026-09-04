@@ -1,7 +1,12 @@
 import { expect, test } from "vitest";
 import { FRM_FACINGS, type Facing } from "@bgforge/image";
 import { interpretIeDirections } from "@bgforge/image/ie-direction";
-import { compassPosition, ieRoseTiles, layoutSequences } from "../../src/image-editor/webview/render/compass-layout";
+import {
+    compassPosition,
+    ieRoseTiles,
+    layoutSequences,
+    roseGeometry,
+} from "../../src/image-editor/webview/render/compass-layout";
 import type { AnimationView, SequenceView } from "../../src/image-editor/webview/messages";
 
 /** A minimal AnimationView carrying only the fields layoutSequences reads (sequences). */
@@ -32,6 +37,66 @@ test("compassPosition places the cardinals on the unit circle (y down: N is up, 
     expect(p("W")).toEqual({ dx: expect.closeTo(-1), dy: expect.closeTo(0) });
     expect(p("N")).toEqual({ dx: expect.closeTo(0), dy: expect.closeTo(-1) }); // up
     expect(p("S")).toEqual({ dx: expect.closeTo(0), dy: expect.closeTo(1) }); // down
+});
+
+test("compassPosition places the half-step facings at their own 22.5-degree angles", () => {
+    // SSW is one step counter-clockwise from S on the 16-point wheel: below centre, slightly left.
+    const ssw = compassPosition("SSW");
+    expect(ssw?.dx).toBeCloseTo(-Math.cos((67.5 * Math.PI) / 180));
+    expect(ssw?.dy).toBeCloseTo(Math.sin((67.5 * Math.PI) / 180));
+    // The eight half-steps sit strictly between their neighbouring 45-degree points, and no two coincide.
+    const wheel: Facing[] = [
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW",
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+    ];
+    const angles = wheel.map((f) => {
+        const p = compassPosition(f);
+        return p ? Math.round(Math.atan2(-p.dy, p.dx) * (180 / Math.PI) * 10) / 10 : undefined;
+    });
+    expect(new Set(angles).size).toBe(16);
+    expect(angles).not.toContain(undefined);
+});
+
+test("roseGeometry widens the circle when the facings are closer together", () => {
+    const at = (facings: Facing[]) =>
+        facings.flatMap((f) => (compassPosition(f) ? [{ pos: compassPosition(f)! }] : []));
+    const octagon = roseGeometry(at(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]));
+    const westArc = roseGeometry(at(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]));
+    // 45 degrees apart keeps the established radius; 22.5 degrees needs a bigger circle or the tiles
+    // overlap - the chord between neighbours must stay at least one tile wide.
+    expect(octagon.radiusTiles).toBeCloseTo(1.5);
+    expect(westArc.radiusTiles).toBeGreaterThan(2.5);
+    const chord = 2 * westArc.radiusTiles * Math.sin(Math.PI / 16);
+    expect(chord).toBeGreaterThanOrEqual(1);
+});
+
+test("roseGeometry fits the box to the tiles present, so a half-populated rose is not half dead space", () => {
+    const at = (facings: Facing[]) =>
+        facings.flatMap((f) => (compassPosition(f) ? [{ pos: compassPosition(f)! }] : []));
+    const westArc = roseGeometry(at(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]));
+    // The arc spans the full height of its circle but only one side of it, so the box is taller than wide.
+    expect(westArc.heightTiles).toBeGreaterThan(westArc.widthTiles * 1.5);
+    // Every tile lands inside the box it reports.
+    for (const c of westArc.centers) {
+        expect(c.x).toBeGreaterThanOrEqual(0.5 - 1e-9);
+        expect(c.x).toBeLessThanOrEqual(westArc.widthTiles - 0.5 + 1e-9);
+        expect(c.y).toBeGreaterThanOrEqual(0.5 - 1e-9);
+        expect(c.y).toBeLessThanOrEqual(westArc.heightTiles - 0.5 + 1e-9);
+    }
 });
 
 test("compassPosition pulls the diagonals in to +/-0.707 so E/W bulge out past them - a rose, not columns", () => {

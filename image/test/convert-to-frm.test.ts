@@ -442,6 +442,31 @@ describe("convertToFrm", () => {
             expect(report.lossless).toBe(true);
         });
 
+        // A fine-scheme block carries three of FRM's six rotations (SW/W/NW) exactly as a coarse one
+        // does; the extra half-step cycles have no FRM slot and drop out with the poles.
+        it("converts a fine-scheme block, mapping its 45-degree cycles and mirroring the east", () => {
+            const frames = Array.from({ length: 18 }, (_, i) => ({
+                width: 1,
+                height: 1,
+                pixels: Uint8Array.from([i + 1]),
+                offsetX: 0,
+                offsetY: 0,
+            }));
+            const source: IndexedAnimation = {
+                palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+                frames,
+                sequences: Array.from({ length: 18 }, (_, i) => ({ frameRefs: [i], facing: "none" as const })),
+                meta: { sourceFormat: "bam", transparentIndex: 0 },
+            };
+            const { animation } = convertToFrm(source, { ieGroup: 1 });
+            expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+            // Block 1 is cycles 9-17: S SSW SW WSW W WNW NW NNW N -> SW is cycle 11, W 13, NW 15.
+            expect(slotPixel(animation, 3)).toBe(12); // SW
+            expect(slotPixel(animation, 4)).toBe(14); // W
+            expect(slotPixel(animation, 5)).toBe(16); // NW
+            expect(slotPixel(animation, 1)).toBe(14); // E = mirrored W
+        });
+
         it("drops the east filler dummies instead of mapping them onto the east rotations", () => {
             const { animation } = convertToFrm(baseFileBam(1), { ieGroup: 0 });
             // Without ieGroup an 8-cycle source maps positionally, putting filler frame 255 in NE/E/SE;

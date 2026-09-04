@@ -14,16 +14,26 @@ export interface RosePosition {
     dy: number;
 }
 
-// Compass angle per facing, degrees CCW from due-East, at 45-degree steps. "none" is non-directional.
+// Compass angle per facing, degrees CCW from due-East. The 45-degree points carry the coarse schemes
+// and FRM's hexagonal set; the half-steps between them complete the IE's 16-point wheel. "none" is
+// non-directional.
 const COMPASS_ANGLE_DEG: Record<Facing, number | undefined> = {
     E: 0,
+    ENE: 22.5,
     NE: 45,
+    NNE: 67.5,
     N: 90,
+    NNW: 112.5,
     NW: 135,
+    WNW: 157.5,
     W: 180,
+    WSW: 202.5,
     SW: 225,
+    SSW: 247.5,
     S: 270,
+    SSE: 292.5,
     SE: 315,
+    ESE: 337.5,
     none: undefined,
 };
 
@@ -33,6 +43,48 @@ export function compassPosition(facing: Facing): RosePosition | undefined {
     const rad = (deg * Math.PI) / 180;
     // Negate the sine: screen y grows downward, so a northern (positive-angle) facing sits ABOVE centre.
     return { dx: Math.cos(rad), dy: -Math.sin(rad) };
+}
+
+/**
+ * Where the rose's tiles sit, in tile widths, fitted to the facings actually present.
+ *
+ * Two things vary with the scheme and neither can be a constant. The RADIUS has to grow as the facings
+ * crowd: neighbours sit a chord of `2r*sin(gap/2)` apart, so the 45-degree schemes clear each other at
+ * the historical 1.5 while the 22.5-degree wheel needs better than 2.5 or its tiles overlap. And the BOX
+ * has to fit the tiles rather than the whole circle: a stored western arc covers half the compass, and a
+ * square box around it would be half empty, pushing the drawn half off the stage's centre.
+ */
+export interface RoseGeometry {
+    radiusTiles: number;
+    widthTiles: number;
+    heightTiles: number;
+    /** Tile centre within the box, in tile widths, one per input tile in order. */
+    centers: { x: number; y: number }[];
+}
+
+/** Historical radius, and the floor: the sparser schemes keep the spacing they have always had. */
+const MIN_RADIUS_TILES = 1.5;
+
+export function roseGeometry(tiles: readonly { pos: RosePosition }[]): RoseGeometry {
+    const angles = tiles.map((t) => Math.atan2(t.pos.dy, t.pos.dx)).sort((a, b) => a - b);
+    let smallestGap = 2 * Math.PI;
+    for (let i = 1; i < angles.length; i++)
+        smallestGap = Math.min(smallestGap, (angles[i] ?? 0) - (angles[i - 1] ?? 0));
+    // One tile of chord at the tightest gap is the no-overlap condition, solved for the radius.
+    const radiusTiles =
+        angles.length < 2 ? MIN_RADIUS_TILES : Math.max(MIN_RADIUS_TILES, 1 / (2 * Math.sin(smallestGap / 2)));
+
+    const raw = tiles.map((t) => ({ x: t.pos.dx * radiusTiles, y: t.pos.dy * radiusTiles }));
+    const xs = raw.map((p) => p.x);
+    const ys = raw.map((p) => p.y);
+    const minX = Math.min(...xs, 0);
+    const minY = Math.min(...ys, 0);
+    return {
+        radiusTiles,
+        widthTiles: Math.max(...xs, 0) - minX + 1,
+        heightTiles: Math.max(...ys, 0) - minY + 1,
+        centers: raw.map((p) => ({ x: p.x - minX + 0.5, y: p.y - minY + 0.5 })),
+    };
 }
 
 /** What the stage renders: the compass rose or the flat cycle grid. */

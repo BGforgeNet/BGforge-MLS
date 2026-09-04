@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { Facing } from "@bgforge/image";
     import type { AnimationView, FrameView, SequenceView } from "../messages";
     import { createFrameFallback } from "../render/frame-loading";
     import FrameCanvas from "./FrameCanvas.svelte";
@@ -9,6 +10,7 @@
         view,
         loadedPixels,
         seq,
+        facing,
         frame,
         zoom,
         tileBase,
@@ -19,11 +21,17 @@
         // so a tile can be laid out (geometry always crosses) before its pixels arrive.
         loadedPixels: ReadonlyMap<number, Uint8Array>;
         seq: SequenceView;
+        // The direction to announce. An untagged IE cycle carries no facing of its own - the rose
+        // derives it from the block scheme - so without this every tile of a nine-direction wheel
+        // announces itself identically.
+        facing?: Facing;
         frame: number;
         zoom: number;
         tileBase: number;
         showOffsetMarker: boolean;
     } = $props();
+
+    const shownFacing = $derived(facing ?? seq.facing);
 
     // Playback holds one shared frame index; a shorter sequence clamps to its own last frame.
     const clampedIndex = $derived(Math.min(frame, seq.frameRefs.length - 1));
@@ -50,6 +58,6 @@
         dirOffsetY={seq.dirOffsetY}
         {tileBase}
         {showOffsetMarker}
-        ariaLabel={seq.facing === "none" ? "Animation frame" : `Animation frame facing ${seq.facing}`}
+        ariaLabel={shownFacing === "none" ? "Animation frame" : `Animation frame facing ${shownFacing}`}
     />
 {/if}

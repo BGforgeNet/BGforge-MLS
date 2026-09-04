@@ -30,7 +30,8 @@ function validRefs(refs: number[], frameCount: number): number[] {
 export function combineIeBamPair(base: IndexedAnimation, east: IndexedAnimation): IndexedAnimation | undefined {
     if (base.sequences.length === 0 || base.sequences.length !== east.sequences.length) return undefined;
     if (base.sequences.length % IE_STRIDE !== 0) return undefined;
-    if (!interpretIeDirections(base.sequences, base.frames.length)?.detected) return undefined;
+    const baseAnalysis = interpretIeDirections(base.sequences, base.frames.length);
+    if (baseAnalysis?.scheme !== "ie8" || !baseAnalysis.detected) return undefined;
     const eastGroups = interpretIeDirections(east.sequences, east.frames.length)?.groups;
     if (!eastGroups?.some((g) => g.some((s) => s.facing === "NE" || s.facing === "E" || s.facing === "SE"))) {
         return undefined;
@@ -62,7 +63,9 @@ export function splitIeBamPair(
     combined: IndexedAnimation,
 ): { base: IndexedAnimation; east: IndexedAnimation } | undefined {
     if (combined.sequences.length === 0 || combined.sequences.length % IE_STRIDE !== 0) return undefined;
-    if (!interpretIeDirections(combined.sequences, combined.frames.length)) return undefined;
+    // The scheme, not the count: 72 cycles divide by 8 and by 9 alike, and only the coarse scheme keeps
+    // its east arc in a companion file at all.
+    if (interpretIeDirections(combined.sequences, combined.frames.length)?.scheme !== "ie8") return undefined;
     return {
         base: sideAnimation(combined, (slot) => slot < IE_WEST_SLOTS),
         east: sideAnimation(combined, (slot) => slot >= IE_WEST_SLOTS),

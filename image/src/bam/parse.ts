@@ -1,5 +1,5 @@
 import { type IndexedAnimation, type Frame, type Rgba, type Sequence, emptyPalette } from "../model/animation.ts";
-import { interpretIeDirections } from "../model/ie-direction.ts";
+import { directionLayoutOf, interpretIeDirections } from "../model/ie-direction.ts";
 import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 
 // RLE decode that also reports how many source bytes were consumed, so the caller can
@@ -163,11 +163,9 @@ export function parseBamV1(bytes: Uint8Array): IndexedAnimation {
     for (let i = 0; i < tables.frameCount; i++) frames.push(decodeFrameAt(bytes, i, tables));
 
     // Resolve the direction layout at the source: the BAM container carries no direction tag, but the
-    // IE creature base-file fingerprint (stride-8 blocks, dummy east slots) is detectable from the cycle
-    // structure. Every consumer (editor layout default, metadata display, manifests) reads this one value.
-    const directionLayout = interpretIeDirections(tables.sequences, frames.length)?.detected
-        ? "ie8"
-        : "non-directional";
+    // IE creature block structure is detectable from the cycle table. Every consumer (editor layout
+    // default, metadata display, manifests) reads this one value.
+    const directionLayout = directionLayoutOf(interpretIeDirections(tables.sequences, frames.length));
 
     return {
         palette: tables.palette,

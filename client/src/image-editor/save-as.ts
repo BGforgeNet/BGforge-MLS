@@ -1,5 +1,6 @@
 import * as path from "path";
 import { type IndexedAnimation, type LossReport, convertToFrm, frmDirectionMode } from "@bgforge/image";
+import { ieBlockSize } from "@bgforge/image/ie-direction";
 import type { SaveAsTarget } from "./webview/messages";
 
 /** The user-facing summary behind the lossy-conversion confirmation modal: a headline for the
@@ -49,13 +50,14 @@ export function needsCyclePick(anim: IndexedAnimation): boolean {
 }
 
 /**
- * Number of 8-cycle direction blocks when the animation resolved as an IE base file (directionLayout
- * "ie8"); undefined otherwise (then `needsCyclePick` decides). The ie8 layout guarantees a multiple of
- * 8 cycles at parse; Math.ceil keeps a loosely-claiming imported manifest from truncating a block.
+ * Number of direction blocks when the animation resolved as an IE creature file, at whichever block
+ * size its layout names; undefined otherwise (then `needsCyclePick` decides). A resolved layout
+ * guarantees a whole number of blocks at parse; Math.ceil keeps a loosely-claiming imported manifest
+ * from truncating one.
  */
 export function ieGroupCount(anim: IndexedAnimation): number | undefined {
-    if (anim.meta.directionLayout !== "ie8") return undefined;
-    return Math.ceil(anim.sequences.length / 8);
+    const stride = ieBlockSize(anim.meta.directionLayout);
+    return stride === undefined ? undefined : Math.ceil(anim.sequences.length / stride);
 }
 
 /** How a non-FRM shape fills FRM's 6 rotations: one IE direction block, or one cycle for all rotations. */

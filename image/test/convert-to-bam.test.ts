@@ -80,9 +80,14 @@ describe.skipIf(frms.length === 0)("convertToBam", () => {
 
         expect(animation.meta.sourceFormat).toBe("bam");
         expect(animation.meta.transparentIndex).toBe(0);
-        expect(animation.meta.directionLayout).toBe("frm6");
-        expect(animation.sequences).toHaveLength(6);
-        expect(animation.sequences.map((s) => s.frameRefs)).toEqual(source.sequences.map((s) => s.frameRefs));
+        // The rotations are re-laid onto IE's 8 direction slots, so the output is an ie8 cycle list -
+        // see placeFrmRotations. Every source rotation survives; S and N are the slots FRM cannot fill.
+        expect(animation.meta.directionLayout).toBe("ie8");
+        expect(animation.sequences).toHaveLength(8);
+        expect(animation.sequences.filter((s) => s.frameRefs.length === 0).map((s) => s.facing)).toEqual(["S", "N"]);
+        expect(new Set(animation.sequences.map((s) => s.frameRefs.join(",")))).toEqual(
+            new Set([...source.sequences.map((s) => s.frameRefs.join(",")), ""]),
+        );
         expect(animation.frames.every((f) => f.rleEncoded === false)).toBe(true);
         expect(animation.frames.every((f) => f.rawEncoding === undefined)).toBe(true);
 
@@ -122,5 +127,57 @@ describe.skipIf(frms.length === 0)("convertToBam", () => {
         expect(animation.meta).not.toBe(bamSource.meta);
         expect(animation).toEqual(bamSource);
         expect(report.items).toEqual([]);
+    });
+});
+
+describe("convertToBam direction placement", () => {
+    // BAM stores no facing tags - a cycle's direction IS its index - so a converted FRM keeps its
+    // directions only if each one is written at the IE slot that means it. Tagging the sequences and
+    // leaving them in FRM header order survives in memory and is lost the moment the file is written.
+    it("writes each FRM rotation at the IE slot that means the same direction", () => {
+        const frames = FRM_FACINGS.map((_, i) => ({
+            width: 1,
+            height: 1,
+            pixels: new Uint8Array([i + 1]),
+            offsetX: 0,
+            offsetY: 0,
+        }));
+        const source: IndexedAnimation = {
+            palette: emptyPalette(),
+            frames,
+            sequences: FRM_FACINGS.map((facing, i) => ({ frameRefs: [i], facing })),
+            meta: { sourceFormat: "frm", directionLayout: "frm6" },
+        };
+
+        const reparsed = parseBamV1(serializeBamV1(convertToBam(source).animation));
+        // Round-tripped through the container, each rotation must be findable at its own IE slot:
+        // S(0) SW(1) W(2) NW(3) N(4) NE(5) E(6) SE(7).
+        const pixelAt = (slot: number): number | undefined => {
+            const ref = reparsed.sequences[slot]?.frameRefs[0];
+            return ref === undefined ? undefined : reparsed.frames[ref]?.pixels[0];
+        };
+        const pixelFor: Map<string, number> = new Map(FRM_FACINGS.map((facing, i) => [facing, i + 1]));
+        expect(pixelAt(1)).toBe(pixelFor.get("SW"));
+        expect(pixelAt(2)).toBe(pixelFor.get("W"));
+        expect(pixelAt(3)).toBe(pixelFor.get("NW"));
+        expect(pixelAt(5)).toBe(pixelFor.get("NE"));
+        expect(pixelAt(6)).toBe(pixelFor.get("E"));
+        expect(pixelAt(7)).toBe(pixelFor.get("SE"));
+    });
+
+    // A single-orientation FRM says "show this everywhere" with six equal data offsets; spread over the
+    // IE slots that has to stay everywhere, including the S and N a directional source cannot fill.
+    it("fills every IE slot from a single-orientation source's one cycle", () => {
+        const source = frmSharingOneFrame([0, 0, 0, 0, 0, 0]);
+        const { animation } = convertToBam(source);
+        expect(animation.sequences).toHaveLength(8);
+        expect(animation.sequences.every((s) => s.frameRefs.length === 1)).toBe(true);
+        expect(animation.sequences.map((s) => s.facing)).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);
+    });
+
+    it("returns no cycles for a source that has none", () => {
+        const source = frmSharingOneFrame([0, 0, 0, 0, 0, 0]);
+        const { animation } = convertToBam({ ...source, sequences: [] });
+        expect(animation.sequences).toEqual([]);
     });
 });

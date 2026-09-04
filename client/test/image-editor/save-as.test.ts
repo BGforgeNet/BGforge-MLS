@@ -76,7 +76,15 @@ describe("ieGroupCount", () => {
         expect(ieGroupCount(anim)).toBe(2);
     });
 
-    it("is undefined for non-ie8 layouts (needsCyclePick decides instead)", () => {
+    // A fine-scheme file is just as directional; counting its blocks at eight would offer the wrong
+    // number of them, and refusing it entirely sends the user to a cycle picker instead of a direction.
+    it("returns the 9-cycle block count for an ie9-resolved animation", () => {
+        const base = multiCycleBam(27);
+        const anim: IndexedAnimation = { ...base, meta: { ...base.meta, directionLayout: "ie9" } };
+        expect(ieGroupCount(anim)).toBe(3);
+    });
+
+    it("is undefined for non-directional layouts (needsCyclePick decides instead)", () => {
         expect(ieGroupCount(multiCycleBam(16))).toBeUndefined();
         expect(ieGroupCount(makeMiniFrm())).toBeUndefined();
     });

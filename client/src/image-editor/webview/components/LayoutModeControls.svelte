@@ -1,9 +1,10 @@
 <script lang="ts">
+    import type { IeScheme } from "@bgforge/image/ie-direction";
     import type { LayoutMode } from "../render/compass-layout";
     import { ieGroupOptionText } from "../render/cycle-grouping";
 
     // Rose/grid layout selector, shown only when a rose is constructible for the current view. The
-    // caller seeds `mode` from detection on open (an FRM's tagged facings, or the IE stride-8
+    // caller seeds `mode` from detection on open (an FRM's tagged facings, or the IE block-structure
     // fingerprint) and this control lets the user override it. `groupCount` > 1 means the rose shows
     // one of several IE direction blocks - the group picker chooses which.
     const {
@@ -12,6 +13,7 @@
         groupCount,
         group,
         groupLabels,
+        scheme,
         onGroupChange,
     }: {
         mode: LayoutMode;
@@ -19,6 +21,7 @@
         groupCount: number; // 0 or 1 = no group picker
         group: number;
         groupLabels?: string[]; // scheme names per group (ieGroupLabels); numbered fallback when absent
+        scheme?: IeScheme; // block size the option's cycle range counts in
         onGroupChange: (group: number) => void;
     } = $props();
 </script>
@@ -64,7 +67,7 @@
                 aria-label="Sequence group"
             >
                 {#each Array.from({ length: groupCount }, (_, i) => i) as i (i)}
-                    <option value={String(i)}>{ieGroupOptionText(groupLabels, i)}</option>
+                    <option value={String(i)}>{ieGroupOptionText(groupLabels, i, scheme)}</option>
                 {/each}
             </select>
         </label>

@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 import type { Facing } from "../src/model/animation.ts";
-import { interpretIeDirections, type SequenceShape } from "../src/model/ie-direction.ts";
+import {
+    directionLayoutOf,
+    ieBlockSize,
+    ieSchemeOf,
+    interpretIeDirections,
+    type SequenceShape,
+} from "../src/model/ie-direction.ts";
 
 function seq(frameRefs: number[], facing: Facing = "none"): SequenceShape {
     return { frameRefs, facing };
@@ -23,7 +29,92 @@ function baseFileSequences(blocks: number): { sequences: SequenceShape[]; frameC
     return { sequences, frameCount: blocks * 10 + 1 };
 }
 
+/**
+ * The character/monster shape: `blocks` of 9 cycles, every cycle in a block the same length (one action
+ * at nine orientations), with distinct frames throughout. Nothing is stored for the east - the engine
+ * mirrors it - so there are no dummy slots to find.
+ */
+function range(start: number, length: number): number[] {
+    return Array.from({ length }, (_, k) => start + k);
+}
+
+function westArcSequences(blocks: number, perCycle = 2): { sequences: SequenceShape[]; frameCount: number } {
+    const sequences: SequenceShape[] = [];
+    let next = 0;
+    for (let g = 0; g < blocks; g++) {
+        for (let slot = 0; slot < 9; slot++) {
+            sequences.push(seq(range(next, perCycle)));
+            next += perCycle;
+        }
+    }
+    return { sequences, frameCount: next };
+}
+
+const WEST_ARC_16 = ["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"];
+
+describe("scheme accessors", () => {
+    test("ieBlockSize names the cycles per block of each creature layout, and nothing else", () => {
+        expect(ieBlockSize("ie8")).toBe(8);
+        expect(ieBlockSize("ie9")).toBe(9);
+        expect(ieBlockSize("frm6")).toBeUndefined();
+        expect(ieBlockSize("non-directional")).toBeUndefined();
+        expect(ieBlockSize(undefined)).toBeUndefined();
+    });
+
+    test("ieSchemeOf narrows a stamped layout to a scheme", () => {
+        expect(ieSchemeOf("ie8")).toBe("ie8");
+        expect(ieSchemeOf("ie9")).toBe("ie9");
+        expect(ieSchemeOf("frm6")).toBeUndefined();
+        expect(ieSchemeOf(undefined)).toBeUndefined();
+    });
+
+    test("directionLayoutOf stamps only a detected shape", () => {
+        const { sequences, frameCount } = westArcSequences(1);
+        expect(directionLayoutOf(interpretIeDirections(sequences, frameCount))).toBe("ie9");
+        // Interpretable but undetected - a lone short set - is not what the file is declared to be.
+        expect(directionLayoutOf(interpretIeDirections([seq([0]), seq([1])], 2))).toBe("non-directional");
+        expect(directionLayoutOf(undefined)).toBe("non-directional");
+    });
+});
+
 describe("interpretIeDirections", () => {
+    test("reads a 9-cycle file as one western arc of the 16-point wheel", () => {
+        const { sequences, frameCount } = westArcSequences(1);
+        const result = interpretIeDirections(sequences, frameCount);
+        expect(result?.scheme).toBe("ie9");
+        expect(result?.detected).toBe(true);
+        expect(result?.groups).toHaveLength(1);
+        expect(result?.groups[0]?.map((s) => s.facing)).toEqual(WEST_ARC_16);
+    });
+
+    // 72 cycles is nine 8-blocks or eight 9-blocks. Reading one as the other keeps every cycle and
+    // silently relabels its direction, so the block shape - not the count - has to decide.
+    test("reads a 72-cycle file of uniform 9-blocks as the fine scheme", () => {
+        // Each block is one action, so its nine cycles share a frame count while the blocks differ -
+        // which cuts cleanly at 9 and raggedly at 8.
+        const sequences: SequenceShape[] = [];
+        let next = 0;
+        for (let block = 0; block < 8; block++) {
+            for (let slot = 0; slot < 9; slot++) {
+                sequences.push(seq(range(next, block + 1)));
+                next += block + 1;
+            }
+        }
+        const result = interpretIeDirections(sequences, next);
+        expect(result?.scheme).toBe("ie9");
+        expect(result?.groups).toHaveLength(8);
+        expect(result?.groups[7]?.map((s) => s.facing)).toEqual(WEST_ARC_16);
+    });
+
+    test("reads a 72-cycle base file of 8-blocks as the coarse scheme", () => {
+        const { sequences, frameCount } = baseFileSequences(9);
+        const result = interpretIeDirections(sequences, frameCount);
+        expect(result?.scheme).toBe("ie8");
+        expect(result?.detected).toBe(true);
+        expect(result?.groups).toHaveLength(9);
+        expect(result?.groups[0]?.map((s) => s.facing)).toEqual(["S", "SW", "W", "NW", "N"]);
+    });
+
     test("detects the base-file fingerprint: stride-8 blocks, real west slots, shared-filler east slots", () => {
         const { sequences, frameCount } = baseFileSequences(2);
         const result = interpretIeDirections(sequences, frameCount);
@@ -57,6 +148,22 @@ describe("interpretIeDirections", () => {
         const { sequences, frameCount } = baseFileSequences(1);
         sequences[6] = seq([2, 2]); // filler frame differs from the others' frame 0
         expect(interpretIeDirections(sequences, frameCount)?.detected).toBe(false);
+    });
+
+    // A multi-block E-file has empty west slots, so NEITHER stride finds uniform arcs and the scores tie
+    // at zero. With no structural evidence either way the coarse reading has to win: it is the only one
+    // an east companion can be, and its cycle count is a multiple of both strides.
+    test("a multi-block E-file stays coarse when neither stride finds block structure", () => {
+        const sequences: SequenceShape[] = [];
+        let next = 1;
+        for (let block = 0; block < 9; block++) {
+            for (let slot = 0; slot < 8; slot++) {
+                sequences.push(slot < 5 ? seq([]) : seq([next++, next++]));
+            }
+        }
+        const result = interpretIeDirections(sequences, next);
+        expect(result?.scheme).toBe("ie8");
+        expect(result?.groups[0]?.map((s) => s.facing)).toEqual(["NE", "E", "SE"]);
     });
 
     test("an E-file shape (west slots empty, east slots real) is interpretable but not detected", () => {

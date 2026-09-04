@@ -9,7 +9,9 @@ export const IE8_FACINGS: readonly Facing[] = ["S", "SW", "W", "NW", "N", "NE", 
 export function facingsForCycleCount(count: number): Facing[] | null {
     if (count === 8) return [...IE8_FACINGS];
     if (count === 6) return [...FRM_FACINGS];
-    return null; // 5/9/16/other schemes rely on the sequences' own facing tags or a single-orientation pick
+    // Everything else reaches FRM already facing-tagged - an IE creature block is extracted and tagged
+    // by the direction interpretation first - or as a single-orientation pick.
+    return null;
 }
 
 export function frmSlotOrder(facings: Facing[]): number[] {
