@@ -199,8 +199,28 @@ body {
     white-space: nowrap;
 }
 
-/* The facet browser. Every control is a native select themed with VS Code's dropdown tokens - left
-   unthemed it renders as OS chrome, a light box punched into a dark panel. */
+/* Every native select in the panel takes VS Code's dropdown tokens - left unthemed one renders as OS
+   chrome, a light box punched into a dark panel. */
+.tagfilter,
+.facet select {
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border, transparent);
+    border-radius: 2px;
+    color: var(--vscode-dropdown-foreground);
+    font-family: inherit;
+    font-size: var(--vscode-font-size);
+    padding: 3px 4px;
+}
+.tagfilter:focus,
+.facet select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+.tagfilter {
+    flex: 0 0 auto;
+}
+
+/* The facet browser. */
 .facetbar {
     align-items: end;
     border-bottom: 1px solid var(--vscode-panel-border);
@@ -218,19 +238,6 @@ body {
 .facetlabel {
     color: var(--vscode-descriptionForeground);
     font-size: 11px;
-}
-.facet select {
-    background: var(--vscode-dropdown-background);
-    border: 1px solid var(--vscode-dropdown-border, transparent);
-    border-radius: 2px;
-    color: var(--vscode-dropdown-foreground);
-    font-family: inherit;
-    font-size: var(--vscode-font-size);
-    padding: 3px 4px;
-}
-.facet select:focus {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
 }
 /* Fixed height: this line swaps between a file plus its button and a one-line reason on every selection
    change, and a reflow here would shift the whole list below it each time. */

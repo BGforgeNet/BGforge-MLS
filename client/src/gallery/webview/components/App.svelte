@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { iconTags, tagsFor } from "../../icon-tags";
     import { filterTiles } from "../grid-window";
     import { type FacetState, type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
@@ -22,6 +23,7 @@
     let sets: SetTile[] = $state([]);
     let note: string | undefined = $state();
     let query = $state("");
+    let tag = $state("");
     let tab: GalleryTab = $state("files");
     /**
      * Every item the host has answered for, including the ones it could not draw - hence the `undefined`
@@ -32,7 +34,11 @@
     let facets: FacetState | undefined = $state();
     let loaded = $state(false);
 
-    const shown = $derived(filterTiles(items, query));
+    const shown = $derived(
+        filterTiles(items, query).filter((tile) => tag === "" || tagsFor(tile.label).includes(tag)),
+    );
+    /** Only the tags this corpus actually contains: a filter offering a type with no files is a dead end. */
+    const tags = $derived(iconTags(items.map((tile) => tile.label)));
     /** The sets tab searches by the same box, over the label the tile shows. */
     const shownSets = $derived(
         sets.filter((set) => set.label.toLowerCase().includes(query.trim().toLowerCase())),
@@ -77,6 +83,9 @@
         total={tab === "files" ? items.length : sets.length}
         title={tab === "files" ? title : "animations"}
         onQuery={(v) => (query = v)}
+        tags={tab === "files" ? tags : []}
+        {tag}
+        onTag={(v) => (tag = v)}
     />
     {#if tab === "sets"}
         {#if facets}
