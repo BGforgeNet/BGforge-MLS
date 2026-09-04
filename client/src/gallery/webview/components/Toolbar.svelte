@@ -9,9 +9,25 @@
         tags?: string[];
         tag?: string;
         onTag?: (value: string) => void;
+        /** The file formats present, on the same terms: one format alone is not a choice. */
+        formats?: string[];
+        format?: string;
+        onFormat?: (value: string) => void;
     }
 
-    const { query, shown, total, title, onQuery, tags = [], tag = "", onTag }: Props = $props();
+    const {
+        query,
+        shown,
+        total,
+        title,
+        onQuery,
+        tags = [],
+        tag = "",
+        onTag,
+        formats = [],
+        format = "",
+        onFormat,
+    }: Props = $props();
 
     const display = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 </script>
@@ -26,7 +42,7 @@
     />
     {#if tags.length > 0}
         <select
-            class="tagfilter"
+            class="filterselect typefilter"
             aria-label="Filter by type"
             value={tag}
             onchange={(event) => onTag?.(event.currentTarget.value)}
@@ -34,6 +50,19 @@
             <option value="">All types</option>
             {#each tags as option (option)}
                 <option value={option}>{display(option)}</option>
+            {/each}
+        </select>
+    {/if}
+    {#if formats.length > 1}
+        <select
+            class="filterselect formatfilter"
+            aria-label="Filter by format"
+            value={format}
+            onchange={(event) => onFormat?.(event.currentTarget.value)}
+        >
+            <option value="">All formats</option>
+            {#each formats as option (option)}
+                <option value={option}>{option.toUpperCase()}</option>
             {/each}
         </select>
     {/if}

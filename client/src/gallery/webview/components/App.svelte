@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { iconTags, tagsFor } from "../../icon-tags";
+    import { matchesTag, resourceTags } from "../../resource-tags";
     import { filterTiles, ladderSize } from "../grid-window";
     import { type FacetState, type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
@@ -30,6 +30,8 @@
     let note: string | undefined = $state();
     let query = $state("");
     let tag = $state("");
+    /** The chosen file format, or "" for every one. A separate axis from the tag: a type spans formats. */
+    let format = $state("");
     let tab: GalleryTab = $state("files");
     /**
      * Every item the host has answered for, including the ones it could not draw - hence the `undefined`
@@ -44,11 +46,23 @@
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
 
+    const inFormat = $derived(items.filter((tile) => format === "" || tile.ext === format));
+    /**
+     * Only the tags the chosen format contains: a filter offering a type with no files is a dead end, and
+     * every type here belongs to one format - the item families to BAM, the area maps to BMP.
+     */
+    const tags = $derived(resourceTags(inFormat));
+    /**
+     * A tag the chosen format does not offer stops applying. Without this the select falls back to showing
+     * its first option while the grid stays filtered by the old tag - an empty grid under a control reading
+     * "All types".
+     */
+    const activeTag = $derived(tags.includes(tag) ? tag : "");
     const shown = $derived(
-        filterTiles(items, query).filter((tile) => tag === "" || tagsFor(tile.label).includes(tag)),
+        filterTiles(inFormat, query).filter((tile) => matchesTag(tile.label, tile.ext, activeTag)),
     );
-    /** Only the tags this corpus actually contains: a filter offering a type with no files is a dead end. */
-    const tags = $derived(iconTags(items.map((tile) => tile.label)));
+    /** The formats, on the same terms: one format alone is not a choice. */
+    const formats = $derived([...new Set(items.map((tile) => tile.ext))].sort());
     /** The sets tab searches by the same box, over the label the tile shows. */
     const shownSets = $derived(
         sets.filter((set) => set.label.toLowerCase().includes(query.trim().toLowerCase())),
@@ -121,8 +135,11 @@
         title={tab === "files" ? title : "animations"}
         onQuery={(v) => (query = v)}
         tags={tab === "files" ? tags : []}
-        {tag}
+        tag={activeTag}
         onTag={(v) => (tag = v)}
+        formats={tab === "files" ? formats : []}
+        {format}
+        onFormat={(v) => (format = v)}
     />
     {#if tab === "sets"}
         {#if facets}

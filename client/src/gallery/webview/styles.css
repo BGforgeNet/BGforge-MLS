@@ -221,7 +221,7 @@ body {
 
 /* Every native select in the panel takes VS Code's dropdown tokens - left unthemed one renders as OS
    chrome, a light box punched into a dark panel. */
-.tagfilter,
+.filterselect,
 .facet select {
     background: var(--vscode-dropdown-background);
     border: 1px solid var(--vscode-dropdown-border, transparent);
@@ -231,13 +231,21 @@ body {
     font-size: var(--vscode-font-size);
     padding: 3px 4px;
 }
-.tagfilter:focus,
+.filterselect:focus,
 .facet select:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
 }
-.tagfilter {
+/* Fixed width, not content-sized: a select that resizes with its own selection moves the control beside it
+   and the count on every change. Each track is sized past its table's longest label. */
+.filterselect {
     flex: 0 0 auto;
+}
+.typefilter {
+    width: 24ch;
+}
+.formatfilter {
+    width: 13ch;
 }
 
 /* The facet browser. */
