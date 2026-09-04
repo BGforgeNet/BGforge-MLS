@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { type AnimationSet, buildAnimationIndex } from "../src/ie-resources/animation-index";
+import {
+    type AnimationSet,
+    buildAnimationIndex,
+    createAnimationIndexResolver,
+} from "../src/ie-resources/animation-index";
 import type { GameHandle } from "../src/ie-resources/game-handle";
 import { miniGame } from "./ie-game-fixtures";
 
@@ -66,6 +70,48 @@ describe("buildAnimationIndex", () => {
     it("is sorted by id, so the gallery's order does not depend on table order", () => {
         const ids = index().map((entry) => entry.id);
         expect(ids).toEqual([...ids].sort((a, b) => a - b));
+    });
+});
+
+describe("createAnimationIndexResolver", () => {
+    it("builds one index per game directory and answers the rest from it", () => {
+        let opened = 0;
+        const resolve = createAnimationIndexResolver({
+            gameAt: (dir) => {
+                opened += 1;
+                return dir === "/games/one" ? miniGame() : undefined;
+            },
+        });
+
+        const first = resolve("/games/one");
+        const second = resolve("/games/one");
+
+        expect(first).toBe(second);
+        expect(opened).toBe(1);
+    });
+
+    it("caches the absence too, so a directory with no game is not reopened per panel", () => {
+        let opened = 0;
+        const resolve = createAnimationIndexResolver({
+            gameAt: () => {
+                opened += 1;
+                return undefined;
+            },
+        });
+
+        expect(resolve("/games/none")).toBeUndefined();
+        expect(resolve("/games/none")).toBeUndefined();
+        expect(opened).toBe(1);
+    });
+
+    it("reads a game that throws as having no animations rather than failing the panel", () => {
+        const resolve = createAnimationIndexResolver({
+            gameAt: () => {
+                throw new Error("unreadable archive");
+            },
+        });
+
+        expect(resolve("/games/broken")).toBeUndefined();
     });
 });
 

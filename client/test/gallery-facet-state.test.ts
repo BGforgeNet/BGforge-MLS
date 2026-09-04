@@ -34,6 +34,7 @@ const index = facetIndex([
 const shipped = new Set(["CEFW1G1", "CEFW2G1", "CEFW2SA", "CHFW1G1"]);
 const exists = (resref: string): boolean => shipped.has(resref);
 
+const MISC = { kind: "misc", detail: 1 } as const;
 const elfSelection: FacetSelection = { ...elfMage, armour: 2, action: { kind: "shoot", weapon: "bow" } };
 
 describe("facetState", () => {
@@ -83,6 +84,18 @@ describe("selectFacet", () => {
     it("re-seats the action when the new selection does not ship the old one", () => {
         const next = selectFacet(index, elfSelection, "race", "human", exists);
         expect(next.action).toEqual({ kind: "misc", detail: 1 });
+    });
+
+    it("re-resolves on a gender change", () => {
+        const next = selectFacet(index, { ...elfSelection, gender: "male" }, "gender", "female", exists);
+        expect(next.gender).toBe("female");
+        expect(facetState(index, next, exists).resref).toBe("CEFW2SA");
+    });
+
+    it("re-resolves on a class change, landing on the set that combination names", () => {
+        const next = selectFacet(index, { ...humanMage, armour: 1, action: MISC }, "charClass", "mage", exists);
+        expect(next.charClass).toBe("mage");
+        expect(facetState(index, next, exists).resref).toBe("CHFW1G1");
     });
 
     it("moves the armour level within one set", () => {

@@ -110,6 +110,21 @@ describe("resolveFacets", () => {
     });
 });
 
+describe("actionLabel", () => {
+    // Every kind, because the label is the value the view sends BACK when the control changes: a kind
+    // whose label nothing produces is a control option that cannot be selected.
+    it("names each kind of action the way its control reads", () => {
+        expect([
+            actionLabel({ kind: "attack", detail: 2 }),
+            actionLabel({ kind: "cast" }),
+            actionLabel({ kind: "misc", detail: 1 }),
+            actionLabel({ kind: "misc", detail: 3 }),
+            actionLabel({ kind: "shoot", weapon: "bow" }),
+            actionLabel({ kind: "paperdoll" }),
+        ]).toEqual(["Attack 2", "Cast", "Stand", "Misc 3", "Shoot (bow)", "Inventory"]);
+    });
+});
+
 describe("armourLevels", () => {
     it("is the set's own levels, lowest first", () => {
         expect(armourLevels(setForFacets(index, elfMage))).toEqual([1, 2, 3, 4]);

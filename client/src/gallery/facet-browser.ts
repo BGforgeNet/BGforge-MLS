@@ -10,13 +10,7 @@
  * name a combination the install has no files for, and another table can name one the first omits.
  */
 import { type AnimationSet } from "../ie-resources/animation-index";
-import {
-    type CharClass,
-    characterIdFor,
-    type CharacterFacets,
-    type Gender,
-    type Race,
-} from "../ie-resources/animation-facets";
+import { type CharClass, type CharacterFacets, type Gender, type Race } from "../ie-resources/animation-facets";
 import { type Action, characterActions, characterMember } from "../ie-resources/animation-schemes/character";
 
 export const RACES: readonly Race[] = ["human", "elf", "dwarf", "halfling", "gnome", "halforc"];
@@ -168,9 +162,4 @@ export function resolveFacets(
         };
     }
     return { set, resref, actions, unavailable: undefined };
-}
-
-/** The id a facet selection points at, for the link a creature's animation field follows. */
-export function idForFacets(facets: CharacterFacets, generation: number): number {
-    return characterIdFor(facets, generation);
 }
