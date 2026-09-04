@@ -60,6 +60,7 @@ export {
     type CreatureRange,
     CREATURE_RANGES,
     applyCreatureColors,
+    creatureColorsAt,
     parseGradientTable,
 } from "./palette/creature-colors.ts";
 export { DEFAULT_FALLOUT_PALETTE } from "./palette/default-palette.ts";

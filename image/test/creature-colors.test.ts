@@ -5,7 +5,12 @@
  */
 import { describe, expect, it } from "vitest";
 import type { Rgba } from "../src/model/animation.ts";
-import { applyCreatureColors, parseGradientTable } from "../src/palette/creature-colors.ts";
+import {
+    CREATURE_RANGES,
+    applyCreatureColors,
+    creatureColorsAt,
+    parseGradientTable,
+} from "../src/palette/creature-colors.ts";
 
 /**
  * A 24-bit uncompressed BMP, the shape an install's gradient table ships as. Rows are given top-down
@@ -162,6 +167,18 @@ describe("applyCreatureColors", () => {
             hair: 7,
         });
         expect(palette[0x04]).toEqual({ r: 99, g: 99, b: 99, a: 255 });
+    });
+});
+
+describe("creatureColorsAt", () => {
+    it("reads the indices in the same order as the palette's ranges", () => {
+        const colors = creatureColorsAt((i) => i * 10);
+
+        // The guard the doc comment promises: byte N is range N, so the two orders cannot drift apart.
+        for (const [i, range] of CREATURE_RANGES.entries()) {
+            expect(colors[range], range).toBe(i * 10);
+        }
+        expect(Object.keys(colors)).toEqual([...CREATURE_RANGES]);
     });
 });
 

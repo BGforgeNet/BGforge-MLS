@@ -8,7 +8,10 @@ export type LossKind =
     | "palette-remapped-to-default"
     | "palette-sidecar-required"
     | "alpha-flattened"
-    | "colours-quantized";
+    | "colours-quantized"
+    /** A creature's colours were written into the output, replacing the animation's placeholder ranges.
+     *  A real loss: the result renders as that one creature and can never be recoloured as another. */
+    | "creature-colours-baked";
 
 export interface LossItem {
     kind: LossKind;

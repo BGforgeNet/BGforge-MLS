@@ -272,8 +272,9 @@ describe("createColorGradientResolver", () => {
         const colors = createColorGradientResolver(withTable())(gameUri())?.[2];
 
         expect(colors).toHaveLength(12);
-        expect(colors?.[0]).toBe("#020000");
-        expect(colors?.[11]).toBe("#020b00");
+        // Row index in red, column in green - the bitmap the fixture wrote.
+        expect(colors?.[0]).toEqual({ r: 2, g: 0, b: 0, a: 255 });
+        expect(colors?.[11]).toEqual({ r: 2, g: 11, b: 0, a: 255 });
     });
 
     it("resolves nothing for an index past the end of the install's table", () => {

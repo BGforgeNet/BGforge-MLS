@@ -1,7 +1,7 @@
 <script lang="ts">
     import { tick as svelteTick } from "svelte";
     import type { Bridge } from "../state/bridge";
-    import { framePixels, type AnimationView } from "../messages";
+    import { framePixels, type AnimationView, type CreatureOption } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
@@ -16,6 +16,7 @@
     import CycleGrid from "./CycleGrid.svelte";
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
     import LayoutModeControls from "./LayoutModeControls.svelte";
+    import CreatureControls from "./CreatureControls.svelte";
     import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -31,6 +32,9 @@
 
     let view = $state<AnimationView | null>(null);
     let errorMessage = $state<string | undefined>();
+    /** The install's creatures, once asked for; the resref currently drawn in, if any. */
+    let creatures = $state<CreatureOption[]>([]);
+    let activeCreature = $state<string | undefined>();
     // If the host never posts "init" (a dropped/failed open), surface it rather than sit on
     // "Loading..." forever. Timer mechanics shared with the binary/dialog editors' App.svelte
     // via installInitTimeout (webview-utils.ts).
@@ -145,6 +149,16 @@
                 // One reassignment per batch, never per frame: $state does not proxy a Map, so the
                 // view only re-renders on the replacement.
                 loadedPixels = next;
+            } else if (m.type === "creatures") {
+                creatures = m.entries;
+            } else if (m.type === "palette") {
+                // A whole replacement rather than an in-place palette write: the tiles read `view`, and a
+                // mutation through the old object would not re-render them. Indexed views only - a BAM v2
+                // has no palette to swap, and the host never offers one for it.
+                if (view !== null && view.colorModel === "indexed") {
+                    view = { ...view, palette: m.palette };
+                    activeCreature = m.creature;
+                }
             } else if (m.type === "error") {
                 errorMessage = m.message;
             }
@@ -326,6 +340,14 @@
                     groupLabels={roseGroupLabels}
                     scheme={ieRose?.scheme}
                     onGroupChange={(g) => (roseGroup = g)}
+                />
+            {/if}
+            {#if view.colorModel === "indexed" && view.sourceFormat !== "frm"}
+                <CreatureControls
+                    {creatures}
+                    active={activeCreature}
+                    onrequest={() => bridge.send({ type: "requestCreatures" })}
+                    onchoose={(resref) => bridge.send({ type: "setCreature", resref })}
                 />
             {/if}
             <MetaControls {view} {bridge} />

@@ -197,6 +197,19 @@ select {
 .zoom-presets {
     justify-content: flex-start;
 }
+/* Creature colours: a picker wide enough for "<name> (<resref>)", which is what makes the list scannable -
+   an 8-character resref alone identifies nothing. Both controls take the row's full width under their
+   label rather than sharing it, since either one truncated defeats its purpose. */
+.creature-select,
+.creature-search {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+.creature-note {
+    margin: 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+}
 
 /* Three-way background selector and the loop toggle: both render as a secondary/outline button that
    flips to the primary (filled) button style while active, so the selected option reads at a glance. */

@@ -24,6 +24,25 @@ export type CreatureRange = (typeof CREATURE_RANGES)[number];
 export type CreatureColors = Record<CreatureRange, number>;
 
 /**
+ * The seven indices from a record that stores them consecutively, `byteAt(0)` being the first.
+ *
+ * Here rather than at the reader, so the order lives once beside `CREATURE_RANGES` - a record's bytes and
+ * the palette's ranges are the same sequence, and a caller writing its own literal would be a second copy of
+ * that fact. Guarded by a test asserting the two agree.
+ */
+export function creatureColorsAt(byteAt: (index: number) => number): CreatureColors {
+    return {
+        metal: byteAt(0),
+        minor: byteAt(1),
+        major: byteAt(2),
+        skin: byteAt(3),
+        leather: byteAt(4),
+        armor: byteAt(5),
+        hair: byteAt(6),
+    };
+}
+
+/**
  * The install's gradient table, as one gradient per image row. It ships as a bitmap whose width is
  * exactly a range's colour count, so a row IS a range's replacement colours and the row number is the
  * index a creature stores. A wider image is read at its first `RANGE_COLORS` columns; a narrower one

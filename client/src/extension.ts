@@ -72,7 +72,10 @@ export async function activate(context: ExtensionContext) {
     // push above would reorder the intervening setup.
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
-        registerImageEditor(context, gameLookups.resourceBytes),
+        registerImageEditor(context, gameLookups.resourceBytes, {
+            creatures: gameLookups.creatures,
+            gradients: gameLookups.colorGradient,
+        }),
         registerScriptViews(context, gameLookups.bcsSymbols),
     );
 

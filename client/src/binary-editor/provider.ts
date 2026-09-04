@@ -39,6 +39,13 @@ export interface GameResolvers {
     isGameBacked: (uri: vscode.Uri) => boolean;
 }
 
+/** One gradient as CSS colours for the webview. The resolver hands back model colours, because the animation
+ *  editor applies the same table to a palette rather than drawing it. */
+function cssGradient(row: readonly { r: number; g: number; b: number }[] | undefined): string[] | undefined {
+    const hex = (n: number): string => n.toString(16).padStart(2, "0");
+    return row?.map((c) => `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`);
+}
+
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
@@ -247,7 +254,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             case "requestGradientTable": {
                 // Same posture as the resource list: answered from the game session, and an empty table is the
                 // honest answer outside a game - the picker then has nothing to offer and says so.
-                const gradients = this.gameLookups.colorGradient(document.uri) ?? [];
+                const gradients = (this.gameLookups.colorGradient(document.uri) ?? []).map(
+                    (row) => cssGradient(row) ?? [],
+                );
                 this.post(panel, { type: "gradientTable", requestId: message.requestId, gradients });
                 break;
             }
@@ -411,7 +420,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
-                      colorGradient: (index) => this.gameLookups.colorGradient(uri)?.[index],
+                      colorGradient: (index) => cssGradient(this.gameLookups.colorGradient(uri)?.[index]),
                       resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
                       flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
                       // Passed directly, unlike the closures above: what can be done with a TYPE is not a

@@ -36,4 +36,13 @@ describe("LossReport", () => {
         expect(r.lossless).toBe(false);
         expect(r.losses.map((i) => i.kind)).toEqual(["empty-direction"]); // only the real loss surfaces
     });
+
+    // Baking a creature's colours in is a one-way door - the output can never be recoloured as another
+    // creature - so it must reach the user, not sit with the informational notes.
+    it("counts baked creature colours as a real loss, so the export warns about them", () => {
+        const r = new LossReport();
+        r.add("creature-colours-baked", "written in Agnasia's colours");
+        expect(r.lossless).toBe(false);
+        expect(r.losses.map((i) => i.kind)).toEqual(["creature-colours-baked"]);
+    });
 });

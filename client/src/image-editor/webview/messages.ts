@@ -162,6 +162,9 @@ export type WebviewToHost =
     // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
     // the library decoder (importApng in @bgforge/image) is still present.
     | { type: "import"; mode: "replace" | "append" }
+    // The install's creatures, for choosing whose colours to draw an IE creature animation in.
+    | { type: "requestCreatures" }
+    | { type: "setCreature"; resref: string | null }
     // Frames whose pixels the open did not carry, asked for as the view comes to need them.
     | { type: "requestFrames"; indices: number[] }
     | { type: "runtimeError"; message: string; stack?: string };
@@ -184,7 +187,10 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
     switch (m.type) {
         case "ready":
         case "save":
+        case "requestCreatures":
             return true;
+        case "setCreature":
+            return m.resref === null || typeof m.resref === "string";
         case "editMeta":
             return isValidMetaPatch(m.patch);
         case "setExternalPalette":
@@ -217,4 +223,16 @@ export type HostToWebview =
     | { type: "init"; view: AnimationView }
     // Answer to `requestFrames`: `frames[i]` is the frame at `indices[i]`, spanning `pixels`.
     | { type: "frames"; indices: number[]; frames: FrameView[]; pixels: ArrayBuffer }
+    /** Creatures the open game holds, the ones using this animation first. Empty outside a game. */
+    | { type: "creatures"; entries: CreatureOption[] }
+    /** The palette the view should draw with: a creature's resolved colours, or the animation's own when
+     *  `creature` is absent. A view state - the document's own palette is never changed by it. */
+    | { type: "palette"; palette: Rgba[]; creature?: string }
     | { type: "error"; message: string };
+
+/** One creature the picker offers. `matches` marks the ones that actually use the open animation. */
+export interface CreatureOption {
+    resref: string;
+    name: string;
+    matches: boolean;
+}

@@ -4,7 +4,9 @@ import {
     type Animation,
     type DirectionLayout,
     type IndexedAnimation,
+    type Rgba,
     DEFAULT_FALLOUT_PALETTE,
+    applyCreatureColors,
     convertToBamV2,
     importPngDirectory,
     isRgbaAnimation,
@@ -12,6 +14,7 @@ import {
     serializeBamV2,
 } from "@bgforge/image";
 import { ieSchemeOf } from "@bgforge/image/ie-direction";
+import type { CreatureEntry } from "../ie-resources/creature-index";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
@@ -21,6 +24,7 @@ import { adaptImportedColourModel, buildCrossFormatSave, buildExport } from "./e
 import { type SaveWrite, planImageSave, pvrzPageWrites } from "./save";
 import {
     type FrmShapePick,
+    exportPaletteMode,
     ieGroupCount,
     needsCyclePick,
     reshapeImportToFrm,
@@ -31,6 +35,7 @@ import { sidecarPalPath } from "./sidecar";
 import { ieGroupLabels, ieGroupOptionText } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
+    type CreatureOption,
     type HostToWebview,
     type SaveAsTarget,
     type WebviewToHost,
@@ -62,6 +67,9 @@ const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
+/** An animation resref opens with a 4-character code naming the animation; the rest is variant and action. */
+const ANIMATION_CODE_CHARS = 4;
+
 /**
  * The view an open (or a post-edit refresh) sends: geometry for every frame, pixels only for the one
  * each sequence shows first. Playback starts at frame 0, so that subset is exactly the first paint;
@@ -77,6 +85,27 @@ function initialView(document: ImageEditorDocument): AnimationView {
         if (first !== undefined) include.add(first);
     }
     return document.toView({ include });
+}
+
+/**
+ * What it takes to draw an IE creature animation in a real creature's colours: the install's creatures, and
+ * the gradient table their seven indices select from. Both are properties of the game, so both are asked per
+ * document URI and answer undefined outside one.
+ */
+export interface CreatureColorSource {
+    creatures: (uri: vscode.Uri) => readonly CreatureEntry[] | undefined;
+    gradients: (uri: vscode.Uri) => readonly (readonly Rgba[])[] | undefined;
+}
+
+/**
+ * The creature whose colours a document is currently shown in. A VIEW state, deliberately not a document
+ * edit: the animation's own palette keeps its placeholders, so the file saves back byte-identical and stays
+ * recolourable by any creature. Export is the only place the choice is baked in.
+ */
+interface ActiveCreature {
+    readonly resref: string;
+    readonly name: string;
+    readonly palette: Rgba[];
 }
 
 /**
@@ -103,8 +132,19 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      */
     private readonly resourceBytes: GameResourceBytes | undefined;
 
-    constructor(context: vscode.ExtensionContext, resourceBytes?: GameResourceBytes) {
+    /** Absent when the resource viewer is not registered, which is also every non-IE context. */
+    private readonly creatureColors: CreatureColorSource | undefined;
+
+    /** The creature each document is being shown as, if any. Per document, so every panel of one agrees. */
+    private readonly activeCreature = new WeakMap<ImageEditorDocument, ActiveCreature>();
+
+    constructor(
+        context: vscode.ExtensionContext,
+        resourceBytes?: GameResourceBytes,
+        creatureColors?: CreatureColorSource,
+    ) {
         this.resourceBytes = resourceBytes;
+        this.creatureColors = creatureColors;
         this.extensionUri = context.extensionUri;
     }
 
@@ -149,6 +189,56 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         });
     }
 
+    /** The animation code a BAM's own name puts it in: an animation resref is `<4-char code><variant><action>`. */
+    private animationCodeOf(document: ImageEditorDocument): string {
+        return path.parse(document.uri.path).name.slice(0, ANIMATION_CODE_CHARS).toUpperCase();
+    }
+
+    /**
+     * The creatures offered for this document, the ones actually using its animation first.
+     *
+     * Both halves are listed rather than only the matching ones: an install shares one animation between
+     * hundreds of creatures, so the matching set is a useful default and not a small one, and borrowing a
+     * palette from an unrelated creature is a legitimate thing to want.
+     */
+    private creatureOptions(document: ImageEditorDocument): CreatureOption[] {
+        const index = this.creatureColors?.creatures(document.uri) ?? [];
+        const code = this.animationCodeOf(document);
+        const options = index.map((entry) => ({
+            resref: entry.resref,
+            name: entry.name,
+            matches: entry.animationCode !== "" && entry.animationCode === code,
+        }));
+        // Matching first, then by name so the list reads alphabetically within each half; a creature the
+        // string table cannot name sorts by its resref, which is all it has.
+        return options.sort((a, b) => {
+            if (a.matches !== b.matches) return a.matches ? -1 : 1;
+            return (a.name || a.resref).localeCompare(b.name || b.resref);
+        });
+    }
+
+    /** The document's own palette - what it shows with no creature chosen. Empty for a palette-less BAM v2. */
+    private basePalette(document: ImageEditorDocument): Rgba[] {
+        const animation = document.animation;
+        return isRgbaAnimation(animation) ? [] : animation.palette.map((c) => ({ ...c }));
+    }
+
+    /** The chosen creature's resolved palette, or undefined to go back to the animation's own colours. */
+    private resolveCreature(document: ImageEditorDocument, resref: string | null): ActiveCreature | undefined {
+        if (resref === null || this.creatureColors === undefined) return undefined;
+        const animation = document.animation;
+        // A BAM v2 carries per-pixel colour and no palette, so there is nothing for a creature to recolour.
+        if (isRgbaAnimation(animation)) return undefined;
+        const entry = this.creatureColors.creatures(document.uri)?.find((e) => e.resref === resref);
+        const gradients = this.creatureColors.gradients(document.uri);
+        if (entry === undefined || gradients === undefined) return undefined;
+        return {
+            resref: entry.resref,
+            name: entry.name,
+            palette: applyCreatureColors(animation.palette, gradients, entry.colors),
+        };
+    }
+
     private async handleWebviewMessage(
         document: ImageEditorDocument,
         panel: vscode.WebviewPanel,
@@ -186,6 +276,21 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "setExternalPalette":
                 document.setExternalPalette(message.enabled);
                 break;
+            case "requestCreatures": {
+                this.post(panel, { type: "creatures", entries: this.creatureOptions(document) });
+                break;
+            }
+            case "setCreature": {
+                const active = this.resolveCreature(document, message.resref);
+                if (active === undefined) this.activeCreature.delete(document);
+                else this.activeCreature.set(document, active);
+                this.postToDocumentPanels(document, {
+                    type: "palette",
+                    palette: active?.palette ?? this.basePalette(document),
+                    creature: active?.resref,
+                });
+                break;
+            }
             case "saveAs":
                 await this.handleSaveAs(document, message.target, message.paletteMode);
                 break;
@@ -226,6 +331,28 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         return dir === undefined ? undefined : path.join(dir, basename);
     }
 
+    /**
+     * The animation an export writes: the document's own, or its colours replaced by the chosen creature's.
+     *
+     * The one place the choice is baked in. Applied to the INDEXED animation before any conversion runs, so
+     * the target sees the real colours as its source rather than a palette swapped in after a remap - which
+     * would leave every index pointing at the wrong colour.
+     */
+    private exportColours(
+        document: ImageEditorDocument,
+        animation: IndexedAnimation,
+    ): { animation: IndexedAnimation; creature: ActiveCreature | undefined } {
+        const creature = this.activeCreature.get(document);
+        if (creature === undefined) return { animation, creature: undefined };
+        return { animation: { ...animation, palette: creature.palette }, creature };
+    }
+
+    /** The note an export carries when a creature's colours went into it. */
+    private static bakedColoursNote(creature: ActiveCreature): string {
+        const who = creature.name === "" ? creature.resref : `${creature.name} (${creature.resref})`;
+        return `written in ${who}'s colours - the result cannot be recoloured as another creature`;
+    }
+
     private async handleSaveAs(
         document: ImageEditorDocument,
         target: SaveAsTarget,
@@ -248,9 +375,22 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 // out as it is - no quantization, nothing to warn about. For an INDEXED document
                 // that means resolvedAnimation, not animation: an FRM's own palette is an all-black
                 // placeholder, and exporting the raw one writes black silhouettes (see document-model).
-                await this.writeAll(
-                    buildExport(document.resolvedAnimation() ?? document.animation, target, targetPath),
-                );
+                const base = document.resolvedAnimation() ?? document.animation;
+                // A PNG directory keeps its palette in each frame's own PLTE chunk and APNG is true
+                // colour, so a creature's colours cross either one exactly - baked in, but not degraded.
+                const exported = isRgbaAnimation(base)
+                    ? { animation: base, creature: undefined }
+                    : this.exportColours(document, base);
+                if (exported.creature !== undefined) {
+                    const note = ImageEditorProvider.bakedColoursNote(exported.creature);
+                    const ok = await vscode.window.showWarningMessage(
+                        "Converting will lose data.",
+                        { modal: true, detail: `- ${note}` },
+                        "Export anyway",
+                    );
+                    if (ok !== "Export anyway") return;
+                }
+                await this.writeAll(buildExport(exported.animation, target, targetPath));
                 vscode.window.setStatusBarMessage(`Exported ${path.basename(targetPath)}${path.sep}`, 3000);
                 return;
             }
@@ -263,10 +403,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // A true-colour document is quantized here; an indexed one comes back with its active
             // palette resolved. FRM's "nearest match" mode pins the palette so the colours make ONE
             // hop rather than being quantized and then remapped (see indexedForExport).
-            const { animation: anim, report: conversion } = document.indexedForExport({
+            const effectiveMode = exportPaletteMode(paletteMode, {
                 target,
-                ...(target === "frm" && paletteMode === "nearest" ? { palette: DEFAULT_FALLOUT_PALETTE } : {}),
+                creatureActive: this.activeCreature.get(document) !== undefined,
             });
+            const { animation: converted, report: conversion } = document.indexedForExport({
+                target,
+                ...(target === "frm" && effectiveMode === "nearest" ? { palette: DEFAULT_FALLOUT_PALETTE } : {}),
+            });
+            const { animation: anim, creature } = this.exportColours(document, converted);
 
             // How the animation fills FRM's 6 rotations: an IE base file contributes one direction
             // block (asked by name when there are several), a non-directional animation one cycle for
@@ -276,7 +421,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 pick = await this.resolveFrmShape(anim, path.basename(document.uri.fsPath));
                 if (pick === undefined) return; // user dismissed the picker
             }
-            const { writes, report } = buildCrossFormatSave(anim, target, targetPath, { paletteMode, ...pick });
+            const { writes, report } = buildCrossFormatSave(anim, target, targetPath, {
+                paletteMode: effectiveMode,
+                ...pick,
+            });
+            if (creature !== undefined) {
+                report.add("creature-colours-baked", ImageEditorProvider.bakedColoursNote(creature));
+            }
             // One warning for the whole journey: quantizing to indexed and then reshaping to the
             // target are two steps of one save, and the user is deciding about the result.
             report.absorb(conversion);
@@ -308,7 +459,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     private async saveAsBamV2(document: ImageEditorDocument, targetPath: string): Promise<void> {
         // resolvedAnimation for an indexed document: its active palette is what becomes the pixels,
         // and an FRM's own palette is an all-black placeholder (see document-model).
-        const { animation, report } = convertToBamV2(document.resolvedAnimation() ?? document.animation);
+        const source = document.resolvedAnimation() ?? document.animation;
+        // BAM v2 is true colour, so a chosen creature's palette becomes the pixels themselves.
+        const coloured = isRgbaAnimation(source)
+            ? { animation: source, creature: undefined }
+            : this.exportColours(document, source);
+        const { animation, report } = convertToBamV2(coloured.animation);
+        if (coloured.creature !== undefined) {
+            report.add("creature-colours-baked", ImageEditorProvider.bakedColoursNote(coloured.creature));
+        }
         if (!report.lossless) {
             const { message, detail } = summarizeLoss(report);
             const confirmed = await vscode.window.showWarningMessage(message, { modal: true, detail }, "Save anyway");

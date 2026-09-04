@@ -2,6 +2,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { type IndexedAnimation, LossReport } from "@bgforge/image";
 import {
+    exportPaletteMode,
     ieGroupCount,
     needsCyclePick,
     reshapeImportToFrm,
@@ -152,5 +153,25 @@ describe("reshapeImportToFrm", () => {
         expect(reshaped.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
         // Directional, not single-orientation: the west-arc rotations carry distinct cycles.
         expect(new Set(reshaped.sequences.map((s) => s.frameRefs.join(","))).size).toBeGreaterThan(1);
+    });
+});
+
+describe("exportPaletteMode", () => {
+    it("keeps a creature's colours exactly by sidecar when saving an FRM", () => {
+        expect(exportPaletteMode(undefined, { target: "frm", creatureActive: true })).toBe("sidecar");
+    });
+
+    it("leaves FRM's default alone when no creature was chosen", () => {
+        expect(exportPaletteMode(undefined, { target: "frm", creatureActive: false })).toBeUndefined();
+    });
+
+    // Every other target keeps a palette of its own, so there is nothing to protect the colours from.
+    it("does not force a mode on a target that has no palette choice", () => {
+        expect(exportPaletteMode(undefined, { target: "bam", creatureActive: true })).toBeUndefined();
+        expect(exportPaletteMode(undefined, { target: "png-directory", creatureActive: true })).toBeUndefined();
+    });
+
+    it("lets an explicit choice win over the creature default", () => {
+        expect(exportPaletteMode("nearest", { target: "frm", creatureActive: true })).toBe("nearest");
     });
 });

@@ -34,6 +34,7 @@ import {
 } from "./game-lookups";
 import { viewTypeForResource } from "./editor-routing";
 import { pickStrref } from "./strref-picker";
+import { createCreatureIndexResolver, type CreatureIndexResolver } from "./creature-index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { DlgReferenceIndex, type DlgSource, type InboundRef } from "../dialog-editor/dlg-references";
@@ -113,6 +114,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
     colorGradient: ColorGradientResolver;
+    creatures: CreatureIndexResolver;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -453,6 +455,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         slotLabel: createSlotLabelResolver(currentGame, fallbackGameDir),
         namingTable: createNamingTableResolver(currentGame, fallbackGameDir),
         colorGradient: createColorGradientResolver(currentGame, fallbackGameDir),
+        creatures: createCreatureIndexResolver(currentGame, fallbackGameDir),
         resourceType: createResourceTypeResolver(currentGame, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(currentGame, fallbackGameDir),
         resourceList: createResourceListResolver(currentGame, fallbackGameDir),
