@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Row } from "@bgforge/binary-editor";
     import { enumOptionList, parseCustomValue } from "../../state/controls";
-    import Combobox from "../primitives/Combobox.svelte";
+    import Combobox from "../../../../webview-ui/Combobox.svelte";
 
     const { row, onedit }: { row: Row; onedit: (value: number) => void } = $props();
     // The combobox is string-valued (bits-ui's own type), so an enum converts at this boundary - both ways,

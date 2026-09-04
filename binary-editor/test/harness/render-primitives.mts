@@ -53,7 +53,11 @@ const js = fs.readFileSync(path.join(outdir, "showcase-main.js"), "utf8");
 // The JS is now in memory; drop the temp build dir so repeated runs don't litter os.tmpdir().
 fs.rmSync(outdir, { recursive: true, force: true });
 
-const css = fs.readFileSync(path.join(here, "../../../client/src/binary-editor/webview/styles.css"), "utf8");
+// Both sheets, in the order the real panel links them: the shared primitive theming (webview-ui) first, the
+// panel's own sheet after. Without the first, every primitive here renders as bare unthemed browser chrome.
+const css = ["client/src/webview-ui/primitives.css", "client/src/binary-editor/webview/styles.css"]
+    .map((file) => fs.readFileSync(path.join(here, "../../..", file), "utf8"))
+    .join("\n");
 
 // VS Code Dark+ fallbacks for the --vscode-* vars styles.css consumes, loaded from the shared theme-vars
 // module so adding a new variable only needs one harness update.

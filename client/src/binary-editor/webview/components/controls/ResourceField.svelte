@@ -7,7 +7,7 @@
     // by staying absent rather than flagging an unresolved name; confining the field to what is installed today
     // would reject correct input. The list is a suggestion set, never the domain.
     import type { Row } from "@bgforge/binary-editor";
-    import Combobox from "../primitives/Combobox.svelte";
+    import Combobox from "../../../../webview-ui/Combobox.svelte";
     import { useResourceList } from "../../state/resource-list-context";
 
     const { row, onedit }: { row: Row; onedit: (value: string) => void } = $props();

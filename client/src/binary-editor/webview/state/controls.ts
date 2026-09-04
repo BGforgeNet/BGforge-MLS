@@ -75,17 +75,9 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
     return next >>> 0;
 }
 
-// Every enum renders through the searchable Combobox primitive, which relies on these two helpers: all
-// dropdowns get substring search and a chevron. An OPEN enum (`enumOpen`, the mod-extensible / advisory
-// tables) additionally accepts a custom numeric value via `parseCustomValue`; a closed enum is pick-only.
-
-/** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
- * whitespace-only query returns all options unchanged. */
-export function filterOptions<T extends { label: string }>(options: T[], query: string): T[] {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-}
+// Every enum renders through the searchable Combobox primitive, which supplies the substring search itself
+// (webview-ui/filter-options.ts). An OPEN enum (`enumOpen`, the mod-extensible / advisory tables)
+// additionally accepts a custom numeric value via `parseCustomValue`; a closed enum is pick-only.
 
 /** Parses a query string as a decimal integer, returning the number or undefined.
  * Accepts only plain decimal integers (optional leading sign): "42", "-5", "+5", "0". Rejects hex

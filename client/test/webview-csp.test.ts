@@ -66,6 +66,25 @@ describe("webview CSP", () => {
         expect(html).toContain('<script nonce="{{nonce}}">');
     });
 
+    /**
+     * The primitives shared across editors (webview-ui/) carry their theming in their OWN stylesheet, so every
+     * panel mounting one links a SECOND sheet - through the same asWebviewUri placeholder, since a sheet the
+     * provider forgets to map or to put under localResourceRoots is dropped exactly as silently as a
+     * nonce-only one, and the primitive then renders as bare browser chrome inside an otherwise themed panel.
+     */
+    it.each([
+        ["binary editor", "client/src/binary-editor/webview/index.html", "client/src/binary-editor/provider.ts"],
+        ["animation editor", "client/src/image-editor/webview/index.html", "client/src/image-editor/provider.ts"],
+    ])("%s links the shared primitives stylesheet through asWebviewUri", (_name, htmlPath, providerPath) => {
+        const html = fs.readFileSync(path.join(REPO_ROOT, htmlPath), "utf8");
+        expect(html).toContain('<link href="{{primitivesUri}}" rel="stylesheet" />');
+
+        const provider = fs.readFileSync(path.join(REPO_ROOT, providerPath), "utf8");
+        expect(provider).toContain("SHARED_UI_CSS");
+        expect(provider).toContain('html.replace("{{primitivesUri}}"');
+        expect(provider).toContain("localResourceRoots: [codiconsDir, webviewDir, sharedUiDir]");
+    });
+
     it("binary editor CSP allows codicon font via cspSource", () => {
         const html = fs.readFileSync(path.join(REPO_ROOT, "client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).toContain("font-src {{cspSource}}");

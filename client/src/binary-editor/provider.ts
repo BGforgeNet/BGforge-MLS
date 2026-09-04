@@ -51,6 +51,8 @@ const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
+const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
+const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /**
@@ -142,9 +144,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     ): Promise<void> {
         const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
         const webviewDir = vscode.Uri.joinPath(this.extensionUri, WEBVIEW_DIR);
+        const sharedUiDir = vscode.Uri.joinPath(this.extensionUri, SHARED_UI_DIR);
         // Both roots must be readable for the <link> stylesheets: codicon.css/.ttf live under CODICONS_DIR,
         // styles.css under WEBVIEW_DIR. asWebviewUri only resolves resources beneath a declared root.
-        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir] };
+        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir, sharedUiDir] };
         panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
@@ -532,10 +535,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // stylesheet's webview URI (same dir, both under localResourceRoots), so no font-URL rewrite is needed.
         const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
         const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
+        const primitivesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_CSS));
         // Function replacers: the URIs contain `$`-adjacent characters that String.replace would otherwise
         // interpret as `$&`/`$'` patterns.
         html = html.replace("{{stylesUri}}", () => stylesUri.toString());
         html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
+        html = html.replace("{{primitivesUri}}", () => primitivesUri.toString());
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();
         html = inlineWebviewScript(html, script, nonce);

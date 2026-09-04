@@ -197,13 +197,15 @@ select {
 .zoom-presets {
     justify-content: flex-start;
 }
-/* Creature colours: a picker wide enough for "<name> (<resref>)", which is what makes the list scannable -
-   an 8-character resref alone identifies nothing. Both controls take the row's full width under their
-   label rather than sharing it, since either one truncated defeats its purpose. */
-.creature-select,
-.creature-search {
+/* Creature colours: the picker takes the row's full width under its label rather than sharing it, so
+   "<name> (<resref>)" fits - an 8-character resref alone identifies nothing, and a truncated one defeats
+   the list's purpose. The combobox box itself is inline-block, so it needs the fill spelled out. */
+.creature-picker {
     flex: 1 1 100%;
     min-width: 0;
+}
+.creature-picker .bb-combobox {
+    display: block;
 }
 .creature-note {
     margin: 0;

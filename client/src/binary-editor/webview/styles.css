@@ -643,70 +643,9 @@ select {
     border-radius: 2px;
     padding: 0.2rem 0.4rem;
 }
-/* The combobox is the single enum control: a bordered box holding a borderless text input (the search field)
- * that FILLS the box, with the chevron overlaid absolutely on the right. The input must span the full box
- * width because bits-ui anchors the open dropdown-list popup to the input element - if the input were narrower
- * than the box (e.g. a flex sibling shrunk by the chevron), the list would be offset from the value field by
- * the chevron width. Right-padding on the input keeps the value text clear of the overlaid chevron. Width is
- * applied to .bb-combobox (the box) by the field-control tier rules below. */
-.bb-combobox {
-    position: relative;
-    display: inline-block;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-input-border, transparent);
-    border-radius: 2px;
-}
-.bb-combobox:focus-within {
-    border-color: var(--vscode-focusBorder);
-}
-.bb-combobox-input {
-    font: inherit;
-    color: inherit;
-    background: transparent;
-    border: none;
-    box-sizing: border-box;
-    width: 100%;
-    padding: 0.2rem 1.5rem 0.2rem 0.4rem; /* right pad clears the overlaid chevron */
-}
-.bb-combobox-trigger {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 0.4rem;
-    color: var(--vscode-descriptionForeground);
-    pointer-events: none; /* decorative chevron: clicks fall through to the input, which owns opening */
-}
-.bb-combobox-trigger::after {
-    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
-    font-size: 0.8em;
-}
-/* The dropdown list spans at least the value field's width (the anchor is the full-width input), so the list is
- * never narrower than the closed control. It can still grow wider for a long option. */
-.bb-combobox-content {
-    min-width: var(--bits-combobox-anchor-width);
-    padding: 0; /* the viewport carries the inner padding - it is the rect bits-ui's highlight check measures */
-}
-.bb-combobox-viewport {
-    /* Inset items from the viewport edges so the top item clears bits-ui's strict "fully inside the viewport"
-     * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
-    padding: 0.2rem;
-}
-/* How many options the rendered cap left out. Styled apart from the items so it does not read as one - it is a
- * notice, not something to pick. */
-.bb-combobox-more {
-    padding: 0.2rem 0.5rem;
-    color: var(--vscode-descriptionForeground);
-    font-style: italic;
-    white-space: nowrap;
-}
 input[type="text"]:focus,
 input[type="number"]:focus,
-select:focus,
-.bb-combobox-input:focus {
+select:focus {
     outline: none;
     border-color: var(--vscode-focusBorder);
 }
@@ -761,50 +700,11 @@ input[type="text"]::placeholder {
     background: transparent;
 }
 
-/* ---- bb-popup-* (shared popup surface rules for Select, Combobox, and Menu primitives) ----
- * Content/item rules that were near-identical across bb-select, bb-combobox, and bb-menu are
- * consolidated here. Each primitive's Content element carries both the primitive-specific class
- * (for anchor-width vars and any other primitive-specific overrides) AND .bb-popup-content; each
- * Item carries .bb-popup-item. Floating positioning is applied via CSSOM, CSP-safe under the strict
- * nonce policy. bits-ui sets data-highlighted, data-selected, and data-disabled on items. */
-.bb-popup-content {
-    z-index: 50;
-    max-height: 18rem;
-    box-sizing: border-box;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 2px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
-    padding: 0.2rem;
-}
-.bb-popup-item {
-    box-sizing: border-box;
-    cursor: pointer;
-    padding: 0.2rem 0.5rem;
-    border-radius: 2px;
-    color: var(--vscode-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.bb-popup-item[data-highlighted] {
-    background: var(--vscode-list-hoverBackground);
-}
-.bb-popup-item[data-selected] {
-    background: var(--vscode-list-activeSelectionBackground);
-    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
-}
-.bb-popup-item[data-disabled] {
-    opacity: 0.5;
-    cursor: default;
-}
-
 /* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
  * Generic, format-agnostic theming for the headless DropdownMenu primitive. bits-ui sets
  * data-highlighted and data-disabled on items; there is no data-selected (menus are not selection
  * controls). The menu surface uses .bb-popup-content for the shared floating panel rules.
- * Content/item rules are shared via .bb-popup-content and .bb-popup-item above.
+ * Content/item rules are shared via .bb-popup-content and .bb-popup-item (webview-ui/primitives.css).
  * Floating positioning is applied via CSSOM, CSP-safe under the strict nonce policy. */
 .bb-menu-trigger {
     /* Secondary button: icon-only "more actions" affordance. */

@@ -23,7 +23,7 @@
     // bind:open is $bindable() in bits-ui and works two-way.
     // inputValue is not $bindable() in bits-ui, so we track it ourselves via oninput on Combobox.Input.
     import { Combobox } from "bits-ui";
-    import { filterOptions } from "../../state/controls";
+    import { filterOptions } from "./filter-options";
 
     const MAX_RENDERED_OPTIONS = 200;
 
