@@ -9,6 +9,7 @@
 import type * as vscode from "vscode";
 import { type CreatureColors, CREATURE_RANGES, creatureColorsAt } from "@bgforge/image";
 import { gameDirOf, type GameDirFallback } from "./game-lookups";
+import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
 export interface CreatureEntry {
@@ -31,18 +32,6 @@ const HEADER_BYTES = FIRST_COLOR + CREATURE_RANGES.length;
 
 /** The resource an install publishes its animation-id to animation-code mapping in. */
 const ANIMATION_TABLE = "ANISND";
-
-/** A `Game` handle, named structurally so this module does not depend on the archive library's own type. */
-export interface GameHandle {
-    tlk: () => { get: (strref: number) => string | undefined } | undefined;
-    canRead: (resref: string, type: string) => boolean;
-    read: (resref: string, type: string) => Uint8Array;
-    list: () => readonly { resref: string; ext: string | undefined }[];
-}
-
-export interface GameSource {
-    gameAt: (dir: string) => GameHandle | undefined;
-}
 
 function buildIndex(game: GameHandle): CreatureEntry[] {
     const codes = game.canRead(ANIMATION_TABLE, "ids")
