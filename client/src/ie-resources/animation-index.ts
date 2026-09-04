@@ -14,6 +14,8 @@
  */
 import { type AnimationIni, parseAnimationIni } from "./animation-ini";
 import { characterFacetsOf, type CharacterFacets } from "./animation-facets";
+import { type AnimationTable, type TableAnimation } from "./animation-tables/table";
+import { tableForFlavour } from "./animation-tables";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
@@ -69,24 +71,37 @@ function prefixesFrom(ini: AnimationIni): Map<number, string> {
     return prefixes;
 }
 
-function schemeFrom(ini: AnimationIni | undefined): AnimationScheme {
-    if (ini === undefined) {
+/** One prefix per armour level, from a table row - the array's index is the level, counting from one. */
+function prefixesOfTable(tabled: TableAnimation | undefined): Map<number, string> {
+    return new Map(tabled === undefined ? undefined : tabled.prefixes.map((prefix, at) => [at + 1, prefix]));
+}
+
+function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): AnimationScheme {
+    const section = ini === undefined ? tabled?.section : ini.section;
+    if (ini === undefined && tabled === undefined) {
         return {
             kind: "unimplemented",
             scheme: undefined,
-            reason: "this install declares no INI for the animation, and its table is not vendored yet",
+            reason: "no INI declares this animation and no table covers it",
         };
     }
-    if (ini.section === "character") return { kind: "character" };
+    if (section === "character") return { kind: "character" };
     return {
         kind: "unimplemented",
-        scheme: ini.animationType,
-        reason: `the ${ini.section ?? "unnamed"} scheme is not implemented yet`,
+        // A table row carries the layout's name but not the install's own type number; only an INI has that.
+        scheme: ini?.animationType,
+        reason: `the ${section ?? "unnamed"} scheme is not implemented yet`,
     };
 }
 
-/** Every animation the game declares, in id order. */
-export function buildAnimationIndex(game: GameHandle): AnimationSet[] {
+/**
+ * Every animation the game declares, in id order.
+ *
+ * `table` is the fallback for an install that declares none - a classic one ships no animation INIs, so
+ * without it every id lists as undrawable. A shipped declaration always wins: the table is consulted only
+ * where the install is silent, never to correct it.
+ */
+export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): AnimationSet[] {
     const read = (resref: string, type: string): Uint8Array | undefined => {
         if (!game.canRead(resref, type)) return undefined;
         try {
@@ -115,13 +130,14 @@ export function buildAnimationIndex(game: GameHandle): AnimationSet[] {
     for (const id of [...ids].sort((a, b) => a - b)) {
         const iniBytes = read(iniResref(id), "ini");
         const ini = iniBytes === undefined ? undefined : parseAnimationIni(iniBytes);
+        const tabled = ini === undefined ? table?.get(id) : undefined;
         sets.push({
             id,
             code: codes.get(id) ?? "",
             name: names.get(id) ?? "",
-            prefixByArmour: ini === undefined ? new Map() : prefixesFrom(ini),
-            paperdollPrefix: ini?.resrefPaperdoll,
-            scheme: schemeFrom(ini),
+            prefixByArmour: ini === undefined ? prefixesOfTable(tabled) : prefixesFrom(ini),
+            paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
+            scheme: schemeFrom(ini, tabled),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),
         });
     }
@@ -139,7 +155,7 @@ export function createAnimationIndexResolver(currentGame: GameSource): Animation
         let index: readonly AnimationSet[] | null = null;
         try {
             const game = currentGame.gameAt(gameDir);
-            if (game !== undefined) index = buildAnimationIndex(game);
+            if (game !== undefined) index = buildAnimationIndex(game, tableForFlavour(game.identity.flavour));
         } catch {
             // An unreadable game is "no animations", the posture every other resolver here takes.
         }

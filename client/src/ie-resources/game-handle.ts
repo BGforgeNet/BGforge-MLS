@@ -8,6 +8,12 @@
  */
 
 export interface GameHandle {
+    /**
+     * Which game this is, in the fine flavour WeiDU's `GAME_IS` tests. Read by the animation index to pick
+     * the table a classic install needs; declared here as the one field of it anyone reads, so a test handle
+     * owes a flavour rather than a whole identity.
+     */
+    identity: { flavour: string };
     tlk: () => { get: (strref: number) => string | undefined } | undefined;
     canRead: (resref: string, type: string) => boolean;
     read: (resref: string, type: string) => Uint8Array;

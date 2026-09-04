@@ -76,3 +76,16 @@ export function characterActions(set: AnimationSet, armour: number, exists: (res
         return resref !== undefined && exists(resref);
     });
 }
+
+/**
+ * Whether the archive holds this set's BODY at any of its armour levels.
+ *
+ * The paperdoll is excluded deliberately: it is keyed by its own prefix, so a set whose body the archive
+ * lacks still answers on its inventory image alone. That is what makes this the question to ask of a vendored
+ * table - does the install actually have what the row names - rather than "has it anything at all".
+ */
+export function characterDrawsBody(set: AnimationSet, exists: (resref: string) => boolean): boolean {
+    return [...set.prefixByArmour.keys()].some((armour) =>
+        characterActions(set, armour, exists).some((action) => action.kind !== "paperdoll"),
+    );
+}

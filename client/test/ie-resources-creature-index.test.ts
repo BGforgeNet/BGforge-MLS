@@ -42,6 +42,7 @@ function gameSource(
     const resources = Object.keys(RECORDS).filter((n) => !(overrides.missing ?? []).includes(n));
     return {
         gameAt: () => ({
+            identity: { flavour: "bg2ee" },
             tlk: () => ({ get: (n: number) => LINES[n] }),
             canRead: (resref: string, type: string) => {
                 const name = `${resref}.${type}`.toLowerCase();

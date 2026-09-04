@@ -137,6 +137,9 @@ const key = (resref: string, type: string): string => `${resref.toUpperCase()}.$
  */
 export function miniGame(): GameHandle {
     return {
+        // Enhanced Edition, because this fixture ships animation INIs: a classic flavour here would also
+        // hand the index a vendored table, and the cases about an undeclared id would stop being about one.
+        identity: { flavour: "bg2ee" },
         tlk: () => undefined,
         canRead: (resref, type) => key(resref, type) in TEXT,
         read: (resref, type) => {

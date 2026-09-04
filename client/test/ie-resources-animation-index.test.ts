@@ -6,6 +6,8 @@ import {
     createAnimationIndexResolver,
 } from "../src/ie-resources/animation-index";
 import type { GameHandle } from "../src/ie-resources/game-handle";
+import { tableForFlavour } from "../src/ie-resources/animation-tables";
+import { animationTable } from "../src/ie-resources/animation-tables/table";
 import { miniGame } from "./ie-game-fixtures";
 
 const index = (): ReturnType<typeof buildAnimationIndex> => buildAnimationIndex(miniGame());
@@ -59,9 +61,7 @@ describe("buildAnimationIndex", () => {
         });
     });
 
-    it("reports an id no INI declares rather than guessing its prefix", () => {
-        // A classic install ships no animation INIs at all, so this is its every id until the
-        // classic-install table is vendored.
+    it("reports an id no INI declares and no table covers rather than guessing its prefix", () => {
         const set = setFor(0xe440);
         expect(set!.scheme.kind).toBe("unimplemented");
         expect(set!.prefixByArmour.size).toBe(0);
@@ -70,6 +70,75 @@ describe("buildAnimationIndex", () => {
     it("is sorted by id, so the gallery's order does not depend on table order", () => {
         const ids = index().map((entry) => entry.id);
         expect(ids).toEqual([...ids].sort((a, b) => a - b));
+    });
+});
+
+describe("buildAnimationIndex with a vendored table", () => {
+    // A classic install declares nothing, so the table is the only answer for every id it lists.
+    const table = animationTable([
+        [0xe440, { prefixes: ["MOGR", "MOGR"], section: "monster_large", paperdoll: "MOGRP" }],
+        [0x6000, { prefixes: ["XXXX"], section: "character" }],
+    ]);
+    const withTable = (): AnimationSet[] => buildAnimationIndex(miniGame(), table);
+    const tabled = (id: number): AnimationSet | undefined => withTable().find((entry) => entry.id === id);
+
+    it("draws an id the install does not declare under the table's prefixes", () => {
+        expect([...tabled(0xe440)!.prefixByArmour]).toEqual([
+            [1, "MOGR"],
+            [2, "MOGR"],
+        ]);
+    });
+
+    it("carries the table's paperdoll, which is its own declaration", () => {
+        expect(tabled(0xe440)?.paperdollPrefix).toBe("MOGRP");
+    });
+
+    it("reports the table's scheme, so a tabled id says what it is rather than that nothing declares it", () => {
+        expect(tabled(0xe440)?.scheme).toEqual({
+            kind: "unimplemented",
+            scheme: undefined,
+            reason: expect.stringContaining("monster_large"),
+        });
+    });
+
+    it("resolves a tabled character scheme, which is what a classic install could not do at all", () => {
+        expect(
+            buildAnimationIndex(
+                miniGame(),
+                animationTable([[0xe440, { prefixes: ["CHMB"], section: "character" }]]),
+            ).find((entry) => entry.id === 0xe440)?.scheme,
+        ).toEqual({ kind: "character" });
+    });
+
+    it("prefers the install's own declaration to the table, which is a fallback and not an override", () => {
+        // 0x6000 has an INI in the fixture; the table's deliberately wrong prefix must not win.
+        expect(tabled(0x6000)?.prefixByArmour.get(1)).toBe("CHMB");
+    });
+});
+
+describe("tableForFlavour", () => {
+    it("answers for a classic game and for the expansions that ship its animations", () => {
+        expect(tableForFlavour("bg2")).toBe(tableForFlavour("tob"));
+        expect(tableForFlavour("bgt")).toBe(tableForFlavour("bg2"));
+    });
+
+    it("gives an Enhanced Edition none, because the install declares its own", () => {
+        expect(tableForFlavour("bg2ee")).toBeUndefined();
+        expect(tableForFlavour("bgee")).toBeUndefined();
+    });
+
+    it("carries the Baldur's Gate II character sets, per armour level", () => {
+        // The armour split is the fact a single-prefix model gets wrong: three levels then a fourth.
+        expect(tableForFlavour("tob")?.get(0x6000)).toEqual({
+            prefixes: ["CHMB", "CHMB", "CHMB", "CHMC"],
+            section: "character",
+            paperdoll: "CHMC",
+        });
+    });
+
+    it("takes the classic body where the Enhanced Edition added one the classic game has not", () => {
+        // Dwarf female: the classic archive ships no CDF* art and draws these under the male body.
+        expect(tableForFlavour("tob")?.get(0x6012)?.prefixes).toEqual(["CDMB", "CDMB", "CDMB", "CDMC"]);
     });
 });
 
