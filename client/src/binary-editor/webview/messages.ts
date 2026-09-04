@@ -18,6 +18,7 @@ export type WebviewToHost =
     | { type: "requestSpellbook"; requestId: number }
     | { type: "requestEffectTree"; requestId: number }
     | { type: "requestResourceList"; requestId: number; ext: string }
+    | { type: "requestGradientTable"; requestId: number }
     | { type: "requestThumbnail"; requestId: number; resref: string; ext: string }
     | { type: "editField"; nodeId: NodeId; value: number | string }
     | { type: "structureOp"; op: StructureOpRequest }
@@ -45,6 +46,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             return typeof m.resref === "string" && typeof m.ext === "string";
         case "requestSpellbook":
         case "requestEffectTree":
+        case "requestGradientTable":
             return typeof m.requestId === "number";
         case "requestResourceList":
             return typeof m.requestId === "number" && typeof m.ext === "string";
@@ -78,6 +80,9 @@ export type HostToWebview =
     /** Every resref of one type the open game holds - the suggestion set behind a resref field's picker.
      *  Empty for a record outside a game, which is also how a picker with nothing to offer degrades. */
     | { type: "resourceList"; requestId: number; resrefs: readonly string[] }
+    /** Every gradient the open game's colour table holds, in index order - what the colour picker offers.
+     *  Empty outside a game, which is also how a picker with nothing to show degrades. */
+    | { type: "gradientTable"; requestId: number; gradients: readonly (readonly string[])[] }
     /** A `data:` URI for a resref field's picture, or undefined when the resource is gone or undrawable.
      *  A string rather than bytes because a `Uint8Array` does not survive `postMessage` on every host, and
      *  because the view puts it straight into an `<img src>`. */

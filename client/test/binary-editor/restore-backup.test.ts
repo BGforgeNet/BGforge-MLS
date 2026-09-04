@@ -98,6 +98,7 @@ const noGame = {
     strref: (): undefined => undefined,
     slotLabel: (): undefined => undefined,
     namingTable: (): undefined => undefined,
+    colorGradient: (): undefined => undefined,
     resourceType: (): undefined => undefined,
     flagBitNames: (): undefined => undefined,
     resourceList: (): undefined => undefined,

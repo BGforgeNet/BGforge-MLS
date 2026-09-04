@@ -28,7 +28,20 @@ const lookups = {
     // Default NOT drawable - the opposite default from `canOpen`, deliberately: most resource types are not
     // pictures, so this keeps the unrelated cases below asserting on rows with no thumbnail to explain.
     canThumbnail: (): boolean => false,
+    colorGradient: (): readonly string[] | undefined => undefined,
 };
+
+/** Twelve colours, the width of one creature-colour range, distinguishable per index. */
+const gradientFor = (index: number): readonly string[] =>
+    Array.from({ length: 12 }, (_, i) => `#${index.toString(16).padStart(2, "0")}00${i.toString(16)}0`);
+
+const withGradients = {
+    ...lookups,
+    colorGradient: (index: number): readonly string[] | undefined => (index < 120 ? gradientFor(index) : undefined),
+};
+
+const gradientsOf = (row: unknown): readonly string[] | undefined =>
+    (row as { gradientColors?: readonly string[] }).gradientColors;
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
 const withRaceIds = {
@@ -668,5 +681,53 @@ describe("withGameContext", () => {
         const out = withGameContext({ rows: [soundSlot] }, named);
 
         expect(out.rows[0]).toMatchObject({ name: "22 AREA_FOREST", strrefText: LINE });
+    });
+
+    // A creature's seven colour bytes each select a gradient from the install's own table, so the number
+    // alone tells the user nothing - the colours are the value.
+    describe("creature colour gradients", () => {
+        const colourRow = { id: "c1", kind: "field", name: "Hair", ref: { kind: "colorGradient" }, rawValue: 4 };
+
+        it("fills the gradient's colours on a colour row", () => {
+            const out = withGameContext({ rows: [colourRow] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toEqual(gradientFor(4));
+        });
+
+        it("keeps the row bare outside a game, so the number still shows", () => {
+            const out = withGameContext({ rows: [colourRow] }, lookups);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+            expect(out.rows[0]).toMatchObject({ rawValue: 4 });
+        });
+
+        it("leaves an index the table cannot supply unresolved rather than showing a wrong swatch", () => {
+            const out = withGameContext({ rows: [{ ...colourRow, rawValue: 200 }] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not swatch another ref kind whose value happens to land inside the table", () => {
+            const idsRow = {
+                id: "c3",
+                kind: "field",
+                name: "Race",
+                ref: { kind: "ids", tables: ["RACE"] },
+                rawValue: 4,
+            };
+
+            const out = withGameContext({ rows: [idsRow] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not touch a plain numeric row that happens to hold the same value", () => {
+            const out = withGameContext(
+                { rows: [{ id: "c2", kind: "field", name: "Weight", rawValue: 4 }] },
+                withGradients,
+            );
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
     });
 });

@@ -102,6 +102,16 @@ export type ExternalRef =
           readonly byFlavour?: Readonly<Partial<Record<IeFlavour, string>>>;
       }
     /**
+     * Value selects one of a creature animation's replacement colour ranges from the install's gradient
+     * table - a bitmap whose every row is the colours for one range, indexed by this field.
+     *
+     * No table name, unlike `ids`/`2da`: the engine reads one configured table for this and a consumer holds
+     * the same install, so naming candidates here would describe a choice nobody makes. The value space is
+     * the table's row count, which differs per edition (a stock BG2 install ships fewer rows than an
+     * Enhanced Edition), so the RANGE is the install's to state and not this declaration's.
+     */
+    | { readonly kind: "colorGradient" }
+    /**
      * The field points outside its file, but at a type another field's value selects - so no single type is
      * right and no lookup can be declared. Marked rather than left bare so the absence reads as a decision
      * instead of an oversight, and so a completeness sweep over resref-shaped fields can tell the two apart.

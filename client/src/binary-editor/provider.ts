@@ -7,6 +7,7 @@ import { hasViewerFor } from "../ie-resources/editor-routing";
 import { canThumbnail, thumbnailDataUri } from "../ie-resources/thumbnails";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import {
+    type ColorGradientResolver,
     type NamingTableResolver,
     type ResourceListResolver,
     type ResourceBytesResolver,
@@ -27,6 +28,7 @@ export interface GameResolvers {
     strref: StrrefResolver;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
+    colorGradient: ColorGradientResolver;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -242,6 +244,13 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 this.post(panel, { type: "resourceList", requestId: message.requestId, resrefs });
                 break;
             }
+            case "requestGradientTable": {
+                // Same posture as the resource list: answered from the game session, and an empty table is the
+                // honest answer outside a game - the picker then has nothing to offer and says so.
+                const gradients = this.gameLookups.colorGradient(document.uri) ?? [];
+                this.post(panel, { type: "gradientTable", requestId: message.requestId, gradients });
+                break;
+            }
             case "editField": {
                 const r = await document.bridge.send({
                     type: "editField",
@@ -402,6 +411,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
+                      colorGradient: (index) => this.gameLookups.colorGradient(uri)?.[index],
                       resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
                       flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
                       // Passed directly, unlike the closures above: what can be done with a TYPE is not a

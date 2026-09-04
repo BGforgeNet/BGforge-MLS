@@ -7,6 +7,7 @@ import { CurrentGame, defaultOpener } from "./current-game";
 import { timedHost } from "../timing";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
+    createColorGradientResolver,
     createNamingTableResolver,
     createResourceListResolver,
     createResourceBytesResolver,
@@ -19,6 +20,7 @@ import {
     createStrrefSearch,
     gameDirOf,
     isGameDocument,
+    type ColorGradientResolver,
     type NamingTableResolver,
     type ResourceListResolver,
     type ResourceBytesResolver,
@@ -110,6 +112,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
+    colorGradient: ColorGradientResolver;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -449,6 +452,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(currentGame, fallbackGameDir),
         namingTable: createNamingTableResolver(currentGame, fallbackGameDir),
+        colorGradient: createColorGradientResolver(currentGame, fallbackGameDir),
         resourceType: createResourceTypeResolver(currentGame, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(currentGame, fallbackGameDir),
         resourceList: createResourceListResolver(currentGame, fallbackGameDir),

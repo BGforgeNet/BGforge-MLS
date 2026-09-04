@@ -63,6 +63,10 @@ export interface Row {
      *  host, which owns the game session - never by the parser, which has no game context. Absent when the
      *  record is not from an installed game, the value is the -1 sentinel, or the TLK has no such entry. */
     strrefText?: string;
+    /** The colours a `colorGradient` ref's value selects from the open game's gradient table, in range order.
+     *  Filled by the host like `strrefText`; absent outside a game and for an index the install's table does
+     *  not reach, where the field shows its number alone rather than a swatch that would be a guess. */
+    gradientColors?: readonly string[];
     /** A resref whose target the OPEN GAME actually has, resolved by the host to the candidate type that
      *  exists. Absent outside a game and for a resref nothing resolves - the view offers to open it only when
      *  this is set, and never marks its absence (a mod record may point at what a later install step creates). */

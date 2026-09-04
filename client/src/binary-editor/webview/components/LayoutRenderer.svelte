@@ -9,6 +9,7 @@
     import { provideJump } from "../state/jump-context";
     import { provideOpenResource } from "../state/open-resource-context";
     import { provideResourceList } from "../state/resource-list-context";
+    import { provideGradientTable } from "../state/gradient-table-context";
     import { provideThumbnail } from "../state/thumbnail-context";
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
@@ -87,6 +88,7 @@
     provideOpenResource((target) => bridge.openResource(target.resref, target.ext));
     // Same reason for listing what the install holds; the bridge caches per type, so a field asks freely.
     provideResourceList((ext) => bridge.requestResourceList(ext));
+    provideGradientTable(() => bridge.requestGradientTable());
     // And the same for a field's picture - the bytes live in the game and the decode is the host's.
     provideThumbnail((resref, ext) => bridge.requestThumbnail(resref, ext));
 

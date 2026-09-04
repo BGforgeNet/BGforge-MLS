@@ -56,6 +56,11 @@ export interface GameLookups {
      */
     namingTable(kind: string, tables: readonly string[]): readonly NamedTable[] | undefined;
     /**
+     * The colours a creature-colour index selects from the open game's gradient table, as CSS colours, or
+     * undefined outside a game and for an index the table does not reach.
+     */
+    colorGradient(index: number): readonly string[] | undefined;
+    /**
      * What this resref field points at in the open game, or undefined outside one. Takes the whole declaration
      * because a few fields store a different type in one flavour (ITM `replacement` is an item everywhere but
      * PSTEE, which stores a sound), and only the host knows which game this is. `present` answers separately
@@ -139,6 +144,22 @@ function isFlagsRefRow(value: object): value is FlagsRefRow {
         value.flagsRef !== null &&
         "kind" in value.flagsRef &&
         !("flagBitNames" in value)
+    );
+}
+
+/**
+ * A creature-colour field: its value indexes the install's gradient table, so the colours ARE the value and
+ * the number alone shows the user nothing. Its own guard rather than a branch of the value-ref one, because
+ * the idempotency marker differs - this row is done once it carries `gradientColors`.
+ */
+function isColorGradientRow(value: object): value is { ref: { kind: string }; rawValue: number } {
+    return (
+        "ref" in value &&
+        isRef(value.ref) &&
+        value.ref.kind === "colorGradient" &&
+        "rawValue" in value &&
+        typeof value.rawValue === "number" &&
+        !("gradientColors" in value)
     );
 }
 
@@ -293,6 +314,12 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
             row = { ...row, ...namedByGame(row, tables) };
             if (offers !== undefined) row = { ...row, ...offers };
         }
+    }
+    if (isColorGradientRow(row)) {
+        // Unresolvable is left bare rather than filled with a fallback: the engine clamps a stray index to the
+        // first gradient when it DRAWS, but showing that swatch here would state the creature is that colour.
+        const colors = lookups.colorGradient(row.rawValue);
+        if (colors !== undefined) row = { ...row, gradientColors: colors };
     }
     // A third axis beside `ref` (the row's VALUE) and `slotRef` (its label): what its BITS mean. A bitfield can
     // carry `flagsRef` and nothing else, so this is its own pass rather than a branch of the ref handling.

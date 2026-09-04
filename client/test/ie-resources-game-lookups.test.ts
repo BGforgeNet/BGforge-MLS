@@ -8,6 +8,7 @@ vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
 import type { IeScriptStyle, TwoDaTable } from "@bgforge/binary";
 import {
     createBcsSymbolResolver,
+    createColorGradientResolver,
     createFlagBitNamesResolver,
     createNamingTableResolver,
     createResourceListResolver,
@@ -56,6 +57,10 @@ function gameSource(
         flavour?: string;
         scriptStyle?: IeScriptStyle;
         kitlist?: TwoDaTable;
+        /** Exact bytes for named resources, for cases whose resource must really decode. */
+        bytes?: Record<string, Uint8Array>;
+        /** Collects every `read` the resolver makes, so a caching claim can be checked. */
+        reads?: string[];
     } = {},
 ): {
     gameAt: (dir: string) => {
@@ -75,6 +80,7 @@ function gameSource(
         identity: { flavour: string; scriptStyle: IeScriptStyle };
     };
 } {
+    const reads = overrides.reads ?? [];
     return {
         gameAt: (dir: string) => {
             if (overrides.throws === true) throw new Error(`no game at ${dir}`);
@@ -107,9 +113,12 @@ function gameSource(
                 // throw for one it does not - the real `Game.read` throws, which is why the resolver asks
                 // `canRead` first rather than catching.
                 read: (resref: string, type: string) => {
-                    if (!(overrides.resources ?? []).includes(`${resref}.${type}`.toLowerCase()))
-                        throw new Error(`no ${resref}.${type}`);
-                    return new TextEncoder().encode(`${resref}.${type}`.toLowerCase());
+                    const name = `${resref}.${type}`.toLowerCase();
+                    if (!(overrides.resources ?? []).includes(name)) throw new Error(`no ${resref}.${type}`);
+                    reads.push(name);
+                    // Real bytes where a case supplies them (the gradient table has to be a decodable
+                    // bitmap); identifiable text otherwise, which is all the resref-shaped cases need.
+                    return overrides.bytes?.[name] ?? new TextEncoder().encode(name);
                 },
                 // The install's whole namespace, biffed and override alike - `resources` doubles as it, split
                 // back into the resref/ext pair `Game.list()` yields.
@@ -224,6 +233,75 @@ describe("file-record fallback", () => {
         createStrrefResolver(spied, () => "/games/other")(gameUri("/games/tob"), 6348);
 
         expect(opened).toEqual(["/games/tob"]);
+    });
+});
+
+/** A 24-bit bitmap of `rows` gradients, 12 colours wide - the shape an install's gradient table ships as. */
+function gradientTableBmp(rows: number): Uint8Array {
+    const width = 12;
+    const stride = width * 3; // already a multiple of 4
+    const pixelOffset = 54;
+    const bytes = new Uint8Array(pixelOffset + stride * rows);
+    const view = new DataView(bytes.buffer);
+    bytes[0] = 0x42;
+    bytes[1] = 0x4d;
+    view.setUint32(2, bytes.length, true);
+    view.setUint32(10, pixelOffset, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, width, true);
+    view.setInt32(22, rows, true);
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 24, true);
+    for (let y = 0; y < rows; y++) {
+        // Written bottom-up, as a positive-height BMP stores them.
+        const base = pixelOffset + (rows - 1 - y) * stride;
+        for (let x = 0; x < width; x++) {
+            bytes[base + x * 3] = 0; // blue
+            bytes[base + x * 3 + 1] = x; // green: the column
+            bytes[base + x * 3 + 2] = y; // red: the gradient index
+        }
+    }
+    return bytes;
+}
+
+describe("createColorGradientResolver", () => {
+    const withTable = (rows = 4, reads?: string[]) =>
+        gameSource({ resources: ["mpalette.bmp"], bytes: { "mpalette.bmp": gradientTableBmp(rows) }, reads });
+
+    it("resolves an index to the twelve colours of that row", () => {
+        const colors = createColorGradientResolver(withTable())(gameUri())?.[2];
+
+        expect(colors).toHaveLength(12);
+        expect(colors?.[0]).toBe("#020000");
+        expect(colors?.[11]).toBe("#020b00");
+    });
+
+    it("resolves nothing for an index past the end of the install's table", () => {
+        expect(createColorGradientResolver(withTable(4))(gameUri())?.[9]).toBeUndefined();
+    });
+
+    it("resolves nothing when the install ships no gradient table", () => {
+        expect(createColorGradientResolver(gameSource())(gameUri())).toBeUndefined();
+    });
+
+    it("resolves nothing for a document outside a game", () => {
+        const fileUri = { scheme: "file", query: "", path: "/mods/x.cre" } as never;
+        expect(createColorGradientResolver(withTable())(fileUri)).toBeUndefined();
+    });
+
+    // Seven fields per creature ask on every open, and the picker asks again, so re-decoding the bitmap per
+    // ask would be a bitmap decode per row drawn.
+    it("reads and decodes the table once, however many times it is asked", () => {
+        const reads: string[] = [];
+        const resolve = createColorGradientResolver(withTable(4, reads));
+
+        const answers = [resolve(gameUri()), resolve(gameUri()), resolve(gameUri())];
+
+        expect(reads).toEqual(["mpalette.bmp"]);
+        expect(answers[0]).toHaveLength(4);
+        // The same decoded table each time, not an equal copy re-derived per ask.
+        expect(answers[1]).toBe(answers[0]);
+        expect(answers[2]).toBe(answers[0]);
     });
 });
 

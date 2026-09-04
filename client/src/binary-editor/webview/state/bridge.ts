@@ -32,6 +32,10 @@ interface PendingThumbnail {
     resolve: (v: string | undefined) => void;
     reject: (e: Error) => void;
 }
+interface PendingGradients {
+    resolve: (v: readonly (readonly string[])[]) => void;
+    reject: (e: Error) => void;
+}
 
 export class Bridge {
     private readonly post: (m: WebviewToHost) => void;
@@ -42,6 +46,8 @@ export class Bridge {
     private pendingResourceList = new Map<number, PendingResourceList>();
     private resourceLists = new Map<string, Promise<readonly string[]>>();
     private pendingThumbnail = new Map<number, PendingThumbnail>();
+    private pendingGradients = new Map<number, PendingGradients>();
+    private gradients?: Promise<readonly (readonly string[])[]>;
     private thumbnails = new Map<string, Promise<string | undefined>>();
 
     /** Called with an error message that matches no pending request - an edit/structureOp/spellbookEdit failure
@@ -91,6 +97,25 @@ export class Bridge {
      * installed while the panel is open is not picked up until it is reopened. A failed request drops out of the
      * cache so a later open retries rather than replaying the rejection.
      */
+    /**
+     * The open game's whole gradient table, for the creature-colour picker.
+     *
+     * Cached for the panel's life like the resource lists, and for the same reason: it is a property of the
+     * install rather than of the record, so no edit can stale it, and the picker opens instantly after the
+     * first time. Requested lazily - a record with no colour field never asks.
+     */
+    requestGradientTable(): Promise<readonly (readonly string[])[]> {
+        if (this.gradients) return this.gradients;
+        const requestId = this.nextId++;
+        this.post({ type: "requestGradientTable", requestId });
+        const promise = new Promise<readonly (readonly string[])[]>((resolve, reject) => {
+            this.pendingGradients.set(requestId, { resolve, reject });
+        });
+        this.gradients = promise;
+        void promise.catch(() => (this.gradients = undefined));
+        return promise;
+    }
+
     requestResourceList(ext: string): Promise<readonly string[]> {
         const cached = this.resourceLists.get(ext);
         if (cached) return cached;
@@ -184,6 +209,14 @@ export class Bridge {
                 return true;
             }
         }
+        if (message.type === "gradientTable") {
+            const p = this.pendingGradients.get(message.requestId);
+            if (p) {
+                this.pendingGradients.delete(message.requestId);
+                p.resolve(message.gradients);
+                return true;
+            }
+        }
         if (message.type === "thumbnail") {
             const p = this.pendingThumbnail.get(message.requestId);
             if (p) {
@@ -216,6 +249,12 @@ export class Bridge {
                 if (pr) {
                     this.pendingResourceList.delete(message.requestId);
                     pr.reject(new Error(message.message));
+                    return true;
+                }
+                const pg = this.pendingGradients.get(message.requestId);
+                if (pg) {
+                    this.pendingGradients.delete(message.requestId);
+                    pg.reject(new Error(message.message));
                     return true;
                 }
                 const pt = this.pendingThumbnail.get(message.requestId);

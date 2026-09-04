@@ -1,5 +1,6 @@
 import type * as vscode from "vscode";
 import { engineForFlavour, type IeScriptStyle, type TwoDaTable } from "@bgforge/binary";
+import { parseGradientTable } from "@bgforge/image";
 import type { BcsNaming } from "../bcs-editor/document";
 import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
 import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
@@ -208,6 +209,49 @@ export function createStringTableProbe(
             // Same posture as the resolver: an unreadable game is "no table", not an error to surface here.
             return false;
         }
+    };
+}
+
+/**
+ * The install's whole creature-colour gradient table, one row of CSS colours per selectable index.
+ * Undefined outside a game and for an install that ships no table.
+ *
+ * The whole table rather than one row: the same answer serves the field, which takes its own index, and the
+ * picker, which offers every index - and it is one bitmap decode either way.
+ */
+export type ColorGradientResolver = (uri: vscode.Uri) => readonly (readonly string[])[] | undefined;
+
+/** The resource an install publishes its creature-colour gradients in. */
+const GRADIENT_TABLE = "MPALETTE";
+
+const hex = (n: number): string => n.toString(16).padStart(2, "0");
+
+export function createColorGradientResolver(
+    currentGame: GameSource,
+    fallback?: GameDirFallback,
+): ColorGradientResolver {
+    // Per game directory: seven fields ask on every creature opened, and the answer is a bitmap decode.
+    // `null` records an install that has no readable table, so a miss is not re-probed per field either.
+    const cache = new Map<string, readonly (readonly string[])[] | null>();
+    return (uri) => {
+        const gameDir = gameDirOf(uri, fallback);
+        if (gameDir === undefined) return;
+        const cached = cache.get(gameDir);
+        if (cached !== undefined) return cached ?? undefined;
+        let table: readonly (readonly string[])[] | null = null;
+        try {
+            const game = currentGame.gameAt(gameDir);
+            if (game?.canRead(GRADIENT_TABLE, "bmp") === true) {
+                table = parseGradientTable(game.read(GRADIENT_TABLE, "bmp")).map((row) =>
+                    row.map((c) => `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`),
+                );
+            }
+        } catch {
+            // An unreadable game or an undecodable table is "no colours", the same posture the other
+            // resolvers take: the field keeps its number, which is what it shows outside a game anyway.
+        }
+        cache.set(gameDir, table);
+        return table ?? undefined;
     };
 }
 
