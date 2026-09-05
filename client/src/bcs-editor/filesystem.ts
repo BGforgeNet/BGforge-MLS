@@ -32,7 +32,7 @@ export function bcsScriptView(symbolsFor: SymbolsFor, extensionPath: string): Sc
         if (symbolsFor(source) === undefined) {
             return (
                 `${source.fsPath} cannot be saved without the game it belongs to: every name in it is a number ` +
-                `that install's own tables give a meaning to. Open a game, then reopen this file.`
+                `that install's own tables give a meaning to. Open a game and this file becomes editable.`
             );
         }
         // A zero-byte file is a real thing an install ships, and is not a script with no blocks.

@@ -33,6 +33,35 @@ describe("dispatch", () => {
         expect(ser.bytes.length).toBeGreaterThan(0);
     });
 
+    // What a record's numbers MEAN comes from the open install, so a game opening changes the view without
+    // changing the model. Re-projecting has to read the live session, not the state it was opened in:
+    // an unsaved edit is in the model and nowhere else.
+    it("re-projects the live model, edits included, without dirtying it", () => {
+        const opened = dispatch({ type: "open", uri: "file:///arcaves.map", bytes: bytes() });
+        if (opened.type !== "opened") throw new Error("expected opened");
+        const sessionId = opened.result.sessionId;
+        // Fields live under a section, so the window holds none until one is open.
+        const section = opened.result.layout.layout?.sections["Global Variables"];
+        if (!section) throw new Error("no Global Variables section");
+        dispatch({ type: "expand", sessionId, nodeId: section.nodeId, expanded: true });
+        const win = dispatch({ type: "getWindow", sessionId, start: 0, end: 500 });
+        if (win.type !== "window") throw new Error("expected window");
+        const field = win.rows.find((r) => r.kind === "field");
+        if (!field) throw new Error("no field row");
+        dispatch({ type: "editField", sessionId, nodeId: field.id, value: 5 });
+
+        const refreshed = dispatch({ type: "reproject", sessionId });
+
+        if (refreshed.type !== "structure") throw new Error("expected structure");
+        expect(refreshed.result.changeSet.changed.find((r) => r.id === field.id)?.rawValue).toBe(5);
+        // Dirtiness is the document's, not this request's: re-projecting is a read.
+        expect(refreshed.result.changeSet.dirty).toBe(true);
+    });
+
+    it("reports an unknown session rather than re-projecting nothing", () => {
+        expect(dispatch({ type: "reproject", sessionId: "nope" }).type).toBe("error");
+    });
+
     it("returns an error response for an unknown session", () => {
         const res = dispatch({ type: "getWindow", sessionId: "nope", start: 0, end: 1 });
         expect(res.type).toBe("error");

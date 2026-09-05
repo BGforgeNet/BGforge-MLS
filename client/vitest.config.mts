@@ -75,9 +75,9 @@ export default defineConfig({
                 // Worker-backed binary editor host glue: the provider, document, and command registration are
                 // built around vscode.CustomEditorProvider, vscode.WebviewPanel and worker_threads, so their
                 // behaviour comes from the spawned-worker integration test. Excluded from the COVERAGE RATIO
-                // rather than from testing: restore-backup.test.ts drives the hot-exit path here against a
-                // mocked vscode, which is worth pinning but would report as thin partial coverage of files
-                // whose bulk is framework wiring.
+                // rather than from testing: provider-wiring.test.ts drives the hot-exit and game-change paths
+                // here against a mocked vscode, which is worth pinning but would report as thin partial
+                // coverage of files whose bulk is framework wiring.
                 "client/src/binary-editor/provider.ts",
                 "client/src/binary-editor/document.ts",
                 "client/src/binary-editor/register.ts",

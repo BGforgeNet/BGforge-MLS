@@ -56,6 +56,8 @@ const h = vi.hoisted(() => {
         FakeUri,
         FileSystemError,
         opened: [] as string[],
+        /** What the host reports as open, which is the set a refresh has to decide over. */
+        textDocuments: [] as { uri: unknown; isDirty: boolean }[],
         unopenable: new Set<string>(),
         /** Paths the fake host rejects for, mapped to the reason - which is not always an `Error`. */
         rejectWith: new Map<string, unknown>(),
@@ -82,9 +84,17 @@ vi.mock("vscode", () => ({
         from: (parts: { scheme: string; path: string; query?: string }) =>
             new h.FakeUri(parts.scheme, parts.path, parts.query ?? ""),
     }),
+    // A working emitter, not a stub: the view's refresh IS a fired change event, so a no-op one would make
+    // every assertion about it vacuous.
     EventEmitter: class {
-        event = () => undefined;
-        fire() {}
+        private readonly handlers: ((value: never) => void)[] = [];
+        event = (handler: (value: never) => void) => {
+            this.handlers.push(handler);
+            return { dispose: () => {} };
+        };
+        fire(value: never) {
+            for (const handler of this.handlers) handler(value);
+        }
         dispose() {}
     },
     Disposable: class {
@@ -130,6 +140,9 @@ vi.mock("vscode", () => ({
     DiagnosticSeverity: { Error: 0 },
     workspace: {
         registerFileSystemProvider: () => ({}),
+        get textDocuments() {
+            return h.textDocuments;
+        },
         // Bridges to real node fs for `file:` sources, the only kind these tests write - the same real bytes
         // a `.bcs` on disk holds, reached the way VS Code itself reaches them rather than a bare fs path.
         fs: {
@@ -240,6 +253,43 @@ describe("the .bcs custom editor", () => {
         // What the tab shows with no game is a notice, not source, so it offers no save to refuse.
         const withoutGame = await newProvider(() => undefined).stat(view);
         expect(withoutGame.permissions).toBe(1);
+    });
+
+    // The notice this view shows without a game asks the reader to open one. That answer has to arrive: the
+    // render is cached against the source's mtime, which a game opening does not move.
+    it("re-renders an open view once a game opens under it", async () => {
+        const { view } = script();
+        /** The open install, in a box the resolver reads per call - which is how a game arrives mid-session. */
+        const game = { naming: undefined as typeof NAMING | undefined };
+        const provider = bcsProvider(() => game.naming);
+        h.textDocuments = [{ uri: view, isDirty: false }];
+        const changed: unknown[] = [];
+        provider.onDidChangeFile((events) => changed.push(...events));
+
+        expect(Buffer.from(await provider.readFile(view)).toString("utf8")).toContain("needs the game it");
+
+        game.naming = NAMING;
+        provider.refreshViews();
+
+        expect(changed).toHaveLength(1);
+        const after = Buffer.from(await provider.readFile(view)).toString("utf8");
+        expect(after).toContain("False()");
+        // The tab was readonly for want of a game; the same refresh is what lets VS Code ask again.
+        const stat = await provider.stat(view);
+        expect(stat.permissions).toBeUndefined();
+    });
+
+    it("leaves a view holding unsaved edits alone", async () => {
+        // Its buffer is the reader's own source, not a render of the file - reloading it would discard work.
+        const { view } = script();
+        const provider = newProvider();
+        h.textDocuments = [{ uri: view, isDirty: true }];
+        const changed: unknown[] = [];
+        provider.onDidChangeFile((events) => changed.push(...events));
+
+        provider.refreshViews();
+
+        expect(changed).toEqual([]);
     });
 
     it("leaves a file holding no script readonly, notice and all", async () => {
@@ -370,7 +420,11 @@ describe("the .bcs custom editor", () => {
         h.languages.splice(0);
         h.shownIn.splice(0);
         h.disposedPanels = 0;
-        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews(
+            { extensionPath: REPO_ROOT } as never,
+            () => NAMING,
+            () => ({ dispose: () => {} }),
+        );
         const provider = h.editor.provider;
         expect(provider, "the custom editor did not register").toBeDefined();
 
@@ -393,7 +447,11 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.unopenable.add(`${file}.baf`);
         h.disposedPanels = 0;
-        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews(
+            { extensionPath: REPO_ROOT } as never,
+            () => NAMING,
+            () => ({ dispose: () => {} }),
+        );
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file));
@@ -416,7 +474,11 @@ describe("the .bcs custom editor", () => {
         h.errors.splice(0);
         h.rejectWith.set(`${file}.baf`, "host said no");
         h.disposedPanels = 0;
-        registerScriptViews({ extensionPath: REPO_ROOT } as never, () => NAMING);
+        registerScriptViews(
+            { extensionPath: REPO_ROOT } as never,
+            () => NAMING,
+            () => ({ dispose: () => {} }),
+        );
         const provider = h.editor.provider!;
 
         const document = provider.openCustomDocument(new h.FakeUri("file", file));

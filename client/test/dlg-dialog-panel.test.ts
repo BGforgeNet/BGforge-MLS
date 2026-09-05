@@ -170,6 +170,8 @@ function harness(
     neighbours: {
         inboundToDialog?: (resref: string) => { dialog: string; state: number; transition: number }[];
         resourceBytes?: (uri: unknown, resref: string, ext: string) => Uint8Array | undefined;
+        /** Overrides the strref-derived default, for a test whose game arrives mid-session. */
+        hasStrings?: () => boolean;
     } = {},
 ) {
     const posted: Posted[] = [];
@@ -196,11 +198,29 @@ function harness(
         },
     } as unknown as vscode.WebviewPanel;
 
+    /** The host's game-changed subscribers, so a test can open a game under an already-wired editor. */
+    const gameListeners: (() => void)[] = [];
     const provider = new DlgDialogEditorProvider(
         { extensionUri: { path: "/ext" } } as unknown as vscode.ExtensionContext,
         // `hasStrings` tracks whether the test wired a resolver at all, which is what "a game is open" means
         // here: the view tells a reader to open one only when there is none.
-        { strref, hasStrings: () => strref !== undefined, pickStrref, inbound, ...neighbours } as never,
+        {
+            strref,
+            hasStrings: () => strref !== undefined,
+            pickStrref,
+            inbound,
+            // Unsubscribing has to really unsubscribe, or a test of the teardown asserts nothing.
+            onDidChangeGame: (listener: () => void) => {
+                gameListeners.push(listener);
+                return {
+                    dispose: () => {
+                        const at = gameListeners.indexOf(listener);
+                        if (at !== -1) gameListeners.splice(at, 1);
+                    },
+                };
+            },
+            ...neighbours,
+        } as never,
     );
     const document = {
         uri: { path: "/game/SELFDLG.dlg", toString: () => "file:///game/SELFDLG.dlg" },
@@ -213,6 +233,10 @@ function harness(
         posted,
         ready: () => onMessage?.({ type: "ready" }),
         send: (msg: unknown) => onMessage?.(msg),
+        /** What the resource view does after it opens an install. */
+        gameOpened: () => {
+            for (const listener of gameListeners) listener();
+        },
         dispose: () => onDispose?.(),
         /** The most recent model posted, which is what the webview would be showing. */
         model: () => posted.toReversed().find((p) => p.type === "model")?.model,
@@ -315,6 +339,41 @@ describe("DlgDialogEditorProvider", () => {
         h.send({ type: "openGame" });
 
         expect(executeCommandMock).toHaveBeenCalledWith("bgforge.ieResources.openGame");
+    });
+
+    // The other half of that button. Running the command is not the outcome the reader asked for - seeing the
+    // lines is - and the editor is wired once, so without this it keeps the answer it got before the game.
+    test("redraws with the strings once a game opens under it", async () => {
+        let open = false;
+        const h = harness((_uri, id) => (open ? `Line ${id}.` : undefined), undefined, undefined, {
+            hasStrings: () => open,
+        });
+
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        h.ready();
+        expect(h.model()?.dlgGameOpen).toBe(false);
+        expect(h.model()?.messages).toEqual({ "100": "#100", "200": "#200" });
+
+        open = true;
+        h.gameOpened();
+
+        expect(h.model()?.dlgGameOpen).toBe(true);
+        expect(h.model()?.messages).toEqual({ "100": "Line 100.", "200": "Line 200." });
+        expect(h.model()?.dlgUnresolvedStrrefs).toBe(0);
+    });
+
+    test("stops redrawing once the panel is gone", async () => {
+        // A disposed panel's webview rejects a post, so a listener outliving its panel turns every later game
+        // change into a stream of them.
+        const h = harness((_uri, id) => `Line ${id}.`);
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        h.ready();
+        const before = h.posted.length;
+
+        h.dispose();
+        h.gameOpened();
+
+        expect(h.posted).toHaveLength(before);
     });
 
     test("surfaces a webview runtimeError instead of leaving a blank panel", async () => {

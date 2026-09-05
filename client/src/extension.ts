@@ -76,7 +76,7 @@ export async function activate(context: ExtensionContext) {
             creatures: gameLookups.creatures,
             gradients: gameLookups.colorGradient,
         }),
-        registerScriptViews(context, gameLookups.bcsSymbols),
+        registerScriptViews(context, gameLookups.bcsSymbols, gameLookups.onDidChangeGame),
     );
 
     // The image gallery. After the resource viewer, whose game session and reveal it borrows.
@@ -139,6 +139,7 @@ export async function activate(context: ExtensionContext) {
             inbound: gameLookups.inbound,
             inboundToDialog: gameLookups.inboundToDialog,
             resourceBytes: gameLookups.resourceBytes,
+            onDidChangeGame: gameLookups.onDidChangeGame,
         }),
     );
 }

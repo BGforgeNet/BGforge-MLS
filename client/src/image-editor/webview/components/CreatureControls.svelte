@@ -10,6 +10,7 @@
     import type { CreatureOption } from "../messages";
     import Combobox from "../../../webview-ui/Combobox.svelte";
     import Checkbox from "../../../webview-ui/Checkbox.svelte";
+    import { shouldFetchCreatures } from "../state/creature-list";
 
     const {
         creatures,
@@ -33,7 +34,7 @@
     // Reactive: the empty-state note below reads it, so a plain field would never re-render.
     let requested = $state(false);
     function load(): void {
-        if (requested) return;
+        if (!shouldFetchCreatures(requested, creatures.length)) return;
         requested = true;
         onrequest();
     }

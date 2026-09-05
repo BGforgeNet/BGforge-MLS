@@ -54,6 +54,12 @@ export interface DlgHostDeps {
     inboundToDialog?: (resref: string) => InboundRef[];
     /** Reads another game resource, which is how a neighbouring dialog is loaded into the same tree. */
     resourceBytes?: (uri: vscode.Uri, resref: string, ext: string) => Uint8Array | undefined;
+    /**
+     * Fires when the open install changes. Required, like `hasStrings` and for the same reader: the view
+     * offers "Open game" when nothing resolves, and an editor that could not hear the answer would leave the
+     * strrefs bare after the reader did exactly what it asked.
+     */
+    onDidChangeGame: (listener: () => void) => vscode.Disposable;
 }
 
 /** Bytes to open: the hot-exit backup when one is readable, otherwise the file itself. */
@@ -263,9 +269,14 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
             }
         });
 
+        // The strrefs are resolved against whatever install is open at the moment the model is built, so a
+        // game opened after this editor was wired changes every line it shows.
+        const gameChanged = this.deps.onDidChangeGame(refresh);
+
         // Retract only our own callback: a replacement panel for the same document (moving the tab to another
         // group closes one and opens another) may already have registered its own by the time this fires.
         panel.onDidDispose(() => {
+            gameChanged.dispose();
             if (document.refresh === refresh) document.refresh = undefined;
         });
     }

@@ -75,13 +75,20 @@ function viewForKind(kind: ScriptFormatKind, symbolsFor: SymbolsFor, extensionPa
     }
 }
 
-export function registerScriptViews(context: vscode.ExtensionContext, symbolsFor: SymbolsFor): vscode.Disposable {
+export function registerScriptViews(
+    context: vscode.ExtensionContext,
+    symbolsFor: SymbolsFor,
+    onDidChangeGame: (listener: () => void) => vscode.Disposable,
+): vscode.Disposable {
     const views = new Map<string, ScriptView>(
         SCRIPT_FORMATS.map((format) => [format.ext, viewForKind(format.kind, symbolsFor, context.extensionPath)]),
     );
     const files = new ScriptViewFileSystemProvider(views);
     return vscode.Disposable.from(
         files,
+        // A compiled script reads as a notice until a game can name its numbers, so opening one changes every
+        // open view's text - and the reader who opened it did so because the notice asked them to.
+        onDidChangeGame(() => files.refreshViews()),
         // Not `isReadonly`: a script with everything it needs behind it saves back over itself, and one
         // without says so per document through `stat` instead - the scheme itself is writable either way.
         vscode.workspace.registerFileSystemProvider(SCRIPT_VIEW_SCHEME, files, { isCaseSensitive: true }),

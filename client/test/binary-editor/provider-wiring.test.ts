@@ -1,9 +1,14 @@
 /**
- * Guards the binary editor's hot-exit restore. When VS Code re-opens a document that was dirty at shutdown it
- * passes back the backup it had asked us to write, and the session must parse THOSE bytes (the unsaved edits)
- * while keeping the original URI as the document's identity, so the next save still targets the real file.
- * The fix lives in the wiring rather than in any single helper, so this drives the real openCustomDocument
- * through a mocked vscode and a fake worker - the two boundaries the provider does not own.
+ * The binary editor's provider wiring, driven through a mocked vscode and a fake worker - the two boundaries
+ * it does not own. Both subjects here live in the wiring rather than in any helper, so nothing below the
+ * provider can guard them.
+ *
+ * Hot-exit restore: when VS Code re-opens a document that was dirty at shutdown it passes back the backup it
+ * had asked us to write, and the session must parse THOSE bytes (the unsaved edits) while keeping the
+ * original URI as the document's identity, so the next save still targets the real file.
+ *
+ * Game changes: every label the editor shows is resolved against whichever install is open when the message
+ * goes out, so an editor open across a game change is showing the previous game's answers.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type * as vscode from "vscode";
@@ -13,10 +18,12 @@ const BACKUP_URI = "file:///storage/backups/sw1h01.itm.bak";
 const DISK_BYTES = new Uint8Array([1, 1, 1]);
 const BACKUP_BYTES = new Uint8Array([2, 2, 2]);
 
-const { readFileMock, showWarningMock, workerRequests } = vi.hoisted(() => ({
+const { readFileMock, showWarningMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
     showWarningMock: vi.fn(),
     workerRequests: [] as { type: string; uri?: string; bytes?: Uint8Array; engine?: string }[],
+    // One row is enough to tell a re-projection apart from an empty refresh.
+    CHANGE_SET: { changed: [{ id: "root/0", kind: "field", label: "Name" }], diagnostics: [], dirty: false },
 }));
 
 vi.mock("vscode", () => {
@@ -27,7 +34,10 @@ vi.mock("vscode", () => {
     }
     return {
         EventEmitter,
-        Uri: { parse: (value: string) => ({ toString: () => value }) },
+        Uri: {
+            parse: (value: string) => ({ toString: () => value }),
+            joinPath: (...parts: unknown[]) => ({ toString: () => parts.join("/") }),
+        },
         window: { showWarningMessage: showWarningMock },
         workspace: { fs: { readFile: readFileMock } },
     };
@@ -48,23 +58,22 @@ vi.mock("node:worker_threads", () => {
             request: { type: string; uri?: string; bytes?: Uint8Array; engine?: string };
         }): void {
             workerRequests.push(msg.request);
-            queueMicrotask(() =>
-                this.onMessage?.({
-                    id: msg.id,
-                    response: {
-                        type: "opened",
-                        result: {
-                            sessionId: "session-1",
-                            format: "itm",
-                            formatName: "ITM",
-                            layout: { blocks: [] },
-                            warnings: [],
-                            errors: [],
-                            rootWindow: [],
-                        },
-                    },
-                }),
-            );
+            const response =
+                msg.request.type === "reproject"
+                    ? { type: "structure", result: { changeSet: CHANGE_SET } }
+                    : {
+                          type: "opened",
+                          result: {
+                              sessionId: "session-1",
+                              format: "itm",
+                              formatName: "ITM",
+                              layout: { blocks: [] },
+                              warnings: [],
+                              errors: [],
+                              rootWindow: [],
+                          },
+                      };
+            queueMicrotask(() => this.onMessage?.({ id: msg.id, response }));
         }
 
         terminate(): Promise<number> {
@@ -73,6 +82,14 @@ vi.mock("node:worker_threads", () => {
     }
     return { Worker };
 });
+
+// Mounting a panel reads the webview bundle off disk, which this suite has no build of and does not test.
+vi.mock("../../src/webview-assets", () => ({
+    getCachedHtmlAsset: () => "<html>{{stylesUri}}{{codiconsUri}}{{baseUri}}{{primitivesUri}}{{cspSource}}</html>",
+    getCachedJsAsset: () => "",
+    inlineWebviewScript: (html: string) => html,
+    generateNonce: () => "nonce",
+}));
 
 const { BinaryEditorProvider } = await import("../../src/binary-editor/provider");
 
@@ -95,6 +112,7 @@ const token = {} as vscode.CancellationToken;
 
 // This suite is about the restore path, not game lookups: a record outside a game resolves nothing.
 const noGame = {
+    onDidChangeGame: () => ({ dispose: () => {} }),
     strref: (): undefined => undefined,
     slotLabel: (): undefined => undefined,
     namingTable: (): undefined => undefined,
@@ -176,5 +194,95 @@ describe("binary editor hot-exit restore", () => {
         await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
 
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES, engine: "bg2" }]);
+    });
+});
+
+/** A panel that records what the host posts and hands back the webview's own channels. */
+function fakePanel() {
+    const posted: { type: string }[] = [];
+    let dispose: (() => void) | undefined;
+    const panel = {
+        webview: {
+            options: {},
+            html: "",
+            cspSource: "vscode-webview:",
+            asWebviewUri: (value: unknown) => value,
+            postMessage: (message: { type: string }) => {
+                posted.push(message);
+                return Promise.resolve(true);
+            },
+            onDidReceiveMessage: () => ({ dispose: () => {} }),
+        },
+        onDidDispose: (cb: () => void) => {
+            dispose = cb;
+            return { dispose: () => {} };
+        },
+    };
+    return { posted, panel: panel as unknown as vscode.WebviewPanel, close: () => dispose?.() };
+}
+
+describe("binary editor across a game change", () => {
+    beforeEach(() => {
+        workerRequests.length = 0;
+        readFileMock.mockReset();
+        readFileMock.mockImplementation(() => Promise.resolve(DISK_BYTES));
+    });
+
+    /** Wire a provider whose game-changed event the test can fire. */
+    function wired() {
+        const listeners: (() => void)[] = [];
+        const provider = new BinaryEditorProvider(context, {
+            ...noGame,
+            onDidChangeGame: (listener: () => void) => {
+                listeners.push(listener);
+                return {
+                    dispose: () => {
+                        const at = listeners.indexOf(listener);
+                        if (at !== -1) listeners.splice(at, 1);
+                    },
+                };
+            },
+        });
+        return {
+            provider,
+            gameOpened: () => {
+                for (const listener of listeners) listener();
+            },
+        };
+    }
+
+    // Every strref, IDS name and gradient in the view was resolved against whatever was open when the message
+    // was sent. Nothing re-sends on its own, so an editor open when a game opens keeps the numbers.
+    it("re-projects an open panel's fields when a game opens under it", async () => {
+        const { provider, gameOpened } = wired();
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, posted } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+        posted.length = 0;
+        workerRequests.length = 0;
+
+        gameOpened();
+        await vi.waitFor(() => expect(posted.length).toBeGreaterThan(0));
+
+        // A changeSet built from the LIVE session, not a re-init from the state the document opened in: the
+        // reader keeps their selection, and an unsaved edit is in the model and nowhere else.
+        expect(workerRequests.map((request) => request.type)).toEqual(["reproject"]);
+        expect(posted).toEqual([{ type: "changeSet", changeSet: CHANGE_SET }]);
+    });
+
+    it("stops telling a closed panel anything", async () => {
+        const { provider, gameOpened } = wired();
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, posted, close } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+        posted.length = 0;
+
+        close();
+        workerRequests.length = 0;
+        gameOpened();
+        await Promise.resolve();
+
+        expect(workerRequests).toEqual([]);
+        expect(posted).toEqual([]);
     });
 });

@@ -37,6 +37,13 @@ export interface GameResolvers {
     /** Whether the resolvers can answer anything for this document. Owns the whole policy - the URI's own
      *  game plus the `file:` fallback - so this module never re-derives what counts as game-backed. */
     isGameBacked: (uri: vscode.Uri) => boolean;
+    /**
+     * Fires when the open install changes.
+     *
+     * Every resolver above answers for whichever game is open at the moment it is called, so the editor is
+     * correct for as long as it keeps asking - and it stops asking once a panel is drawn.
+     */
+    onDidChangeGame: (listener: () => void) => vscode.Disposable;
 }
 
 /** One gradient as CSS colours for the webview. The resolver hands back model colours, because the animation
@@ -152,7 +159,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
+        // The subscription is per panel because that is what its lifetime matches.
+        const gameChanged = this.gameLookups.onDidChangeGame(() => void this.reproject(document, panel));
         panel.onDidDispose(() => {
+            gameChanged.dispose();
             this.active.delete(panel);
             // Last panel for this document gone -> cancel any pending debounced validate so it never fires
             // against a disposed bridge.
@@ -471,6 +481,23 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             });
         }, BinaryEditorProvider.DIAGNOSTICS_DEBOUNCE_MS);
         this.diagnosticsTimers.set(document, timer);
+    }
+
+    /**
+     * Re-send every field with whatever the install can now name, after the open game changed.
+     *
+     * A changeSet rather than a re-init: the record itself has not changed, so the reader keeps their
+     * selection and open tab - and the worker projects from the live model, which is the only place an
+     * unsaved edit exists.
+     */
+    private async reproject(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
+        try {
+            const r = await document.bridge.send({ type: "reproject", sessionId: document.sessionId });
+            if (r.type === "structure") this.post(panel, { type: "changeSet", changeSet: r.result.changeSet });
+        } catch (error) {
+            // The alternative is a panel labelled by the game that is no longer open, with nothing said.
+            this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+        }
     }
 
     private documentIsActive(document: BinaryEditorDocument): boolean {
