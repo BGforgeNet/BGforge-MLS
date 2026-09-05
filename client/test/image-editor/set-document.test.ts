@@ -213,12 +213,12 @@ describe("createAnimationSetSource", () => {
 
     it("resolves a set the open install declares", () => {
         const source = createAnimationSetSource({ animations: () => [set], gameAt });
-        expect(source("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
+        expect(source.lookup("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
     });
 
     it("resolves nothing for an install other than the open one", () => {
         const source = createAnimationSetSource({ animations: () => [set], gameAt });
-        expect(source("/games/tob", 0x1234).kind).toBe("no-game");
+        expect(source.lookup("/games/tob", 0x1234).kind).toBe("no-game");
     });
 
     it("opens a set before anything has opened the game in the view", () => {
@@ -232,13 +232,23 @@ describe("createAnimationSetSource", () => {
         };
         const source = createAnimationSetSource({ animations: () => [set], gameAt: lazy });
 
-        expect(source("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
+        expect(source.lookup("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
         expect(opened).toBe(1);
     });
 
     it("says the game declares nothing under that id", () => {
         const source = createAnimationSetSource({ animations: () => undefined, gameAt });
-        expect(source("/games/bgee", 0x1234).kind).toBe("not-declared");
+        expect(source.lookup("/games/bgee", 0x1234).kind).toBe("not-declared");
+    });
+
+    it("lists the install's sets for the editor's own picker", () => {
+        // The list is what the set picker offers, and an install with nothing declared offers nothing
+        // rather than an undefined the caller has to unwrap.
+        const declared = (dir: string): AnimationSet[] | undefined => (dir === "/games/bgee" ? [set] : undefined);
+        const source = createAnimationSetSource({ animations: declared, gameAt });
+
+        expect(source.list("/games/bgee")).toEqual([set]);
+        expect(source.list("/games/tob")).toEqual([]);
     });
 });
 

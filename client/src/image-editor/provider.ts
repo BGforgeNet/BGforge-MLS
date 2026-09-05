@@ -33,7 +33,10 @@ import {
     summarizeLoss,
 } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
+import { animationIdHex, setTitle } from "@bgforge/animation";
 import { ieGroupLabels } from "@bgforge/animation/group-labels";
+import { parseAnimationSetUri } from "../ie-resources/uri";
+import { openAnimationSet } from "../ie-resources/open-set";
 import { ieGroupOptionText } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
@@ -301,6 +304,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 this.post(panel, { type: "error", message: "That part of the set could not be drawn." });
                 break;
             }
+            case "pickSet":
+                await this.pickSet(document);
+                break;
             case "save":
                 // Route through VS Code's own save so its dirty tracking clears - scoped to this
                 // document's URI, so it saves the right one even if focus moved since the click.
@@ -599,6 +605,33 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             title: "Which direction group should the FRM use? (its north/south cycles have no FRM rotation)",
         });
         return picked === undefined ? undefined : items.indexOf(picked);
+    }
+
+    /**
+     * Offer the install's animation sets and open the one chosen, in the tab it belongs in.
+     *
+     * The host's own quick pick rather than a control in the webview: an install declares hundreds of
+     * sets, so this is a search, and the quick pick is the search this editor's readers already use for
+     * every other resource. Opening rather than swapping the document: a set IS the document's address,
+     * so another set is another document - and this way the reader keeps the one they came from.
+     */
+    private async pickSet(document: ImageEditorDocument): Promise<void> {
+        const address = parseAnimationSetUri(document.uri);
+        if (address === undefined || this.animationSets === undefined) return;
+        const items = this.animationSets.list(address.gameDir).map((set) => ({
+            label: setTitle(set),
+            // The id is what the tables key on, so it is the reader's own reference - and it is what
+            // makes two sets sharing a name (a family's generations) tellable apart.
+            description: animationIdHex(set.id),
+            id: set.id,
+        }));
+        if (items.length === 0) return;
+        const picked = await vscode.window.showQuickPick(items, {
+            title: "Show which animation set?",
+            matchOnDescription: true,
+        });
+        if (picked === undefined || picked.id === address.id) return;
+        await openAnimationSet((dir) => this.animationSets?.list(dir), address.gameDir, picked.id);
     }
 
     /** Ask which cycle a single-orientation FRM should use; undefined if the user dismisses the picker. */

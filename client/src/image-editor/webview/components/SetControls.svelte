@@ -5,21 +5,29 @@
     //
     // Plain selects rather than the searchable combobox the creature picker uses: an armour level offers at
     // most four options and an action list around twenty, all of them visible at once in a native list.
+    //
+    // The SET is the exception: an install declares hundreds, so choosing one is a search rather than a
+    // list, and the host's own quick pick already is that search. This is the button that opens it.
     import type { SetView } from "../messages";
 
     const {
         set,
         onArmourChange,
         onActionChange,
+        onPickSet,
     }: {
         set: SetView;
         onArmourChange: (level: number) => void;
         onActionChange: (resref: string) => void;
+        onPickSet: () => void;
     } = $props();
 </script>
 
 <div class="view-controls" role="group" aria-label="Animation set">
-    <p class="set-title">{set.title}</p>
+    <label class="view-field" title="Which animation set this editor is pointed at">
+        <span class="view-label">Set</span>
+        <button type="button" class="set-pick" onclick={onPickSet}>{set.title}</button>
+    </label>
     {#if set.armours.length > 1}
         <label class="view-field" title="Which armour level's files this set draws from">
             <span class="view-label">Armour</span>

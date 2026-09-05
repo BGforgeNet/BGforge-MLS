@@ -15,6 +15,11 @@ test("accepts valid messages", () => {
     // null is how the webview clears the choice back to the file's own palette.
     expect(isWebviewToHost({ type: "setCreature", resref: null })).toBe(true);
     expect(isWebviewToHost({ type: "requestFrames", indices: [0, 3] })).toBe(true);
+    // The set controls: two picks carrying a value, and the set picker, which carries none because the
+    // list it offers is the host's.
+    expect(isWebviewToHost({ type: "selectSetAction", resref: "CDMB1G1" })).toBe(true);
+    expect(isWebviewToHost({ type: "selectSetArmour", level: 2 })).toBe(true);
+    expect(isWebviewToHost({ type: "pickSet" })).toBe(true);
     expect(isWebviewToHost({ type: "runtimeError", message: "boom" })).toBe(true);
 });
 test("rejects malformed messages", () => {

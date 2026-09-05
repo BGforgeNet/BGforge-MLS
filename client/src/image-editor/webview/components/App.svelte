@@ -330,6 +330,7 @@
                     set={view.set}
                     onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
                     onActionChange={(resref) => bridge.send({ type: "selectSetAction", resref })}
+                    onPickSet={() => bridge.send({ type: "pickSet" })}
                 />
             {/if}
             <ViewControls

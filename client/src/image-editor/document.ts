@@ -200,7 +200,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         backup?: DocumentBackup,
     ): ImageEditorDocument {
         const hex = animationIdHex(address.id);
-        const found = animationSets?.(address.gameDir, address.id) ?? { kind: "no-game" };
+        const found = animationSets?.lookup(address.gameDir, address.id) ?? { kind: "no-game" };
         if (found.kind === "no-game") throw new Error(`Open ${address.gameDir} to show animation ${hex}.`);
         if (found.kind === "not-declared") throw new Error(`This game declares no animation ${hex}.`);
         const state = AnimationSetState.open(found.set, found.io);

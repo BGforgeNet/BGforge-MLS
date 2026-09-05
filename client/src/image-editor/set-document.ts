@@ -36,8 +36,17 @@ export type AnimationSetLookup =
     | { kind: "no-game" }
     | { kind: "not-declared" };
 
-/** Resolves the set a set-scoped URI names, against whichever install is open. */
-export type AnimationSetSource = (gameDir: string, id: number) => AnimationSetLookup;
+/**
+ * The sets an install declares: one by address, and the whole list.
+ *
+ * Both halves rather than a lookup alone, because the editor's own set picker offers the list - and a
+ * second resolver for it would build the index twice and hold two copies of the answer.
+ */
+export interface AnimationSetSource {
+    lookup(gameDir: string, id: number): AnimationSetLookup;
+    /** Every set the install declares, in index order. Empty outside a game. */
+    list(gameDir: string): readonly AnimationSet[];
+}
 
 /**
  * Resolve a set against whichever install `gameDir` names.
@@ -54,11 +63,16 @@ export function createAnimationSetSource(deps: {
     animations: AnimationIndexResolver;
     gameAt: (dir: string) => Game | undefined;
 }): AnimationSetSource {
-    return (gameDir, id) => {
-        const game = deps.gameAt(gameDir);
-        if (game === undefined) return { kind: "no-game" };
-        const set = (deps.animations(gameDir) ?? []).find((entry) => entry.id === id);
-        return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(game) };
+    return {
+        lookup: (gameDir, id) => {
+            const game = deps.gameAt(gameDir);
+            if (game === undefined) return { kind: "no-game" };
+            const set = (deps.animations(gameDir) ?? []).find((entry) => entry.id === id);
+            return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(game) };
+        },
+        // Not gated on the game being open: the index resolver opens the configured install itself, the
+        // same way the lookup above does.
+        list: (gameDir) => deps.animations(gameDir) ?? [],
     };
 }
 

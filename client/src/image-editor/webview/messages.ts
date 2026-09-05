@@ -192,6 +192,9 @@ export type WebviewToHost =
     // Set documents only: which action and which armour level of the open set to show.
     | { type: "selectSetAction"; resref: string }
     | { type: "selectSetArmour"; level: number }
+    // Set documents only: offer the install's sets and open the one chosen. The list is the host's to
+    // show - an install declares hundreds, and the host's own quick pick is already a search over them.
+    | { type: "pickSet" }
     | { type: "runtimeError"; message: string; stack?: string };
 
 function isValidMetaPatch(patch: unknown): patch is MetaPatch {
@@ -213,6 +216,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "ready":
         case "save":
         case "requestCreatures":
+        case "pickSet":
             return true;
         case "setCreature":
             return m.resref === null || typeof m.resref === "string";

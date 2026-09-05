@@ -231,10 +231,19 @@ select {
     line-height: 1.35;
 }
 
-/* The open set's name, heading its two pickers. Reads as a section title rather than a field label:
-   nothing selects it, and the file editor's equivalent identity is the tab's own filename. */
-.set-title {
-    margin: 0;
-    font-weight: 600;
+/* The open set's name, as the button that opens the host's set picker. Full width under its label like
+   the creature picker, and for the same reason: a set's name is prose ("CLERIC_MALE_GNOME") that a
+   shared row would clip, and this one is also the row's only statement of what is open. Left-aligned so
+   it reads as a value rather than as a centred command. */
+.set-pick {
+    flex: 1 1 100%;
+    min-width: 0;
+    text-align: left;
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, var(--vscode-panel-border));
     overflow-wrap: anywhere;
+}
+.set-pick:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }

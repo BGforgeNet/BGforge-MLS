@@ -113,6 +113,16 @@ function ioFor(files: Record<string, Uint8Array>): StanceIo {
     };
 }
 
+/** The set source as the editor takes it: a lookup plus the list its own set picker offers. */
+function setSource(lookup: AnimationSetSource["lookup"]): AnimationSetSource {
+    return { lookup, list: () => [SET] };
+}
+
+/** The two members most of these need: one to open on, one to swap to. */
+function twoMembers(): Record<string, Uint8Array> {
+    return { TSTBG1: baseFileBam(), TSTBG2: baseFileBam() };
+}
+
 describe("opening an animation set", () => {
     beforeEach(() => {
         readFileMock.mockReset();
@@ -120,22 +130,24 @@ describe("opening an animation set", () => {
     });
 
     it("opens on the set's first action, without reading a file", async () => {
-        const source = vi.fn(() => ({ kind: "set" as const, set: SET, io: ioFor({ TSTBG1: baseFileBam() }) }));
+        const lookup = vi.fn(() => ({ kind: "set" as const, set: SET, io: ioFor({ TSTBG1: baseFileBam() }) }));
+        const source = setSource(lookup);
 
         const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
 
-        expect(source).toHaveBeenCalledWith("/games/bgee", 0x1234);
+        expect(lookup).toHaveBeenCalledWith("/games/bgee", 0x1234);
         expect(document.setState?.action.resref).toBe("TSTBG1");
         expect(readFileMock).not.toHaveBeenCalled();
     });
 
     it("reloads from the game, never from the set address", async () => {
         const files: Record<string, Uint8Array> = { TSTBG1: baseFileBam() };
-        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
-            kind: "set" as const,
-            set: SET,
-            io: ioFor(files),
-        }));
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(files) })),
+        );
 
         await document.reload();
 
@@ -144,11 +156,12 @@ describe("opening an animation set", () => {
     });
 
     it("swaps the shown action, and reports a refusal for one the set does not draw", async () => {
-        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
-            kind: "set" as const,
-            set: SET,
-            io: ioFor({ TSTBG1: baseFileBam(), TSTBG2: baseFileBam() }),
-        }));
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(twoMembers()) })),
+        );
 
         expect(document.selectSetAction("TSTBG2")).toBe("changed");
         expect(document.toView().set?.action).toBe("TSTBG2");
@@ -168,11 +181,12 @@ describe("opening an animation set", () => {
     });
 
     it("writes only the members the reader changed", async () => {
-        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
-            kind: "set" as const,
-            set: SET,
-            io: ioFor({ TSTBG1: baseFileBam(), TSTBG2: baseFileBam() }),
-        }));
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(twoMembers()) })),
+        );
 
         // Nothing edited yet: a set save must not copy every member into the override folder.
         expect(document.setSaveWrites()).toEqual([]);
@@ -192,11 +206,12 @@ describe("opening an animation set", () => {
     it("refuses in place to save a member drawn from several files", async () => {
         const quadrant: AnimationSet = { ...SET, layout: "quadrant" };
         const files = Object.fromEntries([1, 2, 3, 4].map((part) => [`TSTBG1${part}`, baseFileBam()] as const));
-        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
-            kind: "set" as const,
-            set: quadrant,
-            io: ioFor(files),
-        }));
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => ({ kind: "set" as const, set: quadrant, io: ioFor(files) })),
+        );
         document.applyMetaPatch({ transparentIndex: 3 });
 
         expect(() => document.setSaveWrites()).toThrow(/drawn from 4 files/);
@@ -210,11 +225,11 @@ describe("opening an animation set", () => {
     });
 
     it("carries every changed member through a hot-exit backup", async () => {
-        const source = (): ReturnType<AnimationSetSource> => ({
-            kind: "set",
+        const source = setSource(() => ({
+            kind: "set" as const,
             set: SET,
-            io: ioFor({ TSTBG1: baseFileBam(), TSTBG2: baseFileBam() }),
-        });
+            io: ioFor(twoMembers()),
+        }));
         const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
         document.applyMetaPatch({ transparentIndex: 3 });
         document.selectSetAction("TSTBG2");
@@ -233,25 +248,21 @@ describe("opening an animation set", () => {
     });
 
     it("asks for the game to be opened when it is not", async () => {
-        const source = (): { kind: "no-game" } => ({ kind: "no-game" });
+        const source = setSource(() => ({ kind: "no-game" }));
         await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
             "Open /games/bgee to show animation 0x1234.",
         );
     });
 
     it("says so for an id the open game does not declare", async () => {
-        const source = (): { kind: "not-declared" } => ({ kind: "not-declared" });
+        const source = setSource(() => ({ kind: "not-declared" }));
         await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
             "This game declares no animation 0x1234.",
         );
     });
 
     it("refuses a set the install ships no files for, naming the animation", async () => {
-        const source = (): { kind: "set"; set: AnimationSet; io: StanceIo } => ({
-            kind: "set",
-            set: SET,
-            io: ioFor({}),
-        });
+        const source = setSource(() => ({ kind: "set" as const, set: SET, io: ioFor({}) }));
 
         await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
             "This install ships no files for animation 0x1234.",
