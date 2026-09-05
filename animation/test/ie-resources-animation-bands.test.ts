@@ -8,7 +8,7 @@ function band(count: number): { seqIndex: number; facing: Facing }[] {
 }
 
 function bands(count: number, slots = 5, scheme: FileBands["scheme"] = "ie8"): FileBands {
-    return { bands: Array.from({ length: count }, () => band(slots)), scheme };
+    return { bands: Array.from({ length: count }, () => band(slots)), scheme, confidence: "declared" };
 }
 
 describe("declaredStride", () => {
@@ -29,7 +29,16 @@ describe("declaredStride", () => {
 describe("stancesOfMembers", () => {
     it("keeps a single-band file on the member's own name", () => {
         const stances = stancesOfMembers([{ label: "WK - walk", resref: "METNWK", parts: ["METNWK"] }], () => bands(1));
-        expect(stances).toEqual([{ label: "WK - walk", resref: "METNWK", parts: ["METNWK"], band: 0, slots: band(5) }]);
+        expect(stances).toEqual([
+            {
+                label: "WK - walk",
+                resref: "METNWK",
+                parts: ["METNWK"],
+                band: 0,
+                slots: band(5),
+                confidence: "declared",
+            },
+        ]);
     });
 
     it("names each band of a file that packs several stances", () => {
@@ -86,7 +95,7 @@ describe("stancesOfMembers", () => {
     });
 
     it("drops a band with no drawable facings", () => {
-        const empty: FileBands = { bands: [band(5), [], band(5)], scheme: "ie8" };
+        const empty: FileBands = { bands: [band(5), [], band(5)], scheme: "ie8", confidence: "declared" };
         expect(stancesOfMembers([{ label: "G1", resref: "X", parts: ["X"] }], () => empty).map((s) => s.band)).toEqual([
             0, 2,
         ]);

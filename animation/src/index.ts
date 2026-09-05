@@ -31,11 +31,29 @@ export { type AnimationTable, type TableAnimation, type TableRows, animationTabl
 export { type Layout, layoutOf } from "./animation-schemes/layout";
 export { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 export { type Action, characterActions, characterDrawsBody, characterMember } from "./animation-schemes/character";
-export { type FileBands, type SetStance, declaredStride, stancesOfMembers } from "./animation-schemes/bands";
+export {
+    type BandConfidence,
+    type FileBands,
+    type SetStance,
+    declaredStride,
+    stancesOfMembers,
+} from "./animation-schemes/bands";
 
 // Reading one set out of an install.
 export { type StanceIo, setStances } from "./set-stances";
 export { type SetTile, setPreviewResref, setTile } from "./set-tiles";
+
+// The neutral model: one set, read out of a game and writable back to it.
+export {
+    type NeutralAction,
+    type NeutralCycles,
+    type NeutralDirection,
+    type NeutralIdentity,
+    type NeutralSet,
+    type NeutralVariant,
+} from "./neutral/model";
+export { readNeutralSet } from "./neutral/read";
+export { type MemberWrite, writeNeutralSet } from "./neutral/write";
 
 // Character facets: race, gender, class, armour, action.
 export {

@@ -32,11 +32,22 @@ export function declaredStride(section: string | undefined): number | undefined 
     return section !== undefined && WIDE_BAND_SECTIONS.has(section) ? WIDE_BAND_STRIDE : undefined;
 }
 
+/**
+ * How the facings on a band were arrived at.
+ *
+ * `declared` means the animation's own type settled the stride, or the parse recognised the scheme's
+ * fingerprint outright. `inferred` means the facings were assigned from block structure alone, which is
+ * all a lone file offers - a reading good enough to draw, and not good enough for a converter to write a
+ * target's direction slots from without saying so.
+ */
+export type BandConfidence = "declared" | "inferred";
+
 /** One file's cycles, already cut into direction bands. */
 export interface FileBands {
     bands: readonly (readonly IeDirectionSlot[])[];
     /** The block scheme, where one was resolved - what the block table keys its names on. */
     scheme: IeScheme | undefined;
+    confidence: BandConfidence;
 }
 
 /** One row of the viewer's stance list. */
@@ -61,6 +72,8 @@ export interface SetStance {
      * separate count would be a second statement of the same fact.
      */
     slots: readonly IeDirectionSlot[];
+    /** How the facings were arrived at - see `BandConfidence`. */
+    confidence: BandConfidence;
 }
 
 /**
@@ -89,6 +102,7 @@ export function stancesOfMembers(
                 parts: member.parts,
                 band,
                 slots,
+                confidence: file.confidence,
             });
         }
     }

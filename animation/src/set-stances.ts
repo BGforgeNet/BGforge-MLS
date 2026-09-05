@@ -93,11 +93,19 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     if (merged === undefined) return undefined;
     if (stride !== undefined) {
         const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride);
-        // A declared stride carries no block scheme, so such bands are numbered rather than named.
-        return bands === undefined ? undefined : { bands, scheme: undefined };
+        // A declared stride carries no block scheme, so such bands are numbered rather than named. The
+        // stride came from the animation's own declared type, so the facings on them are declared too.
+        return bands === undefined ? undefined : { bands, scheme: undefined, confidence: "declared" };
     }
     const analysis = interpretIeDirections(merged.sequences, merged.frameCount);
-    return analysis === undefined ? undefined : { bands: analysis.groups, scheme: analysis.scheme };
+    if (analysis === undefined) return undefined;
+    // `detected` is the interpreter's own strong fingerprint for the scheme it chose; without it the
+    // facings are a reading of block structure, good enough to draw and not to write a target from.
+    return {
+        bands: analysis.groups,
+        scheme: analysis.scheme,
+        confidence: analysis.detected ? "declared" : "inferred",
+    };
 }
 
 /** Every stance this set offers at one armour level, in the order a viewer should list them. */

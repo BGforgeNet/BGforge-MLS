@@ -30,7 +30,7 @@ export default defineConfig({
             // set-stances.ts measures lower here than it did in the client, because the client's set-viewer
             // suite also drives it and stayed behind - that coverage is real but is counted against neither
             // package's sources, so these floors understate what is exercised.
-            thresholds: { lines: 96.52, functions: 96.34, branches: 89.21, statements: 94.88 },
+            thresholds: { lines: 97.01, functions: 96.77, branches: 89.39, statements: 95.09 },
         }),
     },
 });
