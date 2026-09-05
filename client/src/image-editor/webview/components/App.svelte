@@ -103,8 +103,13 @@
     // columns=directions with whichever stride the file actually uses.
     const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length, ieRose?.scheme) : undefined);
     // Decoded filename meaning (critter/avatar naming schemes) - shown in a banner when a scheme
-    // matches. The block scheme goes in too: some name families are only readable under one of them.
-    const nameMeaning = $derived(view ? describeAnimationName({ ...view, scheme: ieRose?.scheme }) : undefined);
+    // matches. The block scheme and count go in too: some name families are only readable under one of
+    // them, and none of them reads a file that packs several blocks, whose meaning is per block.
+    const nameMeaning = $derived(
+        view
+            ? describeAnimationName({ ...view, scheme: ieRose?.scheme, blocks: ieRose?.groups.length })
+            : undefined,
+    );
     $effect(() => {
         const v = view;
         if (!v || v === columnsSeededView) return;
@@ -395,7 +400,7 @@
             {#if layoutMode === "grid" && cycleAnalysis?.multiSequence}
                 <CycleLayoutControls
                     cycleCount={view.sequences.length}
-                    suggestedColumns={cycleAnalysis.suggestedColumns}
+                    analysis={cycleAnalysis}
                     columns={cycleColumns}
                     onColumnsChange={(c) => (cycleColumns = c)}
                 />

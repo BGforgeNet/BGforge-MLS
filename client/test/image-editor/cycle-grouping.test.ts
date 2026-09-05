@@ -1,32 +1,58 @@
 import { describe, expect, test } from "vitest";
-import { analyzeCycleGrid, ieGroupOptionText } from "../../src/image-editor/webview/render/cycle-grouping";
+import {
+    analyzeCycleGrid,
+    cycleGridHint,
+    ieGroupOptionText,
+} from "../../src/image-editor/webview/render/cycle-grouping";
 
 test("a single directional set (<=8 cycles) is not flagged as multi-sequence", () => {
     for (const n of [1, 4, 6, 8]) {
-        expect(analyzeCycleGrid(n)).toEqual({ multiSequence: false, suggestedColumns: 0 });
+        expect(analyzeCycleGrid(n)).toEqual({ multiSequence: false, suggestedColumns: 0, resolved: false });
     }
 });
 
 test("more than 8 cycles is flagged as multi-sequence with a suggested column count", () => {
     // usar1ca's 64 cycles (8 sequences x 8 directions) - the reported case: suggest 8 columns.
-    expect(analyzeCycleGrid(64)).toEqual({ multiSequence: true, suggestedColumns: 8 });
+    expect(analyzeCycleGrid(64)).toEqual({ multiSequence: true, suggestedColumns: 8, resolved: false });
 });
 
 // The interpretation knows the block size; without it, 9 cycles reads as "more than one set" purely
 // because 9 > 8, which is exactly wrong for the commonest creature file there is.
 test("a known scheme sets the block size, so one block is never called multi-sequence", () => {
-    expect(analyzeCycleGrid(9, "ie9")).toEqual({ multiSequence: false, suggestedColumns: 0 });
-    expect(analyzeCycleGrid(8, "ie8")).toEqual({ multiSequence: false, suggestedColumns: 0 });
+    expect(analyzeCycleGrid(9, "ie9")).toEqual({ multiSequence: false, suggestedColumns: 0, resolved: true });
+    expect(analyzeCycleGrid(8, "ie8")).toEqual({ multiSequence: false, suggestedColumns: 0, resolved: true });
 });
 
 test("a known scheme suggests its own block size as the column count", () => {
-    expect(analyzeCycleGrid(99, "ie9")).toEqual({ multiSequence: true, suggestedColumns: 9 });
-    expect(analyzeCycleGrid(72, "ie9")).toEqual({ multiSequence: true, suggestedColumns: 9 });
-    expect(analyzeCycleGrid(72, "ie8")).toEqual({ multiSequence: true, suggestedColumns: 8 });
+    expect(analyzeCycleGrid(99, "ie9")).toEqual({ multiSequence: true, suggestedColumns: 9, resolved: true });
+    expect(analyzeCycleGrid(72, "ie9")).toEqual({ multiSequence: true, suggestedColumns: 9, resolved: true });
+    expect(analyzeCycleGrid(72, "ie8")).toEqual({ multiSequence: true, suggestedColumns: 8, resolved: true });
 });
 
 test("a count divisible by 6 but not 8 suggests 6 columns", () => {
-    expect(analyzeCycleGrid(18)).toEqual({ multiSequence: true, suggestedColumns: 6 });
+    expect(analyzeCycleGrid(18)).toEqual({ multiSequence: true, suggestedColumns: 6, resolved: false });
+});
+
+/**
+ * The hint above the columns box used to say a BAM stores no direction info and the blocks must be laid
+ * out by hand - true only where nothing resolved the structure. Where the interpretation DID resolve it
+ * the columns are already the file's own stride, and telling the reader to work it out themselves
+ * contradicts the block list the same panel is showing.
+ */
+describe("cycleGridHint", () => {
+    test("reports the resolved block structure as a reading, not a guess", () => {
+        const hint = cycleGridHint(72, analyzeCycleGrid(72, "ie9"));
+
+        expect(hint).toContain("8 blocks of 9");
+        expect(hint).not.toContain("no direction");
+    });
+
+    test("says the column count is a guess when nothing resolved the structure", () => {
+        const hint = cycleGridHint(64, analyzeCycleGrid(64));
+
+        expect(hint).toContain("64 cycles");
+        expect(hint).toContain("guess");
+    });
 });
 
 // Detection itself (interpretIeDirections) is library code, tested in image/test/ie-direction.test.ts.

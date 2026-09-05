@@ -102,6 +102,20 @@ describe("describeAnimationName - BAM", () => {
         ).toBe("G2: BG1 monster attack");
     });
 
+    /**
+     * The same withholding, for the other file the G-code table cannot be read over: one that PACKS
+     * several direction blocks. `G1` names one animation in the coarse scheme and the whole first half
+     * of a creature's moves in the packed families - so a file of six blocks captioned "stand (combat)"
+     * contradicts the block list beside it, which correctly calls block 0 the walk.
+     */
+    it("withholds the BG1 monster reading from a file that packs several blocks", () => {
+        const packed = { basename: "mogmg1.bam", sourceFormat: "bam" as const, sequences: [], scheme: "ie8" as const };
+
+        expect(describeAnimationName({ ...packed, blocks: 6 })).toBeUndefined();
+        // One block is the shape the table describes, and it still reads.
+        expect(describeAnimationName({ ...packed, blocks: 1 })).toBe("G1: BG1 monster stand (combat)");
+    });
+
     it("decodes the character-animation scheme", () => {
         expect(bam("chmf4a5.bam")).toBe("human male fighter, plate mail - attack (1-handed thrust)");
         expect(bam("cimt1sx.bam")).toBe("halfling male thief/bard, no armor - shoot (crossbow)");

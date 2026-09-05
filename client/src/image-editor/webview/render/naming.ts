@@ -22,10 +22,12 @@ export function describeAnimationName(view: {
     /** The block scheme the cycle structure resolved to, where one did - it decides which naming
      *  families a name can belong to. */
     scheme?: IeScheme;
+    /** How many direction blocks the file holds, where that was resolved - see `describeBam`. */
+    blocks?: number;
 }): string | undefined {
     const stem = view.basename.replace(/\.[^.]+$/, "").toLowerCase();
     if (view.sourceFormat === "frm") return describeFrm(stem, view.dirName, view.sequences);
-    return describeBam(stem, view.scheme);
+    return describeBam(stem, view.scheme, view.blocks);
 }
 
 // ---- FRM (Fallout) ----
@@ -293,7 +295,7 @@ function charSchemeDetail(action: string, detail: string): string | null | undef
     return detail === "" ? null : undefined;
 }
 
-function describeBam(stem: string, scheme?: IeScheme): string | undefined {
+function describeBam(stem: string, scheme?: IeScheme, blocks?: number): string | undefined {
     // `ca` is matched ahead of the single letters so a cast file does not read as action C; the misc
     // action carries `1` plus an optional second digit (G1, G11-G19), so the digits bind greedily.
     const charMatch = /^c([dheio])([fm])([bcfmtw])([1-9])(ca|a|s|w|g1)([1-9asx]?)(e?)$/.exec(stem);
@@ -321,11 +323,13 @@ function describeBam(stem: string, scheme?: IeScheme): string | undefined {
         return `${who}, ${BAM_ARMOR[armor]} - inventory paperdoll`;
     }
 
-    // The G-code table belongs to the coarse scheme. The later monster families reuse the same tokens
-    // for different block sets, so a file whose structure resolved as fine is deliberately left
-    // undecoded rather than described as something it is not; its blocks are named by the rose's own
-    // group labels instead.
-    const gMatch = scheme === "ie9" ? null : /^.{3,}g(2[1-6]?|1[1-5]?)(e?)$/.exec(stem);
+    // The G-code table belongs to the coarse scheme, and to a file holding ONE direction block. The later
+    // monster families reuse the same tokens for different block sets, and the packed families put a
+    // creature's whole first half of moves in `G1` - so a file that resolved as fine, or that packs more
+    // than one block, is left undecoded rather than described as something it is not. Its blocks are named
+    // by the rose's own group labels instead, which is where a packed file's meaning actually lives.
+    const packed = blocks !== undefined && blocks > 1;
+    const gMatch = scheme === "ie9" || packed ? null : /^.{3,}g(2[1-6]?|1[1-5]?)(e?)$/.exec(stem);
     if (gMatch) {
         const [, code = "", east = ""] = gMatch;
         const label = BAM_G_CODES[code];

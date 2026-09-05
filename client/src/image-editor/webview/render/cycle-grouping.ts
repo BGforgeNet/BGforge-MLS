@@ -1,10 +1,10 @@
 /**
  * Cheap heuristics for a BAM that packs more than one directional set into its flat cycle list - most
  * often an IE creature animation (actions x directions stored as ~N numbered cycles with no metadata
- * saying which cycle is which). A BAM carries NO sequence or direction tag, so this can only GUESS from
- * the cycle structure; the true layout lives in external IE animation tables (animate.ids / per-animation
- * INIs), not in the file. Detection only seeds defaults - the user confirms/overrides via the layout
- * (rose/grid) selector and the manual grid-columns control. The direction-block interpretation itself
+ * saying which cycle is which). A BAM carries NO sequence or direction tag, so without a resolved scheme
+ * this can only GUESS from the cycle structure; the true layout lives in external IE animation tables
+ * (animate.ids / per-animation INIs), not in the file. Detection seeds defaults - the user confirms or
+ * overrides via the layout (rose/grid) selector and the grid-columns control. The interpretation itself
  * lives in the library (@bgforge/image/ie-direction), where the BAM parser resolves meta.directionLayout
  * from it; the block NAMES live in @bgforge/animation/group-labels, which the set browser needs too. This
  * module keeps the webview-only presentation heuristics (grid columns, option text).
@@ -19,6 +19,10 @@ export interface CycleGridAnalysis {
      *  Biased to the IE 8-direction norm (then 6), preferring a count that tiles evenly. 0 when a single
      *  set. */
     suggestedColumns: number;
+    /** True when a scheme supplied the block size, so the numbers above are a division rather than a
+     *  guess. The hint the user reads turns on this: it is the difference between telling them to lay
+     *  the blocks out by hand and showing them the structure that was read. */
+    resolved: boolean;
 }
 
 // A single directional set is at most 8 cycles (IE's 8 compass directions); anything larger is multiple
@@ -32,12 +36,25 @@ export function analyzeCycleGrid(cycleCount: number, scheme?: IeScheme): CycleGr
     if (stride !== undefined) {
         const blocks = Math.ceil(cycleCount / stride);
         return blocks > 1
-            ? { multiSequence: true, suggestedColumns: stride }
-            : { multiSequence: false, suggestedColumns: 0 };
+            ? { multiSequence: true, suggestedColumns: stride, resolved: true }
+            : { multiSequence: false, suggestedColumns: 0, resolved: true };
     }
-    if (cycleCount <= MAX_SINGLE_DIRECTION_SET) return { multiSequence: false, suggestedColumns: 0 };
+    if (cycleCount <= MAX_SINGLE_DIRECTION_SET) {
+        return { multiSequence: false, suggestedColumns: 0, resolved: false };
+    }
     const suggestedColumns = cycleCount % 8 === 0 ? 8 : cycleCount % 6 === 0 ? 6 : 8;
-    return { multiSequence: true, suggestedColumns };
+    return { multiSequence: true, suggestedColumns, resolved: false };
+}
+
+/** The sentence above the columns box. A resolved analysis has already read the file's block structure,
+ *  so it reports it; only an unresolved one asks the reader to work the layout out. Takes a
+ *  multi-sequence analysis - the only kind the control is shown for - so the column count is nonzero. */
+export function cycleGridHint(cycleCount: number, analysis: CycleGridAnalysis): string {
+    if (!analysis.resolved) {
+        return `${cycleCount} cycles - looks like a multi-sequence animation (e.g. an IE creature: actions x directions). A BAM names no directions, so the column count is a guess:`;
+    }
+    const blocks = Math.ceil(cycleCount / analysis.suggestedColumns);
+    return `${cycleCount} cycles - ${blocks} blocks of ${analysis.suggestedColumns}, read from the file's own cycle structure:`;
 }
 
 /** Option text for one direction group - shared by the webview's group select and the host's FRM
