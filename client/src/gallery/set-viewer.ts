@@ -8,7 +8,7 @@
  * is what lets it be tested without a webview.
  */
 import { type Game } from "@bgforge/binary";
-import { composeQuadrants } from "@bgforge/image";
+import { composeParts } from "@bgforge/image";
 import { ImageDocumentModel } from "../image-editor/document-model";
 import { type AnimationView } from "../image-editor/webview/messages";
 import { type AnimationSet } from "../ie-resources/animation-index";
@@ -104,7 +104,7 @@ function stanceModel(game: Game, stance: SetStance): ImageDocumentModel | undefi
         const animation = part.indexedAnimation();
         return animation === undefined ? [] : [animation];
     });
-    const composed = indexed.length === parts.length ? composeQuadrants(indexed) : undefined;
+    const composed = indexed.length === parts.length ? composeParts(indexed) : undefined;
     // Composition refuses parts whose cycles disagree. Falling back to the first part draws a corner,
     // which is wrong but visible - and better than a stance that silently draws nothing.
     return composed === undefined ? first : ImageDocumentModel.fromAnimation(composed, `${stance.resref}.BAM`);

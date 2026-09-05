@@ -22,6 +22,15 @@ export type Layout =
     | "cycles"
     /** `<resref>G<cycle><quadrant>` - each cycle split across four files. */
     | "quadrant"
+    /**
+     * `<resref><stance><tile><facing>` - a 3x3 grid of tiles, one file per tile PER FACING.
+     *
+     * The largest creatures ship this way: a file holds the whole cycle table but draws only the one cycle
+     * its name's last two digits number, leaving the rest as single-pixel placeholders. So one stance is
+     * nine tiles times as many facings as it stores - up to 243 files - and a picture is the nine tiles of
+     * one facing laid side by side.
+     */
+    | "pieces"
     /** `<resref><code>` for a fixed set of two-character action codes. */
     | "actions"
     /**
@@ -50,7 +59,9 @@ const FIXED: Readonly<Record<string, Layout>> = {
     monster_ankheg: "cycles",
     monster_large: "cycles",
     monster_quadrant: "quadrant",
-    multi_new: "quadrant",
+    // Not `pieces`, though most of its animations tile: one of them ships quadrant files instead, so the
+    // section does not settle the layout and the archive has to.
+    multi_new: "mixed",
     monster_icewind: "mixed",
     monster_large16: "mixed",
 };

@@ -101,6 +101,15 @@ export interface RoseTile {
 export interface GridTile {
     seq: SequenceView;
     index: number;
+    /**
+     * The direction this tile draws, where the caller resolved one.
+     *
+     * An IE cycle carries no facing of its own, so a grid built straight from a file's sequences has
+     * none and labels by index. A caller that already knows the band - the gallery, which resolves it
+     * host-side from the animation's declared type - passes it here rather than letting the label claim
+     * a cycle number the tile's position does not name.
+     */
+    facing?: Facing;
 }
 
 type CompassLayout = { mode: "compass"; tiles: RoseTile[] };

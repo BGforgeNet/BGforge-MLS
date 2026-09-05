@@ -95,6 +95,36 @@ export function blankOpeningCycles(edge: number, blanks: number, real: number): 
     return serializeBamV1(animation);
 }
 
+/**
+ * An eight-cycle BAM in the shape a character direction band takes: the cycles named in `drawn` hold two
+ * distinct frames, the rest hold one frame repeated.
+ *
+ * That repetition is what the band reading calls padding - a stored IE character animation carries five
+ * facings and pads the three the engine mirrors - so a pair of these is how a base file and its mirrored
+ * twin differ, and the only shape that shows whether a member was banded as one picture or as one file.
+ */
+export function bandedPair(edge: number, drawn: readonly number[]): Uint8Array {
+    const palette = greyPalette();
+    for (let i = 1; i <= 2; i++) palette[i] = { r: i * 80, g: 255 - i * 80, b: i * 20, a: 255 };
+    const square = (index: number) => ({
+        width: edge,
+        height: edge,
+        pixels: new Uint8Array(edge * edge).fill(index),
+        offsetX: 0,
+        offsetY: 0,
+    });
+    const animation: IndexedAnimation = {
+        palette,
+        frames: [square(1), square(2)],
+        sequences: Array.from({ length: 8 }, (_, cycle) => ({
+            frameRefs: drawn.includes(cycle) ? [0, 1] : [0, 0],
+            facing: "none" as const,
+        })),
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    return serializeBamV1(animation);
+}
+
 /** A 2x2 BAM of four distinct palette indices, for asserting which sample a downscale keeps. */
 export function fourColour2x2(): Uint8Array {
     const palette = greyPalette();

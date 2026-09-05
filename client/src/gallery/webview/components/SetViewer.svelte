@@ -69,6 +69,16 @@
      */
     const gridTile = $derived(Math.max(TILE_BASE, widest + TILE_GAP));
 
+    /**
+     * Scale for the grid fallback, so a stance's facings stay a readable row rather than a long scroll.
+     *
+     * A composed sprite is several hundred pixels a side, and a stance is up to nine of them - drawn at
+     * true size the pane shows one facing and the reader has to scroll to compare. Capping the CELL at
+     * the rose's own tile size keeps both layouts the same size on screen; the sprite scales with it,
+     * since the cell footprint is `tileBase * zoom`.
+     */
+    const gridZoom = $derived(Math.min(1, ROSE_MAX_TILE / gridTile));
+
     /** Playback holds one frame index shared across every tile; each clamps to its own length. */
     let frame = $state(0);
     let playing = $state(true);
@@ -170,9 +180,9 @@
                     <CycleGrid
                         view={animation}
                         {loadedPixels}
-                        tiles={tiles.map((tile, index) => ({ seq: tile.seq, index }))}
+                        tiles={tiles.map((tile, index) => ({ seq: tile.seq, index, facing: tile.facing }))}
                         {frame}
-                        zoom={1}
+                        zoom={gridZoom}
                         columns={0}
                         tileBase={gridTile}
                     />

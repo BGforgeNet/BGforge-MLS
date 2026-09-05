@@ -66,16 +66,19 @@ export interface SetStance {
 /**
  * Every stance a set's members offer, in member order.
  *
- * `bandsFor` reads and bands one file; a member it cannot answer for is dropped rather than listed, since
- * a row that resolves to nothing is worse than no row. Bands with no drawable facing go the same way.
+ * `bandsFor` bands one MEMBER - every file it draws, not only the first. Which facings a band stores is
+ * read off content, so a member whose art is split across files has to be banded as the whole picture:
+ * banding the first file alone reports the facings that file happens to hold. A member it cannot answer
+ * for is dropped rather than listed, since a row that resolves to nothing is worse than no row. Bands
+ * with no drawable facing go the same way.
  */
 export function stancesOfMembers(
     members: readonly SchemeMember[],
-    bandsFor: (resref: string) => FileBands | undefined,
+    bandsFor: (member: SchemeMember) => FileBands | undefined,
 ): SetStance[] {
     const stances: SetStance[] = [];
     for (const member of members) {
-        const file = bandsFor(member.resref);
+        const file = bandsFor(member);
         if (file === undefined) continue;
         const labels = ieGroupLabels(member.resref, file.bands.length, file.scheme);
         for (const [band, slots] of file.bands.entries()) {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Frame, IndexedAnimation, Rgba } from "../src/model/animation.ts";
-import { composeQuadrants } from "../src/model/quadrants.ts";
+import { composeParts } from "../src/model/compose-parts.ts";
 
 function palette(): Rgba[] {
     return Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
@@ -30,9 +30,9 @@ function quadrantParts(): IndexedAnimation[] {
     ];
 }
 
-describe("composeQuadrants", () => {
+describe("composeParts", () => {
     test("unions the parts into one frame that keeps the shared anchor", () => {
-        const composed = composeQuadrants(quadrantParts());
+        const composed = composeParts(quadrantParts());
         const first = composed?.frames[0];
         // x spans -4..3 and y spans -4..1, so 7x5 with the anchor 4 in and 4 down.
         expect(first?.width).toBe(7);
@@ -42,7 +42,7 @@ describe("composeQuadrants", () => {
     });
 
     test("places each part in its own quarter", () => {
-        const composed = composeQuadrants(quadrantParts());
+        const composed = composeParts(quadrantParts());
         const f = composed!.frames[0]!;
         const at = (x: number, y: number): number => f.pixels[y * f.width + x]!;
         expect(at(0, 0)).toBe(11); // top-left part
@@ -56,7 +56,7 @@ describe("composeQuadrants", () => {
             animation([frame(2, 2, 2, 2, 1), frame(2, 2, 2, 2, 2)], [[0, 1], [1]]),
             animation([frame(2, 2, 0, 2, 3), frame(2, 2, 0, 2, 4)], [[0, 1], [1]]),
         ];
-        const composed = composeQuadrants(parts);
+        const composed = composeParts(parts);
         expect(composed?.sequences).toHaveLength(2);
         expect(composed?.sequences[0]?.frameRefs).toHaveLength(2);
         expect(composed?.sequences[1]?.frameRefs).toHaveLength(1);
@@ -80,7 +80,7 @@ describe("composeQuadrants", () => {
                 ],
             ),
         ];
-        expect(composeQuadrants(parts)?.frames).toHaveLength(2);
+        expect(composeParts(parts)?.frames).toHaveLength(2);
     });
 
     test("does not let one part's transparent pixels erase another's image", () => {
@@ -89,19 +89,19 @@ describe("composeQuadrants", () => {
             animation([frame(2, 1, 2, 1, 7)], [[0]]),
             animation([{ ...frame(2, 1, 2, 1, 0), pixels: new Uint8Array([0, 0]) }], [[0]]),
         ];
-        const f = composeQuadrants(parts)!.frames[0]!;
+        const f = composeParts(parts)!.frames[0]!;
         expect([...f.pixels]).toEqual([7, 7]);
     });
 
     test("carries the parts' shared palette and transparent index", () => {
-        const composed = composeQuadrants(quadrantParts());
+        const composed = composeParts(quadrantParts());
         expect(composed?.palette).toHaveLength(256);
         expect(composed?.meta.transparentIndex).toBe(0);
         expect(composed?.meta.sourceFormat).toBe("bam");
     });
 
     test("a lone part composes to an animation of the same shape", () => {
-        const composed = composeQuadrants([animation([frame(3, 2, 1, 1, 5)], [[0]])]);
+        const composed = composeParts([animation([frame(3, 2, 1, 1, 5)], [[0]])]);
         expect(composed?.frames[0]?.width).toBe(3);
         expect(composed?.frames[0]?.offsetX).toBe(1);
         expect(composed?.sequences[0]?.frameRefs).toEqual([0]);
@@ -109,19 +109,66 @@ describe("composeQuadrants", () => {
 
     test("refuses parts whose cycles do not line up, rather than drawing a mismatch", () => {
         const parts = [animation([frame(2, 2, 2, 2, 1)], [[0]]), animation([frame(2, 2, 0, 2, 2)], [[0], [0]])];
-        expect(composeQuadrants(parts)).toBeUndefined();
+        expect(composeParts(parts)).toBeUndefined();
     });
 
-    test("refuses a cycle whose parts hold different frame counts", () => {
+    test("refuses a cycle two parts both draw at different lengths", () => {
+        // Both hold distinct frames, so neither is a pad and the lengths are a real disagreement.
         const parts = [
-            animation([frame(2, 2, 2, 2, 1), frame(2, 2, 2, 2, 2)], [[0, 1]]),
-            animation([frame(2, 2, 0, 2, 3)], [[0]]),
+            animation([frame(2, 2, 2, 2, 1), frame(2, 2, 2, 2, 2), frame(2, 2, 2, 2, 3)], [[0, 1, 2]]),
+            animation([frame(2, 2, 0, 2, 4), frame(2, 2, 0, 2, 5)], [[0, 1]]),
         ];
-        expect(composeQuadrants(parts)).toBeUndefined();
+        expect(composeParts(parts)).toBeUndefined();
+    });
+
+    // The shape the older character files ship in: one file holds the facings the engine mirrors for
+    // everyone else, so each cycle is drawn by exactly one of the pair and left empty by the other.
+    test("takes a cycle from whichever part draws it", () => {
+        const west = animation([frame(2, 2, 2, 2, 11)], [[0], []]);
+        const east = animation([frame(2, 2, 2, 2, 22)], [[], [0]]);
+
+        const composed = composeParts([west, east]);
+
+        expect(composed?.sequences.map((s) => s.frameRefs.length)).toEqual([1, 1]);
+        const [first, second] = composed!.sequences.map((s) => composed!.frames[s.frameRefs[0]!]!);
+        expect(first?.pixels[0]).toBe(11);
+        expect(second?.pixels[0]).toBe(22);
+    });
+
+    // The shape the shipped files actually take: a part that does not draw a cycle pads its slot with one
+    // frame repeated rather than leaving it empty, at a length that has nothing to do with the twin's.
+    test("ignores a padded cycle in favour of the part that draws it", () => {
+        const west = animation(
+            [frame(2, 2, 2, 2, 11), frame(2, 2, 2, 2, 12), frame(6, 6, 3, 3, 99)],
+            [
+                [0, 1],
+                [2, 2, 2],
+            ],
+        );
+        const east = animation(
+            [frame(6, 6, 3, 3, 88), frame(2, 2, 2, 2, 21), frame(2, 2, 2, 2, 22)],
+            [
+                [0, 0, 0],
+                [1, 2],
+            ],
+        );
+
+        const composed = composeParts([west, east]);
+
+        expect(composed?.sequences.map((s) => s.frameRefs.length)).toEqual([2, 2]);
+        // Each cycle draws only its own part's art: the other's 6x6 pad would have grown both frames.
+        expect(composed?.frames[composed.sequences[0]!.frameRefs[0]!]?.width).toBe(2);
+        expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(21);
+    });
+
+    test("still refuses parts that hold different numbers of cycles", () => {
+        // An empty cycle is an absence; a missing cycle is a disagreement about what the file even holds.
+        const parts = [animation([frame(2, 2, 2, 2, 1)], [[0], []]), animation([frame(2, 2, 0, 2, 2)], [[0]])];
+        expect(composeParts(parts)).toBeUndefined();
     });
 
     test("refuses an empty part list", () => {
-        expect(composeQuadrants([])).toBeUndefined();
+        expect(composeParts([])).toBeUndefined();
     });
 
     test("skips a zero-area part rather than letting it grow the bounding box", () => {
@@ -129,7 +176,7 @@ describe("composeQuadrants", () => {
             animation([frame(2, 2, 2, 2, 9)], [[0]]),
             animation([{ width: 0, height: 0, pixels: new Uint8Array(), offsetX: 40, offsetY: 40 }], [[0]]),
         ];
-        const f = composeQuadrants(parts)!.frames[0]!;
+        const f = composeParts(parts)!.frames[0]!;
         expect(f.width).toBe(2);
         expect(f.height).toBe(2);
     });

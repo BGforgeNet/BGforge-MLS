@@ -97,7 +97,9 @@ function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | unde
             reason: "no INI declares this animation and no table covers it",
         };
     }
-    if (section === "character") return { kind: "character" };
+    // `character_old` names its files exactly as `character` does; what it adds is a mirrored twin per
+    // file, which is a part of each member rather than a scheme of its own.
+    if (section === "character" || section === "character_old") return { kind: "character" };
     return {
         kind: "unimplemented",
         // A table row carries the layout's name but not the install's own type number; only an INI has that.

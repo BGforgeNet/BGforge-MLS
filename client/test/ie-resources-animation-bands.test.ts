@@ -68,7 +68,7 @@ describe("stancesOfMembers", () => {
                 { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
                 { label: "G2", resref: "MOGHG2", parts: ["MOGHG2"] },
             ],
-            (resref) => (resref === "MOGHG1" ? bands(6) : bands(2)),
+            (member) => (member.resref === "MOGHG1" ? bands(6) : bands(2)),
         );
         expect(stances).toHaveLength(8);
         expect(stances.at(-1)?.resref).toBe("MOGHG2");
@@ -80,7 +80,7 @@ describe("stancesOfMembers", () => {
                 { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
                 { label: "G9", resref: "MISSING", parts: ["MISSING"] },
             ],
-            (resref) => (resref === "MOGHG1" ? bands(1) : undefined),
+            (member) => (member.resref === "MOGHG1" ? bands(1) : undefined),
         );
         expect(stances.map((s) => s.resref)).toEqual(["MOGHG1"]);
     });

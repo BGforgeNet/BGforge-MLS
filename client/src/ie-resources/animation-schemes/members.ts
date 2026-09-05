@@ -76,6 +76,18 @@ function actionLabel(code: string): string {
 
 const QUADRANTS = [1, 2, 3, 4] as const;
 
+/** Stance groups a tiled animation can carry, and the 3x3 grid each one's picture is cut into. */
+const PIECE_STANCES = [1, 2, 3, 4, 5] as const;
+const TILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+/**
+ * The cycle each tile file draws, as its name's last two digits.
+ *
+ * Read as a cycle number rather than a facing: a stance storing more than nine cycles numbers the later
+ * ones 10-18 and 20-28, so the tens digit is part of the number and not a second dimension. Offering all
+ * three ranges costs only lookups - the archive decides which a given animation ships.
+ */
+const TILE_CYCLES = [0, 1, 2].flatMap((tens) => TILES.map((_, at) => `${tens}${at}`));
+
 function candidates(layout: Layout, resref: string): MemberShape[] {
     switch (layout) {
         case "bare":
@@ -88,6 +100,14 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
                 label: cycle,
                 parts: QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}`),
             }));
+        case "pieces":
+            // One member per stance group, drawing every tile of every facing that stance stores. They are
+            // pieces of one picture across the grid AND across the cycle table, so the caller composes the
+            // lot: a tile file's untouched cycles are placeholders that compose away.
+            return PIECE_STANCES.map((stance) => ({
+                label: `G${stance}`,
+                parts: TILE_CYCLES.flatMap((cycle) => TILES.map((tile) => `${resref}${stance}${tile}${cycle}`)),
+            }));
         case "actions":
             return Object.keys(ACTION_CODES).map((code) => ({
                 label: actionLabel(code),
@@ -96,12 +116,16 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
         case "mixed":
             return [
                 ...candidates("quadrant", resref),
+                ...candidates("pieces", resref),
                 ...candidates("cycles", resref),
                 ...candidates("actions", resref),
             ];
-        case "character":
         case "characterOld":
-            // Armour level is a dimension of its own, so those layouts resolve through `character.ts`.
+            // The base files are the character scheme's own; only the mirrored twin below is extra, and it
+            // is a part of its member rather than a member of its own.
+            return [];
+        case "character":
+            // Armour level is a dimension of its own, so that layout resolves through `character.ts`.
             return [];
     }
 }

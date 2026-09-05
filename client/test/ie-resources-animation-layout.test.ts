@@ -3,6 +3,9 @@ import { openGame } from "@bgforge/binary";
 import { layoutOf } from "../src/ie-resources/animation-schemes/layout";
 import { schemeMembers } from "../src/ie-resources/animation-schemes/members";
 import { parseAnimationIni } from "../src/ie-resources/animation-ini";
+import { buildAnimationIndex } from "../src/ie-resources/animation-index";
+import { tableForFlavour } from "../src/ie-resources/animation-tables";
+import { setTile } from "../src/gallery/set-tiles";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 
@@ -132,6 +135,39 @@ describe("action code names", () => {
 
 describe.skipIf(GAME === undefined)("over a real install", () => {
     /**
+     * The promise the gallery makes: if the install ships art for an animation, the list can open it.
+     *
+     * Asked of the ARCHIVE rather than of a section list, because the two ways a row draws nothing are not
+     * distinguishable from the declaration alone - a game's tables name animations belonging to other games
+     * in the family, and those legitimately have no files. Anything with files and no member is our gap.
+     */
+    it("resolves a member for every animation the install actually ships files for", () => {
+        const game = openGame(GAME!);
+        expect(game, `no game at ${GAME}`).toBeDefined();
+
+        const bams: string[] = [];
+        for (const ref of game!.list()) {
+            if (ref.ext?.toLowerCase() === "bam") bams.push(ref.resref.toUpperCase());
+        }
+        const sets = buildAnimationIndex(game!, tableForFlavour(game!.identity.flavour));
+        const exists = (resref: string): boolean => game!.canRead(resref, "bam");
+
+        const undrawn: string[] = [];
+        let shipping = 0;
+        for (const set of sets) {
+            const prefix = [...set.prefixByArmour.values()][0]?.toUpperCase();
+            if (prefix === undefined || !bams.some((name) => name.startsWith(prefix))) continue;
+            shipping += 1;
+            if (setTile(set, exists).resref === undefined) {
+                undrawn.push(`0x${set.id.toString(16)} ${set.name || set.code} (${prefix})`);
+            }
+        }
+        process.stdout.write(`  ${shipping - undrawn.length}/${shipping} animations with art resolve a file\n`);
+        expect(shipping, "no animation in this install ships art, so nothing was exercised").toBeGreaterThan(0);
+        expect(undrawn).toEqual([]);
+    });
+
+    /**
      * The claim these layouts make is that they name files the install has. A layout that named nothing would
      * show as an animation with no members - indistinguishable, in the panel, from one the install omits.
      */
@@ -163,7 +199,12 @@ describe.skipIf(GAME === undefined)("over a real install", () => {
         for (const [layout, tally] of byLayout) {
             process.stdout.write(`  ${layout}: ${tally.resolved}/${tally.claimed} resolve\n`);
         }
-        expect(claimed, "no animation claimed a layout, so nothing was exercised").toBeGreaterThan(0);
+        // A classic install ships no animation INIs at all - its declarations come from the vendored table -
+        // so zero here is a property of the game, not a failure. The sibling above covers those installs.
+        if (claimed === 0) {
+            process.stdout.write("  (this install declares no animation INIs)\n");
+            return;
+        }
         expect(resolved).toBeGreaterThan(0);
     });
 });

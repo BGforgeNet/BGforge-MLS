@@ -91,13 +91,54 @@ describe("setTile", () => {
         expect(setTile(setOf({ id: 0xe440 }), nothing).label).toBe("0xe440");
     });
 
-    it("carries the reason a set cannot be drawn, so the tile can say so", () => {
+    // The three reasons a row draws nothing are different answers to "what do I do about this?", and only
+    // the middle one is ours to fix.
+    it("says the naming is undeclared - not the animation - and offers the code to search on", () => {
+        // Every row that reaches this note IS named by the tables; what is missing is any statement of
+        // what its files are called.
+        const tile = setTile(
+            setOf({
+                code: "SPRI",
+                name: "FIRE_RING",
+                scheme: { kind: "unimplemented", scheme: undefined, reason: "no INI declaration" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("Nothing declares which files this animation draws (code SPRI).");
+        expect(tile.resref).toBeUndefined();
+    });
+
+    it("leaves the code out of that note where the tables name none", () => {
         const tile = setTile(
             setOf({ scheme: { kind: "unimplemented", scheme: undefined, reason: "no INI declaration" } }),
             nothing,
         );
-        expect(tile.unsupported).toBe("no INI declaration");
-        expect(tile.resref).toBeUndefined();
+        expect(tile.unsupported).toBe("Nothing declares which files this animation draws.");
+    });
+
+    it("keeps the layout's own reason where the layout is the thing we cannot read", () => {
+        const tile = setTile(
+            setOf({
+                prefixByArmour: new Map([[1, "MXXX"]]),
+                scheme: { kind: "unimplemented", scheme: undefined, reason: "the moon scheme is not implemented yet" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("the moon scheme is not implemented yet");
+    });
+
+    it("says the install ships no art where the layout is known and nothing resolves", () => {
+        // The common case by far, and the one that used to read as a missing feature: a game's tables name
+        // animations belonging to other games in the family.
+        const tile = setTile(
+            setOf({
+                prefixByArmour: new Map([[1, "MBAS"]]),
+                layout: "cycles",
+                scheme: { kind: "unimplemented", scheme: undefined, reason: "the monster_old scheme is not done" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("This install ships no files for this animation.");
     });
 
     it("drops the reason once a layout resolves, rather than saying so beside a working link", () => {
