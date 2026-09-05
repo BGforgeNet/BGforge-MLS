@@ -1,0 +1,105 @@
+/*
+ * Layout for the shared animation components: CompassRose, CycleGrid, SequenceTile, FrameCanvas.
+ *
+ * Extracted from the image editor's stylesheet when the gallery's set viewer became a second host for
+ * those components. The rules are part of the components' contract rather than either panel's chrome -
+ * the rose positions its cells with inline left/top, which do nothing without the absolute positioning
+ * below, so a panel that mounts the component and not this sheet renders every facing stacked in a
+ * column. Every webview that mounts them links this file; neither panel restates it.
+ */
+
+.compass-rose,
+.cycle-grid {
+    margin: auto;
+}
+.compass-rose {
+    /* Radial layout: cells are absolutely positioned on a circle by CompassRose (width/height set per
+       zoom there). */
+    position: relative;
+}
+.compass-cell {
+    position: absolute;
+    /* left/top already centre the cell on its circle point (CompassRose subtracts half a tile). No
+       transform here: a transformed cell becomes its own stacking context, which would defeat the
+       global backdrop-under-sprite layering of .frame-tile-bg / canvas. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cycle-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+/* Multi-sequence layout: pin to a fixed column count (set inline) so each row is one sequence and each
+   column a direction, instead of width-driven wrapping. grid-template-columns comes from the control. */
+.cycle-grid.fixed-columns {
+    display: grid;
+    justify-content: center;
+}
+.cycle-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+.cycle-cell-label {
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* ---- frame tile (one rendered frame within the rose/grid) ---- */
+.frame-tile {
+    position: relative;
+    box-sizing: border-box;
+}
+/* Backdrop/sprite layering: every tile backdrop at z-index 0, every canvas at 1, in ONE shared stacking
+   context (no cell or tile creates its own), so a neighbouring tile's backdrop can never paint over an
+   anchor-shifted canvas overhanging its 96px box. The backdrop value is the stage's --tile-bg. */
+.frame-tile-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--tile-bg, transparent);
+}
+.frame-tile canvas {
+    position: absolute;
+    z-index: 1;
+    image-rendering: pixelated;
+}
+/* Offset/center-anchor marker: a diagnostic crosshair, not editor chrome - a fixed accent color with
+   difference blending keeps it visible over any of the three preview backgrounds (transparent/
+   checkered/green), which a single theme color could not guarantee against all three. */
+/* left/top come from FrameCanvas (referenceMarkerPercent) so the marker sits on the frame's real anchor
+   per format - feet line for FRM, centre for BAM - not a fixed tile centre. translate centres it on that
+   point. */
+.frame-offset-marker {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    z-index: 2; /* above the z-index 1 canvases it diagnoses */
+    pointer-events: none;
+}
+.frame-offset-marker::before,
+.frame-offset-marker::after {
+    content: "";
+    position: absolute;
+    background: #ff0055;
+    mix-blend-mode: difference;
+}
+.frame-offset-marker::before {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+.frame-offset-marker::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+}

@@ -41,30 +41,49 @@ describe("schemeMembers", () => {
     };
 
     it("offers the resref itself where the layout carries no suffix", () => {
-        expect(schemeMembers("bare", "SNOMC", has("SNOMC"))).toEqual([{ label: "SNOMC", resref: "SNOMC" }]);
+        expect(schemeMembers("bare", "SNOMC", has("SNOMC"))).toEqual([
+            { label: "SNOMC", resref: "SNOMC", parts: ["SNOMC"] },
+        ]);
     });
 
     it("offers only the cycles the install ships", () => {
-        expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([{ label: "G1", resref: "MOGHG1" }]);
+        expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
+            { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
+        ]);
     });
 
-    it("offers each cycle's quadrants separately", () => {
-        expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG13"))).toEqual([
-            { label: "G11", resref: "MWYVG11" },
-            { label: "G13", resref: "MWYVG13" },
+    it("gathers a cycle's four quarters into ONE member", () => {
+        // The quarters are pieces of a single sprite, so offering them separately would offer corners.
+        expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"))).toEqual([
+            { label: "G1", resref: "MWYVG11", parts: ["MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"] },
         ]);
+    });
+
+    it("keeps a quadrant member the install has only some quarters of", () => {
+        // Drawing three quarters beats dropping the animation from the list entirely.
+        expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG13"))).toEqual([
+            { label: "G1", resref: "MWYVG11", parts: ["MWYVG11", "MWYVG13"] },
+        ]);
+    });
+
+    it("identifies a quadrant member by the first quarter the install actually has", () => {
+        expect(schemeMembers("quadrant", "MWYV", has("MWYVG13"))[0]?.resref).toBe("MWYVG13");
     });
 
     it("offers the action codes the animation carries and no others", () => {
         expect(schemeMembers("actions", "METN", has("METNWK", "METNDE"))).toEqual([
-            { label: "DE", resref: "METNDE" },
-            { label: "WK", resref: "METNWK" },
+            { label: "DE - die", resref: "METNDE", parts: ["METNDE"] },
+            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
         ]);
     });
 
     it("takes whichever family the files answer for, where the section mixes two", () => {
-        expect(schemeMembers("mixed", "MTAN", has("MTANG11"))).toEqual([{ label: "G11", resref: "MTANG11" }]);
-        expect(schemeMembers("mixed", "METN", has("METNWK"))).toEqual([{ label: "WK", resref: "METNWK" }]);
+        expect(schemeMembers("mixed", "MTAN", has("MTANG11", "MTANG12"))).toEqual([
+            { label: "G1", resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
+        ]);
+        expect(schemeMembers("mixed", "METN", has("METNWK"))).toEqual([
+            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
+        ]);
     });
 
     it("resolves nothing for an animation with no declared prefix", () => {
@@ -73,6 +92,41 @@ describe("schemeMembers", () => {
 
     it("leaves the armour-dimensioned layouts to the scheme that owns them", () => {
         expect(schemeMembers("character", "CHMB", has("CHMB1G1"))).toEqual([]);
+    });
+});
+
+describe("action code names", () => {
+    const has = (...names: string[]) => {
+        const set = new Set(names);
+        return (resref: string): boolean => set.has(resref);
+    };
+
+    it("names the stance a two-character code stands for", () => {
+        expect(schemeMembers("actions", "METN", has("METNWK"))).toEqual([
+            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
+        ]);
+        expect(schemeMembers("actions", "METN", has("METNDE", "METNGH"))).toEqual([
+            { label: "DE - die", resref: "METNDE", parts: ["METNDE"] },
+            { label: "GH - get hit", resref: "METNGH", parts: ["METNGH"] },
+        ]);
+    });
+
+    it("leaves a code the sources disagree on as the bare code", () => {
+        // CA/SP: the engine's playback order and IESDP's block names invert each other, so naming
+        // either one would ship a coin flip as a fact.
+        expect(schemeMembers("actions", "METN", has("METNCA"))).toEqual([
+            { label: "CA", resref: "METNCA", parts: ["METNCA"] },
+        ]);
+        expect(schemeMembers("actions", "METN", has("METNA3"))).toEqual([
+            { label: "A3", resref: "METNA3", parts: ["METNA3"] },
+        ]);
+    });
+
+    it("keeps the cycle and quadrant layouts on their file suffixes", () => {
+        // G-files pack several stances, so the FILE has no single stance name - the bands do.
+        expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
+            { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
+        ]);
     });
 });
 

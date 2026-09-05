@@ -32,6 +32,7 @@ export {
     type SequenceShape,
     interpretIeDirections,
 } from "./model/ie-direction.ts";
+export { composeQuadrants } from "./model/quadrants.ts";
 
 // Format codecs.
 export { type BmpImage, readBmpRgba } from "./bmp/parse.ts";

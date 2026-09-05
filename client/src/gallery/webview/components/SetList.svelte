@@ -3,7 +3,9 @@
 
     interface Props {
         sets: SetTile[];
-        onOpen: (resref: string) => void;
+        /** Opens the viewer page on this set - by id, since the page is about the whole set rather than
+         *  the one file the row previews. */
+        onOpen: (id: number) => void;
         /** The animation the panel was opened on - its row is marked so the reader can see where they landed. */
         focus?: number;
     }
@@ -25,8 +27,8 @@
                 class:setfocus={set.id === focus}
                 aria-current={set.id === focus ? "true" : undefined}
                 disabled={set.resref === undefined}
-                title={set.unsupported ?? `Open ${set.resref}`}
-                onclick={() => set.resref && onOpen(set.resref)}
+                title={set.unsupported ?? `View ${set.label}`}
+                onclick={() => set.resref && onOpen(set.id)}
             >
                 <span class="setname">{set.label}</span>
                 <span class="setid">{hex(set.id)}</span>

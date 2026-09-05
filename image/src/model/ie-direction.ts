@@ -15,6 +15,15 @@ const IE_SLOT_FACINGS: Facing[] = ["S", "SW", "W", "NW", "N", "NE", "E", "SE"];
  */
 const IE_WEST_ARC_FACINGS: Facing[] = ["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"];
 
+/**
+ * The whole 16-point wheel, continuing the west arc's order back round through the east.
+ *
+ * Not a scheme the interpreter can choose: a 16-cycle band divides evenly into two 8-slot blocks, so
+ * structure alone cannot tell the readings apart. It is reachable only through `ieBandsOfStride`, whose
+ * caller holds the animation's declared type and therefore knows.
+ */
+const IE_WHEEL_FACINGS: Facing[] = [...IE_WEST_ARC_FACINGS, "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE"];
+
 /** Cycles per direction block in the 8-slot scheme. */
 export const IE_STRIDE = 8;
 /** Slots 0-4 are the stored west arc (S..N); 5-7 are the eastern slots a base file leaves as dummies. */
@@ -107,26 +116,90 @@ export function interpretIeDirections(sequences: SequenceShape[], frameCount: nu
     const shape = chooseScheme(sequences, lengths, realRefs);
     if (shape === undefined) return undefined;
 
-    const stride = shape.facings.length;
-    const groupCount = Math.ceil(sequences.length / stride);
     const detected =
         shape.scheme === "ie8"
             ? detectBaseFile(lengths, realRefs, sequences)
-            : blockArcUniformity(lengths, stride, shape.arc) === 1;
+            : blockArcUniformity(lengths, shape.facings.length, shape.arc) === 1;
 
+    // In a detected base file the east slots hold filler frames, not east-facing data - drop them.
+    const groups = partitionBlocks(shape.facings, lengths, detected ? shape.arc : undefined);
+    return { groups, scheme: shape.scheme, detected };
+}
+
+/**
+ * Cut a cycle list into blocks of one facing each, dropping cycles that hold no frames.
+ *
+ * `arc`, when given, is how many leading slots hold real per-direction cycles; the rest are the unstored
+ * east and are dropped. Absent, every non-empty slot is kept.
+ */
+function partitionBlocks(facings: Facing[], lengths: number[], arc?: number): IeDirectionSlot[][] {
+    const stride = facings.length;
     const groups: IeDirectionSlot[][] = [];
-    for (let g = 0; g < groupCount; g++) {
+    for (let g = 0; g < Math.ceil(lengths.length / stride); g++) {
         const slots: IeDirectionSlot[] = [];
-        for (const [slot, facing] of shape.facings.entries()) {
+        for (const [slot, facing] of facings.entries()) {
             const seqIndex = g * stride + slot;
             if ((lengths[seqIndex] ?? 0) === 0) continue;
-            // In a detected base file the east slots hold filler frames, not east-facing data - drop them.
-            if (detected && slot >= shape.arc) continue;
+            if (arc !== undefined && slot >= arc) continue;
             slots.push({ seqIndex, facing });
         }
         groups.push(slots);
     }
-    return { groups, scheme: shape.scheme, detected };
+    return groups;
+}
+
+/** The facing order each stride stores its cycles in. */
+const FACINGS_BY_STRIDE = new Map<number, Facing[]>([
+    [IE_SLOT_FACINGS.length, IE_SLOT_FACINGS],
+    [IE_WEST_ARC_FACINGS.length, IE_WEST_ARC_FACINGS],
+    [IE_WHEEL_FACINGS.length, IE_WHEEL_FACINGS],
+]);
+
+/**
+ * Cut a cycle list into direction bands of a stride the CALLER names, rather than one inferred.
+ *
+ * `interpretIeDirections` reads the stride off block structure, which is all a lone file offers - and a
+ * 16-cycle band divides evenly into two 8-slot blocks, so it reads such a file as twice as many stances
+ * at half the facings. A caller holding the animation's declared type knows the stride outright and
+ * should say so. Returns undefined for a stride no IE scheme stores.
+ */
+export function ieBandsOfStride(
+    sequences: SequenceShape[],
+    frameCount: number,
+    stride: number,
+): IeDirectionSlot[][] | undefined {
+    const facings = FACINGS_BY_STRIDE.get(stride);
+    if (facings === undefined || sequences.length === 0) return undefined;
+    const realRefs = (seq: SequenceShape): number[] => seq.frameRefs.filter((r) => r >= 0 && r < frameCount);
+    const lengths = sequences.map((seq) => realRefs(seq).length);
+    return partitionBlocks(facings, lengths, storedArc(stride, sequences, realRefs));
+}
+
+/**
+ * How many leading slots hold real per-direction cycles.
+ *
+ * How much of the wheel a file stores varies with the animation, not just its stride - one quadrant set
+ * ships all sixteen facings while its sibling ships ten and pads the rest - so this is read off content
+ * rather than tabled. A slot is padding when its cycle is one frame repeated (or empty), the same
+ * convention the base-file fingerprint reads; a slot only counts as unstored when EVERY band pads it,
+ * so a stance whose east genuinely holds one frame does not drop that facing for the others.
+ */
+function storedArc(stride: number, sequences: SequenceShape[], realRefs: (seq: SequenceShape) => number[]): number {
+    const bands = Math.ceil(sequences.length / stride);
+    let arc = stride;
+    for (let slot = stride - 1; slot >= 0; slot--) {
+        let padded = true;
+        for (let band = 0; band < bands && padded; band++) {
+            const seq = sequences[band * stride + slot];
+            if (seq === undefined) continue;
+            // `every` is true for an empty cycle, which is the other shape padding takes.
+            padded = realRefs(seq).every((ref, _, refs) => ref === refs[0]);
+        }
+        if (!padded) break;
+        arc = slot;
+    }
+    // Every slot flat is a still animation, not a file that stores no directions at all.
+    return arc === 0 ? stride : arc;
 }
 
 /**

@@ -17,6 +17,7 @@ import { characterFacetsOf, type CharacterFacets } from "./animation-facets";
 import { type AnimationTable, type TableAnimation } from "./animation-tables/table";
 import { tableForFlavour } from "./animation-tables";
 import { type Layout, layoutOf } from "./animation-schemes/layout";
+import { declaredStride } from "./animation-schemes/bands";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
@@ -48,6 +49,11 @@ export interface AnimationSet {
      * section names the scheme, the layout decides what to open, and several sections share a layout.
      */
     layout?: Layout;
+    /**
+     * Cycles per direction band, where the section settles it; absent leaves the reading to structural
+     * inference. Resolved here rather than per consumer so the section itself stays private to the index.
+     */
+    bandStride?: number;
     /** Present only where the id declares them - a monster or a named individual has none. */
     facets?: CharacterFacets;
 }
@@ -145,6 +151,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
         const iniBytes = read(iniResref(id), "ini");
         const ini = iniBytes === undefined ? undefined : parseAnimationIni(iniBytes);
         const tabled = ini === undefined ? table?.get(id) : undefined;
+        const stride = declaredStride(ini === undefined ? tabled?.section : ini.section);
         sets.push({
             id,
             code: codes.get(id) ?? "",
@@ -153,6 +160,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
             scheme: schemeFrom(ini, tabled),
             ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
+            ...(stride === undefined ? {} : { bandStride: stride }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),
         });
     }

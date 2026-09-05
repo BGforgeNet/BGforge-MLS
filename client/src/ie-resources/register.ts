@@ -125,6 +125,13 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     revealResource: (resref: string, ext: string) => Promise<void>;
     /** The open install, for a consumer that needs the `Game` itself rather than one resolved lookup. */
     gameSession: () => { dir: string; game: Game } | undefined;
+    /**
+     * Fires after the open install changes - opened, replaced, or closed.
+     *
+     * For a consumer that reads the game ONCE rather than per lookup, and so cannot self-correct when the
+     * view opens a game later. The lookups above need nothing: each asks `currentGame` at call time.
+     */
+    onDidChangeGame: vscode.Event<void>;
 } {
     // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
     // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
@@ -161,6 +168,9 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         return checkedValid ? dir : undefined;
     };
     const fallbackGameDir = (): string | undefined => configuredGameDir() ?? currentGame.current?.dir;
+
+    const gameChanged = new vscode.EventEmitter<void>();
+    context.subscriptions.push(gameChanged);
 
     // Built once and shared: the resolver is also the value this returns to the binary editor, and the picker
     // needs both halves - search to find a string, resolve to show the one a typed number already names.
@@ -241,6 +251,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await setHasGame(false);
         tree.refresh();
         updateHeader();
+        gameChanged.fire();
     };
 
     const openGameDir = async (dir: string): Promise<void> => {
@@ -277,6 +288,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await setHasGame(true);
         tree.refresh();
         updateHeader();
+        gameChanged.fire();
     };
 
     /**
@@ -471,6 +483,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
          * game the user has since switched away from, and neither is an error worth a popup.
          */
         gameSession: () => currentGame.current,
+        onDidChangeGame: gameChanged.event,
         revealResource: async (resref: string, ext: string): Promise<void> => {
             const node = tree.resourceNode(resref, ext);
             if (node === undefined) return;

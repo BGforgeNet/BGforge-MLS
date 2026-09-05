@@ -83,6 +83,7 @@ export async function activate(context: ExtensionContext) {
     registerGallery(context, {
         gameSession: gameLookups.gameSession,
         revealResource: gameLookups.revealResource,
+        onDidChangeGame: gameLookups.onDidChangeGame,
     });
 
     // If the extension is launched in debug mode then the debug server options are used

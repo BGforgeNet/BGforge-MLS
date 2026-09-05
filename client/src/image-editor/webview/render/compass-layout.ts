@@ -1,5 +1,5 @@
 import type { Facing } from "@bgforge/image";
-import type { IeDirectionAnalysis } from "@bgforge/image/ie-direction";
+import type { IeDirectionAnalysis, IeDirectionSlot } from "@bgforge/image/ie-direction";
 import type { AnimationView, SequenceView } from "../messages";
 
 /**
@@ -148,7 +148,17 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
 
 /** Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction). */
 export function ieRoseTiles(view: AnimationView, interpretation: IeDirectionAnalysis, group: number): RoseTile[] {
-    const slots = interpretation.groups[group] ?? [];
+    return roseTilesForSlots(view, interpretation.groups[group] ?? []);
+}
+
+/**
+ * Rose tiles for direction slots a caller already holds.
+ *
+ * Split from `ieRoseTiles` for the gallery's set viewer, which resolves a stance's band host-side from the
+ * animation's declared type rather than from a lone file's block structure - so it has the slots without
+ * ever holding an `IeDirectionAnalysis`. Both routes build a tile the same way.
+ */
+export function roseTilesForSlots(view: AnimationView, slots: readonly IeDirectionSlot[]): RoseTile[] {
     return slots.flatMap((slot) => {
         const seq = view.sequences[slot.seqIndex];
         const pos = compassPosition(slot.facing);

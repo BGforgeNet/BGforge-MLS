@@ -4,6 +4,7 @@ import {
     directionLayoutOf,
     ieBlockSize,
     ieSchemeOf,
+    ieBandsOfStride,
     interpretIeDirections,
     type SequenceShape,
 } from "../src/model/ie-direction.ts";
@@ -199,5 +200,114 @@ describe("interpretIeDirections", () => {
         for (let slot = 0; slot < 5; slot++) sequences[8 + slot] = seq([]);
         const result = interpretIeDirections(sequences, frameCount);
         expect(result?.detected).toBe(false);
+    });
+});
+
+describe("ieBandsOfStride", () => {
+    /** Five stances at sixteen facings each - the shape a quadrant monster's G2 file actually holds. */
+    function bands16(stances: number): { sequences: SequenceShape[]; frameCount: number } {
+        const sequences: SequenceShape[] = [];
+        for (let band = 0; band < stances; band++) {
+            for (let slot = 0; slot < 16; slot++) {
+                const first = 1 + band * 40 + slot * 2;
+                sequences.push(seq([first, first + 1]));
+            }
+        }
+        return { sequences, frameCount: stances * 40 + 1 };
+    }
+
+    test("cuts the list at the stride the caller names, not the one inference would pick", () => {
+        const { sequences, frameCount } = bands16(5);
+        // Inference reads 80 cycles as ten 8-blocks, halving every stance.
+        expect(interpretIeDirections(sequences, frameCount)?.groups).toHaveLength(10);
+        const bands = ieBandsOfStride(sequences, frameCount, 16);
+        expect(bands).toHaveLength(5);
+        expect(bands?.[0]).toHaveLength(16);
+    });
+
+    test("names all sixteen points of the wheel, in stored-cycle order", () => {
+        const { sequences, frameCount } = bands16(1);
+        expect(ieBandsOfStride(sequences, frameCount, 16)?.[0]?.map((s) => s.facing)).toEqual([
+            "S",
+            "SSW",
+            "SW",
+            "WSW",
+            "W",
+            "WNW",
+            "NW",
+            "NNW",
+            "N",
+            "NNE",
+            "NE",
+            "ENE",
+            "E",
+            "ESE",
+            "SE",
+            "SSE",
+        ]);
+    });
+
+    test("indexes back into the caller's own cycle list", () => {
+        const { sequences, frameCount } = bands16(3);
+        expect(ieBandsOfStride(sequences, frameCount, 16)?.[2]?.[0]?.seqIndex).toBe(32);
+    });
+
+    test("drops a cycle with no frames rather than drawing an empty facing", () => {
+        const { sequences, frameCount } = bands16(1);
+        sequences[3] = seq([]);
+        const band = ieBandsOfStride(sequences, frameCount, 16)?.[0];
+        expect(band).toHaveLength(15);
+        expect(band?.map((s) => s.facing)).not.toContain("WSW");
+    });
+
+    test("still serves the strides inference already knows, so one partitioner covers both", () => {
+        const { sequences, frameCount } = baseFileSequences(2);
+        expect(ieBandsOfStride(sequences, frameCount, 8)).toHaveLength(2);
+        expect(ieBandsOfStride(sequences, frameCount, 8)?.[0]?.[0]?.facing).toBe("S");
+    });
+
+    test("refuses a stride no IE scheme stores", () => {
+        const { sequences, frameCount } = bands16(1);
+        expect(ieBandsOfStride(sequences, frameCount, 7)).toBeUndefined();
+    });
+});
+
+describe("ieBandsOfStride filler slots", () => {
+    /** One band of `stride` cycles: `stored` real varied cycles, the rest one repeated filler frame. */
+    function band(stride: number, stored: number, bands = 1): { sequences: SequenceShape[]; frameCount: number } {
+        const sequences: SequenceShape[] = [];
+        for (let b = 0; b < bands; b++) {
+            for (let slot = 0; slot < stride; slot++) {
+                const first = 1 + b * 100 + slot * 3;
+                sequences.push(slot < stored ? seq([first, first + 1, first + 2]) : seq([0, 0, 0]));
+            }
+        }
+        return { sequences, frameCount: bands * 100 + 1 };
+    }
+
+    test("drops the trailing slots every band fills with one repeated frame", () => {
+        const { sequences, frameCount } = band(8, 5, 3);
+        const bands = ieBandsOfStride(sequences, frameCount, 8);
+        expect(bands?.map((b) => b.length)).toEqual([5, 5, 5]);
+        expect(bands?.[0]?.map((s) => s.facing)).toEqual(["S", "SW", "W", "NW", "N"]);
+    });
+
+    test("keeps all sixteen when the file genuinely stores the eastern half", () => {
+        const { sequences, frameCount } = band(16, 16);
+        expect(ieBandsOfStride(sequences, frameCount, 16)?.[0]).toHaveLength(16);
+    });
+
+    test("drops the six the wheel leaves unstored when they are filler", () => {
+        const { sequences, frameCount } = band(16, 10, 5);
+        const bands = ieBandsOfStride(sequences, frameCount, 16);
+        expect(bands?.map((b) => b.length)).toEqual([10, 10, 10, 10, 10]);
+        expect(bands?.[0]?.at(-1)?.facing).toBe("NNE");
+    });
+
+    test("keeps a filler-looking slot that only ONE band leaves flat", () => {
+        // A stance whose east really is one frame does not license dropping that facing everywhere.
+        const { sequences, frameCount } = band(8, 8, 2);
+        for (let slot = 5; slot < 8; slot++) sequences[slot] = seq([0, 0, 0]);
+        expect(ieBandsOfStride(sequences, frameCount, 8)?.map((b) => b.length)).toEqual([8, 8]);
     });
 });

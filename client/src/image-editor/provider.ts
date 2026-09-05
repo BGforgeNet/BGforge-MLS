@@ -68,6 +68,8 @@ const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.j
 const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
 const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
 const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
+/** Layout for the animation components this editor shares with the gallery's set viewer. */
+const SHARED_TILES_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /** An animation resref opens with a 4-character code naming the animation; the rest is variant and action. */
@@ -838,6 +840,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // Function replacers: the URIs contain `$`-adjacent characters that String.replace would
         // otherwise interpret as `$&`/`$'` patterns.
         html = html.replace("{{stylesUri}}", () => stylesUri.toString());
+        html = html.replace("{{sharedStylesUri}}", () =>
+            webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_TILES_CSS)).toString(),
+        );
         html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
         html = html.replace("{{baseUri}}", () => baseUri.toString());
         html = html.replace("{{primitivesUri}}", () => primitivesUri.toString());

@@ -7,21 +7,25 @@
  */
 import * as vscode from "vscode";
 import { gameSource } from "./game-source";
-import { GALLERY_VIEW_TYPE, type GalleryPanelState, wireGalleryPanel } from "./panel";
+import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGalleryPanel } from "./panel";
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
 import { createAnimationIndexResolver } from "../ie-resources/animation-index";
 import { createFacetBrowser, type FacetBrowser } from "./facet-state";
 import { setTile } from "./set-tiles";
+import { type ResolvedSet, resolveSet, stanceAnimation } from "./set-viewer";
+import { type SetStance } from "../ie-resources/animation-schemes/bands";
 import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
 
 export interface GalleryHostDeps {
-    /** The open install, or undefined with none - read per panel, so opening a game does not need a reload. */
+    /** The open install, or undefined with none. Asked per lookup, so it is never a stale capture. */
     gameSession: () => { dir: string; game: Game } | undefined;
     /** Show a game resource in the resource tree - `registerIeResources`'s own reveal. */
     revealResource: (resref: string, ext: string) => Promise<void>;
+    /** Fires when the open install changes; a wired panel re-reads the corpus on it. */
+    onDidChangeGame: vscode.Event<void>;
 }
 
 export function registerGallery(context: vscode.ExtensionContext, deps: GalleryHostDeps): void {
@@ -55,6 +59,19 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         const animations = animationIndex(current.dir);
         if (animations === undefined) return undefined;
         return createFacetBrowser(animations, (resref) => current.game.canRead(resref, "bam"));
+    };
+
+    /** One set resolved for the viewer page, against whichever game is open now. */
+    const resolveSetFor = (id: number, armour?: number): ResolvedSet | undefined => {
+        const current = deps.gameSession();
+        if (current === undefined) return undefined;
+        const set = (animationIndex(current.dir) ?? []).find((entry) => entry.id === id);
+        return set === undefined ? undefined : resolveSet(current.game, set, armour);
+    };
+
+    const animate = (stance: SetStance) => {
+        const current = deps.gameSession();
+        return current === undefined ? undefined : stanceAnimation(current.game, stance);
     };
 
     const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
@@ -94,6 +111,24 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         await source.reveal(id);
     };
 
+    /**
+     * One set of deps for both ways a panel comes into being.
+     *
+     * Shared rather than built per call site: the two differ only in the state they start from, and a dep
+     * added to one and forgotten in the other breaks exactly the restored panel - the path nobody exercises
+     * until a window reload.
+     */
+    const panelDeps = {
+        sourceFor,
+        open,
+        sets,
+        openResref,
+        facets,
+        resolveSet: resolveSetFor,
+        stanceAnimation: animate,
+        onDidChangeGame: deps.onDidChangeGame,
+    } satisfies GalleryDeps;
+
     const show = (kind: "game" | "workspace", focusSet?: number): void => {
         const panel = vscode.window.createWebviewPanel(
             GALLERY_VIEW_TYPE,
@@ -102,7 +137,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
             { enableScripts: true, retainContextWhenHidden: true },
         );
         const state = { source: kind, ...(focusSet === undefined ? {} : { focusSet }) };
-        wireGalleryPanel(panel, state, context, { sourceFor, open, sets, openResref, facets });
+        wireGalleryPanel(panel, state, context, panelDeps);
     };
 
     context.subscriptions.push(
@@ -118,7 +153,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
                 // A restored panel whose state VS Code could not persist falls back to the workspace, which
                 // is the source that needs no game open - a blank panel would be the alternative.
                 const kind = (state as GalleryPanelState | undefined)?.source === "game" ? "game" : "workspace";
-                wireGalleryPanel(panel, { source: kind }, context, { sourceFor, open, sets, openResref, facets });
+                wireGalleryPanel(panel, { source: kind }, context, panelDeps);
             },
         }),
     );
