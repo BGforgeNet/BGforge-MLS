@@ -33,10 +33,16 @@ export function retargetAction(
     target: ConversionTarget,
 ): RetargetedAction {
     // A non-directional member's cycles are not facings, so there is no direction order to rebuild them
-    // in - and most of what an install ships is this shape. Passing it through is the conversion; folding
-    // it into the loop would rebuild it as the empty set of facings the target happens to store.
+    // in - and most of what an install ships is this shape. Its own cycles, in its own order, are the
+    // conversion; folding it into the loop would rebuild it as the empty set of facings the target happens
+    // to store. Its OWN cycles rather than the whole animation, because a file packs several bands and the
+    // rest of them belong to other actions.
     if (action.cycles.kind !== "directional") {
-        return { animation: source, facings: source.sequences.map((sequence) => sequence.facing) };
+        const sequences = action.cycles.sequenceIndices.flatMap((index) => {
+            const sequence = source.sequences[index];
+            return sequence === undefined ? [] : [sequence];
+        });
+        return { animation: { ...source, sequences }, facings: sequences.map((sequence) => sequence.facing) };
     }
 
     const stored = storedByFacing(action.cycles.directions);

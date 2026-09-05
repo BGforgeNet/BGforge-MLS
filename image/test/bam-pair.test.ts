@@ -3,6 +3,7 @@ import {
     combineIeBamPair,
     parseBamV1,
     serializeBamV1,
+    splitIeBamBlocks,
     splitIeBamPair,
     DEFAULT_FALLOUT_PALETTE,
     type IndexedAnimation,
@@ -142,5 +143,28 @@ describe("splitIeBamPair", () => {
         if (!first) throw new Error("expected a sequence");
         tagged.sequences[0] = { ...first, facing: "S" };
         expect(splitIeBamPair(tagged)).toBeUndefined();
+    });
+});
+
+describe("splitIeBamBlocks", () => {
+    /**
+     * For a caller that laid the blocks out itself. Detection reads a file's block structure to decide
+     * whether it is a base file at all, and a freshly built file - real art in every slot, no dummies to
+     * recognise - can fail that reading; stating the layout is what lets a writer split its own output.
+     */
+    it("splits on the blocks it is told about rather than on a reading of them", () => {
+        const frames: Frame[] = Array.from({ length: 8 }, (_, at) => px(at + 1));
+        const sequences: Sequence[] = frames.map((_, at) => ({ frameRefs: [at], facing: "none" as const }));
+
+        const split = splitIeBamBlocks(bam(sequences, frames));
+        expect(split?.base.frames.map((frame) => frame.pixels[0])).toEqual([1, 2, 3, 4, 5]);
+        expect(split?.east.frames.map((frame) => frame.pixels[0])).toEqual([6, 7, 8]);
+    });
+
+    it("still refuses a cycle count that is not blocks of eight", () => {
+        // The caller's claim is about the LAYOUT, and a count off the stride contradicts it whatever the
+        // caller believes - the one check no amount of writer knowledge replaces.
+        expect(splitIeBamBlocks(bam([{ frameRefs: [0], facing: "none" }], [px(1)]))).toBeUndefined();
+        expect(splitIeBamBlocks(bam([], []))).toBeUndefined();
     });
 });

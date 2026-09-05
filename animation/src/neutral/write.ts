@@ -29,7 +29,7 @@ export interface MemberWrite {
  * Only the two BAM arms exist because only they have a caller: the reader resolves members through an
  * install's archive, which serves BAM. An FRM arm goes in when a Fallout set can be read into a member.
  */
-function serializeMember(animation: Animation, resref: string): Uint8Array {
+export function serializeMember(animation: Animation, resref: string): Uint8Array {
     if (isRgbaAnimation(animation)) {
         throw new Error(`${resref}: a true-colour BAM has PVRZ pages, which this writer does not carry.`);
     }

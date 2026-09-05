@@ -113,7 +113,7 @@ describe("retargeting an action's directions", () => {
      * an ordered list, not a direction map. Rebuilding one in a direction order would produce whatever
      * facings the target happens to store, which for these is none at all.
      */
-    it("passes a non-directional member straight through", () => {
+    it("passes a non-directional member through in its own order", () => {
         const source = bandOf(["S", "W"]);
         const ordered: NeutralAction = {
             label: "G1",
@@ -125,8 +125,45 @@ describe("retargeting an action's directions", () => {
 
         const result = retargetAction(source, ordered, IE_8_POINT_PAIRED);
 
-        expect(result.animation).toBe(source);
-        expect(result.animation.sequences).toHaveLength(2);
+        expect(result.animation.sequences).toEqual(source.sequences);
+        expect(result.animation.frames).toEqual(source.frames);
+    });
+
+    /**
+     * A file packs several bands, and the other bands belong to other actions. Taking the whole animation
+     * for one of them would write every action's cycles into every action's file.
+     */
+    /**
+     * The interpretation was recorded against the file as it was read, and a conversion can run against a
+     * file the install has since replaced with a shorter one. A slot pointing past its cycles is dropped
+     * rather than filled from whatever sits at that index.
+     */
+    it("drops a slot addressing a cycle the animation no longer has", () => {
+        const source = bandOf(["S", "W"]);
+        const stale: NeutralAction = {
+            label: "WK - walk",
+            action: decodeActionCode("action-codes", "WK"),
+            resrefs: ["BAND"],
+            band: 0,
+            cycles: { kind: "ordered", sequenceIndices: [0, 99] },
+        };
+
+        expect(retargetAction(source, stale, IE_8_POINT_PAIRED).animation.sequences).toHaveLength(1);
+    });
+
+    it("takes only the cycles a non-directional band names", () => {
+        const source = bandOf(["S", "W"]);
+        const second: NeutralAction = {
+            label: "G1 - band 2",
+            action: decodeActionCode("cycle-numbers", "G1"),
+            resrefs: ["BAND"],
+            band: 1,
+            cycles: { kind: "ordered", sequenceIndices: [1] },
+        };
+
+        const result = retargetAction(source, second, IE_8_POINT_PAIRED);
+
+        expect(result.animation.sequences).toEqual([source.sequences[1]]);
     });
 
     /**
@@ -167,6 +204,9 @@ describe("retargeting an action's directions", () => {
         };
 
         expect(retargetAction(source, action, IE_8_POINT_MIRRORED).facings).toEqual(["S"]);
+        // The same missing cycle reached through the mirror: a target storing the east asks for W's cycle
+        // to flip into E, and finds nothing there either.
+        expect(retargetAction(source, action, IE_8_POINT_PAIRED).facings).toEqual(["S"]);
     });
 
     /**

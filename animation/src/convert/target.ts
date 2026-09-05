@@ -16,6 +16,23 @@ export interface ConversionTarget {
     /** Facings the target's engine shows, stored and mirrored together. */
     shown: readonly Facing[];
     /**
+     * How many cycles one direction block takes in the target's FILES, or undefined where this does not
+     * model the target's file layout.
+     *
+     * Distinct from the stored count, and the distinction is what a writer gets wrong: a scheme that stores
+     * five facings still lays them out in eight-slot blocks, because the engine reads slot 5 of each block
+     * as the first mirrored facing. A file packing five cycles per band would put the next band's art where
+     * the east belongs.
+     */
+    stride: number | undefined;
+    /**
+     * Whether the target keeps the eastern facings in a companion file rather than in the member itself.
+     *
+     * A file-layout fact like `stride`, not an engine one: both eight-point profiles show eight facings, and
+     * this is what says whether the eastern half lives in `<name>E` or is reflected at playback.
+     */
+    pairEast: boolean;
+    /**
      * Whether the target fixes its own palette and remaps whatever it is given.
      *
      * A property of the format rather than of this source, so it is stated once and does not count as a
@@ -42,6 +59,8 @@ export const IE_8_POINT_MIRRORED: ConversionTarget = {
     label: "Infinity Engine, 8 directions (mirrored east)",
     stored: IE_8.slice(0, 5),
     shown: IE_8,
+    stride: 8,
+    pairEast: false,
     fixedPalette: false,
     declaration: "infinity-ids",
 };
@@ -51,6 +70,8 @@ export const IE_8_POINT_PAIRED: ConversionTarget = {
     label: "Infinity Engine, 8 directions (east stored)",
     stored: IE_8,
     shown: IE_8,
+    stride: 8,
+    pairEast: true,
     fixedPalette: false,
     declaration: "infinity-ids",
 };
@@ -60,6 +81,8 @@ export const IE_16_POINT_MIRRORED: ConversionTarget = {
     label: "Infinity Engine, 16 directions (mirrored east)",
     stored: IE_9,
     shown: IE_16,
+    stride: 9,
+    pairEast: false,
     fixedPalette: false,
     declaration: "infinity-ids",
 };
@@ -69,6 +92,8 @@ export const IE_16_POINT_FULL: ConversionTarget = {
     label: "Infinity Engine, 16 directions (all stored)",
     stored: IE_16,
     shown: IE_16,
+    stride: 16,
+    pairEast: false,
     fixedPalette: false,
     declaration: "infinity-ids",
 };
@@ -78,6 +103,9 @@ export const FALLOUT_FRM: ConversionTarget = {
     label: "Fallout, 6 rotations",
     stored: FRM_FACINGS,
     shown: FRM_FACINGS,
+    // An FRM holds one rotation per file rather than blocks of cycles, so no block stride describes it.
+    stride: undefined,
+    pairEast: false,
     fixedPalette: true,
     declaration: "unmodelled",
 };

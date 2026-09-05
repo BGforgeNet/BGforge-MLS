@@ -62,10 +62,24 @@ export function combineIeBamPair(base: IndexedAnimation, east: IndexedAnimation)
 export function splitIeBamPair(
     combined: IndexedAnimation,
 ): { base: IndexedAnimation; east: IndexedAnimation } | undefined {
-    if (combined.sequences.length === 0 || combined.sequences.length % IE_STRIDE !== 0) return undefined;
     // The scheme, not the count: 72 cycles divide by 8 and by 9 alike, and only the coarse scheme keeps
     // its east arc in a companion file at all.
     if (interpretIeDirections(combined.sequences, combined.frames.length)?.scheme !== "ie8") return undefined;
+    return splitIeBamBlocks(combined);
+}
+
+/**
+ * The same split, for a caller that already KNOWS the animation is laid out in 8-slot blocks.
+ *
+ * A file a writer has just built has real art in every slot, which is not the base-file fingerprint the
+ * detector above looks for - so it would refuse to split a file it laid out itself. A caller states the
+ * layout it wrote rather than asking a reader to infer it back; the cycle count is still checked, since a
+ * count off the stride cannot be blocks whatever the caller believes.
+ */
+export function splitIeBamBlocks(
+    combined: IndexedAnimation,
+): { base: IndexedAnimation; east: IndexedAnimation } | undefined {
+    if (combined.sequences.length === 0 || combined.sequences.length % IE_STRIDE !== 0) return undefined;
     return {
         base: sideAnimation(combined, (slot) => slot < IE_WEST_SLOTS),
         east: sideAnimation(combined, (slot) => slot >= IE_WEST_SLOTS),

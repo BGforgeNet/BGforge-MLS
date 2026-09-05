@@ -54,7 +54,7 @@ export { type PvrzResolver, decodeBamV2, pvrzResourceName } from "./bam/v2-parse
 export { type BamV2PageWrite, type BamV2SaveOptions, type BamV2SaveResult } from "./bam/v2-serialize.ts";
 export { serializeBamV2 } from "./bam/v2-serialize.ts";
 export { serializeBamV1 } from "./bam/serialize.ts";
-export { combineIeBamPair, splitIeBamPair } from "./bam/pair.ts";
+export { combineIeBamPair, splitIeBamBlocks, splitIeBamPair } from "./bam/pair.ts";
 export { isBamc, decodeBamc, encodeBamc } from "./bam/bamc.ts";
 export { encodeIndexedPng, encodeTruecolourPng } from "./png/encode.ts";
 export { type DecodedIndexedPng, decodeIndexedPng, decodeTruecolourPng } from "./png/decode.ts";

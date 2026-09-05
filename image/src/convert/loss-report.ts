@@ -17,7 +17,13 @@ export type LossKind =
     | "directions-unrepresentable"
     /** The target SHOWS these facings but stores only the mirrored arc, so drawn eastern art is thrown
      *  away. A real loss, and the one that hides best - the result still animates in every direction. */
-    | "drawn-facings-mirrored";
+    | "drawn-facings-mirrored"
+    /** The target's naming has no code for what this action depicts, so it is not written at all. A
+     *  completeness loss rather than a per-pixel one: the art survives, the animation loses a move. */
+    | "action-unmapped"
+    /** The two namings disagree on how finely an action is named - a grip the target does not distinguish,
+     *  or a weapon it does and the source never stated. Informational: the art is untouched either way. */
+    | "action-code-detail";
 
 export interface LossItem {
     kind: LossKind;
@@ -39,6 +45,9 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     // A coarser target has no slot of that kind at all, so this fires on every finer source and says
     // nothing about THIS one. Per-item it would be the report's loudest entry and its least informative.
     "directions-unrepresentable",
+    // A naming difference, not a data one: the art written is the art read, under a name whose precision
+    // differs. Worth saying, never worth calling the conversion lossy.
+    "action-code-detail",
 ]);
 
 export class LossReport {

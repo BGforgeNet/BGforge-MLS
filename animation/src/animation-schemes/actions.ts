@@ -133,6 +133,22 @@ export function decodeActionCode(scheme: ActionScheme, code: string): NeutralAct
 }
 
 /**
+ * Whether a scheme's filenames carry the armour level.
+ *
+ * Only the character family varies by armour at all, and it puts the level in the name; the others name a
+ * file per action and nothing else. A set with several levels therefore cannot be written into those
+ * without the levels overwriting each other, which is the caller's decision to make rather than this one's.
+ */
+export function namesArmour(scheme: ActionScheme): boolean {
+    return scheme === "character";
+}
+
+/** The file a scheme names for one action of one armour level. */
+export function nameMember(scheme: ActionScheme, prefix: string, armour: number | undefined, code: string): string {
+    return namesArmour(scheme) && armour !== undefined ? `${prefix}${armour}${code}` : `${prefix}${code}`;
+}
+
+/**
  * What a candidate code does to the source's detail.
  *
  * `assumed` is the one worth reporting: the target's names distinguish something the source never stated,

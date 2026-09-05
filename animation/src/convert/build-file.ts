@@ -1,0 +1,82 @@
+/**
+ * Rebuild one SOURCE FILE as one TARGET FILE.
+ *
+ * The file is the unit a game reads, not the action: a creature file packs several actions as consecutive
+ * direction blocks sharing one frame pool, and converting an action at a time would emit that pool once per
+ * action. So the bands of a file are laid out together, into the blocks the target's own files take.
+ *
+ * The block, not the stored count, is what decides the layout. A scheme that stores five facings still
+ * writes eight-slot blocks, because the engine reads slot 5 of each block as the first mirrored facing - a
+ * file packing five cycles per band would put the next band's art where the east belongs.
+ */
+import { type Facing, type IndexedAnimation, type Sequence, ieFacingsForStride } from "@bgforge/image";
+import { type NeutralAction } from "../neutral/model";
+import { type ConversionTarget } from "./target";
+import { retargetAction } from "./retarget";
+
+/** A slot the target's blocks have and this source drew nothing for. Its cycle exists and is empty. */
+const EMPTY_SLOT: Sequence = { frameRefs: [], facing: "none" };
+
+/**
+ * Move a retargeted band's cycles onto the file's own frame pool.
+ *
+ * A retarget appends its mirrors to a copy of the source pool, so every band's copy holds the same source
+ * frames at the same indices and its own mirrors after them. Only those mirrors are new to the file.
+ */
+function adoptBand(pool: IndexedAnimation["frames"], sourceCount: number, band: IndexedAnimation): Sequence[] {
+    const adopted = new Map<number, number>();
+    return band.sequences.map((sequence) => ({
+        ...sequence,
+        frameRefs: sequence.frameRefs.map((ref) => {
+            if (ref < sourceCount) return ref;
+            const already = adopted.get(ref);
+            if (already !== undefined) return already;
+            const frame = band.frames[ref];
+            // A ref past that band's own pool is the "no frame" sentinel every layer here carries through
+            // rather than inventing a frame for.
+            if (frame === undefined) return ref;
+            pool.push(frame);
+            adopted.set(ref, pool.length - 1);
+            return pool.length - 1;
+        }),
+    }));
+}
+
+/**
+ * The file `actions` describe, rebuilt for `target` - undefined where the target's file layout is not
+ * modelled here.
+ *
+ * `actions` are the bands of ONE source file, in the order the file stores them; `source` is the animation
+ * they index, which for a member drawn from several files is those files composed into one picture.
+ */
+export function buildTargetFile(
+    source: IndexedAnimation,
+    actions: readonly NeutralAction[],
+    target: ConversionTarget,
+): IndexedAnimation | undefined {
+    if (target.stride === undefined) return undefined;
+    const slots = ieFacingsForStride(target.stride);
+    if (slots.length === 0) return undefined;
+
+    const frames = [...source.frames];
+    const sequences: Sequence[] = [];
+    for (const action of actions) {
+        const band = retargetAction(source, action, target);
+        const cycles = adoptBand(frames, source.frames.length, band.animation);
+        // Cycles that are not facings keep the length and order the source gave them: a target's direction
+        // slots mean nothing to them, and padding them into blocks would claim they are directions.
+        if (action.cycles.kind !== "directional") {
+            sequences.push(...cycles);
+            continue;
+        }
+        const byFacing = new Map<Facing, Sequence>();
+        band.facings.forEach((facing, at) => {
+            const cycle = cycles[at];
+            /* v8 ignore next -- a retarget returns one facing per cycle it built */
+            if (cycle !== undefined) byFacing.set(facing, cycle);
+        });
+        for (const facing of slots) sequences.push(byFacing.get(facing) ?? EMPTY_SLOT);
+    }
+
+    return { ...source, frames, sequences };
+}
