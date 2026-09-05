@@ -151,6 +151,13 @@ export class ImageDocumentModel {
     private basePage: number | undefined;
     private undoStack: DocumentSnapshot[] = [];
     private redoStack: DocumentSnapshot[] = [];
+    /**
+     * True for a model rebuilt from a hot-exit backup, which is unsaved by definition.
+     *
+     * Its undo stack starts empty - the snapshots were not backed up - so undo alone cannot say whether
+     * this differs from what is on disk, and only the origin can.
+     */
+    private restored = false;
 
     onChange?: () => void;
 
@@ -176,6 +183,7 @@ export class ImageDocumentModel {
             ? ImageDocumentModel.fromRgbaAnimation(rgbaFromBackup(backup), basename)
             : ImageDocumentModel.fromBytes(backup.bytes, basename, sidecarBytes);
         model.externalEnabled = backup.externalPalette;
+        model.restored = true;
         return model;
     }
 
@@ -413,6 +421,20 @@ export class ImageDocumentModel {
         this.snapshotForUndo();
         this.animationValue = animation;
         this.onChange?.();
+    }
+
+    /**
+     * Whether anything undoable has been done to this model since it was read.
+     *
+     * Read by a set save, which writes only the members the reader actually changed: a set holds a dozen
+     * files and writing every one of them into the game's override folder over a single edit would put
+     * eleven unrequested copies there.
+     *
+     * Undoing back to the start clears it, because the undo stack is what an undo pops from - so a member
+     * edited and then fully undone is correctly not written.
+     */
+    get edited(): boolean {
+        return this.restored || this.undoStack.length > 0;
     }
 
     undo(): void {

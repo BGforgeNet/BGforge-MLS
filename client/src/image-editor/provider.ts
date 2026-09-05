@@ -145,6 +145,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     /** Resolves an animation set the editor is asked to open. Absent outside the resource viewer, as above. */
     private readonly animationSets: AnimationSetSource | undefined;
 
+    /** Asks once before a set save replaces several override files. Absent as above. */
+    private readonly confirmGroupWrite: ((uris: readonly vscode.Uri[]) => Promise<void>) | undefined;
+
     /** The creature each document is being shown as, if any. Per document, so every panel of one agrees. */
     private readonly activeCreature = new WeakMap<ImageEditorDocument, ActiveCreature>();
 
@@ -153,10 +156,12 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         resourceBytes?: GameResourceBytes,
         creatureColors?: CreatureColorSource,
         animationSets?: AnimationSetSource,
+        confirmGroupWrite?: (uris: readonly vscode.Uri[]) => Promise<void>,
     ) {
         this.resourceBytes = resourceBytes;
         this.creatureColors = creatureColors;
         this.animationSets = animationSets;
+        this.confirmGroupWrite = confirmGroupWrite;
         this.extensionUri = context.extensionUri;
     }
 
@@ -782,6 +787,21 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // An IE base/east pair saves in place by splitting back into its two member files; a Save As
         // to another destination falls through and writes the single combined form instead.
         if (destination.toString() === document.saveUri.toString()) {
+            const setWrites = document.setSaveWrites();
+            if (setWrites !== undefined) {
+                // One question for the whole save: the writes land in the game's override folder, and a
+                // per-file prompt would put the same modal up once per changed member.
+                await this.confirmGroupWrite?.(setWrites.map((write) => write.uri));
+                for (const write of setWrites) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await vscode.workspace.fs.writeFile(write.uri, write.bytes);
+                }
+                // Said out loud because a set save writes files the reader never named: the tab says a set
+                // was saved, and this says how much of the game it touched.
+                const count = setWrites.length;
+                vscode.window.setStatusBarMessage(`Saved ${count} animation ${count === 1 ? "file" : "files"}`, 3000);
+                return;
+            }
             const pairWrites = document.pairSaveWrites();
             if (pairWrites) {
                 // Sequential by design: the base lands before the companion so a crash never leaves a

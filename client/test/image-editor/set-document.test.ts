@@ -171,6 +171,26 @@ describe("AnimationSetState", () => {
         expect(state?.actions.map((action) => action.resref)).toEqual(["TSTCG2"]);
     });
 
+    /**
+     * A model carries its own unsaved edits, so a cache the armour picker cleared would throw them away
+     * silently: the member would come back from the archive looking untouched.
+     */
+    it("keeps a member's unsaved edits across an armour change", () => {
+        const set = setOf({
+            prefixByArmour: new Map([
+                [1, "TSTB"],
+                [2, "TSTC"],
+            ]),
+        });
+        const state = AnimationSetState.open(set, fakeIo({ TSTBG1: baseFileBam(1), TSTCG1: baseFileBam(1) }));
+        state?.model.applyMetaPatch({ transparentIndex: 7 });
+
+        expect(state?.selectArmour(2)).toBe("changed");
+        expect(state?.selectArmour(1)).toBe("changed");
+
+        expect(state?.model.animation.meta.transparentIndex).toBe(7);
+    });
+
     it("keeps the open armour when the level asked for draws nothing", () => {
         const set = setOf({
             prefixByArmour: new Map([
@@ -189,25 +209,35 @@ describe("AnimationSetState", () => {
 describe("createAnimationSetSource", () => {
     const set = setOf();
     const game = { canRead: () => false, read: () => undefined } as unknown as Game;
-    const session = { dir: "/games/bgee", game };
+    const gameAt = (dir: string): Game | undefined => (dir === "/games/bgee" ? game : undefined);
 
     it("resolves a set the open install declares", () => {
-        const source = createAnimationSetSource({ animations: () => [set], gameSession: () => session });
+        const source = createAnimationSetSource({ animations: () => [set], gameAt });
         expect(source("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
     });
 
     it("resolves nothing for an install other than the open one", () => {
-        const source = createAnimationSetSource({ animations: () => [set], gameSession: () => session });
+        const source = createAnimationSetSource({ animations: () => [set], gameAt });
         expect(source("/games/tob", 0x1234).kind).toBe("no-game");
     });
 
-    it("resolves nothing with no game open", () => {
-        const source = createAnimationSetSource({ animations: () => [set], gameSession: () => undefined });
-        expect(source("/games/bgee", 0x1234).kind).toBe("no-game");
+    it("opens a set before anything has opened the game in the view", () => {
+        // The editor's own restore beats the resource view's: a tab reopened with the window runs before the
+        // view is shown, so a source that read only an ALREADY-open session refused the set it had just
+        // listed. `gameAt` is what opens the configured install on demand, as every other lookup does.
+        let opened = 0;
+        const lazy = (dir: string): Game | undefined => {
+            opened += 1;
+            return gameAt(dir);
+        };
+        const source = createAnimationSetSource({ animations: () => [set], gameAt: lazy });
+
+        expect(source("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
+        expect(opened).toBe(1);
     });
 
     it("says the game declares nothing under that id", () => {
-        const source = createAnimationSetSource({ animations: () => undefined, gameSession: () => session });
+        const source = createAnimationSetSource({ animations: () => undefined, gameAt });
         expect(source("/games/bgee", 0x1234).kind).toBe("not-declared");
     });
 });

@@ -123,6 +123,12 @@ export function registerIeResources(context: vscode.ExtensionContext): {
      * second instance would repeat that walk and hold a second copy of the answer.
      */
     animations: AnimationIndexResolver;
+    /**
+     * Ask once, for a whole group of resource writes, before any of them replaces a file in the game's
+     * override folder. For a save that writes several resources at once, where a prompt per file would put
+     * the same modal in front of the reader several times over one save.
+     */
+    confirmGroupWrite: (uris: readonly vscode.Uri[]) => Promise<void>;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -133,6 +139,14 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     revealResource: (resref: string, ext: string) => Promise<void>;
     /** The open install, for a consumer that needs the `Game` itself rather than one resolved lookup. */
     gameSession: () => { dir: string; game: Game } | undefined;
+    /**
+     * The game at `dir`, opening the configured install when nothing is open yet - what every resolver here
+     * reaches for. Undefined where another install is open, or where `dir` holds no game at all.
+     *
+     * Distinct from `gameSession` in exactly the case that matters to a restored editor: a tab reopened with
+     * the window runs before the resource view is ever shown, so its game is configured but not yet open.
+     */
+    gameAt: (dir: string) => Game | undefined;
     /**
      * Fires after the open install changes - opened, replaced, or closed.
      *
@@ -481,6 +495,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         colorGradient: createColorGradientResolver(currentGame, fallbackGameDir),
         creatures: createCreatureIndexResolver(currentGame, fallbackGameDir),
         animations: animationIndex,
+        confirmGroupWrite: (uris) => fsProvider.confirmGroupWrite(uris),
         resourceType: createResourceTypeResolver(currentGame, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(currentGame, fallbackGameDir),
         resourceList: createResourceListResolver(currentGame, fallbackGameDir),
@@ -496,6 +511,17 @@ export function registerIeResources(context: vscode.ExtensionContext): {
          * game the user has since switched away from, and neither is an error worth a popup.
          */
         gameSession: () => currentGame.current,
+        gameAt: (dir) => {
+            let game: Game | undefined;
+            try {
+                game = currentGame.gameAt(dir);
+            } catch {
+                // A path that holds no game reads as "no game", the posture every lookup here takes: the
+                // caller reports it to the reader, where an exception thrown out of a document open would
+                // surface as VS Code's own unexplained "could not be opened" placeholder.
+            }
+            return game;
+        },
         onDidChangeGame: gameChanged.event,
         revealResource: async (resref: string, ext: string): Promise<void> => {
             const node = tree.resourceNode(resref, ext);

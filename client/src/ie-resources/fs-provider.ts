@@ -45,6 +45,13 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
      * being replaced from then on is our own.
      */
     private readonly written = new Set<string>();
+    /**
+     * URIs a group confirmation has already covered, consumed by the write that follows it.
+     *
+     * Separate from `written`, and cleared as each write takes it: an approval answers for ONE save, so a
+     * later independent save of the same resource asks again.
+     */
+    private readonly approved = new Set<string>();
     private readonly currentGame: CurrentGame;
 
     constructor(currentGame: CurrentGame) {
@@ -153,17 +160,20 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
      * already in `override` is different: those bytes are the only copy, they usually belong to an installed
      * mod, and nothing in the editor can bring them back.
      */
-    private async confirmReplacement(replaced: string): Promise<void> {
-        const name = path.basename(replaced);
+    private async confirmReplacement(replaced: string | readonly string[]): Promise<void> {
+        const files = typeof replaced === "string" ? [replaced] : replaced;
+        const [first] = files;
+        if (first === undefined) return;
+        const name = files.length === 1 ? path.basename(first) : `${files.length} files`;
         const overwrite = "Overwrite";
         const choice = await vscode.window.showWarningMessage(
             `Overwrite ${name} in the game's override folder?`,
             {
                 modal: true,
                 detail:
-                    `${replaced}\n\nThis file was not written by this editing session - an installed mod, ` +
-                    `another tool or an earlier session put it there. Saving replaces it, and its current ` +
-                    `contents cannot be recovered from here.`,
+                    `${files.join("\n")}\n\nThese files were not written by this editing session - an installed ` +
+                    `mod, another tool or an earlier session put them there. Saving replaces them, and their ` +
+                    `current contents cannot be recovered from here.`,
             },
             overwrite,
         );
@@ -175,11 +185,36 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
         }
     }
 
+    /**
+     * Answer the override-replacement question once for a group of writes that belong to one save.
+     *
+     * An animation set saves one file per changed member, and asking per member would put the modal in
+     * front of the reader several times for a single save. The answer is recorded against exactly these
+     * URIs, so `writeFile` does not ask again for them and asks as usual for everything else.
+     *
+     * Silent when the group replaces nothing, which is the ordinary case: writing into `override` for the
+     * first time shadows an archived resource rather than destroying a file.
+     */
+    async confirmGroupWrite(uris: readonly vscode.Uri[]): Promise<void> {
+        const replaced: string[] = [];
+        for (const uri of uris) {
+            const key = uri.toString();
+            if (this.written.has(key)) continue;
+            const { game, resref, ext, type } = this.resolve(uri);
+            const file = this.replacedFile(game, resref, ext, type);
+            if (file !== undefined) replaced.push(file);
+        }
+        if (replaced.length === 0) return;
+        await this.confirmReplacement(replaced);
+        for (const uri of uris) this.approved.add(uri.toString());
+    }
+
     async writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void> {
         this.refuseSetBytes(uri);
         const { game, resref, ext, type } = this.resolve(uri);
         const key = uri.toString();
-        const replaced = this.written.has(key) ? undefined : this.replacedFile(game, resref, ext, type);
+        const asked = this.written.has(key) || this.approved.delete(key);
+        const replaced = asked ? undefined : this.replacedFile(game, resref, ext, type);
         if (replaced !== undefined) await this.confirmReplacement(replaced);
 
         // Both land in override/, atomically; game.write also updates the resolution tree in place. A sidecar

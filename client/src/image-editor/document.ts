@@ -22,7 +22,7 @@ import {
 import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { type AnimationSetSource, AnimationSetState, type SetPick, setView } from "./set-document";
-import { parseAnimationSetUri } from "../ie-resources/uri";
+import { parseAnimationSetUri, resourceUri } from "../ie-resources/uri";
 import { animationIdHex } from "@bgforge/animation";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
@@ -38,8 +38,11 @@ export type GameResourceBytes = (uri: vscode.Uri, resref: string, ext: string) =
 
 type BamFormat = "bam" | "bamc";
 
-/** One write of an in-place pair save, addressed by URI so it lands back where the member was read. */
-export interface PairWrite {
+/**
+ * One write of an in-place save that produces several files - a base/east pair, or a set's changed
+ * members - addressed by URI so it lands back where its file was read.
+ */
+export interface ResourceWrite {
     uri: vscode.Uri;
     bytes: Uint8Array;
 }
@@ -129,7 +132,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     ): Promise<ImageEditorDocument> {
         const setAddress = parseAnimationSetUri(uri);
         if (setAddress !== undefined) {
-            return ImageEditorDocument.openSet(uri, setAddress, animationSets);
+            return ImageEditorDocument.openSet(uri, setAddress, animationSets, backup);
         }
         if (isFrSplitPath(uri.fsPath)) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(uri.fsPath);
@@ -187,14 +190,14 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * worth saying out loud - the install is closed or is a different one, or it ships none of this
      * animation's files - and neither is something a blank editor would convey.
      *
-     * Deliberately takes no `backup`: a set document has no edit path yet, so there is nothing unsaved for
-     * a hot-exit restore to carry, and a backup format holding one member would be the wrong shape for the
-     * several a set save writes.
+     * A restore replays every member the backup carries over the freshly-resolved set - the whole set is
+     * read from the game as usual, and the unsaved members are put back on top of it.
      */
     private static openSet(
         uri: vscode.Uri,
         address: { gameDir: string; id: number },
         animationSets?: AnimationSetSource,
+        backup?: DocumentBackup,
     ): ImageEditorDocument {
         const hex = animationIdHex(address.id);
         const found = animationSets?.(address.gameDir, address.id) ?? { kind: "no-game" };
@@ -202,6 +205,15 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         if (found.kind === "not-declared") throw new Error(`This game declares no animation ${hex}.`);
         const state = AnimationSetState.open(found.set, found.io);
         if (state === undefined) throw new Error(`This install ships no files for animation ${hex}.`);
+        for (const member of backup?.members ?? []) {
+            state.restoreMember(
+                member.resref,
+                ImageDocumentModel.fromBackup(
+                    { bytes: member.bytes, externalPalette: member.externalPalette },
+                    `${member.resref}.BAM`,
+                ),
+            );
+        }
         return new ImageEditorDocument(uri, state.model, false, undefined, state);
     }
 
@@ -224,7 +236,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * serialized with its member's own encoding. Undefined for non-pair documents; throws when edits
      * broke the 8-slot block structure a split needs.
      */
-    pairSaveWrites(): PairWrite[] | undefined {
+    pairSaveWrites(): ResourceWrite[] | undefined {
         if (!this.iePair) return undefined;
         const indexed = this.model.indexedAnimation();
         // Pairing is a BAM v1 shape: a document only becomes a pair by combining two v1 files.
@@ -239,6 +251,36 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             { uri: this.iePair.baseUri, bytes: serializeBamAs(split.base, this.iePair.baseFormat) },
             { uri: this.iePair.eastUri, bytes: serializeBamAs(split.east, this.iePair.eastFormat) },
         ];
+    }
+
+    /**
+     * In-place save writes for a set: one file per member the reader changed, addressed by its own
+     * resource URI so each lands in the game it was read from. Undefined for a document that is not a set.
+     *
+     * Untouched members produce no write - a set is a dozen files, and copying all of them into the
+     * override folder over one edit would put eleven unrequested copies there.
+     *
+     * Throws for an edited member drawn from SEVERAL files: its model is those files composed into one
+     * picture, and writing that picture back means cutting it up again - which this cannot do, so it says
+     * so rather than writing the whole composition over the first quarter.
+     */
+    setSaveWrites(): ResourceWrite[] | undefined {
+        const state = this.setState;
+        if (state === undefined) return undefined;
+        const address = parseAnimationSetUri(this.uri);
+        // Unreachable - a set state exists only for a set URI - but stated rather than defaulted: a missing
+        // game directory would address every write at the filesystem root instead of failing.
+        if (address === undefined) throw new Error(`${this.uri.toString()} is not an animation set address.`);
+        const { gameDir } = address;
+        return state.editedMembers().map(({ action, model }) => {
+            if (action.parts.length > 1) {
+                throw new Error(
+                    `${action.resref} is drawn from ${action.parts.length} files composed together, ` +
+                        `which cannot be saved back in place - use Save As instead.`,
+                );
+            }
+            return { uri: resourceUri(gameDir, action.resref, "bam"), bytes: model.saveArtifacts().bytes };
+        });
     }
 
     /**
@@ -388,11 +430,14 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     private fireEdit(label: string): void {
+        // The model is captured now, not read at undo time: a set document swaps models when the reader
+        // picks another action, and an undo that read `this.model` would then unwind the wrong picture.
+        const edited = this.model;
         this._onDidChangeCustomDocument.fire({
             document: this,
             label,
-            undo: () => this.model.undo(),
-            redo: () => this.model.redo(),
+            undo: () => edited.undo(),
+            redo: () => edited.redo(),
         });
     }
 
@@ -478,7 +523,18 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     backup(): DocumentBackup {
-        return this.model.backup();
+        const state = this.setState;
+        if (state === undefined) return this.model.backup();
+        // A set has no artifact of its own, so the main payload is empty and every changed member travels
+        // in the member table - the open one included, since it is a member like any other.
+        return {
+            bytes: new Uint8Array(),
+            externalPalette: false,
+            members: state.editedMembers().map(({ action, model }) => {
+                const member = model.backup();
+                return { resref: action.resref, bytes: member.bytes, externalPalette: member.externalPalette };
+            }),
+        };
     }
 
     sidecarBytes(): Uint8Array | undefined {

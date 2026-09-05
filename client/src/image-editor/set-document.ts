@@ -40,20 +40,25 @@ export type AnimationSetLookup =
 export type AnimationSetSource = (gameDir: string, id: number) => AnimationSetLookup;
 
 /**
- * Resolve a set against whichever install is open now.
+ * Resolve a set against whichever install `gameDir` names.
  *
  * Asked per open rather than captured: a document survives the game being closed and another opened, and a
  * set resolved against the previous install would draw one game's animation under another's address.
+ *
+ * Through `gameAt`, which OPENS the configured install when nothing is open yet, rather than through the
+ * already-open session: a `.animset` tab reopened with the window restores before the resource view is first
+ * shown, and reading the session alone refused a set the gallery had listed moments earlier. Undefined stays
+ * "no game", which is what a different install being open means.
  */
 export function createAnimationSetSource(deps: {
     animations: AnimationIndexResolver;
-    gameSession: () => { dir: string; game: Game } | undefined;
+    gameAt: (dir: string) => Game | undefined;
 }): AnimationSetSource {
     return (gameDir, id) => {
-        const current = deps.gameSession();
-        if (current === undefined || current.dir !== gameDir) return { kind: "no-game" };
+        const game = deps.gameAt(gameDir);
+        if (game === undefined) return { kind: "no-game" };
         const set = (deps.animations(gameDir) ?? []).find((entry) => entry.id === id);
-        return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(current.game) };
+        return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(game) };
     };
 }
 
@@ -65,7 +70,7 @@ export function createAnimationSetSource(deps: {
 export type SetPick = "changed" | "unchanged" | "refused";
 
 /**
- * One armour level's resolved actions, and the models already built for them.
+ * One armour level's resolved actions.
  *
  * Actions are MEMBERS - one per file - not stances: a creature file packs several direction bands, and the
  * editor already has a control for picking between those. Listing stances here would offer the same choice
@@ -74,23 +79,63 @@ export type SetPick = "changed" | "unchanged" | "refused";
 interface ArmourLevel {
     level: number;
     actions: SchemeMember[];
-    models: Map<string, ImageDocumentModel>;
+}
+
+/** One loaded member: the action it stands for, and the model the editor draws and edits. */
+interface OpenAction {
+    action: SchemeMember;
+    model: ImageDocumentModel;
+}
+
+/**
+ * Every member loaded so far, by the file it draws.
+ *
+ * Held across armour levels rather than per level, because a model carries its own unsaved edits: a cache
+ * scoped to the open level would discard them the moment the reader changed armour, and the picture would
+ * come back from the archive as if nothing had been done to it. Resrefs are unique across levels, since
+ * the level is part of the name.
+ */
+type MemberModels = Map<string, OpenAction>;
+
+function modelFor(io: StanceIo, models: MemberModels, action: SchemeMember): ImageDocumentModel | undefined {
+    const cached = models.get(action.resref);
+    if (cached !== undefined) return cached.model;
+    const model = stanceModel(io, action);
+    // The action is cached beside its model because a model outlives the armour level it was loaded
+    // under, and a save needs the FILES it draws - which a resref alone does not give for a quadrant.
+    if (model !== undefined) models.set(action.resref, { action, model });
+    return model;
+}
+
+/**
+ * The first action of `level` whose files parse, with its model.
+ *
+ * Not simply the first action: the member list is resolved against the archive's index, which says a file
+ * is there without saying it can be decoded - and an action that cannot be drawn is not one to open on.
+ */
+function firstDrawn(io: StanceIo, models: MemberModels, level: ArmourLevel): OpenAction | undefined {
+    for (const action of level.actions) {
+        const model = modelFor(io, models, action);
+        if (model !== undefined) return { action, model };
+    }
+    return undefined;
+}
+
+function resolveLevel(set: AnimationSet, io: StanceIo, level: number): ArmourLevel {
+    return { level, actions: setMembers(set, level, io.exists) };
 }
 
 export class AnimationSetState {
     readonly set: AnimationSet;
     private readonly io: StanceIo;
+    private readonly models: MemberModels;
     private current: ArmourLevel;
-    private open: { action: SchemeMember; model: ImageDocumentModel };
+    private open: OpenAction;
 
-    private constructor(
-        set: AnimationSet,
-        io: StanceIo,
-        level: ArmourLevel,
-        open: { action: SchemeMember; model: ImageDocumentModel },
-    ) {
+    private constructor(set: AnimationSet, io: StanceIo, models: MemberModels, level: ArmourLevel, open: OpenAction) {
         this.set = set;
         this.io = io;
+        this.models = models;
         this.current = level;
         this.open = open;
     }
@@ -105,39 +150,10 @@ export class AnimationSetState {
     static open(set: AnimationSet, io: StanceIo, armour?: number): AnimationSetState | undefined {
         const levels = armourLevels(set);
         const chosen = armour !== undefined && levels.includes(armour) ? armour : (firstArmour(set) ?? 1);
-        const level = AnimationSetState.resolve(set, io, chosen);
-        const first = AnimationSetState.firstDrawn(level, io);
-        return first === undefined ? undefined : new AnimationSetState(set, io, level, first);
-    }
-
-    private static resolve(set: AnimationSet, io: StanceIo, level: number): ArmourLevel {
-        return { level, actions: setMembers(set, level, io.exists), models: new Map() };
-    }
-
-    /**
-     * The first action of `level` whose files parse, with its model.
-     *
-     * Not simply the first action: the member list is resolved against the archive's index, which says a
-     * file is there without saying it can be decoded - and an action that cannot be drawn is not one to
-     * open on.
-     */
-    private static firstDrawn(
-        level: ArmourLevel,
-        io: StanceIo,
-    ): { action: SchemeMember; model: ImageDocumentModel } | undefined {
-        for (const action of level.actions) {
-            const model = AnimationSetState.modelFor(level, io, action);
-            if (model !== undefined) return { action, model };
-        }
-        return undefined;
-    }
-
-    private static modelFor(level: ArmourLevel, io: StanceIo, action: SchemeMember): ImageDocumentModel | undefined {
-        const cached = level.models.get(action.resref);
-        if (cached !== undefined) return cached;
-        const model = stanceModel(io, action);
-        if (model !== undefined) level.models.set(action.resref, model);
-        return model;
+        const level = resolveLevel(set, io, chosen);
+        const models: MemberModels = new Map();
+        const first = firstDrawn(io, models, level);
+        return first === undefined ? undefined : new AnimationSetState(set, io, models, level, first);
     }
 
     /** Every armour level the set declares, lowest first - what the armour picker offers. */
@@ -172,10 +188,39 @@ export class AnimationSetState {
         if (resref === this.open.action.resref) return "unchanged";
         const action = this.current.actions.find((candidate) => candidate.resref === resref);
         if (action === undefined) return "refused";
-        const model = AnimationSetState.modelFor(this.current, this.io, action);
+        const model = modelFor(this.io, this.models, action);
         if (model === undefined) return "refused";
         this.open = { action, model };
         return "changed";
+    }
+
+    /**
+     * Every loaded member the reader has changed, with the files it draws.
+     *
+     * The whole set is not written back on every save: a set is a dozen files, and copying all of them
+     * into the game's override folder over one edit puts eleven unrequested copies there. Order is load
+     * order, which is stable within a session and is what a save's own report reads back.
+     */
+    editedMembers(): OpenAction[] {
+        return [...this.models.values()].filter((member) => member.model.edited);
+    }
+
+    /**
+     * Replace a member's model with one restored from a hot-exit backup.
+     *
+     * Ignores a resref this set does not draw: the install can have changed since the backup was written,
+     * and a member it no longer has is better dropped than restored under a name nothing will save to.
+     */
+    restoreMember(resref: string, model: ImageDocumentModel): void {
+        const known = this.models.get(resref);
+        const action =
+            known?.action ??
+            armourLevels(this.set)
+                .flatMap((level) => resolveLevel(this.set, this.io, level).actions)
+                .find((candidate) => candidate.resref === resref);
+        if (action === undefined) return;
+        this.models.set(resref, { action, model });
+        if (this.open.action.resref === resref) this.open = { action, model };
     }
 
     /**
@@ -186,13 +231,14 @@ export class AnimationSetState {
      * a set whose files have just been removed is better shown stale than blank.
      */
     reload(): boolean {
-        const resolved = AnimationSetState.resolve(this.set, this.io, this.current.level);
+        this.models.clear();
+        const resolved = resolveLevel(this.set, this.io, this.current.level);
         const same = resolved.actions.find((candidate) => candidate.resref === this.open.action.resref);
-        const model = same === undefined ? undefined : AnimationSetState.modelFor(resolved, this.io, same);
+        const model = same === undefined ? undefined : modelFor(this.io, this.models, same);
         const open =
             same !== undefined && model !== undefined
                 ? { action: same, model }
-                : AnimationSetState.firstDrawn(resolved, this.io);
+                : firstDrawn(this.io, this.models, resolved);
         if (open === undefined) return false;
         this.current = resolved;
         this.open = open;
@@ -206,8 +252,8 @@ export class AnimationSetState {
     selectArmour(level: number): SetPick {
         if (level === this.current.level) return "unchanged";
         if (!this.armours.includes(level)) return "refused";
-        const resolved = AnimationSetState.resolve(this.set, this.io, level);
-        const first = AnimationSetState.firstDrawn(resolved, this.io);
+        const resolved = resolveLevel(this.set, this.io, level);
+        const first = firstDrawn(this.io, this.models, resolved);
         if (first === undefined) return "refused";
         this.current = resolved;
         this.open = first;

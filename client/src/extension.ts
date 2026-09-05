@@ -79,8 +79,9 @@ export async function activate(context: ExtensionContext) {
             { creatures: gameLookups.creatures, gradients: gameLookups.colorGradient },
             createAnimationSetSource({
                 animations: gameLookups.animations,
-                gameSession: gameLookups.gameSession,
+                gameAt: gameLookups.gameAt,
             }),
+            gameLookups.confirmGroupWrite,
         ),
         registerScriptViews(context, gameLookups.bcsSymbols, gameLookups.onDidChangeGame),
     );

@@ -11,6 +11,18 @@ export interface BackupPage {
     bytes: Uint8Array;
 }
 
+/**
+ * One changed member of an animation set, travelling inside that set's backup.
+ *
+ * Named by resref rather than by position: a restore re-resolves the set against the install, and the
+ * member list can differ from what it was when the backup was written.
+ */
+export interface BackupMember {
+    resref: string;
+    bytes: Uint8Array;
+    externalPalette: boolean;
+}
+
 /** Restorable document state a backup carries. The sidecar palette and the FR-split / IE-pair file
  *  identity are deliberately absent: a dirty document has written nothing, so both still re-derive
  *  from disk on restore. */
@@ -24,6 +36,14 @@ export interface DocumentBackup {
      * outright, for pages that do not exist yet). Empty for every palette-indexed format.
      */
     pages?: readonly BackupPage[];
+    /**
+     * Set documents only: every member the reader had changed, the open one included.
+     *
+     * A set holds a model per member, each with its own unsaved edits, so a backup carrying only the open
+     * one would restore a document that had silently dropped the rest. `bytes` is empty for a set, which
+     * has no single artifact of its own.
+     */
+    members?: readonly BackupMember[];
 }
 
 const HEADER_TERMINATOR = 0x0a;
@@ -31,8 +51,9 @@ const HEADER_TERMINATOR = 0x0a;
 // Bumped only on a breaking container change. A backup outlives the extension version that wrote it
 // (an update can land while one is pending), so an unreadable header must fail loudly rather than
 // feed a mis-sliced payload to the parser. v2 added the page table, which moved the main payload
-// from "everything after the header" to a counted length.
-const BACKUP_VERSION = 2;
+// from "everything after the header" to a counted length; v3 added the member table an animation set
+// needs, which appends a second run of counted payloads after the pages.
+const BACKUP_VERSION = 3;
 
 interface PageEntry {
     page: number;
@@ -51,26 +72,53 @@ function isPageEntry(value: unknown): value is PageEntry {
     );
 }
 
+interface MemberEntry {
+    resref: string;
+    length: number;
+    externalPalette: boolean;
+}
+
+function isMemberEntry(value: unknown): value is MemberEntry {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        "resref" in value &&
+        "length" in value &&
+        "externalPalette" in value &&
+        typeof value.resref === "string" &&
+        typeof value.length === "number" &&
+        value.length >= 0 &&
+        typeof value.externalPalette === "boolean"
+    );
+}
+
 export function encodeBackup(backup: DocumentBackup): Uint8Array {
     const pages = backup.pages ?? [];
+    const members = backup.members ?? [];
     const header = new TextEncoder().encode(
         JSON.stringify({
             version: BACKUP_VERSION,
             externalPalette: backup.externalPalette,
             main: backup.bytes.length,
             pages: pages.map((p) => ({ page: p.page, length: p.bytes.length })),
+            members: members.map((m) => ({
+                resref: m.resref,
+                length: m.bytes.length,
+                externalPalette: m.externalPalette,
+            })),
         }),
     );
-    const payloadLength = backup.bytes.length + pages.reduce((n, p) => n + p.bytes.length, 0);
+    const sizeOf = (parts: readonly { bytes: Uint8Array }[]): number => parts.reduce((n, p) => n + p.bytes.length, 0);
+    const payloadLength = backup.bytes.length + sizeOf(pages) + sizeOf(members);
     const out = new Uint8Array(header.length + 1 + payloadLength);
     out.set(header, 0);
     out[header.length] = HEADER_TERMINATOR;
     let offset = header.length + 1;
     out.set(backup.bytes, offset);
     offset += backup.bytes.length;
-    for (const page of pages) {
-        out.set(page.bytes, offset);
-        offset += page.bytes.length;
+    for (const part of [...pages, ...members]) {
+        out.set(part.bytes, offset);
+        offset += part.bytes.length;
     }
     return out;
 }
@@ -95,6 +143,10 @@ export function decodeBackup(raw: Uint8Array): DocumentBackup {
     if (!Array.isArray(entries) || !entries.every((entry) => isPageEntry(entry))) {
         throw new TypeError("Animation editor backup has a malformed page table");
     }
+    const memberEntries: unknown = "members" in header ? header.members : [];
+    if (!Array.isArray(memberEntries) || !memberEntries.every((entry) => isMemberEntry(entry))) {
+        throw new TypeError("Animation editor backup has a malformed member table");
+    }
 
     let offset = end + 1;
     const bytes = raw.subarray(offset, offset + header.main);
@@ -104,8 +156,17 @@ export function decodeBackup(raw: Uint8Array): DocumentBackup {
         offset += entry.length;
         return page;
     });
+    const members: BackupMember[] = memberEntries.map((entry) => {
+        const member = {
+            resref: entry.resref,
+            bytes: raw.subarray(offset, offset + entry.length),
+            externalPalette: entry.externalPalette,
+        };
+        offset += entry.length;
+        return member;
+    });
     // The lengths are what slice the payload, so a truncated file must fail here rather than hand
     // back a short final page that decodes as a corrupt texture.
     if (offset > raw.length) throw new Error("Animation editor backup is truncated");
-    return { bytes, externalPalette: header.externalPalette, pages };
+    return { bytes, externalPalette: header.externalPalette, pages, members };
 }

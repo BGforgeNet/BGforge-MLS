@@ -8,6 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as vscode from "vscode";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
+import type { AnimationSetSource } from "../../src/image-editor/set-document";
 import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
 
 const GAME_SCHEME = "bgforge-ie-resource";
@@ -31,7 +32,16 @@ vi.mock("vscode", () => {
     });
     return {
         EventEmitter,
-        Uri: { file: make },
+        Uri: {
+            file: make,
+            // The set save addresses each member by its own resource URI, which is built this way.
+            from: (parts: { scheme: string; path: string; query: string }) => ({
+                ...make(parts.path),
+                scheme: parts.scheme,
+                query: parts.query,
+                toString: () => `${parts.scheme}:${parts.path}?${parts.query}`,
+            }),
+        },
         window: { showWarningMessage: vi.fn() },
         workspace: { fs: { readFile: readFileMock } },
     };
@@ -155,6 +165,71 @@ describe("opening an animation set", () => {
         expect(document.toView().set).toBeUndefined();
         expect(document.selectSetAction("TSTBG1")).toBe("refused");
         expect(document.selectSetArmour(2)).toBe("refused");
+    });
+
+    it("writes only the members the reader changed", async () => {
+        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
+            kind: "set" as const,
+            set: SET,
+            io: ioFor({ TSTBG1: baseFileBam(), TSTBG2: baseFileBam() }),
+        }));
+
+        // Nothing edited yet: a set save must not copy every member into the override folder.
+        expect(document.setSaveWrites()).toEqual([]);
+
+        document.applyMetaPatch({ transparentIndex: 3 });
+
+        const writes = document.setSaveWrites() ?? [];
+        expect(writes.map((write) => write.uri.path)).toEqual(["/tstbg1.bam"]);
+        expect(writes[0]?.bytes.byteLength).toBeGreaterThan(0);
+    });
+
+    /**
+     * A quadrant member's model is four files composed into one picture. Writing it back means cutting it
+     * up again, which this path cannot do - so it says so rather than writing the whole composition over
+     * the first quarter.
+     */
+    it("refuses in place to save a member drawn from several files", async () => {
+        const quadrant: AnimationSet = { ...SET, layout: "quadrant" };
+        const files = Object.fromEntries([1, 2, 3, 4].map((part) => [`TSTBG1${part}`, baseFileBam()] as const));
+        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, () => ({
+            kind: "set" as const,
+            set: quadrant,
+            io: ioFor(files),
+        }));
+        document.applyMetaPatch({ transparentIndex: 3 });
+
+        expect(() => document.setSaveWrites()).toThrow(/drawn from 4 files/);
+    });
+
+    it("has no set writes for a document opened on a file", async () => {
+        readFileMock.mockResolvedValue(baseFileBam());
+        const document = await ImageEditorDocument.open(fileUri("/art/TSTBG1.bam"));
+
+        expect(document.setSaveWrites()).toBeUndefined();
+    });
+
+    it("carries every changed member through a hot-exit backup", async () => {
+        const source = (): ReturnType<AnimationSetSource> => ({
+            kind: "set",
+            set: SET,
+            io: ioFor({ TSTBG1: baseFileBam(), TSTBG2: baseFileBam() }),
+        });
+        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
+        document.applyMetaPatch({ transparentIndex: 3 });
+        document.selectSetAction("TSTBG2");
+        document.applyMetaPatch({ transparentIndex: 5 });
+
+        const backup = document.backup();
+        expect(backup.members?.map((member) => member.resref)).toEqual(["TSTBG1", "TSTBG2"]);
+
+        // Restored over a set read fresh from the game: the unsaved members go back on top of it, so a
+        // save after the restore still writes exactly them - carrying the edit, not the archive's copy.
+        const restored = await ImageEditorDocument.open(setUri("1234"), backup, undefined, source);
+        expect(restored.setSaveWrites()?.map((write) => write.uri.path)).toEqual(["/tstbg1.bam", "/tstbg2.bam"]);
+        expect(restored.animation.meta.transparentIndex).toBe(3);
+        restored.selectSetAction("TSTBG2");
+        expect(restored.animation.meta.transparentIndex).toBe(5);
     });
 
     it("asks for the game to be opened when it is not", async () => {
