@@ -67,6 +67,7 @@ export {
 export { type ConversionPlan, planConversion } from "./convert/plan";
 export { type NotesOptions, type PlannedConversion, conversionNotes } from "./convert/notes";
 export { type RetargetedAction, retargetAction } from "./convert/retarget";
+export { allocateAnimationId } from "./convert/allocate";
 
 // Character facets: race, gender, class, armour, action.
 export {

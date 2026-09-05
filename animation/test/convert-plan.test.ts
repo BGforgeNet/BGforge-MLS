@@ -153,6 +153,22 @@ describe("planning a conversion", () => {
     });
 
     /**
+     * Fallout's wheel has no half-step and no due-N/S slot, so a sixteen-point source drops six facings -
+     * structurally, on every such conversion, which is exactly why they are stated once and do not make
+     * the conversion lossy. The 45-degree facings that DO map are the closest match available (measured
+     * against the critter corpus), so nothing is being degraded to fit.
+     */
+    it("states a sixteen-point source's Fallout-unrepresentable facings once, without calling it lossy", () => {
+        const plan = planConversion(setWithActions([directional("WK - walk", WEST_ARC_16)]), FALLOUT_FRM);
+
+        expect(plan.outcome).toBe("lossless");
+        expect(reportOf(plan).items).toContainEqual({
+            kind: "directions-unrepresentable",
+            detail: "the target has no slot for S, SSW, WSW, WNW, NNW, N",
+        });
+    });
+
+    /**
      * The third outcome. No source in either engine reaches it today, which is the point: two outcomes
      * would force a future mismatch into "lossy" and write a plausible-looking file that is wrong.
      */

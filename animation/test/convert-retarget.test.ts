@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type Facing, type IndexedAnimation, isRgbaAnimation, loadImage, serializeBamV1 } from "@bgforge/image";
 import { type NeutralAction } from "../src/neutral/model";
-import { IE_16_POINT_FULL, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/convert/target";
+import { FALLOUT_FRM, IE_16_POINT_FULL, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/convert/target";
 import { retargetAction } from "../src/convert/retarget";
 import { greyPalette } from "../../image/test/bam-fixtures.ts";
 
@@ -49,6 +49,7 @@ function actionOver(facings: Facing[]): NeutralAction {
 
 const WEST_ARC_8: Facing[] = ["S", "SW", "W", "NW", "N"];
 const ALL_8: Facing[] = ["S", "SW", "W", "NW", "N", "NE", "E", "SE"];
+const WEST_ARC_16: Facing[] = ["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"];
 
 /** The pixels of a retargeted facing's first frame. */
 function pixelsFor(result: ReturnType<typeof retargetAction>, facing: Facing): number[] {
@@ -162,6 +163,23 @@ describe("retargeting an action's directions", () => {
         };
 
         expect(retargetAction(source, action, IE_8_POINT_MIRRORED).facings).toEqual(["S"]);
+    });
+
+    /**
+     * A sixteen-point source into Fallout's six rotations fills every slot from the 45-degree facings and
+     * drops the half-steps, rather than substituting a nearer-numbered half-step for a slot.
+     *
+     * That is settled by measurement, not by analogy: summing FRM locomotion offsets over the critter
+     * corpus puts Fallout's diagonals at ~36 degrees of screen elevation, so for each FRM diagonal its
+     * 45-degree namesake is roughly 9 degrees off while the nearest half-step is roughly 14. The namesake
+     * is the closer match in every case, which is why name-matching IS the minimum-angle mapping here.
+     */
+    it("fills Fallout's rotations from a sixteen-point source's 45-degree facings", () => {
+        const result = retargetAction(bandOf(WEST_ARC_16), actionOver(WEST_ARC_16), FALLOUT_FRM);
+
+        expect(result.facings).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+        // SW is stored; SE is its mirror. A half-step never lands in either.
+        expect(pixelsFor(result, "SW")).toEqual(pixelsFor(result, "SE").toReversed());
     });
 
     /**

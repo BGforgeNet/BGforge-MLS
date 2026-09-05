@@ -48,7 +48,9 @@ function declarationLines(set: NeutralSet, target: ConversionTarget, id: string)
     return [
         `- \`ANIMATE.IDS\`: \`${id} ${set.identity.name}\``,
         `- \`ANISND.IDS\`: \`${id} ${set.identity.code}\``,
-        `- The id ${id} is assumed, not allocated - check it is free before declaring it.`,
+        // Provenance of the id is the caller's, not this function's, so the line claims neither - and the
+        // confirmation is worth asking for either way: an override or a mod can claim an id no index saw.
+        `- Confirm nothing else in the target claims ${id}.`,
     ];
 }
 
