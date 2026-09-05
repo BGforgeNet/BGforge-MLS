@@ -37,6 +37,7 @@ import { pickStrref } from "./strref-picker";
 import { createCreatureIndexResolver, type CreatureIndexResolver } from "./creature-index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
+import { type AnimationIndexResolver, createAnimationIndexResolver } from "@bgforge/animation";
 import { DlgReferenceIndex, type DlgSource, type InboundRef } from "../dialog-editor/dlg-references";
 
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
@@ -115,6 +116,13 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     namingTable: NamingTableResolver;
     colorGradient: ColorGradientResolver;
     creatures: CreatureIndexResolver;
+    /**
+     * The animations the open install declares, per game directory.
+     *
+     * One resolver for every consumer: building the index walks the install's declaration tables, and a
+     * second instance would repeat that walk and hold a second copy of the answer.
+     */
+    animations: AnimationIndexResolver;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -145,6 +153,10 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         // outside. Report it when it holds the host past the budget, as the server does for its requests.
         (dir, encoding) => timedHost("openGame", () => defaultOpener(dir, encoding)),
     );
+
+    // Built here rather than per consumer: the gallery and the animation editor both browse the declared
+    // animations, and the resolver caches one index per install.
+    const animationIndex = createAnimationIndexResolver(currentGame);
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured
@@ -468,6 +480,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         namingTable: createNamingTableResolver(currentGame, fallbackGameDir),
         colorGradient: createColorGradientResolver(currentGame, fallbackGameDir),
         creatures: createCreatureIndexResolver(currentGame, fallbackGameDir),
+        animations: animationIndex,
         resourceType: createResourceTypeResolver(currentGame, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(currentGame, fallbackGameDir),
         resourceList: createResourceListResolver(currentGame, fallbackGameDir),

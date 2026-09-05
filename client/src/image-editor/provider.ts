@@ -20,6 +20,7 @@ import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScrip
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
+import { type AnimationSetSource } from "./set-document";
 import { adaptImportedColourModel, buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave, pvrzPageWrites } from "./save";
 import {
@@ -141,6 +142,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     /** Absent when the resource viewer is not registered, which is also every non-IE context. */
     private readonly creatureColors: CreatureColorSource | undefined;
 
+    /** Resolves an animation set the editor is asked to open. Absent outside the resource viewer, as above. */
+    private readonly animationSets: AnimationSetSource | undefined;
+
     /** The creature each document is being shown as, if any. Per document, so every panel of one agrees. */
     private readonly activeCreature = new WeakMap<ImageEditorDocument, ActiveCreature>();
 
@@ -148,9 +152,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         context: vscode.ExtensionContext,
         resourceBytes?: GameResourceBytes,
         creatureColors?: CreatureColorSource,
+        animationSets?: AnimationSetSource,
     ) {
         this.resourceBytes = resourceBytes;
         this.creatureColors = creatureColors;
+        this.animationSets = animationSets;
         this.extensionUri = context.extensionUri;
     }
 
@@ -163,7 +169,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // the unsaved edits; reading the files instead would silently discard them while the editor still
         // shows as dirty.
         const backup = await readBackup(uri, openContext.backupId);
-        const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes);
+        const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes, this.animationSets);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: initialView(document) }));
         return document;

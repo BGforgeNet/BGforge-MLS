@@ -21,6 +21,7 @@ import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";
 import { registerImageEditor } from "./image-editor/register";
+import { createAnimationSetSource } from "./image-editor/set-document";
 import { routeCompile } from "./script-view/compile-command";
 import { registerScriptViews } from "./script-view/register";
 import { LSP_DOCUMENT_SELECTOR } from "./document-selector";
@@ -72,16 +73,22 @@ export async function activate(context: ExtensionContext) {
     // push above would reorder the intervening setup.
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
-        registerImageEditor(context, gameLookups.resourceBytes, {
-            creatures: gameLookups.creatures,
-            gradients: gameLookups.colorGradient,
-        }),
+        registerImageEditor(
+            context,
+            gameLookups.resourceBytes,
+            { creatures: gameLookups.creatures, gradients: gameLookups.colorGradient },
+            createAnimationSetSource({
+                animations: gameLookups.animations,
+                gameSession: gameLookups.gameSession,
+            }),
+        ),
         registerScriptViews(context, gameLookups.bcsSymbols, gameLookups.onDidChangeGame),
     );
 
     // The image gallery. After the resource viewer, whose game session and reveal it borrows.
     registerGallery(context, {
         gameSession: gameLookups.gameSession,
+        animations: gameLookups.animations,
         revealResource: gameLookups.revealResource,
         onDidChangeGame: gameLookups.onDidChangeGame,
     });

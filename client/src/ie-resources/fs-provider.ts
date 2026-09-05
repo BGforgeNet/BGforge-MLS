@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { conlog } from "../logging";
 import { type CurrentGame } from "./current-game";
-import { parseResourceUri } from "./uri";
+import { parseAnimationSetUri, parseResourceUri } from "./uri";
 
 /**
  * How many resources' bytes stay cached. `stat` reads a resource whole just to report its size, so browsing a
@@ -104,7 +104,21 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
         return { game, resref, ext, type: resourceTypeCode(ext) };
     }
 
+    /**
+     * A set address has no bytes of its own: it stands for the several files the set draws, each of which
+     * has its own resource URI. Refused rather than answered with an empty buffer, which would open as an
+     * empty document and look like a corrupt animation instead of a caller asking the wrong question.
+     */
+    private refuseSetBytes(uri: vscode.Uri): void {
+        if (parseAnimationSetUri(uri) === undefined) return;
+        throw new Error(
+            `${uri.path} names an animation set, which has no single file - its members are read and written ` +
+                `by their own resource URIs.`,
+        );
+    }
+
     readFile(uri: vscode.Uri): Uint8Array {
+        this.refuseSetBytes(uri);
         const cached = this.cacheGet(uri.toString());
         if (cached) return cached;
         const { game, resref, ext, type } = this.resolve(uri);
@@ -162,6 +176,7 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
     }
 
     async writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void> {
+        this.refuseSetBytes(uri);
         const { game, resref, ext, type } = this.resolve(uri);
         const key = uri.toString();
         const replaced = this.written.has(key) ? undefined : this.replacedFile(game, resref, ext, type);
@@ -177,12 +192,19 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
     }
 
     stat(uri: vscode.Uri): vscode.FileStat {
+        // VS Code stats a resource before opening its custom editor, so a set has to answer here even
+        // though it has no bytes - reporting size 0 rather than reading the members, which is work the
+        // document does lazily and would otherwise happen twice for every set opened.
+        if (parseAnimationSetUri(uri) !== undefined) {
+            return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 0 };
+        }
         const bytes = this.readFile(uri);
         // Constant timestamps: the viewer is the writer, so VS Code never needs to detect an external change.
         return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: bytes.byteLength };
     }
 
     delete(uri: vscode.Uri): void {
+        this.refuseSetBytes(uri);
         const { game, resref, type } = this.resolve(uri);
         if (type === undefined) throw vscode.FileSystemError.NoPermissions(uri); // aux sidecars aren't deletable here
         game.remove(resref, type); // uninstall the override copy; winner falls back to the BIF

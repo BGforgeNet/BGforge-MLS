@@ -11,7 +11,7 @@ import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGaller
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
-import { createAnimationIndexResolver, type SetStance, setTile } from "@bgforge/animation";
+import { type AnimationIndexResolver, type SetStance, setTile } from "@bgforge/animation";
 import { createFacetBrowser, type FacetBrowser } from "./facet-state";
 import { type ResolvedSet, resolveSet, stanceAnimation } from "./set-viewer";
 import { type SetTile } from "./webview/messages";
@@ -20,6 +20,8 @@ import { type Game } from "@bgforge/binary";
 export interface GalleryHostDeps {
     /** The open install, or undefined with none. Asked per lookup, so it is never a stale capture. */
     gameSession: () => { dir: string; game: Game } | undefined;
+    /** The animations the open install declares - the resource viewer's own index, shared not rebuilt. */
+    animations: AnimationIndexResolver;
     /** Show a game resource in the resource tree - `registerIeResources`'s own reveal. */
     revealResource: (resref: string, ext: string) => Promise<void>;
     /** Fires when the open install changes; a wired panel re-reads the corpus on it. */
@@ -27,15 +29,11 @@ export interface GalleryHostDeps {
 }
 
 export function registerGallery(context: vscode.ExtensionContext, deps: GalleryHostDeps): void {
-    const animationIndex = createAnimationIndexResolver({
-        gameAt: (dir) => (deps.gameSession()?.dir === dir ? deps.gameSession()?.game : undefined),
-    });
-
     const sets = (): readonly SetTile[] => {
         const current = deps.gameSession();
         if (current === undefined) return [];
         const exists = (resref: string): boolean => current.game.canRead(resref, "bam");
-        return (animationIndex(current.dir) ?? []).map((set) => setTile(set, exists));
+        return (deps.animations(current.dir) ?? []).map((set) => setTile(set, exists));
     };
 
     /** Open an animation's BAM, through the same resource URI every other game item opens by. */
@@ -54,7 +52,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     const facets = (): FacetBrowser | undefined => {
         const current = deps.gameSession();
         if (current === undefined) return undefined;
-        const animations = animationIndex(current.dir);
+        const animations = deps.animations(current.dir);
         if (animations === undefined) return undefined;
         return createFacetBrowser(animations, (resref) => current.game.canRead(resref, "bam"));
     };
@@ -63,7 +61,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     const resolveSetFor = (id: number, armour?: number): ResolvedSet | undefined => {
         const current = deps.gameSession();
         if (current === undefined) return undefined;
-        const set = (animationIndex(current.dir) ?? []).find((entry) => entry.id === id);
+        const set = (deps.animations(current.dir) ?? []).find((entry) => entry.id === id);
         return set === undefined ? undefined : resolveSet(current.game, set, armour);
     };
 

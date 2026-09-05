@@ -21,6 +21,8 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
+import { type AnimationSetSource, AnimationSetState } from "./set-document";
+import { parseAnimationSetUri } from "../ie-resources/uri";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
 import { composePvrzResolver } from "./pvrz-resolver";
@@ -71,7 +73,12 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     // Set when the document was opened from an IE base/east BAM pair (see ie-pair.ts): the pair is
     // combined on load into one full-rose animation and split back into both files on save.
     readonly iePair: IePairInfo | undefined;
-    private readonly model: ImageDocumentModel;
+    /**
+     * Set when the document was opened on an animation set rather than a file: the set, the armour level
+     * and the action currently shown. Swapping the action swaps the model, which is why it is not readonly.
+     */
+    readonly setState: AnimationSetState | undefined;
+    private model: ImageDocumentModel;
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
         vscode.CustomDocumentEditEvent<ImageEditorDocument>
@@ -81,10 +88,29 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     private readonly _onDidRefresh = new vscode.EventEmitter<void>();
     readonly onDidRefresh = this._onDidRefresh.event;
 
-    private constructor(uri: vscode.Uri, model: ImageDocumentModel, isFrSplit: boolean, iePair?: IePairInfo) {
+    private constructor(
+        uri: vscode.Uri,
+        model: ImageDocumentModel,
+        isFrSplit: boolean,
+        iePair?: IePairInfo,
+        setState?: AnimationSetState,
+    ) {
         this.uri = uri;
         this.isFrSplit = isFrSplit;
         this.iePair = iePair;
+        this.setState = setState;
+        this.model = model;
+        this.model.onChange = () => this._onDidRefresh.fire();
+    }
+
+    /**
+     * Put another model behind this document - a set showing a different action, or one reloaded from the
+     * game. The refresh hook moves with it: left on the old model, an edit made after the swap would fire a
+     * panel refresh that redraws from the model nobody is looking at any more.
+     */
+    private useModel(model: ImageDocumentModel): void {
+        if (model === this.model) return;
+        this.model.onChange = undefined;
         this.model = model;
         this.model.onChange = () => this._onDidRefresh.fire();
     }
@@ -98,7 +124,12 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         uri: vscode.Uri,
         backup?: DocumentBackup,
         resourceBytes?: GameResourceBytes,
+        animationSets?: AnimationSetSource,
     ): Promise<ImageEditorDocument> {
+        const setAddress = parseAnimationSetUri(uri);
+        if (setAddress !== undefined) {
+            return ImageEditorDocument.openSet(uri, setAddress, animationSets);
+        }
         if (isFrSplitPath(uri.fsPath)) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(uri.fsPath);
             // Present and save under the combined <base>.frm identity, not the opened .frN member.
@@ -146,6 +177,30 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             ? ImageDocumentModel.fromBackup(backup, basename, sidecarBytes)
             : ImageDocumentModel.fromBytes(bytes, basename, sidecarBytes);
         return new ImageEditorDocument(uri, model, false);
+    }
+
+    /**
+     * Open an animation set: its members are read from the game the URI names, not from a file.
+     *
+     * A failure here throws rather than opening an empty tab, because the two ways it can fail are both
+     * worth saying out loud - the install is closed or is a different one, or it ships none of this
+     * animation's files - and neither is something a blank editor would convey.
+     *
+     * Deliberately takes no `backup`: a set document has no edit path yet, so there is nothing unsaved for
+     * a hot-exit restore to carry, and a backup format holding one member would be the wrong shape for the
+     * several a set save writes.
+     */
+    private static openSet(
+        uri: vscode.Uri,
+        address: { gameDir: string; id: number },
+        animationSets?: AnimationSetSource,
+    ): ImageEditorDocument {
+        const hex = `0x${address.id.toString(16).padStart(4, "0")}`;
+        const source = animationSets?.(address.gameDir, address.id);
+        if (source === undefined) throw new Error(`No open game declares animation ${hex}.`);
+        const state = AnimationSetState.open(source.set, source.io);
+        if (state === undefined) throw new Error(`This install ships no files for animation ${hex}.`);
+        return new ImageEditorDocument(uri, state.model, false, undefined, state);
     }
 
     /**
@@ -415,6 +470,13 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     async reload(): Promise<void> {
+        if (this.setState !== undefined) {
+            // Re-read from the game rather than from `this.uri`: a set address has no bytes of its own, and
+            // the FS provider refuses a read of one for exactly that reason.
+            this.setState.reload();
+            this.useModel(this.setState.model);
+            return;
+        }
         if (this.isFrSplit) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(this.uri.fsPath);
             this.model.reloadAnimation(animation, sidecarBytes);
