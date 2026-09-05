@@ -143,6 +143,17 @@ export function namesArmour(scheme: ActionScheme): boolean {
     return scheme === "character";
 }
 
+/**
+ * Whether the scheme's filenames address ONE action each.
+ *
+ * The two-letter family names a file per action, so a source file packing several direction bands becomes
+ * several files there. The other two pack instead: a character `G1` holds the walk, the stances and the
+ * stand together, and a cycle-numbered name says which file rather than what is inside it.
+ */
+export function namesOneFilePerAction(scheme: ActionScheme): boolean {
+    return scheme === "action-codes";
+}
+
 /** The file a scheme names for one action of one armour level. */
 export function nameMember(scheme: ActionScheme, prefix: string, armour: number | undefined, code: string): string {
     return namesArmour(scheme) && armour !== undefined ? `${prefix}${armour}${code}` : `${prefix}${code}`;
@@ -182,14 +193,19 @@ function fateOf(source: string | undefined, target: string | undefined): DetailF
  * identical letters is exactly the inference the vocabulary exists to avoid.
  */
 export function encodeActionCodes(target: ActionScheme, action: NeutralActionRef): ActionEncoding[] {
-    if (action.id === "unpinned") {
-        return action.scheme === target ? [{ code: action.code, detail: "kept" }] : [];
-    }
     const candidates: ActionEncoding[] = [];
-    for (const entry of TABLES[target]) {
-        if (entry.id !== action.id) continue;
-        const detail = fateOf(action.detail, entry.detail);
-        if (detail !== undefined) candidates.push({ code: entry.code, detail });
+    if (action.id !== "unpinned") {
+        for (const entry of TABLES[target]) {
+            if (entry.id !== action.id) continue;
+            const detail = fateOf(action.detail, entry.detail);
+            if (detail !== undefined) candidates.push({ code: entry.code, detail });
+        }
+    }
+    // Its own scheme always names it, whatever its table holds: the code came from there, so a set written
+    // back lands on the file it was read from. This is the only name a band of a packed file has - the
+    // block table pinned what it depicts, and its own family names files rather than actions.
+    if (action.scheme === target && !candidates.some((entry) => entry.code === action.code)) {
+        candidates.push({ code: action.code, detail: "kept" });
     }
     // The source's own code first where the target names it too: a set written back to the scheme it came
     // from must land on the file it was read from, whatever else that scheme calls the same meaning.

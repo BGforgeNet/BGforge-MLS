@@ -74,12 +74,23 @@ describe("naming an action in a target scheme", () => {
         ]);
     });
 
-    it("offers a candidate only for the grip it names", () => {
-        // Never another grip's code: naming a thrust as a backslash would be the converter stating
-        // something the source contradicts, which is worse than having no name for it.
+    it("writes an action back under its own code when the target is the scheme it came from", () => {
+        // Its own name, and only that one: a thrust re-filed as a backslash would be the converter
+        // stating something the source contradicts, and a set written back to its own scheme has to
+        // land on the files it was read from.
         expect(encodeActionCodes("character", decodeActionCode("character", "A5"))).toEqual([
             { code: "A5", detail: "kept" },
         ]);
+    });
+
+    it("keeps a band's own code even where its scheme names no actions at all", () => {
+        // A packed file's band: the block table pinned what it depicts, while its code is the FILE's and
+        // the cycle-numbered family has no table to look it up in. Writing it back has to put it in the
+        // file it came out of, which nothing but its own code says.
+        const band = { scheme: "cycle-numbers" as const, id: "walk" as const, code: "G1" };
+
+        expect(encodeActionCodes("cycle-numbers", band)).toEqual([{ code: "G1", detail: "kept" }]);
+        expect(encodeActionCodes("action-codes", band)).toEqual([{ code: "WK", detail: "kept" }]);
     });
 
     it("carries an unpinned code within its own scheme and nowhere else", () => {

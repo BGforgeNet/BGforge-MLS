@@ -7,7 +7,7 @@ import { type NeutralSet } from "../src/neutral/model";
 import { FALLOUT_FRM, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/convert/target";
 import { type ConversionOptions, convertSet } from "../src/convert/convert";
 import { decodeActionCode } from "../src/animation-schemes/actions";
-import { bandedPair, multiCycle } from "../../image/test/bam-fixtures.ts";
+import { bandedPair, multiCycle, packedBands } from "../../image/test/bam-fixtures.ts";
 
 /** A west-arc band: five drawn facings and three the engine mirrors, which is the stored IE shape. */
 const band = () => bandedPair(4, [0, 1, 2, 3, 4]);
@@ -155,6 +155,36 @@ describe("converting a whole set", () => {
             layout,
         });
     }
+
+    /**
+     * The case most of an install is: one BAM holding six direction blocks, whose NAME says only which
+     * file it is. The block table says what each block depicts, so a naming that files one action per
+     * file takes the packed file apart rather than filing the whole of it under its first block.
+     */
+    it("writes a packed file's blocks as one target file each, named for what each block depicts", () => {
+        const packed = monster({ MOGHG1: packedBands(4, 6, [0, 1, 2, 3, 4]) }, "cycles");
+
+        const result = converted(packed, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "action-codes" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual([
+            "XYZWK",
+            "XYZSC",
+            "XYZSD",
+            "XYZGH",
+            "XYZDE",
+            "XYZTW",
+        ]);
+    });
+
+    it("keeps a packed file packed for a naming that addresses files rather than actions", () => {
+        // The same source into a cycle-numbered target: that family names the FILE, so taking its blocks
+        // apart would write six files the target's own reader would not put back together.
+        const packed = monster({ MOGHG1: packedBands(4, 6, [0, 1, 2, 3, 4]) }, "cycles");
+
+        const result = converted(packed, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "cycle-numbers" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZG1"]);
+    });
 
     it("names a shot by the weapon the target files it under, and says the weapon is assumed", () => {
         // The two-letter naming says only "ranged"; the character naming has a code per weapon, so the

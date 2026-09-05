@@ -17,7 +17,13 @@ import {
     isRgbaAnimation,
     splitIeBamBlocks,
 } from "@bgforge/image";
-import { type ActionScheme, encodeActionCodes, nameMember, namesArmour } from "../animation-schemes/actions";
+import {
+    type ActionScheme,
+    encodeActionCodes,
+    nameMember,
+    namesArmour,
+    namesOneFilePerAction,
+} from "../animation-schemes/actions";
 import { type NeutralAction, type NeutralSet, type NeutralVariant } from "../neutral/model";
 import { type MemberWrite, serializeMember } from "../neutral/write";
 import { buildTargetFile } from "./build-file";
@@ -114,53 +120,57 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
         // Per armour level, because the level is part of the name wherever a scheme has levels at all: a
         // set-wide tally would find level 2's walk code taken by level 1 and report it as unmappable.
         const taken = new Set<string>();
-        for (const [resref, actions] of filesOf(variant)) {
-            const [member] = actions;
-            /* v8 ignore next -- a group exists because an action put it there */
-            if (member === undefined) continue;
-            const source = composedSource(variant, resref, member.resrefs.length);
-            if (source === undefined) {
-                return {
-                    outcome: "refused",
-                    reason: `${resref} is drawn from files this cannot compose back into a target's own.`,
-                };
-            }
-            // The file is named for the member, as the source named it: the bands inside it have no names
-            // of their own in any of these schemes.
-            const named = codeFor(member, options.scheme, taken);
-            if (named === undefined) {
-                report.add("action-unmapped", `${member.label} (${resref}) has no counterpart in the target`);
-                continue;
-            }
-            taken.add(named.code);
-            if (named.detail !== "kept") {
-                report.add(
-                    "action-code-detail",
-                    `${resref} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
+        for (const [resref, packed] of filesOf(variant)) {
+            // What ONE target file holds. A scheme that names a file per action takes a source file's
+            // bands apart - a packed monster `G1` is the walk, the stances and the death, and the target
+            // has a name for each; a scheme that packs takes the file as it stands.
+            const units = namesOneFilePerAction(options.scheme) ? packed.map((action) => [action]) : [packed];
+            for (const actions of units) {
+                const [member] = actions;
+                /* v8 ignore next -- a unit exists because an action put it there */
+                if (member === undefined) continue;
+                const source = composedSource(variant, resref, member.resrefs.length);
+                if (source === undefined) {
+                    return {
+                        outcome: "refused",
+                        reason: `${resref} is drawn from files this cannot compose back into a target's own.`,
+                    };
+                }
+                const named = codeFor(member, options.scheme, taken);
+                if (named === undefined) {
+                    report.add("action-unmapped", `${member.label} (${resref}) has no counterpart in the target`);
+                    continue;
+                }
+                taken.add(named.code);
+                if (named.detail !== "kept") {
+                    report.add(
+                        "action-code-detail",
+                        `${resref} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
+                    );
+                }
+                const built = buildTargetFile(source, actions, target);
+                /* v8 ignore next -- the target's file layout was checked before the loop */
+                if (built === undefined) return { outcome: "refused", reason: `${target.label} has no layout here.` };
+                const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
+                if (!target.pairEast) {
+                    writes.push({ resref: name, bytes: serializeMember(built, name) });
+                    continue;
+                }
+                // Split on the blocks this just laid out, not on a re-reading of them: a file with real art
+                // in every slot is not the base-file shape a reader detects, so a detecting split would
+                // refuse the very file it was handed to cut.
+                const split = splitIeBamBlocks(built);
+                if (split === undefined) {
+                    return {
+                        outcome: "refused",
+                        reason: `${resref} does not fit the eight-slot blocks the target's paired files take.`,
+                    };
+                }
+                writes.push(
+                    { resref: name, bytes: serializeMember(split.base, name) },
+                    { resref: `${name}E`, bytes: serializeMember(split.east, `${name}E`) },
                 );
             }
-            const built = buildTargetFile(source, actions, target);
-            /* v8 ignore next -- the target's file layout was checked before the loop */
-            if (built === undefined) return { outcome: "refused", reason: `${target.label} has no file layout here.` };
-            const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
-            if (!target.pairEast) {
-                writes.push({ resref: name, bytes: serializeMember(built, name) });
-                continue;
-            }
-            // Split on the blocks this just laid out, not on a re-reading of them: a file with real art in
-            // every slot is not the base-file shape a reader detects, so a detecting split would refuse the
-            // very file it was handed to cut.
-            const split = splitIeBamBlocks(built);
-            if (split === undefined) {
-                return {
-                    outcome: "refused",
-                    reason: `${resref} does not fit the eight-slot blocks the target's paired files take.`,
-                };
-            }
-            writes.push(
-                { resref: name, bytes: serializeMember(split.base, name) },
-                { resref: `${name}E`, bytes: serializeMember(split.east, `${name}E`) },
-            );
         }
     }
 

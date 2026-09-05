@@ -11,7 +11,7 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { ieGroupLabels } from "../group-labels";
+import { type IeGroup, ieGroups } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
 import { type NeutralActionRef } from "./actions";
@@ -122,12 +122,12 @@ export function stancesOfMembers(
     for (const member of members) {
         const file = bandsFor(member);
         if (file === undefined) continue;
-        const labels = ieGroupLabels(member.resref, file.bands.length, file.scheme);
+        const groups = ieGroups(member.resref, file.bands.length, file.scheme);
         for (const [band, slots] of file.bands.entries()) {
             if (slots.length === 0) continue;
             stances.push({
-                label: bandLabel(member.label, labels, band, file.bands.length),
-                action: member.action,
+                label: bandLabel(member.label, groups?.[band]?.label, band, file.bands.length),
+                action: bandAction(member.action, groups?.[band]),
                 resref: member.resref,
                 parts: member.parts,
                 band,
@@ -140,7 +140,26 @@ export function stancesOfMembers(
 }
 
 /** A single-band file is its own stance; a packed one takes the block's name, else a number. */
-function bandLabel(member: string, labels: string[] | undefined, band: number, bandCount: number): string {
+function bandLabel(member: string, name: string | undefined, band: number, bandCount: number): string {
     if (bandCount === 1) return member;
-    return labels?.[band] ?? `${member} - group ${band + 1}`;
+    return name ?? `${member} - group ${band + 1}`;
+}
+
+/**
+ * What a band depicts.
+ *
+ * A packed file's name says which FILE the block lives in, and the block table says what the block is -
+ * so where the table names it, the band's own meaning beats the file's. That is the difference between a
+ * converter that can file a walk under the target's walk and one that only knows the file was `G1`. The
+ * code stays the file's: within its own scheme this band goes back where it came from, and the file is
+ * where that is.
+ */
+function bandAction(file: NeutralActionRef, group: IeGroup | undefined): NeutralActionRef {
+    if (group?.id === undefined) return file;
+    return {
+        scheme: file.scheme,
+        id: group.id,
+        code: file.code,
+        ...(group.detail === undefined ? {} : { detail: group.detail }),
+    };
 }

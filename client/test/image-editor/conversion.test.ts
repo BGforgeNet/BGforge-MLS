@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
 import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
+import { packedBands } from "../../../image/test/bam-fixtures.ts";
 import {
     CONVERSION_PROFILES,
     convertOpenSet,
@@ -122,6 +123,31 @@ describe("convertOpenSet", () => {
         expect(result.outcome).toBe("refused");
         expect(result.reason).toContain("no file the target can name");
         expect(result.writes).toEqual([]);
+    });
+
+    /**
+     * A packed file, which is what most of an install ships: the two-letter family names one file per
+     * action, so the blocks come apart - and the blocks the documentation refuses to pin come back as
+     * named losses rather than as files under a guessed name.
+     */
+    it("reports what a packed file's unnamed blocks cost, beside the files it did write", () => {
+        const packed: AnimationSet = { ...SET, layout: "cycles" };
+        const files: Record<string, Uint8Array> = { TSTBG2: packedBands(2, 3, [0, 1, 2, 3, 4]) };
+        const packedIo: StanceIo = {
+            exists: (resref) => Object.hasOwn(files, resref.toUpperCase()),
+            read: (resref) => files[resref.toUpperCase()],
+        };
+
+        const result = convertOpenSet(packed, packedIo, "tob", request);
+
+        expect(result.outcome).toBe("lossy");
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1"]);
+        expect(result.losses).toEqual([
+            "A2/CA - attack or cast (TSTBG2) has no counterpart in the target",
+            "A3/SP - attack or spell (TSTBG2) has no counterpart in the target",
+        ]);
+        // The informational half stays separate: nothing here is a reason to hesitate.
+        expect(result.notes.some((note) => note.includes("loss"))).toBe(false);
     });
 
     it("refuses a target it does not offer", () => {

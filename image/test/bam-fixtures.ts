@@ -42,6 +42,17 @@ export function multiCycle(edge: number, count: number): Uint8Array {
  * twin differ, and the only shape that shows whether a member was banded as one picture or as one file.
  */
 export function bandedPair(edge: number, drawn: readonly number[]): Uint8Array {
+    return packedBands(edge, 1, drawn);
+}
+
+/**
+ * `blocks` eight-cycle bands back to back - the shape a PACKED file takes.
+ *
+ * The majority of shipped creature animations are this: one BAM holding the walk, the stances, the death
+ * and the rest as consecutive direction blocks. `drawn` names the slots of each block that hold real art,
+ * so the eastern three stay padding and every block reads as a stored western arc.
+ */
+export function packedBands(edge: number, blocks: number, drawn: readonly number[]): Uint8Array {
     const palette = greyPalette();
     for (let i = 1; i <= 2; i++) palette[i] = { r: i * 80, g: 255 - i * 80, b: i * 20, a: 255 };
     const square = (index: number) => ({
@@ -54,8 +65,8 @@ export function bandedPair(edge: number, drawn: readonly number[]): Uint8Array {
     const animation: IndexedAnimation = {
         palette,
         frames: [square(1), square(2)],
-        sequences: Array.from({ length: 8 }, (_, cycle) => ({
-            frameRefs: drawn.includes(cycle) ? [0, 1] : [0, 0],
+        sequences: Array.from({ length: 8 * blocks }, (_, cycle) => ({
+            frameRefs: drawn.includes(cycle % 8) ? [0, 1] : [0, 0],
             facing: "none" as const,
         })),
         meta: { sourceFormat: "bam", transparentIndex: 0 },

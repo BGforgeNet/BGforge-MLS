@@ -85,6 +85,45 @@ describe("stancesOfMembers", () => {
         expect(stances.every((s) => s.resref === "MOGHG1")).toBe(true);
     });
 
+    /**
+     * The band's own meaning, not only its name. The file is called `G1` and the code stays `G1` - that is
+     * where a same-scheme write puts it back - but what the band DEPICTS is what the block table says, and
+     * a converter that only had the filename could file none of these under a target's own names.
+     */
+    it("gives each band of a packed file what the block table says it depicts", () => {
+        const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
+
+        expect(stances.map((s) => s.action.id)).toEqual(["walk", "ready", "stand", "get-hit", "die", "twitch"]);
+        expect(stances.every((s) => s.action.code === "G1")).toBe(true);
+    });
+
+    it("carries the grip a block's own name pins", () => {
+        // The nine-block character G1 names its stances by grip, and that is a detail a target which
+        // distinguishes grips can file on - so it travels with the band rather than staying in the label.
+        const stances = stancesOfMembers([member("G1", "CDMB1G1")], () => bands(9));
+
+        expect(stances.map((s) => s.action.detail)).toEqual([
+            undefined,
+            "1-handed",
+            "1-handed",
+            "2-handed",
+            "2-handed",
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+        ]);
+    });
+
+    it("leaves a band the block table does not pin on the file's own meaning", () => {
+        // The cast blocks: the sources disagree over which half of each pair is the release, so the table
+        // names them without saying what they are. The file's own code does say - `CA` is a spell - and
+        // that is what the bands keep, rather than the table's silence overwriting it.
+        const stances = stancesOfMembers([member("CA", "MOGHCA")], () => bands(8));
+
+        expect(stances.map((s) => s.action.id)).toEqual(Array.from({ length: 8 }, () => "spell"));
+    });
+
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {
         // A wrong stance name is worse than an honest number - the same posture the block table takes.
         const stances = stancesOfMembers([member("G2", "MWYVG2")], () => bands(5, 10, undefined));
