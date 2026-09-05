@@ -23,7 +23,10 @@ export type LossKind =
     | "action-unmapped"
     /** The two namings disagree on how finely an action is named - a grip the target does not distinguish,
      *  or a weapon it does and the source never stated. Informational: the art is untouched either way. */
-    | "action-code-detail";
+    | "action-code-detail"
+    /** A member the source cut across several files was assembled into the one file the target writes.
+     *  Informational: it is the picture the parts drew together, and none of it is discarded. */
+    | "parts-composed";
 
 export interface LossItem {
     kind: LossKind;
@@ -48,6 +51,8 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     // A naming difference, not a data one: the art written is the art read, under a name whose precision
     // differs. Worth saying, never worth calling the conversion lossy.
     "action-code-detail",
+    // An assembly, not a degradation: the parts drew one picture and the output holds all of it.
+    "parts-composed",
 ]);
 
 export class LossReport {

@@ -11,6 +11,10 @@
  * second derivation of a fact that module already owns.
  */
 import { type AnimationSet } from "../animation-index";
+import { type IeGroup, ieBlocks } from "../group-labels";
+
+/** The character family bands at nine cycles - the sixteen-point scheme's stored western arc. */
+const CHARACTER_SCHEME = "ie9";
 
 export type Action =
     /** `A1`..`A9` - grip and weapon vary by number. */
@@ -80,6 +84,65 @@ export function characterActions(set: AnimationSet, armour: number, exists: (res
         const resref = characterMember(set, armour, action);
         return resref !== undefined && exists(resref);
     });
+}
+
+/**
+ * The band skeleton one character file carries, and where its own action's art sits in it.
+ *
+ * The engine reads a band by its POSITION, so this is a writer's fact, not a reader's: a file holding only
+ * the band it draws would play the walk where the stance belongs.
+ */
+export interface CharacterFileLayout {
+    /** Direction bands the file holds, drawn or empty. */
+    bands: number;
+    /** Which of them this file's own action draws. */
+    at: number;
+}
+
+/**
+ * Where each misc file's art sits in the eleven-band skeleton they all carry.
+ *
+ * Measured per file across a classic and an Enhanced install: every `G` file holds the same eleven bands and
+ * draws the one its digit names, so the digit is a position in that list rather than a sequence code. The
+ * hit-and-death files draw a second band as well - the engine continues one into the next - and a converted
+ * source has only the one action, so each is written at its own band alone.
+ */
+const MISC_BAND: Readonly<Record<string, number>> = {
+    G11: 0,
+    G1: 1,
+    G12: 2,
+    G13: 3,
+    G14: 4,
+    G15: 5,
+    G16: 6,
+    G17: 7,
+    G18: 8,
+    G19: 9,
+};
+
+/** Bands in a misc file, and in a cast file - the four conjure and release pairs. */
+const MISC_BANDS = 11;
+const CAST_BANDS = 8;
+/** The release half of the first spell: what a source that names one spell action is written as. */
+const CAST_BAND = 1;
+
+/** How the file naming `code` is laid out. Anything the skeletons do not cover is a single band. */
+export function characterFileLayout(code: string): CharacterFileLayout {
+    const misc = MISC_BAND[code];
+    if (misc !== undefined) return { bands: MISC_BANDS, at: misc };
+    return code === "CA" ? { bands: CAST_BANDS, at: CAST_BAND } : { bands: 1, at: 0 };
+}
+
+/**
+ * What a misc file depicts, from the block its art sits in.
+ *
+ * Read from the block table rather than restated here: the same eleven blocks are what a picker lists for a
+ * packed file, so a second set of words for them would be two names for one thing. Undefined for a code the
+ * family's open space carries and the table does not name.
+ */
+export function characterMiscBlock(detail: number): IeGroup | undefined {
+    const at = MISC_BAND[`G${detail}`];
+    return at === undefined ? undefined : ieBlocks("g1", CHARACTER_SCHEME, MISC_BANDS)?.[at];
 }
 
 /**

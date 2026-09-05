@@ -114,6 +114,16 @@ const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
 const IE_SEQUENCE_TOKENS = ["g1", "g2", "ca"];
 
 /**
+ * One documented block layout, addressed by what identifies it rather than by a filename.
+ *
+ * Exported for the writer's side of the same fact: a character misc file draws one band of a layout, so
+ * what that file depicts is what that block depicts, and reading it from here keeps one statement of it.
+ */
+export function ieBlocks(token: string, scheme: IeScheme, count: number): IeGroup[] | undefined {
+    return IE_SEQUENCE_NAMES[`${token}/${scheme}/${count}`];
+}
+
+/**
  * The documented blocks of a multi-block file, from the filename's sequence token and the block scheme;
  * undefined when the combination matches no documented layout (callers number the groups instead).
  */
@@ -122,7 +132,7 @@ export function ieGroups(basename: string, groupCount: number, scheme?: IeScheme
     const stem = basename.toLowerCase().replace(/\.[^.]*$/, "");
     for (const candidate of [stem, stem.replace(/e$/, "")]) {
         for (const token of IE_SEQUENCE_TOKENS) {
-            if (candidate.endsWith(token)) return IE_SEQUENCE_NAMES[`${token}/${scheme}/${groupCount}`];
+            if (candidate.endsWith(token)) return ieBlocks(token, scheme, groupCount);
         }
     }
     return undefined;

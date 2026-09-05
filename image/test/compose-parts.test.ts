@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Frame, IndexedAnimation, Rgba } from "../src/model/animation.ts";
-import { composeParts, splitFrame } from "../src/model/compose-parts.ts";
+import { composeParts, cycleDrawsArt, splitFrame } from "../src/model/compose-parts.ts";
 
 function palette(): Rgba[] {
     return Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
@@ -238,5 +238,23 @@ describe("splitFrame", () => {
             [1, 2],
             [3, 4],
         ]);
+    });
+});
+
+describe("cycleDrawsArt", () => {
+    // Areas in frame order: two placeholders, then a sprite.
+    const areas = [1, 1, 900];
+
+    test("reads a cycle of single-pixel frames as the placeholder it is", () => {
+        expect(cycleDrawsArt([0, 1], areas)).toBe(false);
+    });
+
+    test("reads a cycle as drawing where any one of its frames is bigger than a pixel", () => {
+        expect(cycleDrawsArt([0, 2], areas)).toBe(true);
+    });
+
+    test("reads an empty cycle, and one naming a frame the table does not hold, as drawing nothing", () => {
+        expect(cycleDrawsArt([], areas)).toBe(false);
+        expect(cycleDrawsArt([7], areas)).toBe(false);
     });
 });

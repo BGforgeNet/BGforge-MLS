@@ -64,8 +64,14 @@ interface ActionEntry {
 }
 
 /**
- * `<race><gender><class><armour><action>`: attacks carry a grip, shots a weapon, and everything under `G`
- * is documented only as "misc", so those stay unpinned. `INV` is the inventory paperdoll.
+ * `<race><gender><class><armour><action>`: attacks carry a grip, shots a weapon, `INV` is the inventory
+ * paperdoll.
+ *
+ * The `G` family is documented only as "misc", which reads as unpinnable - but every one of those files
+ * carries the same eleven-band skeleton and draws the band its digit names, and what THAT band depicts the
+ * block table pins. So each misc file is named for its own band: measured per file across a classic and an
+ * Enhanced install, and the two independent readings agree. `A7`-`A9` ship without their grips documented
+ * and stay unpinned, which is what the family's genuinely unnamed space looks like.
  */
 const CHARACTER: readonly ActionEntry[] = [
     { code: "A1", id: "attack", detail: "1-handed overhead" },
@@ -78,6 +84,16 @@ const CHARACTER: readonly ActionEntry[] = [
     { code: "SA", id: "shoot", detail: "bow" },
     { code: "SS", id: "shoot", detail: "sling" },
     { code: "SX", id: "shoot", detail: "crossbow" },
+    { code: "G11", id: "walk" },
+    { code: "G1", id: "ready", detail: "1-handed" },
+    { code: "G12", id: "stand", detail: "1-handed" },
+    { code: "G13", id: "ready", detail: "2-handed" },
+    { code: "G14", id: "get-hit" },
+    { code: "G15", id: "die" },
+    { code: "G16", id: "twitch" },
+    { code: "G17", id: "stand" },
+    { code: "G18", id: "stand" },
+    { code: "G19", id: "sleep" },
     { code: "INV", id: "paperdoll" },
 ];
 
@@ -146,12 +162,13 @@ export function namesArmour(scheme: ActionScheme): boolean {
 /**
  * Whether the scheme's filenames address ONE action each.
  *
- * The two-letter family names a file per action, so a source file packing several direction bands becomes
- * several files there. The other two pack instead: a character `G1` holds the walk, the stances and the
- * stand together, and a cycle-numbered name says which file rather than what is inside it.
+ * Both named families do, so a source file packing several direction bands becomes several files in either.
+ * A character file carries the whole family's band skeleton and still draws one action in it - measured per
+ * file on two installs - which is a layout fact rather than a naming one. Only the cycle-numbered family
+ * packs: its names say which file rather than what is inside it, so its files are written as they stand.
  */
 export function namesOneFilePerAction(scheme: ActionScheme): boolean {
-    return scheme === "action-codes";
+    return scheme !== "cycle-numbers";
 }
 
 /** The file a scheme names for one action of one armour level. */

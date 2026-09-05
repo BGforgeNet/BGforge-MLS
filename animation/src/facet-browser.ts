@@ -11,7 +11,7 @@
  */
 import { type AnimationSet } from "./animation-index";
 import { type CharClass, type CharacterFacets, type Gender, type Race } from "./animation-facets";
-import { type Action, characterActions, characterMember } from "./animation-schemes/character";
+import { type Action, characterActions, characterMember, characterMiscBlock } from "./animation-schemes/character";
 
 export const RACES: readonly Race[] = ["human", "elf", "dwarf", "halfling", "gnome", "halforc"];
 export const GENDERS: readonly Gender[] = ["male", "female"];
@@ -117,7 +117,12 @@ export function actionLabel(action: Action): string {
         case "cast":
             return "Cast";
         case "misc":
-            return action.detail === 1 ? "Stand" : `Misc ${action.detail}`;
+            // A misc file's digit is a position in the band skeleton its family shares, so the control says
+            // what that block depicts rather than repeating the number already in the filename. The block's
+            // own label, because these labels are KEYS - the view sends the string back and lists options by
+            // it - and two files that merely share a meaning would collide under a name built from the term.
+            // The family's code space is open, so one the table does not name keeps its number.
+            return characterMiscBlock(action.detail)?.label ?? `Misc ${action.detail}`;
         case "shoot":
             return `Shoot (${action.weapon})`;
         case "paperdoll":

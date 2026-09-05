@@ -17,7 +17,8 @@
             "@bgforge/binary": ["../binary/src/index.ts"],
             "@bgforge/image": ["../image/src/index.ts"],
             "@bgforge/image/frame-anchor": ["../image/src/model/frame-anchor.ts"],
-            "@bgforge/image/ie-direction": ["../image/src/model/ie-direction.ts"]
+            "@bgforge/image/ie-direction": ["../image/src/model/ie-direction.ts"],
+            "@bgforge/image/compose-parts": ["../image/src/model/compose-parts.ts"]
         }
     },
     "include": ["src", "test", "../shared", "../binary/src"],

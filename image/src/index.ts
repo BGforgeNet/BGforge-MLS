@@ -35,7 +35,7 @@ export {
     ieFacingsForStride,
     interpretIeDirections,
 } from "./model/ie-direction.ts";
-export { type PartRect, composeParts, drawsCycle, splitFrame } from "./model/compose-parts.ts";
+export { type PartRect, composeParts, cycleDrawsArt, drawsCycle, splitFrame } from "./model/compose-parts.ts";
 
 // Format codecs.
 export { type BmpImage, readBmpRgba } from "./bmp/parse.ts";

@@ -1,4 +1,7 @@
 import type { Facing } from "@bgforge/image";
+// The pure subpath, not the "@bgforge/image" barrel: the barrel's png/bamc codecs need Buffer/zlib and
+// crash a browser webview bundle on load (see render/anchor.ts).
+import { cycleDrawsArt } from "@bgforge/image/compose-parts";
 import type { IeDirectionAnalysis, IeDirectionSlot } from "@bgforge/image/ie-direction";
 import type { AnimationView, SequenceView } from "../messages";
 
@@ -153,6 +156,21 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
     }
 
     return { mode: "grid", tiles: view.sequences.map((seq, index) => ({ seq, index })) };
+}
+
+/**
+ * The first direction block that draws anything, or 0 where none does.
+ *
+ * A file of a packed family carries every block of that family's skeleton and draws only the one its own
+ * name promises, so opening on block 0 shows a character file's placeholders - a stage of single pixels,
+ * which reads as a broken editor rather than as "this block is not the one".
+ */
+export function firstDrawnBlock(view: AnimationView, interpretation: IeDirectionAnalysis): number {
+    const areas = view.frames.map((frame) => frame.width * frame.height);
+    const at = interpretation.groups.findIndex((slots) =>
+        slots.some((slot) => cycleDrawsArt(view.sequences[slot.seqIndex]?.frameRefs ?? [], areas)),
+    );
+    return at === -1 ? 0 : at;
 }
 
 /** Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction). */

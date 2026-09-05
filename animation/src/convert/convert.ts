@@ -13,6 +13,7 @@
 import {
     type IndexedAnimation,
     type LossReport,
+    composeParts,
     ieFacingsForStride,
     isRgbaAnimation,
     splitIeBamBlocks,
@@ -24,9 +25,10 @@ import {
     namesArmour,
     namesOneFilePerAction,
 } from "../animation-schemes/actions";
+import { characterFileLayout } from "../animation-schemes/character";
 import { type NeutralAction, type NeutralSet, type NeutralVariant } from "../neutral/model";
 import { type MemberWrite, serializeMember } from "../neutral/write";
-import { buildTargetFile } from "./build-file";
+import { type BandLayout, buildTargetFile, seatInBandLayout } from "./build-file";
 import { conversionNotes } from "./notes";
 import { planConversion } from "./plan";
 import { type ConversionTarget } from "./target";
@@ -68,16 +70,34 @@ function filesOf(variant: NeutralVariant): Map<string, NeutralAction[]> {
 /**
  * The source animation a file group draws.
  *
- * One file is itself; anything drawn from several is a composition - a base and its eastern companion, or a
- * sprite cut into quarters or tiles - and putting those back together for a target means cutting them up
- * again, which this does not do yet. Undefined says so; the caller refuses rather than writing one part of
- * the picture over the whole.
+ * One file is itself; a member drawn from several - a sprite cut into quarters or tiles - is the picture
+ * they draw TOGETHER, so it is assembled here. Every target this offers writes a member as one file, so
+ * writing one quarter as the whole would be a wrong animation rather than a lossy one.
+ *
+ * Splitting a composed picture back into a target's OWN tiles is deliberately not built: no target offered
+ * writes tiles, so it would be a writer with nothing to write for.
+ *
+ * Undefined where the parts cannot be assembled - their cycle tables disagree, or a true-colour member's
+ * frames live in PVRZ pages the reader never had. The caller refuses rather than writing part of a picture.
  */
-function composedSource(variant: NeutralVariant, resref: string, parts: number): IndexedAnimation | undefined {
-    if (parts !== 1) return undefined;
-    const animation = variant.files.get(resref);
-    // A true-colour member's frames live in PVRZ pages the reader never had, so it cannot be rebuilt here.
-    return animation === undefined || isRgbaAnimation(animation) ? undefined : animation;
+function composedSource(
+    variant: NeutralVariant,
+    resrefs: readonly string[],
+    report: LossReport,
+): IndexedAnimation | undefined {
+    const parts: IndexedAnimation[] = [];
+    for (const resref of resrefs) {
+        const animation = variant.files.get(resref);
+        if (animation === undefined || isRgbaAnimation(animation)) return undefined;
+        parts.push(animation);
+    }
+    const [first] = parts;
+    if (parts.length === 1) return first;
+    const composed = composeParts(parts);
+    if (composed !== undefined) {
+        report.add("parts-composed", `${resrefs.join(" + ")} are assembled into one file`);
+    }
+    return composed;
 }
 
 /**
@@ -97,12 +117,23 @@ function codeFor(
     return undefined;
 }
 
+/**
+ * The band skeleton the target's naming family gives one file.
+ *
+ * Only the character family has one: its files all carry the same eleven bands (eight for a cast file) and
+ * draw the one their own code names. Everywhere else a file is the band it holds.
+ */
+function fileLayout(scheme: ActionScheme, code: string): BandLayout {
+    return scheme === "character" ? characterFileLayout(code) : { bands: 1, at: 0 };
+}
+
 export function convertSet(set: NeutralSet, target: ConversionTarget, options: ConversionOptions): ConversionResult {
     const plan = planConversion(set, target);
     if (plan.outcome === "refused") return plan;
     // Asked once, for the set: every file below is laid out in the same blocks, so a target whose file
     // layout this does not model refuses the conversion rather than a file at a time.
-    if (target.stride === undefined || ieFacingsForStride(target.stride).length === 0) {
+    const stride = target.stride;
+    if (stride === undefined || ieFacingsForStride(stride).length === 0) {
         return { outcome: "refused", reason: `This does not know how ${target.label} lays its files out.` };
     }
     if (set.variants.length > 1 && !namesArmour(options.scheme)) {
@@ -116,28 +147,42 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
 
     const report = plan.report;
     const writes: MemberWrite[] = [];
+    /** Actions the target has no name for - kept apart from the report so a refusal can name them once. */
+    const unmapped: NeutralAction[] = [];
     for (const variant of set.variants) {
         // Per armour level, because the level is part of the name wherever a scheme has levels at all: a
         // set-wide tally would find level 2's walk code taken by level 1 and report it as unmappable.
         const taken = new Set<string>();
         for (const [resref, packed] of filesOf(variant)) {
+            // Assembled once for the whole group: every band of a file draws the same parts, so composing
+            // per band would report the same assembly once per band of it.
+            const [first] = packed;
+            /* v8 ignore next -- a group exists because an action put it there */
+            if (first === undefined) continue;
+            const source = composedSource(variant, first.resrefs, report);
+            if (source === undefined) {
+                return {
+                    outcome: "refused",
+                    reason: `${resref} is drawn from files this cannot assemble into one picture.`,
+                };
+            }
             // What ONE target file holds. A scheme that names a file per action takes a source file's
             // bands apart - a packed monster `G1` is the walk, the stances and the death, and the target
             // has a name for each; a scheme that packs takes the file as it stands.
-            const units = namesOneFilePerAction(options.scheme) ? packed.map((action) => [action]) : [packed];
+            //
+            // Unless the group already IS one of the target's files: a cast file holds four conjure and
+            // release pairs under one name, so filing its bands separately would report seven eighths of it
+            // lost to a file that had room for all of it.
+            const whole = codeFor(first, options.scheme, taken);
+            const fills = whole !== undefined && fileLayout(options.scheme, whole.code).bands === packed.length;
+            const units = namesOneFilePerAction(options.scheme) && !fills ? packed.map((action) => [action]) : [packed];
             for (const actions of units) {
                 const [member] = actions;
                 /* v8 ignore next -- a unit exists because an action put it there */
                 if (member === undefined) continue;
-                const source = composedSource(variant, resref, member.resrefs.length);
-                if (source === undefined) {
-                    return {
-                        outcome: "refused",
-                        reason: `${resref} is drawn from files this cannot compose back into a target's own.`,
-                    };
-                }
                 const named = codeFor(member, options.scheme, taken);
                 if (named === undefined) {
+                    unmapped.push(member);
                     report.add("action-unmapped", `${member.label} (${resref}) has no counterpart in the target`);
                     continue;
                 }
@@ -148,9 +193,18 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                         `${resref} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
                     );
                 }
-                const built = buildTargetFile(source, actions, target);
+                const laid = buildTargetFile(source, actions, target);
                 /* v8 ignore next -- the target's file layout was checked before the loop */
-                if (built === undefined) return { outcome: "refused", reason: `${target.label} has no layout here.` };
+                if (laid === undefined) return { outcome: "refused", reason: `${target.label} has no layout here.` };
+                const built = seatInBandLayout(laid, fileLayout(options.scheme, named.code), stride);
+                if (built === undefined) {
+                    return {
+                        outcome: "refused",
+                        reason:
+                            `${member.label} (${resref}) is not the one direction band ` +
+                            `the target's ${named.code} file seats.`,
+                    };
+                }
                 const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
                 if (!target.pairEast) {
                     writes.push({ resref: name, bytes: serializeMember(built, name) });
@@ -177,10 +231,21 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     // Nothing named is nothing converted. Reported as a lossy conversion the caller gets a list of what
     // was lost and an empty output, with nothing to say which of the two it is looking at - and a source
     // whose actions carry no meaning (a cycle-numbered set) lands here for every meaning-carrying target.
+    //
+    // The actions are named ONCE, and only the naming failures: built from the report's own lines it
+    // repeated a clause per action and carried in whatever else the plan had recorded, so a set of a dozen
+    // bands produced a paragraph with one fact in it. Which sentence depends on WHY there is no name -
+    // "nobody has said what this is" is a different problem for the reader than "the target has no such
+    // file", and only the first is unfixable from here.
     if (writes.length === 0) {
+        if (unmapped.length === 0) return { outcome: "refused", reason: "This set has no member to convert." };
+        const names = unmapped.map((action) => action.label).join(", ");
+        const unstated = unmapped.every((action) => action.action.id === "unpinned");
         return {
             outcome: "refused",
-            reason: `This set has no file the target can name: ${report.losses.map((loss) => loss.detail).join("; ")}.`,
+            reason: unstated
+                ? `Nothing states what this set's actions depict, so the target can name none of them: ${names}.`
+                : `The target has no counterpart for any of this set's actions: ${names}.`,
         };
     }
 

@@ -5,8 +5,13 @@
  * a set draws, `bands.ts` decides how a file's cycles divide into stances and what to call them. This is
  * the only place that reads bytes, so both stay unit-testable without a game.
  */
-import { drawsCycle, readBamV1Tables } from "@bgforge/image";
-import { ieBandsOfStride, interpretIeDirections, type SequenceShape } from "@bgforge/image/ie-direction";
+import { cycleDrawsArt, drawsCycle, readBamV1Tables } from "@bgforge/image";
+import {
+    ieBandsOfStride,
+    interpretIeDirections,
+    type IeDirectionSlot,
+    type SequenceShape,
+} from "@bgforge/image/ie-direction";
 import { type AnimationSet } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
@@ -58,6 +63,25 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
 interface PartTables {
     sequences: SequenceShape[];
     frameCount: number;
+    /** Each frame's pixel count, so a cycle can be asked whether it draws anything without decoding one. */
+    frameAreas: number[];
+}
+
+/**
+ * The cycle table of a whole member, plus which of its cycles hold art at all.
+ *
+ * No frame areas of its own: a merged cycle's refs index the frame table of the PART it came from, so the
+ * areas are only meaningful beside their own part and the reading they support is already taken below.
+ */
+interface MergedTables {
+    sequences: SequenceShape[];
+    frameCount: number;
+    holdsArt: boolean[];
+}
+
+/** Whether a cycle opens on a frame that draws something rather than on a placeholder. */
+function cycleHoldsArt(sequence: SequenceShape | undefined, areas: readonly number[]): boolean {
+    return sequence !== undefined && cycleDrawsArt(sequence.frameRefs, areas);
 }
 
 /**
@@ -70,16 +94,21 @@ interface PartTables {
  * Cycle indices line up across parts, so a merged entry addresses the same cycle of the composed
  * animation.
  */
-function mergedTables(parts: PartTables[]): PartTables | undefined {
-    const [first, ...rest] = parts;
+function mergedTables(parts: PartTables[]): MergedTables | undefined {
+    const [first] = parts;
     if (first === undefined) return undefined;
-    if (rest.length === 0) return first;
+    const sequences = first.sequences.map((seq, cycle) =>
+        drawsCycle(seq)
+            ? seq
+            : (parts.map((part) => part.sequences[cycle]).find((candidate) => drawsCycle(candidate)) ?? seq),
+    );
+    // Judged per part, because a cycle's refs index the frame table of the file they came from - and a
+    // cycle draws where ANY part holds pixels for it, which is the same reading the merge above takes.
     return {
         frameCount: Math.max(...parts.map((part) => part.frameCount)),
-        sequences: first.sequences.map((seq, cycle) =>
-            drawsCycle(seq)
-                ? seq
-                : (parts.map((part) => part.sequences[cycle]).find((candidate) => drawsCycle(candidate)) ?? seq),
+        sequences,
+        holdsArt: sequences.map((_, cycle) =>
+            parts.some((part) => cycleHoldsArt(part.sequences[cycle], part.frameAreas)),
         ),
     };
 }
@@ -102,11 +131,16 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     }
     const merged = mergedTables(tables);
     if (merged === undefined) return undefined;
+    /** A band draws where any of its cycles holds art - the rest are the skeleton a packed file carries. */
+    const drawn = (bands: readonly (readonly IeDirectionSlot[])[]): boolean[] =>
+        bands.map((slots) => slots.some((slot) => merged.holdsArt[slot.seqIndex] === true));
     if (stride !== undefined) {
         const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride);
         // The stride came from the animation's own declared type, so the facings on them are declared too.
         // A stride the block table has a scheme for keeps its stance names; a wider one is numbered.
-        return bands === undefined ? undefined : { bands, scheme: schemeForStride(stride), confidence: "declared" };
+        return bands === undefined
+            ? undefined
+            : { bands, drawn: drawn(bands), scheme: schemeForStride(stride), confidence: "declared" };
     }
     const analysis = interpretIeDirections(merged.sequences, merged.frameCount);
     if (analysis === undefined) return undefined;
@@ -114,6 +148,7 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     // facings are a reading of block structure, good enough to draw and not to write a target from.
     return {
         bands: analysis.groups,
+        drawn: drawn(analysis.groups),
         scheme: analysis.scheme,
         confidence: analysis.detected ? "declared" : "inferred",
     };

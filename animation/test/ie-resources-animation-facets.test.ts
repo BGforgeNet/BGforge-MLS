@@ -104,20 +104,36 @@ describe("the decode against a table's own comments", () => {
 });
 
 describe.skipIf(EE_GAME === undefined)("the decode against a real install's table", () => {
+    /**
+     * An id its own table names more than once cannot be judged this way.
+     *
+     * A classic install aliases: `0x6313` is `THIEF_FEMALE_HALFLING`, and the same id again as
+     * `THIEF_FEMALE_GNOME` and `THIEF_FEMALE_HALFORC` - so whatever the decode answers, two of the three
+     * comments disagree with it. Excluded rather than judged, and COUNTED, so a decode that stopped
+     * matching cannot hide behind a shrinking population.
+     */
     it("agrees on every row whose comment names a class, gender and race", () => {
         const game = openGame(EE_GAME!);
         expect(game, `no game at ${EE_GAME}`).toBeDefined();
         const rows = facetRows(game!.read("ANISND", "ids"));
+        const perId = new Map<number, number>();
+        for (const row of rows) perId.set(row.id, (perId.get(row.id) ?? 0) + 1);
+        const judged = rows.filter((row) => perId.get(row.id) === 1);
         // Canonical strings, not JSON: `JSON.stringify` is order-sensitive, so two objects carrying the
         // same facets in a different key order compare unequal and every row "disagrees".
         const canonical = (facets: CharacterFacets | undefined): string =>
             facets === undefined ? "none" : `${facets.race}/${facets.gender}/${facets.charClass}`;
         // Reported beside the verdict: a decode that silently stopped matching rows would otherwise pass.
-        const disagreed = rows.filter(
+        const disagreed = judged.filter(
             (row) => canonical(characterFacetsOf(row.id)) !== canonical(facetsFromComment(row.comment)),
         );
-        expect({ rows: rows.length, disagreed }).toEqual({ rows: rows.length, disagreed: [] });
-        expect(rows.length).toBeGreaterThan(50);
+
+        expect({ judged: judged.length, aliased: rows.length - judged.length, disagreed }).toEqual({
+            judged: judged.length,
+            aliased: rows.length - judged.length,
+            disagreed: [],
+        });
+        expect(judged.length).toBeGreaterThan(50);
     });
 });
 

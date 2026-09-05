@@ -105,7 +105,10 @@ describe("resolveFacets", () => {
 
     it("offers only the actions whose files the install has", () => {
         const resolved = resolveFacets(index, elfMage, 2, { kind: "misc", detail: 1 }, exists);
-        expect(resolved.actions.map((action) => actionLabel(action))).toEqual(["Stand", "Shoot (bow)"]);
+        expect(resolved.actions.map((action) => actionLabel(action))).toEqual([
+            "SC1 - combat stance (1-h)",
+            "Shoot (bow)",
+        ]);
     });
 });
 
@@ -116,11 +119,37 @@ describe("actionLabel", () => {
         expect([
             actionLabel({ kind: "attack", detail: 2 }),
             actionLabel({ kind: "cast" }),
-            actionLabel({ kind: "misc", detail: 1 }),
-            actionLabel({ kind: "misc", detail: 3 }),
             actionLabel({ kind: "shoot", weapon: "bow" }),
             actionLabel({ kind: "paperdoll" }),
-        ]).toEqual(["Attack 2", "Cast", "Stand", "Misc 3", "Shoot (bow)", "Inventory"]);
+        ]).toEqual(["Attack 2", "Cast", "Shoot (bow)", "Inventory"]);
+    });
+
+    /**
+     * The misc files each draw one band of the skeleton they share, and that band's meaning is measured - so
+     * the control says what the file shows rather than repeating the digit already in its name, in the
+     * block's own words so the two surfaces name it identically.
+     *
+     * Every label is DISTINCT, and that is a requirement rather than an observation: the view lists these by
+     * label and sends the string back, so two files sharing one name would collide. A term-based name does
+     * exactly that - three of these blocks are stands.
+     */
+    it("names a misc file for its own block, distinctly, and numbers one nothing names", () => {
+        const labels = [1, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((detail) => actionLabel({ kind: "misc", detail }));
+
+        expect(labels).toEqual([
+            "SC1 - combat stance (1-h)",
+            "WK - walk",
+            "SD1 - stand (1-h)",
+            "SC2 - combat stance (2-h)",
+            "GH - get hit",
+            "DE - die",
+            "TW - twitch",
+            "SD2 - stand 2",
+            "SD3 - stand 3",
+            "SL1 - sleep 1",
+        ]);
+        expect(new Set(labels).size).toBe(labels.length);
+        expect(actionLabel({ kind: "misc", detail: 3 })).toBe("Misc 3");
     });
 });
 

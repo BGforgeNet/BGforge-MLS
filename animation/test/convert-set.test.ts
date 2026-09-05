@@ -32,6 +32,16 @@ function read(files: Record<string, Uint8Array>, over: Partial<AnimationSet> = {
 
 const OPTIONS: ConversionOptions = { prefix: "XYZ", scheme: "character", targetId: 0x6100 };
 
+/** Which direction bands of a written file hold cycles with frames in them. */
+function bandsWithArt(written: ReturnType<typeof parseBamV1>, stride: number): number[] {
+    const drawn: number[] = [];
+    for (let index = 0; index * stride < written.sequences.length; index++) {
+        const cycles = written.sequences.slice(index * stride, index * stride + stride);
+        if (cycles.some((cycle) => cycle.frameRefs.length > 0)) drawn.push(index);
+    }
+    return drawn;
+}
+
 function converted(set: NeutralSet, target = IE_8_POINT_MIRRORED, options = OPTIONS) {
     const result = convertSet(set, target, options);
     if (result.outcome === "refused") throw new Error(`expected a conversion, got a refusal: ${result.reason}`);
@@ -74,8 +84,9 @@ describe("converting a whole set", () => {
 
     it("reports an action the target's scheme has no name for, and writes nothing for it", () => {
         // A completeness loss rather than a per-pixel one: the art is intact and the target simply has
-        // nowhere to file it, which is worse hidden than stated.
-        const result = converted(read({ CDMB1G1: band(), CDMB1A1: band() }), IE_8_POINT_MIRRORED, {
+        // nowhere to file it, which is worse hidden than stated. `A7` is the case: it ships, and what it
+        // depicts is documented nowhere, so no other scheme can be told where to put it.
+        const result = converted(read({ CDMB1A7: band(), CDMB1A1: band() }), IE_8_POINT_MIRRORED, {
             ...OPTIONS,
             scheme: "action-codes",
         });
@@ -109,7 +120,8 @@ describe("converting a whole set", () => {
         const result = converted(read({ CDMB1G1: band() }), IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "CDMB" });
         const written = parseBamV1(result.writes[0]?.bytes ?? new Uint8Array());
 
-        const drawnPixels = written.sequences.map((sequence) => {
+        // The stance's own band of the character skeleton - the rest of the file is the empty bands.
+        const drawnPixels = written.sequences.slice(8, 16).map((sequence) => {
             const frame = written.frames[sequence.frameRefs[0] ?? -1];
             return frame === undefined ? undefined : frame.pixels[0];
         });
@@ -186,6 +198,48 @@ describe("converting a whole set", () => {
         expect(result.writes.map((write) => write.resref)).toEqual(["XYZG1"]);
     });
 
+    /**
+     * The character family's own file shape, and the reason it needs one.
+     *
+     * Its misc files all carry the same eleven-band skeleton and draw only the band their digit names, so a
+     * writer that emitted the drawn band alone would put every stance at band 0 - where the engine reads the
+     * walk. Both directions are asserted: a monster's walk into the file that draws the walk band, and a
+     * character stance back into its own file at the band it came from.
+     */
+    it("pads a stance into the band the character file draws it at", () => {
+        const walk = converted(monster({ MOGHWK: band() }, "actions"));
+        const written = parseBamV1(walk.writes[0]?.bytes ?? new Uint8Array());
+        const drawnBands = bandsWithArt(written, 8);
+
+        expect(walk.writes.map((write) => write.resref)).toEqual(["XYZ1G11"]);
+        expect(written.sequences.length).toBe(11 * 8);
+        expect(drawnBands).toEqual([0]);
+    });
+
+    /**
+     * A cast file is the skeleton, not one band of it: the character family stores four conjure and release
+     * pairs in one `CA`, so a source that already holds those eight bands goes in whole. Filed a band at a
+     * time, seven eighths of it would be reported lost to a file that had room for all of it.
+     */
+    it("writes a file whose bands already fill the target's own file as it stands", () => {
+        const cast = read({ CDMB1CA: packedBands(4, 8, [0, 1, 2, 3, 4]) });
+
+        const result = converted(cast, IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "CDMB" });
+        const written = parseBamV1(result.writes[0]?.bytes ?? new Uint8Array());
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["CDMB1CA"]);
+        expect(written.sequences.length).toBe(8 * 8);
+        expect(result.report.losses).toEqual([]);
+    });
+
+    it("puts a combat stance at its own band rather than at the front of the file", () => {
+        const stance = converted(read({ CDMB1G1: band() }), IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "CDMB" });
+        const written = parseBamV1(stance.writes[0]?.bytes ?? new Uint8Array());
+
+        expect(stance.writes.map((write) => write.resref)).toEqual(["CDMB1G1"]);
+        expect(bandsWithArt(written, 8)).toEqual([1]);
+    });
+
     it("names a shot by the weapon the target files it under, and says the weapon is assumed", () => {
         // The two-letter naming says only "ranged"; the character naming has a code per weapon, so the
         // conversion has to pick one - and say that it did, since nothing in the source chose it.
@@ -222,14 +276,24 @@ describe("converting a whole set", () => {
         });
     });
 
-    it("refuses a member drawn from files it cannot compose back into one", () => {
-        // A quadrant member is a sprite cut into quarters. Putting it back together for a target means
-        // cutting it up again, and writing one quarter's picture as the whole would be worse than refusing.
+    /**
+     * A quadrant member is one sprite cut into quarters, each its own file. Every target offered here
+     * writes a member as ONE file, so the quarters are assembled into the picture they draw together -
+     * writing one quarter as the whole would be a wrong animation rather than a lossy one. The reader is
+     * told, because the assembled sprite is larger than anything the source shipped.
+     */
+    it("composes a member's parts into the single file its target writes, and says it did", () => {
         const quarters = Object.fromEntries([1, 2, 3, 4].map((part) => [`MOGHG1${part}`, band()]));
 
-        expect(convertSet(monster(quarters, "quadrant"), IE_8_POINT_MIRRORED, OPTIONS)).toMatchObject({
-            outcome: "refused",
+        const result = converted(monster(quarters, "quadrant"), IE_8_POINT_MIRRORED, {
+            ...OPTIONS,
+            scheme: "cycle-numbers",
         });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZG1"]);
+        expect(result.report.items.map((item) => item.kind)).toContain("parts-composed");
+        // An assembly, not a degradation: nothing the source drew is missing from the output.
+        expect(result.outcome).toBe("lossless");
     });
 
     it("refuses to pair a file whose cycles do not fill the target's blocks", () => {
@@ -261,23 +325,90 @@ describe("converting a whole set", () => {
         });
     });
 
+    /**
+     * The skeleton seats ONE direction band. A member whose cycles are a bare ordered list is not one - it
+     * has no facings to fill the band with - and padding it anyway would put an arbitrary run of cycles at a
+     * position the engine reads as a direction block.
+     */
+    it("refuses to seat cycles that are not a direction band in a character file", () => {
+        const set: NeutralSet = {
+            identity: { sourceId: 0x1234, code: "MOGH", name: "OGRE_MAGE", sourceFlavour: "tob", sourceSection: "x" },
+            variants: [
+                {
+                    armour: 1,
+                    files: new Map([["MOGHWK", parseBamV1(multiCycle(4, 3))]]),
+                    actions: [
+                        {
+                            label: "WK",
+                            action: decodeActionCode("action-codes", "WK"),
+                            resrefs: ["MOGHWK"],
+                            band: 0,
+                            cycles: { kind: "ordered", sequenceIndices: [0, 1, 2] },
+                        },
+                    ],
+                },
+            ],
+        };
+
+        const result = convertSet(set, IE_8_POINT_MIRRORED, OPTIONS);
+
+        expect(result).toMatchObject({ outcome: "refused" });
+        expect(result.outcome === "refused" && result.reason).toContain("G11");
+    });
+
     it("refuses a target whose files this does not know how to lay out", () => {
         const result = convertSet(read({ CDMB1G1: band() }), FALLOUT_FRM, OPTIONS);
 
         expect(result).toMatchObject({ outcome: "refused" });
     });
 
-    it("refuses a conversion the target can name nothing in, rather than reporting an empty one", () => {
-        // Every action unmapped is not a lossy conversion, it is no conversion. Reported as lossy the
-        // reader gets a list of what was lost and an empty output folder, with nothing saying which of
-        // the two happened.
-        const result = convertSet(read({ CDMB1G1: band() }), IE_8_POINT_MIRRORED, {
+    /**
+     * Every action unmapped is not a lossy conversion, it is no conversion - reported as lossy the reader
+     * gets a list of losses and an empty output folder, with nothing saying which of the two happened.
+     *
+     * The reason names the actions ONCE. Assembling it out of the report's own loss lines repeated the same
+     * clause per action and mixed in whatever else the plan had recorded, so a set of a dozen bands produced
+     * a paragraph the reader had to parse to find the one fact in it.
+     */
+    it("refuses a conversion the target can name nothing in, naming the actions once", () => {
+        const result = convertSet(read({ CDMB1A7: band(), CDMB1A8: band() }), IE_8_POINT_MIRRORED, {
             ...OPTIONS,
             scheme: "action-codes",
         });
+        const reason = result.outcome === "refused" ? result.reason : "";
 
         expect(result).toMatchObject({ outcome: "refused" });
-        expect(result.outcome === "refused" && result.reason).toContain("no file the target can name");
+        // Unpinned throughout, so the reason says the source never stated what these are.
+        expect(reason).toContain("Nothing states what this set's actions depict");
+        expect(reason).toContain("Attack 7, Attack 8");
+        expect(reason).not.toContain("counterpart");
+    });
+
+    it("says the target simply has no such name when the source's actions are pinned", () => {
+        // A walk is a named thing; the cycle-numbered family names files rather than actions, so it has no
+        // file to put one in. A different sentence from "nobody has said what this is", and the difference
+        // matters: this one is the target's limitation, not the source's silence.
+        const result = convertSet(read({ CDMB1G11: band() }), IE_8_POINT_MIRRORED, {
+            ...OPTIONS,
+            scheme: "cycle-numbers",
+        });
+        const reason = result.outcome === "refused" ? result.reason : "";
+
+        expect(result).toMatchObject({ outcome: "refused" });
+        expect(reason).toContain("no counterpart");
+        expect(reason).toContain("WK - walk");
+    });
+
+    it("refuses a set with nothing in it rather than naming an empty list", () => {
+        const empty: NeutralSet = {
+            identity: { sourceId: 0x1234, code: "MOGH", name: "OGRE_MAGE", sourceFlavour: "tob", sourceSection: "x" },
+            variants: [],
+        };
+
+        expect(convertSet(empty, IE_8_POINT_MIRRORED, OPTIONS)).toMatchObject({
+            outcome: "refused",
+            reason: "This set has no member to convert.",
+        });
     });
 
     it("refuses a set whose levels the target's names cannot tell apart", () => {

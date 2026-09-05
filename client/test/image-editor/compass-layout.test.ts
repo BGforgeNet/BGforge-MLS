@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
 import { FRM_FACINGS, type Facing } from "@bgforge/image";
-import { interpretIeDirections } from "@bgforge/image/ie-direction";
+import { type IeDirectionAnalysis, interpretIeDirections } from "@bgforge/image/ie-direction";
 import {
     compassPosition,
+    firstDrawnBlock,
     ieRoseTiles,
     layoutSequences,
     roseGeometry,
@@ -195,4 +196,32 @@ test("ieRoseTiles builds one direction block's rose from untagged cycles, at the
     const block1 = ieRoseTiles(view, interpretation, 1);
     expect(block1.map((tile) => tile.seq.frameRefs[0])).toEqual([9, 10, 11, 12, 13]);
     expect(ieRoseTiles(view, interpretation, 99)).toEqual([]);
+});
+
+/**
+ * A packed file's skeleton: sixteen cycles in two stride-8 blocks, where the first block references only
+ * the 1x1 placeholder every undrawn band of a character file is padded with, and the second holds sprites.
+ */
+function skeletonView(): { view: AnimationView; interpretation: IeDirectionAnalysis } {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = [
+        { width: 1, height: 1, offsetX: 0, offsetY: 0 },
+        { width: 30, height: 40, offsetX: 0, offsetY: 0 },
+    ];
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: i < 8 ? [0] : [1] }));
+    const interpretation = interpretIeDirections(view.sequences, view.frames.length);
+    if (!interpretation) throw new Error("expected an IE interpretation");
+    return { view, interpretation };
+}
+
+test("firstDrawnBlock skips the placeholder blocks a packed file pads its skeleton with", () => {
+    const { view, interpretation } = skeletonView();
+    expect(firstDrawnBlock(view, interpretation)).toBe(1);
+});
+
+test("firstDrawnBlock opens on the first block where nothing in the file draws", () => {
+    const { view, interpretation } = skeletonView();
+    // Every cycle on the placeholder: there is no better block to offer than the first.
+    view.sequences = view.sequences.map((sequence) => ({ ...sequence, frameRefs: [0] }));
+    expect(firstDrawnBlock(view, interpretation)).toBe(0);
 });

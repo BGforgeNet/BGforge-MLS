@@ -45,7 +45,10 @@ describe("facetState", () => {
     });
 
     it("offers only the actions whose files exist at this level", () => {
-        expect(facetState(index, elfSelection, exists).actions.map((a) => a.label)).toEqual(["Stand", "Shoot (bow)"]);
+        expect(facetState(index, elfSelection, exists).actions.map((a) => a.label)).toEqual([
+            "SC1 - combat stance (1-h)",
+            "Shoot (bow)",
+        ]);
     });
 
     it("keeps an unavailable race in the list, with its reason", () => {

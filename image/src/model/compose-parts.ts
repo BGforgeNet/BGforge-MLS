@@ -97,6 +97,21 @@ export function splitFrame(composed: Frame, parts: readonly PartRect[], transpar
 }
 
 /**
+ * A single pixel is the placeholder a packed file's undrawn bands are made of.
+ *
+ * Measured per band of every character file across a classic and an Enhanced install: an undrawn band's
+ * cycles reference nothing but `1x1` frames, while a drawn one holds sprites of some thirty by forty.
+ * Nothing depicts a creature in one pixel, and a file cannot omit the bands it does not draw - the engine
+ * finds a band by its position - so this is what tells a skeleton's empty band from a real one.
+ */
+export const PLACEHOLDER_FRAME_AREA = 1;
+
+/** Whether a cycle draws anything, given each frame's pixel count in frame order. */
+export function cycleDrawsArt(frameRefs: readonly number[], areas: readonly number[]): boolean {
+    return frameRefs.some((ref) => (areas[ref] ?? 0) > PLACEHOLDER_FRAME_AREA);
+}
+
+/**
  * Whether a part holds real art for a cycle, as opposed to a placeholder standing in its slot.
  *
  * A part that does not draw a cycle still carries an entry for it rather than an empty one, and the shape

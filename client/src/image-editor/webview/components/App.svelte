@@ -10,7 +10,14 @@
     } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
-    import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
+    import {
+        firstDrawnBlock,
+        ieRoseTiles,
+        layoutSequences,
+        type GridTile,
+        type LayoutMode,
+        type RoseTile,
+    } from "../render/compass-layout";
     import { interpretIeDirections } from "@bgforge/image/ie-direction";
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroupLabels } from "@bgforge/animation/group-labels";
@@ -83,6 +90,7 @@
     // (many cycles -> lay out as rows=sequences x columns=directions), then user-overridable.
     let cycleColumns = $state(0);
     let columnsSeededView: AnimationView | undefined;
+    let groupSeededView: AnimationView | undefined;
     // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
     const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
@@ -127,6 +135,15 @@
     // eslint-disable-next-line prefer-const -- reassigned via onGroupChange in the LayoutModeControls markup
     let roseGroup = $state(0);
     const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
+    // Which block a newly opened animation lands on: the first that draws, not block 0 (firstDrawnBlock).
+    const firstDrawnGroup = $derived(view && ieRose ? firstDrawnBlock(view, ieRose) : 0);
+    $effect(() => {
+        const v = view;
+        const seed = firstDrawnGroup;
+        if (!v || v === groupSeededView) return;
+        groupSeededView = v;
+        roseGroup = seed;
+    });
     const roseGroupLabels = $derived(
         view && roseGroupCount > 1 ? ieGroupLabels(view.basename, roseGroupCount, ieRose?.scheme) : undefined,
     );

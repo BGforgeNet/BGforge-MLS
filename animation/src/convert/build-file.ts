@@ -80,3 +80,35 @@ export function buildTargetFile(
 
     return { ...source, frames, sequences };
 }
+
+/** The band skeleton a target's file carries: how many bands, and which one this action's art draws. */
+export interface BandLayout {
+    bands: number;
+    at: number;
+}
+
+/**
+ * Seat a one-band file in the skeleton its target's naming family gives it.
+ *
+ * A family whose files all carry the same bands addresses a band by its POSITION, so the empty ones have to
+ * be written too - a file holding only the band it draws would play the walk where the stance belongs. The
+ * empty bands are empty CYCLES, the same "nothing to draw here" the layout above already writes for a facing
+ * the source has no art for.
+ *
+ * Undefined where the file is not the single band a skeleton seats: padding a multi-band file would claim a
+ * position for cycles that have none.
+ */
+export function seatInBandLayout(
+    file: IndexedAnimation,
+    layout: BandLayout,
+    stride: number,
+): IndexedAnimation | undefined {
+    if (layout.bands === 1) return file;
+    // Already the whole skeleton - a source file whose bands ARE the target's file needs no seating.
+    if (file.sequences.length === layout.bands * stride) return file;
+    if (file.sequences.length !== stride) return undefined;
+    const empty = Array.from({ length: stride }, () => EMPTY_SLOT);
+    const sequences: Sequence[] = [];
+    for (let band = 0; band < layout.bands; band++) sequences.push(...(band === layout.at ? file.sequences : empty));
+    return { ...file, sequences };
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { characterActions, characterDrawsBody, characterMember } from "../src/animation-schemes/character";
+import {
+    characterActions,
+    characterDrawsBody,
+    characterFileLayout,
+    characterMember,
+} from "../src/animation-schemes/character";
 import { type AnimationSet } from "../src/animation-index";
 
 /**
@@ -124,5 +129,33 @@ describe("characterDrawsBody", () => {
 
     it("answers no for a set the archive holds nothing of", () => {
         expect(characterDrawsBody(cleric, () => false)).toBe(false);
+    });
+});
+
+/**
+ * The skeleton every character file carries.
+ *
+ * Measured across a classic and an Enhanced install, per file: a `G` file holds eleven direction bands and
+ * draws only the one its digit names, the rest present and empty; a cast file holds the four conjure and
+ * release pairs; an attack, a shot and the paperdoll are a single band. A writer that emitted only the drawn
+ * band would put the walk where the engine reads the stance.
+ */
+describe("characterFileLayout", () => {
+    it("puts each misc file's art in the band its digit names", () => {
+        // G1 is the second band, not the first: the walk is band 0 and lives in G11.
+        expect(characterFileLayout("G1")).toEqual({ bands: 11, at: 1 });
+        expect(characterFileLayout("G11")).toEqual({ bands: 11, at: 0 });
+        expect(characterFileLayout("G12")).toEqual({ bands: 11, at: 2 });
+        expect(characterFileLayout("G19")).toEqual({ bands: 11, at: 9 });
+    });
+
+    it("gives the cast file the release band of its first spell", () => {
+        expect(characterFileLayout("CA")).toEqual({ bands: 8, at: 1 });
+    });
+
+    it("gives an attack, a shot and the paperdoll a file of their own band alone", () => {
+        expect(characterFileLayout("A1")).toEqual({ bands: 1, at: 0 });
+        expect(characterFileLayout("SX")).toEqual({ bands: 1, at: 0 });
+        expect(characterFileLayout("INV")).toEqual({ bands: 1, at: 0 });
     });
 });

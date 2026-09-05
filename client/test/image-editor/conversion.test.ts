@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
-import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
+import { type Frame, type IndexedAnimation, type Rgba, parseBamV1, serializeBamV1 } from "@bgforge/image";
 import { packedBands } from "../../../image/test/bam-fixtures.ts";
 import {
     CONVERSION_PROFILES,
@@ -89,6 +89,20 @@ describe("convertOpenSet", () => {
         expect(result.losses).toEqual([]);
     });
 
+    /**
+     * The character family, which is the one target that does not name a file per band on its own terms:
+     * every one of its files carries the family's band skeleton and draws the band its code names, so what
+     * lands on disk has to be the whole skeleton rather than the one band.
+     */
+    it("files a two-letter set into the character family's own files and band skeleton", () => {
+        const result = convertOpenSet(SET, io, "tob", { ...request, profileId: "ie-character" });
+        const written = parseBamV1(result.writes[0]?.bytes ?? new Uint8Array());
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWB1G12", "NEWB1G11"]);
+        // Eleven bands of the sixteen-point scheme's nine stored facings - what an install's own files hold.
+        expect(written.sequences.length).toBe(11 * 9);
+    });
+
     it("writes the east into its own file for a target that stores it", () => {
         const result = convertOpenSet(SET, io, "tob", { ...request, profileId: "ie-monster-paired" });
 
@@ -121,7 +135,7 @@ describe("convertOpenSet", () => {
         const result = convertOpenSet(cycles, cycleIo, "tob", request);
 
         expect(result.outcome).toBe("refused");
-        expect(result.reason).toContain("no file the target can name");
+        expect(result.reason).toContain("Nothing states what this set's actions depict");
         expect(result.writes).toEqual([]);
     });
 

@@ -3,7 +3,7 @@ import { openGame } from "@bgforge/binary";
 import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
 import { setMembers, setStances, type StanceIo } from "../src/set-stances";
-import { bandedPair, multiCycle } from "../../image/test/bam-fixtures.ts";
+import { bandedPair, multiCycle, skeletonBands } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 
@@ -66,6 +66,24 @@ describe("setStances over the character layouts", () => {
             "E",
             "SE",
         ]);
+    });
+
+    /**
+     * The band skeleton every character file carries. Only one of its bands holds art; the rest exist so
+     * the engine finds the drawn one at the position its name promises.
+     *
+     * Listing them all is what the reader did, and the cost was not cosmetic: ten files x eleven bands made
+     * a hundred-odd stances of which ten drew anything, and a conversion then reported a loss for every one
+     * of the empties. The band's INDEX survives the filtering, because that is what addresses it in the file.
+     */
+    it("lists only the bands that hold art, at the index they sit in", () => {
+        const skeleton = skeletonBands(4, 11, 1, [0, 1, 2, 3, 4]);
+        const io: StanceIo = { exists: (resref) => resref === "CDMB1G1", read: () => skeleton };
+
+        const stances = setStances(characterSet(), 1, io);
+
+        expect(stances.map((stance) => stance.band)).toEqual([1]);
+        expect(stances[0]?.slots.length).toBeGreaterThan(0);
     });
 
     it("keeps the base file's own stored arc where no twin ships", () => {

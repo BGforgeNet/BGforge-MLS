@@ -24,6 +24,7 @@ export default defineConfig({
             // codecs into a browser bundle.
             "@bgforge/image/frame-anchor": path.resolve(import.meta.dirname, "../image/src/model/frame-anchor.ts"),
             "@bgforge/image/ie-direction": path.resolve(import.meta.dirname, "../image/src/model/ie-direction.ts"),
+            "@bgforge/image/compose-parts": path.resolve(import.meta.dirname, "../image/src/model/compose-parts.ts"),
             "@bgforge/image": path.resolve(import.meta.dirname, "../image/src/index.ts"),
             // The dialog editor's layout module imports elkjs's worker source under a virtual specifier
             // that only the webview build resolves (scripts/esbuild-elk-worker.mjs). vitest runs no

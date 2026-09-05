@@ -15,7 +15,12 @@ function band(count: number): { seqIndex: number; facing: Facing }[] {
 }
 
 function bands(count: number, slots = 5, scheme: FileBands["scheme"] = "ie8"): FileBands {
-    return { bands: Array.from({ length: count }, () => band(slots)), scheme, confidence: "declared" };
+    return {
+        bands: Array.from({ length: count }, () => band(slots)),
+        drawn: Array.from({ length: count }, () => true),
+        scheme,
+        confidence: "declared",
+    };
 }
 
 describe("declaredStride", () => {
@@ -153,7 +158,27 @@ describe("stancesOfMembers", () => {
     });
 
     it("drops a band with no drawable facings", () => {
-        const empty: FileBands = { bands: [band(5), [], band(5)], scheme: "ie8", confidence: "declared" };
+        const empty: FileBands = {
+            bands: [band(5), [], band(5)],
+            drawn: [true, true, true],
+            scheme: "ie8",
+            confidence: "declared",
+        };
         expect(stancesOfMembers([member("G1", "X")], () => empty).map((s) => s.band)).toEqual([0, 2]);
+    });
+
+    /**
+     * The other empty band: slots that address cycles, drawing nothing. A packed file carries one per band
+     * of its family's skeleton, so listing them makes a file of eleven bands into eleven rows of which one
+     * shows anything - and the band's own INDEX has to survive, since that is what addresses it in the file.
+     */
+    it("drops a band whose slots hold no art, keeping the index of the ones that do", () => {
+        const skeleton: FileBands = {
+            bands: [band(5), band(5), band(5)],
+            drawn: [false, true, false],
+            scheme: "ie8",
+            confidence: "declared",
+        };
+        expect(stancesOfMembers([member("G1", "X")], () => skeleton).map((s) => s.band)).toEqual([1]);
     });
 });

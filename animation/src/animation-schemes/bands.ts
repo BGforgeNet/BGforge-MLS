@@ -72,6 +72,14 @@ export type BandConfidence = "declared" | "inferred";
 /** One file's cycles, already cut into direction bands. */
 export interface FileBands {
     bands: readonly (readonly IeDirectionSlot[])[];
+    /**
+     * Which bands hold art, one per band.
+     *
+     * A packed file carries every band of its family's skeleton and draws the one its own name promises, so
+     * without this a file of eleven bands lists eleven stances of which one draws anything - and everything
+     * downstream, a conversion's loss report included, then speaks about ten that are not there.
+     */
+    drawn: readonly boolean[];
     /** The block scheme, where one was resolved - what the block table keys its names on. */
     scheme: IeScheme | undefined;
     confidence: BandConfidence;
@@ -124,7 +132,9 @@ export function stancesOfMembers(
         if (file === undefined) continue;
         const groups = ieGroups(member.resref, file.bands.length, file.scheme);
         for (const [band, slots] of file.bands.entries()) {
-            if (slots.length === 0) continue;
+            // The index is kept as it stands: a filtered band is still where it was in the file, and that
+            // position is what addresses it there.
+            if (slots.length === 0 || file.drawn[band] !== true) continue;
             stances.push({
                 label: bandLabel(member.label, groups?.[band]?.label, band, file.bands.length),
                 action: bandAction(member.action, groups?.[band]),

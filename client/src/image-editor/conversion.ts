@@ -46,9 +46,12 @@ export interface ConversionProfile {
  */
 export const CONVERSION_PROFILES: readonly ConversionProfile[] = [
     {
+        // Nine cycles per band, not eight: measured on a classic and an Enhanced install, every character
+        // file bands at nine, which is the sixteen-point scheme's stored western arc. Written in eight-slot
+        // blocks the engine would read the next band's art as this one's eastern half.
         id: "ie-character",
         label: "IE character (armour levels)",
-        target: IE_8_POINT_MIRRORED,
+        target: IE_16_POINT_MIRRORED,
         scheme: "character",
     },
     {

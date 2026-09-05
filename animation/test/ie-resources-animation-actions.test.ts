@@ -24,7 +24,23 @@ describe("reading a scheme's action code", () => {
     });
 
     it("leaves a code the documentation does not pin unpinned, keeping it verbatim", () => {
-        expect(decodeActionCode("character", "G13")).toEqual({ scheme: "character", id: "unpinned", code: "G13" });
+        // A7 ships in both installs and the published naming details only A1-A6, so what it depicts is
+        // exactly what nothing has stated.
+        expect(decodeActionCode("character", "A7")).toEqual({ scheme: "character", id: "unpinned", code: "A7" });
+    });
+
+    /**
+     * The stances a character set keeps in its misc files.
+     *
+     * The published naming calls the whole `G` family "misc", which reads as unpinnable - but each file's
+     * art sits in one band of the eleven-band skeleton they all carry, and that band's meaning IS pinned by
+     * the block table the viewer already names them with. Measured per file on a classic and an Enhanced
+     * install: `G11` draws the walk band, `G1` the first combat stance, `G19` the sleep.
+     */
+    it("reads a misc file as the stance its own band depicts", () => {
+        expect(decodeActionCode("character", "G11")).toMatchObject({ id: "walk" });
+        expect(decodeActionCode("character", "G1")).toMatchObject({ id: "ready", detail: "1-handed" });
+        expect(decodeActionCode("character", "G19")).toMatchObject({ id: "sleep" });
     });
 
     it("reads both spell codes as spellcasting, without saying which half each is", () => {
@@ -49,10 +65,18 @@ describe("naming an action in a target scheme", () => {
         expect(encodeActionCodes("action-codes", walk)).toEqual([{ code: "WK", detail: "kept" }]);
     });
 
+    it("files a two-letter stance under the character misc file that draws it", () => {
+        // The whole point of the misc band table: a monster's walk has a home in the character family, and
+        // it is the file whose art sits in the walk band rather than the one whose name starts with G1.
+        expect(encodeActionCodes("character", decodeActionCode("action-codes", "WK"))).toEqual([
+            { code: "G11", detail: "kept" },
+        ]);
+    });
+
     it("has no name for an action the target scheme does not distinguish", () => {
-        // The character scheme names no walk at all: its walking art is one of the unpinned misc codes.
-        // Reported as a lost action rather than filed under a code that means something else.
-        expect(encodeActionCodes("character", decodeActionCode("action-codes", "WK"))).toEqual([]);
+        // The two-letter family has no paperdoll: it names animation files, and an inventory picture is not
+        // one. Reported as a lost action rather than filed under a code that means something else.
+        expect(encodeActionCodes("action-codes", decodeActionCode("character", "INV"))).toEqual([]);
     });
 
     it("drops a detail the target's names do not carry", () => {
@@ -94,8 +118,8 @@ describe("naming an action in a target scheme", () => {
     });
 
     it("carries an unpinned code within its own scheme and nowhere else", () => {
-        const misc = decodeActionCode("character", "G13");
-        expect(encodeActionCodes("character", misc)).toEqual([{ code: "G13", detail: "kept" }]);
+        const misc = decodeActionCode("character", "A7");
+        expect(encodeActionCodes("character", misc)).toEqual([{ code: "A7", detail: "kept" }]);
         expect(encodeActionCodes("action-codes", misc)).toEqual([]);
     });
 

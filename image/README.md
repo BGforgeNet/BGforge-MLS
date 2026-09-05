@@ -34,6 +34,8 @@ Internal workspace package - not currently published to npm.
   browser bundles (used by the editor webview).
 - `@bgforge/image/ie-direction` - Buffer/zlib-free subpath with the IE direction-block
   analysis (used by the editor webview's compass layout).
+- `@bgforge/image/compose-parts` - Buffer/zlib-free subpath with multi-part composition and
+  the placeholder-frame test (used by the editor webview and the animation package).
 
 ## Development
 

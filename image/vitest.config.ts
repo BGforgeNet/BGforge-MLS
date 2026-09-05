@@ -29,7 +29,7 @@ export default defineConfig({
             // codecs moved onto reused scratch buffers: their palette/ramp/pixel reads are indexed
             // by computed block geometry, so they assert with `!` rather than adding a `?? 0`
             // fallback per channel that nothing can reach.
-            thresholds: { lines: 100, functions: 100, branches: 89.26, statements: 98.59 },
+            thresholds: { lines: 100, functions: 100, branches: 89.28, statements: 98.6 },
         }),
     },
 });

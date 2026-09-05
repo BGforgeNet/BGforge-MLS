@@ -44,6 +44,14 @@ export interface BamV1Tables {
     transparentIndex: number;
     /** Where the frame entry table starts; `decodeFrameAt` locates each entry from it. */
     frameEntryOffset: number;
+    /**
+     * Each frame's declared pixel count, in frame order.
+     *
+     * Read here because the entry table is already walked for the size bounds below, and the alternative
+     * is decoding pixels to answer "does this frame draw anything" - which is the question a caller asks
+     * of a whole file at once (a packed file's empty bands reference frames of no size).
+     */
+    frameAreas: number[];
 }
 
 /** Reads the header, palette, frame entry table and cycle table. `bytes` must be uncompressed v1. */
@@ -88,6 +96,7 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
     // it first trips at frame 4 - by which point frames 0-3 are already allocated, which is the
     // allocation the bound exists to prevent. The per-frame bound moves here for the same reason.
     let declaredPixels = 0;
+    const frameAreas: number[] = [];
     for (let i = 0; i < frameCount; i++) {
         const e = frameEntryOffset + i * 12;
         const width = view.getUint16(e + 0x00, le);
@@ -95,6 +104,7 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
         if (width * height > MAX_FRAME_PIXELS) {
             throw new Error(`parseBamV1: frame ${i} claims ${width}x${height} pixels - implausibly large for a sprite`);
         }
+        frameAreas.push(width * height);
         declaredPixels += width * height;
     }
     if (declaredPixels > MAX_ANIMATION_PIXELS) {
@@ -124,7 +134,7 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
         sequences.push({ frameRefs, facing: "none" });
     }
 
-    return { palette, sequences, frameCount, transparentIndex, frameEntryOffset };
+    return { palette, sequences, frameCount, transparentIndex, frameEntryOffset, frameAreas };
 }
 
 /** Decodes one frame's pixels. `index` must be in range; `bytes` must be uncompressed v1. */
