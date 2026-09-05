@@ -73,7 +73,7 @@ const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.j
 const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
 const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
 const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
-/** Layout for the animation components this editor shares with the gallery's set viewer. */
+/** The animation components' own layout, without which the rose draws its facings in one column. */
 const SHARED_TILES_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 

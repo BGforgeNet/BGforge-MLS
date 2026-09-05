@@ -6,8 +6,6 @@
  * do - an `<img src>` is what the view needs, and a transferred buffer would have to be re-encoded there.
  */
 
-import type { AnimationView } from "../../image-editor/webview/messages";
-import type { Facing } from "@bgforge/image";
 import type { SetTile } from "@bgforge/animation";
 
 export interface GalleryTile {
@@ -59,33 +57,6 @@ export interface FacetState {
     unavailable: string | undefined;
 }
 
-/**
- * One row of the viewer's stance list.
- *
- * `slots` is the band's cycles, which the rose lays out at their compass angles. It crosses as plain
- * objects, like everything else here.
- */
-export interface StanceRow {
-    label: string;
-    resref: string;
-    /** Every file the stance draws - four for an oversized creature whose quarters compose into one. */
-    parts: string[];
-    band: number;
-    slots: { seqIndex: number; facing: Facing }[];
-}
-
-/** Everything the viewer page draws for one set, resolved by the host against the archive. */
-export interface SetDetail {
-    id: number;
-    title: string;
-    /** Armour levels this set declares; one level alone is not a choice and the view hides the control. */
-    armours: number[];
-    armour: number;
-    stances: StanceRow[];
-    /** Why the list is empty, when it is - so the page says which rather than looking broken. */
-    note?: string;
-}
-
 export type HostToWebview =
     /**
      * `note` explains an EMPTY list when the reason is not "this corpus has no pictures" - no game open, no
@@ -114,17 +85,7 @@ export type HostToWebview =
      *  view marks it as such rather than leaving it looking like a still. */
     | { type: "thumbnail"; id: string; dataUri?: string; directional?: boolean }
     /** The facet browser's whole state, sent on open and after every selection change. */
-    | { type: "facets"; state: FacetState }
-    /** The viewer page's contents, sent when a set is opened and after an armour change. */
-    | { type: "setDetail"; detail: SetDetail }
-    /**
-     * One stance's animation, as the image editor's own view of a file.
-     *
-     * The whole reading arrives in one message rather than field by field: the page would otherwise paint
-     * the new stance's cycles against the previous one's frames. `stance` echoes which row asked, so a
-     * slow answer for a row the reader has already moved off is dropped rather than drawn.
-     */
-    | { type: "stanceAnimation"; stance: number; view: AnimationView };
+    | { type: "facets"; state: FacetState };
 
 export type WebviewToHost =
     | { type: "ready" }
@@ -140,11 +101,13 @@ export type WebviewToHost =
     | { type: "openResref"; resref: string }
     /** A facet control changed; the host re-resolves and answers with a whole `FacetState`. */
     | { type: "selectFacet"; family: FacetFamily; value: string }
-    /** Open the viewer page on one set, at an armour level when the reader has chosen one. */
-    | { type: "openSet"; id: number; armour?: number }
-    /** Draw one stance of the open set - the host answers with `stanceAnimation`. */
-    | { type: "selectStance"; stance: number }
-    /** Open the whole set in the animation editor, where it can be played, inspected and saved. */
+    /**
+     * Open the whole set in the animation editor, where it is drawn, played, inspected and saved.
+     *
+     * The panel draws no set of its own. It once had a viewer page, retired when the editor learned to
+     * open a set: two surfaces for one animation meant two copies of the stance list, the transport and
+     * the rose, and only one of them could ever save.
+     */
     | { type: "openSetEditor"; id: number }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };

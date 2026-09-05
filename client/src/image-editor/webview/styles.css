@@ -219,9 +219,9 @@ select {
        the compass rose AND the cycle grid (non-creature animations). */
     display: flex;
 }
-/* The rose, grid, tile and marker rules live in `client/src/webview-ui/animation-tiles.css`, which
-   this panel links alongside this sheet - the gallery's set viewer mounts the same components and needs
-   the same layout. Only this panel's own chrome stays here. */
+/* The rose, grid, tile and marker rules live in `client/src/webview-ui/animation-tiles.css`, which this
+   panel links alongside this sheet: they are the components' own layout contract. Only this panel's own
+   chrome stays here. */
 
 /* The cycle-layout hint reads as secondary guidance, not a control label. */
 .cycle-hint {

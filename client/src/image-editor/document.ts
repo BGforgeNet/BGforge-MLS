@@ -204,7 +204,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         if (found.kind === "no-game") throw new Error(`Open ${address.gameDir} to show animation ${hex}.`);
         if (found.kind === "not-declared") throw new Error(`This game declares no animation ${hex}.`);
         const state = AnimationSetState.open(found.set, found.io);
-        if (state === undefined) throw new Error(`This install ships no files for animation ${hex}.`);
+        if (state === undefined) throw new Error(AnimationSetState.refusal(found.set, hex));
         for (const member of backup?.members ?? []) {
             state.restoreMember(
                 member.resref,

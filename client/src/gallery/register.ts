@@ -12,9 +12,8 @@ import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
-import { type AnimationIndexResolver, type SetStance, setTile } from "@bgforge/animation";
+import { type AnimationIndexResolver, setTile } from "@bgforge/animation";
 import { createFacetBrowser, type FacetBrowser } from "./facet-state";
-import { type ResolvedSet, resolveSet, stanceAnimation } from "./set-viewer";
 import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
 
@@ -58,24 +57,11 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         return createFacetBrowser(animations, (resref) => current.game.canRead(resref, "bam"));
     };
 
-    /** One set resolved for the viewer page, against whichever game is open now. */
-    const resolveSetFor = (id: number, armour?: number): ResolvedSet | undefined => {
-        const current = deps.gameSession();
-        if (current === undefined) return undefined;
-        const set = (deps.animations(current.dir) ?? []).find((entry) => entry.id === id);
-        return set === undefined ? undefined : resolveSet(current.game, set, armour);
-    };
-
     /** Hand a whole set to the animation editor, through the same open the editor's own picker uses. */
     const openSetEditor = async (id: number): Promise<void> => {
         const current = deps.gameSession();
         if (current === undefined) return;
         await openAnimationSet(deps.animations, current.dir, id);
-    };
-
-    const animate = (stance: SetStance) => {
-        const current = deps.gameSession();
-        return current === undefined ? undefined : stanceAnimation(current.game, stance);
     };
 
     const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
@@ -128,9 +114,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         sets,
         openResref,
         facets,
-        resolveSet: resolveSetFor,
         openSetEditor,
-        stanceAnimation: animate,
         onDidChangeGame: deps.onDidChangeGame,
     } satisfies GalleryDeps;
 

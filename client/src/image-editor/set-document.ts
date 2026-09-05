@@ -161,6 +161,20 @@ export class AnimationSetState {
      * install does not ship has nothing to put in one. The caller reports that rather than opening a tab
      * that would draw an empty frame.
      */
+    /**
+     * Why `open` returned nothing, in the reader's terms.
+     *
+     * Two different facts sit behind one empty set, and they ask different things: a set this names no
+     * files for is a gap in what the editor models, one whose files are absent is a gap in the install.
+     * The scheme carries the first in its own words, since only it knows what is unmodelled - and a set
+     * with no layout is exactly the case `setMembers` can name nothing for.
+     */
+    static refusal(set: AnimationSet, hex: string): string {
+        return set.scheme.kind === "unimplemented" && set.layout === undefined
+            ? `Cannot show animation ${hex}: ${set.scheme.reason}.`
+            : `This install ships no files for animation ${hex}.`;
+    }
+
     static open(set: AnimationSet, io: StanceIo, armour?: number): AnimationSetState | undefined {
         const levels = armourLevels(set);
         const chosen = armour !== undefined && levels.includes(armour) ? armour : (firstArmour(set) ?? 1);

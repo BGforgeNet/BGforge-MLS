@@ -1,11 +1,11 @@
 /*
  * Layout for the shared animation components: CompassRose, CycleGrid, SequenceTile, FrameCanvas.
  *
- * Extracted from the image editor's stylesheet when the gallery's set viewer became a second host for
- * those components. The rules are part of the components' contract rather than either panel's chrome -
+ * A sheet of their own rather than part of a panel's chrome: the rules are the components' contract -
  * the rose positions its cells with inline left/top, which do nothing without the absolute positioning
- * below, so a panel that mounts the component and not this sheet renders every facing stacked in a
- * column. Every webview that mounts them links this file; neither panel restates it.
+ * below, so a webview that mounts the component and not this sheet renders every facing stacked in a
+ * column. Every webview that mounts them links this file and none restates it. Kept separate now that
+ * only the image editor mounts them, because the invariant is the components', not that panel's.
  */
 
 .compass-rose,

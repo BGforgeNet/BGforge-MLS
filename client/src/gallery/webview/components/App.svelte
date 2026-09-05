@@ -5,12 +5,9 @@
         type FacetState,
         type GalleryTile,
         type HostToWebview,
-        type SetDetail,
         type SetTile,
         type WebviewToHost,
     } from "../messages";
-    import type { AnimationView } from "../../../image-editor/webview/messages";
-    import SetViewer from "./SetViewer.svelte";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
     import FacetBar from "./FacetBar.svelte";
     import Grid from "./Grid.svelte";
@@ -54,22 +51,6 @@
     /** The animation this panel was opened on, if any: the sets tab marks its row. */
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
-    /** The set the viewer page is open on, or undefined while the sets LIST is showing. */
-    let viewing: SetDetail | undefined = $state();
-    let stance = $state(0);
-    /** The selected stance's animation. Cleared when the selection moves, so the rose never draws the
-     *  previous stance's frames against the new one's cycles. */
-    let stanceAnimation: AnimationView | undefined = $state();
-
-    function openSet(id: number, armour?: number): void {
-        post({ type: "openSet", id, ...(armour === undefined ? {} : { armour }) });
-    }
-
-    function selectStance(next: number): void {
-        stance = next;
-        stanceAnimation = undefined;
-        post({ type: "selectStance", stance: next });
-    }
 
     const inFormat = $derived(items.filter((tile) => format === "" || tile.ext === format));
     /**
@@ -130,28 +111,11 @@
             // A restored panel can ask for a tab this source cannot fill; resolveTab decides, not the
             // stored value. A panel opened ON an animation asks for the sets tab.
             tab = resolveTab(message.focusSet === undefined ? tab : "sets", message.sets.length > 0);
-            // A second init means the corpus changed under the panel - a game opened, or closed. Whatever
-            // the viewer page was showing belongs to the old one, so go back to the list rather than leave
-            // a page whose stance rows the host can no longer answer for.
-            viewing = undefined;
-            stanceAnimation = undefined;
             loaded = true;
             return;
         }
         if (message.type === "facets") {
             facets = message.state;
-            return;
-        }
-        if (message.type === "setDetail") {
-            viewing = message.detail;
-            // Open on the first stance, and ask for it in the same step - the page would otherwise show a
-            // selected row with nothing drawn beside it.
-            if (message.detail.stances.length > 0) selectStance(0);
-            return;
-        }
-        if (message.type === "stanceAnimation") {
-            // A late answer for a row the reader has already left is dropped rather than drawn.
-            if (message.stance === stance) stanceAnimation = message.view;
             return;
         }
         // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
@@ -167,84 +131,68 @@
 </script>
 
 <div class="gallery">
-{#if viewing}
-    <!-- The viewer takes the whole panel: it is a page about ONE animation, and leaving the tab strip and
-         search box above it would offer controls that act on a list the reader can no longer see. -->
-    <SetViewer
-        detail={viewing}
-        animation={stanceAnimation}
-        {stance}
-        onStance={selectStance}
-        onArmour={(armour) => viewing && openSet(viewing.id, armour)}
-        onBack={() => {
-            viewing = undefined;
-            stanceAnimation = undefined;
-        }}
-        onOpenResref={(resref) => post({ type: "openResref", resref })}
-        onOpenSet={(id) => post({ type: "openSetEditor", id })}
-    />
-{:else}
-    {#if showTabStrip(hasSets)}
-        <Tabs current={tab} onSelect={(next) => (tab = next)} />
-    {/if}
-    <Toolbar
-        {query}
-        shown={tab === "files" ? shown.length : shownSets.length}
-        total={tab === "files" ? items.length : sets.length}
-        title={tab === "files" ? title : "animations"}
-        onQuery={(v) => (query = v)}
-        tags={tab === "files" ? tags : []}
-        tag={activeTag}
-        onTag={(v) => (tag = v)}
-        formats={tab === "files" ? formats : []}
-        {format}
-        onFormat={(v) => (format = v)}
-    />
-    {#if tab === "sets"}
-        {#if facets}
-            <FacetBar
-                state={facets}
-                onSelect={(family, value) => post({ type: "selectFacet", family, value })}
-            />
-            <div class="facetpreview" style="width: {PREVIEW_PX}px; height: {PREVIEW_PX}px">
-                {#if facetTile && thumbnails.get(facetTile.id)}
-                    <img src={thumbnails.get(facetTile.id)} alt={`${facets.resref} frame`} />
-                    {#if directional.has(facetTile.id)}
-                        <span class="rose" title="Creature animation: one frame of several directions"></span>
-                    {/if}
-                {/if}
-            </div>
-            <p class="facetresult">
-                {#if facets.resref}
-                    <span class="facetfile">{facets.resref}.BAM</span>
-                    <button
-                        type="button"
-                        class="facetopen"
-                        onclick={() => facets?.resref && post({ type: "openResref", resref: facets.resref })}
-                    >
-                        Open in editor
-                    </button>
-                {:else}
-                    <span class="facetnone">{facets.unavailable}</span>
-                {/if}
-            </p>
-        {/if}
-        {#if focusSet !== undefined && !sets.some((set) => set.id === focusSet)}
-            <p class="facetnone">This install has no animation {hex(focusSet)}.</p>
-        {/if}
-        <SetList sets={shownSets} focus={focusSet} onOpen={openSet} />
-    {:else if loaded && items.length === 0}
-        <p class="empty">{note ?? "No drawable resources here."}</p>
-    {:else}
-        <Grid
-            tiles={shown}
-            {thumbnails}
-            {directional}
-            {tileSize}
-            {ladder}
-            onOpen={(id) => post({ type: "open", id })}
-            onNeed={(ids, size) => post({ type: "requestThumbnails", ids, size })}
+{#if showTabStrip(hasSets)}
+    <Tabs current={tab} onSelect={(next) => (tab = next)} />
+{/if}
+<Toolbar
+    {query}
+    shown={tab === "files" ? shown.length : shownSets.length}
+    total={tab === "files" ? items.length : sets.length}
+    title={tab === "files" ? title : "animations"}
+    onQuery={(v) => (query = v)}
+    tags={tab === "files" ? tags : []}
+    tag={activeTag}
+    onTag={(v) => (tag = v)}
+    formats={tab === "files" ? formats : []}
+    {format}
+    onFormat={(v) => (format = v)}
+/>
+{#if tab === "sets"}
+    {#if facets}
+        <FacetBar
+            state={facets}
+            onSelect={(family, value) => post({ type: "selectFacet", family, value })}
         />
+        <div class="facetpreview" style="width: {PREVIEW_PX}px; height: {PREVIEW_PX}px">
+            {#if facetTile && thumbnails.get(facetTile.id)}
+                <img src={thumbnails.get(facetTile.id)} alt={`${facets.resref} frame`} />
+                {#if directional.has(facetTile.id)}
+                    <span class="rose" title="Creature animation: one frame of several directions"></span>
+                {/if}
+            {/if}
+        </div>
+        <p class="facetresult">
+            {#if facets.resref}
+                <span class="facetfile">{facets.resref}.BAM</span>
+                <button
+                    type="button"
+                    class="facetopen"
+                    onclick={() => facets?.resref && post({ type: "openResref", resref: facets.resref })}
+                >
+                    Open in editor
+                </button>
+            {:else}
+                <span class="facetnone">{facets.unavailable}</span>
+            {/if}
+        </p>
     {/if}
+    {#if focusSet !== undefined && !sets.some((set) => set.id === focusSet)}
+        <p class="facetnone">This install has no animation {hex(focusSet)}.</p>
+    {/if}
+    <!-- A row opens the set in the animation editor. The panel draws no set of its own: a set is a
+         document there, with the same controls, save path and backup as a single file. -->
+    <SetList sets={shownSets} focus={focusSet} onOpen={(id) => post({ type: "openSetEditor", id })} />
+{:else if loaded && items.length === 0}
+    <p class="empty">{note ?? "No drawable resources here."}</p>
+{:else}
+    <Grid
+        tiles={shown}
+        {thumbnails}
+        {directional}
+        {tileSize}
+        {ladder}
+        onOpen={(id) => post({ type: "open", id })}
+        onNeed={(ids, size) => post({ type: "requestThumbnails", ids, size })}
+    />
 {/if}
 </div>

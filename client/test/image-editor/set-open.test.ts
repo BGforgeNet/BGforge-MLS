@@ -268,4 +268,26 @@ describe("opening an animation set", () => {
             "This install ships no files for animation 0x1234.",
         );
     });
+
+    /**
+     * The two empty sets are not the same fact and the reader can act on different things: files this model
+     * cannot NAME are a gap in the editor, files the install does not ship are a gap in the install. The
+     * scheme's own words carry the first, since only it knows what is unmodelled.
+     */
+    it("says what a set it cannot name any file for is refused for", async () => {
+        const unmodelled: AnimationSet = {
+            ...SET,
+            scheme: { kind: "unimplemented", scheme: 9, reason: "the monster_icewind scheme is not implemented yet" },
+            layout: undefined,
+        };
+        const source = setSource(() => ({
+            kind: "set" as const,
+            set: unmodelled,
+            io: ioFor({ TSTBG1: baseFileBam() }),
+        }));
+
+        await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
+            "Cannot show animation 0x1234: the monster_icewind scheme is not implemented yet.",
+        );
+    });
 });

@@ -3,8 +3,8 @@
 
     interface Props {
         sets: SetTile[];
-        /** Opens the viewer page on this set - by id, since the page is about the whole set rather than
-         *  the one file the row previews. */
+        /** Opens the whole set in the animation editor - by id, since a set is more than the one file the
+         *  row previews, and the editor is where it is drawn, played and saved. */
         onOpen: (id: number) => void;
         /** The animation the panel was opened on - its row is marked so the reader can see where they landed. */
         focus?: number;
@@ -27,7 +27,7 @@
                 class:setfocus={set.id === focus}
                 aria-current={set.id === focus ? "true" : undefined}
                 disabled={set.resref === undefined}
-                title={set.unsupported ?? `View ${set.label}`}
+                title={set.unsupported ?? `Open ${set.label} in the animation editor`}
                 onclick={() => set.resref && onOpen(set.id)}
             >
                 <span class="setname">{set.label}</span>

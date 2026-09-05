@@ -72,16 +72,18 @@ const context = { extensionUri: { fsPath: "/ext" }, subscriptions: [] } as unkno
 describe("wireGalleryPanel over a game that opens later", () => {
     let open = false;
     let listener: (() => void) | undefined;
+    /** The sets handed to the animation editor, in order - the panel's only answer to a set row. */
+    let handedOver: number[] = [];
 
     const deps = {
         sourceFor: () => (open ? fakeSource() : undefined),
         open: async () => {},
         sets: (): readonly SetTile[] => (open ? [SET] : []),
         openResref: async () => {},
-        openSetEditor: async () => {},
+        openSetEditor: async (id: number) => {
+            handedOver.push(id);
+        },
         facets: () => undefined,
-        resolveSet: () => undefined,
-        stanceAnimation: () => undefined,
         makePort: () => ({
             postMessage: () => {},
             onMessage: () => {},
@@ -97,6 +99,7 @@ describe("wireGalleryPanel over a game that opens later", () => {
     beforeEach(() => {
         open = false;
         listener = undefined;
+        handedOver = [];
     });
 
     it("says which empty state it is in while no game is open", () => {
@@ -137,5 +140,22 @@ describe("wireGalleryPanel over a game that opens later", () => {
         const inits = posted.filter((message) => message.type === "init");
         expect(inits[1]).toMatchObject({ items: [], sets: [] });
         expect(inits[1] && "note" in inits[1] && inits[1].note).toContain("No game is open");
+    });
+
+    /**
+     * The panel used to answer a set row with a page of its own. It hands the set to the editor instead,
+     * and draws nothing further itself - so the absence of a reply is half of what this pins.
+     */
+    it("hands a set to the animation editor rather than drawing one", () => {
+        const { panel, posted, send } = fakePanel();
+        open = true;
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+        const answered = posted.length;
+
+        send({ type: "openSetEditor", id: SET.id });
+
+        expect(handedOver).toEqual([SET.id]);
+        expect(posted).toHaveLength(answered);
     });
 });

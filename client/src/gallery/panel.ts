@@ -15,16 +15,10 @@ import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "./webview/messages";
-import { type ResolvedSet } from "./set-viewer";
-import { type SetStance } from "@bgforge/animation";
-import { type AnimationView } from "../image-editor/webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
-/** Layout for the animation components this panel shares with the image editor. */
-const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
-const SHARED_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
 const WEBVIEW_JS = path.join("client", "out", "gallery", "webview", "main.js");
 const WORKER_JS = path.join("client", "out", "gallery", "worker.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
@@ -59,17 +53,8 @@ export interface GalleryDeps {
     openResref(resref: string): Promise<void>;
     /** The facet browser over the open game's animations, or undefined with no game. */
     facets(): FacetBrowser | undefined;
-    /**
-     * One set resolved for the viewer page, or undefined when no game is open or the id names nothing.
-     *
-     * The panel holds the answer so `selectStance` can name a row by index rather than re-resolving the
-     * whole set per click - and so the row a click means cannot drift from the row the host answers for.
-     */
-    resolveSet(id: number, armour?: number): ResolvedSet | undefined;
     /** Open a whole set in the animation editor - the browser hands the set over, it does not edit it. */
     openSetEditor(id: number): Promise<void>;
-    /** One stance's animation, with only that band's frames carrying pixels. */
-    stanceAnimation(stance: SetStance): AnimationView | undefined;
     /**
      * Fires when the open game changes - opened, replaced, or closed.
      *
@@ -108,7 +93,6 @@ export function wireGalleryPanel(
             // The stylesheet is a source file, not a build output, so its directory is a root too - without
             // it `asWebviewUri` resolves to a URI the webview refuses to load and the panel renders unstyled.
             vscode.Uri.joinPath(context.extensionUri, "client", "src", "gallery", "webview"),
-            vscode.Uri.joinPath(context.extensionUri, SHARED_UI_DIR),
         ],
     };
     panel.webview.html = buildGalleryHtml(panel.webview, context.extensionUri);
@@ -128,9 +112,6 @@ export function wireGalleryPanel(
     // independently, and a restored panel starts from the default rather than inheriting a stale pick.
     let browser: FacetBrowser | undefined;
     let selection: FacetSelection = DEFAULT_SELECTION;
-    // The set the viewer page is currently on. Held so a stance click names a row by index against the
-    // same list the host answered with, rather than one re-resolved between the two messages.
-    let openSet: ResolvedSet | undefined;
 
     /**
      * Take a reading of the corpus this panel browses.
@@ -152,7 +133,6 @@ export function wireGalleryPanel(
         // Seated before the first `facets` message, so a link lands with its animation already selected
         // rather than showing the default and moving under the reader.
         selection = (state.focusSet === undefined ? undefined : browser?.seat(state.focusSet)) ?? DEFAULT_SELECTION;
-        openSet = undefined;
     };
 
     const postFacets = (): void => {
@@ -202,31 +182,9 @@ export function wireGalleryPanel(
             case "openResref":
                 void deps.openResref(message.resref);
                 break;
-            case "openSet": {
-                const resolved = deps.resolveSet(message.id, message.armour);
-                if (resolved === undefined) break;
-                openSet = resolved;
-                void panel.webview.postMessage({
-                    type: "setDetail",
-                    detail: resolved.detail,
-                } satisfies HostToWebview);
-                break;
-            }
             case "openSetEditor":
                 void deps.openSetEditor(message.id);
                 break;
-            case "selectStance": {
-                const stance = openSet?.stances[message.stance];
-                if (stance === undefined) break;
-                const view = deps.stanceAnimation(stance);
-                if (view === undefined) break;
-                void panel.webview.postMessage({
-                    type: "stanceAnimation",
-                    stance: message.stance,
-                    view,
-                } satisfies HostToWebview);
-                break;
-            }
             // Parity with the other panels: a fatal error in the webview reaches the output channel and a
             // toast instead of leaving a silently blank panel.
             case "runtimeError":
@@ -257,11 +215,9 @@ function buildGalleryHtml(webview: vscode.Webview, extensionUri: vscode.Uri): st
     // See docs/architecture.md (Webview CSP): styles load as <link> stylesheets resolved through
     // asWebviewUri and authorised by `style-src {{cspSource}}`, not inlined with a nonce.
     const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, WEBVIEW_CSS));
-    const sharedStylesUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, SHARED_CSS));
     const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, CODICONS_DIR, "codicon.css"));
     // Function replacers: the URIs contain `$`-adjacent characters String.replace would read as patterns.
     html = html.replace("{{stylesUri}}", () => stylesUri.toString());
-    html = html.replace("{{sharedStylesUri}}", () => sharedStylesUri.toString());
     html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
     html = inlineWebviewScript(html, getCachedJsAsset("gallery", extensionPath, WEBVIEW_JS), generateNonce());
     return html.replaceAll("{{cspSource}}", webview.cspSource);
