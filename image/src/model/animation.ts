@@ -147,6 +147,62 @@ export function isRgbaAnimation(animation: Animation): animation is RgbaAnimatio
 // Fallout's 6 hexagonal rotations, in header index order 0..5. No due-N or due-S.
 export const FRM_FACINGS: Facing[] = ["NE", "E", "SE", "SW", "W", "NW"];
 
+/**
+ * What each facing becomes when the picture is flipped across the vertical axis.
+ *
+ * This is the whole basis of IE mirroring: an animation stores its western arc and the engine reflects it
+ * for the east. Keyed by the union rather than listed as pairs, so adding a facing fails to compile until
+ * its partner is named. Due north, due south and `none` lie on the axis (or off the wheel) and map to
+ * themselves - mirroring one is a no-op, not an error.
+ */
+const MIRRORED_FACING: Record<Facing, Facing> = {
+    N: "N",
+    NNE: "NNW",
+    NE: "NW",
+    ENE: "WNW",
+    E: "W",
+    ESE: "WSW",
+    SE: "SW",
+    SSE: "SSW",
+    S: "S",
+    SSW: "SSE",
+    SW: "SE",
+    WSW: "ESE",
+    W: "E",
+    WNW: "ENE",
+    NW: "NE",
+    NNW: "NNE",
+    none: "none",
+};
+
+/** The facing a horizontally flipped picture shows. */
+export function mirrorFacing(facing: Facing): Facing {
+    return MIRRORED_FACING[facing];
+}
+
+/**
+ * Horizontal flip, the pixel half of `mirrorFacing`.
+ *
+ * The anchor moves with the row: a BAM offset is the centre PIXEL rather than a gap width, so the flipped
+ * frame's anchor is measured from the other edge and an off-by-one here shifts every mirrored direction
+ * one pixel against the drawn ones.
+ */
+export function mirrorFrame(frame: Frame): Frame {
+    const pixels = new Uint8Array(frame.width * frame.height);
+    for (let y = 0; y < frame.height; y++) {
+        for (let x = 0; x < frame.width; x++) {
+            pixels[y * frame.width + (frame.width - 1 - x)] = frame.pixels[y * frame.width + x] ?? 0;
+        }
+    }
+    return {
+        width: frame.width,
+        height: frame.height,
+        pixels,
+        offsetX: frame.width - 1 - frame.offsetX,
+        offsetY: frame.offsetY,
+    };
+}
+
 // Keyed by the union rather than listed as an array, so adding a facing or a layout fails to compile
 // until it is named here - the validators below read these, and a hand-kept copy of a union drifts.
 const FACING_KEYS: Record<Facing, true> = {

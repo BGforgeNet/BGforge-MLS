@@ -4,6 +4,8 @@ import {
     type Frame,
     type Sequence,
     FRM_FACINGS,
+    mirrorFacing,
+    mirrorFrame,
     transparentIndexOf,
 } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
@@ -126,29 +128,12 @@ function buildSingleOrientationSlots(anim: IndexedAnimation, cycleIndex: number)
 }
 
 // Eastern FRM rotations and the stored west cycle each mirrors across the vertical axis - what the
-// engine does at render time for animations without a *E companion file.
-const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = [
-    { east: "NE", west: "NW" },
-    { east: "E", west: "W" },
-    { east: "SE", west: "SW" },
-];
-
-/** Horizontal flip. A BAM anchor is the centre PIXEL (offsetX = centerX), so it mirrors with the row. */
-function mirrorFrame(frame: Frame): Frame {
-    const pixels = new Uint8Array(frame.width * frame.height);
-    for (let y = 0; y < frame.height; y++) {
-        for (let x = 0; x < frame.width; x++) {
-            pixels[y * frame.width + (frame.width - 1 - x)] = frame.pixels[y * frame.width + x] ?? 0;
-        }
-    }
-    return {
-        width: frame.width,
-        height: frame.height,
-        pixels,
-        offsetX: frame.width - 1 - frame.offsetX,
-        offsetY: frame.offsetY,
-    };
-}
+// engine does at render time for animations without a *E companion file. Derived from the facing
+// mapping rather than restated, so the two cannot disagree about which cycle reflects onto which.
+const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = (["NE", "E", "SE"] as const).map((east) => ({
+    east,
+    west: mirrorFacing(east),
+}));
 
 /**
  * One IE direction block as a standalone facing-tagged source: the chosen group's slots become the

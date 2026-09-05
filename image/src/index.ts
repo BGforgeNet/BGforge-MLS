@@ -23,6 +23,8 @@ export {
     FRM_FACINGS,
     emptyPalette,
     isRgbaAnimation,
+    mirrorFacing,
+    mirrorFrame,
     transparentIndexOf,
 } from "./model/animation.ts";
 export { type Anchor, type AnchorGeom, offsetToAnchor } from "./model/frame-anchor.ts";
