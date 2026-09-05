@@ -136,4 +136,25 @@ describe("webview CSP", () => {
         expect(build).toContain("img-src data:");
         expect(build).toContain("default-src 'none'");
     });
+
+    /**
+     * A sheet the panel links and the harness omits is invisible to every assertion the harness makes about
+     * CONTENT: the tiles still render, the labels still read, and only the LAYOUT is missing - so a check of
+     * a computed grid or flex property reads the specified value back instead of the used one and reports a
+     * number, not a failure. That is how the animation editor's grid ran unstyled here.
+     *
+     * Each marker is asserted present in its own sheet first, so a renamed selector fails as a stale marker
+     * rather than as a missing stylesheet.
+     */
+    it.each([
+        ["client/src/webview-ui/base.css", ".error-state"],
+        ["client/src/webview-ui/primitives.css", ".bb-combobox"],
+        ["client/src/webview-ui/animation-tiles.css", ".cycle-grid.fixed-columns"],
+        ["client/src/image-editor/webview/styles.css", ".cycle-hint"],
+    ])("the animation harness page carries %s, as the real panel links it", (sheet, marker) => {
+        expect(fs.readFileSync(path.join(REPO_ROOT, sheet), "utf8")).toContain(marker);
+        const page = path.join(REPO_ROOT, "binary-editor/test/harness/image-app.html");
+        if (!fs.existsSync(page)) return; // harness not built in lint-only stages
+        expect(fs.readFileSync(page, "utf8")).toContain(marker);
+    });
 });
