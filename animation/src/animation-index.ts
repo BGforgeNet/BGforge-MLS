@@ -45,6 +45,16 @@ export interface AnimationSet {
     paperdollPrefix: string | undefined;
     scheme: AnimationScheme;
     /**
+     * The section the install (or the table) declared, verbatim - `character`, `monster_icewind`,
+     * `multi_new`, and so on. Absent where nothing declared one.
+     *
+     * Kept alongside the two fields derived from it because neither can be inverted: `scheme` collapses
+     * `character` and `character_old` onto one kind, and `layout` collapses `monster_icewind`,
+     * `monster_large16` and `multi_new` onto one family. Writing a set back out means naming a section in
+     * the target's own declaration, which only the section itself can answer.
+     */
+    section?: string;
+    /**
      * Which file-naming family this animation draws under, where one is known. Separate from `scheme`: the
      * section names the scheme, the layout decides what to open, and several sections share a layout.
      */
@@ -88,8 +98,19 @@ function prefixesOfTable(tabled: TableAnimation | undefined): Map<number, string
     return new Map(tabled === undefined ? undefined : tabled.prefixes.map((prefix, at) => [at + 1, prefix]));
 }
 
+/**
+ * The declared section: the install's own, else the table's, else none.
+ *
+ * One definition rather than the precedence re-stated per reader - the scheme, the band stride and the set's
+ * own `section` field all need it, and a copy that missed the "install wins" half would silently answer with
+ * a vendored row's section for an animation the install declares itself.
+ */
+function sectionOf(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): string | undefined {
+    return ini === undefined ? tabled?.section : ini.section;
+}
+
 function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): AnimationScheme {
-    const section = ini === undefined ? tabled?.section : ini.section;
+    const section = sectionOf(ini, tabled);
     if (ini === undefined && tabled === undefined) {
         return {
             kind: "unimplemented",
@@ -161,7 +182,8 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
         const iniBytes = read(iniResref(id), "ini");
         const ini = iniBytes === undefined ? undefined : parseAnimationIni(iniBytes);
         const tabled = ini === undefined ? table?.get(id) : undefined;
-        const stride = declaredStride(ini === undefined ? tabled?.section : ini.section);
+        const section = sectionOf(ini, tabled);
+        const stride = declaredStride(section);
         sets.push({
             id,
             code: codes.get(id) ?? "",
@@ -169,6 +191,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             prefixByArmour: ini === undefined ? prefixesOfTable(tabled) : prefixesFrom(ini),
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
             scheme: schemeFrom(ini, tabled),
+            ...(section === undefined ? {} : { section }),
             ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
             ...(stride === undefined ? {} : { bandStride: stride }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),

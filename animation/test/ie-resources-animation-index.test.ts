@@ -67,6 +67,23 @@ describe("buildAnimationIndex", () => {
         const ids = index().map((entry) => entry.id);
         expect(ids).toEqual([...ids].sort((a, b) => a - b));
     });
+
+    /**
+     * The declared section, kept verbatim.
+     *
+     * Both derived fields flatten it and neither can be inverted: `scheme` collapses `character` and
+     * `character_old` onto one kind, and `layout` collapses `monster_icewind`, `monster_large16` and
+     * `multi_new` onto "mixed". A writer emitting a converted set has to name a section in the target's
+     * own declaration, so the index has to keep the one it read.
+     */
+    it("keeps the section the INI declared, which the scheme and layout both flatten", () => {
+        expect(setFor(0x6000)?.section).toBe("character");
+        expect(setFor(0xa000)?.section).toBe("monster_large16");
+    });
+
+    it("leaves the section unset where nothing declares one, rather than inventing a name", () => {
+        expect(setFor(0xe440)?.section).toBeUndefined();
+    });
 });
 
 describe("buildAnimationIndex with a vendored table", () => {
@@ -109,6 +126,25 @@ describe("buildAnimationIndex with a vendored table", () => {
     it("prefers the install's own declaration to the table, which is a fallback and not an override", () => {
         // 0x6000 has an INI in the fixture; the table's deliberately wrong prefix must not win.
         expect(tabled(0x6000)?.prefixByArmour.get(1)).toBe("CHMB");
+    });
+
+    it("carries a tabled section, so a classic install's rows are as nameable as an INI's", () => {
+        expect(tabled(0xe440)?.section).toBe("monster_large");
+    });
+
+    /**
+     * The one distinction only the section carries. `character_old` names its files exactly as `character`
+     * does and resolves to the same scheme kind and the same layout, so a converter reading either derived
+     * field cannot tell that this set ships a mirrored twin per member and the other does not.
+     */
+    it("distinguishes character_old from character, which the scheme kind cannot", () => {
+        const set = buildAnimationIndex(
+            miniGame(),
+            animationTable([[0xe440, { prefixes: ["CHMB"], section: "character_old" }]]),
+        ).find((entry) => entry.id === 0xe440);
+
+        expect(set?.section).toBe("character_old");
+        expect(set?.scheme).toEqual({ kind: "character" });
     });
 });
 
