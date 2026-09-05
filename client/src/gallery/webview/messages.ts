@@ -144,5 +144,7 @@ export type WebviewToHost =
     | { type: "openSet"; id: number; armour?: number }
     /** Draw one stance of the open set - the host answers with `stanceAnimation`. */
     | { type: "selectStance"; stance: number }
+    /** Open the whole set in the animation editor, where it can be played, inspected and saved. */
+    | { type: "openSetEditor"; id: number }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };

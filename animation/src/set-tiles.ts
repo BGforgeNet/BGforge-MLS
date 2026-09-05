@@ -4,7 +4,7 @@
  * No `vscode` import, for the same reason `source.ts` has none: this is the decision about what a tile says,
  * and it is worth testing without an extension host.
  */
-import { type AnimationSet, firstArmour } from "./animation-index";
+import { type AnimationSet, firstArmour, setTitle } from "./animation-index";
 import { characterMember } from "./animation-schemes/character";
 import { schemeMembers } from "./animation-schemes/members";
 
@@ -73,7 +73,7 @@ export function setTile(set: AnimationSet, exists: (resref: string) => boolean):
     const hasPrefix = set.prefixByArmour.size > 0 || set.paperdollPrefix !== undefined;
     return {
         id: set.id,
-        label: set.name || set.code || `0x${set.id.toString(16).padStart(4, "0")}`,
+        label: setTitle(set),
         resref,
         // A resolved preview outranks any verdict: the note belongs on a row that cannot be opened, and
         // explaining an absence beside a working link is the worse of the two errors.

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { type AnimationSet, buildAnimationIndex, createAnimationIndexResolver } from "../src/animation-index";
+import {
+    type AnimationSet,
+    animationIdHex,
+    buildAnimationIndex,
+    createAnimationIndexResolver,
+    setTitle,
+} from "../src/animation-index";
 import type { GameHandle } from "../src/game-handle";
 import { tableForFlavour } from "../src/animation-tables";
 import { animationTable } from "../src/animation-tables/table";
@@ -8,6 +14,19 @@ import { miniGame } from "./ie-game-fixtures";
 
 const index = (): ReturnType<typeof buildAnimationIndex> => buildAnimationIndex(miniGame());
 const setFor = (id: number) => index().find((entry) => entry.id === id);
+
+describe("setTitle", () => {
+    /** Three surfaces show this string, so each fallback is asserted rather than left to the happy path. */
+    it("prefers the declared name, then the code, then the id", () => {
+        expect(setTitle({ id: 0x6004, code: "CGMC", name: "CLERIC_MALE_GNOME" })).toBe("CLERIC_MALE_GNOME");
+        expect(setTitle({ id: 0x6004, code: "CGMC", name: "" })).toBe("CGMC");
+        expect(setTitle({ id: 0x6004, code: "", name: "" })).toBe("0x6004");
+    });
+
+    it("writes an id as four hex digits", () => {
+        expect(animationIdHex(0x2)).toBe("0x0002");
+    });
+});
 
 describe("buildAnimationIndex", () => {
     it("takes the id set from every table, not just one", () => {

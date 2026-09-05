@@ -6,7 +6,7 @@
  * the two views separate decode and compose paths for the same picture.
  */
 import { type Game } from "@bgforge/binary";
-import { type SetStance, type StanceIo } from "@bgforge/animation";
+import { type StanceIo } from "@bgforge/animation";
 import { composeParts } from "@bgforge/image";
 import { ImageDocumentModel } from "./document-model";
 
@@ -25,14 +25,20 @@ export function stanceIo(game: Game): StanceIo {
 }
 
 /**
- * The document this stance draws from - one file, or the four quarters of an oversized creature composed
- * into one animation.
+ * One member of a set: the file it names, or the four quarters of an oversized creature composed into one
+ * animation.
+ *
+ * Takes the two fields a member and a stance have in common rather than either type, because both callers
+ * pass one: the gallery draws a stance, the editor opens a whole member.
  *
  * A quadrant animation's parts are pieces of a single sprite rather than alternatives, so drawing one of
  * them shows a corner. Composing needs every part to parse; a part that will not is dropped and the rest
  * still compose, which loses a quarter rather than the whole creature.
  */
-export function stanceModel(io: StanceIo, stance: SetStance): ImageDocumentModel | undefined {
+export function stanceModel(
+    io: StanceIo,
+    stance: { resref: string; parts: readonly string[] },
+): ImageDocumentModel | undefined {
     const parts = stance.parts.flatMap((resref) => {
         const bytes = io.read(resref);
         if (bytes === undefined) return [];

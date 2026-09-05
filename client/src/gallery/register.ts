@@ -10,8 +10,8 @@ import { gameSource } from "./game-source";
 import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGalleryPanel } from "./panel";
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
-import { resourceUri } from "../ie-resources/uri";
-import { type AnimationIndexResolver, type SetStance, setTile } from "@bgforge/animation";
+import { animationSetUri, resourceUri } from "../ie-resources/uri";
+import { type AnimationIndexResolver, type SetStance, setTile, setTitle } from "@bgforge/animation";
 import { createFacetBrowser, type FacetBrowser } from "./facet-state";
 import { type ResolvedSet, resolveSet, stanceAnimation } from "./set-viewer";
 import { type SetTile } from "./webview/messages";
@@ -63,6 +63,17 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         if (current === undefined) return undefined;
         const set = (deps.animations(current.dir) ?? []).find((entry) => entry.id === id);
         return set === undefined ? undefined : resolveSet(current.game, set, armour);
+    };
+
+    /** Hand a whole set to the animation editor, by the set-scoped address that editor opens. */
+    const openSetEditor = async (id: number): Promise<void> => {
+        const current = deps.gameSession();
+        if (current === undefined) return;
+        // Labelled with the set's own name so the editor tab reads as the animation rather than as an id;
+        // an id the open install declares nothing for simply opens under its number.
+        const set = (deps.animations(current.dir) ?? []).find((entry) => entry.id === id);
+        const uri = animationSetUri(current.dir, id, set === undefined ? undefined : setTitle(set));
+        await vscode.commands.executeCommand("vscode.open", uri);
     };
 
     const animate = (stance: SetStance) => {
@@ -121,6 +132,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         openResref,
         facets,
         resolveSet: resolveSetFor,
+        openSetEditor,
         stanceAnimation: animate,
         onDidChangeGame: deps.onDidChangeGame,
     } satisfies GalleryDeps;

@@ -388,15 +388,30 @@ body {
     display: flex;
     gap: 6px;
 }
+/* The bar's trailing actions. `.setedit` always renders, so it carries the margin that pushes the pair
+   to the right edge; `.setplay` follows it and only appears for a stance with more than one frame. */
+.setedit,
 .setplay {
+    align-items: center;
     background: none;
     border: 1px solid var(--vscode-panel-border);
     border-radius: 2px;
     color: var(--vscode-foreground);
     cursor: pointer;
-    margin-left: auto;
+    display: flex;
+    font-family: inherit;
+    font-size: var(--vscode-font-size);
+    gap: 4px;
     padding: 2px 8px;
 }
+.setedit {
+    margin-left: auto;
+}
+.setedit:hover,
+.setplay:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+.setedit:focus-visible,
 .setplay:focus-visible {
     outline: 1px solid var(--vscode-focusBorder);
 }

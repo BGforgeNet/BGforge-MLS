@@ -278,6 +278,24 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 this.post(panel, { type: "frames", indices: answered.map((a) => a.index), frames, pixels });
                 break;
             }
+            case "selectSetAction":
+            case "selectSetArmour": {
+                const pick =
+                    message.type === "selectSetAction"
+                        ? document.selectSetAction(message.resref)
+                        : document.selectSetArmour(message.level);
+                if (pick === "changed") {
+                    this.postToDocumentPanels(document, { type: "init", view: initialView(document) });
+                    break;
+                }
+                if (pick === "unchanged") break;
+                // A refusal reposts the view AND says so: the picker offers what the archive's index lists,
+                // and a file listed there can still be undecodable - a control that silently snapped back
+                // would leave the reader thinking the click missed.
+                this.post(panel, { type: "init", view: initialView(document) });
+                this.post(panel, { type: "error", message: "That part of the set could not be drawn." });
+                break;
+            }
             case "save":
                 // Route through VS Code's own save so its dirty tracking clears - scoped to this
                 // document's URI, so it saves the right one even if focus moved since the click.

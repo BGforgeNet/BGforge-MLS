@@ -230,3 +230,11 @@ select {
     font-size: 0.85em;
     line-height: 1.35;
 }
+
+/* The open set's name, heading its two pickers. Reads as a section title rather than a field label:
+   nothing selects it, and the file editor's equivalent identity is the tab's own filename. */
+.set-title {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}

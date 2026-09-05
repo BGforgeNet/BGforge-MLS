@@ -66,6 +66,8 @@ export interface GalleryDeps {
      * whole set per click - and so the row a click means cannot drift from the row the host answers for.
      */
     resolveSet(id: number, armour?: number): ResolvedSet | undefined;
+    /** Open a whole set in the animation editor - the browser hands the set over, it does not edit it. */
+    openSetEditor(id: number): Promise<void>;
     /** One stance's animation, with only that band's frames carrying pixels. */
     stanceAnimation(stance: SetStance): AnimationView | undefined;
     /**
@@ -210,6 +212,9 @@ export function wireGalleryPanel(
                 } satisfies HostToWebview);
                 break;
             }
+            case "openSetEditor":
+                void deps.openSetEditor(message.id);
+                break;
             case "selectStance": {
                 const stance = openSet?.stances[message.stance];
                 if (stance === undefined) break;

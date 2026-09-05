@@ -181,6 +181,7 @@
             stanceAnimation = undefined;
         }}
         onOpenResref={(resref) => post({ type: "openResref", resref })}
+        onOpenSet={(id) => post({ type: "openSetEditor", id })}
     />
 {:else}
     {#if showTabStrip(hasSets)}

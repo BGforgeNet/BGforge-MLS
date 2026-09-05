@@ -15,6 +15,7 @@
 import { type ConversionPlan } from "./plan";
 import { type ConversionTarget } from "./target";
 import { type NeutralSet } from "../neutral/model";
+import { animationIdHex, setTitle } from "../animation-index";
 
 export interface NotesOptions {
     /** The animation id the converted set is to be declared under. */
@@ -23,10 +24,6 @@ export interface NotesOptions {
 
 /** A plan that goes ahead. A refusal writes nothing at all, so it has no notes to write. */
 export type PlannedConversion = Exclude<ConversionPlan, { outcome: "refused" }>;
-
-function hex(id: number): string {
-    return `0x${id.toString(16).padStart(4, "0")}`;
-}
 
 /** Every file the set draws, each named once, in read order. */
 function resrefs(set: NeutralSet): string[] {
@@ -60,10 +57,10 @@ export function conversionNotes(
     plan: PlannedConversion,
     options: NotesOptions,
 ): string {
-    const id = hex(options.targetId);
+    const id = animationIdHex(options.targetId);
     const losses = new Set(plan.report.losses);
     const lines = [
-        `# ${set.identity.name || set.identity.code || hex(set.identity.sourceId)}`,
+        `# ${setTitle({ id: set.identity.sourceId, code: set.identity.code, name: set.identity.name })}`,
         "",
         `Converted to: ${target.label}`,
         "",
@@ -73,7 +70,7 @@ export function conversionNotes(
         "",
         "## Source",
         "",
-        `- Game \`${set.identity.sourceFlavour}\`, animation ${hex(set.identity.sourceId)}`,
+        `- Game \`${set.identity.sourceFlavour}\`, animation ${animationIdHex(set.identity.sourceId)}`,
         `- Section \`${set.identity.sourceSection ?? "none declared"}\``,
         `- Files: ${resrefs(set).join(", ")}`,
         "",

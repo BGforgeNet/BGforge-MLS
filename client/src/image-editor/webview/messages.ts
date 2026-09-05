@@ -45,6 +45,26 @@ export interface SequenceView {
     dirOffsetY: number;
 }
 
+/**
+ * The animation set a document is showing, when it was opened on one rather than on a single file.
+ *
+ * Absent for a file, which is what the two extra controls key off: everything else in the view is the
+ * same, so the set surface is the file surface plus these pickers rather than a second editor.
+ */
+export interface SetView {
+    id: number;
+    title: string;
+    /**
+     * Every armour level the set declares, lowest first, each with the name the install's own vocabulary
+     * gives it. Labelled host-side like the actions below, so the webview holds no naming table of its own.
+     */
+    armours: { level: number; label: string }[];
+    armour: number;
+    /** The actions this armour level draws; `resref` is what a pick posts back. */
+    actions: { label: string; resref: string }[];
+    action: string;
+}
+
 interface AnimationViewBase {
     frames: FrameView[];
     /** Every frame's pixels concatenated; each frame's own bytes are its `start`/`length` span. */
@@ -56,6 +76,8 @@ interface AnimationViewBase {
     // category from the art directory (art/critters, art/scenery, ...) - see render/naming.ts.
     dirName?: string;
     sourceFormat: SourceFormat;
+    /** Present only for a document opened on a whole animation set. */
+    set?: SetView;
 }
 
 /** FRM, BAM v1 and BAMC: each frame's span of the shared buffer holds palette indices. */
@@ -167,6 +189,9 @@ export type WebviewToHost =
     | { type: "setCreature"; resref: string | null }
     // Frames whose pixels the open did not carry, asked for as the view comes to need them.
     | { type: "requestFrames"; indices: number[] }
+    // Set documents only: which action and which armour level of the open set to show.
+    | { type: "selectSetAction"; resref: string }
+    | { type: "selectSetArmour"; level: number }
     | { type: "runtimeError"; message: string; stack?: string };
 
 function isValidMetaPatch(patch: unknown): patch is MetaPatch {
@@ -205,6 +230,10 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             return typeof m.mode === "string" && IMPORT_MODES.has(m.mode);
         case "requestFrames":
             return Array.isArray(m.indices) && m.indices.every((i) => typeof i === "number");
+        case "selectSetAction":
+            return typeof m.resref === "string";
+        case "selectSetArmour":
+            return typeof m.level === "number";
         case "runtimeError":
             return typeof m.message === "string";
         default:

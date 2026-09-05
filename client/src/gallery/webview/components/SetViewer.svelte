@@ -15,9 +15,11 @@
         onArmour: (armour: number) => void;
         onBack: () => void;
         onOpenResref: (resref: string) => void;
+        /** Hand the whole set to the animation editor, which is where it can be edited and saved. */
+        onOpenSet: (id: number) => void;
     }
 
-    const { detail, animation, stance, onStance, onArmour, onBack, onOpenResref }: Props = $props();
+    const { detail, animation, stance, onStance, onArmour, onBack, onOpenResref, onOpenSet }: Props = $props();
 
     /**
      * Tile size, and the width past which a rose stops fitting.
@@ -121,6 +123,15 @@
                 </select>
             </label>
         {/if}
+        <button
+            type="button"
+            class="setedit"
+            title="Open every action of this set in the animation editor"
+            onclick={() => onOpenSet(detail.id)}
+        >
+            <span class="codicon codicon-go-to-file" aria-hidden="true"></span>
+            Open set in editor
+        </button>
         {#if longest > 1}
             <button
                 type="button"

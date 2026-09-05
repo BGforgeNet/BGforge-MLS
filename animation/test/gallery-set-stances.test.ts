@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
 import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
-import { setStances, type StanceIo } from "../src/set-stances";
+import { setMembers, setStances, type StanceIo } from "../src/set-stances";
 import { bandedPair, multiCycle } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
@@ -78,6 +78,65 @@ describe("setStances over the character layouts", () => {
             "NW",
             "N",
         ]);
+    });
+});
+
+describe("setMembers", () => {
+    /** A monster set: its files are named by the scheme's own suffixes rather than by armour and action. */
+    function monsterSet(overrides: Partial<AnimationSet> = {}): AnimationSet {
+        return {
+            id: 0x1234,
+            code: "MOGH",
+            name: "OGRE_MAGE",
+            prefixByArmour: new Map([[1, "MOGH"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "cycles",
+            ...overrides,
+        };
+    }
+
+    it("names a non-character set's files from its layout", () => {
+        const members = setMembers(monsterSet(), 1, (resref) => resref === "MOGHG1" || resref === "MOGHG3");
+        expect(members.map((member) => member.resref)).toEqual(["MOGHG1", "MOGHG3"]);
+    });
+
+    /**
+     * A set the index could not give a layout to draws nothing, rather than falling through to a default
+     * scheme: a guessed naming scheme resolves to files that either do not exist or belong to another set.
+     */
+    it("names nothing for a set with no layout", () => {
+        expect(setMembers(monsterSet({ layout: undefined }), 1, () => true)).toEqual([]);
+    });
+
+    it("names one member per action for a character set", () => {
+        const members = setMembers(characterSet(), 1, (resref) => resref === "CDMB1G1");
+        expect(members.map((member) => member.resref)).toEqual(["CDMB1G1"]);
+    });
+});
+
+describe("setStances with a declared stride", () => {
+    /**
+     * A set whose declared type fixes its cycles-per-direction is banded at that stride rather than by
+     * reading block structure - which is the only way a file whose structure is ambiguous bands correctly.
+     */
+    it("bands at the stride the set declares", () => {
+        const set: AnimationSet = {
+            id: 0x1234,
+            code: "MOGH",
+            name: "OGRE_MAGE",
+            prefixByArmour: new Map([[1, "MOGH"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "cycles",
+            bandStride: 8,
+        };
+        const io: StanceIo = { exists: (resref) => resref === "MOGHG1", read: () => multiCycle(4, 16) };
+
+        const stances = setStances(set, 1, io);
+
+        expect(stances.map((stance) => stance.band)).toEqual([0, 1]);
+        expect(stances.every((stance) => stance.confidence === "declared")).toBe(true);
     });
 });
 

@@ -23,8 +23,11 @@ export interface StanceIo {
  *
  * The paperdoll is excluded: it is a single inventory image with no facings, so it belongs beside the
  * stance list rather than in it - a rose drawn from it would announce a direction the file does not have.
+ *
+ * Exported because a member is the unit an ACTION picker offers, where a stance is the unit a rose draws:
+ * one file packs several direction bands, so the stances below are many-to-one on these.
  */
-function membersOf(set: AnimationSet, armour: number, exists: (resref: string) => boolean): SchemeMember[] {
+export function setMembers(set: AnimationSet, armour: number, exists: (resref: string) => boolean): SchemeMember[] {
     if (set.scheme.kind === "character") {
         return characterActions(set, armour, exists)
             .filter((action) => action.kind !== "paperdoll")
@@ -110,7 +113,7 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
 
 /** Every stance this set offers at one armour level, in the order a viewer should list them. */
 export function setStances(set: AnimationSet, armour: number, io: StanceIo): SetStance[] {
-    return stancesOfMembers(membersOf(set, armour, io.exists), (member) =>
+    return stancesOfMembers(setMembers(set, armour, io.exists), (member) =>
         bandsOf(
             member.parts.map((resref) => io.read(resref)),
             set.bandStride,

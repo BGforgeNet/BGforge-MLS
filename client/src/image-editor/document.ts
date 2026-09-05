@@ -21,8 +21,9 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
-import { type AnimationSetSource, AnimationSetState } from "./set-document";
+import { type AnimationSetSource, AnimationSetState, type SetPick, setView } from "./set-document";
 import { parseAnimationSetUri } from "../ie-resources/uri";
+import { animationIdHex } from "@bgforge/animation";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
 import { composePvrzResolver } from "./pvrz-resolver";
@@ -195,10 +196,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         address: { gameDir: string; id: number },
         animationSets?: AnimationSetSource,
     ): ImageEditorDocument {
-        const hex = `0x${address.id.toString(16).padStart(4, "0")}`;
-        const source = animationSets?.(address.gameDir, address.id);
-        if (source === undefined) throw new Error(`No open game declares animation ${hex}.`);
-        const state = AnimationSetState.open(source.set, source.io);
+        const hex = animationIdHex(address.id);
+        const found = animationSets?.(address.gameDir, address.id) ?? { kind: "no-game" };
+        if (found.kind === "no-game") throw new Error(`Open ${address.gameDir} to show animation ${hex}.`);
+        if (found.kind === "not-declared") throw new Error(`This game declares no animation ${hex}.`);
+        const state = AnimationSetState.open(found.set, found.io);
         if (state === undefined) throw new Error(`This install ships no files for animation ${hex}.`);
         return new ImageEditorDocument(uri, state.model, false, undefined, state);
     }
@@ -415,7 +417,33 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         // dirName lives here, not in the model: the model is deliberately path-free, and the
         // document owns the file identity (see saveUri). Only FRM naming reads it, and an FRM is
         // always a real file, so the filesystem path is the right form to take the folder from.
-        return { ...this.model.toView(options), dirName: path.basename(path.dirname(this.saveUri.fsPath)) };
+        return {
+            ...this.model.toView(options),
+            dirName: path.basename(path.dirname(this.saveUri.fsPath)),
+            ...(this.setState === undefined ? {} : { set: setView(this.setState) }),
+        };
+    }
+
+    /**
+     * Show another action of the open set. Refused for a file document, and for an action the set does not
+     * draw - the caller reposts the view either way, so a refused pick snaps the control back to what is
+     * actually open rather than leaving it showing a choice that did not take.
+     */
+    selectSetAction(resref: string): SetPick {
+        const state = this.setState;
+        if (state === undefined) return "refused";
+        const pick = state.select(resref);
+        if (pick === "changed") this.useModel(state.model);
+        return pick;
+    }
+
+    /** Show another armour level of the open set, on its first action that draws. Refused as above. */
+    selectSetArmour(level: number): SetPick {
+        const state = this.setState;
+        if (state === undefined) return "refused";
+        const pick = state.selectArmour(level);
+        if (pick === "changed") this.useModel(state.model);
+        return pick;
     }
 
     getBytes(): Uint8Array {

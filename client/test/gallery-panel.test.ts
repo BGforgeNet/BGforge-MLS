@@ -78,6 +78,7 @@ describe("wireGalleryPanel over a game that opens later", () => {
         open: async () => {},
         sets: (): readonly SetTile[] => (open ? [SET] : []),
         openResref: async () => {},
+        openSetEditor: async () => {},
         facets: () => undefined,
         resolveSet: () => undefined,
         stanceAnimation: () => undefined,

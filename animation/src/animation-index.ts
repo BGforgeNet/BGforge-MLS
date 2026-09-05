@@ -71,6 +71,21 @@ export interface AnimationSet {
 const ANIMATION_CODES = "ANISND";
 const ANIMATION_NAMES = "ANIMATE";
 
+/** `0x6004` - how an animation id is written wherever a reader sees one. */
+export function animationIdHex(id: number): string {
+    return `0x${id.toString(16).padStart(4, "0")}`;
+}
+
+/**
+ * What a set is called: the name its install declares, else its four-letter code, else its id.
+ *
+ * One definition because four surfaces show it - the gallery tile, the viewer page, the editor tab and
+ * the conversion notes - and a set that appears under two different names across them reads as two sets.
+ */
+export function setTitle(set: Pick<AnimationSet, "id" | "code" | "name">): string {
+    return set.name || set.code || animationIdHex(set.id);
+}
+
 /** The INI an animation declares itself in is named after its id in hex, four digits, uppercase. */
 function iniResref(id: number): string {
     return id.toString(16).toUpperCase().padStart(4, "0");

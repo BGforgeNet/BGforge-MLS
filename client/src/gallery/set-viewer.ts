@@ -10,7 +10,7 @@
 import { type Game } from "@bgforge/binary";
 import { stanceIo, stanceModel } from "../image-editor/stance-model";
 import { type AnimationView } from "../image-editor/webview/messages";
-import { type AnimationSet, type SetStance, armourLevels, firstArmour, setStances } from "@bgforge/animation";
+import { type AnimationSet, type SetStance, armourLevels, firstArmour, setStances, setTitle } from "@bgforge/animation";
 import { type SetDetail } from "./webview/messages";
 
 /** What the viewer page shows for one set, plus the stances the host keeps to answer `selectStance`. */
@@ -29,11 +29,10 @@ export function resolveSet(game: Game, set: AnimationSet, armour?: number): Reso
     const armours = armourLevels(set);
     const chosen = armour !== undefined && armours.includes(armour) ? armour : (firstArmour(set) ?? 1);
     const stances = setStances(set, chosen, stanceIo(game));
-    const title = set.name || set.code || `0x${set.id.toString(16).padStart(4, "0")}`;
     return {
         detail: {
             id: set.id,
-            title,
+            title: setTitle(set),
             armours,
             armour: chosen,
             stances: stances.map((stance) => ({

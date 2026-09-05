@@ -51,9 +51,26 @@ describe("ie-resources animation set URI", () => {
     });
 
     /** Four hex digits is how an install names the animation's own declaration, so the address reads like one. */
-    it("names the set by its id in hex", () => {
+    it("falls back to the id in hex where the set has no name", () => {
         expect(animationSetUri("/g", 0x6004).path).toBe("/6004.animset");
         expect(animationSetUri("/g", 0x2).path).toBe("/0002.animset");
+    });
+
+    /** The path is what the editor tab shows, so it carries the name the install declares. */
+    it("labels the address with the set's name", () => {
+        expect(animationSetUri("/g", 0x6004, "CLERIC_MALE_GNOME").path).toBe("/CLERIC_MALE_GNOME.animset");
+    });
+
+    /**
+     * The label is display, the query is identity - so a name that would break the address is stripped
+     * rather than allowed to decide which set opens. A name that strips to nothing keeps the id.
+     */
+    it("keeps the label from deciding which set opens", () => {
+        const dotted = animationSetUri("/g", 0x6004, "OGRE.MAGE/2");
+
+        expect(dotted.path).toBe("/OGREMAGE2.animset");
+        expect(parseAnimationSetUri(dotted)).toEqual({ gameDir: "/g", id: 0x6004 });
+        expect(animationSetUri("/g", 0x6004, "***").path).toBe("/6004.animset");
     });
 
     /**
@@ -65,15 +82,15 @@ describe("ie-resources animation set URI", () => {
         expect(parseAnimationSetUri(resourceUri("/g", "SW1H01", "ITM"))).toBeUndefined();
     });
 
-    it("refuses a set-shaped path whose id is not hex", () => {
-        const notHex = { ...animationSetUri("/g", 0x6004), path: "/zzzz.animset" };
+    it("refuses a set-shaped address carrying no id", () => {
+        const noId = { ...animationSetUri("/g", 0x6004), query: "g=%2Fg" };
 
-        expect(parseAnimationSetUri(notHex)).toBeUndefined();
+        expect(parseAnimationSetUri(noId)).toBeUndefined();
     });
 
     /** `parseInt` reads a prefix, so an unanchored check would open set 6 for an address naming "6zz". */
     it("refuses an id with a trailing non-hex character rather than reading its prefix", () => {
-        const trailing = { ...animationSetUri("/g", 0x6004), path: "/6zz.animset" };
+        const trailing = { ...animationSetUri("/g", 0x6004), query: "g=%2Fg&a=6zz" };
 
         expect(parseAnimationSetUri(trailing)).toBeUndefined();
     });

@@ -39,15 +39,24 @@ export type ResourceUriParts = Pick<vscode.Uri, "path" | "query">;
  */
 const ANIMATION_SET_EXT = "animset";
 
-/** Address a whole animation set by the id its install declares it under. */
-export function animationSetUri(gameDir: string, id: number): vscode.Uri {
-    // Four hex digits is how an install names the animation's own declaration file, so the address reads
-    // like one. Cosmetic: the parse below reads any hex width.
+/** The query key carrying a set's id. */
+const ANIMATION_SET_ID = "a";
+
+/**
+ * Address a whole animation set, labelled by `name` where the install declares one.
+ *
+ * The path is the label because it is what the editor tab shows, and a tab reading `6004.animset` names
+ * nothing a reader recognises. Identity stays in the query: the label is stripped to the characters a
+ * declaration table uses, so two sets could in principle share a path, and only the id decides which one
+ * opens. Four hex digits is how an install names an animation's own declaration file, so it reads like one.
+ */
+export function animationSetUri(gameDir: string, id: number, name?: string): vscode.Uri {
     const hex = id.toString(16).padStart(4, "0");
+    const label = (name ?? "").replaceAll(/[^A-Za-z0-9_-]/g, "");
     return vscode.Uri.from({
         scheme: GAME_RESOURCE_SCHEME,
-        path: `/${hex}.${ANIMATION_SET_EXT}`,
-        query: new URLSearchParams({ g: gameDir }).toString(),
+        path: `/${label === "" ? hex : label}.${ANIMATION_SET_EXT}`,
+        query: new URLSearchParams({ g: gameDir, [ANIMATION_SET_ID]: hex }).toString(),
     });
 }
 
@@ -63,12 +72,13 @@ export interface ParsedAnimationSetUri {
  * which set, so the two cannot disagree.
  */
 export function parseAnimationSetUri(uri: ResourceUriParts): ParsedAnimationSetUri | undefined {
-    const { gameDir, resref, ext } = parseResourceUri(uri);
+    const { gameDir, ext } = parseResourceUri(uri);
     if (ext !== ANIMATION_SET_EXT) return undefined;
+    const hex = new URLSearchParams(uri.query).get(ANIMATION_SET_ID) ?? "";
     // Anchored, so a stray non-hex character refuses the whole address rather than parsing a prefix of it -
     // `parseInt` alone reads "6zz" as 6 and would open the wrong set.
-    if (!/^[0-9a-f]+$/i.test(resref)) return undefined;
-    return { gameDir, id: Number.parseInt(resref, 16) };
+    if (!/^[0-9a-f]+$/i.test(hex)) return undefined;
+    return { gameDir, id: Number.parseInt(hex, 16) };
 }
 
 export function parseResourceUri(uri: ResourceUriParts): ParsedResourceUri {

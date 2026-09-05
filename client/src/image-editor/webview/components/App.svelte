@@ -18,6 +18,7 @@
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
     import LayoutModeControls from "./LayoutModeControls.svelte";
     import CreatureControls from "./CreatureControls.svelte";
+    import SetControls from "./SetControls.svelte";
     import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -323,6 +324,14 @@
             {/if}
         </div>
         <aside class="controls-column">
+            {#if view.set}
+                <!-- First in the column: it selects WHAT is shown, where everything below it selects how. -->
+                <SetControls
+                    set={view.set}
+                    onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
+                    onActionChange={(resref) => bridge.send({ type: "selectSetAction", resref })}
+                />
+            {/if}
             <ViewControls
                 {zoom}
                 {background}

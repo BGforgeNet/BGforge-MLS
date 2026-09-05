@@ -12,17 +12,32 @@ import { type Game } from "@bgforge/binary";
 import {
     type AnimationIndexResolver,
     type AnimationSet,
-    type SetStance,
+    type SchemeMember,
     type StanceIo,
+    armourLabel,
     armourLevels,
     firstArmour,
-    setStances,
+    setMembers,
+    setTitle,
 } from "@bgforge/animation";
 import { type ImageDocumentModel } from "./document-model";
+import { type SetView } from "./webview/messages";
 import { stanceIo, stanceModel } from "./stance-model";
 
-/** The set a set-scoped URI names, with the io its members read through, or undefined outside that game. */
-export type AnimationSetSource = (gameDir: string, id: number) => { set: AnimationSet; io: StanceIo } | undefined;
+/**
+ * What a set address resolves to, or why it does not.
+ *
+ * The two failures are told apart because they ask different things of the reader: one is "open the game
+ * this came from", the other is "this install has no such animation". Collapsing them into `undefined`
+ * left the second reported as the first, which sent the reader looking for a game that was already open.
+ */
+export type AnimationSetLookup =
+    | { kind: "set"; set: AnimationSet; io: StanceIo }
+    | { kind: "no-game" }
+    | { kind: "not-declared" };
+
+/** Resolves the set a set-scoped URI names, against whichever install is open. */
+export type AnimationSetSource = (gameDir: string, id: number) => AnimationSetLookup;
 
 /**
  * Resolve a set against whichever install is open now.
@@ -36,16 +51,29 @@ export function createAnimationSetSource(deps: {
 }): AnimationSetSource {
     return (gameDir, id) => {
         const current = deps.gameSession();
-        if (current === undefined || current.dir !== gameDir) return;
+        if (current === undefined || current.dir !== gameDir) return { kind: "no-game" };
         const set = (deps.animations(gameDir) ?? []).find((entry) => entry.id === id);
-        return set === undefined ? undefined : { set, io: stanceIo(current.game) };
+        return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(current.game) };
     };
 }
 
-/** One armour level's resolved actions, and the models already built for them. */
+/**
+ * What a pick did. Three states rather than a boolean because the two failures differ: showing what is
+ * already shown is not a failure at all, and reporting it as one would put an error in front of a reader
+ * who did nothing wrong.
+ */
+export type SetPick = "changed" | "unchanged" | "refused";
+
+/**
+ * One armour level's resolved actions, and the models already built for them.
+ *
+ * Actions are MEMBERS - one per file - not stances: a creature file packs several direction bands, and the
+ * editor already has a control for picking between those. Listing stances here would offer the same choice
+ * twice, and their resrefs collide, so a picker keyed on one could not address a row.
+ */
 interface ArmourLevel {
     level: number;
-    stances: SetStance[];
+    actions: SchemeMember[];
     models: Map<string, ImageDocumentModel>;
 }
 
@@ -53,13 +81,13 @@ export class AnimationSetState {
     readonly set: AnimationSet;
     private readonly io: StanceIo;
     private current: ArmourLevel;
-    private open: { stance: SetStance; model: ImageDocumentModel };
+    private open: { action: SchemeMember; model: ImageDocumentModel };
 
     private constructor(
         set: AnimationSet,
         io: StanceIo,
         level: ArmourLevel,
-        open: { stance: SetStance; model: ImageDocumentModel },
+        open: { action: SchemeMember; model: ImageDocumentModel },
     ) {
         this.set = set;
         this.io = io;
@@ -83,31 +111,32 @@ export class AnimationSetState {
     }
 
     private static resolve(set: AnimationSet, io: StanceIo, level: number): ArmourLevel {
-        return { level, stances: setStances(set, level, io), models: new Map() };
+        return { level, actions: setMembers(set, level, io.exists), models: new Map() };
     }
 
     /**
-     * The first action of `level` whose members parse, with its model.
+     * The first action of `level` whose files parse, with its model.
      *
-     * Not simply the first action: `setStances` lists a member on its cycle table alone, which a file can
-     * carry while its frame data is unreadable - and an action that cannot be drawn is not one to open on.
+     * Not simply the first action: the member list is resolved against the archive's index, which says a
+     * file is there without saying it can be decoded - and an action that cannot be drawn is not one to
+     * open on.
      */
     private static firstDrawn(
         level: ArmourLevel,
         io: StanceIo,
-    ): { stance: SetStance; model: ImageDocumentModel } | undefined {
-        for (const stance of level.stances) {
-            const model = AnimationSetState.modelFor(level, io, stance);
-            if (model !== undefined) return { stance, model };
+    ): { action: SchemeMember; model: ImageDocumentModel } | undefined {
+        for (const action of level.actions) {
+            const model = AnimationSetState.modelFor(level, io, action);
+            if (model !== undefined) return { action, model };
         }
         return undefined;
     }
 
-    private static modelFor(level: ArmourLevel, io: StanceIo, stance: SetStance): ImageDocumentModel | undefined {
-        const cached = level.models.get(stance.resref);
+    private static modelFor(level: ArmourLevel, io: StanceIo, action: SchemeMember): ImageDocumentModel | undefined {
+        const cached = level.models.get(action.resref);
         if (cached !== undefined) return cached;
-        const model = stanceModel(io, stance);
-        if (model !== undefined) level.models.set(stance.resref, model);
+        const model = stanceModel(io, action);
+        if (model !== undefined) level.models.set(action.resref, model);
         return model;
     }
 
@@ -121,12 +150,12 @@ export class AnimationSetState {
     }
 
     /** The actions this armour level draws, in the order the picker should list them. */
-    get actions(): readonly SetStance[] {
-        return this.current.stances;
+    get actions(): readonly SchemeMember[] {
+        return this.current.actions;
     }
 
-    get action(): SetStance {
-        return this.open.stance;
+    get action(): SchemeMember {
+        return this.open.action;
     }
 
     get model(): ImageDocumentModel {
@@ -134,17 +163,19 @@ export class AnimationSetState {
     }
 
     /**
-     * Show the action `resref` names. False - leaving the open action alone - when this level does not name
-     * it, or when its members will not parse: the document must keep a model either way, and a picker
-     * showing an action the editor could not draw is what the false answer is for.
+     * Show the action `resref` names.
+     *
+     * Refused where this level does not name it, or where its files will not parse: the document must keep
+     * a model either way, so the open action stays and the caller reports what happened.
      */
-    select(resref: string): boolean {
-        const stance = this.current.stances.find((candidate) => candidate.resref === resref);
-        if (stance === undefined || stance.resref === this.open.stance.resref) return false;
-        const model = AnimationSetState.modelFor(this.current, this.io, stance);
-        if (model === undefined) return false;
-        this.open = { stance, model };
-        return true;
+    select(resref: string): SetPick {
+        if (resref === this.open.action.resref) return "unchanged";
+        const action = this.current.actions.find((candidate) => candidate.resref === resref);
+        if (action === undefined) return "refused";
+        const model = AnimationSetState.modelFor(this.current, this.io, action);
+        if (model === undefined) return "refused";
+        this.open = { action, model };
+        return "changed";
     }
 
     /**
@@ -156,11 +187,11 @@ export class AnimationSetState {
      */
     reload(): boolean {
         const resolved = AnimationSetState.resolve(this.set, this.io, this.current.level);
-        const same = resolved.stances.find((candidate) => candidate.resref === this.open.stance.resref);
+        const same = resolved.actions.find((candidate) => candidate.resref === this.open.action.resref);
         const model = same === undefined ? undefined : AnimationSetState.modelFor(resolved, this.io, same);
         const open =
             same !== undefined && model !== undefined
-                ? { stance: same, model }
+                ? { action: same, model }
                 : AnimationSetState.firstDrawn(resolved, this.io);
         if (open === undefined) return false;
         this.current = resolved;
@@ -169,16 +200,29 @@ export class AnimationSetState {
     }
 
     /**
-     * Show `level`'s actions, opening on the first that draws. False - leaving the open level alone - when
-     * the set does not declare it or this install ships none of its files.
+     * Show `level`'s actions, opening on the first that draws. Refused - leaving the open level alone -
+     * where the set does not declare that level or this install ships none of its files.
      */
-    selectArmour(level: number): boolean {
-        if (level === this.current.level || !this.armours.includes(level)) return false;
+    selectArmour(level: number): SetPick {
+        if (level === this.current.level) return "unchanged";
+        if (!this.armours.includes(level)) return "refused";
         const resolved = AnimationSetState.resolve(this.set, this.io, level);
         const first = AnimationSetState.firstDrawn(resolved, this.io);
-        if (first === undefined) return false;
+        if (first === undefined) return "refused";
         this.current = resolved;
         this.open = first;
-        return true;
+        return "changed";
     }
+}
+
+/** What the editor's two set controls read: the level and action lists, and which of each is open. */
+export function setView(state: AnimationSetState): SetView {
+    return {
+        id: state.set.id,
+        title: setTitle(state.set),
+        armours: state.armours.map((level) => ({ level, label: armourLabel(level) })),
+        armour: state.armour,
+        actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
+        action: state.action.resref,
+    };
 }
