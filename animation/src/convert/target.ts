@@ -22,6 +22,14 @@ export interface ConversionTarget {
      * loss - the same call `LossReport` already makes for `palette-remapped-to-default`.
      */
     fixedPalette: boolean;
+    /**
+     * How the target's engine is told the animation exists.
+     *
+     * `infinity-ids` is the `ANIMATE.IDS`/`ANISND.IDS` pair. `unmodelled` says this tool does not know the
+     * target's declaration step - marked rather than omitted, because a notes file that simply left the
+     * section out would read as "nothing to declare", which is a stronger claim than has been checked.
+     */
+    declaration: "infinity-ids" | "unmodelled";
 }
 
 const IE_8 = ieFacingsForStride(8);
@@ -35,6 +43,7 @@ export const IE_8_POINT_MIRRORED: ConversionTarget = {
     stored: IE_8.slice(0, 5),
     shown: IE_8,
     fixedPalette: false,
+    declaration: "infinity-ids",
 };
 
 /** Eight-point, all eight stored: a base BAM plus the `*E` companion holding the eastern art. */
@@ -43,6 +52,7 @@ export const IE_8_POINT_PAIRED: ConversionTarget = {
     stored: IE_8,
     shown: IE_8,
     fixedPalette: false,
+    declaration: "infinity-ids",
 };
 
 /** Sixteen-point, nine stored: the west arc, with the eastern seven mirrored and no companion file. */
@@ -51,6 +61,7 @@ export const IE_16_POINT_MIRRORED: ConversionTarget = {
     stored: IE_9,
     shown: IE_16,
     fixedPalette: false,
+    declaration: "infinity-ids",
 };
 
 /** Sixteen-point, all sixteen stored - what the wide-band sections declare. */
@@ -59,6 +70,7 @@ export const IE_16_POINT_FULL: ConversionTarget = {
     stored: IE_16,
     shown: IE_16,
     fixedPalette: false,
+    declaration: "infinity-ids",
 };
 
 /** Fallout's six rotations, every one stored, against the game's own palette. */
@@ -67,4 +79,5 @@ export const FALLOUT_FRM: ConversionTarget = {
     stored: FRM_FACINGS,
     shown: FRM_FACINGS,
     fixedPalette: true,
+    declaration: "unmodelled",
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "@bgforge/image";
-import { declaredStride, type FileBands, stancesOfMembers } from "../src/animation-schemes/bands";
+import { declaredStride, type FileBands, schemeForStride, stancesOfMembers } from "../src/animation-schemes/bands";
 
 /** One band of `count` slots; the facings themselves do not matter to the naming. */
 function band(count: number): { seqIndex: number; facing: Facing }[] {
@@ -17,12 +17,33 @@ describe("declaredStride", () => {
         expect(declaredStride("monster_large16")).toBe(16);
     });
 
+    /**
+     * The paired section, whose members merge a base file with the `*E` companion holding real eastern art.
+     * Inference reads a LONE base file right - dummy east slots are the fingerprint it looks for - but the
+     * merged pair has no dummies, so it falls through to an unnamed cycle list and the eastern art stops
+     * being eastern. A converter reading that would discard hand-drawn facings and report no loss.
+     */
+    it("settles the paired section, whose merged members have no dummy slots to recognise", () => {
+        expect(declaredStride("character_old")).toBe(8);
+    });
+
     it("leaves every other section to structural inference", () => {
         // Overriding where inference is already right would replace a measured answer with a guess.
         expect(declaredStride("monster")).toBeUndefined();
         expect(declaredStride("character")).toBeUndefined();
         expect(declaredStride("monster_old")).toBeUndefined();
         expect(declaredStride(undefined)).toBeUndefined();
+    });
+});
+
+describe("schemeForStride", () => {
+    /** Keeping the scheme is what keeps the block table's stance names on a declared-stride band. */
+    it("reads an eight-cycle band as the eight-slot scheme", () => {
+        expect(schemeForStride(8)).toBe("ie8");
+    });
+
+    it("leaves a wider band without a scheme, since the block table names none", () => {
+        expect(schemeForStride(16)).toBeUndefined();
     });
 });
 

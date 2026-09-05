@@ -88,7 +88,10 @@ describe("planning a conversion", () => {
 
         expect(plan.outcome).toBe("lossy");
         expect(reportOf(plan).losses).toEqual([
-            { kind: "drawn-facings-mirrored", detail: "WK - walk: NE, E, SE are drawn and the target mirrors them" },
+            {
+                kind: "drawn-facings-mirrored",
+                detail: "NE, E, SE are drawn and the target mirrors them: WK - walk",
+            },
         ]);
     });
 

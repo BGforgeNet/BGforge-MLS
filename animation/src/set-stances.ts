@@ -9,7 +9,7 @@ import { drawsCycle, readBamV1Tables } from "@bgforge/image";
 import { ieBandsOfStride, interpretIeDirections, type SequenceShape } from "@bgforge/image/ie-direction";
 import { type AnimationSet } from "./animation-index";
 import { characterActions, characterMember } from "./animation-schemes/character";
-import { type FileBands, type SetStance, stancesOfMembers } from "./animation-schemes/bands";
+import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-browser";
 
@@ -93,9 +93,9 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     if (merged === undefined) return undefined;
     if (stride !== undefined) {
         const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride);
-        // A declared stride carries no block scheme, so such bands are numbered rather than named. The
-        // stride came from the animation's own declared type, so the facings on them are declared too.
-        return bands === undefined ? undefined : { bands, scheme: undefined, confidence: "declared" };
+        // The stride came from the animation's own declared type, so the facings on them are declared too.
+        // A stride the block table has a scheme for keeps its stance names; a wider one is numbered.
+        return bands === undefined ? undefined : { bands, scheme: schemeForStride(stride), confidence: "declared" };
     }
     const analysis = interpretIeDirections(merged.sequences, merged.frameCount);
     if (analysis === undefined) return undefined;

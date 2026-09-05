@@ -381,4 +381,50 @@ describe.skipIf(GAME === undefined)("the same-game round trip over a real instal
         // so it is the outlier rather than the suite's shape - it carries its own budget instead of
         // lifting the ceiling for every test in the file.
     }, 600000);
+
+    /**
+     * A member that ships an `*E` companion has to read as DIRECTIONS, not as an unnamed cycle list.
+     *
+     * Merging the companion in removes the dummy east slots that are the interpreter's base-file
+     * fingerprint, so structural inference correctly stops recognising the scheme and the band falls back
+     * to a bare cycle list - at which point the eastern art stops being eastern. A converter into a
+     * mirroring target would then discard hand-drawn frames and report the conversion lossless, which is
+     * the one loss nothing downstream can see afterwards: the result still animates in every direction.
+     *
+     * Whether a GIVEN band draws its east is data, not a modelling question - a pair may leave sleep or a
+     * spell release mirrored. So the guard is on the reading, plus a positive control that eastern art is
+     * reachable at all; without the latter the first assertion would pass over a set that stores no east.
+     */
+    it("reads a member with an east companion as directions rather than a bare cycle list", () => {
+        const game = openGame(GAME!);
+        if (game === undefined) throw new Error(`no game at ${GAME}`);
+        const io: StanceIo = {
+            exists: (resref) => game.canRead(resref, "bam"),
+            read: (resref) => (game.canRead(resref, "bam") ? game.read(resref, "bam") : undefined),
+        };
+
+        let paired = 0;
+        let storingEast = 0;
+        const bareCycleLists: string[] = [];
+        for (const set of buildAnimationIndex(game, tableForFlavour(game.identity.flavour))) {
+            for (const variant of readNeutralSet(set, io, { flavour: game.identity.flavour }).variants) {
+                for (const action of variant.actions) {
+                    // A companion is a part that is ANOTHER part plus "E" - not merely a name ending in
+                    // one, which also matches the `DE` (die) action code and would sweep in every
+                    // action-code set that has no companion at all.
+                    if (!action.resrefs.some((resref) => action.resrefs.includes(`${resref}E`))) continue;
+                    paired += 1;
+                    if (action.cycles.kind !== "directional") {
+                        bareCycleLists.push(`${set.name || set.code}/${action.label}`);
+                        continue;
+                    }
+                    if (action.cycles.directions.some((slot) => slot.facing === "E")) storingEast += 1;
+                }
+            }
+        }
+
+        expect(paired, "no set in this install pairs an east companion, so nothing was exercised").toBeGreaterThan(0);
+        expect(bareCycleLists.slice(0, 10)).toEqual([]);
+        expect(storingEast, "no paired member stored eastern art, so the reading proves nothing").toBeGreaterThan(0);
+    }, 600000);
 });

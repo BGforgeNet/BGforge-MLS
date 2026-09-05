@@ -48,6 +48,10 @@ export function planConversion(set: NeutralSet, target: ConversionTarget): Conve
         report.add("directions-unrepresentable", `the target has no slot for ${unrepresentable.join(", ")}`);
     }
 
+    // Grouped by WHAT is discarded rather than one row per action: a set's every action usually loses the
+    // same facings, and twenty near-identical rows is a report nobody reads to the end. Every affected
+    // action is still named - grouping shortens the report, it does not drop anything from it.
+    const discardedBy = new Map<string, string[]>();
     for (const action of actions) {
         const facings = storedFacings(action);
         if (facings.length === 0) continue;
@@ -61,12 +65,12 @@ export function planConversion(set: NeutralSet, target: ConversionTarget): Conve
         // it discards art a reader would have accepted. The result still animates in every direction, which
         // is exactly why nothing downstream would report it.
         const discarded = facings.filter((facing) => shown.has(facing) && !stored.has(facing));
-        if (discarded.length > 0) {
-            report.add(
-                "drawn-facings-mirrored",
-                `${action.label}: ${discarded.join(", ")} are drawn and the target mirrors them`,
-            );
-        }
+        if (discarded.length === 0) continue;
+        const key = discarded.join(", ");
+        discardedBy.set(key, [...(discardedBy.get(key) ?? []), action.label]);
+    }
+    for (const [facings, labels] of discardedBy) {
+        report.add("drawn-facings-mirrored", `${facings} are drawn and the target mirrors them: ${labels.join(", ")}`);
     }
 
     if (target.fixedPalette) {

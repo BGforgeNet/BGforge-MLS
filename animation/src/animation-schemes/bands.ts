@@ -27,9 +27,35 @@ const WIDE_BAND_SECTIONS = new Set(["monster_quadrant", "monster_large16"]);
 
 const WIDE_BAND_STRIDE = 16;
 
+/**
+ * Sections whose bands are eight cycles with every facing DRAWN rather than mirrored.
+ *
+ * Inference reads a LONE base file correctly: its eastern slots are dummies, and that is precisely the
+ * fingerprint it looks for. Merged with the `*E` companion those slots hold real art, so the fingerprint
+ * fails - correctly, it is no longer a base file - and the reading would fall back to an unnamed cycle
+ * list, losing the fact that the eastern art is eastern. The section already settles it. Measured on a
+ * classic install: every member carrying an `*E` companion is declared in this section.
+ */
+const PAIRED_BAND_SECTIONS = new Set(["character_old"]);
+
+const IE_BAND_STRIDE = 8;
+
 /** The stride a section settles, or undefined to leave the reading to structural inference. */
 export function declaredStride(section: string | undefined): number | undefined {
-    return section !== undefined && WIDE_BAND_SECTIONS.has(section) ? WIDE_BAND_STRIDE : undefined;
+    if (section === undefined) return undefined;
+    if (WIDE_BAND_SECTIONS.has(section)) return WIDE_BAND_STRIDE;
+    return PAIRED_BAND_SECTIONS.has(section) ? IE_BAND_STRIDE : undefined;
+}
+
+/**
+ * The block scheme a declared stride implies, where one covers it.
+ *
+ * An eight-cycle band is the eight-slot scheme whether or not the eastern slots are drawn, so its bands
+ * keep the block table's own stance names. A sixteen-cycle band matches no scheme the table knows, which
+ * is why those bands are numbered instead.
+ */
+export function schemeForStride(stride: number): IeScheme | undefined {
+    return stride === IE_BAND_STRIDE ? "ie8" : undefined;
 }
 
 /**

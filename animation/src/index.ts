@@ -65,6 +65,7 @@ export {
     IE_8_POINT_PAIRED,
 } from "./convert/target";
 export { type ConversionPlan, planConversion } from "./convert/plan";
+export { type NotesOptions, type PlannedConversion, conversionNotes } from "./convert/notes";
 
 // Character facets: race, gender, class, armour, action.
 export {
