@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Frame, IndexedAnimation, Rgba } from "../src/model/animation.ts";
-import { composeParts } from "../src/model/compose-parts.ts";
+import { composeParts, splitFrame } from "../src/model/compose-parts.ts";
 
 function palette(): Rgba[] {
     return Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
@@ -179,5 +179,64 @@ describe("composeParts", () => {
         const f = composeParts(parts)!.frames[0]!;
         expect(f.width).toBe(2);
         expect(f.height).toBe(2);
+    });
+});
+
+describe("splitFrame", () => {
+    /**
+     * The property the writer rests on: a picture composed from its parts splits back into exactly those
+     * parts. Anything less and a converted tiled set would be written with its seams in the wrong places,
+     * which no per-file comparison would catch - each tile is a valid BAM either way.
+     */
+    test("cuts a composed frame back into the parts it was composed from", () => {
+        const parts = quadrantParts();
+        const composed = composeParts(parts)!.frames[0]!;
+        const rects = parts.map((part) => part.frames[0]!);
+
+        expect(splitFrame(composed, rects, 0)).toEqual(rects);
+    });
+
+    /**
+     * A part whose rectangle falls outside the picture is empty, not an error - it drew nothing. Both axes
+     * are exercised: a part clear of the frame horizontally never reaches the vertical bound at all, so one
+     * of them would otherwise go unrun.
+     */
+    test("reads transparent for a part lying outside the composed frame on either axis", () => {
+        const composed = frame(2, 2, 0, 0, 7);
+
+        const [besideIt, aboveIt] = splitFrame(
+            composed,
+            [
+                { offsetX: -10, offsetY: 0, width: 2, height: 2 },
+                { offsetX: 0, offsetY: -10, width: 2, height: 2 },
+            ],
+            3,
+        );
+
+        expect([...besideIt!.pixels]).toEqual([3, 3, 3, 3]);
+        expect([...aboveIt!.pixels]).toEqual([3, 3, 3, 3]);
+    });
+
+    /**
+     * Splitting on a grid the picture was never composed from is legitimate - a conversion into a tiled
+     * target picks its own seams - so the cut follows the rectangles given, not any remembered geometry.
+     */
+    test("cuts on whatever rectangles it is given, not the original seams", () => {
+        // One 4x1 strip of distinct values, cut into two 2x1 halves the composition never had.
+        const composed: Frame = { width: 4, height: 1, pixels: new Uint8Array([1, 2, 3, 4]), offsetX: 0, offsetY: 0 };
+
+        const halves = splitFrame(
+            composed,
+            [
+                { offsetX: 0, offsetY: 0, width: 2, height: 1 },
+                { offsetX: -2, offsetY: 0, width: 2, height: 1 },
+            ],
+            0,
+        );
+
+        expect(halves.map((half) => [...half.pixels])).toEqual([
+            [1, 2],
+            [3, 4],
+        ]);
     });
 });

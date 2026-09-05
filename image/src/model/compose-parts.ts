@@ -57,6 +57,45 @@ export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimati
     return { palette: reference.palette, frames, sequences, meta: reference.meta };
 }
 
+/** Where a part's frame sits around the shared anchor - the rectangle the composition above unions. */
+export interface PartRect {
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+}
+
+/**
+ * Cut a composed frame back into the parts it came from - the write-side inverse of `composeFrame`.
+ *
+ * It needs the ORIGINAL rectangles because composition keeps no record of the seams: the union is just a
+ * picture, and nothing in it says where one tile ended. Faithful wherever the parts do not overlap, which
+ * is the measured shape of every shipped multi-file animation; where two do overlap, a pixel goes to every
+ * part whose rectangle covers it, since there is no longer anything to say which drew it.
+ *
+ * A part reaching outside the composed frame reads transparent there rather than throwing - that is a part
+ * the composition never drew, and refusing it would fail a whole set over one empty tile.
+ */
+export function splitFrame(composed: Frame, parts: readonly PartRect[], transparent: number): Frame[] {
+    return parts.map((part) => {
+        const pixels = new Uint8Array(part.width * part.height).fill(transparent);
+        const left = composed.offsetX - part.offsetX;
+        const top = composed.offsetY - part.offsetY;
+        for (let row = 0; row < part.height; row++) {
+            const sourceRow = top + row;
+            if (sourceRow < 0 || sourceRow >= composed.height) continue;
+            for (let column = 0; column < part.width; column++) {
+                const sourceColumn = left + column;
+                if (sourceColumn < 0 || sourceColumn >= composed.width) continue;
+                // Both coordinates were bounds-checked just above, so the read is in range; the possibly-
+                // undefined type comes from `noUncheckedIndexedAccess`, not from anything absent at runtime.
+                pixels[row * part.width + column] = composed.pixels[sourceRow * composed.width + sourceColumn]!;
+            }
+        }
+        return { width: part.width, height: part.height, pixels, offsetX: part.offsetX, offsetY: part.offsetY };
+    });
+}
+
 /**
  * Whether a part holds real art for a cycle, as opposed to a placeholder standing in its slot.
  *
