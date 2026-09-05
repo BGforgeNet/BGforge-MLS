@@ -122,9 +122,27 @@ describe("tableForFlavour", () => {
         expect(tableForFlavour("bgt")).toBe(tableForFlavour("bg2"));
     });
 
-    it("gives an Enhanced Edition none, because the install declares its own", () => {
-        expect(tableForFlavour("bg2ee")).toBeUndefined();
-        expect(tableForFlavour("bgee")).toBeUndefined();
+    it("gives an Enhanced Edition the effect rows and no avatars, since it declares those itself", () => {
+        // The effect ids are the ones NO install of the family declares, EE included, so they answer there
+        // too - while every avatar keeps coming from the install's own INI.
+        for (const flavour of ["bg2ee", "bgee", "sod", "eet"]) {
+            const table = tableForFlavour(flavour);
+            expect(table?.get(0x0000), flavour).toEqual({ prefixes: ["SPRING"], section: "effect" });
+            expect(table?.get(0x6000), flavour).toBeUndefined();
+        }
+    });
+
+    it("gives a family it carries no rows for nothing at all", () => {
+        // Icewind Dale and Planescape have effect ids of their own; no row here was checked against either.
+        expect(tableForFlavour("pst")).toBeUndefined();
+        expect(tableForFlavour("iwd2")).toBeUndefined();
+    });
+
+    it("lets a classic game's own rows override the family-wide effect rows", () => {
+        // 0x0410 is in both: the effect set names one file, the rows derived from this game's own
+        // declarations name another, and the derived one is the later entry.
+        expect(tableForFlavour("tob")?.get(0x0410)?.prefixes).toEqual(["SPGLYPHI"]);
+        expect(tableForFlavour("bgee")?.get(0x0410)?.prefixes).toEqual(["GLPHWRDH"]);
     });
 
     it("carries the Baldur's Gate II character sets, per armour level", () => {
@@ -184,8 +202,18 @@ describe("createAnimationIndexResolver", () => {
     });
 });
 
-/** An installed EE game (ships per-animation INIs) and a classic one (ships none). Unset means skip. */
-const EE_GAME = process.env.BGFORGE_IE_GAME;
+/**
+ * An installed EE game (ships per-animation INIs) and a classic one (ships none). Unset means skip.
+ *
+ * The EE half checks the EDITION rather than trusting the variable: the same variable points every other
+ * suite here at whatever install is on hand, and a classic one declares no INI - so an unchecked run fails
+ * on the install being the wrong kind, which reads as a broken index.
+ */
+function eeGameDir(dir: string | undefined): string | undefined {
+    return dir !== undefined && openGame(dir)?.identity.edition === "ee" ? dir : undefined;
+}
+
+const EE_GAME = eeGameDir(process.env.BGFORGE_IE_GAME);
 const CLASSIC_GAME = process.env.BGFORGE_IE_GAME_CLASSIC;
 
 function realIndex(dir: string): readonly AnimationSet[] {

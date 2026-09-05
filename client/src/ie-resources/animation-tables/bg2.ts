@@ -10,6 +10,7 @@
  *   pnpm exec tsx client/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --classic <dir>
  */
 
+import { EFFECT_ROWS } from "./effects";
 import { animationTable, type AnimationTable, type TableRows } from "./table";
 
 /**
@@ -505,5 +506,8 @@ const DERIVED: TableRows = [
     // END GENERATED ROWS
 ];
 
-/** Deltas last: a later entry wins the Map, so the hand-authored block overrides what it corrects. */
-export const BG2_TABLE: AnimationTable = animationTable([...DERIVED, ...CLASSIC_DELTAS]);
+/**
+ * Effects first, then the derived rows, then the deltas: a later entry wins the Map, so a row this game's
+ * own INIs cover overrides the family-wide effect row, and the hand-authored block overrides both.
+ */
+export const BG2_TABLE: AnimationTable = animationTable([...EFFECT_ROWS, ...DERIVED, ...CLASSIC_DELTAS]);
