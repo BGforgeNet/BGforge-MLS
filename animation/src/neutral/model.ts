@@ -22,6 +22,7 @@
  * Conversion reads this model and BUILDS a new animation for the target; it never mutates what was read.
  */
 import { type Animation, type Facing } from "@bgforge/image";
+import { type NeutralActionRef } from "../animation-schemes/actions";
 
 /** What an install said this animation is, kept as read. */
 export interface NeutralIdentity {
@@ -65,6 +66,14 @@ export interface NeutralVariant {
 export interface NeutralAction {
     /** What the source called it, for display and for the notes file. */
     label: string;
+    /**
+     * What it depicts, in the vocabulary neither game owns, plus the code its own scheme named it by.
+     *
+     * The whole reason the model holds this rather than the code alone: a target scheme has to be asked
+     * for its own name for the same meaning, and the codes collide across schemes - `A4` is a ranged
+     * attack in one family and a two-handed backslash in another.
+     */
+    action: NeutralActionRef;
     /** Every file this action draws, the one it is named by first. */
     resrefs: readonly string[];
     /** Which band of those files, counting from zero. */

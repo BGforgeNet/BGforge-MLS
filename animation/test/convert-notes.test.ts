@@ -7,6 +7,7 @@ import { type StanceIo } from "../src/set-stances";
 import { FALLOUT_FRM, IE_8_POINT_MIRRORED } from "../src/convert/target";
 import { type ConversionPlan, planConversion } from "../src/convert/plan";
 import { conversionNotes } from "../src/convert/notes";
+import { decodeActionCode } from "../src/animation-schemes/actions";
 import { bandedPair } from "../../image/test/bam-fixtures.ts";
 
 function setWithActions(actions: NeutralAction[]): NeutralSet {
@@ -25,9 +26,10 @@ function setWithActions(actions: NeutralAction[]): NeutralSet {
     return { ...read, variants: [{ ...read.variants[0]!, actions }] };
 }
 
-function directional(label: string, facings: Facing[]): NeutralAction {
+function directional(label: string, facings: Facing[], code = "G1"): NeutralAction {
     return {
         label,
+        action: decodeActionCode("character", code),
         resrefs: ["CDMB1G1"],
         band: 0,
         cycles: { kind: "directional", directions: facings.map((facing, at) => ({ facing, sequenceIndex: at })) },
@@ -71,6 +73,26 @@ describe("the companion notes file", () => {
         expect(notes).toContain("0x6004");
         expect(notes).toContain("character");
         expect(notes).toContain("CDMB1G1");
+    });
+
+    /**
+     * The codes rather than the labels: they are what the source's filenames carry, so a reader can check
+     * this against an archive listing. What each one depicts is what the conversion matched on.
+     */
+    it("names each action once, with what its code depicts beside it", () => {
+        const set = setWithActions([
+            directional("Attack 5", WEST_ARC_8, "A5"),
+            directional("Cast", WEST_ARC_8, "CA"),
+            directional("Misc 13", WEST_ARC_8, "G13"),
+            directional("Attack 5 again", WEST_ARC_8, "A5"),
+        ]);
+
+        const notes = conversionNotes(set, IE_8_POINT_MIRRORED, planned(set, IE_8_POINT_MIRRORED), {
+            targetId: 0x6100,
+        });
+
+        // An unpinned code stands bare, which is the same statement the vocabulary makes about it.
+        expect(notes).toContain("- Actions: A5 (attack, 1-handed thrust), CA (spell), G13");
     });
 
     it("says so in one line when nothing was lost", () => {

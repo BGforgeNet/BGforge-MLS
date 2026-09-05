@@ -26,8 +26,13 @@ export type Action =
 
 const SHOT: Record<"bow" | "sling" | "crossbow", string> = { bow: "A", sling: "S", crossbow: "X" };
 
-/** The trailing characters that name an action within one armour level. */
-function suffixOf(action: Action): string {
+/**
+ * The trailing characters that name an action within one armour level.
+ *
+ * Exported because the same characters are what says WHAT the action depicts: the naming tables decode
+ * `A5` into a thrust, and a caller that re-derived the code from a label would be reading prose.
+ */
+export function characterActionCode(action: Action): string {
     switch (action.kind) {
         case "attack":
             return `A${action.detail}`;
@@ -48,10 +53,10 @@ export function characterMember(set: AnimationSet, armour: number, action: Actio
         // The paperdoll is keyed by its own prefix AND still by armour level, so a set with no paperdoll
         // declaration has no inventory image rather than borrowing the body's.
         if (set.paperdollPrefix === undefined || !set.prefixByArmour.has(armour)) return undefined;
-        return `${set.paperdollPrefix}${armour}INV`;
+        return `${set.paperdollPrefix}${armour}${characterActionCode(action)}`;
     }
     const prefix = set.prefixByArmour.get(armour);
-    return prefix === undefined ? undefined : `${prefix}${armour}${suffixOf(action)}`;
+    return prefix === undefined ? undefined : `${prefix}${armour}${characterActionCode(action)}`;
 }
 
 /** Every action the scheme can name, in the order a picker should offer them. */

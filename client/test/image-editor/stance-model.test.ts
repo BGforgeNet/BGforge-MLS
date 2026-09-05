@@ -28,7 +28,15 @@ function fakeGame(over: Partial<Pick<Game, "canRead" | "read">>): Game {
 }
 
 function stanceOf(parts: string[]): SetStance {
-    return { label: "G1", resref: parts[0]!, parts, band: 0, slots: [], confidence: "inferred" };
+    return {
+        label: "G1",
+        action: { scheme: "cycle-numbers", id: "unpinned", code: "G1" },
+        resref: parts[0]!,
+        parts,
+        band: 0,
+        slots: [],
+        confidence: "inferred",
+    };
 }
 
 describe("stanceIo", () => {

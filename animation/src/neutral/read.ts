@@ -72,6 +72,7 @@ export function readNeutralSet(set: AnimationSet, io: StanceIo, options: Neutral
             if (drawn.length === 0) continue;
             actions.push({
                 label: stance.label,
+                action: stance.action,
                 resrefs: drawn,
                 band: stance.band,
                 cycles: cyclesOf(stance.slots, stance.confidence),

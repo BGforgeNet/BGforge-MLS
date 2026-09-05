@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "@bgforge/image";
 import { declaredStride, type FileBands, schemeForStride, stancesOfMembers } from "../src/animation-schemes/bands";
+import { decodeActionCode } from "../src/animation-schemes/actions";
+import { type SchemeMember } from "../src/animation-schemes/members";
+
+/** A member as the two-letter naming family produces one; the code is what its label leads with. */
+function member(label: string, resref: string): SchemeMember {
+    return { label, action: decodeActionCode("action-codes", label.slice(0, 2)), resref, parts: [resref] };
+}
 
 /** One band of `count` slots; the facings themselves do not matter to the naming. */
 function band(count: number): { seqIndex: number; facing: Facing }[] {
@@ -49,10 +56,11 @@ describe("schemeForStride", () => {
 
 describe("stancesOfMembers", () => {
     it("keeps a single-band file on the member's own name", () => {
-        const stances = stancesOfMembers([{ label: "WK - walk", resref: "METNWK", parts: ["METNWK"] }], () => bands(1));
+        const stances = stancesOfMembers([member("WK - walk", "METNWK")], () => bands(1));
         expect(stances).toEqual([
             {
                 label: "WK - walk",
+                action: { scheme: "action-codes", id: "walk", code: "WK" },
                 resref: "METNWK",
                 parts: ["METNWK"],
                 band: 0,
@@ -64,7 +72,7 @@ describe("stancesOfMembers", () => {
 
     it("names each band of a file that packs several stances", () => {
         // MOGHG1's real shape: six 8-slot bands, five stored facings each.
-        const stances = stancesOfMembers([{ label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] }], () => bands(6));
+        const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
         expect(stances.map((s) => s.label)).toEqual([
             "WK - walk",
             "SC - combat stance",
@@ -79,9 +87,7 @@ describe("stancesOfMembers", () => {
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {
         // A wrong stance name is worse than an honest number - the same posture the block table takes.
-        const stances = stancesOfMembers([{ label: "G2", resref: "MWYVG2", parts: ["MWYVG2"] }], () =>
-            bands(5, 10, undefined),
-        );
+        const stances = stancesOfMembers([member("G2", "MWYVG2")], () => bands(5, 10, undefined));
         expect(stances.map((s) => s.label)).toEqual([
             "G2 - group 1",
             "G2 - group 2",
@@ -93,32 +99,22 @@ describe("stancesOfMembers", () => {
     });
 
     it("carries every member's bands, in member order", () => {
-        const stances = stancesOfMembers(
-            [
-                { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
-                { label: "G2", resref: "MOGHG2", parts: ["MOGHG2"] },
-            ],
-            (member) => (member.resref === "MOGHG1" ? bands(6) : bands(2)),
+        const stances = stancesOfMembers([member("G1", "MOGHG1"), member("G2", "MOGHG2")], (row) =>
+            row.resref === "MOGHG1" ? bands(6) : bands(2),
         );
         expect(stances).toHaveLength(8);
         expect(stances.at(-1)?.resref).toBe("MOGHG2");
     });
 
     it("drops a member the archive cannot band rather than offering a dead row", () => {
-        const stances = stancesOfMembers(
-            [
-                { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
-                { label: "G9", resref: "MISSING", parts: ["MISSING"] },
-            ],
-            (member) => (member.resref === "MOGHG1" ? bands(1) : undefined),
+        const stances = stancesOfMembers([member("G1", "MOGHG1"), member("G9", "MISSING")], (row) =>
+            row.resref === "MOGHG1" ? bands(1) : undefined,
         );
         expect(stances.map((s) => s.resref)).toEqual(["MOGHG1"]);
     });
 
     it("drops a band with no drawable facings", () => {
         const empty: FileBands = { bands: [band(5), [], band(5)], scheme: "ie8", confidence: "declared" };
-        expect(stancesOfMembers([{ label: "G1", resref: "X", parts: ["X"] }], () => empty).map((s) => s.band)).toEqual([
-            0, 2,
-        ]);
+        expect(stancesOfMembers([member("G1", "X")], () => empty).map((s) => s.band)).toEqual([0, 2]);
     });
 });

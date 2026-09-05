@@ -8,7 +8,8 @@
 import { drawsCycle, readBamV1Tables } from "@bgforge/image";
 import { ieBandsOfStride, interpretIeDirections, type SequenceShape } from "@bgforge/image/ie-direction";
 import { type AnimationSet } from "./animation-index";
-import { characterActions, characterMember } from "./animation-schemes/character";
+import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
+import { decodeActionCode } from "./animation-schemes/actions";
 import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-browser";
@@ -39,7 +40,14 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
                 // its armour levels remain separate members, as they are for every character set.
                 const mirrored = `${resref}E`;
                 const parts = exists(mirrored) ? [resref, mirrored] : [resref];
-                return [{ label: actionLabel(action), resref, parts }];
+                return [
+                    {
+                        label: actionLabel(action),
+                        action: decodeActionCode("character", characterActionCode(action)),
+                        resref,
+                        parts,
+                    },
+                ];
             });
     }
     if (set.layout === undefined) return [];

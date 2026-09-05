@@ -14,11 +14,20 @@
  * SEVERAL stances as consecutive direction bands; naming those is the band layer's job, not the file's.
  */
 
+import { type NeutralActionRef, decodeActionCode } from "./actions";
 import { type Layout } from "./layout";
 
 export interface SchemeMember {
     /** What a picker shows: the suffix, or the resref itself where the layout has no suffix. */
     label: string;
+    /**
+     * What this member depicts, decoded from the code its name carries.
+     *
+     * Decided here rather than by a reader of the label, because this is the only layer that knows which
+     * naming family produced the code - and `A4` means a ranged attack in one family and a two-handed
+     * backslash in another.
+     */
+    action: NeutralActionRef;
     /** The file that identifies this member - the first one it draws. */
     resref: string;
     /**
@@ -34,6 +43,7 @@ export interface SchemeMember {
 /** A member before the archive has been asked which of its files exist. */
 interface MemberShape {
     label: string;
+    action: NeutralActionRef;
     parts: readonly string[];
 }
 
@@ -50,6 +60,10 @@ const CYCLES = ["G1", "G2", "G3"] as const;
  * the engine's playback order and the published block names invert relative to each other - so both stay
  * bare rather than shipping one reading of a disagreement as a fact. The gloss wording matches the block
  * labels in `image-editor/webview/render/cycle-grouping.ts`, which is the other surface naming these.
+ *
+ * Deliberately separate from `actions.ts`, which is the authority on what a code MEANS: these words have to
+ * match what the cycle view calls the same block, and that table has to match the published naming. Where
+ * they differ the difference is the point, not drift.
  */
 const ACTION_CODES: Readonly<Record<string, string | undefined>> = {
     A1: "attack",
@@ -88,29 +102,41 @@ const TILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
  */
 const TILE_CYCLES = [0, 1, 2].flatMap((tens) => TILES.map((_, at) => `${tens}${at}`));
 
+/** A member of the cycle-numbered family: the digits are its name, and nothing pins what they depict. */
+function cycleMember(label: string, parts: readonly string[]): MemberShape {
+    return { label, action: decodeActionCode("cycle-numbers", label), parts };
+}
+
 function candidates(layout: Layout, resref: string): MemberShape[] {
     switch (layout) {
         case "bare":
-            return [{ label: resref, parts: [resref] }];
+            // The file IS the animation, so it carries no action code at all - the empty one, which names
+            // the file back as the bare resref when a set is written.
+            return [{ label: resref, action: decodeActionCode("cycle-numbers", ""), parts: [resref] }];
         case "cycles":
-            return CYCLES.map((cycle) => ({ label: cycle, parts: [`${resref}${cycle}`] }));
+            return CYCLES.map((cycle) => cycleMember(cycle, [`${resref}${cycle}`]));
         case "quadrant":
             // One member per cycle, drawing that cycle's four quarters together.
-            return CYCLES.map((cycle) => ({
-                label: cycle,
-                parts: QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}`),
-            }));
+            return CYCLES.map((cycle) =>
+                cycleMember(
+                    cycle,
+                    QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}`),
+                ),
+            );
         case "pieces":
             // One member per stance group, drawing every tile of every facing that stance stores. They are
             // pieces of one picture across the grid AND across the cycle table, so the caller composes the
             // lot: a tile file's untouched cycles are placeholders that compose away.
-            return PIECE_STANCES.map((stance) => ({
-                label: `G${stance}`,
-                parts: TILE_CYCLES.flatMap((cycle) => TILES.map((tile) => `${resref}${stance}${tile}${cycle}`)),
-            }));
+            return PIECE_STANCES.map((stance) =>
+                cycleMember(
+                    `G${stance}`,
+                    TILE_CYCLES.flatMap((cycle) => TILES.map((tile) => `${resref}${stance}${tile}${cycle}`)),
+                ),
+            );
         case "actions":
             return Object.keys(ACTION_CODES).map((code) => ({
                 label: actionLabel(code),
+                action: decodeActionCode("action-codes", code),
                 parts: [`${resref}${code}`],
             }));
         case "mixed":
@@ -145,6 +171,6 @@ export function schemeMembers(
     return candidates(layout, resref).flatMap((member) => {
         const parts = member.parts.filter(exists);
         const first = parts[0];
-        return first === undefined ? [] : [{ label: member.label, resref: first, parts }];
+        return first === undefined ? [] : [{ label: member.label, action: member.action, resref: first, parts }];
     });
 }

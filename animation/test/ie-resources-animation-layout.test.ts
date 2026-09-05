@@ -9,6 +9,9 @@ import { setTile } from "../src/set-tiles";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 
+/** What a `G`-numbered member depicts: nothing anything has pinned, under the code its name carries. */
+const cycleAction = (code: string) => ({ scheme: "cycle-numbers", id: "unpinned", code });
+
 describe("layoutOf", () => {
     it("reads a section whose layout never varies", () => {
         expect(layoutOf("monster_old", undefined)).toBe("cycles");
@@ -45,27 +48,33 @@ describe("schemeMembers", () => {
 
     it("offers the resref itself where the layout carries no suffix", () => {
         expect(schemeMembers("bare", "SNOMC", has("SNOMC"))).toEqual([
-            { label: "SNOMC", resref: "SNOMC", parts: ["SNOMC"] },
+            // No suffix means no action code: the empty one, which names the file back as the bare resref.
+            { label: "SNOMC", action: cycleAction(""), resref: "SNOMC", parts: ["SNOMC"] },
         ]);
     });
 
     it("offers only the cycles the install ships", () => {
         expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
-            { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
+            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
         ]);
     });
 
     it("gathers a cycle's four quarters into ONE member", () => {
         // The quarters are pieces of a single sprite, so offering them separately would offer corners.
         expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"))).toEqual([
-            { label: "G1", resref: "MWYVG11", parts: ["MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"] },
+            {
+                label: "G1",
+                action: cycleAction("G1"),
+                resref: "MWYVG11",
+                parts: ["MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"],
+            },
         ]);
     });
 
     it("keeps a quadrant member the install has only some quarters of", () => {
         // Drawing three quarters beats dropping the animation from the list entirely.
         expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG13"))).toEqual([
-            { label: "G1", resref: "MWYVG11", parts: ["MWYVG11", "MWYVG13"] },
+            { label: "G1", action: cycleAction("G1"), resref: "MWYVG11", parts: ["MWYVG11", "MWYVG13"] },
         ]);
     });
 
@@ -75,17 +84,39 @@ describe("schemeMembers", () => {
 
     it("offers the action codes the animation carries and no others", () => {
         expect(schemeMembers("actions", "METN", has("METNWK", "METNDE"))).toEqual([
-            { label: "DE - die", resref: "METNDE", parts: ["METNDE"] },
-            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
+            {
+                label: "DE - die",
+                action: { scheme: "action-codes", id: "die", code: "DE" },
+                resref: "METNDE",
+                parts: ["METNDE"],
+            },
+            {
+                label: "WK - walk",
+                action: { scheme: "action-codes", id: "walk", code: "WK" },
+                resref: "METNWK",
+                parts: ["METNWK"],
+            },
         ]);
+    });
+
+    it("offers no members for the two layouts armour level resolves", () => {
+        // A character set's files are named per armour level, which is a dimension this resolver does not
+        // take - the character scheme answers for both, including the paired layout's mirrored twin.
+        expect(schemeMembers("character", "CDMB", has("CDMB1G1"))).toEqual([]);
+        expect(schemeMembers("characterOld", "CDMB", has("CDMB1G1", "CDMB1G1E"))).toEqual([]);
     });
 
     it("takes whichever family the files answer for, where the section mixes two", () => {
         expect(schemeMembers("mixed", "MTAN", has("MTANG11", "MTANG12"))).toEqual([
-            { label: "G1", resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
+            { label: "G1", action: cycleAction("G1"), resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
         ]);
         expect(schemeMembers("mixed", "METN", has("METNWK"))).toEqual([
-            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
+            {
+                label: "WK - walk",
+                action: { scheme: "action-codes", id: "walk", code: "WK" },
+                resref: "METNWK",
+                parts: ["METNWK"],
+            },
         ]);
     });
 
@@ -106,11 +137,26 @@ describe("action code names", () => {
 
     it("names the stance a two-character code stands for", () => {
         expect(schemeMembers("actions", "METN", has("METNWK"))).toEqual([
-            { label: "WK - walk", resref: "METNWK", parts: ["METNWK"] },
+            {
+                label: "WK - walk",
+                action: { scheme: "action-codes", id: "walk", code: "WK" },
+                resref: "METNWK",
+                parts: ["METNWK"],
+            },
         ]);
         expect(schemeMembers("actions", "METN", has("METNDE", "METNGH"))).toEqual([
-            { label: "DE - die", resref: "METNDE", parts: ["METNDE"] },
-            { label: "GH - get hit", resref: "METNGH", parts: ["METNGH"] },
+            {
+                label: "DE - die",
+                action: { scheme: "action-codes", id: "die", code: "DE" },
+                resref: "METNDE",
+                parts: ["METNDE"],
+            },
+            {
+                label: "GH - get hit",
+                action: { scheme: "action-codes", id: "get-hit", code: "GH" },
+                resref: "METNGH",
+                parts: ["METNGH"],
+            },
         ]);
     });
 
@@ -118,17 +164,29 @@ describe("action code names", () => {
         // CA/SP: the engine's playback order and IESDP's block names invert each other, so naming
         // either one would ship a coin flip as a fact.
         expect(schemeMembers("actions", "METN", has("METNCA"))).toEqual([
-            { label: "CA", resref: "METNCA", parts: ["METNCA"] },
+            // The label stays bare while the vocabulary still calls it a spell: which HALF of a cast it is
+            // is the disputed part, not whether it is one.
+            {
+                label: "CA",
+                action: { scheme: "action-codes", id: "spell", code: "CA" },
+                resref: "METNCA",
+                parts: ["METNCA"],
+            },
         ]);
         expect(schemeMembers("actions", "METN", has("METNA3"))).toEqual([
-            { label: "A3", resref: "METNA3", parts: ["METNA3"] },
+            {
+                label: "A3",
+                action: { scheme: "action-codes", id: "attack", code: "A3" },
+                resref: "METNA3",
+                parts: ["METNA3"],
+            },
         ]);
     });
 
     it("keeps the cycle and quadrant layouts on their file suffixes", () => {
         // G-files pack several stances, so the FILE has no single stance name - the bands do.
         expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
-            { label: "G1", resref: "MOGHG1", parts: ["MOGHG1"] },
+            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
         ]);
     });
 });

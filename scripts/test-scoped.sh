@@ -52,9 +52,10 @@ fi
 
 # Suite id -> config/script path used to verify the mapping hasn't gone stale, the command run
 # from the repo root, and the space-separated path prefixes that trigger it.
-suite_ids=(server binary binary-editor bcs client client-unit format image ssl tssl transpilers scripts tssl-plugin td-plugin)
+suite_ids=(server animation binary binary-editor bcs client client-unit format image ssl tssl transpilers scripts tssl-plugin td-plugin)
 declare -A suite_label=(
     [server]="server unit tests"
+    [animation]="animation unit tests"
     [binary]="binary unit tests"
     ["binary-editor"]="binary-editor unit tests"
     [bcs]="bcs unit tests"
@@ -71,6 +72,7 @@ declare -A suite_label=(
 )
 declare -A suite_check=(
     [server]="server/vitest.config.mts"
+    [animation]="animation/vitest.config.ts"
     [binary]="binary/vitest.config.ts"
     ["binary-editor"]="binary-editor/vitest.config.ts"
     [bcs]="compilers/bcs/vitest.config.ts"
@@ -87,6 +89,7 @@ declare -A suite_check=(
 )
 declare -A suite_cmd=(
     [server]="pnpm exec vitest run --config server/vitest.config.mts"
+    [animation]="pnpm exec vitest run --config animation/vitest.config.ts"
     [binary]="pnpm exec vitest run --config binary/vitest.config.ts"
     ["binary-editor"]="pnpm exec vitest run --config binary-editor/vitest.config.ts"
     [bcs]="pnpm exec vitest run --config compilers/bcs/vitest.config.ts"
@@ -105,12 +108,14 @@ declare -A suite_cmd=(
 )
 declare -A suite_prefixes=(
     [server]="server/ shared/"
+    # The set model is built on the image library's own animation model, so a change to either reaches it.
+    [animation]="animation/ image/"
     [binary]="binary/ shared/"
     ["binary-editor"]="binary-editor/ binary/"
     # The client's script view decompiles through this codec, so a change to either side reaches it.
     [bcs]="compilers/bcs/ client/src/bcs-editor/"
-    [client]="client/ server/ shared/ binary-editor/ binary/ image/"
-    ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/"
+    [client]="client/ server/ shared/ binary-editor/ binary/ image/ animation/"
+    ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/ animation/"
     [format]="format/ shared/"
     [image]="image/"
     [ssl]="compilers/ssl/ shared/"

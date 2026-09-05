@@ -12,6 +12,7 @@ import {
     IE_8_POINT_PAIRED,
 } from "../src/convert/target";
 import { type ConversionPlan, planConversion } from "../src/convert/plan";
+import { decodeActionCode } from "../src/animation-schemes/actions";
 import { bandedPair } from "../../image/test/bam-fixtures.ts";
 
 /**
@@ -40,6 +41,7 @@ function setWithActions(actions: NeutralAction[]): NeutralSet {
 function directional(label: string, facings: Facing[]): NeutralAction {
     return {
         label,
+        action: decodeActionCode("character", "G1"),
         resrefs: ["CDMB1G1"],
         band: 0,
         cycles: {
@@ -133,6 +135,7 @@ describe("planning a conversion", () => {
     it("passes a non-directional member through untouched", () => {
         const ordered: NeutralAction = {
             label: "G1",
+            action: decodeActionCode("character", "G1"),
             resrefs: ["CDMB1G1"],
             band: 0,
             cycles: { kind: "ordered", sequenceIndices: [0, 1, 2] },

@@ -14,6 +14,7 @@
 import { ieGroupLabels } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
+import { type NeutralActionRef } from "./actions";
 
 /**
  * Sections whose files band at sixteen cycles rather than eight or nine.
@@ -80,6 +81,8 @@ export interface FileBands {
 export interface SetStance {
     /** What the sidebar shows. */
     label: string;
+    /** What the member this band belongs to depicts - see `SchemeMember.action`. */
+    action: NeutralActionRef;
     /** The file this band's cycles live in - what "open this" means, and what the bands were read from. */
     resref: string;
     /**
@@ -124,6 +127,7 @@ export function stancesOfMembers(
             if (slots.length === 0) continue;
             stances.push({
                 label: bandLabel(member.label, labels, band, file.bands.length),
+                action: member.action,
                 resref: member.resref,
                 parts: member.parts,
                 band,

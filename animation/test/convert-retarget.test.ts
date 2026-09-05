@@ -3,6 +3,7 @@ import { type Facing, type IndexedAnimation, isRgbaAnimation, loadImage, seriali
 import { type NeutralAction } from "../src/neutral/model";
 import { FALLOUT_FRM, IE_16_POINT_FULL, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/convert/target";
 import { retargetAction } from "../src/convert/retarget";
+import { decodeActionCode } from "../src/animation-schemes/actions";
 import { greyPalette } from "../../image/test/bam-fixtures.ts";
 
 /**
@@ -38,6 +39,7 @@ function bandOf(facings: Facing[]): IndexedAnimation {
 function actionOver(facings: Facing[]): NeutralAction {
     return {
         label: "WK - walk",
+        action: decodeActionCode("action-codes", "WK"),
         resrefs: ["BAND"],
         band: 0,
         cycles: {
@@ -115,6 +117,7 @@ describe("retargeting an action's directions", () => {
         const source = bandOf(["S", "W"]);
         const ordered: NeutralAction = {
             label: "G1",
+            action: decodeActionCode("cycle-numbers", "G1"),
             resrefs: ["BAND"],
             band: 0,
             cycles: { kind: "ordered", sequenceIndices: [0, 1] },
@@ -151,6 +154,7 @@ describe("retargeting an action's directions", () => {
         const source = bandOf(["S", "W"]);
         const action: NeutralAction = {
             label: "WK - walk",
+            action: decodeActionCode("action-codes", "WK"),
             resrefs: ["BAND"],
             band: 0,
             cycles: {

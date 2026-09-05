@@ -33,6 +33,26 @@ function resrefs(set: NeutralSet): string[] {
 }
 
 /**
+ * What the source's actions depict, each named once.
+ *
+ * The codes rather than the display labels: a code is what the source's filenames carry and what a reader
+ * checking this against an archive listing sees, and the term beside it is what the conversion matched on.
+ * An unpinned code is printed bare, which is the same statement the vocabulary makes - nobody has said what
+ * this one is.
+ */
+function actionSummary(set: NeutralSet): string {
+    const seen = new Map<string, string>();
+    for (const variant of set.variants) {
+        for (const action of variant.actions) {
+            const { code, id, detail } = action.action;
+            if (seen.has(code)) continue;
+            seen.set(code, id === "unpinned" ? code : `${code} (${detail === undefined ? id : `${id}, ${detail}`})`);
+        }
+    }
+    return [...seen.values()].join(", ");
+}
+
+/**
  * The rows to merge by hand, for a target whose declaration step this tool models.
  *
  * An unmodelled target says so rather than printing nothing: an absent section reads as "nothing to
@@ -73,6 +93,7 @@ export function conversionNotes(
         `- Game \`${set.identity.sourceFlavour}\`, animation ${animationIdHex(set.identity.sourceId)}`,
         `- Section \`${set.identity.sourceSection ?? "none declared"}\``,
         `- Files: ${resrefs(set).join(", ")}`,
+        `- Actions: ${actionSummary(set)}`,
         "",
         "## Result",
         "",
