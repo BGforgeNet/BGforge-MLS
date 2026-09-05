@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type AnimationSet } from "../src/ie-resources/animation-index";
-import { type CharacterFacets } from "../src/ie-resources/animation-facets";
+import { type AnimationSet } from "../src/animation-index";
+import { type CharacterFacets } from "../src/animation-facets";
 import {
     CLASSES,
     RACES,
@@ -10,7 +10,7 @@ import {
     facetIndex,
     resolveFacets,
     setForFacets,
-} from "../src/gallery/facet-browser";
+} from "../src/facet-browser";
 
 function characterSet(id: number, facets: CharacterFacets, prefix: string, levels = 4): AnimationSet {
     const prefixByArmour = new Map<number, string>();

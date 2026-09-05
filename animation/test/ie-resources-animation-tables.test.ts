@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { buildAnimationIndex } from "../src/ie-resources/animation-index";
-import { tableForFlavour } from "../src/ie-resources/animation-tables";
-import { characterDrawsBody } from "../src/ie-resources/animation-schemes/character";
-import { setTile } from "../src/gallery/set-tiles";
+import { buildAnimationIndex } from "../src/animation-index";
+import { tableForFlavour } from "../src/animation-tables";
+import { characterDrawsBody } from "../src/animation-schemes/character";
+import { setTile } from "../src/set-tiles";
 
 /**
  * Point `BGFORGE_IE_GAME` at any install of a family this repo carries a table for and these run.

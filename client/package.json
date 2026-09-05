@@ -13,6 +13,7 @@
         "test": "./scripts/test.sh"
     },
     "dependencies": {
+        "@bgforge/animation": "workspace:*",
         "@bgforge/binary": "workspace:*",
         "@bgforge/binary-editor": "workspace:*",
         "@bgforge/image": "workspace:*",

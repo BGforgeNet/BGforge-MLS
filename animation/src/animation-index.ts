@@ -117,6 +117,14 @@ function layoutFor(ini: AnimationIni | undefined, tabled: TableAnimation | undef
 }
 
 /**
+ * The lowest armour level a set declares - what a viewer opens on when the caller names none, what its
+ * tile stands for, and where a facet picker starts.
+ */
+export function firstArmour(set: AnimationSet): number | undefined {
+    return [...set.prefixByArmour.keys()].sort((a, b) => a - b)[0];
+}
+
+/**
  * Every animation the game declares, in id order.
  *
  * `table` is the fallback for an install that declares none - a classic one ships no animation INIs, so

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Regenerate a vendored animation table in client/src/ie-resources/animation-tables/ from the declarations an
+ * Regenerate a vendored animation table in animation/src/animation-tables/ from the declarations an
  * Enhanced Edition install ships, and check the result against a classic archive of the same family.
  *
  * A classic install declares no animation INIs, so the id -> BAM prefix mapping has to be written down for the
@@ -8,13 +8,13 @@
  * than transcribed; the classic archive is what proves each row names files that install actually has.
  *
  * Usage:
- *   pnpm exec tsx client/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> [--classic <dir>]
- *   pnpm exec tsx client/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --check
+ *   pnpm exec tsx animation/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> [--classic <dir>]
+ *   pnpm exec tsx animation/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --check
  *
  * `--check` exits 1 on drift. Rows the classic archive contradicts are reported, never silently emitted: a
  * classic delta belongs in the target file's hand-authored block, with the evidence that put it there.
  *
- * Lives under `client/test/` rather than `scripts/` because it reads an archive through `@bgforge/binary`,
+ * Lives under `animation/test/` rather than `scripts/` because it reads an archive through `@bgforge/binary`,
  * which the client's config already resolves to source; the scripts config is NodeNext and cannot compile
  * that package's sources.
  */
@@ -24,11 +24,11 @@ import * as path from "path";
 // By path rather than by package name: this runs under tsx from the repo root, where the package specifier
 // resolves to the workspace package's built entry point and so would need a build first.
 import { openGame } from "../../../binary/src/index";
-import { parseAnimationIni } from "../../src/ie-resources/animation-ini";
-import { characterDrawsBody } from "../../src/ie-resources/animation-schemes/character";
+import { parseAnimationIni } from "../../src/animation-ini";
+import { characterDrawsBody } from "../../src/animation-schemes/character";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
-const TABLE_DIR = path.join(REPO_ROOT, "client/src/ie-resources/animation-tables");
+const TABLE_DIR = path.join(REPO_ROOT, "animation/src/animation-tables");
 const BEGIN_MARKER = "    // BEGIN GENERATED ROWS";
 const END_MARKER = "    // END GENERATED ROWS";
 

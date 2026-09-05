@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Game } from "@bgforge/binary";
 import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
-import { type AnimationSet } from "../src/ie-resources/animation-index";
+import { type AnimationSet } from "@bgforge/animation";
 import { resolveSet, stanceAnimation } from "../src/gallery/set-viewer";
 
 function palette(): Rgba[] {

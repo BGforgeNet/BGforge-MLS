@@ -9,9 +9,9 @@
  * Availability is decided against resolved member FILES rather than against a table's rows: a table can
  * name a combination the install has no files for, and another table can name one the first omits.
  */
-import { type AnimationSet } from "../ie-resources/animation-index";
-import { type CharClass, type CharacterFacets, type Gender, type Race } from "../ie-resources/animation-facets";
-import { type Action, characterActions, characterMember } from "../ie-resources/animation-schemes/character";
+import { type AnimationSet } from "./animation-index";
+import { type CharClass, type CharacterFacets, type Gender, type Race } from "./animation-facets";
+import { type Action, characterActions, characterMember } from "./animation-schemes/character";
 
 export const RACES: readonly Race[] = ["human", "elf", "dwarf", "halfling", "gnome", "halforc"];
 export const GENDERS: readonly Gender[] = ["male", "female"];

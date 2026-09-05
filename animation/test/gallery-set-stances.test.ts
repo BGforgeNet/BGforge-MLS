@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { type AnimationSet, buildAnimationIndex } from "../src/ie-resources/animation-index";
-import { tableForFlavour } from "../src/ie-resources/animation-tables";
-import { firstArmour, setStances, type StanceIo } from "../src/gallery/set-stances";
-import { bandedPair, multiCycle } from "./image-fixtures";
+import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/animation-index";
+import { tableForFlavour } from "../src/animation-tables";
+import { setStances, type StanceIo } from "../src/set-stances";
+import { bandedPair, multiCycle } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 

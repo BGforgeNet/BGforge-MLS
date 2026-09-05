@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { miniGame } from "./ie-game-fixtures";
-import { readIdsCodes } from "../src/ie-resources/ids-tables";
+import { readIdsCodes } from "../src/ids-tables";
 
 const decode = (bytes: Uint8Array): string => new TextDecoder("latin1").decode(bytes);
 

@@ -11,7 +11,7 @@
  * not digits, a body prefix that changes between armour levels, a set whose paperdoll aliases away from its
  * body, an id one table names and the other does not, and a scheme with no implementation.
  */
-import type { GameHandle } from "../src/ie-resources/game-handle";
+import type { GameHandle } from "../src/game-handle";
 
 /** Which real resource each fixture row was copied from. Read this before changing any value here. */
 export const MINI_GAME_PROVENANCE = {

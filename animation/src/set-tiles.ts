@@ -4,14 +4,24 @@
  * No `vscode` import, for the same reason `source.ts` has none: this is the decision about what a tile says,
  * and it is worth testing without an extension host.
  */
-import { type AnimationSet } from "../ie-resources/animation-index";
-import { characterMember } from "../ie-resources/animation-schemes/character";
-import { schemeMembers } from "../ie-resources/animation-schemes/members";
-import { type SetTile } from "./webview/messages";
+import { type AnimationSet, firstArmour } from "./animation-index";
+import { characterMember } from "./animation-schemes/character";
+import { schemeMembers } from "./animation-schemes/members";
 
-/** The lowest armour level a set draws at - what its tile opens, and where a facet picker starts. */
-export function firstArmour(set: AnimationSet): number | undefined {
-    return [...set.prefixByArmour.keys()].sort((a, b) => a - b)[0];
+/**
+ * One animation set, as a tile.
+ *
+ * `unsupported` carries the reason the set cannot be drawn yet, so the tile says which scheme is missing
+ * rather than going blank - a browser stays honest about what it does not cover. Plain fields only: the
+ * gallery panel sends this across `postMessage` unchanged.
+ */
+export interface SetTile {
+    id: number;
+    /** `ANIMATE.IDS`'s name where it has one, else the `ANISND.IDS` code, else the id in hex. */
+    label: string;
+    /** The prefix the set draws under at its lowest armour level, for the tile's thumbnail. */
+    resref: string | undefined;
+    unsupported: string | undefined;
 }
 
 /**

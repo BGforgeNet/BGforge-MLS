@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { characterActions, characterMember } from "../src/ie-resources/animation-schemes/character";
-import { type AnimationSet } from "../src/ie-resources/animation-index";
+import { characterActions, characterMember } from "../src/animation-schemes/character";
+import { type AnimationSet } from "../src/animation-index";
 
 /**
  * A complete set from the few fields these tests care about.

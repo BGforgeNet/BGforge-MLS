@@ -32,6 +32,7 @@ transpilers/out
 format/out
 binary/out
 image/out
+animation/out
 compilers/ssl/out
 compilers/tssl/out
 

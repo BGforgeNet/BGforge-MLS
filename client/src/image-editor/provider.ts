@@ -32,7 +32,8 @@ import {
     summarizeLoss,
 } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
-import { ieGroupLabels, ieGroupOptionText } from "./webview/render/cycle-grouping";
+import { ieGroupLabels } from "@bgforge/animation/group-labels";
+import { ieGroupOptionText } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
     type CreatureOption,

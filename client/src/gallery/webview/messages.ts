@@ -8,6 +8,7 @@
 
 import type { AnimationView } from "../../image-editor/webview/messages";
 import type { Facing } from "@bgforge/image";
+import type { SetTile } from "@bgforge/animation";
 
 export interface GalleryTile {
     id: string;
@@ -18,17 +19,10 @@ export interface GalleryTile {
 /**
  * One animation set, as a tile.
  *
- * `unsupported` carries the reason the set cannot be drawn yet, so the tile says which scheme is missing
- * rather than going blank - the gallery stays honest about what it does not cover.
+ * Declared beside the code that builds it (`@bgforge/animation`'s `setTile`) rather than here, so the
+ * shape has one home; it crosses this channel unchanged, being plain fields only.
  */
-export interface SetTile {
-    id: number;
-    /** `ANIMATE.IDS`'s name where it has one, else the `ANISND.IDS` code, else the id in hex. */
-    label: string;
-    /** The prefix the set draws under at its lowest armour level, for the tile's thumbnail. */
-    resref: string | undefined;
-    unsupported: string | undefined;
-}
+export type { SetTile } from "@bgforge/animation";
 
 /**
  * The five facet controls.

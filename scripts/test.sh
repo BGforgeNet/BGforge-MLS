@@ -62,6 +62,7 @@ parallel \
     "Typecheck binary-editor harness" "pnpm exec tsc --project binary-editor/test/harness/tsconfig.json" \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
+    "Typecheck animation" "(cd animation && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Typecheck bcs" "(cd compilers/bcs && pnpm exec tsc --noEmit)" \
     "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
@@ -99,6 +100,7 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
         "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
         "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage animation" "pnpm exec vitest run --config animation/vitest.config.ts --coverage --maxWorkers=2" \
         "Coverage bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
         "Coverage tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
@@ -121,6 +123,7 @@ else
         "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
         "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
         "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
+        "Unit animation" "pnpm exec vitest run --config animation/vitest.config.ts --maxWorkers=2" \
         "Unit bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=1" \
         "Unit ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
         "Unit tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \

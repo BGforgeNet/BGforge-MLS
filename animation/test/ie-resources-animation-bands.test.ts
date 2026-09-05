@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "@bgforge/image";
-import { declaredStride, type FileBands, stancesOfMembers } from "../src/ie-resources/animation-schemes/bands";
+import { declaredStride, type FileBands, stancesOfMembers } from "../src/animation-schemes/bands";
 
 /** One band of `count` slots; the facings themselves do not matter to the naming. */
 function band(count: number): { seqIndex: number; facing: Facing }[] {

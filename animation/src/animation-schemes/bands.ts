@@ -11,7 +11,7 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { ieGroupLabels } from "../../image-editor/webview/render/cycle-grouping";
+import { ieGroupLabels } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
 

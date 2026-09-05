@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type AnimationSet } from "../src/ie-resources/animation-index";
-import { type CharacterFacets } from "../src/ie-resources/animation-facets";
-import { facetIndex } from "../src/gallery/facet-browser";
+import { type AnimationSet, type CharacterFacets, facetIndex } from "@bgforge/animation";
 import {
     createFacetBrowser,
     DEFAULT_SELECTION,

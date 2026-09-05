@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readIdsCodes } from "../src/ie-resources/ids-tables";
+import { readIdsCodes } from "../src/ids-tables";
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
 

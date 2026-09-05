@@ -1,0 +1,57 @@
+{
+    "name": "@bgforge/animation",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Library for resolving Infinity Engine animation sets: which files an animation draws, how its cycles band into directions, and how its facets resolve.",
+    "keywords": [
+        "animation",
+        "bam",
+        "infinity-engine",
+        "modding"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "animation"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        },
+        "./group-labels": {
+            "types": "./out/group-labels.d.ts",
+            "import": "./out/group-labels.js"
+        }
+    },
+    "scripts": {
+        "build": "tsdown",
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "dependencies": {
+        "@bgforge/image": "workspace:*"
+    },
+    "devDependencies": {
+        "@bgforge/binary": "workspace:*",
+        "@types/node": "catalog:",
+        "tsdown": "catalog:",
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

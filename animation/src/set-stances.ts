@@ -7,20 +7,15 @@
  */
 import { drawsCycle, readBamV1Tables } from "@bgforge/image";
 import { ieBandsOfStride, interpretIeDirections, type SequenceShape } from "@bgforge/image/ie-direction";
-import { type AnimationSet } from "../ie-resources/animation-index";
-import { characterActions, characterMember } from "../ie-resources/animation-schemes/character";
-import { type FileBands, type SetStance, stancesOfMembers } from "../ie-resources/animation-schemes/bands";
-import { type SchemeMember, schemeMembers } from "../ie-resources/animation-schemes/members";
+import { type AnimationSet } from "./animation-index";
+import { characterActions, characterMember } from "./animation-schemes/character";
+import { type FileBands, type SetStance, stancesOfMembers } from "./animation-schemes/bands";
+import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-browser";
 
 export interface StanceIo {
     exists(resref: string): boolean;
     read(resref: string): Uint8Array | undefined;
-}
-
-/** The lowest armour level a set declares - what a viewer opens on when the caller names none. */
-export function firstArmour(set: AnimationSet): number | undefined {
-    return [...set.prefixByArmour.keys()].sort((a, b) => a - b)[0];
 }
 
 /**

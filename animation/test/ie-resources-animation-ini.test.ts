@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { parseAnimationIni } from "../src/ie-resources/animation-ini";
+import { parseAnimationIni } from "../src/animation-ini";
 import { miniGame } from "./ie-game-fixtures";
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);

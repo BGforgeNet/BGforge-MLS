@@ -1,4 +1,5 @@
 packages:
+  - animation
   - binary
   - binary-editor
   - client

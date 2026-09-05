@@ -6,7 +6,8 @@
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import { ieRoseTiles, layoutSequences, type GridTile, type LayoutMode, type RoseTile } from "../render/compass-layout";
     import { interpretIeDirections } from "@bgforge/image/ie-direction";
-    import { analyzeCycleGrid, ieGroupLabels } from "../render/cycle-grouping";
+    import { analyzeCycleGrid } from "../render/cycle-grouping";
+    import { ieGroupLabels } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
     import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";

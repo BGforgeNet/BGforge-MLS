@@ -40,9 +40,6 @@ const config: KnipConfig = {
                 "src/test/*.test.ts",
                 // vitest unit tests (run via client/vitest.config.mts)
                 "test/**/*.test.ts",
-                // Maintenance tools run via `pnpm exec tsx`; nothing imports them, and they regenerate
-                // checked-in data rather than taking part in the build.
-                "test/tools/*.ts",
             ],
             // The dialog-editor render harness is environment-only (Playwright + browser
             // globals), run via `pnpm exec tsx`, not imported by the build or tests - same
@@ -159,6 +156,11 @@ const config: KnipConfig = {
         },
         image: {
             entry: ["test/**/*.test.ts"],
+        },
+        animation: {
+            // The table generator is run by hand via `pnpm exec tsx` against a real install; nothing
+            // imports it, and it regenerates checked-in data rather than taking part in the build.
+            entry: ["test/**/*.test.ts", "test/tools/*.ts"],
         },
         "compilers/bcs": {
             entry: ["test/**/*.test.ts"],

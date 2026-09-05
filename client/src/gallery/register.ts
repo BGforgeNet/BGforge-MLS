@@ -11,11 +11,9 @@ import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGaller
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
-import { createAnimationIndexResolver } from "../ie-resources/animation-index";
+import { createAnimationIndexResolver, type SetStance, setTile } from "@bgforge/animation";
 import { createFacetBrowser, type FacetBrowser } from "./facet-state";
-import { setTile } from "./set-tiles";
 import { type ResolvedSet, resolveSet, stanceAnimation } from "./set-viewer";
-import { type SetStance } from "../ie-resources/animation-schemes/bands";
 import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
 

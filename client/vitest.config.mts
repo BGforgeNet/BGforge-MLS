@@ -13,6 +13,9 @@ export default defineConfig({
         // without requiring a build step. The built out/ does not exist until
         // pnpm --filter @bgforge/binary build runs, but tests run from source.
         alias: {
+            // Subpath before the barrel, for the reason spelled out for @bgforge/image below.
+            "@bgforge/animation/group-labels": path.resolve(import.meta.dirname, "../animation/src/group-labels.ts"),
+            "@bgforge/animation": path.resolve(import.meta.dirname, "../animation/src/index.ts"),
             "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
             "@bgforge/binary-editor": path.resolve(import.meta.dirname, "../binary-editor/src/index.ts"),
             // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts

@@ -164,6 +164,25 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
 
+  animation:
+    dependencies:
+      '@bgforge/image':
+        specifier: workspace:*
+        version: link:../image
+    devDependencies:
+      '@bgforge/binary':
+        specifier: workspace:*
+        version: link:../binary
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.14(oxc-resolver@11.24.2)(tsx@4.23.12)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+
   binary:
     dependencies:
       cac:
@@ -201,6 +220,9 @@ importers:
 
   client:
     dependencies:
+      '@bgforge/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary

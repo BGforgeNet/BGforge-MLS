@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { characterFacetsOf, characterIdFor, type CharacterFacets } from "../src/ie-resources/animation-facets";
-import { readIdsCodes } from "../src/ie-resources/ids-tables";
+import { characterFacetsOf, characterIdFor, type CharacterFacets } from "../src/animation-facets";
+import { readIdsCodes } from "../src/ids-tables";
 import { miniGame } from "./ie-game-fixtures";
 
 const EE_GAME = process.env.BGFORGE_IE_GAME;

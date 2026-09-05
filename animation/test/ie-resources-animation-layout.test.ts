@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { layoutOf } from "../src/ie-resources/animation-schemes/layout";
-import { schemeMembers } from "../src/ie-resources/animation-schemes/members";
-import { parseAnimationIni } from "../src/ie-resources/animation-ini";
-import { buildAnimationIndex } from "../src/ie-resources/animation-index";
-import { tableForFlavour } from "../src/ie-resources/animation-tables";
-import { setTile } from "../src/gallery/set-tiles";
+import { layoutOf } from "../src/animation-schemes/layout";
+import { schemeMembers } from "../src/animation-schemes/members";
+import { parseAnimationIni } from "../src/animation-ini";
+import { buildAnimationIndex } from "../src/animation-index";
+import { tableForFlavour } from "../src/animation-tables";
+import { setTile } from "../src/set-tiles";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 

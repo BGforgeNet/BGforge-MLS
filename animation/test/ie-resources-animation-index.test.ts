@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import {
-    type AnimationSet,
-    buildAnimationIndex,
-    createAnimationIndexResolver,
-} from "../src/ie-resources/animation-index";
-import type { GameHandle } from "../src/ie-resources/game-handle";
-import { tableForFlavour } from "../src/ie-resources/animation-tables";
-import { animationTable } from "../src/ie-resources/animation-tables/table";
+import { type AnimationSet, buildAnimationIndex, createAnimationIndexResolver } from "../src/animation-index";
+import type { GameHandle } from "../src/game-handle";
+import { tableForFlavour } from "../src/animation-tables";
+import { animationTable } from "../src/animation-tables/table";
 import { miniGame } from "./ie-game-fixtures";
 
 const index = (): ReturnType<typeof buildAnimationIndex> => buildAnimationIndex(miniGame());

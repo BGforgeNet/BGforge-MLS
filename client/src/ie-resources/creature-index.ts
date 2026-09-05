@@ -9,8 +9,7 @@
 import type * as vscode from "vscode";
 import { type CreatureColors, CREATURE_RANGES, creatureColorsAt } from "@bgforge/image";
 import { gameDirOf, type GameDirFallback } from "./game-lookups";
-import type { GameHandle, GameSource } from "./game-handle";
-import { readIdsCodes } from "./ids-tables";
+import { type GameHandle, type GameSource, readIdsCodes } from "@bgforge/animation";
 
 export interface CreatureEntry {
     readonly resref: string;

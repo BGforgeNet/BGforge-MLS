@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type AnimationSet } from "../src/ie-resources/animation-index";
-import { firstArmour, setPreviewResref, setTile } from "../src/gallery/set-tiles";
+import { type AnimationSet, firstArmour } from "../src/animation-index";
+import { setPreviewResref, setTile } from "../src/set-tiles";
 
 function setOf(partial: Partial<AnimationSet>): AnimationSet {
     return {

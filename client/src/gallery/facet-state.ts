@@ -5,10 +5,13 @@
  * set to, so answering them one at a time would let the view hold a combination that never existed. This
  * also keeps the "which files exist" question on the side that can see the archive.
  */
-import { type AnimationSet } from "../ie-resources/animation-index";
-import { type CharClass, type CharacterFacets, type Gender, type Race } from "../ie-resources/animation-facets";
-import { type Action } from "../ie-resources/animation-schemes/character";
 import {
+    type Action,
+    type AnimationSet,
+    type CharClass,
+    type CharacterFacets,
+    type Gender,
+    type Race,
     CLASSES,
     GENDERS,
     RACES,
@@ -19,7 +22,7 @@ import {
     facetIndex,
     resolveFacets,
     setForFacets,
-} from "./facet-browser";
+} from "@bgforge/animation";
 import { type FacetFamily, type FacetOption, type FacetState } from "./webview/messages";
 
 /** What the browser is currently pointed at. Actions are keyed by their label, which is what the view sends. */

@@ -11,9 +11,7 @@ import { type Game } from "@bgforge/binary";
 import { composeParts } from "@bgforge/image";
 import { ImageDocumentModel } from "../image-editor/document-model";
 import { type AnimationView } from "../image-editor/webview/messages";
-import { type AnimationSet } from "../ie-resources/animation-index";
-import { type SetStance } from "../ie-resources/animation-schemes/bands";
-import { firstArmour, setStances, type StanceIo } from "./set-stances";
+import { type AnimationSet, type SetStance, type StanceIo, firstArmour, setStances } from "@bgforge/animation";
 import { type SetDetail } from "./webview/messages";
 
 function ioFor(game: Game): StanceIo {

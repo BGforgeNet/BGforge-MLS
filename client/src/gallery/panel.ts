@@ -16,7 +16,7 @@ import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "./webview/messages";
 import { type ResolvedSet } from "./set-viewer";
-import { type SetStance } from "../ie-resources/animation-schemes/bands";
+import { type SetStance } from "@bgforge/animation";
 import { type AnimationView } from "../image-editor/webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
