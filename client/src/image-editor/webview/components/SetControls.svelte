@@ -15,11 +15,14 @@
         onArmourChange,
         onActionChange,
         onPickSet,
+        onConvert,
     }: {
         set: SetView;
         onArmourChange: (level: number) => void;
         onActionChange: (resref: string) => void;
         onPickSet: () => void;
+        /** Open the conversion mode, which takes over this column while it is up. */
+        onConvert: () => void;
     } = $props();
 </script>
 
@@ -54,4 +57,7 @@
             {/each}
         </select>
     </label>
+    <button type="button" class="convert-open" onclick={onConvert}>
+        Convert this set...
+    </button>
 </div>

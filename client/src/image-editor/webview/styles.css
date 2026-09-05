@@ -247,3 +247,82 @@ select {
 .set-pick:hover {
     background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
+
+/* --- Conversion mode ------------------------------------------------------ */
+
+/* Both full-width commands, secondary like the set button: neither is the panel's primary action, which
+   is the save at the bottom of the editor. */
+.convert-open,
+.convert-run {
+    width: 100%;
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, var(--vscode-panel-border));
+}
+.convert-open:hover,
+.convert-run:not(:disabled):hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+.convert-run:disabled {
+    opacity: 0.5;
+}
+.convert-head {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+.convert-head .view-label {
+    font-weight: 600;
+}
+.convert-close {
+    background: none;
+    border: none;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    padding: 0;
+}
+.convert-close:hover {
+    text-decoration: underline;
+}
+/* Takes the whole row under the id box, so the number and its hex reading sit together rather than the
+   hex being read as the next field's label. */
+.convert-hex {
+    color: var(--vscode-descriptionForeground);
+    flex: 1 1 100%;
+    font-size: 0.85em;
+}
+.convert-summary,
+.convert-note {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin: 0;
+}
+/* The refusal is the whole answer when it fires, so it is the one thing here that reads as a warning. */
+.convert-refused {
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+    font-size: 0.9em;
+    margin: 0;
+}
+.convert-losses,
+.convert-notes {
+    font-size: 0.9em;
+    margin: 0;
+    padding-left: 1.1rem;
+}
+/* Losses read as the warning; the notes beside them are representation changes that cost nothing, so they
+   stay in the secondary colour rather than competing with the losses for attention. */
+.convert-losses {
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+}
+.convert-notes {
+    color: var(--vscode-descriptionForeground);
+}
+.view-check {
+    align-items: center;
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    font-size: 0.9em;
+    gap: 0.4rem;
+}

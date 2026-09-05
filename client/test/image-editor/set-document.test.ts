@@ -208,12 +208,18 @@ describe("AnimationSetState", () => {
 
 describe("createAnimationSetSource", () => {
     const set = setOf();
-    const game = { canRead: () => false, read: () => undefined } as unknown as Game;
+    const game = {
+        canRead: () => false,
+        read: () => undefined,
+        identity: { flavour: "bgee" },
+    } as unknown as Game;
     const gameAt = (dir: string): Game | undefined => (dir === "/games/bgee" ? game : undefined);
 
     it("resolves a set the open install declares", () => {
         const source = createAnimationSetSource({ animations: () => [set], gameAt });
-        expect(source.lookup("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set });
+        // The flavour travels with the answer: a conversion records which install its source came from,
+        // and this lookup is the only place that still knows.
+        expect(source.lookup("/games/bgee", 0x1234)).toMatchObject({ kind: "set", set, flavour: "bgee" });
     });
 
     it("resolves nothing for an install other than the open one", () => {

@@ -195,7 +195,36 @@ export type WebviewToHost =
     // Set documents only: offer the install's sets and open the one chosen. The list is the host's to
     // show - an install declares hundreds, and the host's own quick pick is already a search over them.
     | { type: "pickSet" }
+    /**
+     * Set documents only: the conversion mode.
+     *
+     * `beginConversion` asks the host what it can convert into and what to offer as the name and id;
+     * `planConversion` asks what a target would cost, which is the whole point of the mode - a set is
+     * many files, so the reader has to see the outcome before committing to it; `runConversion` writes,
+     * once, after the host has asked where.
+     */
+    | { type: "beginConversion" }
+    | { type: "planConversion"; profileId: string }
+    | { type: "runConversion"; request: ConversionRequestView }
     | { type: "runtimeError"; message: string; stack?: string };
+
+/** The reader's choices for a conversion, as the webview holds them. */
+export interface ConversionRequestView {
+    profileId: string;
+    prefix: string;
+    targetId: number;
+    notes: boolean;
+}
+
+function isValidConversionRequest(request: unknown): request is ConversionRequestView {
+    return (
+        isRecord(request) &&
+        typeof request.profileId === "string" &&
+        typeof request.prefix === "string" &&
+        typeof request.targetId === "number" &&
+        typeof request.notes === "boolean"
+    );
+}
 
 function isValidMetaPatch(patch: unknown): patch is MetaPatch {
     if (!isRecord(patch)) return false;
@@ -217,7 +246,12 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "save":
         case "requestCreatures":
         case "pickSet":
+        case "beginConversion":
             return true;
+        case "planConversion":
+            return typeof m.profileId === "string";
+        case "runConversion":
+            return isValidConversionRequest(m.request);
         case "setCreature":
             return m.resref === null || typeof m.resref === "string";
         case "editMeta":
@@ -261,7 +295,34 @@ export type HostToWebview =
     /** The palette the view should draw with: a creature's resolved colours, or the animation's own when
      *  `creature` is absent. A view state - the document's own palette is never changed by it. */
     | { type: "palette"; palette: Rgba[]; creature?: string }
+    /** What the conversion mode can offer, sent once when the reader opens it. */
+    | { type: "conversionSetup"; setup: ConversionSetupView }
+    /** What converting into the chosen target would cost, and how many files it would write. */
+    | { type: "conversionPlan"; plan: ConversionPlanView }
     | { type: "error"; message: string };
+
+/** The targets on offer, and what to fill the name and id boxes with before the reader touches them. */
+export interface ConversionSetupView {
+    profiles: { id: string; label: string }[];
+    prefix: string;
+    targetId: number;
+}
+
+/**
+ * A planned conversion, as the panel draws it.
+ *
+ * `files` is a count rather than the names: the names follow the reader's chosen stem, which would mean
+ * re-reading and re-converting the whole set on every keystroke to keep a list honest.
+ */
+export interface ConversionPlanView {
+    profileId: string;
+    outcome: "refused" | "lossless" | "lossy";
+    /** Present only on a refusal, and then it is the whole answer. */
+    reason?: string;
+    losses: string[];
+    notes: string[];
+    files: number;
+}
 
 /** One creature the picker offers. `matches` marks the ones that actually use the open animation. */
 export interface CreatureOption {

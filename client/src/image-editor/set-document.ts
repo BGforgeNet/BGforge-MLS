@@ -32,9 +32,8 @@ import { stanceIo, stanceModel } from "./stance-model";
  * left the second reported as the first, which sent the reader looking for a game that was already open.
  */
 export type AnimationSetLookup =
-    | { kind: "set"; set: AnimationSet; io: StanceIo }
-    | { kind: "no-game" }
-    | { kind: "not-declared" };
+    /** `flavour` is the install this was read from, which the neutral model records on a conversion. */
+    { kind: "set"; set: AnimationSet; io: StanceIo; flavour: string } | { kind: "no-game" } | { kind: "not-declared" };
 
 /**
  * The sets an install declares: one by address, and the whole list.
@@ -68,7 +67,9 @@ export function createAnimationSetSource(deps: {
             const game = deps.gameAt(gameDir);
             if (game === undefined) return { kind: "no-game" };
             const set = (deps.animations(gameDir) ?? []).find((entry) => entry.id === id);
-            return set === undefined ? { kind: "not-declared" } : { kind: "set", set, io: stanceIo(game) };
+            return set === undefined
+                ? { kind: "not-declared" }
+                : { kind: "set", set, io: stanceIo(game), flavour: game.identity.flavour };
         },
         // Not gated on the game being open: the index resolver opens the configured install itself, the
         // same way the lookup above does.

@@ -33,13 +33,15 @@ import {
     summarizeLoss,
 } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
-import { animationIdHex, setTitle } from "@bgforge/animation";
+import { type AnimationSet, type StanceIo, animationIdHex, setTitle } from "@bgforge/animation";
+import { CONVERSION_PROFILES, convertOpenSet, defaultPrefix, suggestTargetId } from "./conversion";
 import { ieGroupLabels } from "@bgforge/animation/group-labels";
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
 import { ieGroupOptionText } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
+    type ConversionRequestView,
     type CreatureOption,
     type HostToWebview,
     type SaveAsTarget,
@@ -306,6 +308,46 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             }
             case "pickSet":
                 await this.pickSet(document);
+                break;
+            case "beginConversion": {
+                const found = this.lookupSet(document);
+                if (found === undefined) break;
+                this.post(panel, {
+                    type: "conversionSetup",
+                    setup: {
+                        profiles: CONVERSION_PROFILES.map((profile) => ({ id: profile.id, label: profile.label })),
+                        prefix: defaultPrefix(found.set),
+                        targetId: suggestTargetId(found.set, this.animationSets?.list(found.gameDir) ?? []),
+                    },
+                });
+                break;
+            }
+            case "planConversion": {
+                const found = this.lookupSet(document);
+                if (found === undefined) break;
+                // Planned without the notes: they are written from the same report the plan reads, so
+                // rendering them here would cost the whole document to show a preview nobody asked for.
+                const result = convertOpenSet(found.set, found.io, found.flavour, {
+                    profileId: message.profileId,
+                    prefix: "",
+                    targetId: 0,
+                    notes: false,
+                });
+                this.post(panel, {
+                    type: "conversionPlan",
+                    plan: {
+                        profileId: message.profileId,
+                        outcome: result.outcome,
+                        ...(result.reason === undefined ? {} : { reason: result.reason }),
+                        losses: result.losses,
+                        notes: result.notes,
+                        files: result.writes.length,
+                    },
+                });
+                break;
+            }
+            case "runConversion":
+                await this.runConversion(panel, document, message.request);
                 break;
             case "save":
                 // Route through VS Code's own save so its dirty tracking clears - scoped to this
@@ -632,6 +674,68 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         });
         if (picked === undefined || picked.id === address.id) return;
         await openAnimationSet((dir) => this.animationSets?.list(dir), address.gameDir, picked.id);
+    }
+
+    /**
+     * The open document's set, as the conversion needs it: the declaration, the archive it reads through,
+     * and which install that is.
+     *
+     * Resolved per message rather than held: the game can close under an open tab, and a conversion run
+     * against a stale archive would read bytes from an install that is no longer there.
+     */
+    private lookupSet(
+        document: ImageEditorDocument,
+    ): { gameDir: string; set: AnimationSet; io: StanceIo; flavour: string } | undefined {
+        const address = parseAnimationSetUri(document.uri);
+        if (address === undefined) return undefined;
+        const found = this.animationSets?.lookup(address.gameDir, address.id);
+        return found?.kind === "set" ? { gameDir: address.gameDir, ...found } : undefined;
+    }
+
+    /**
+     * Write a converted set out, into a folder the reader chooses.
+     *
+     * A folder rather than the game's own override: a converted set is a new animation nothing declares
+     * yet, and landing it in an install would put files there that no table names - which the engine
+     * ignores and the next reader cannot account for. The notes file beside them says what to declare.
+     */
+    private async runConversion(
+        panel: vscode.WebviewPanel,
+        document: ImageEditorDocument,
+        request: ConversionRequestView,
+    ): Promise<void> {
+        const found = this.lookupSet(document);
+        if (found === undefined) return;
+        const result = convertOpenSet(found.set, found.io, found.flavour, request);
+        if (result.outcome === "refused") {
+            this.post(panel, { type: "error", message: result.reason ?? "This set cannot be converted." });
+            return;
+        }
+        const [folder] =
+            (await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                openLabel: "Convert into this folder",
+                title: `Where should ${setTitle(found.set)} be written?`,
+            })) ?? [];
+        if (folder === undefined) return;
+
+        for (const write of result.writes) {
+            const uri = vscode.Uri.joinPath(folder, `${write.resref}.BAM`);
+            // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
+            await vscode.workspace.fs.writeFile(uri, write.bytes);
+        }
+        if (result.notesFile !== undefined) {
+            const stem = request.prefix === "" ? defaultPrefix(found.set) : request.prefix;
+            await vscode.workspace.fs.writeFile(
+                vscode.Uri.joinPath(folder, `${stem}-notes.md`),
+                new TextEncoder().encode(result.notesFile),
+            );
+        }
+        const count = result.writes.length;
+        void vscode.window.showInformationMessage(
+            `Converted ${setTitle(found.set)}: ${count} ${count === 1 ? "file" : "files"} in ${folder.fsPath}.`,
+        );
     }
 
     /** Ask which cycle a single-orientation FRM should use; undefined if the user dismisses the picker. */

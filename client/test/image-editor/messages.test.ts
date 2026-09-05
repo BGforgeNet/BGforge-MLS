@@ -20,6 +20,16 @@ test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "selectSetAction", resref: "CDMB1G1" })).toBe(true);
     expect(isWebviewToHost({ type: "selectSetArmour", level: 2 })).toBe(true);
     expect(isWebviewToHost({ type: "pickSet" })).toBe(true);
+    // The conversion mode: opening it carries nothing, planning carries the target, and only the run
+    // carries the reader's whole choice - which is also the only one that writes anything.
+    expect(isWebviewToHost({ type: "beginConversion" })).toBe(true);
+    expect(isWebviewToHost({ type: "planConversion", profileId: "ie-monster" })).toBe(true);
+    expect(
+        isWebviewToHost({
+            type: "runConversion",
+            request: { profileId: "ie-monster", prefix: "NEWB", targetId: 0x9000, notes: true },
+        }),
+    ).toBe(true);
     expect(isWebviewToHost({ type: "runtimeError", message: "boom" })).toBe(true);
 });
 test("rejects malformed messages", () => {
@@ -34,5 +44,15 @@ test("rejects malformed messages", () => {
     expect(isWebviewToHost({ type: "setCreature", resref: 7 })).toBe(false);
     expect(isWebviewToHost({ type: "requestFrames", indices: ["0"] })).toBe(false);
     expect(isWebviewToHost({ type: "runtimeError" })).toBe(false);
+    expect(isWebviewToHost({ type: "planConversion" })).toBe(false);
+    expect(isWebviewToHost({ type: "runConversion", request: { profileId: "ie-monster" } })).toBe(false);
+    // The id decides what the notes tell the reader to declare, so a string that merely looks like one
+    // is not a request this acts on.
+    expect(
+        isWebviewToHost({
+            type: "runConversion",
+            request: { profileId: "ie-monster", prefix: "NEWB", targetId: "9000", notes: true },
+        }),
+    ).toBe(false);
     expect(isWebviewToHost({ type: "somethingElse" })).toBe(false);
 });

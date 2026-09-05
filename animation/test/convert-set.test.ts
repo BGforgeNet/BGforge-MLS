@@ -237,6 +237,19 @@ describe("converting a whole set", () => {
         expect(result).toMatchObject({ outcome: "refused" });
     });
 
+    it("refuses a conversion the target can name nothing in, rather than reporting an empty one", () => {
+        // Every action unmapped is not a lossy conversion, it is no conversion. Reported as lossy the
+        // reader gets a list of what was lost and an empty output folder, with nothing saying which of
+        // the two happened.
+        const result = convertSet(read({ CDMB1G1: band() }), IE_8_POINT_MIRRORED, {
+            ...OPTIONS,
+            scheme: "action-codes",
+        });
+
+        expect(result).toMatchObject({ outcome: "refused" });
+        expect(result.outcome === "refused" && result.reason).toContain("no file the target can name");
+    });
+
     it("refuses a set whose levels the target's names cannot tell apart", () => {
         // The two-letter names carry no armour level, so two levels would write the same files twice and
         // the second would silently replace the first.

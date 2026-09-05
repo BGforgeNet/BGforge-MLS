@@ -164,6 +164,16 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
         }
     }
 
+    // Nothing named is nothing converted. Reported as a lossy conversion the caller gets a list of what
+    // was lost and an empty output, with nothing to say which of the two it is looking at - and a source
+    // whose actions carry no meaning (a cycle-numbered set) lands here for every meaning-carrying target.
+    if (writes.length === 0) {
+        return {
+            outcome: "refused",
+            reason: `This set has no file the target can name: ${report.losses.map((loss) => loss.detail).join("; ")}.`,
+        };
+    }
+
     // Recomputed rather than taken from the plan: the naming step above adds losses of its own, and a
     // conversion that lost an action is not the lossless one the plan described before it ran.
     const outcome = report.lossless ? "lossless" : "lossy";

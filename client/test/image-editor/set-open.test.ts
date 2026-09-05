@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as vscode from "vscode";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
-import type { AnimationSetSource } from "../../src/image-editor/set-document";
+import type { AnimationSetLookup, AnimationSetSource } from "../../src/image-editor/set-document";
 import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
 
 const GAME_SCHEME = "bgforge-ie-resource";
@@ -118,6 +118,11 @@ function setSource(lookup: AnimationSetSource["lookup"]): AnimationSetSource {
     return { lookup, list: () => [SET] };
 }
 
+/** The lookup's answer for a set that resolves, carrying the install it was read from. */
+function found(set: AnimationSet, io: StanceIo): AnimationSetLookup {
+    return { kind: "set", set, io, flavour: "tob" };
+}
+
 /** The two members most of these need: one to open on, one to swap to. */
 function twoMembers(): Record<string, Uint8Array> {
     return { TSTBG1: baseFileBam(), TSTBG2: baseFileBam() };
@@ -130,7 +135,7 @@ describe("opening an animation set", () => {
     });
 
     it("opens on the set's first action, without reading a file", async () => {
-        const lookup = vi.fn(() => ({ kind: "set" as const, set: SET, io: ioFor({ TSTBG1: baseFileBam() }) }));
+        const lookup = vi.fn(() => found(SET, ioFor({ TSTBG1: baseFileBam() })));
         const source = setSource(lookup);
 
         const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
@@ -146,7 +151,7 @@ describe("opening an animation set", () => {
             setUri("1234"),
             undefined,
             undefined,
-            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(files) })),
+            setSource(() => found(SET, ioFor(files))),
         );
 
         await document.reload();
@@ -160,7 +165,7 @@ describe("opening an animation set", () => {
             setUri("1234"),
             undefined,
             undefined,
-            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(twoMembers()) })),
+            setSource(() => found(SET, ioFor(twoMembers()))),
         );
 
         expect(document.selectSetAction("TSTBG2")).toBe("changed");
@@ -185,7 +190,7 @@ describe("opening an animation set", () => {
             setUri("1234"),
             undefined,
             undefined,
-            setSource(() => ({ kind: "set" as const, set: SET, io: ioFor(twoMembers()) })),
+            setSource(() => found(SET, ioFor(twoMembers()))),
         );
 
         // Nothing edited yet: a set save must not copy every member into the override folder.
@@ -210,7 +215,7 @@ describe("opening an animation set", () => {
             setUri("1234"),
             undefined,
             undefined,
-            setSource(() => ({ kind: "set" as const, set: quadrant, io: ioFor(files) })),
+            setSource(() => found(quadrant, ioFor(files))),
         );
         document.applyMetaPatch({ transparentIndex: 3 });
 
@@ -225,11 +230,7 @@ describe("opening an animation set", () => {
     });
 
     it("carries every changed member through a hot-exit backup", async () => {
-        const source = setSource(() => ({
-            kind: "set" as const,
-            set: SET,
-            io: ioFor(twoMembers()),
-        }));
+        const source = setSource(() => found(SET, ioFor(twoMembers())));
         const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
         document.applyMetaPatch({ transparentIndex: 3 });
         document.selectSetAction("TSTBG2");
@@ -262,7 +263,7 @@ describe("opening an animation set", () => {
     });
 
     it("refuses a set the install ships no files for, naming the animation", async () => {
-        const source = setSource(() => ({ kind: "set" as const, set: SET, io: ioFor({}) }));
+        const source = setSource(() => found(SET, ioFor({})));
 
         await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
             "This install ships no files for animation 0x1234.",
@@ -280,11 +281,7 @@ describe("opening an animation set", () => {
             scheme: { kind: "unimplemented", scheme: 9, reason: "the monster_icewind scheme is not implemented yet" },
             layout: undefined,
         };
-        const source = setSource(() => ({
-            kind: "set" as const,
-            set: unmodelled,
-            io: ioFor({ TSTBG1: baseFileBam() }),
-        }));
+        const source = setSource(() => found(unmodelled, ioFor({ TSTBG1: baseFileBam() })));
 
         await expect(ImageEditorDocument.open(setUri("1234"), undefined, undefined, source)).rejects.toThrow(
             "Cannot show animation 0x1234: the monster_icewind scheme is not implemented yet.",

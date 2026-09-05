@@ -32,6 +32,7 @@ export { type AnimationTable, type TableAnimation, type TableRows, animationTabl
 
 // Schemes: how an animation's files are named, and how their cycles band.
 export { type Layout, layoutOf } from "./animation-schemes/layout";
+export { type ActionScheme, type NeutralActionId, type NeutralActionRef } from "./animation-schemes/actions";
 export { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 export { type Action, characterActions, characterDrawsBody, characterMember } from "./animation-schemes/character";
 export {
@@ -68,6 +69,7 @@ export {
     IE_8_POINT_PAIRED,
 } from "./convert/target";
 export { type ConversionPlan, planConversion } from "./convert/plan";
+export { type ConversionOptions, type ConversionResult, convertSet } from "./convert/convert";
 export { type NotesOptions, type PlannedConversion, conversionNotes } from "./convert/notes";
 export { type RetargetedAction, retargetAction } from "./convert/retarget";
 export { allocateAnimationId } from "./convert/allocate";
