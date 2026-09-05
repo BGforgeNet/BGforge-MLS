@@ -156,6 +156,17 @@ const FACINGS_BY_STRIDE = new Map<number, Facing[]>([
 ]);
 
 /**
+ * The facings a stride stores its cycles in, in stored order; empty for a stride no IE scheme uses.
+ *
+ * The one published reading of these orders, so a caller describing what a target holds names a stride
+ * rather than restating the wheel - a second copy of a facing order is how two layers come to disagree
+ * about which cycle is west.
+ */
+export function ieFacingsForStride(stride: number): readonly Facing[] {
+    return FACINGS_BY_STRIDE.get(stride) ?? [];
+}
+
+/**
  * Cut a cycle list into direction bands of a stride the CALLER names, rather than one inferred.
  *
  * `interpretIeDirections` reads the stride off block structure, which is all a lone file offers - and a

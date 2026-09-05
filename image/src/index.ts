@@ -30,6 +30,7 @@ export {
     type IeDirectionAnalysis,
     type IeDirectionSlot,
     type SequenceShape,
+    ieFacingsForStride,
     interpretIeDirections,
 } from "./model/ie-direction.ts";
 export { composeParts, drawsCycle } from "./model/compose-parts.ts";

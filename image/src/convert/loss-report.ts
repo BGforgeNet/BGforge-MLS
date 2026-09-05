@@ -11,7 +11,13 @@ export type LossKind =
     | "colours-quantized"
     /** A creature's colours were written into the output, replacing the animation's placeholder ranges.
      *  A real loss: the result renders as that one creature and can never be recoloured as another. */
-    | "creature-colours-baked";
+    | "creature-colours-baked"
+    /** The source stored art for facings the target's wheel has no slot of any kind for - a coarser
+     *  direction scheme. Structural, so informational: it fires on every finer-than-target source. */
+    | "directions-unrepresentable"
+    /** The target SHOWS these facings but stores only the mirrored arc, so drawn eastern art is thrown
+     *  away. A real loss, and the one that hides best - the result still animates in every direction. */
+    | "drawn-facings-mirrored";
 
 export interface LossItem {
     kind: LossKind;
@@ -30,6 +36,9 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     "palette-sidecar-required",
     // Mirrored east rotations ADD engine-faithful data (what playback shows anyway); nothing is lost.
     "mirrored-directions",
+    // A coarser target has no slot of that kind at all, so this fires on every finer source and says
+    // nothing about THIS one. Per-item it would be the report's loudest entry and its least informative.
+    "directions-unrepresentable",
 ]);
 
 export class LossReport {

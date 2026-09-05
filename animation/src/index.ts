@@ -55,6 +55,17 @@ export {
 export { readNeutralSet } from "./neutral/read";
 export { type MemberWrite, writeNeutralSet } from "./neutral/write";
 
+// Conversion: what a target can hold, and what converting into it would cost.
+export {
+    type ConversionTarget,
+    FALLOUT_FRM,
+    IE_16_POINT_FULL,
+    IE_16_POINT_MIRRORED,
+    IE_8_POINT_MIRRORED,
+    IE_8_POINT_PAIRED,
+} from "./convert/target";
+export { type ConversionPlan, planConversion } from "./convert/plan";
+
 // Character facets: race, gender, class, armour, action.
 export {
     type CharClass,

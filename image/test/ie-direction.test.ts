@@ -5,6 +5,7 @@ import {
     ieBlockSize,
     ieSchemeOf,
     ieBandsOfStride,
+    ieFacingsForStride,
     interpretIeDirections,
     type SequenceShape,
 } from "../src/model/ie-direction.ts";
@@ -309,5 +310,42 @@ describe("ieBandsOfStride filler slots", () => {
         const { sequences, frameCount } = band(8, 8, 2);
         for (let slot = 5; slot < 8; slot++) sequences[slot] = seq([0, 0, 0]);
         expect(ieBandsOfStride(sequences, frameCount, 8)?.map((b) => b.length)).toEqual([8, 8]);
+    });
+});
+
+describe("ieFacingsForStride", () => {
+    test("names the eight-slot scheme's stored order, west arc first", () => {
+        expect(ieFacingsForStride(8)).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);
+    });
+
+    test("names the nine stored cycles of the finer scheme, due south round to due north", () => {
+        expect(ieFacingsForStride(9)).toEqual(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]);
+    });
+
+    test("continues the west arc's order back through the east for the whole wheel", () => {
+        expect(ieFacingsForStride(16)).toEqual([
+            "S",
+            "SSW",
+            "SW",
+            "WSW",
+            "W",
+            "WNW",
+            "NW",
+            "NNW",
+            "N",
+            "NNE",
+            "NE",
+            "ENE",
+            "E",
+            "ESE",
+            "SE",
+            "SSE",
+        ]);
+    });
+
+    // A caller asking about a stride no scheme stores gets nothing to iterate, rather than a wheel that
+    // silently answers for a different resolution than the one it asked about.
+    test("answers with no facings for a stride no IE scheme stores", () => {
+        expect(ieFacingsForStride(6)).toEqual([]);
     });
 });
