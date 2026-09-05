@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { characterActions, characterMember } from "../src/animation-schemes/character";
+import { characterActions, characterDrawsBody, characterMember } from "../src/animation-schemes/character";
 import { type AnimationSet } from "../src/animation-index";
 
 /**
@@ -101,5 +101,28 @@ describe("characterActions", () => {
 
     it("reports nothing for a level the set does not have", () => {
         expect(characterActions(mage, 9, () => true)).toEqual([]);
+    });
+});
+
+/**
+ * The question a vendored table has to be checked against: does this install actually hold what the row
+ * names? Its only other exercise is a corpus-gated sweep, so on a machine with no install it went unrun.
+ */
+describe("characterDrawsBody", () => {
+    it("answers yes when the archive holds a body file at any armour level", () => {
+        // Only the fourth level's prefix ships, which is why this asks across levels rather than the first.
+        expect(characterDrawsBody(cleric, (resref) => resref === "CDMC4G1")).toBe(true);
+    });
+
+    /**
+     * The paperdoll is keyed by its own prefix, so a set with nothing but an inventory image draws no body.
+     * Counting it would mark a row as present on the strength of a picture the creature never animates with.
+     */
+    it("does not count a paperdoll as a body", () => {
+        expect(characterDrawsBody(cleric, (resref) => resref === "CGMC1INV")).toBe(false);
+    });
+
+    it("answers no for a set the archive holds nothing of", () => {
+        expect(characterDrawsBody(cleric, () => false)).toBe(false);
     });
 });

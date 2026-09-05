@@ -8,7 +8,7 @@
  */
 import { type Animation, loadImage } from "@bgforge/image";
 import { type IeDirectionSlot } from "@bgforge/image/ie-direction";
-import { type AnimationSet } from "../animation-index";
+import { type AnimationSet, armourLevels } from "../animation-index";
 import { type BandConfidence } from "../animation-schemes/bands";
 import { setStances, type StanceIo } from "../set-stances";
 import { type NeutralAction, type NeutralCycles, type NeutralSet, type NeutralVariant } from "./model";
@@ -52,19 +52,9 @@ function cyclesOf(slots: readonly IeDirectionSlot[], confidence: BandConfidence)
     };
 }
 
-/**
- * Every armour level the set declares, lowest first.
- *
- * A set that declares none has nothing to read: its files are unnamed, so there is no variant to build
- * rather than an empty one to explain.
- */
-function armoursOf(set: AnimationSet): number[] {
-    return [...set.prefixByArmour.keys()].sort((a, b) => a - b);
-}
-
 export function readNeutralSet(set: AnimationSet, io: StanceIo, options: NeutralReadOptions): NeutralSet {
     const variants: NeutralVariant[] = [];
-    for (const armour of armoursOf(set)) {
+    for (const armour of armourLevels(set)) {
         const stances = setStances(set, armour, io);
         if (stances.length === 0) continue;
 

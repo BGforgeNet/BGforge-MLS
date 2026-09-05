@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type AnimationSet } from "../src/animation-index";
+import { type AnimationSet, armourLevels } from "../src/animation-index";
 import { type CharacterFacets } from "../src/animation-facets";
 import {
     CLASSES,
     RACES,
     actionLabel,
-    armourLevels,
     facetChoices,
     facetIndex,
     resolveFacets,

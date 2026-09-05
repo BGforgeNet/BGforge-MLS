@@ -99,11 +99,6 @@ function describe(facets: CharacterFacets): string {
     return `${facetLabel(facets.race)} ${facetLabel(facets.gender)} ${facetLabel(facets.charClass)}`.toLowerCase();
 }
 
-/** The armour levels a set draws, lowest first. */
-export function armourLevels(set: AnimationSet | undefined): number[] {
-    return set === undefined ? [] : [...set.prefixByArmour.keys()].sort((a, b) => a - b);
-}
-
 export const ARMOUR_LABELS: Record<number, string> = {
     1: "None",
     2: "Leather",

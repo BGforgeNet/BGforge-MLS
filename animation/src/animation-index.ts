@@ -138,11 +138,21 @@ function layoutFor(ini: AnimationIni | undefined, tabled: TableAnimation | undef
 }
 
 /**
+ * Every armour level a set declares, lowest first.
+ *
+ * Lives here rather than beside the facet picker that used to own it: the reader, the stance loader and
+ * two pickers all ask this, and four copies of one sort is four chances to order them differently.
+ */
+export function armourLevels(set: AnimationSet | undefined): number[] {
+    return set === undefined ? [] : [...set.prefixByArmour.keys()].sort((a, b) => a - b);
+}
+
+/**
  * The lowest armour level a set declares - what a viewer opens on when the caller names none, what its
  * tile stands for, and where a facet picker starts.
  */
 export function firstArmour(set: AnimationSet): number | undefined {
-    return [...set.prefixByArmour.keys()].sort((a, b) => a - b)[0];
+    return armourLevels(set)[0];
 }
 
 /**

@@ -11,7 +11,14 @@ import { type Game } from "@bgforge/binary";
 import { composeParts } from "@bgforge/image";
 import { ImageDocumentModel } from "../image-editor/document-model";
 import { type AnimationView } from "../image-editor/webview/messages";
-import { type AnimationSet, type SetStance, type StanceIo, firstArmour, setStances } from "@bgforge/animation";
+import {
+    type AnimationSet,
+    type SetStance,
+    type StanceIo,
+    armourLevels,
+    firstArmour,
+    setStances,
+} from "@bgforge/animation";
 import { type SetDetail } from "./webview/messages";
 
 function ioFor(game: Game): StanceIo {
@@ -27,11 +34,6 @@ function ioFor(game: Game): StanceIo {
     return { exists: (resref) => game.canRead(resref, "bam"), read };
 }
 
-/** The armour levels a set declares, lowest first. */
-function armoursOf(set: AnimationSet): number[] {
-    return [...set.prefixByArmour.keys()].sort((a, b) => a - b);
-}
-
 /** What the viewer page shows for one set, plus the stances the host keeps to answer `selectStance`. */
 export interface ResolvedSet {
     detail: SetDetail;
@@ -45,7 +47,7 @@ export interface ResolvedSet {
  * previously-viewed set falls back to the lowest rather than emptying the page.
  */
 export function resolveSet(game: Game, set: AnimationSet, armour?: number): ResolvedSet {
-    const armours = armoursOf(set);
+    const armours = armourLevels(set);
     const chosen = armour !== undefined && armours.includes(armour) ? armour : (firstArmour(set) ?? 1);
     const stances = setStances(set, chosen, ioFor(game));
     const title = set.name || set.code || `0x${set.id.toString(16).padStart(4, "0")}`;

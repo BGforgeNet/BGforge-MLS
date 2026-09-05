@@ -24,6 +24,29 @@ describe("buildAnimationIndex", () => {
         expect(set?.name).toBe("CLERIC_MALE_GNOME");
     });
 
+    /**
+     * A table the archive lists but cannot serve - a corrupt BIF entry, a truncated override copy.
+     *
+     * The index reads two of them, so failing the build over one would lose every animation the install
+     * declares rather than the one vocabulary that could not be read. The set survives under the name the
+     * readable table gave it, with the unreadable one's answer simply absent.
+     */
+    it("builds over a declaration table that will not read, losing only that table's answers", () => {
+        const game = miniGame();
+        const noCodes: GameHandle = {
+            ...game,
+            read: (resref, type) => {
+                if (resref === "ANISND") throw new Error("corrupt archive entry");
+                return game.read(resref, type);
+            },
+        };
+
+        const set = buildAnimationIndex(noCodes).find((entry) => entry.id === 0x6004);
+
+        expect(set?.name).toBe("CLERIC_MALE_GNOME");
+        expect(set?.code).toBe("");
+    });
+
     it("draws under the prefix the INI declares, not under the animation's own code", () => {
         // The gnome cleric's code is CGMC; its body is the dwarf one.
         expect(setFor(0x6004)?.prefixByArmour.get(1)).toBe("CDMB");
