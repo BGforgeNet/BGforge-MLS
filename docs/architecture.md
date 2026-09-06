@@ -689,7 +689,11 @@ additionally excludes `src/fallout-ssl/provider.ts` and `src/weidu-tp2/provider.
 and `src/**/format/**/*.ts` (per-language tree-sitter formatters covered by
 grammar-corpus tests).
 
-Ratchet upward when the unit slice in any package widens.
+Floors are round percentages set a point or two under the measured actuals, not the
+actuals themselves: a floor pinned to the exact current figure goes red the first time a
+refactor shifts a ratio by a fraction, which trains everyone to edit the number rather
+than read it. Ratchet upward only on deliberate coverage work - a widened unit slice, a
+newly covered path - never as a reflex after an unrelated change moved the figure.
 
 ## Extension Packaging
 

@@ -20,16 +20,15 @@ export default defineConfig({
         // every test in the file passes.
         hookTimeout: 60000,
         // See binary-editor/vitest.config.ts for the rationale and the constraint it puts on new tests:
-        // reusing the worker's module registry across files, measured 11.5s -> 9.9s here.
+        // reusing the worker's module registry across files, which takes about a seventh off this suite.
         isolate: false,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
         // and the server/test/td + server/test/tbaf fixture-driven integration
-        // suites in scripts/test.sh - not by this vitest project. Threshold values are
-        // ratcheted to just under the unit-suite actuals (74.3/79.4/59.0/72.8
-        // at last ratchet); keep raising them as standalone unit tests are
-        // added. See docs/architecture.md "Coverage thresholds" for the full
-        // layering.
+        // suites in scripts/test.sh - not by this vitest project. The values are
+        // round floors a point or two under the unit-suite actuals, and ratchet
+        // only on deliberate coverage work. See docs/architecture.md "Coverage
+        // thresholds" for the full layering.
         coverage: coverageConfig({
             reportsDirectory: "coverage/transpile",
             // Scoped to this package's own sources. Without it v8 measures whatever the tests happened to
