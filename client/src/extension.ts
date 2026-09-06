@@ -69,8 +69,8 @@ export async function activate(context: ExtensionContext) {
     // disposables. First, because it owns the game session the binary editor resolves strrefs through.
     const gameLookups = registerIeResources(context);
 
-    // Register binary file and animation editors. Kept as its own push: merging with the
-    // push above would reorder the intervening setup.
+    // Register binary file and animation editors. Both take the lookups above, so they are registered after
+    // the game session rather than beside the earlier subscriptions.
     const imageEditor = registerImageEditor(
         context,
         gameLookups.resourceBytes,
