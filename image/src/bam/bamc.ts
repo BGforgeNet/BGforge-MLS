@@ -1,4 +1,4 @@
-import zlib from "zlib";
+import zlib from "node:zlib";
 import { MAX_INFLATED_BYTES } from "../limits.ts";
 
 // BAMC layout: char[4] 'BAMC' @0x00, char[4] 'V1  ' @0x04, u32 uncompressedLength @0x08,

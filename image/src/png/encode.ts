@@ -1,4 +1,4 @@
-import zlib from "zlib";
+import zlib from "node:zlib";
 import { type Rgba } from "../model/animation.ts";
 import { PNG_SIGNATURE, writeChunk } from "./chunk.ts";
 

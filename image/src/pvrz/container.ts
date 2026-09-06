@@ -1,4 +1,4 @@
-import zlib from "zlib";
+import zlib from "node:zlib";
 import { MAX_INFLATED_BYTES } from "../limits.ts";
 import { decodeBc1, decodeBc3, encodeBc3 } from "./bc.ts";
 import { type PvrFormat, type PvrTexture } from "./texture.ts";
