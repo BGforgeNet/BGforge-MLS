@@ -167,6 +167,12 @@ describe("flagArrayZodSchema", () => {
         0x04: "PickUp",
     };
 
+    /** Every rejection message, so a case pins WHICH refusal fired and on which entry. */
+    const messages = (input: unknown): string[] =>
+        flagArrayZodSchema(table, 8)
+            .safeParse(input)
+            .error?.issues.map((issue) => issue.message) ?? [];
+
     it("accepts an empty array", () => {
         const schema = flagArrayZodSchema(table, 8);
         expect(() => schema.parse([])).not.toThrow();
@@ -179,8 +185,7 @@ describe("flagArrayZodSchema", () => {
     });
 
     it("rejects unknown flag names", () => {
-        const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["unknown"])).toThrow("with N in [0, 8) and not overlapping a named bit");
+        expect(messages(["unknown"])).toEqual(['"unknown" is neither a flag table key nor a "bit<N>" position']);
     });
 
     it("rejects duplicate entries", () => {
@@ -202,13 +207,11 @@ describe("flagArrayZodSchema", () => {
 
     it("rejects bit<N> with N >= codecBitWidth", () => {
         // u8 codec -> N must be in [0, 8).
-        const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["bit8"])).toThrow("with N in [0, 8) and not overlapping a named bit");
+        expect(messages(["bit8"])).toEqual(['"bit8" is past the codec word: N must be in [0, 8)']);
     });
 
     it("rejects bit<N> overlapping a named-bit position", () => {
-        const schema = flagArrayZodSchema(table, 8);
         // bit 0 is named "hidden" (mask 0x01); a literal "bit0" must use the slug.
-        expect(() => schema.parse(["bit0"])).toThrow("with N in [0, 8) and not overlapping a named bit");
+        expect(messages(["bit0"])).toEqual(['"bit0" overlaps the flag named at position 0: use its table key instead']);
     });
 });

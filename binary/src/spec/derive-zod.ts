@@ -233,23 +233,37 @@ export function flagArrayZodSchema(
 ): z.ZodType<string[]> {
     const { entries, namedMask } = compileFlagTable(table);
     const namedSet = new Set(entries.map((entry) => entry.key));
-    const elementSchema = z.string().refine(
-        (value) => {
-            if (namedSet.has(value)) return true;
-            const match = /^bit(\d+)$/.exec(value);
-            if (!match) return false;
-            const position = Number(match[1]);
-            if (!Number.isInteger(position) || position < 0 || position >= codecBitWidth) return false;
-            // Strict-disjoint at the schema layer: `bit<N>` cannot occupy
-            // a position the spec already names (the canonical key must be
-            // used instead). flagArrayToInt re-checks at the wire boundary.
-            const bitMask = (1 << position) >>> 0;
-            return (bitMask & namedMask) === 0;
-        },
-        {
-            message: `expected a flag table key or "bit<N>" with N in [0, ${codecBitWidth}) and not overlapping a named bit`,
-        },
-    );
+    // One message per cause, each naming the offending entry first: a shared message cannot say which of
+    // the three rejected an entry, so a caller (and a test) cannot tell a typo from a mis-sized position.
+    const elementSchema = z.string().superRefine((value, ctx) => {
+        if (namedSet.has(value)) return;
+        const match = /^bit(\d+)$/.exec(value);
+        if (!match) {
+            ctx.addIssue({
+                code: "custom",
+                message: `"${value}" is neither a flag table key nor a "bit<N>" position`,
+            });
+            return;
+        }
+        const position = Number(match[1]);
+        if (!Number.isInteger(position) || position < 0 || position >= codecBitWidth) {
+            ctx.addIssue({
+                code: "custom",
+                message: `"${value}" is past the codec word: N must be in [0, ${codecBitWidth})`,
+            });
+            return;
+        }
+        // Strict-disjoint at the schema layer: `bit<N>` cannot occupy
+        // a position the spec already names (the canonical key must be
+        // used instead). flagArrayToInt re-checks at the wire boundary.
+        const bitMask = (1 << position) >>> 0;
+        if ((bitMask & namedMask) !== 0) {
+            ctx.addIssue({
+                code: "custom",
+                message: `"${value}" overlaps the flag named at position ${position}: use its table key instead`,
+            });
+        }
+    });
     return z.array(elementSchema).refine((arr) => new Set(arr).size === arr.length, {
         message: "flag array must not contain duplicate entries",
     });
