@@ -123,6 +123,37 @@ describe("naming an action in a target scheme", () => {
         expect(encodeActionCodes("action-codes", misc)).toEqual([]);
     });
 
+    /**
+     * The Fallout codes are the engine's own: its file-code builder writes `a` plus the animation's index
+     * for the unarmed group, `b` plus the offset into the knockdown range for a death, and fixed pairs for
+     * standing back up. So the table below is a decode of that arithmetic, not a reading of the filenames.
+     */
+    describe("the Fallout critter scheme", () => {
+        it("names the actions the engine's unarmed group has a code for", () => {
+            const named = (scheme: ActionScheme, code: string) =>
+                encodeActionCodes("fallout-critter", decodeActionCode(scheme, code)).map((entry) => entry.code);
+
+            expect(named("action-codes", "WK")).toContain("AB");
+            expect(named("action-codes", "SD")).toContain("AA");
+            expect(named("action-codes", "GH")).toContain("AO");
+            expect(named("action-codes", "DE")).toContain("BA");
+            expect(named("action-codes", "GU")).toContain("CH");
+            expect(named("action-codes", "A1")).toContain("AQ");
+        });
+
+        /**
+         * A combat stance is a weapon-out pose, and Fallout spells the weapon into the code's FIRST letter -
+         * so every candidate for it names a weapon the source never stated. Left unnamed rather than filed
+         * under a knife: the reader is told the action did not travel, which is true, where a knife-group
+         * file would be a quiet invention.
+         */
+        it("names nothing for the actions Fallout's critter scheme has no counterpart for", () => {
+            for (const code of ["SC", "SP", "SL", "TW"]) {
+                expect(encodeActionCodes("fallout-critter", decodeActionCode("action-codes", code))).toEqual([]);
+            }
+        });
+    });
+
     it("round-trips every code of every scheme through its own table", () => {
         // A table typo shows up here rather than as a converted set whose files the reader that produced
         // them cannot resolve: same scheme in and out, so the code that comes back must be the one that

@@ -18,6 +18,18 @@ import { retargetAction } from "./retarget";
 const EMPTY_SLOT: Sequence = { frameRefs: [], facing: "none" };
 
 /**
+ * The direction slots one of the target's files lays out, in the order it stores them.
+ *
+ * A block target's slots are the whole block, mirrored positions included, because the engine reads those
+ * positions whether or not this source fills them. A rotation target's file holds exactly what it stores.
+ * Empty where the block size names no direction order, which refuses the file rather than writing a guess.
+ */
+export function targetSlots(target: ConversionTarget): readonly Facing[] {
+    if (target.files === "frm-rotations") return target.stored;
+    return target.stride === undefined ? [] : ieFacingsForStride(target.stride);
+}
+
+/**
  * Move a retargeted band's cycles onto the file's own frame pool.
  *
  * A retarget appends its mirrors to a copy of the source pool, so every band's copy holds the same source
@@ -54,8 +66,7 @@ export function buildTargetFile(
     actions: readonly NeutralAction[],
     target: ConversionTarget,
 ): IndexedAnimation | undefined {
-    if (target.stride === undefined) return undefined;
-    const slots = ieFacingsForStride(target.stride);
+    const slots = targetSlots(target);
     if (slots.length === 0) return undefined;
 
     const frames = [...source.frames];

@@ -20,6 +20,8 @@ import { animationIdHex, setTitle } from "../animation-index";
 export interface NotesOptions {
     /** The animation id the converted set is to be declared under. */
     targetId: number;
+    /** The stem the written files share, where the target's declaration step names it. */
+    prefix?: string;
 }
 
 /** A plan that goes ahead. A refusal writes nothing at all, so it has no notes to write. */
@@ -53,14 +55,36 @@ function actionSummary(set: NeutralSet): string {
 }
 
 /**
+ * The base names a Fallout conversion registers, one per armour level the source carries.
+ *
+ * The levels come from the set rather than from the written files so the list holds stems: a file's name is
+ * a stem plus the code the engine appends, and repeating the codes here would be a list nobody can paste.
+ */
+function falloutBases(set: NeutralSet, prefix?: string): string {
+    if (prefix === undefined || prefix === "") return "the base name these files share";
+    const bases = set.variants.map((variant) => `\`${prefix}${variant.armour ?? ""}\``);
+    return [...new Set(bases)].join(", ");
+}
+
+/**
  * The rows to merge by hand, for a target whose declaration step this tool models.
  *
  * An unmodelled target says so rather than printing nothing: an absent section reads as "nothing to
  * declare", which is a stronger claim than anything here has checked.
  */
-function declarationLines(set: NeutralSet, target: ConversionTarget, id: string): string[] {
+function declarationLines(set: NeutralSet, target: ConversionTarget, id: string, prefix?: string): string[] {
     if (target.declaration === "unmodelled") {
         return [`- How ${target.label} declares an animation is not modelled here - check its own requirements.`];
+    }
+    if (target.declaration === "fallout-art-list") {
+        // The base names alone: the engine appends the two-letter code itself, so the list holds the stems
+        // rather than any of the files written beside these notes. One per armour level, because that game
+        // has no armour on an animation - each level is its own critter and needs its own row.
+        const bases = falloutBases(set, prefix);
+        return [
+            `- \`ART/CRITTERS/CRITTERS.LST\`: add ${bases} - the engine appends each two-letter code itself.`,
+            "- Each row's position in that list is the art index a critter's prototype points at.",
+        ];
     }
     return [
         `- \`ANIMATE.IDS\`: \`${id} ${set.identity.name}\``,
@@ -86,7 +110,7 @@ export function conversionNotes(
         "",
         "## Declare by hand",
         "",
-        ...declarationLines(set, target, id),
+        ...declarationLines(set, target, id, options.prefix),
         "",
         "## Source",
         "",

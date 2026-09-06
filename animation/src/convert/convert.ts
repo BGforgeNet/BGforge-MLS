@@ -12,9 +12,9 @@
  */
 import {
     type IndexedAnimation,
+    type LossKind,
     type LossReport,
     composeParts,
-    ieFacingsForStride,
     isRgbaAnimation,
     splitIeBamBlocks,
 } from "@bgforge/image";
@@ -27,8 +27,8 @@ import {
 } from "../animation-schemes/actions";
 import { characterFileLayout } from "../animation-schemes/character";
 import { type NeutralAction, type NeutralSet, type NeutralVariant } from "../neutral/model";
-import { type MemberWrite, serializeMember } from "../neutral/write";
-import { type BandLayout, buildTargetFile, seatInBandLayout } from "./build-file";
+import { type MemberWrite, serializeAsFrm, serializeMember } from "../neutral/write";
+import { type BandLayout, buildTargetFile, seatInBandLayout, targetSlots } from "./build-file";
 import { conversionNotes } from "./notes";
 import { planConversion } from "./plan";
 import { type ConversionTarget } from "./target";
@@ -132,8 +132,8 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     if (plan.outcome === "refused") return plan;
     // Asked once, for the set: every file below is laid out in the same blocks, so a target whose file
     // layout this does not model refuses the conversion rather than a file at a time.
-    const stride = target.stride;
-    if (stride === undefined || ieFacingsForStride(stride).length === 0) {
+    const slots = targetSlots(target);
+    if (slots.length === 0) {
         return { outcome: "refused", reason: `This does not know how ${target.label} lays its files out.` };
     }
     if (set.variants.length > 1 && !namesArmour(options.scheme)) {
@@ -149,6 +149,20 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     const writes: MemberWrite[] = [];
     /** Actions the target has no name for - kept apart from the report so a refusal can name them once. */
     const unmapped: NeutralAction[] = [];
+    /**
+     * Facts already stated, so a set with armour levels states each once.
+     *
+     * Every level draws the same actions, so reporting per level repeats the whole list as many times as
+     * the set has levels - a four-level character set produced a hundred and forty lines carrying about
+     * thirty facts, which is a report nobody reads to the end. The fact is about the SET either way: the
+     * levels differ in their art, never in which actions the target can name or what its palette holds.
+     */
+    const stated = new Set<string>();
+    const stateOnce = (kind: LossKind, key: string, detail: string) => {
+        if (stated.has(`${kind}|${key}`)) return;
+        stated.add(`${kind}|${key}`);
+        report.add(kind, detail);
+    };
     for (const variant of set.variants) {
         // Per armour level, because the level is part of the name wherever a scheme has levels at all: a
         // set-wide tally would find level 2's walk code taken by level 1 and report it as unmappable.
@@ -183,20 +197,21 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 const named = codeFor(member, options.scheme, taken);
                 if (named === undefined) {
                     unmapped.push(member);
-                    report.add("action-unmapped", `${member.label} (${resref}) has no counterpart in the target`);
+                    stateOnce("action-unmapped", member.label, `${member.label} has no counterpart in the target`);
                     continue;
                 }
                 taken.add(named.code);
                 if (named.detail !== "kept") {
-                    report.add(
+                    stateOnce(
                         "action-code-detail",
-                        `${resref} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
+                        named.code,
+                        `${member.label} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
                     );
                 }
                 const laid = buildTargetFile(source, actions, target);
                 /* v8 ignore next -- the target's file layout was checked before the loop */
                 if (laid === undefined) return { outcome: "refused", reason: `${target.label} has no layout here.` };
-                const built = seatInBandLayout(laid, fileLayout(options.scheme, named.code), stride);
+                const built = seatInBandLayout(laid, fileLayout(options.scheme, named.code), slots.length);
                 if (built === undefined) {
                     return {
                         outcome: "refused",
@@ -206,8 +221,21 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                     };
                 }
                 const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
+                if (target.files === "frm-rotations") {
+                    const frm = serializeAsFrm(built, name);
+                    for (const item of frm.report.items) stateOnce(item.kind, item.detail, item.detail);
+                    if (frm.quantized) {
+                        stateOnce(
+                            "colours-quantized",
+                            "palette",
+                            "colours the game's own palette does not hold were moved to their nearest match",
+                        );
+                    }
+                    writes.push({ resref: name, extension: "FRM", bytes: frm.bytes });
+                    continue;
+                }
                 if (!target.pairEast) {
-                    writes.push({ resref: name, bytes: serializeMember(built, name) });
+                    writes.push({ resref: name, extension: "BAM", bytes: serializeMember(built, name) });
                     continue;
                 }
                 // Split on the blocks this just laid out, not on a re-reading of them: a file with real art
@@ -221,8 +249,8 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                     };
                 }
                 writes.push(
-                    { resref: name, bytes: serializeMember(split.base, name) },
-                    { resref: `${name}E`, bytes: serializeMember(split.east, `${name}E`) },
+                    { resref: name, extension: "BAM", bytes: serializeMember(split.base, name) },
+                    { resref: `${name}E`, extension: "BAM", bytes: serializeMember(split.east, `${name}E`) },
                 );
             }
         }

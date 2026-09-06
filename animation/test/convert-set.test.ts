@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBamV1 } from "@bgforge/image";
+import { DEFAULT_FALLOUT_PALETTE, parseBamV1, parseFrm, serializeBamV1 } from "@bgforge/image";
 import { type AnimationSet } from "../src/animation-index";
 import { type StanceIo } from "../src/set-stances";
 import { readNeutralSet } from "../src/neutral/read";
@@ -356,10 +356,102 @@ describe("converting a whole set", () => {
         expect(result.outcome === "refused" && result.reason).toContain("G11");
     });
 
-    it("refuses a target whose files this does not know how to lay out", () => {
-        const result = convertSet(read({ CDMB1G1: band() }), FALLOUT_FRM, OPTIONS);
+    /**
+     * The other game. An FRM is one action per file with six rotations inside it, so the walk band of a
+     * character file becomes one Fallout file - decoded here rather than trusted, because a conversion that
+     * writes plausible bytes nothing can read is the failure this whole path exists to avoid.
+     */
+    it("writes a Fallout critter file per action, six rotations to a file", () => {
+        const result = converted(read({ CDMB1G11: band() }), FALLOUT_FRM, {
+            ...OPTIONS,
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
+        });
+
+        // The walk, under the code the engine's own builder gives ANIM_WALK, on the source's own level.
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB"]);
+        const written = parseFrm(result.writes[0]?.bytes ?? new Uint8Array());
+        expect(written.sequences).toHaveLength(6);
+        expect(written.sequences.every((sequence) => sequence.frameRefs.length > 0)).toBe(true);
+    });
+
+    /**
+     * Fallout has no armour level on an animation - it ships each armoured look as its own critter, under
+     * its own base name. So a character set's levels become that many bases rather than a refusal: the
+     * alternative was the whole family being unconvertible, which is the one outcome that loses everything.
+     */
+    it("gives each armour level of a character set its own Fallout base", () => {
+        const set = read({ CDMB1G11: band(), CDMB2G11: band() }, { prefixByArmour: new Map([[1, "CDMB"]]) });
+        const twoLevels: NeutralSet = {
+            ...set,
+            variants: [
+                { ...set.variants[0]!, armour: 1 },
+                { ...set.variants[0]!, armour: 2 },
+            ],
+        };
+
+        const result = converted(twoLevels, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB", "XYZBAS2AB"]);
+    });
+
+    /**
+     * Every armour level of a set draws the same actions, so a level-by-level report says the same thing as
+     * many times as the set has levels - a character set produced a hundred and forty loss lines carrying
+     * about thirty facts. Each fact is about the SET, so it is stated once.
+     */
+    it("states a loss once for the set rather than once per armour level", () => {
+        // A walk Fallout names and a combat stance it does not, at four armour levels.
+        const set = read({ CDMB1G11: band(), CDMB1G1: band() }, { prefixByArmour: new Map([[1, "CDMB"]]) });
+        const fourLevels: NeutralSet = {
+            ...set,
+            variants: [1, 2, 3, 4].map((armour) => ({ ...set.variants[0]!, armour })),
+        };
+
+        const result = converted(fourLevels, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        expect(result.writes).toHaveLength(4);
+        expect(result.report.losses.filter((loss) => loss.kind === "action-unmapped")).toHaveLength(1);
+    });
+
+    /**
+     * A source already painted in the target's own palette costs no colour at all, so the conversion says
+     * nothing about colours - the quantization line is for art that genuinely moved, and firing it on every
+     * conversion would make it the line readers learn to skip.
+     */
+    it("reports no colour loss where the source's palette maps onto the game's exactly", () => {
+        // The same band repainted in the target's own palette: every colour it uses already exists there.
+        const parsed = parseBamV1(band());
+        const inGamePalette = serializeBamV1({ ...parsed, palette: [...DEFAULT_FALLOUT_PALETTE] });
+
+        const result = converted(read({ CDMB1G11: inGamePalette }), FALLOUT_FRM, {
+            ...OPTIONS,
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
+        });
+
+        expect(result.report.items.some((item) => item.kind === "colours-quantized")).toBe(false);
+    });
+
+    it("refuses the whole set for a target whose file layout is not modelled, rather than a file at a time", () => {
+        const unmodelled = { ...IE_8_POINT_MIRRORED, stride: undefined };
+
+        const result = convertSet(read({ CDMB1G1: band() }), unmodelled, OPTIONS);
 
         expect(result).toMatchObject({ outcome: "refused" });
+        expect(result.outcome === "refused" && result.reason).toContain("lays its files out");
+    });
+
+    it("says which of a set's actions Fallout has no file for", () => {
+        // A sleep and a combat stance: neither is anything the critter vocabulary names.
+        const result = convertSet(read({ CDMB1G19: band(), CDMB1G1: band() }), FALLOUT_FRM, {
+            ...OPTIONS,
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
+        });
+
+        expect(result).toMatchObject({ outcome: "refused" });
+        expect(result.outcome === "refused" && result.reason).toContain("no counterpart");
     });
 
     /**

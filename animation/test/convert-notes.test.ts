@@ -119,11 +119,67 @@ describe("the companion notes file", () => {
      * The IDS pair is an Infinity Engine table. Printing those rows for a Fallout target told the reader to
      * edit tables that game does not have - caught by reading a rendered file, not by a unit assertion.
      */
+    /**
+     * A target whose declaration step nothing here models says so. Printing nothing would read as "nothing
+     * to declare", which is a stronger claim than anything has checked - so the section is never empty.
+     */
+    it("says so where a target's declaration step is not modelled", () => {
+        const unmodelled = { ...FALLOUT_FRM, declaration: "unmodelled" as const };
+
+        const notes = conversionNotes(walk, unmodelled, planned(walk, unmodelled), { targetId: 0x6100 });
+
+        expect(notes).toContain("is not modelled here");
+    });
+
     it("does not hand a non-Infinity target the Infinity declaration rows", () => {
         const notes = conversionNotes(walk, FALLOUT_FRM, planned(walk, FALLOUT_FRM), { targetId: 0x6100 });
 
         expect(notes).not.toContain("ANIMATE.IDS");
-        expect(notes).toContain("is not modelled here");
+        expect(notes).not.toContain("ANISND.IDS");
+    });
+
+    /**
+     * Fallout finds a critter's art by looking its base name up in the critter art list and appending the
+     * two-letter code itself, so the list entry is the step that makes the written files reachable at all -
+     * naming it is the difference between a folder of files and an animation the game can play.
+     */
+    it("tells a Fallout conversion which list its base name goes in", () => {
+        const notes = conversionNotes(walk, FALLOUT_FRM, planned(walk, FALLOUT_FRM), {
+            targetId: 0x6100,
+            prefix: "XYZBAS",
+        });
+
+        expect(notes).toContain("CRITTERS.LST");
+        expect(notes).toContain("XYZBAS");
+    });
+
+    it("points at the base name without inventing one where none was chosen", () => {
+        const notes = conversionNotes(walk, FALLOUT_FRM, planned(walk, FALLOUT_FRM), { targetId: 0x6100 });
+
+        expect(notes).toContain("CRITTERS.LST");
+        expect(notes).toContain("the base name these files share");
+    });
+
+    /**
+     * Each armour level is its own critter there, so each needs its own row - a notes file naming one base
+     * for a four-level set would leave three of the written groups unreachable by the game.
+     */
+    it("lists one Fallout base per armour level", () => {
+        const levels: NeutralSet = {
+            ...walk,
+            variants: [
+                { ...walk.variants[0]!, armour: 1 },
+                { ...walk.variants[0]!, armour: 2 },
+            ],
+        };
+
+        const notes = conversionNotes(levels, FALLOUT_FRM, planned(levels, FALLOUT_FRM), {
+            targetId: 0x6100,
+            prefix: "XYZBAS",
+        });
+
+        expect(notes).toContain("XYZBAS1");
+        expect(notes).toContain("XYZBAS2");
     });
 
     /**

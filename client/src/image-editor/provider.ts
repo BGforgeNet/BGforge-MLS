@@ -721,7 +721,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         if (folder === undefined) return;
 
         for (const write of result.writes) {
-            const uri = vscode.Uri.joinPath(folder, `${write.resref}.BAM`);
+            const uri = vscode.Uri.joinPath(folder, `${write.resref}.${write.extension}`);
             // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
             await vscode.workspace.fs.writeFile(uri, write.bytes);
         }

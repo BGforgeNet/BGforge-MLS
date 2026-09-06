@@ -82,7 +82,7 @@ export const CONVERSION_PROFILES: readonly ConversionProfile[] = [
         id: "fallout-frm",
         label: "Fallout critter (6 rotations)",
         target: FALLOUT_FRM,
-        scheme: "cycle-numbers",
+        scheme: "fallout-critter",
     },
 ];
 

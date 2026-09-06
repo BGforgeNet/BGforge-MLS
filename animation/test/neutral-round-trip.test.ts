@@ -15,7 +15,7 @@ import { tableForFlavour } from "../src/animation-tables";
 import { type StanceIo } from "../src/set-stances";
 import { type NeutralSet } from "../src/neutral/model";
 import { readNeutralSet } from "../src/neutral/read";
-import { writeNeutralSet } from "../src/neutral/write";
+import { serializeAsFrm, writeNeutralSet } from "../src/neutral/write";
 import { bandedPair, multiCycle } from "../../image/test/bam-fixtures.ts";
 
 /** A character set at one armour level - the shape both character layouts resolve through. */
@@ -243,6 +243,17 @@ describe("writing a neutral set back to the game it came from", () => {
         const { set, parsed } = oneIndexedMember();
 
         expect(() => writeNeutralSet(withMember(set, convertToRgba(parsed)))).toThrow(/CDMB1G1: a true-colour BAM/);
+    });
+
+    /**
+     * The same refusal on the conversion side. A conversion reaches its writer through a reader that
+     * already dropped true colour, so this guards the export rather than a path the set conversion takes -
+     * and a Fallout file written from pages nobody carried would be a picture of nothing.
+     */
+    it("refuses to write a true-colour animation as a Fallout file", () => {
+        const { parsed } = oneIndexedMember();
+
+        expect(() => serializeAsFrm(convertToRgba(parsed), "CDMB1G1")).toThrow(/CDMB1G1: a true-colour BAM/);
     });
 
     it("refuses a source format it has no writer for", () => {

@@ -19,10 +19,10 @@
  * for those with a question mark against nearly every row, so the family has no table at all rather than a
  * table of guesses.
  *
- * Infinity Engine families only, because those are the ones a set can be READ from today - Fallout's critter
- * naming joins this union when the reader can produce a member from an FRM.
+ * `fallout-critter` is a WRITE target only: a set is not yet read from FRMs, so no code decodes into it, and
+ * its table exists to name the files a converted set lands in.
  */
-export type ActionScheme = "character" | "action-codes" | "cycle-numbers";
+export type ActionScheme = "character" | "action-codes" | "cycle-numbers" | "fallout-critter";
 
 /**
  * The neutral vocabulary.
@@ -121,10 +121,41 @@ const ACTION_CODES: readonly ActionEntry[] = [
     { code: "SL", id: "sleep" },
 ];
 
+/**
+ * Fallout's critter codes, decoded from the engine's own file-code builder rather than from filenames.
+ *
+ * That builder writes two letters: the first names the weapon group, the second the animation. Unarmed it
+ * emits `a` plus the animation's own index, so `AA` is standing and `AB` walking; a knockdown or death is
+ * `b` plus the offset into that range, making `BA` the first of them; standing back up has its own fixed
+ * pairs. Only the unarmed group is named here - every other first letter spells out a weapon, which a source
+ * that never stated one cannot be filed under.
+ *
+ * The gaps are the point. A combat stance, a spell, a sleep and a post-death twitch have no counterpart in
+ * that vocabulary at all, so they get no entry and the conversion reports them as actions that did not
+ * travel - which is what the reader needs to know, where a nearest-looking code would hide it.
+ */
+const FALLOUT_CRITTER: readonly ActionEntry[] = [
+    { code: "AA", id: "stand" },
+    { code: "AB", id: "walk" },
+    // Hit from the front, then from behind: a family whose chain draws the hit twice fills both.
+    { code: "AO", id: "get-hit" },
+    { code: "AP", id: "get-hit" },
+    // Punch first, kick second: a set with two melee attacks fills both, and the caller takes them in order.
+    { code: "AQ", id: "attack" },
+    { code: "AR", id: "attack" },
+    { code: "AS", id: "shoot" },
+    // Falling backwards, then forwards - the first two of the knockdown range.
+    { code: "BA", id: "die" },
+    { code: "BB", id: "die" },
+    { code: "CH", id: "get-up" },
+    { code: "CJ", id: "get-up" },
+];
+
 const TABLES: Readonly<Record<ActionScheme, readonly ActionEntry[]>> = {
     character: CHARACTER,
     "action-codes": ACTION_CODES,
     "cycle-numbers": [],
+    "fallout-critter": FALLOUT_CRITTER,
 };
 
 /**
@@ -138,6 +169,7 @@ export const ACTION_SCHEME_CODES: Readonly<Record<ActionScheme, readonly string[
     character: CHARACTER.map((entry) => entry.code),
     "action-codes": ACTION_CODES.map((entry) => entry.code),
     "cycle-numbers": [],
+    "fallout-critter": FALLOUT_CRITTER.map((entry) => entry.code),
 };
 
 export function decodeActionCode(scheme: ActionScheme, code: string): NeutralActionRef {
@@ -151,12 +183,14 @@ export function decodeActionCode(scheme: ActionScheme, code: string): NeutralAct
 /**
  * Whether a scheme's filenames carry the armour level.
  *
- * Only the character family varies by armour at all, and it puts the level in the name; the others name a
- * file per action and nothing else. A set with several levels therefore cannot be written into those
- * without the levels overwriting each other, which is the caller's decision to make rather than this one's.
+ * The character family varies by armour and puts the level in the name. Fallout has no armour level on an
+ * animation at all - it ships each armoured look as its own critter under its own base name - so the level
+ * goes in the base there, which is the same string and a different thing to declare. The remaining families
+ * name a file per action and nothing else, so a set with several levels would write each over the one
+ * before it; that is a refusal rather than a silent overwrite.
  */
 export function namesArmour(scheme: ActionScheme): boolean {
-    return scheme === "character";
+    return scheme === "character" || scheme === "fallout-critter";
 }
 
 /**

@@ -110,13 +110,23 @@ describe("convertOpenSet", () => {
         expect(result.writes.map((write) => write.resref)).toEqual(["NEWBSD", "NEWBSDE", "NEWBWK", "NEWBWKE"]);
     });
 
-    it("refuses a target whose file layout is not modelled, and writes nothing", () => {
+    /**
+     * The other game, through the profile the editor actually offers. A Fallout file is one action with its
+     * six rotations inside, so the two-letter IE codes become the engine's own critter codes and the wheel
+     * drops from eight points to six - a real loss, and one the reader is told about rather than left to
+     * discover in the output.
+     */
+    it("converts into Fallout's own files and names what the narrower wheel costs", () => {
         const result = convertOpenSet(SET, io, "tob", { ...request, profileId: "fallout-frm" });
 
-        expect(result.outcome).toBe("refused");
-        expect(result.reason).toContain("Fallout");
-        expect(result.writes).toEqual([]);
-        expect(result.notesFile).toBeUndefined();
+        expect(result.outcome).toBe("lossy");
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWB1AA", "NEWB1AB"]);
+        // The bytes are FRM, so the name has to say so: everything downstream reads a name to pick a reader.
+        expect(result.writes.map((write) => write.extension)).toEqual(["FRM", "FRM"]);
+        // Fallout's wheel has no due-north or due-south, which is structural and so a note; the palette is
+        // the game's own and moving a colour onto its nearest neighbour is the loss.
+        expect(result.notes.join(" ")).toContain("no slot for");
+        expect(result.losses.join(" ")).toContain("nearest match");
     });
 
     /**
@@ -156,9 +166,11 @@ describe("convertOpenSet", () => {
 
         expect(result.outcome).toBe("lossy");
         expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1"]);
+        // The action, not the file it came from: an armoured set draws the same action out of a file per
+        // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
         expect(result.losses).toEqual([
-            "A2/CA - attack or cast (TSTBG2) has no counterpart in the target",
-            "A3/SP - attack or spell (TSTBG2) has no counterpart in the target",
+            "A2/CA - attack or cast has no counterpart in the target",
+            "A3/SP - attack or spell has no counterpart in the target",
         ]);
         // The informational half stays separate: nothing here is a reason to hesitate.
         expect(result.notes.some((note) => note.includes("loss"))).toBe(false);

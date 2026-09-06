@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { type Facing, type IndexedAnimation } from "@bgforge/image";
 import { type NeutralAction } from "../src/neutral/model";
 import { decodeActionCode } from "../src/animation-schemes/actions";
-import { FALLOUT_FRM, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED, IE_16_POINT_FULL } from "../src/convert/target";
+import {
+    type ConversionTarget,
+    FALLOUT_FRM,
+    IE_8_POINT_MIRRORED,
+    IE_8_POINT_PAIRED,
+    IE_16_POINT_FULL,
+} from "../src/convert/target";
 import { buildTargetFile } from "../src/convert/build-file";
 import { greyPalette } from "../../image/test/bam-fixtures.ts";
 
@@ -119,7 +125,27 @@ describe("laying a converted file out in the target's blocks", () => {
         expect(built?.sequences.filter((sequence) => sequence.frameRefs.length > 0)).toHaveLength(8);
     });
 
-    it("refuses a target whose file layout this does not model", () => {
-        expect(buildTargetFile(fileOf(1), [westBand(0)], FALLOUT_FRM)).toBeUndefined();
+    /**
+     * The guard for a target profile nothing ships yet: blocks of cycles whose block size names no
+     * direction order. Every offered target names one, so this is only reachable from a constructed
+     * profile - and refusing beats laying a file out in an order nobody has stated.
+     */
+    it("refuses a block target whose block size names no direction order", () => {
+        const unmodelled: ConversionTarget = { ...IE_8_POINT_MIRRORED, stride: undefined };
+
+        expect(buildTargetFile(fileOf(1), [westBand(0)], unmodelled)).toBeUndefined();
+    });
+
+    /**
+     * An FRM is not blocks of cycles: the file IS one action, and its six rotations are the whole of it.
+     * So the target's stored facings are the slots, and there is no stride to pad them into.
+     */
+    it("lays a band into a rotation-per-slot target's six rotations", () => {
+        const built = buildTargetFile(fileOf(1), [westBand(0)], FALLOUT_FRM);
+
+        expect(built?.sequences).toHaveLength(6);
+        // Fallout has no due-north or due-south rotation, so two of the eight-point band's facings have
+        // nowhere to go; the six that remain are all drawn rather than padded.
+        expect(built?.sequences.filter((sequence) => sequence.frameRefs.length > 0)).toHaveLength(6);
     });
 });

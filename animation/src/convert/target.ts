@@ -16,8 +16,16 @@ export interface ConversionTarget {
     /** Facings the target's engine shows, stored and mirrored together. */
     shown: readonly Facing[];
     /**
-     * How many cycles one direction block takes in the target's FILES, or undefined where this does not
-     * model the target's file layout.
+     * How the target's files are shaped, and what serializes them.
+     *
+     * `ie-blocks` is a BAM whose cycles are blocks of `stride`, several actions to a file. `frm-rotations`
+     * is a Fallout FRM: the file IS one action and its stored facings are the whole of its cycle list, so
+     * `stride` says nothing about it.
+     */
+    files: "ie-blocks" | "frm-rotations";
+    /**
+     * How many cycles one direction block takes in the target's FILES, or undefined where the target's
+     * files are not blocks of cycles at all.
      *
      * Distinct from the stored count, and the distinction is what a writer gets wrong: a scheme that stores
      * five facings still lays them out in eight-slot blocks, because the engine reads slot 5 of each block
@@ -42,11 +50,13 @@ export interface ConversionTarget {
     /**
      * How the target's engine is told the animation exists.
      *
-     * `infinity-ids` is the `ANIMATE.IDS`/`ANISND.IDS` pair. `unmodelled` says this tool does not know the
-     * target's declaration step - marked rather than omitted, because a notes file that simply left the
-     * section out would read as "nothing to declare", which is a stronger claim than has been checked.
+     * `infinity-ids` is the `ANIMATE.IDS`/`ANISND.IDS` pair. `fallout-art-list` is the critter art list the
+     * engine resolves a base name through before appending the two-letter code itself. `unmodelled` says
+     * this tool does not know the target's declaration step - marked rather than omitted, because a notes
+     * file that simply left the section out would read as "nothing to declare", which is a stronger claim
+     * than has been checked.
      */
-    declaration: "infinity-ids" | "unmodelled";
+    declaration: "infinity-ids" | "fallout-art-list" | "unmodelled";
 }
 
 const IE_8 = ieFacingsForStride(8);
@@ -59,6 +69,7 @@ export const IE_8_POINT_MIRRORED: ConversionTarget = {
     label: "Infinity Engine, 8 directions (mirrored east)",
     stored: IE_8.slice(0, 5),
     shown: IE_8,
+    files: "ie-blocks",
     stride: 8,
     pairEast: false,
     fixedPalette: false,
@@ -70,6 +81,7 @@ export const IE_8_POINT_PAIRED: ConversionTarget = {
     label: "Infinity Engine, 8 directions (east stored)",
     stored: IE_8,
     shown: IE_8,
+    files: "ie-blocks",
     stride: 8,
     pairEast: true,
     fixedPalette: false,
@@ -81,6 +93,7 @@ export const IE_16_POINT_MIRRORED: ConversionTarget = {
     label: "Infinity Engine, 16 directions (mirrored east)",
     stored: IE_9,
     shown: IE_16,
+    files: "ie-blocks",
     stride: 9,
     pairEast: false,
     fixedPalette: false,
@@ -92,6 +105,7 @@ export const IE_16_POINT_FULL: ConversionTarget = {
     label: "Infinity Engine, 16 directions (all stored)",
     stored: IE_16,
     shown: IE_16,
+    files: "ie-blocks",
     stride: 16,
     pairEast: false,
     fixedPalette: false,
@@ -103,9 +117,10 @@ export const FALLOUT_FRM: ConversionTarget = {
     label: "Fallout, 6 rotations",
     stored: FRM_FACINGS,
     shown: FRM_FACINGS,
-    // An FRM holds one rotation per file rather than blocks of cycles, so no block stride describes it.
+    files: "frm-rotations",
+    // An FRM holds one action per file, its rotations in place of blocks, so no block stride describes it.
     stride: undefined,
     pairEast: false,
     fixedPalette: true,
-    declaration: "unmodelled",
+    declaration: "fallout-art-list",
 };
