@@ -55,7 +55,7 @@ jobs:
           sudo apt-get install -y "${pkgs[@]}"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           run_install: false
 
@@ -216,7 +216,7 @@ jobs:
 
       - name: GitHub Release
         if: "startsWith(github.ref, 'refs/tags/')"
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
