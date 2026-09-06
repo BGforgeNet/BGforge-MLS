@@ -44,10 +44,15 @@ if [[ ${#outputs[@]} -eq 0 ]]; then
 fi
 
 if [[ "$CHECK_MODE" == "true" ]]; then
-    # run.sh has just rewritten each .ssl, so anything git still reports as differing is a
-    # committed file that had gone stale against its source.
-    if ! git diff --exit-code -- "${outputs[@]}"; then
-        echo "Error: the committed .ssl is out of date with its .tssl source (diff above)." >&2
+    # run.sh has just rewritten each .ssl, so anything git still reports on is a file that
+    # went stale against its source or was never committed at all. `git diff` sees only the
+    # first case - it ignores untracked paths and exits 0 for them - so the gate is the
+    # porcelain status, with the diff printed after it for the stale-file case.
+    stale="$(git status --porcelain -- "${outputs[@]}")"
+    if [[ -n "$stale" ]]; then
+        echo "$stale"
+        git diff -- "${outputs[@]}"
+        echo "Error: the generated .ssl is not what is committed (stale or never committed)." >&2
         exit 1
     fi
     echo "Generated .ssl is up to date."
