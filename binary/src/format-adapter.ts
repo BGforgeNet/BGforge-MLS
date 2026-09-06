@@ -67,11 +67,11 @@ export interface BinaryFormatAdapter {
     readonly documentCacheStrategy: "clear" | "none";
 
     /**
-     * Optional declarative layout. When present, the editor renders this format via the generic
-     * layout renderer (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the
-     * parse result's `variantId`) instead of the legacy depth-0-groups-as-tabs path. Absent => the
-     * format keeps the tabs path. This is presentation-only data (sibling of `presentationSchema`);
-     * keep parser/codec free of it.
+     * Declarative layout: the editor renders the format through the generic layout renderer
+     * (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the parse result's
+     * `variantId`). Absent, the binary editor has no renderer for the format and the webview shows its
+     * error banner - which is why DLG, rendered by the dialog editor, omits it. This is
+     * presentation-only data (sibling of `presentationSchema`); keep parser/codec free of it.
      */
     readonly layout?: FormatLayout;
 

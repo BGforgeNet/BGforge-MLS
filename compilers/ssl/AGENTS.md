@@ -44,8 +44,9 @@ a pin has moved.
 ## The corpus cannot tell you what the language is
 
 Every defect found by reading the reference compiler's own lexer and parser was invisible to a green sweep of
-1517 scripts: `\v` decoded as the letter `v`, adjacent string literals, character constants, `variable a[10]`
-never creating its array, `break` outside a loop compiling to a jump into whatever was on the stack. None
+the whole corpus (`CORPUS_SIZE` in `test/integration/corpus.ts`): `\v` decoded as the letter `v`, adjacent
+string literals, character constants, `variable a[10]` never creating its array, `break` outside a loop
+compiling to a jump into whatever was on the stack. None
 appear in the corpus, so the differential agreed with us all the way.
 
 So when the question is "what does the language do here", **read the reference implementation** - it is open

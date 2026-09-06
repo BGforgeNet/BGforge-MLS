@@ -90,7 +90,7 @@ const SCENERY_VARIANT_NAMES = ["door", "stairs", "elevator", "ladderBottom", "la
 /**
  * Stable layout-variant id for the declarative renderer, derived from object type (+ item/scenery
  * subtype). Used to select the matching variant in `pro/layout-schema.ts`; an unknown subtype falls
- * back to the bare object-type id (which has no layout variant -> the editor uses the legacy tabs path).
+ * back to the bare object-type id, for which no variant exists, so the editor shows its error banner.
  */
 function proVariantId(objectType: number, subType: number | undefined): string {
     switch (objectType) {

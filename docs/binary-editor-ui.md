@@ -258,9 +258,10 @@ What a writer in the Svelte webview must honour.
 
 ### Field-presentation features cover every block renderer, through one shared layer
 
-Fields render through MULTIPLE components: `Field.svelte` (kv/detail forms), `blocks/FieldsBlock.svelte`
-(packed titled boxes), `blocks/GridBlock.svelte` (label+control grids), `blocks/MatrixBlock.svelte` (2D
-matrices), with `CellControl.svelte` as the shared control dispatcher underneath. A per-field presentation
+Fields render through MULTIPLE components under `client/src/binary-editor/webview/components/`:
+`Field.svelte` (kv/detail forms), `blocks/FieldsBlock.svelte` (packed titled boxes), `blocks/GridBlock.svelte`
+(label+control grids), `blocks/MatrixBlock.svelte` (2D matrices), with `CellControl.svelte` as the shared
+control dispatcher underneath. A per-field presentation
 property (a tooltip, a range hint, a diagnostic/advisory, a link affordance) added to ONE of these renderers
 is a defect unless every other renderer either also gets it (via one shared helper/component, never per-block
 copies) or is explicitly declared N/A with the reason. A field's presentation must not depend on which block

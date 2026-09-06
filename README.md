@@ -78,7 +78,7 @@ They bring the TypeScript type system, many TypeScript features, and better tool
 
 ## Binary formats
 
-Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, have a built-in [binary editor](#binary-editor) with JSON dump/load support.
+Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, have a built-in [binary editor](#binary-editor) with JSON dump/load support. Infinity Engine `.dlg` files are read and written by the same library, but open in the [dialog editor](#dialog-editor) rather than the binary one.
 
 ## GitHub Actions
 

@@ -31,8 +31,8 @@ Pick the cheapest tool that answers the actual question.
   a gallery drive.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
   order: `pnpm -C binary build` (only if `binary/src` changed) -> `pnpm exec tsx binary-editor/test/harness/build.mts`
-  (after any webview/Svelte/`styles.css` edit) -> a driver (`render-pro-eff.mts`, `render-itm.mts`, `render-spl.mts`,
-  `render-cre.mts`, `render-map.mts`, `render-primitives.mts`). Prereq: `pnpm exec playwright install chromium`.
+  (after any webview/Svelte/`styles.css` edit) -> one of the `render-*.mts` drivers in that same directory
+  (`ls binary-editor/test/harness`). Prereq: `pnpm exec playwright install chromium`.
   Harness: `binary-editor/test/harness/README.md`. UI conventions and the screenshot review brief:
   `binary-editor/AGENTS.md`.
 - **The whole extension in a real VS Code** -> `pnpm dev:web` (code-server; the harness above only draws the webview
@@ -76,8 +76,8 @@ gate and the sibling to copy: `docs/development.md`.
 
 ## Generated files - never hand-edit
 
-- **`syntaxes/*.tmLanguage.json`** are fully generated. After editing any `syntaxes/*.tmLanguage.yml`, run
-  `scripts/syntaxes-to-json.sh` before testing or committing.
+- **`syntaxes/*.tmLanguage.json`** are fully generated from `syntaxes/*.tmLanguage.yml` by
+  `scripts/syntaxes-to-json.sh`.
 - **Stanzas marked `# Auto-generated`** inside `syntaxes/*.tmLanguage.yml` come from `server/data/*.yml` via
   `generate-data.sh`. Edit the data source and regenerate. Full list: `docs/data-pipeline.md`.
 - **Generated artifacts are excluded from `oxfmt` but stay linted by `oxlint`.** The asymmetry is deliberate - do not
@@ -85,6 +85,9 @@ gate and the sibling to copy: `docs/development.md`.
   guards that keep it honest: `docs/ignore-files.md`.
 - **Sort `server/data/*.yml`** with `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Never
   hand-roll sorting.
+- Both of the above are enforced by `scripts/utils/test/syntaxes-generated.test.ts`, which regenerates the JSON into
+  a temp dir and re-runs the sorter in memory. It exempts the generator-owned data files, and
+  `server/data/fallout-worldmap-txt.yml`, which is committed in a different order.
 
 ## Traps
 

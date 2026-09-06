@@ -55,7 +55,7 @@ sparse `Partial<Document>` and merge over defaults.
 
 ### Prerequisites
 
-The flat sorted-array projection for flag fields (rule #7) is in place across all five formats -
+The flat sorted-array projection for flag fields (rule #7) is in place across every format -
 flag fields surface as `string[]` in canonical-doc. The construction API exposes
 `item.header.flags.unidentified = true` as a typed-accessor wrapper over that shape, not as
 direct inheritance of the canonical shape. For enums and PIDs,

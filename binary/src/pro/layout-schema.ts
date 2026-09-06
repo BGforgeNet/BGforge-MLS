@@ -1,12 +1,12 @@
 /**
  * PRO declarative layout. Attached to the PRO adapter so the editor renders PRO on a single dense page
- * via the generic layout renderer instead of the legacy depth-0-groups-as-tabs path. The active variant
- * is chosen by the parse result's `variantId` (see `proVariantId` in `index.ts`).
+ * via the generic layout renderer. The active variant is chosen by the parse result's `variantId` (see
+ * `proVariantId` in `index.ts`).
  *
  * Every PRO object/sub type has a variant: critter (the worked mockup), the seven item subtypes
  * (weapon/armor/ammo/drug/misc/key/container), the six scenery subtypes (door/stairs/elevator/ladderTop/
- * ladderBottom/generic), and wall/tile/misc. With all variants present the parser never falls back to the
- * legacy depth-0-groups-as-tabs path (since retired).
+ * ladderBottom/generic), and wall/tile/misc. Only the bare `item`/`scenery` ids `proVariantId` emits for
+ * an unknown subtype have none.
  *
  * Field refs are the semantic keys `toSemanticFieldKey("pro", sourceSegments)` produces. The critter parser
  * flattens to one "Critter" group, so its keys are `pro.critter.<field>`; every other type keys its fields

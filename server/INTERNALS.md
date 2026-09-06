@@ -585,7 +585,6 @@ Reusable infrastructure that providers consume via configuration, not inheritanc
 | `tooltip-format.ts`     | Formatting: `buildSignatureBlock()`, `buildWeiduHoverContent()`, `formatDeprecation()`  | All providers       |
 | `tooltip-table.ts`      | Tables: `buildWeiduTable()` (4-col), `buildFalloutArgsTable()` (2-col)                  | SSL, BAF, D, TP2    |
 | `semantic-tokens.ts`    | Encoding: `SemanticTokenSpan`, `encodeSemanticTokens()`, legend                         | SSL, TP2            |
-| `hash.ts`               | Utility: `djb2HashHex()` for parse cache keys                                           | All parsers         |
 
 ### Design pattern
 
