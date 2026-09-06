@@ -6,7 +6,7 @@
  * branching in the snapshot, presentation, editor, and validation layers.
  */
 
-import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
+import type { NumericRange } from "./binary-format-contract";
 import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
 import type { FormatLayout } from "./layout-schema-types";
 import type { CrossRefRelationship } from "./cross-ref-relationship";
@@ -230,27 +230,7 @@ class FormatAdapterRegistry {
     }
 }
 
+// Holds no reference to any concrete format: `register-formats.ts` registers the built-in adapters.
+// Registering them here would put this module above `pro/` while `presentation-schema.ts` keeps it
+// below, closing a package-root <-> `pro/` import cycle.
 export const formatAdapterRegistry = new FormatAdapterRegistry();
-
-// Eagerly register every built-in format adapter, then install the
-// registry-driven domain-range lookup into `binary-format-contract`. The
-// setter pattern keeps `binary-format-contract` cycle-free: derive-zod
-// and per-format canonical schemas import codec primitives from there
-// without dragging in the format-adapter graph.
-import { proFormatAdapter } from "./pro/format-adapter";
-import { mapFormatAdapter } from "./map/format-adapter";
-import { itmFormatAdapter } from "./itm/format-adapter";
-import { splFormatAdapter } from "./spl/format-adapter";
-import { effFormatAdapter } from "./eff/format-adapter";
-import { dlgFormatAdapter } from "./dlg/format-adapter";
-import { creFormatAdapter } from "./cre/format-adapter";
-
-formatAdapterRegistry.register(proFormatAdapter);
-formatAdapterRegistry.register(mapFormatAdapter);
-formatAdapterRegistry.register(itmFormatAdapter);
-formatAdapterRegistry.register(splFormatAdapter);
-formatAdapterRegistry.register(effFormatAdapter);
-formatAdapterRegistry.register(dlgFormatAdapter);
-formatAdapterRegistry.register(creFormatAdapter);
-
-setDomainRangeLookup((format, fieldKey) => formatAdapterRegistry.get(format)?.domainRanges?.[fieldKey]);

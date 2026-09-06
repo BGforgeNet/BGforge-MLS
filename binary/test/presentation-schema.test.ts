@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { getFormatPresentationSchema, resolveFieldPresentation, toNumericOptionMap } from "../src/presentation-schema";
 
 describe("presentation-schema", () => {

@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { loadBinaryJsonSnapshot, createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
 import type { ParseResult } from "../src/types";
 

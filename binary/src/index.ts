@@ -163,19 +163,5 @@ export type {
     IeFlavour,
 } from "./archive";
 
-// Side-effect: register the bundled parsers on the registry.
-import { proParser } from "./pro";
-import { mapParser } from "./map";
-import { itmParser } from "./itm";
-import { splParser } from "./spl";
-import { effParser } from "./eff";
-import { dlgParser } from "./dlg";
-import { creParser } from "./cre";
-import { parserRegistry } from "./registry";
-parserRegistry.register(proParser);
-parserRegistry.register(mapParser);
-parserRegistry.register(itmParser);
-parserRegistry.register(splParser);
-parserRegistry.register(effParser);
-parserRegistry.register(dlgParser);
-parserRegistry.register(creParser);
+// Side-effect: populate the parser and format-adapter registries.
+import "./register-formats";

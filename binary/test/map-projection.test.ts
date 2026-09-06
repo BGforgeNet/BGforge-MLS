@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import * as fs from "fs";
 import * as path from "path";
 import { formatAdapterRegistry, type ProjectedEntry } from "../src/format-adapter";
