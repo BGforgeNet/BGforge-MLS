@@ -109,6 +109,14 @@ jobs:
       - name: Install WeiDU
         run: ./scripts/ensure-weidu.sh
 
+      # zizmor's online audit rules need GitHub API access, so the workflow lint runs here with a
+      # token of its own. The Test step below runs the same lint offline, and a token on that step
+      # would reach every suite in the gate.
+      - name: Workflow lint (online audits)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm lint:workflows
+
       - name: Test
         run: pnpm test:all
 

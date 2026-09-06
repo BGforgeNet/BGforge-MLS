@@ -17,7 +17,7 @@ cd "$SCRIPT_DIR/.."
 source "$SCRIPT_DIR/tool-download-lib.sh"
 
 ACTIONLINT_VERSION="1.7.12"
-ZIZMOR_VERSION="1.29.0"
+ZIZMOR_VERSION="1.30.0"
 
 ACTIONLINT_CACHE_DIR=".dev/actionlint-${ACTIONLINT_VERSION}"
 ACTIONLINT_BIN="$ACTIONLINT_CACHE_DIR/actionlint"
@@ -34,8 +34,8 @@ declare -A ACTIONLINT_SHA256=(
 )
 declare -A ZIZMOR_SHA256=(
     # keys quoted so shfmt doesn't read the hyphens as arithmetic and reformat them
-    ["x86_64-unknown-linux-gnu"]="dd96df044a6e8538d5f423790f453bdd03d49e5b2bcc38214acc41a2f1297839"
-    ["aarch64-unknown-linux-gnu"]="415eaa7c0a06479a701b8e44a3e812c1047decc848ec4bede7bd6bbf49f22d20"
+    ["x86_64-unknown-linux-gnu"]="ec8c95cd800845abb9bbc5f377ec7c57d2eb8e2386a00a201d3a74ee4092e5ed"
+    ["aarch64-unknown-linux-gnu"]="018a024d6b6d09733b07f6ef42838d984c23ec04bc9b2acd55f7d67826aeafe5"
 )
 
 os="$(uname -s)"
@@ -88,8 +88,13 @@ fi
 # aren't workflow documents) - zizmor covers those.
 "${actionlint_cmd[@]}"
 
-# --offline states the mode zizmor already runs in: with no GH_TOKEN it falls back to offline and
-# prints a notice on every run. The audits it disables need GitHub API access, and the alternative -
-# putting a token in the environment of the whole `pnpm test:all` step this runs inside - hands it to
-# every suite in the gate, which is a worse trade than losing those audits.
-"${zizmor_cmd[@]}" --offline --config zizmor.yml .github/workflows/ actions/
+# zizmor's online audit rules need GitHub API access. With a token in the environment they run;
+# without one zizmor falls back to offline anyway, and asking for --offline explicitly keeps the
+# notice it prints in that case out of the output. CI gives the token to a workflow-lint step of
+# its own rather than to the `pnpm test:all` step this also runs inside, which would hand it to
+# every suite in the gate.
+zizmor_args=(--config zizmor.yml)
+if [[ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}${ZIZMOR_GITHUB_TOKEN:-}" ]]; then
+    zizmor_args+=(--offline)
+fi
+"${zizmor_cmd[@]}" "${zizmor_args[@]}" .github/workflows/ actions/

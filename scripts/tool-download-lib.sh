@@ -14,7 +14,7 @@
 # against EXPECTED_SHA256 (a mismatch is fatal, so a compromised release asset can't
 # silently swap the binary). If ARCHIVE_MEMBER is given, URL is an archive - .zip, or
 # .tar.gz otherwise - and that single member is extracted; without it URL is a raw binary
-# copied directly into place. A zip member is flattened to its basename, since a release
+# copied directly into place. An archive member is flattened to its basename, since a release
 # archive nests the binary under its own top-level directory and DEST_BIN names where it
 # should land.
 ensure_verified_tool() {
@@ -48,10 +48,14 @@ ensure_verified_tool() {
         fi
         unzip -q -o -j "$tmp_dir/download" "$archive_member" -d "$(dirname "$dest_bin")"
     else
+        # --strip-components drops the member's leading directories so it lands at DEST_BIN
+        # rather than under a version-named subdirectory.
         # --no-same-owner: extract as the invoking user regardless of the uid/gid recorded
         # in the archive - the release tarball's uid isn't guaranteed to exist (or be
         # chown-able to) in every CI/sandbox environment.
-        tar -xzf "$tmp_dir/download" -C "$(dirname "$dest_bin")" --no-same-owner "$archive_member"
+        local member_slashes="${archive_member//[^\/]/}"
+        tar -xzf "$tmp_dir/download" -C "$(dirname "$dest_bin")" --no-same-owner \
+            --strip-components="${#member_slashes}" "$archive_member"
     fi
     chmod +x "$dest_bin"
     rm -rf "$tmp_dir"

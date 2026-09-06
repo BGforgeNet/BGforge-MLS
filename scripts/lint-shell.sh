@@ -10,6 +10,40 @@ cd "$SCRIPT_DIR/.."
 # shellcheck source=scripts/tool-download-lib.sh
 source "$SCRIPT_DIR/tool-download-lib.sh"
 
+os="$(uname -s)"
+arch="$(uname -m)"
+
+# GitHub-hosted runners preinstall shellcheck, so unlike shfmt below the pinned binary has to
+# win over PATH: otherwise a runner-image bump changes which checks the gate runs.
+# koalaman/shellcheck publishes no checksums manifest, so the hashes are pinned from the sha256
+# of the immutable v0.11.0 release tarballs. A platform with no pinned build falls back to the
+# host's own shellcheck.
+SHELLCHECK_VERSION="0.11.0"
+SHELLCHECK_CACHE_DIR=".dev/shellcheck-${SHELLCHECK_VERSION}"
+SHELLCHECK_BIN="$SHELLCHECK_CACHE_DIR/shellcheck"
+declare -A SHELLCHECK_SHA256=(
+    ["linux.x86_64"]="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
+    ["linux.aarch64"]="68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+)
+
+shellcheck_cmd=(shellcheck)
+sc_arch=""
+if [[ "$os" == "Linux" ]]; then
+    case "$arch" in
+        x86_64) sc_arch="linux.x86_64" ;;
+        aarch64 | arm64) sc_arch="linux.aarch64" ;;
+    esac
+fi
+if [[ -n "$sc_arch" ]]; then
+    ensure_verified_tool "shellcheck v${SHELLCHECK_VERSION}" \
+        "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.${sc_arch}.tar.gz" \
+        "${SHELLCHECK_SHA256[$sc_arch]}" "$SHELLCHECK_BIN" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+    shellcheck_cmd=("$SHELLCHECK_BIN")
+elif ! command -v shellcheck >/dev/null 2>&1; then
+    echo "lint-shell.sh: no pinned shellcheck build for ${os}/${arch}; install shellcheck and put it on PATH" >&2
+    exit 1
+fi
+
 # shfmt isn't preinstalled on GitHub-hosted runners (shellcheck is), so fetch a pinned,
 # checksum-verified binary when it's absent - the same version the devbox ships, so a
 # local pass and a CI pass format-agree. mvdan/sh publishes no checksums manifest, so the
@@ -24,8 +58,6 @@ declare -A SHFMT_SHA256=(
 
 shfmt_cmd=(shfmt)
 if ! command -v shfmt >/dev/null 2>&1; then
-    os="$(uname -s)"
-    arch="$(uname -m)"
     if [[ "$os" != "Linux" ]]; then
         echo "lint-shell.sh: no bundled shfmt download for OS '$os'; install shfmt and put it on PATH" >&2
         exit 1
@@ -48,9 +80,9 @@ fi
 # -c: include cached/tracked files
 # -o: include other/untracked files (but still respect .gitignore)
 # --exclude-standard: use standard git exclude rules
-git ls-files -co --exclude-standard '*.sh' | xargs shellcheck -x
+git ls-files -zco --exclude-standard '*.sh' | xargs -0r "${shellcheck_cmd[@]}" -x
 
 # Format check: -i 4 matches the .editorconfig 4-space shell indent, -ci indents
 # switch-case bodies. `shfmt -d` exits non-zero on any unformatted file (fix with
 # `shfmt -i 4 -ci -w <file>`).
-git ls-files -co --exclude-standard '*.sh' | xargs "${shfmt_cmd[@]}" -i 4 -ci -d
+git ls-files -zco --exclude-standard '*.sh' | xargs -0r "${shfmt_cmd[@]}" -i 4 -ci -d
