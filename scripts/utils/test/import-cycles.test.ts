@@ -37,18 +37,6 @@ const ALLOWED: readonly { readonly reason: string; readonly files: readonly stri
             "format/src/fallout-ssl/expressions.ts",
         ],
     },
-    {
-        // Pre-existing pair, not domain-imposed: `utils` builds macro tooltips through `macro-utils`,
-        // which reaches back for the shared tooltip base.
-        reason: "fallout-ssl tooltip helpers",
-        files: ["server/src/fallout-ssl/macro-utils.ts", "server/src/fallout-ssl/utils.ts"],
-    },
-    {
-        // Pre-existing pair, not domain-imposed: `hover` parses headers, and the header parser
-        // embeds hover markdown in the completion items it builds.
-        reason: "weidu-tp2 header parser and hover",
-        files: ["server/src/weidu-tp2/header-parser.ts", "server/src/weidu-tp2/hover.ts"],
-    },
 ];
 
 /**

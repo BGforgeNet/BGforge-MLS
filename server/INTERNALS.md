@@ -158,6 +158,7 @@ server/src/
 |   +-- rename.ts
 |   +-- definition.ts
 |   +-- hover.ts
+|   +-- hover-content.ts      # Hover markdown builders shared with header-parser
 |   +-- callable-symbols.ts   # FUNCTION/MACRO/ACTION definitions
 |   +-- callable-definitions.ts
 |   +-- variable-symbols.ts   # INT_VAR / STR_VAR definitions

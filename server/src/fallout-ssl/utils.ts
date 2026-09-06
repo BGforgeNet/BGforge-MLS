@@ -23,7 +23,7 @@ import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { sslMapGet, sslNameKey, sslNamesEqual } from "../../../shared/fallout-ssl-names";
-import { jsdocToMarkdown } from "./jsdoc-format";
+import { buildTooltipBase } from "./jsdoc-format";
 import {
     type MacroData,
     parseMacroParams,
@@ -126,35 +126,6 @@ function buildProcedureSignature(name: string, params: ParamInfo[], parsed: jsdo
     }
 
     return formatSignature({ name, prefix, params: sigParams });
-}
-
-/**
- * Build base tooltip content: signature block + optional file path + optional JSDoc
- * + optional engine doc (for engine procedures).
- * Shared by procedures and macros.
- * Used by: hover (contents.value), completion (documentation.value), header symbols.
- */
-export function buildTooltipBase(
-    signature: string,
-    jsdocData: jsdoc.JSdoc | null,
-    filePath?: string,
-    engineDoc?: string,
-): string {
-    let markdown = buildSignatureBlock(signature, LANG_FALLOUT_SSL_TOOLTIP, filePath);
-    if (jsdocData) {
-        markdown += jsdocToMarkdown(jsdocData);
-    }
-    if (engineDoc) {
-        if (jsdocData) {
-            // Separate engine doc from user JSDoc with a horizontal rule.
-            markdown += "\n\n---\n\n";
-        } else {
-            // No user JSDoc - still need a blank line after the closing code fence.
-            markdown += "\n\n";
-        }
-        markdown += engineDoc;
-    }
-    return markdown;
 }
 
 /**
