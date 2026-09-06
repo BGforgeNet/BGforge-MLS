@@ -74,7 +74,6 @@ lefthook.yml
 stryker.conf.json
 tsconfig.base.json
 vitest.config.ts
-vitest.workspace.ts
 zizmor.yml
 
 # Per-workspace node_modules under binary/binary-editor/format are covered by the
