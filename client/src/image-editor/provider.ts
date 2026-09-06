@@ -811,17 +811,40 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             })) ?? [];
         if (folder === undefined) return;
 
+        // Nothing is rolled back on a failed write: the destination is a folder of the reader's own, which
+        // can already hold files this run did not put there. The report carries the state instead - which
+        // member stopped it, and what is in the folder now.
+        const written: string[] = [];
+        const stopped = (name: string, error: unknown): Error => {
+            const cause = error instanceof Error ? error.message : String(error);
+            const listed = written.length === 0 ? "" : ` (${written.join(", ")})`;
+            const rest = written.length === result.writes.length ? "" : "; the rest were not written";
+            return new Error(
+                `${name} could not be written: ${cause}. ${folder.fsPath} now holds ${written.length} of ` +
+                    `${result.writes.length} converted files${listed}${rest}.`,
+            );
+        };
         for (const write of result.writes) {
-            const uri = vscode.Uri.joinPath(folder, `${write.resref}.${write.extension}`);
-            // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
-            await vscode.workspace.fs.writeFile(uri, write.bytes);
+            const name = `${write.resref}.${write.extension}`;
+            try {
+                // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
+                await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(folder, name), write.bytes);
+            } catch (error) {
+                throw stopped(name, error);
+            }
+            written.push(name);
         }
         if (result.notesFile !== undefined) {
             const stem = request.prefix === "" ? defaultPrefix(found.set) : request.prefix;
-            await vscode.workspace.fs.writeFile(
-                vscode.Uri.joinPath(folder, `${stem}-notes.md`),
-                new TextEncoder().encode(result.notesFile),
-            );
+            const name = `${stem}-notes.md`;
+            try {
+                await vscode.workspace.fs.writeFile(
+                    vscode.Uri.joinPath(folder, name),
+                    new TextEncoder().encode(result.notesFile),
+                );
+            } catch (error) {
+                throw stopped(name, error);
+            }
         }
         const count = result.writes.length;
         void vscode.window.showInformationMessage(
