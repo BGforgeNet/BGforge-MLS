@@ -137,7 +137,7 @@ describe("stancesOfMembers", () => {
     it("drops a band the scheme addresses no sequence to", () => {
         const stances = stancesOfMembers([member("G1", "MAKHG1")], () => bands(4, 8), "monster_ankheg");
 
-        expect(stances.map((s) => s.label)).toEqual(["DE - die", "TW - twitch", "SD - stand"]);
+        expect(stances.map((s) => s.label)).toEqual(["DE - die", "TW - twitch", "SD - stand (emerged)"]);
         // The index is the band's address in the file, so dropping the first one must not renumber the rest.
         expect(stances.map((s) => s.band)).toEqual([1, 2, 3]);
     });
@@ -151,7 +151,7 @@ describe("stancesOfMembers", () => {
             "A2/CA - attack or cast",
             "A3/SP - attack or spell",
         ]);
-        expect(declared.map((s) => s.label)).toEqual(["SC - combat stance", "EMERGE - emerge", "HIDE - burrow"]);
+        expect(declared.map((s) => s.label)).toEqual(["SD - stand (hidden)", "EMERGE - emerge", "HIDE - burrow"]);
     });
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {

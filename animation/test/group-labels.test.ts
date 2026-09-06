@@ -53,8 +53,26 @@ describe("ieGroupLabels", () => {
     test("marks the block the burrowing scheme addresses nothing to", () => {
         const groups = ieGroups("makhg1.bam", 4, "ie8", "monster_ankheg");
         expect(groups?.[0]?.unused).toBe(true);
-        expect(groups?.slice(1).map((group) => group.label)).toEqual(["DE - die", "TW - twitch", "SD - stand"]);
+        expect(groups?.slice(1).map((group) => group.label)).toEqual([
+            "DE - die",
+            "TW - twitch",
+            "SD - stand (emerged)",
+        ]);
         expect(groups?.some((group) => group.unused === true && group.id !== undefined)).toBe(false);
+    });
+
+    /**
+     * The burrowing scheme stands twice - once above ground and once under it - and only the emerged one is
+     * the stance every other family calls `stand`. Both reference implementations name the underground block
+     * a stand of its own; calling it a combat stance named a third thing neither of them does.
+     */
+    test("names the burrowing scheme's two standing blocks apart", () => {
+        const hidden = ieGroups("makhg2.bam", 3, "ie8", "monster_ankheg");
+        expect(hidden?.[0]?.label).toBe("SD - stand (hidden)");
+        expect(hidden?.[0]?.id).toBeUndefined();
+
+        const emerged = ieGroups("makhg1.bam", 4, "ie8", "monster_ankheg");
+        expect(emerged?.[3]?.id).toBe("stand");
     });
 
     // A family that spreads its bands over several files numbers them from the packed name, and each of

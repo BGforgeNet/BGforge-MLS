@@ -85,10 +85,13 @@ const ANKHEG_G1: IeGroup[] = [
     { label: "(unused)", unused: true },
     { label: "DE - die", id: "die" },
     { label: "TW - twitch", id: "twitch" },
-    { label: "SD - stand", id: "stand" },
+    { label: "SD - stand (emerged)", id: "stand" },
 ];
 const ANKHEG_G2: IeGroup[] = [
-    { label: "SC - combat stance", id: "ready" },
+    // Unpinned: this is the burrower's second standing block, the one it holds underground. Both reference
+    // implementations name it a stand rather than a combat stance, and it cannot take the `stand` id the
+    // emerged block above already carries.
+    { label: "SD - stand (hidden)" },
     { label: "EMERGE - emerge" },
     { label: "HIDE - burrow" },
 ];
