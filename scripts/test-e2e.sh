@@ -44,11 +44,10 @@ export CODE_TESTS_PATH
 CODE_TESTS_WORKSPACE="$ROOT_DIR/client/testFixture"
 export CODE_TESTS_WORKSPACE
 
-if command -v xvfb-run >/dev/null 2>&1; then
-    xvfb-run -a node "$ROOT_DIR/client/out/test/runTest.js"
-else
-    echo "xvfb-run not found; running E2E tests without Xvfb." >&2
-    node "$ROOT_DIR/client/out/test/runTest.js"
+if ! command -v xvfb-run >/dev/null 2>&1; then
+    fail_e2e "required command 'xvfb-run' is not available. Install xvfb before 'pnpm test:e2e'."
 fi
+
+xvfb-run -a node "$ROOT_DIR/client/out/test/runTest.js"
 
 timing_summary "E2E tests passed"
