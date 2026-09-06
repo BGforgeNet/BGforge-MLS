@@ -18,8 +18,11 @@ import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node"
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { collectParseErrors } from "../../../shared/parse-errors";
 
-/** Diagnostic source label - distinct from the compiler's "BGforge MLS" so hovers say which engine flagged it. */
-const DIAG_SOURCE = "BGforge MLS (syntax)";
+/**
+ * Diagnostic source label - distinct from the compiler's "BGforge MLS" so hovers say which engine
+ * flagged it. Exported because the code-action handler matches on it before reading the wording.
+ */
+export const DIAG_SOURCE = "BGforge MLS (syntax)";
 
 /** Cap the offending-token text so a long/multiline error span keeps the hover readable. */
 const MAX_TOKEN_LEN = 32;

@@ -1,10 +1,11 @@
 /**
  * Quick fixes for the syntax diagnostics the tree-sitter pass publishes.
  *
- * Only a MISSING-node diagnostic determines an edit: its wording (see `shared/tree-sitter-diagnostics.ts`)
- * names the exact token the grammar expected, and the node is zero-width, so both the text and the
- * insertion point are given. An ERROR-node diagnostic carries no expected token, and a compiler
- * diagnostic names a symbol rather than a token; neither gets an action.
+ * Only a MISSING-node diagnostic from this server's syntax pass determines an edit: it carries that
+ * pass's source label, its wording (see `shared/tree-sitter-diagnostics.ts`) names the exact token the
+ * grammar expected, and the node is zero-width, so both the text and the insertion point are given. An
+ * ERROR-node diagnostic carries no expected token, and a compiler diagnostic names a symbol rather than
+ * a token; neither gets an action.
  */
 
 import {
@@ -18,6 +19,7 @@ import {
 } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { timeHandler } from "../shared/time-handler";
+import { DIAG_SOURCE } from "../shared/tree-sitter-diagnostics";
 import type { HandlerContext } from "./context";
 
 /** The MISSING-node wording, as `collectParseDiagnostics` formats it. */
@@ -32,6 +34,11 @@ const PUNCTUATION = /^[^\p{L}\p{N}_\s]+$/u;
 
 /** The token a diagnostic says is missing, or undefined when it names no insertable one. */
 function missingToken(diagnostic: Diagnostic): string | undefined {
+    // The client sends every diagnostic on the range, this server's and other extensions'; only the
+    // tree-sitter pass publishes the wording this parses, so the source gates the parse.
+    if (diagnostic.source !== DIAG_SOURCE) {
+        return undefined;
+    }
     // A 3.18 diagnostic message may be markup; only the plain wording this server publishes matches.
     const message = typeof diagnostic.message === "string" ? diagnostic.message : diagnostic.message.value;
     const token = MISSING_TOKEN.exec(message)?.[1];

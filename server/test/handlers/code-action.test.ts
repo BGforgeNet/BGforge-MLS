@@ -23,7 +23,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as codeAction from "../../src/handlers/code-action";
 import type { HandlerContext } from "../../src/handlers/context";
-import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
+import { DIAG_SOURCE, collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 import { getParser, initParser } from "../../../shared/parsers/fallout-ssl";
 
 type CodeActionHandler = (params: {
@@ -57,7 +57,7 @@ function syntaxDiagnostic(message: string, line: number, character: number): Dia
     return {
         message,
         range: { start: { line, character }, end: { line, character: character + 1 } },
-        source: "BGforge MLS (syntax)",
+        source: DIAG_SOURCE,
     };
 }
 
@@ -108,6 +108,17 @@ describe("code-action handler", () => {
             message: "Unknown identifier qq.",
             range: { start: { line: 1, character: 0 }, end: { line: 1, character: 2 } },
             source: "BGforge MLS",
+        };
+
+        expect(handler({ textDocument: { uri: URI }, context: { diagnostics: [diagnostic] } })).toEqual([]);
+    });
+
+    it("offers nothing for another source's diagnostic that happens to use the same wording", () => {
+        const handler = wire(makeDocs("procedure start begin\n    display_msg(1;\nend\n"));
+        const diagnostic: Diagnostic = {
+            message: "missing ')'",
+            range: { start: { line: 1, character: 18 }, end: { line: 1, character: 19 } },
+            source: "some other extension",
         };
 
         expect(handler({ textDocument: { uri: URI }, context: { diagnostics: [diagnostic] } })).toEqual([]);
