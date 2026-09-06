@@ -25,14 +25,6 @@ const REGENERATE_TIMEOUT_MS = 300_000;
 
 const GENERATED_MARKER = /^#\s*Auto-generated\b.*\bDo not hand-edit\b/;
 
-/** Hand-maintained data files the sorter's output form does not describe. */
-const UNSORTED = new Map<string, string>([
-    [
-        "fallout-worldmap-txt.yml",
-        "committed in a different stanza and item order; moving it to the sorter's form would reorder the highlight patterns generated from it",
-    ],
-]);
-
 function ymlFiles(dir: string): string[] {
     return fs
         .readdirSync(dir)
@@ -70,9 +62,7 @@ describe("syntaxes/*.tmLanguage.json is what the generator produces", () => {
 
 describe("hand-maintained server/data YAML is sorted", () => {
     const handMaintained = ymlFiles(DATA_DIR).filter(
-        (name) =>
-            !GENERATED_MARKER.test(fs.readFileSync(path.join(DATA_DIR, name), "utf8").split("\n", 1)[0] ?? "") &&
-            !UNSORTED.has(name),
+        (name) => !GENERATED_MARKER.test(fs.readFileSync(path.join(DATA_DIR, name), "utf8").split("\n", 1)[0] ?? ""),
     );
 
     it("finds files to check", () => {
@@ -82,10 +72,5 @@ describe("hand-maintained server/data YAML is sorted", () => {
     it.each(handMaintained)("%s is in the sorter's output form", (name) => {
         const source = fs.readFileSync(path.join(DATA_DIR, name), "utf8");
         expect(sortYamlStanzasAndItems(source)).toBe(source);
-    });
-
-    it("exempts only files that still exist", () => {
-        const stale = [...UNSORTED.keys()].filter((name) => !fs.existsSync(path.join(DATA_DIR, name)));
-        expect(stale).toEqual([]);
     });
 });
