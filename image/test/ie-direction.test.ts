@@ -108,6 +108,42 @@ describe("interpretIeDirections", () => {
         expect(result?.groups[7]?.map((s) => s.facing)).toEqual(WEST_ARC_16);
     });
 
+    /**
+     * The shape that made this tolerance necessary: eleven fully populated 9-blocks, ten of them exactly
+     * uniform and one carrying a single extra frame in one direction. Measured across both shipped
+     * installs, an ie9 file's worst block is off by 0 or by 1 and nothing lies between 1 and 16, so a
+     * file like this is a direction-block file with a rounding wobble, not a different kind of file.
+     */
+    test("tolerates one direction of one block carrying an extra frame", () => {
+        const sequences: SequenceShape[] = [];
+        let next = 0;
+        for (let block = 0; block < 11; block++) {
+            for (let slot = 0; slot < 9; slot++) {
+                const length = block === 8 && slot === 5 ? 47 : 46;
+                sequences.push(seq(range(next, length)));
+                next += length;
+            }
+        }
+        const result = interpretIeDirections(sequences, next);
+        expect(result?.scheme).toBe("ie9");
+        expect(result?.detected).toBe(true);
+        expect(result?.groups).toHaveLength(11);
+    });
+
+    /** Past the tolerance the file is something else, and the two real installs' outliers are far past it. */
+    test("refuses a block whose directions differ by more than one frame", () => {
+        const sequences: SequenceShape[] = [];
+        let next = 0;
+        for (let block = 0; block < 11; block++) {
+            for (let slot = 0; slot < 9; slot++) {
+                const length = block === 8 && slot === 5 ? 62 : 46;
+                sequences.push(seq(range(next, length)));
+                next += length;
+            }
+        }
+        expect(interpretIeDirections(sequences, next)?.detected).toBe(false);
+    });
+
     test("reads a 72-cycle base file of 8-blocks as the coarse scheme", () => {
         const { sequences, frameCount } = baseFileSequences(9);
         const result = interpretIeDirections(sequences, frameCount);

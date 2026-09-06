@@ -13,6 +13,29 @@ const FILE_AT: ResourceLocation = { kind: "file", path: "/game/override/GUI.BAM"
 const BIF_AT: ResourceLocation = { kind: "bif", archivePath: "/game/data/gui.bif", entry: 3, tileset: false };
 
 describe("runJob", () => {
+    /**
+     * A thrown non-Error still has to reach the panel as a readable reason. Node's own IO throws Errors,
+     * so only a dependency throwing a string or an object gets here - and that is exactly the case where
+     * a bare `.message` read would put `undefined` in front of the reader instead of the cause.
+     */
+    it("reports a thrown non-Error as its own text", () => {
+        const out = runJob(
+            { id: 9, kind: "thumbnail", item: "ODD.BAM", at: FILE_AT, ext: "bam", size: 64 },
+            {
+                readBytes: () => {
+                    // eslint-disable-next-line no-throw-literal -- the non-Error throw is what this pins
+                    throw "the archive said no";
+                },
+            },
+        );
+        expect(out).toEqual<GalleryResponse>({
+            id: 9,
+            kind: "error",
+            item: "ODD.BAM",
+            message: "the archive said no",
+        });
+    });
+
     it("asks for pages before decoding a v2 item", () => {
         const readBytes = vi.fn().mockReturnValue(bamV2WithPages(12).bam);
         const out = runJob(

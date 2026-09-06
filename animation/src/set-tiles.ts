@@ -5,7 +5,6 @@
  * and it is worth testing without an extension host.
  */
 import { type AnimationSet, firstArmour, setTitle } from "./animation-index";
-import { type CharacterFacets } from "./animation-facets";
 import { characterMember } from "./animation-schemes/character";
 import { schemeMembers } from "./animation-schemes/members";
 
@@ -23,13 +22,6 @@ export interface SetTile {
     /** The prefix the set draws under at its lowest armour level, for the tile's thumbnail. */
     resref: string | undefined;
     unsupported: string | undefined;
-    /**
-     * What this set is, where its id says so - what the browser's filters narrow on.
-     *
-     * Absent for everything that is not a character: a monster or a named individual has no race or class,
-     * and the filters treat that as "matches nothing but ANY" rather than inventing a value for it.
-     */
-    facets?: CharacterFacets;
 }
 
 /**
@@ -86,6 +78,5 @@ export function setTile(set: AnimationSet, exists: (resref: string) => boolean):
         // A resolved preview outranks any verdict: the note belongs on a row that cannot be opened, and
         // explaining an absence beside a working link is the worse of the two errors.
         unsupported: resref === undefined ? emptyNote(set, hasPrefix) : undefined,
-        ...(set.facets === undefined ? {} : { facets: set.facets }),
     };
 }

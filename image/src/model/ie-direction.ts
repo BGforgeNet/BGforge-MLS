@@ -249,17 +249,30 @@ function chooseScheme(
     return best;
 }
 
-/** Fraction of blocks whose arc slots all carry the same (non-zero) frame count. */
+/**
+ * How far a block's arc slots may differ in length and still count as one stance seen from several sides.
+ *
+ * Measured across both shipped installs: an ie9 file's worst block is off by 0 or by exactly 1, never in
+ * between, and the only files past that are off by 16 and by 107 - so the tolerance sits in a gap rather
+ * than on a slope. Requiring exact equality rejected every file in the off-by-one half, which is most of
+ * the character animations; one direction of one stance carrying an extra frame does not make a file
+ * something other than direction blocks.
+ */
+const ARC_LENGTH_TOLERANCE = 1;
+
+/** Fraction of blocks whose arc slots carry the same (non-zero) frame count, within the tolerance. */
 function blockArcUniformity(lengths: number[], stride: number, arc: number): number {
     const blocks = Math.floor(lengths.length / stride);
     if (blocks === 0) return 0;
     let uniform = 0;
     for (let b = 0; b < blocks; b++) {
-        const first = lengths[b * stride] ?? 0;
+        // Sliced rather than indexed per slot: `blocks` counts only whole blocks, so every index below
+        // `arc` is in range and a per-slot fallback would be a branch nothing can take.
+        const arcLengths = lengths.slice(b * stride, b * stride + arc);
+        const first = arcLengths[0] ?? 0;
         if (first === 0) continue;
-        let same = true;
-        for (let slot = 1; slot < arc; slot++) same &&= lengths[b * stride + slot] === first;
-        if (same) uniform++;
+        const spread = Math.max(...arcLengths) - Math.min(...arcLengths);
+        if (spread <= ARC_LENGTH_TOLERANCE) uniform++;
     }
     return uniform / blocks;
 }

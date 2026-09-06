@@ -16,10 +16,20 @@ body {
     height: 100vh;
 }
 
-/* The browse controls fill the panel until there is something to look at, then step aside into a column
-   beside it. One surface either way: what changes is how much of it the list is entitled to, and a grid
-   of thumbnails is worth the whole width only while nothing has been chosen out of it. */
-.browse {
+/* The controls sit across the top at their own height and never move: a reader picking through a list is
+   still using them once something is drawn, and a bar that re-columned on the first pick moved every
+   control out from under the pointer that had just chosen with it. */
+.controls {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 0;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* The grid takes what is left until there is a picture, then yields most of it and keeps a band. Sized in
+   viewport height rather than rows so the split does not depend on the tile size the reader chose. */
+.browse-grid {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -27,13 +37,12 @@ body {
     min-width: 0;
 }
 
-.gallery.showing {
-    flex-direction: row;
-}
-
-.gallery.showing .browse {
-    flex: 0 0 18rem;
-    border-right: 1px solid var(--vscode-panel-border);
+/* Content-sized up to the cap, not fixed at it: a search narrowed to one row of tiles would otherwise hold
+   a third of the panel empty above the picture. The cap is what a full corpus gets, and it scrolls there. */
+.gallery.showing .browse-grid {
+    flex: 0 0 auto;
+    max-height: 30vh;
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 /* The animation surface's own root expects a flex column to lay its banner, stage and toolbar down. */
@@ -54,8 +63,8 @@ body {
     padding: 8px;
     border-bottom: 1px solid var(--vscode-panel-border);
     flex: 0 0 auto;
-    /* Wraps, because this bar shares a narrow column with the picture once one is being drawn - unwrapped,
-       the two fixed-width selects took the whole row and squeezed the search field to nothing. */
+    /* Wraps, because unwrapped the two fixed-width selects take the whole row in a narrow panel and
+       squeeze the search field to nothing. */
     flex-wrap: wrap;
 }
 
@@ -184,79 +193,9 @@ body {
     border-bottom-color: var(--vscode-focusBorder);
 }
 
-/* Animation-set list. Same reason as the tab strip: the CSP drops a component-injected <style>. */
-.setlist {
-    flex: 1;
-    list-style: none;
-    margin: 0;
-    overflow-y: auto;
-    padding: 4px 8px;
-}
-.setrow {
-    margin: 0;
-}
-.setopen {
-    align-items: baseline;
-    background: transparent;
-    border: none;
-    color: var(--vscode-foreground);
-    cursor: pointer;
-    display: flex;
-    gap: 10px;
-    padding: 3px 6px;
-    text-align: left;
-    width: 100%;
-}
-.setopen:hover:not(:disabled) {
-    background: var(--vscode-list-hoverBackground);
-}
-.setopen:disabled {
-    cursor: default;
-    opacity: 0.7;
-}
-/* The row a link landed on. A left rule rather than a background, so it stays visible under the hover and
-   selection backgrounds a reader moves through while looking for it. */
-.setfocus {
-    box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
-}
-/* Fixed tracks, not content-sized ones: over hundreds of rows an auto-width name column puts every id and
-   every reason at a different x, and the eye cannot scan a column that moves per row. Sized past the
-   longest name either shipped install's tables carry, so the track holds without truncating. */
-.setname {
-    flex: 0 0 auto;
-    /* Monospace like the other two identifier columns, which also makes the `ch` track exact rather than an
-       estimate over a proportional font. */
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 12px;
-    width: 30ch;
-}
-.setid,
-.setresref {
-    color: var(--vscode-descriptionForeground);
-    flex: 0 0 auto;
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 11px;
-}
-.setid {
-    width: 7ch;
-}
-.setresref {
-    width: 6ch;
-}
-/* The reason takes the remaining width and stays on one line: it is an explanation, not the row's subject. */
-.setnote {
-    color: var(--vscode-descriptionForeground);
-    flex: 1 1 auto;
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 /* Every native select in the panel takes VS Code's dropdown tokens - left unthemed one renders as OS
    chrome, a light box punched into a dark panel. */
-.filterselect,
-.facet select {
+.filterselect {
     background: var(--vscode-dropdown-background);
     border: 1px solid var(--vscode-dropdown-border, transparent);
     border-radius: 2px;
@@ -265,8 +204,7 @@ body {
     font-size: var(--vscode-font-size);
     padding: 3px 4px;
 }
-.filterselect:focus,
-.facet select:focus {
+.filterselect:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
 }
@@ -282,32 +220,18 @@ body {
     width: 13ch;
 }
 
-/* The animation filters and the picker they narrow, as one block of controls. */
-.setfilters {
-    display: flex;
-    flex: 0 0 auto;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-    padding: 8px 8px 0;
-}
+/* A fixed track sized past the longest option, never the bar's width and never the current selection's:
+   an option is a 30ch name (the bound the set-name column already records for either shipped install)
+   plus ` 0xNNNN (RESREF)`. The bar is wider than that and stays empty to the right, which is what an
+   ungrown control looks like. */
 .setpicker {
     display: flex;
     flex-direction: column;
     flex: 0 0 auto;
     gap: 2px;
     padding: 8px;
-    max-width: 26rem;
-}
-/* Bounded, not full-width: this column also holds a grid of thumbnails, and a control stretched to its
-   width would read as the panel's subject rather than as one of four above the list. */
-.setfilters .facet {
-    flex: 1 1 8rem;
-    max-width: 14rem;
-}
-.facet {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    width: 48ch;
+    max-width: 100%;
 }
 .facetlabel {
     color: var(--vscode-descriptionForeground);

@@ -36,10 +36,6 @@
         "./group-labels": {
             "types": "./out/group-labels.d.ts",
             "import": "./out/group-labels.js"
-        },
-        "./facet-labels": {
-            "types": "./out/facet-labels.d.ts",
-            "import": "./out/facet-labels.js"
         }
     },
     "scripts": {

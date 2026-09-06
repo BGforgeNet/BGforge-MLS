@@ -3,9 +3,7 @@
     import { filterTiles } from "../grid-window";
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
-    import { ANY_SELECTION, type FilterSelection, filterControls, filterSets } from "../set-filter";
     import Grid from "./Grid.svelte";
-    import SetFilters from "./SetFilters.svelte";
     import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -69,8 +67,6 @@
     let thumbnails: Map<string, string | undefined> = $state(new Map());
     /** Which answered items are creature animations, so a tile can say why its picture holds one frame. */
     let directional: Set<string> = $state(new Set());
-    /** How the animation list is narrowed. All ANY is where a panel opens: everything the install declares. */
-    let filters: FilterSelection = $state({ ...ANY_SELECTION });
     /** The animation this panel was opened on, if any - kept for the note when the install has no such id. */
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
@@ -92,8 +88,6 @@
     );
     /** The formats, on the same terms: one format alone is not a choice. */
     const formats = $derived([...new Set(items.map((tile) => tile.ext))].sort());
-    const filterBar = $derived(filterControls(sets, filters));
-    const shownSets = $derived(filterSets(sets, filters));
     const hasSets = $derived(sets.length > 0);
 
     const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
@@ -106,9 +100,6 @@
             sets = message.sets;
             note = message.note;
             focusSet = message.focusSet;
-            // Back to ANY with the corpus: this is a new install's animations, and a race carried over from
-            // the last one would narrow the list to nothing while every control still reads as a choice.
-            filters = { ...ANY_SELECTION };
             // A restored panel can ask for a tab this source cannot fill; resolveTab decides, not the
             // stored value. A panel opened ON an animation asks for the sets tab.
             tab = resolveTab(message.focusSet === undefined ? tab : "sets", message.sets.length > 0);
@@ -140,7 +131,10 @@
 </script>
 
 <div class="gallery" class:showing={showing !== undefined}>
-<div class="browse">
+<!-- Choosing what to draw is a bar across the top; everything below it is the animation editor as its own
+     tab draws it. The controls keep their place and their width whatever is on the stage, so picking
+     something moves nothing that the reader is still using to pick with. -->
+<div class="controls">
 {#if showTabStrip(hasSets)}
     <Tabs current={tab} onSelect={(next) => (tab = next)} />
 {/if}
@@ -160,35 +154,43 @@
         {format}
         onFormat={(v) => (format = v)}
     />
-{/if}
-{#if tab === "sets"}
-    <SetFilters
-        controls={filterBar}
-        onSelect={(family, value) => (filters = { ...filters, [family]: value })}
-    />
-    <SetPicker sets={shownSets} current={showing?.set} onChoose={(id) => post({ type: "showSet", id })} />
+{:else}
+    <!-- A fixture of this tab, not a state of it: drawn from the moment the tab opens and keeping its
+         place afterwards, holding no value until one is chosen. The drawn surface's own column carries no
+         set row here, so this is the one place a set is chosen. -->
+    <SetPicker {sets} current={showing?.set} onChoose={(id) => post({ type: "showSet", id })} />
     {#if focusSet !== undefined && !sets.some((set) => set.id === focusSet)}
         <p class="facetnone">This install has no animation {hex(focusSet)}.</p>
     {/if}
-{:else if loaded && items.length === 0}
-    <p class="empty">{note ?? "No drawable resources here."}</p>
-{:else}
-    <Grid
-        tiles={shown}
-        {thumbnails}
-        {directional}
-        {tileSize}
-        {ladder}
-        onOpen={(id) => post({ type: "open", id })}
-        onNeed={(ids, size) => post({ type: "requestThumbnails", ids, size })}
-    />
 {/if}
 </div>
+{#if tab === "files"}
+    {#if loaded && items.length === 0}
+        <p class="empty">{note ?? "No drawable resources here."}</p>
+    {:else}
+        <!-- The file grid stays reachable while something is drawn - it is how the next file is chosen -
+             so it keeps a band of its own rather than being replaced by the stage. -->
+        <div class="browse-grid">
+            <Grid
+                tiles={shown}
+                {thumbnails}
+                {directional}
+                {tileSize}
+                {ladder}
+                onOpen={(id) => post({ type: "open", id })}
+                onNeed={(ids, size) => post({ type: "requestThumbnails", ids, size })}
+            />
+        </div>
+    {/if}
+{/if}
 {#if showing}
     <!-- Mounted once and kept: it holds the reader's zoom, background and layout choice, which a remount
          per selection would reset under them. A new selection reaches it as another `init`. -->
     <div class="stage-pane">
-        <AnimationApp bridge={viewerBridge} />
+        <!-- The set's controls answer to the tab, not to what happens to be drawn: a reader who has moved
+             to the file list is not choosing an animation set, and a set left on the stage behind them
+             should not keep offering its own pickers there. -->
+        <AnimationApp bridge={viewerBridge} showSet={tab === "sets"} showSetChoice={false} />
     </div>
 {/if}
 </div>

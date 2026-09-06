@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type AnimationSet, armourLevels } from "../src/animation-index";
 import { type CharacterFacets } from "../src/animation-facets";
-import { actionLabel, armourLabel, facetLabel } from "../src/facet-labels";
+import { actionLabel, armourLabel } from "../src/facet-labels";
 
 function characterSet(id: number, facets: CharacterFacets, prefix: string, levels = 4): AnimationSet {
     const prefixByArmour = new Map<number, string>();
@@ -18,22 +18,6 @@ function characterSet(id: number, facets: CharacterFacets, prefix: string, level
 }
 
 const elfMage: CharacterFacets = { race: "elf", gender: "female", charClass: "mage" };
-
-describe("facetLabel", () => {
-    it("spells a facet value the way a control should read it", () => {
-        expect([facetLabel("elf"), facetLabel("female"), facetLabel("mage")]).toEqual(["Elf", "Female", "Mage"]);
-    });
-
-    /** The tables' own spelling is one word; a dropdown reading "Halforc" looks like a typo, not a race. */
-    it("hyphenates the one value the tables run together", () => {
-        expect(facetLabel("halforc")).toBe("Half-orc");
-    });
-
-    /** A value from an install this vocabulary does not cover is shown as it came, never dropped. */
-    it("passes an unknown value through", () => {
-        expect(facetLabel("tiefling")).toBe("tiefling");
-    });
-});
 
 describe("armourLabel", () => {
     it("names the levels the tables ship", () => {

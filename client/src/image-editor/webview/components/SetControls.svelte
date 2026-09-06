@@ -7,17 +7,22 @@
     // most four options and an action list around twenty, all of them visible at once in a native list.
     //
     // The SET is the exception: an install declares hundreds, so choosing one is a search rather than a
-    // list, and the host's own quick pick already is that search. This is the button that opens it.
+    // list, and the host's own quick pick already is that search. This is the button that opens it - and
+    // it is omitted where the surface around this column already carries a set picker of its own, so one
+    // panel never offers the same choice twice.
     import type { SetView } from "../messages";
 
     const {
         set,
+        showChoice = true,
         onArmourChange,
         onActionChange,
         onPickSet,
         onConvert,
     }: {
         set: SetView;
+        /** Whether choosing the SET belongs here, or to the surface around this column. */
+        showChoice?: boolean;
         onArmourChange: (level: number) => void;
         onActionChange: (resref: string) => void;
         onPickSet: () => void;
@@ -27,10 +32,12 @@
 </script>
 
 <div class="view-controls" role="group" aria-label="Animation set">
-    <label class="view-field" title="Which animation set this editor is pointed at">
-        <span class="view-label">Set</span>
-        <button type="button" class="set-pick" onclick={onPickSet}>{set.title}</button>
-    </label>
+    {#if showChoice}
+        <label class="view-field" title="Which animation set this editor is pointed at">
+            <span class="view-label">Set</span>
+            <button type="button" class="set-pick" onclick={onPickSet}>{set.title}</button>
+        </label>
+    {/if}
     {#if set.armours.length > 1}
         <label class="view-field" title="Which armour level's files this set draws from">
             <span class="view-label">Armour</span>

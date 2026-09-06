@@ -83,4 +83,4 @@ export {
     characterFacetsOf,
     characterIdFor,
 } from "./animation-facets";
-export { ARMOUR_LABELS, actionLabel, armourLabel, facetLabel } from "./facet-labels";
+export { ARMOUR_LABELS, actionLabel, armourLabel } from "./facet-labels";

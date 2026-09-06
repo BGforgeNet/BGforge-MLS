@@ -11,6 +11,7 @@
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import {
+        defaultLayoutMode,
         firstDrawnBlock,
         ieRoseTiles,
         layoutSequences,
@@ -41,9 +42,22 @@
     const {
         bridge,
         viewState,
+        showSet,
+        showSetChoice,
     }: {
         bridge: Bridge;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
+        /**
+         * Whether the set's own controls belong on screen. False where the surrounding surface has moved
+         * the reader on to something else - the gallery's file tab - and the set is still drawn only
+         * because nothing has replaced it yet.
+         */
+        showSet?: boolean;
+        /**
+         * Whether choosing the SET belongs in this column. False where the surface around it carries its
+         * own set picker, which would otherwise be the same choice offered twice.
+         */
+        showSetChoice?: boolean;
     } = $props();
 
     let view = $state<AnimationView | null>(null);
@@ -95,18 +109,12 @@
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
     const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
 
-    // Stage layout (rose vs grid). The default derives from tagged compass facings (FRM), or from the
-    // parser's stamped layout agreeing with the scheme this interpretation chose - both run the same
-    // fingerprint, so agreement means the file's block structure is unambiguous. A fresh open shows
-    // that choice; the selector writes `layoutChoice`, which then wins for the webview's lifetime.
+    // Stage layout (rose vs grid). A fresh open shows the default the file's structure implies; the
+    // selector writes `layoutChoice`, which then wins for the webview's lifetime.
     const facingLayout = $derived(view ? layoutSequences(view) : null);
     const ieRose = $derived(view ? interpretIeDirections(view.sequences, view.frames.length) : undefined);
     const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
-    const defaultLayoutMode: LayoutMode = $derived(
-        facingLayout?.mode === "compass" || (ieRose && view?.meta.directionLayout === ieRose.scheme)
-            ? "rose"
-            : "grid",
-    );
+    const defaultMode: LayoutMode = $derived(defaultLayoutMode(facingLayout, ieRose));
     // Seeded from the interpretation's block size, so the flat grid falls into rows=sequences x
     // columns=directions with whichever stride the file actually uses.
     const cycleAnalysis = $derived(view ? analyzeCycleGrid(view.sequences.length, ieRose?.scheme) : undefined);
@@ -127,7 +135,7 @@
     // eslint-disable-next-line prefer-const -- reassigned via onModeChange in the LayoutModeControls markup
     let layoutChoice = $state<LayoutMode | undefined>();
     const layoutMode = $derived.by((): LayoutMode => {
-        const choice = layoutChoice ?? defaultLayoutMode;
+        const choice = layoutChoice ?? defaultMode;
         // A sticky "rose" choice can outlive rose-ability (e.g. an import replaced the animation).
         return choice === "rose" && !roseAvailable ? "grid" : choice;
     });
@@ -361,10 +369,11 @@
             {/if}
         </div>
         <aside class="controls-column">
-            {#if view.set}
+            {#if view.set && showSet !== false}
                 <!-- First in the column: it selects WHAT is shown, where everything below it selects how. -->
                 <SetControls
                     set={view.set}
+                    showChoice={showSetChoice !== false}
                     onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
                     onActionChange={(resref) => bridge.send({ type: "selectSetAction", resref })}
                     onPickSet={() => bridge.send({ type: "pickSet" })}

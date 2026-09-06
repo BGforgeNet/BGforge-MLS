@@ -159,6 +159,26 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
 }
 
 /**
+ * Which layout a fresh open shows.
+ *
+ * Rose whenever the file's structure says it holds directions: tagged compass facings (FRM), or an IE
+ * interpretation that found MORE THAN ONE direction block. The block count is the discriminator rather
+ * than the interpretation's own `detected` fingerprint, because the two answer different questions:
+ * `detected` decides what the file is DECLARED to be, is stamped at parse and read by the save path, and
+ * is conservative on purpose - a file it rejects can still plainly be direction blocks, and both shipped
+ * installs carry such files. Being wrong about the declaration writes bad blocks; being wrong about the
+ * default costs one click, so the default reads the weaker structural signal. Block count separates the
+ * corpus cleanly: no single-block animation in either install is a character or is detected.
+ */
+export function defaultLayoutMode(
+    facingLayout: CompassLayout | GridLayout | null,
+    ieDirections: IeDirectionAnalysis | undefined,
+): LayoutMode {
+    if (facingLayout?.mode === "compass") return "rose";
+    return ieDirections !== undefined && ieDirections.groups.length > 1 ? "rose" : "grid";
+}
+
+/**
  * The first direction block that draws anything, or 0 where none does.
  *
  * A file of a packed family carries every block of that family's skeleton and draws only the one its own

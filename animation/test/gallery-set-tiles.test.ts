@@ -57,6 +57,21 @@ describe("setPreviewResref", () => {
         expect(setPreviewResref(unknown, has("MWYVG1"))).toBeUndefined();
     });
 
+    /**
+     * A set whose tables name a layout but no armour levels at all. The lowest level stands in as 1 so the
+     * prefix lookup still has a key to ask with - it comes back empty, and the tile says the set draws
+     * nothing rather than throwing on the way there.
+     */
+    it("has no preview for a layout set that declares no armour levels", () => {
+        const bare = setOf({
+            id: 0x9100,
+            scheme: { kind: "unimplemented", scheme: 0x9100, reason: "declared with no prefixes" },
+            layout: "cycles",
+            prefixByArmour: new Map(),
+        });
+        expect(setPreviewResref(bare, has("MOGRG1"))).toBeUndefined();
+    });
+
     it("stands a non-character layout at the first member the archive answers for", () => {
         const ogre = setOf({
             id: 0x9000,
@@ -89,17 +104,6 @@ describe("setTile", () => {
     it("falls back to the code, then to the id, for a set the tables barely name", () => {
         expect(setTile(setOf({ id: 0x6004, code: "CGMC" }), nothing).label).toBe("CGMC");
         expect(setTile(setOf({ id: 0xe440 }), nothing).label).toBe("0xe440");
-    });
-
-    /**
-     * The facets travel on the tile because the browser filters on them, and their ABSENCE is the load-
-     * bearing half: a monster has no race, so a race filter must exclude it rather than match it on a
-     * value invented here.
-     */
-    it("carries a character's facets and leaves a monster without any", () => {
-        const facets = { race: "gnome", gender: "male", charClass: "cleric" } as const;
-        expect(setTile(setOf({ ...cleric, facets }), nothing).facets).toEqual(facets);
-        expect("facets" in setTile(setOf({ id: 0xa000, code: "MWYV" }), nothing)).toBe(false);
     });
 
     // The three reasons a row draws nothing are different answers to "what do I do about this?", and only

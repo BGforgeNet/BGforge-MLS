@@ -1,31 +1,11 @@
 /**
  * How an animation's own vocabulary is spelled for a reader.
  *
- * One home for it, because several surfaces show the same values: the gallery's filters, the set pickers
- * in the animation editor, and the conversion notes. The tables spell them for a parser - `halforc`, an
- * armour LEVEL, an action struct - and none of those is what a control should say.
+ * One home for it, because several surfaces show the same values: the set pickers in the animation editor
+ * and the conversion notes. The tables spell them for a parser - an armour LEVEL, an action struct - and
+ * neither is what a control should say.
  */
 import { type Action, characterMiscBlock } from "./animation-schemes/character";
-
-const TITLES: Record<string, string> = {
-    human: "Human",
-    elf: "Elf",
-    dwarf: "Dwarf",
-    halfling: "Halfling",
-    gnome: "Gnome",
-    halforc: "Half-orc",
-    male: "Male",
-    female: "Female",
-    cleric: "Cleric",
-    fighter: "Fighter",
-    mage: "Mage",
-    thief: "Thief",
-    monk: "Monk",
-};
-
-export function facetLabel(value: string): string {
-    return TITLES[value] ?? value;
-}
 
 export const ARMOUR_LABELS: Record<number, string> = {
     1: "None",

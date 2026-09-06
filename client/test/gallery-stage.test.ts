@@ -26,12 +26,17 @@ type Doc = { uri: string; disposed: boolean };
 function fakeHost() {
     const opened: Doc[] = [];
     const attached: { doc: Doc; detached: boolean }[] = [];
+    /** The surface the stage hands the editor - how a save or a set change gets back out of the panel. */
+    const surfaces: { save: (doc: never) => Promise<void>; showSet: (dir: string, id: number) => Promise<void> }[] = [];
+    const saved: Doc[] = [];
     const pending: (() => void)[] = [];
     let hold = false;
 
     return {
         opened,
         attached,
+        surfaces,
+        saved,
         /** Make the next opens wait until `release` is called. */
         holdOpens: () => {
             hold = true;
@@ -59,9 +64,11 @@ function fakeHost() {
             attach: (
                 document: never,
                 channel: { onMessage: (h: (m: unknown) => Promise<void>) => { dispose: () => void } },
+                surface: { save: (doc: never) => Promise<void>; showSet: (dir: string, id: number) => Promise<void> },
             ) => {
                 const entry = { doc: document as unknown as Doc, detached: false };
                 attached.push(entry);
+                surfaces.push(surface);
                 const subscription = channel.onMessage(async (message) => {
                     received.push(message);
                 }) as { dispose: () => void };
@@ -72,7 +79,9 @@ function fakeHost() {
                     },
                 };
             },
-            saveDocument: async () => {},
+            saveDocument: async (document: never) => {
+                saved.push(document as unknown as Doc);
+            },
         },
     };
 }
@@ -80,9 +89,18 @@ function fakeHost() {
 const received: unknown[] = [];
 const uri = (value: string): vscodeTypes.Uri => ({ toString: () => value }) as vscodeTypes.Uri;
 
+const shownSets: { dir: string; id: number }[] = [];
+
 function stageOver(host: ReturnType<typeof fakeHost>) {
     received.length = 0;
-    return createAnimationStage({ host: host.host, post: () => {}, showSet: async () => {} });
+    shownSets.length = 0;
+    return createAnimationStage({
+        host: host.host,
+        post: () => {},
+        showSet: async (dir: string, id: number) => {
+            shownSets.push({ dir, id });
+        },
+    });
 }
 
 describe("the gallery's animation stage", () => {
@@ -138,6 +156,24 @@ describe("the gallery's animation stage", () => {
         expect(await second).toBe(true);
         expect(host.opened[0]?.disposed).toBe(true);
         expect(host.attached.map((entry) => entry.doc.uri)).toEqual(["set:2"]);
+    });
+
+    /**
+     * The surface is the stage's other half: the editor reaches the panel's host through it, so a save
+     * started inside the drawn surface and a set change asked for from its controls both have to arrive
+     * at the panel's own dependencies. Neither is visible in the picture, and neither has another test.
+     */
+    it("routes a save and a set change from the surface back to the panel", async () => {
+        const host = fakeHost();
+        const stage = stageOver(host);
+
+        await stage.show(uri("set:1"));
+        const surface = host.surfaces[0];
+        await surface?.save(host.opened[0] as never);
+        await surface?.showSet("/games/bg2", 0x6201);
+
+        expect(host.saved.map((doc) => doc.uri)).toEqual(["set:1"]);
+        expect(shownSets).toEqual([{ dir: "/games/bg2", id: 0x6201 }]);
     });
 
     it("disposes what it holds when the panel closes", async () => {
