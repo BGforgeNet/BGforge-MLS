@@ -25,7 +25,12 @@ export default defineConfig({
         //
         // ~1500 gcc invocations plus the same number of in-process runs, against other suites running in
         // parallel on a contended runner. The timeout guards against hangs, not slowness.
+        //
+        // Both, at the same figure and for that same reason: the sweeps do their work in `beforeAll` and
+        // assert over the result, so the hook is what runs long. Left at the default it expired under the
+        // contention of the full gate while every test in the file reported green, and which shard it took
+        // moved between runs - the shape of a starved hook rather than of anything the suite compiles.
         testTimeout: 600000,
-        hookTimeout: 60000,
+        hookTimeout: 600000,
     },
 });
