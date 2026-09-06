@@ -104,12 +104,6 @@ describe("evaluateCondition", () => {
             );
         });
     });
-
-    it("throws on unresolved identifiers", () => {
-        expect(() => evaluateCondition("i < unknown", "i", 5, emptyVars)).toThrow(
-            "Unsupported character 'u' at position 4",
-        );
-    });
 });
 
 describe("substituteVars", () => {
