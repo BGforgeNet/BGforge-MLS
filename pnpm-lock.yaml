@@ -238,6 +238,9 @@ importers:
       '@xyflow/svelte':
         specifier: ^1.6.5
         version: 1.6.5(svelte@5.56.10)
+      bits-ui:
+        specifier: 2.19.0
+        version: 2.19.0(@internationalized/date@3.12.2)(svelte@5.56.10)
       elkjs:
         specifier: ^0.12.0
         version: 0.12.0
@@ -257,12 +260,9 @@ importers:
       '@vscode/test-electron':
         specifier: ^3.1.0
         version: 3.1.0(supports-color@8.1.1)
-      bits-ui:
-        specifier: 2.19.0
-        version: 2.19.0(@internationalized/date@3.12.2)(svelte@5.56.10)
-      glob:
-        specifier: ^13.0.6
-        version: 13.0.6
+      fast-glob:
+        specifier: ^3.3.3
+        version: 3.3.3
 
   compilers/bcs:
     dependencies:
