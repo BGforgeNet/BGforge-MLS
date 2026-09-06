@@ -46,8 +46,7 @@ Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run`
 -> `pnpm test:cov <pkg>...` -> `pnpm build:all` + `pnpm test:all` at close-out.
 
 **`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
-**Run `pnpm test:cov` on the packages you touched before the full gate**: it enforces the same per-package
-thresholds in seconds, where learning a 0.02% miss from `test:all` costs a full run and closing it costs another.
+**Run `pnpm test:cov` on the packages you touched before the full gate** - see `scripts/test-coverage.sh` for why.
 Full tier guidance, and the rule that every vitest config runs from any cwd: `docs/development.md`.
 
 ## Testing against real external files

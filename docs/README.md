@@ -47,13 +47,14 @@ tracked `*.md` not listed below, not under a directory listed below, and not in 
 
 ## Libraries and packages
 
-| Document                                   | Contents                                                                     |
-| ------------------------------------------ | ---------------------------------------------------------------------------- |
-| [../server/README.md](../server/README.md) | The server as a published npm package                                        |
-| [../binary/README.md](../binary/README.md) | Binary library and the `fgbin` CLI (Fallout PRO/MAP, IE ITM/SPL/EFF/CRE/DLG) |
-| [../format/README.md](../format/README.md) | Formatter library and the `fgfmt` CLI                                        |
-| [../image/README.md](../image/README.md)   | Animation library: FRM/BAM codecs, conversions, PNG/APNG import/export       |
-| [binary-editor-ui.md](binary-editor-ui.md) | Binary editor UI: layout schema, render layer, screenshot review brief       |
+| Document                                         | Contents                                                                     |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| [../server/README.md](../server/README.md)       | The server as a published npm package                                        |
+| [../binary/README.md](../binary/README.md)       | Binary library and the `fgbin` CLI (Fallout PRO/MAP, IE ITM/SPL/EFF/CRE/DLG) |
+| [../format/README.md](../format/README.md)       | Formatter library and the `fgfmt` CLI                                        |
+| [../image/README.md](../image/README.md)         | FRM/BAM codec library: conversions, PNG/APNG import/export                   |
+| [../animation/README.md](../animation/README.md) | IE animation sets: declarations, file layout, cycle bands, facets            |
+| [binary-editor-ui.md](binary-editor-ui.md)       | Binary editor UI: layout schema, render layer, screenshot review brief       |
 
 ## Test harnesses
 

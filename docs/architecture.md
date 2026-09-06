@@ -89,7 +89,8 @@ vscode-mls/
 |   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-editor/          Dialog Editor (custom text editor + Svelte webview; @xyflow/svelte graph)
 |   |   +-- binary-editor/          Binary .pro/.map/.itm/.spl/.eff/.cre custom editor (worker thread + Svelte webview; uses @bgforge/binary + @bgforge/binary-editor)
-|   |   +-- image-editor/           Animation editor for Fallout FRM / IE BAM (custom editor + Svelte webview; uses @bgforge/image)
+|   |   +-- image-editor/           Animation editor for Fallout FRM / IE BAM (custom editor + Svelte webview; uses @bgforge/image + @bgforge/animation)
+|   |   +-- gallery/                Image Gallery: thumbnail grid over an installed game or a workspace folder (webview panel; uses @bgforge/animation + @bgforge/image)
 |   |   +-- ie-resources/           IE game resource viewer: sidebar tree over an installed game, plus the bgforge-ie-resource: FileSystemProvider that lets the editors open and save resources out of chitin.key/BIF and override/
 |   |   +-- script-view/            bgforge-script: FileSystemProvider backing the read-and-recompile views below
 |   |   +-- bcs-editor/             Compiled IE script (.bcs/.bs) view: decompiles to BAF, recompiles on save
@@ -139,8 +140,13 @@ vscode-mls/
 |   +-- src/                    index.ts (public library) + internal.ts (in-repo helpers) + cli.ts (fgfmt bin)
 |   +-- out/                    tsdown output + WASM files
 |
-+-- image/                  @bgforge/image package: animation library (Fallout FRM / IE BAM codecs, indexed <-> true-colour conversion, PNG/APNG import-export)
++-- image/                  @bgforge/image package: FRM/BAM codec library (Fallout FRM / IE BAM codecs, indexed <-> true-colour conversion, PNG/APNG import-export)
 |   +-- src/                    Codecs (frm/, bam/, png/, palette/, pvrz/) + conversions (convert/, quantize/) + PNG-directory/APNG io (io/)
+|   +-- test/                   Library tests (vitest)
+|   +-- out/                    tsdown output
+|
++-- animation/              @bgforge/animation package: IE animation-set resolution library (declared sets, file layout, cycle bands, neutral model, conversion, facets)
+|   +-- src/                    Index (animation-index.ts) + fallback tables (animation-tables/) + schemes (animation-schemes/) + neutral model (neutral/) + conversion (convert/)
 |   +-- test/                   Library tests (vitest)
 |   +-- out/                    tsdown output
 |
@@ -311,7 +317,9 @@ activate()
   |     Opening the last-used game is deferred until the view is actually shown - it is synchronous and
   |     proportional to the install, so an activation triggered by a script file must not pay for it.
   +-> Register binary editor provider (.pro/.map/.itm/.spl/.eff/.cre files)
-  +-> Register the animation editor (.frm/.bam files)
+  +-> Register the animation editor (.frm/.bam/.animset files)
+  +-> Register the image gallery (webview panel; browses a game install or a workspace folder)
+  |     After the animation editor, which it draws inside itself rather than handing animations over to.
   +-> Register the Dialog Editor custom editor (.d/.ssl/.td/.tssl)
   +-> Start server (server/out/server.js)
 ```
@@ -336,12 +344,13 @@ process, not the extension host.
 
 ### Webview Panels
 
-Two webview-based features, each with a host-side and browser-side module:
+Three webview-based features, each with a host-side and browser-side module:
 
 | Feature       | Host Module                            | Webview Module                             | Trigger                                            |
 | ------------- | -------------------------------------- | ------------------------------------------ | -------------------------------------------------- |
 | Dialog Editor | `client/src/dialog-editor/panel.ts`    | `client/src/dialog-editor/webview/main.ts` | Ctrl+Shift+V (or Reopen With) on .d/.ssl/.td/.tssl |
 | Binary Editor | `client/src/binary-editor/provider.ts` | `client/src/binary-editor/webview/main.ts` | Open .pro/.map/.itm/.spl/.eff/.cre                 |
+| Image Gallery | `client/src/gallery/panel.ts`          | `client/src/gallery/webview/main.ts`       | Command Palette: Game/Workspace Image Gallery      |
 
 The Dialog Editor is a `CustomTextEditorProvider` (viewType `bgforge.dialogEditor`), not a standalone panel: it edits the underlying `.d`/`.ssl`/`.td`/`.tssl` source, round-tripping changes through the server. Its host side is split into `panel.ts` (the vscode/webview boundary - `asWebviewUri`, nonce generation, the cached bundle read), `host-core.ts` (a vscode-agnostic `DialogHostCore` for unit testing), and `dialog-webview-html.ts` (pure CSP + HTML construction). The webview is a Svelte app (`webview/main.ts` -> `App.svelte`) rendering the conversation graph via `@xyflow/svelte`.
 
@@ -349,7 +358,7 @@ For the binary library internals - spec system, primitives, derivation, format-a
 
 #### Webview CSP: styles need `cspSource`, not a bare nonce
 
-Both webviews lock the inline `<script>` bundle to a per-load CSP nonce (`script-src 'nonce-...'`). Styles are
+All three webviews lock the inline `<script>` bundle to a per-load CSP nonce (`script-src 'nonce-...'`). Styles are
 different: a webview's `style-src` **must include `{{cspSource}}`**. VS Code wraps the webview in its own CSP layer
 and only honours `style-src` sources it can attribute to the webview origin (`cspSource`); a `style-src 'nonce-...'`
 with no `cspSource` is honoured by raw Chromium - so it passes any headless or standalone render - but is silently
