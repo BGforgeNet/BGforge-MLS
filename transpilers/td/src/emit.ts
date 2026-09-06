@@ -30,8 +30,23 @@ import {
 } from "./types";
 
 import { TrackedText, joinTracked, type EmittedText } from "../../common/tracked-text";
+import { TranspileError } from "../../common/transpile-error";
 
 const INDENT = "    ";
+
+/**
+ * Wrap a value in WeiDU's `~...~` string form, which has no escape: a tilde inside the value would end
+ * the string early and the rest would parse as syntax. Refused here rather than emitted.
+ * @param line 0-based line of the bundled source, where the IR carries one.
+ */
+function weiduString(value: string, what: string, line?: number): string {
+    if (value.includes("~")) {
+        throw new TranspileError(`${what} contains a tilde, which ends a WeiDU ~...~ string: ${value}`, {
+            line: line === undefined ? undefined : line + 1,
+        });
+    }
+    return `~${value}~`;
+}
 
 /**
  * Emit a complete TD script as D code.
@@ -158,7 +173,7 @@ function emitState(state: TDState): string {
     // State header: IF ~trigger~ label or IF ~~ label
     const trigger = applyHelperFixups(state.trigger ?? "");
     const weight = state.weight !== undefined ? `WEIGHT #${state.weight} ` : "";
-    lines.push(`IF ${weight}~${trigger}~ ${state.label}`);
+    lines.push(`IF ${weight}${weiduString(trigger, "state trigger", state.line)} ${state.label}`);
 
     // SAY - with multisay support: SAY text = text = text
     // States with transitions but no say() emit SAY ~~ (required WeiDU syntax).
@@ -171,7 +186,7 @@ function emitState(state: TDState): string {
 
     // Transitions
     for (const trans of state.transitions) {
-        lines.push(emitTransition(trans));
+        lines.push(emitTransition(trans, state.line));
     }
 
     lines.push("END");
@@ -182,21 +197,21 @@ function emitState(state: TDState): string {
 // Transition
 // =============================================================================
 
-function emitTransition(trans: TDTransition): string {
+function emitTransition(trans: TDTransition, line?: number): string {
     const hasTrigger = trans.trigger !== undefined && trans.trigger !== "";
     const hasReply = trans.reply !== undefined;
 
     // Without reply, use full format: IF ~trigger~ THEN GOTO target
     // With reply, use shorthand: +~trigger~+ @text + target
     if (!hasReply) {
-        return emitTransitionLongform(trans, hasTrigger);
+        return emitTransitionLongform(trans, hasTrigger, line);
     }
 
     let result = INDENT;
 
     // Trigger part: +~trigger~+ or ++
     if (hasTrigger) {
-        result += `+~${applyHelperFixups(trans.trigger!)}~+`;
+        result += `+${weiduString(applyHelperFixups(trans.trigger!), "transition trigger", line)}+`;
     } else {
         result += "++";
     }
@@ -206,7 +221,7 @@ function emitTransition(trans: TDTransition): string {
 
     // DO action
     if (trans.action) {
-        result += ` DO ~${applyHelperFixups(trans.action)}~`;
+        result += ` DO ${weiduString(applyHelperFixups(trans.action), "transition action", line)}`;
     }
 
     // Journal entries
@@ -238,18 +253,17 @@ function emitTransition(trans: TDTransition): string {
  * COPY_TRANS/COPY_TRANS_LATE are emitted directly (not wrapped in IF~THEN)
  * because the WeiDU D grammar treats them as state-level constructs.
  */
-function emitTransitionLongform(trans: TDTransition, hasTrigger: boolean): string {
+function emitTransitionLongform(trans: TDTransition, hasTrigger: boolean, line?: number): string {
     // COPY_TRANS is a state-level terminal, not an IF~THEN transition
     if (trans.next.type === TDTransitionType.CopyTrans) {
         return INDENT + emitTransitionNext(trans.next);
     }
 
-    let result = INDENT + "IF ~";
-    result += hasTrigger ? applyHelperFixups(trans.trigger!) : "";
-    result += "~";
+    const trigger = hasTrigger ? applyHelperFixups(trans.trigger!) : "";
+    let result = INDENT + "IF " + weiduString(trigger, "transition trigger", line);
 
     if (trans.action) {
-        result += ` DO ~${applyHelperFixups(trans.action)}~`;
+        result += ` DO ${weiduString(applyHelperFixups(trans.action), "transition action", line)}`;
     }
 
     result += " " + emitTransitionNext(trans.next);
@@ -311,7 +325,7 @@ function emitText(text: TDText): string {
             result = `#${text.value}`;
             break;
         case TDTextType.Literal:
-            result = `~${text.value}~`;
+            result = weiduString(String(text.value), "literal text");
             break;
         case TDTextType.Forced:
             result = `!${text.value}`;
@@ -361,7 +375,9 @@ function emitChain(chain: TDChain): string {
     // IF trigger THEN filename label
     if (chain.trigger) {
         const weight = chain.weight !== undefined ? `WEIGHT #${chain.weight} ` : "";
-        lines.push(`IF ${weight}~${applyHelperFixups(chain.trigger)}~ THEN ${chain.filename} ${chain.label}`);
+        lines.push(
+            `IF ${weight}${weiduString(applyHelperFixups(chain.trigger), "chain trigger")} THEN ${chain.filename} ${chain.label}`,
+        );
     } else {
         lines.push(`${chain.filename} ${chain.label}`);
     }
@@ -374,13 +390,15 @@ function emitChain(chain: TDChain): string {
         // Speaker switch needed if different speaker (but not for first entry)
         if (entry.speaker && entry.speaker !== currentSpeaker && !firstEntry) {
             // Speaker switch
-            const ifCond = entry.trigger ? ` IF ~${applyHelperFixups(entry.trigger)}~ THEN` : "";
+            const ifCond = entry.trigger
+                ? ` IF ${weiduString(applyHelperFixups(entry.trigger), "chain entry trigger")} THEN`
+                : "";
             const ifExists = entry.ifFileExists ? "IF_FILE_EXISTS " : "";
             lines.push(`== ${ifExists}${entry.speaker}${ifCond}`);
             currentSpeaker = entry.speaker;
         } else if (!firstEntry && entry.trigger) {
             // Same speaker with condition
-            lines.push(`= IF ~${applyHelperFixups(entry.trigger)}~ THEN`);
+            lines.push(`= IF ${weiduString(applyHelperFixups(entry.trigger), "chain entry trigger")} THEN`);
         }
 
         // Update current speaker if this is first entry
@@ -406,7 +424,7 @@ function emitChain(chain: TDChain): string {
 
         // Action after entry
         if (entry.action) {
-            lines.push(`DO ~${applyHelperFixups(entry.action)}~`);
+            lines.push(`DO ${weiduString(applyHelperFixups(entry.action), "chain entry action")}`);
         }
 
         firstEntry = false;
@@ -430,7 +448,7 @@ function emitChainEpilogue(epilogue: TDChainEpilogue): string {
             return `${keyword} ${safe}${epilogue.filename} ${epilogue.target}`;
         }
         case TDEpilogueType.Transitions:
-            return "END\n" + epilogue.transitions.map(emitTransition).join("\n");
+            return "END\n" + epilogue.transitions.map((trans) => emitTransition(trans)).join("\n");
     }
 }
 
@@ -466,7 +484,9 @@ function emitInterject(interject: TDChain | TDInterject): string {
     for (const entry of interject.entries) {
         // Speaker line (INTERJECT always has == prefix, unlike CHAIN)
         if (entry.speaker) {
-            const ifCond = entry.trigger ? ` IF ~${applyHelperFixups(entry.trigger)}~ THEN` : "";
+            const ifCond = entry.trigger
+                ? ` IF ${weiduString(applyHelperFixups(entry.trigger), "interject entry trigger")} THEN`
+                : "";
             const ifExists = entry.ifFileExists ? "IF_FILE_EXISTS " : "";
             lines.push(`  == ${ifExists}${entry.speaker}${ifCond}`);
         }
@@ -481,7 +501,7 @@ function emitInterject(interject: TDChain | TDInterject): string {
 
         // Action after entry
         if (entry.action) {
-            lines.push(`  DO ~${applyHelperFixups(entry.action)}~`);
+            lines.push(`  DO ${weiduString(applyHelperFixups(entry.action), "interject entry action")}`);
         }
     }
 
@@ -507,22 +527,22 @@ function emitPatch(patch: { type: "patch"; operation: TDPatchOperation }): strin
         case TDPatchOp.AlterTrans:
             return emitAlterTrans(op);
         case TDPatchOp.AddStateTrigger:
-            return `ADD_STATE_TRIGGER ${op.filename} ${formatStateList(op.states)} ~${applyHelperFixups(op.trigger)}~${formatUnless(op.unless)}`;
+            return `ADD_STATE_TRIGGER ${op.filename} ${formatStateList(op.states)} ${weiduString(applyHelperFixups(op.trigger), "ADD_STATE_TRIGGER trigger")}${formatUnless(op.unless)}`;
         case TDPatchOp.AddTransTrigger: {
             const trans = op.transitions ? ` DO ${op.transitions.join(" ")}` : "";
-            return `ADD_TRANS_TRIGGER ${op.filename} ${formatStateList(op.states)} ~${applyHelperFixups(op.trigger)}~${trans}${formatUnless(op.unless)}`;
+            return `ADD_TRANS_TRIGGER ${op.filename} ${formatStateList(op.states)} ${weiduString(applyHelperFixups(op.trigger), "ADD_TRANS_TRIGGER trigger")}${trans}${formatUnless(op.unless)}`;
         }
         case TDPatchOp.AddTransAction:
-            return `ADD_TRANS_ACTION ${op.filename} BEGIN ${formatStateList(op.states)} END BEGIN ${op.transitions.join(" ")} END ~${applyHelperFixups(op.action)}~${formatUnless(op.unless)}`;
+            return `ADD_TRANS_ACTION ${op.filename} BEGIN ${formatStateList(op.states)} END BEGIN ${op.transitions.join(" ")} END ${weiduString(applyHelperFixups(op.action), "ADD_TRANS_ACTION action")}${formatUnless(op.unless)}`;
         case TDPatchOp.ReplaceTransTrigger:
         case TDPatchOp.ReplaceTransAction: {
             const keyword = op.op === TDPatchOp.ReplaceTransTrigger ? "REPLACE_TRANS_TRIGGER" : "REPLACE_TRANS_ACTION";
-            return `${keyword} ${op.filename} BEGIN ${formatStateList(op.states)} END BEGIN ${op.transitions.join(" ")} END ~${applyHelperFixups(op.oldText)}~ ~${applyHelperFixups(op.newText)}~${formatUnless(op.unless)}`;
+            return `${keyword} ${op.filename} BEGIN ${formatStateList(op.states)} END BEGIN ${op.transitions.join(" ")} END ${weiduString(applyHelperFixups(op.oldText), `${keyword} search text`)} ${weiduString(applyHelperFixups(op.newText), `${keyword} replacement text`)}${formatUnless(op.unless)}`;
         }
         case TDPatchOp.ReplaceTriggerText:
         case TDPatchOp.ReplaceActionText: {
             const keyword = op.op === TDPatchOp.ReplaceTriggerText ? "REPLACE_TRIGGER_TEXT" : "REPLACE_ACTION_TEXT";
-            return `${keyword} ${op.filenames.join(" ")} ~${applyHelperFixups(op.oldText)}~ ~${applyHelperFixups(op.newText)}~${formatUnless(op.unless)}`;
+            return `${keyword} ${op.filenames.join(" ")} ${weiduString(applyHelperFixups(op.oldText), `${keyword} search text`)} ${weiduString(applyHelperFixups(op.newText), `${keyword} replacement text`)}${formatUnless(op.unless)}`;
         }
         case TDPatchOp.SetWeight:
             return `SET_WEIGHT ${op.filename} ${op.state} #${op.weight}`;
@@ -532,7 +552,7 @@ function emitPatch(patch: { type: "patch"; operation: TDPatchOperation }): strin
             // Format: REPLACE_STATE_TRIGGER filename state1 ~trigger~ [state2 state3...] [UNLESS ~condition~]
             const [firstState, ...restStates] = op.states;
             const rest = restStates.length > 0 ? ` ${formatStateList(restStates)}` : "";
-            return `REPLACE_STATE_TRIGGER ${op.filename} ${firstState} ~${applyHelperFixups(op.trigger)}~${rest}${formatUnless(op.unless)}`;
+            return `REPLACE_STATE_TRIGGER ${op.filename} ${firstState} ${weiduString(applyHelperFixups(op.trigger), "REPLACE_STATE_TRIGGER trigger")}${rest}${formatUnless(op.unless)}`;
         }
         case TDPatchOp.ReplaceStates:
             return emitReplaceStates(op);
@@ -549,10 +569,10 @@ function emitAlterTrans(op: TDAlterTrans): string {
 
     if (op.changes.trigger !== undefined) {
         const triggerValue = op.changes.trigger === false ? "" : applyHelperFixups(op.changes.trigger);
-        lines.push(`  "TRIGGER" ~${triggerValue}~`);
+        lines.push(`  "TRIGGER" ${weiduString(triggerValue, "ALTER_TRANS trigger")}`);
     }
     if (op.changes.action !== undefined) {
-        lines.push(`  "ACTION" ~${applyHelperFixups(op.changes.action)}~`);
+        lines.push(`  "ACTION" ${weiduString(applyHelperFixups(op.changes.action), "ALTER_TRANS action")}`);
     }
     if (op.changes.reply !== undefined) {
         lines.push(`  "REPLY" ${emitText(op.changes.reply)}`);
@@ -567,7 +587,7 @@ function formatStateList(states: (string | number)[]): string {
 }
 
 function formatUnless(unless?: string): string {
-    return unless ? ` UNLESS ~${unless}~` : "";
+    return unless ? ` UNLESS ${weiduString(unless, "UNLESS condition")}` : "";
 }
 
 function emitReplaceStates(op: TDReplaceStates): string {
