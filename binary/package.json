@@ -58,6 +58,7 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
+        "fast-check": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },
