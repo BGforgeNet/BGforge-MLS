@@ -237,6 +237,27 @@ test("ieRoseTiles builds one direction block's rose from untagged cycles, at the
 });
 
 /**
+ * A coarse-path band stores each picture in a pair of neighbouring slots, so its sixteen slots carry eight
+ * facings. A rose is one tile per compass point: a second tile of the same facing lands at the same angle,
+ * hidden under the first, and the keyed list the rose renders from cannot hold two of one key at all.
+ */
+test("ieRoseTiles gives a coarse-path band one tile per facing, not one per slot", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    // Real frames: the declared band cut drops any slot whose refs fall outside the frame table.
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+    const blocks = directionBlocks(view, { stride: 16, coarse: true });
+    if (!blocks) throw new Error("expected declared blocks");
+
+    const tiles = ieRoseTiles(view, blocks, 0);
+
+    expect(tiles.map((tile) => tile.facing)).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);
+    expect(new Set(tiles.map((tile) => tile.facing)).size).toBe(tiles.length);
+    // The tile kept is the first slot of each pair, so the rose draws the same art the grid opens on.
+    expect(tiles.map((tile) => tile.seq.frameRefs[0])).toEqual([1, 3, 5, 7, 9, 11, 13, 15]);
+});
+
+/**
  * A packed file's skeleton: sixteen cycles in two stride-8 blocks, where the first block references only
  * the 1x1 placeholder every undrawn band of a character file is padded with, and the second holds sprites.
  */

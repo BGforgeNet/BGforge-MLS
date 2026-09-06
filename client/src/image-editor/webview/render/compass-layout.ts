@@ -248,12 +248,22 @@ export function firstDrawnBlock(
     return at === -1 ? 0 : at;
 }
 
-/** Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction). */
+/**
+ * Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction).
+ *
+ * One tile per FACING, not per slot: a band whose animation declares no smooth path stores each picture in
+ * a pair of neighbouring slots, and a rose is a picture per compass point - two tiles of one facing would
+ * land at the same angle, drawn one over the other. The grid layout is where every stored cycle is
+ * addressable; this is the view of what the animation faces.
+ */
 export function ieRoseTiles(view: AnimationView, interpretation: DirectionBlocks, group: number): RoseTile[] {
     const slots: readonly IeDirectionSlot[] = interpretation.groups[group] ?? [];
+    const taken = new Set<Facing>();
     return slots.flatMap((slot) => {
         const seq = view.sequences[slot.seqIndex];
         const pos = compassPosition(slot.facing);
-        return seq && pos ? [{ seq, pos, facing: slot.facing }] : [];
+        if (seq === undefined || pos === undefined || taken.has(slot.facing)) return [];
+        taken.add(slot.facing);
+        return [{ seq, pos, facing: slot.facing }];
     });
 }
