@@ -7,10 +7,10 @@
  * third of a 10.2 MB artifact. Serving both from this file leaves one copy.
  *
  * It stays TWO INSTANCES, not one. A worker has one event loop and both workloads are synchronous CPU,
- * so a shared instance would queue a ~10 ms dialog parse behind a first TSSL compile of ~690 ms. The
- * instances are separate because of that, not because the code had to be; each client owns one and
- * only ever sends its own kinds, so the other half of this file is dead weight in each - dead weight
- * that costs nothing at run time and saves a whole copy of ts-morph on disk.
+ * so a shared instance would queue a short dialog parse behind a first TSSL compile orders of magnitude
+ * longer than it. The instances are separate because of that, not because the code had to be; each client
+ * owns one and only ever sends its own kinds, so the other half of this file is dead weight in each - dead
+ * weight that costs nothing at run time and saves a whole copy of ts-morph on disk.
  */
 
 import { parentPort } from "node:worker_threads";

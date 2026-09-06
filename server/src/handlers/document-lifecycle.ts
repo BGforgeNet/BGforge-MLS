@@ -29,7 +29,7 @@ const documentSettings: Map<NormalizedUri, Thenable<MLSsettings>> = new Map();
 /**
  * Start whichever ts-morph worker this document will need, on open rather than at server start.
  *
- * Each worker costs ~110 MB resident and ~450 ms of thread and ts-morph setup, and a workspace with no
+ * Each worker costs resident memory and thread and ts-morph setup, and a workspace with no
  * TypeScript-transpiler sources never uses either - so starting both unconditionally charged every
  * session for a feature most never reach. Opening still precedes the first compile by a debounce at
  * minimum (nothing here compiles), so the head start the prewarm exists for survives the move.

@@ -16,7 +16,7 @@ export default defineConfig({
         // Links the sfall headers into the corpus once for the whole project. Both suites need them,
         // and doing it per-file raced when the files ran in parallel.
         globalSetup: [path.resolve(import.meta.dirname, "test/integration/global-setup.ts")],
-        // The files run in parallel (281s serial, 110s parallel). This suite once drove the bundled
+        // The files run in parallel, which more than halves the suite. This suite once drove the bundled
         // compiler across the whole corpus, and that compiler hangs on roughly one spawn in several
         // thousand, so serialising it kept the number of concurrent spawns down; since the oracles were
         // committed the sweeps compare against those in-process and only switch-differential.test.ts

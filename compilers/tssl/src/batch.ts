@@ -89,6 +89,6 @@ export function prepareEntry(batch: TranspileBatchState, filePath: string, text:
     return entry;
 }
 
-// Skipping the dependency re-resolve on an unchanged re-compile was measured and dropped: 6 ms, and it
-// loses a module outright when an entry's imports change between compiles - the resolve is what pulls
-// the new one in.
+// Skipping the dependency re-resolve on an unchanged re-compile was measured and dropped: the saving is
+// negligible, and it loses a module outright when an entry's imports change between compiles - the
+// resolve is what pulls the new one in.

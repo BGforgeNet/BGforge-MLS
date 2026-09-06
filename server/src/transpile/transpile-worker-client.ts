@@ -5,10 +5,9 @@
  * with the compiler. What is here is reading this protocol's response - `result` for a transpile,
  * `parsed` for a dialog parse - and rebuilding a refusal as the error the caller reports from.
  *
- * The worker is started at server start rather than by the first request, so the ~400 ms of thread and
- * ts-morph setup happens on a thread nobody is waiting on. A warm round trip costs 0.06 ms empty and
- * 0.46 ms for a 200-record result, against a transpile of 10-60 ms, so the boundary is not where the
- * time goes.
+ * The worker is started at server start rather than by the first request, so the thread and ts-morph
+ * setup happens on a thread nobody is waiting on. A warm round trip is a small fraction of the transpile
+ * it carries, so the boundary is not where the time goes.
  */
 
 import { TranspileError } from "../../../transpilers/common/transpile-error";
@@ -17,8 +16,8 @@ import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import type { TranspileRequest, TranspileResponse, TranspileWorkerResult } from "./transpile-worker-protocol";
 
 /**
- * Bounds one transpile. A hang detector, not a budget: the slowest measured transpile is under 100 ms,
- * so this only fires on a real stall.
+ * Bounds one transpile. A hang detector, not a budget: it is orders of magnitude above the slowest
+ * measured transpile, so this only fires on a real stall.
  */
 const TRANSPILE_TIMEOUT_MS = 60_000;
 

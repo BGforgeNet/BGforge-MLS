@@ -75,8 +75,8 @@ export interface TsslProgram {
  *
  * `lib` is pinned to the language core because the default for this target is `lib.es2022.full.d.ts`,
  * which adds DOM, WebWorker and ScriptHost - 1.70 MB of declarations to parse and bind against 0.11 MB
- * without them, for a language whose scripts run inside a game engine. Dropping them takes standing the
- * program up and modelling one script from 854 ms to 547 ms, and its retained heap from 113 MB to 85 MB.
+ * without them, for a language whose scripts run inside a game engine. Dropping them takes about a third
+ * off standing the program up and modelling one script, and about a quarter off its retained heap.
  * It changes nothing a script can express: a name from those libraries was refused before and is refused
  * now, having simply stopped resolving first.
  *
