@@ -11,9 +11,11 @@ import type * as vscodeTypes from "vscode";
 import { type GalleryItem, type GallerySource } from "../src/gallery/source";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "../src/gallery/webview/messages";
 
+const { showErrorMessageMock } = vi.hoisted(() => ({ showErrorMessageMock: vi.fn() }));
+
 vi.mock("vscode", () => ({
     Uri: { joinPath: (...parts: unknown[]) => ({ toString: () => parts.join("/") }) },
-    window: { showErrorMessage: vi.fn() },
+    window: { showErrorMessage: showErrorMessageMock },
 }));
 
 vi.mock("../src/webview-assets", () => ({
@@ -68,6 +70,10 @@ function fakePanel() {
 }
 
 const context = { extensionUri: { fsPath: "/ext" }, subscriptions: [] } as unknown as vscodeTypes.ExtensionContext;
+
+beforeEach(() => {
+    showErrorMessageMock.mockClear();
+});
 
 describe("wireGalleryPanel over a game that opens later", () => {
     let open = false;
@@ -165,5 +171,110 @@ describe("wireGalleryPanel over a game that opens later", () => {
         );
 
         expect(staged).toEqual([`set:${SET.id}`]);
+    });
+});
+
+/**
+ * Message routing exercised against an already-open game, isolated from the "game opens later" behavior above:
+ * the worker's error channel, a thumbnail request, both branches of the "open" message, and a webview crash.
+ */
+describe("wireGalleryPanel message routing", () => {
+    let errorCb: ((err: Error) => void) | undefined;
+    let openCalls: { id: string }[] = [];
+    let animationUriResult: vscodeTypes.Uri | undefined;
+    let staged: string[] = [];
+
+    const animation = {
+        openDocument: async (uri: vscodeTypes.Uri) => {
+            staged.push(uri.toString());
+            return {} as never;
+        },
+        attach: () => ({ dispose: () => {} }),
+        saveDocument: async () => {},
+    };
+
+    const deps = {
+        sourceFor: () => fakeSource(),
+        open: async (_source: GallerySource, id: string) => {
+            openCalls.push({ id });
+        },
+        animationUri: () => animationUriResult,
+        sets: (): readonly SetTile[] => [SET],
+        setUri: (id: number) => ({ toString: () => `set:${id}` }) as vscodeTypes.Uri,
+        animation,
+        makePort: () => ({
+            postMessage: () => {},
+            onMessage: () => {},
+            onError: (cb: (err: Error) => void) => {
+                errorCb = cb;
+            },
+            dispose: () => {},
+        }),
+        onDidChangeGame: () => ({ dispose: () => {} }),
+    };
+
+    beforeEach(() => {
+        errorCb = undefined;
+        openCalls = [];
+        animationUriResult = undefined;
+        staged = [];
+    });
+
+    it("surfaces a dead or crashed worker as a toast naming the failure", () => {
+        const { panel } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+
+        expect(errorCb, "the panel never subscribed to the port's error channel").toBeDefined();
+        errorCb?.(new Error("worker crashed"));
+
+        expect(showErrorMessageMock).toHaveBeenCalledWith("Image gallery worker stopped: worker crashed");
+    });
+
+    it("forwards a requestThumbnails message to the pump", () => {
+        const { panel, posted, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+
+        send({ type: "requestThumbnails", ids: [ITEM.id], size: 64 });
+
+        // fakeSource().stamp() is undefined for every item, so the pump answers straight away with "no
+        // picture" rather than dispatching to the worker - see ThumbnailPump.request's key === undefined arm.
+        expect(posted).toContainEqual({ type: "thumbnail", id: ITEM.id });
+    });
+
+    it("hands an item with no stage on this panel to deps.open", () => {
+        const { panel, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+
+        send({ type: "open", id: ITEM.id });
+
+        expect(openCalls).toEqual([{ id: ITEM.id }]);
+        expect(staged).toEqual([]);
+    });
+
+    it("draws an item this panel can stage instead of handing it off", async () => {
+        const { panel, posted, send } = fakePanel();
+        animationUriResult = { toString: () => "anim:MOGHG1" } as vscodeTypes.Uri;
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+
+        send({ type: "open", id: ITEM.id });
+        await vi.waitFor(() =>
+            expect(posted.findLast((message) => message.type === "showing")).toMatchObject({ item: ITEM.id }),
+        );
+
+        expect(staged).toEqual(["anim:MOGHG1"]);
+        expect(openCalls).toEqual([]);
+    });
+
+    it("surfaces a webview runtimeError as a toast naming the failure", () => {
+        const { panel, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+
+        send({ type: "runtimeError", message: "boom", stack: "at foo" });
+
+        expect(showErrorMessageMock).toHaveBeenCalledWith("Image gallery failed for game: boom");
     });
 });
