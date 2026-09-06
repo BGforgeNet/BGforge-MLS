@@ -16,6 +16,20 @@ export interface PlaybackState {
 // animations may carry none. Matches the BAM engine rate the parser resolves.
 export const DEFAULT_PLAYBACK_FPS = 15;
 
+/**
+ * The transport's resting state, for a surface that is drawn before anything is loaded.
+ *
+ * No frames, so every control resolves to its own disabled case by the rules already here rather than by a
+ * second "nothing loaded" branch through each of them.
+ */
+export const IDLE_PLAYBACK: PlaybackState = {
+    playing: false,
+    loop: false,
+    frame: 0,
+    fps: DEFAULT_PLAYBACK_FPS,
+    frameCount: 0,
+};
+
 export function createPlayback(opts: { frameCount: number; fps: number }): PlaybackState {
     // Resolved once here so the transport controls and tick never see a sub-1 fps; the source's
     // stored fps metadata is untouched (a 0-fps FRM still shows and saves 0).

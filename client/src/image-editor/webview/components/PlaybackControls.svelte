@@ -65,6 +65,8 @@
             oninput={(e) => onChange(setFrame(state, Number(e.currentTarget.value)))}
             aria-label="Frame scrubber"
         />
-        <span class="playback-value">{state.frame + 1} / {state.frameCount}</span>
+        <!-- Frames count from one for the reader, so an empty transport reads "0 / 0" rather than the
+             "1 / 0" that counting a frame nothing holds would produce. -->
+        <span class="playback-value">{state.frameCount === 0 ? 0 : state.frame + 1} / {state.frameCount}</span>
     </label>
 </div>

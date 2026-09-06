@@ -4,7 +4,10 @@
     import type { SourceFormat } from "@bgforge/image";
     import Menu from "../../../webview-ui/Menu.svelte";
 
-    const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
+    // Null while nothing is loaded: the bar keeps its place so choosing a set moves nothing above it.
+    // Its buttons still press - each sends a message the host has no open document to act on - rather
+    // than being greyed out, which is the shape the surface asked for.
+    const { view, bridge }: { view: AnimationView | null; bridge: Bridge } = $props();
 
     // "Save as" and "Import" are both dropdown menus - the shared Menu primitive every panel uses, opened
     // upward because this toolbar sits at the bottom. Picking an entry immediately runs the action
@@ -20,7 +23,9 @@
         paletteMode?: "sidecar" | "nearest";
     }
 
-    function buildSaveAsOptions(source: SourceFormat): SaveAsOption[] {
+    // `null` is "nothing loaded": there is no source format to leave out, so every target is offered and
+    // opening a set only ever removes the one entry that would be a save-in-place.
+    function buildSaveAsOptions(source: SourceFormat | null): SaveAsOption[] {
         const frmVariants: SaveAsOption[] =
             source === "frm"
                 ? []
@@ -45,7 +50,7 @@
         ];
     }
 
-    const saveAsOptions = $derived(buildSaveAsOptions(view.sourceFormat));
+    const saveAsOptions = $derived(buildSaveAsOptions(view?.sourceFormat ?? null));
 
     // Plain "Save" writes the source format back in place, so its tooltip names that format the same
     // way the "Save as" entries do - an upper-cased tag would read "BAMV2" and "BAMC".
@@ -90,7 +95,11 @@
 </script>
 
 <div class="toolbar">
-    <button type="button" onclick={handleSave} title={`Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`}>
+    <button
+        type="button"
+        onclick={handleSave}
+        title={view === null ? "Save in place" : `Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`}
+    >
         Save
     </button>
     <Menu

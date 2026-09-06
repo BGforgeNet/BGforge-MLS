@@ -9,7 +9,7 @@
         type CreatureOption,
     } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
-    import { createPlayback, tick, type PlaybackState } from "../render/playback";
+    import { createPlayback, IDLE_PLAYBACK, tick, type PlaybackState } from "../render/playback";
     import {
         defaultLayoutMode,
         directionBlocks,
@@ -391,10 +391,10 @@
             {/if}
         </div>
         <aside class="controls-column">
-            {#if view?.set && showSet !== false}
+            {#if showSet !== false}
                 <!-- First in the column: it selects WHAT is shown, where everything below it selects how. -->
                 <SetControls
-                    set={view.set}
+                    set={view?.set ?? null}
                     showChoice={showSetChoice !== false}
                     onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
                     onActionChange={(resref) => bridge.send({ type: "selectSetAction", resref })}
@@ -425,7 +425,7 @@
                 onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
                 {viewState}
             />
-            {#if roseAvailable}
+            {#if roseAvailable || !view}
                 <LayoutModeControls
                     mode={layoutMode}
                     onModeChange={(m) => (layoutChoice = m)}
@@ -436,7 +436,7 @@
                     onGroupChange={(g) => (roseGroup = g)}
                 />
             {/if}
-            {#if view?.colorModel === "indexed" && view.sourceFormat !== "frm"}
+            {#if !view || (view.colorModel === "indexed" && view.sourceFormat !== "frm")}
                 <CreatureControls
                     {creatures}
                     active={activeCreature}
@@ -444,9 +444,10 @@
                     onchoose={(resref) => bridge.send({ type: "setCreature", resref })}
                 />
             {/if}
-            {#if view}
-                <MetaControls {view} {bridge} />
-            {/if}
+            <MetaControls {view} {bridge} />
+            <!-- Still gated on the model, unlike its neighbours: this one comes and goes with the LAYOUT
+                 even when a set is loaded (grid mode, many cycles), so drawing it while idle would add a
+                 control the loaded surface does not have - moving the column the other way. -->
             {#if view && layoutMode === "grid" && cycleAnalysis?.multiSequence}
                 <CycleLayoutControls
                     cycleCount={view.sequences.length}
@@ -455,14 +456,8 @@
                     onColumnsChange={(c) => (cycleColumns = c)}
                 />
             {/if}
-            {#if playback}
-                <PlaybackControls state={playback} onChange={(next) => (playback = next)} />
-            {/if}
+            <PlaybackControls state={playback ?? IDLE_PLAYBACK} onChange={(next) => (playback = next)} />
         </aside>
     </div>
-    {#if view}
-        <!-- Gated on the model rather than disabled: every button here acts on a picture, and one that is
-             pressable with nothing loaded is an action offered against data that does not exist. -->
-        <Toolbar {view} {bridge} />
-    {/if}
+    <Toolbar {view} {bridge} />
 {/if}

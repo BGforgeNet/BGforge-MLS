@@ -2,8 +2,14 @@
     import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Bridge } from "../state/bridge";
     import type { AnimationView } from "../messages";
+    // What the transport rests at with nothing loaded, so the two controls agree before a set arrives
+    // rather than showing one rate here and another beside it.
+    import { DEFAULT_PLAYBACK_FPS } from "../render/playback";
 
-    const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
+    // Null while nothing is loaded: the controls keep their places so choosing a set moves nothing, and
+    // each shows the value it would show for the format this surface draws (an indexed BAM). Every edit
+    // below goes through the bridge, which has no document to change until one is open.
+    const { view, bridge }: { view: AnimationView | null; bridge: Bridge } = $props();
 
     // No direction-layout control here: meta.directionLayout is RESOLVED at parse (the IE stride-8
     // fingerprint) and a BAM has no on-disk field for it, so a manual edit would silently not survive
@@ -17,7 +23,7 @@
          all, and the 15 the parser resolves is what a conversion to FRM would then write. -->
     <label
         class="meta-field"
-        title={view.sourceFormat === "frm"
+        title={view?.sourceFormat === "frm"
             ? undefined
             : "Playback speed in the editor. A BAM stores no frame rate - the game plays at 15 - so this is not saved."}
     >
@@ -27,7 +33,7 @@
             min="1"
             max="60"
             step="1"
-            value={view.meta.fps ?? 10}
+            value={view === null ? DEFAULT_PLAYBACK_FPS : (view.meta.fps ?? 10)}
             onchange={(e) => {
                 const next = Number(e.currentTarget.value);
                 if (Number.isFinite(next) && next > 0) bridge.send({ type: "editMeta", patch: { fps: next } });
@@ -35,14 +41,14 @@
             aria-label="Frames per second"
         />
     </label>
-    {#if view.sourceFormat === "frm"}
+    {#if view?.sourceFormat === "frm"}
         <label class="meta-field" title="Marks the action frame in playback">
             <span class="meta-label">Action frame</span>
             <input
                 type="number"
                 min="0"
                 step="1"
-                value={view.meta.actionFrame ?? 0}
+                value={view?.meta.actionFrame ?? 0}
                 onchange={(e) => {
                     const next = Number(e.currentTarget.value);
                     if (Number.isFinite(next) && next >= 0) {
@@ -54,18 +60,18 @@
         </label>
         <!-- Absent, not disabled, for a true-colour document: the format has no palette, so a
              greyed-out control would still offer an edit that could never be represented. -->
-        {#if view.colorModel === "indexed"}
+        {#if view?.colorModel === "indexed"}
             <Checkbox
                 label="Use external palette"
-                checked={view.externalPaletteActive}
-                disabled={!view.hasSidecarPal}
+                checked={view?.externalPaletteActive === true}
+                disabled={view?.hasSidecarPal !== true}
                 onchange={(enabled) => bridge.send({ type: "setExternalPalette", enabled })}
-                title={view.hasSidecarPal
+                title={view?.hasSidecarPal
                     ? "Render with the sidecar .pal palette instead of the default Fallout palette"
                     : "Disabled: no sidecar .pal file found next to this .frm"}
             />
         {/if}
-    {:else if view.colorModel === "indexed"}
+    {:else if view === null || view.colorModel === "indexed"}
         <!-- A transparent INDEX is a palette concept: BAM v2 carries real per-pixel alpha instead,
              so there is no index to nominate and the control has nothing to act on. -->
         <label
@@ -78,7 +84,7 @@
                 min="0"
                 max="255"
                 step="1"
-                value={view.meta.transparentIndex ?? 0}
+                value={view?.meta.transparentIndex ?? 0}
                 onchange={(e) => {
                     const next = Number(e.currentTarget.value);
                     if (Number.isFinite(next) && next >= 0 && next <= 255) {
