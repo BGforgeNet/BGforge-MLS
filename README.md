@@ -14,6 +14,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
 - [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
 - [**Animations**](#animation-viewer): Fallout FRM; Infinity BAM.
+- [**Image gallery**](#image-gallery): browse the images of an open game or workspace folder.
 - [**GitHub actions**](#github-actions): format, transpile, compile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
@@ -85,6 +86,8 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 [GitHub Actions](actions/README.md) keep generated artifacts in mod repositories up to date: they refresh binary-format JSON snapshots, format Fallout/WeiDU sources, and regenerate transpiler output, committing the results back or simply verifying they match. A fourth compiles TSSL to Fallout INT bytecode as a CI check.
 
 ## Installation
+
+BGforge MLS runs in desktop VS Code and in code-server. It is not supported on vscode.dev or github.dev: the bundled SSL compiler and the workspace scanner both need a real filesystem.
 
 1. Install BGforge MLS from the VS Code Marketplace.
    Alternatively, download the package from [GitHub Releases](https://github.com/BGforgeNet/BGforge-MLS/releases) and install it manually.
