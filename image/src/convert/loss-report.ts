@@ -26,7 +26,10 @@ export type LossKind =
     | "action-code-detail"
     /** A member the source cut across several files was assembled into the one file the target writes.
      *  Informational: it is the picture the parts drew together, and none of it is discarded. */
-    | "parts-composed";
+    | "parts-composed"
+    /** The source's engine layers a weapon on from files the item owns and the target draws one into the
+     *  art instead, so the result is unarmed. Structural: there was no member here to carry. */
+    | "weapon-layer-unrepresentable";
 
 export interface LossItem {
     kind: LossKind;
@@ -53,6 +56,10 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     "action-code-detail",
     // An assembly, not a degradation: the parts drew one picture and the output holds all of it.
     "parts-composed",
+    // Structural, like the direction one above: there was no weapon member to carry, so this says something
+    // about the two engines and nothing about this source. As a loss it would mark every such conversion
+    // lossy for a reason unrelated to the art it wrote.
+    "weapon-layer-unrepresentable",
 ]);
 
 export class LossReport {

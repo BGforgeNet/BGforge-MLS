@@ -25,35 +25,32 @@ export interface StanceIo {
 }
 
 /**
- * The files this set draws at one armour level.
- *
- * The paperdoll is excluded: it is a single inventory image with no facings, so it belongs beside the
- * stance list rather than in it - a rose drawn from it would announce a direction the file does not have.
+ * The files this set draws at one armour level, the inventory paperdoll among them.
  *
  * Exported because a member is the unit an ACTION picker offers, where a stance is the unit a rose draws:
- * one file packs several direction bands, so the stances below are many-to-one on these.
+ * one file packs several direction bands, so the stances below are many-to-one on these. The paperdoll is
+ * one of those units - it is a member of the set, and a conversion that dropped it would leave the reader
+ * to notice the missing inventory image themselves. What it is NOT is a stance, which `setStances` says.
  */
 export function setMembers(set: AnimationSet, armour: number, exists: (resref: string) => boolean): SchemeMember[] {
     if (set.scheme.kind === "character") {
-        return characterActions(set, armour, exists)
-            .filter((action) => action.kind !== "paperdoll")
-            .flatMap((action) => {
-                const resref = characterMember(set, armour, action);
-                if (resref === undefined) return [];
-                // A character action is one file. The older layout ships a second one holding the facings
-                // the engine mirrors for everyone else, so where it exists it is a PART of this member -
-                // its armour levels remain separate members, as they are for every character set.
-                const mirrored = `${resref}E`;
-                const parts = exists(mirrored) ? [resref, mirrored] : [resref];
-                return [
-                    {
-                        label: actionLabel(action),
-                        action: decodeActionCode("character", characterActionCode(action)),
-                        resref,
-                        parts,
-                    },
-                ];
-            });
+        return characterActions(set, armour, exists).flatMap((action) => {
+            const resref = characterMember(set, armour, action);
+            if (resref === undefined) return [];
+            // A character action is one file. The older layout ships a second one holding the facings
+            // the engine mirrors for everyone else, so where it exists it is a PART of this member -
+            // its armour levels remain separate members, as they are for every character set.
+            const mirrored = `${resref}E`;
+            const parts = exists(mirrored) ? [resref, mirrored] : [resref];
+            return [
+                {
+                    label: actionLabel(action),
+                    action: decodeActionCode("character", characterActionCode(action)),
+                    resref,
+                    parts,
+                },
+            ];
+        });
     }
     if (set.layout === undefined) return [];
     return schemeMembers(set.layout, set.prefixByArmour.get(armour), exists);
@@ -154,9 +151,21 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     };
 }
 
-/** Every stance this set offers at one armour level, in the order a viewer should list them. */
+/** Whether a member is the inventory paperdoll rather than something a rose can be drawn from. */
+export function isPaperdoll(member: SchemeMember): boolean {
+    return member.action.id === "paperdoll";
+}
+
+/**
+ * Every stance this set offers at one armour level, in the order a viewer should list them.
+ *
+ * The paperdoll is dropped here rather than by `setMembers`: it is a single inventory image and, measured
+ * across both installs, always exactly one cycle - so a rose drawn from it would announce a direction the
+ * file does not have. It stays a member, which is what carries it through a conversion.
+ */
 export function setStances(set: AnimationSet, armour: number, io: StanceIo): SetStance[] {
-    return stancesOfMembers(setMembers(set, armour, io.exists), (member) =>
+    const members = setMembers(set, armour, io.exists).filter((member) => !isPaperdoll(member));
+    return stancesOfMembers(members, (member) =>
         bandsOf(
             member.parts.map((resref) => io.read(resref)),
             set.bandStride,

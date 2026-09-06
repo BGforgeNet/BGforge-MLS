@@ -48,6 +48,15 @@ export interface ConversionTarget {
      */
     fixedPalette: boolean;
     /**
+     * Whether the target's art already contains the weapon a figure is holding.
+     *
+     * The Infinity Engine draws a character weaponless and layers the weapon on from its own files, which
+     * belong to the item rather than to any animation set - so a conversion has no weapon member to carry.
+     * Fallout has no such layer: its critter art is drawn per weapon group, and a set converted from a
+     * layered source is therefore an unarmed figure. Stated because nothing in the written files says it.
+     */
+    weaponsInArt: boolean;
+    /**
      * How the target's engine is told the animation exists.
      *
      * `infinity-ids` is the `ANIMATE.IDS`/`ANISND.IDS` pair. `fallout-art-list` is the critter art list the
@@ -73,6 +82,7 @@ export const IE_8_POINT_MIRRORED: ConversionTarget = {
     stride: 8,
     pairEast: false,
     fixedPalette: false,
+    weaponsInArt: false,
     declaration: "infinity-ids",
 };
 
@@ -85,6 +95,7 @@ export const IE_8_POINT_PAIRED: ConversionTarget = {
     stride: 8,
     pairEast: true,
     fixedPalette: false,
+    weaponsInArt: false,
     declaration: "infinity-ids",
 };
 
@@ -97,6 +108,7 @@ export const IE_16_POINT_MIRRORED: ConversionTarget = {
     stride: 9,
     pairEast: false,
     fixedPalette: false,
+    weaponsInArt: false,
     declaration: "infinity-ids",
 };
 
@@ -109,6 +121,7 @@ export const IE_16_POINT_FULL: ConversionTarget = {
     stride: 16,
     pairEast: false,
     fixedPalette: false,
+    weaponsInArt: false,
     declaration: "infinity-ids",
 };
 
@@ -122,5 +135,6 @@ export const FALLOUT_FRM: ConversionTarget = {
     stride: undefined,
     pairEast: false,
     fixedPalette: true,
+    weaponsInArt: true,
     declaration: "fallout-art-list",
 };

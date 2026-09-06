@@ -77,5 +77,14 @@ export function planConversion(set: NeutralSet, target: ConversionTarget): Conve
         report.add("palette-remapped-to-default", "the target holds its own palette and remaps what it is given");
     }
 
+    if (target.weaponsInArt) {
+        // Not a member that failed to convert - there was never one to carry. The source's weapons live in
+        // their own files, keyed by the item rather than by this set, and the target has no layer for them.
+        report.add(
+            "weapon-layer-unrepresentable",
+            "the target draws a weapon into the art itself, so the result is unarmed",
+        );
+    }
+
     return report.lossless ? { outcome: "lossless", report } : { outcome: "lossy", report };
 }

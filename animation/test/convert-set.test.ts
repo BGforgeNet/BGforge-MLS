@@ -415,6 +415,45 @@ describe("converting a whole set", () => {
     });
 
     /**
+     * The inventory paperdoll. It is a member of the set like any other - measured on both installs it is
+     * always one cycle and never a direction - so it travels as an ordered action rather than as a shape of
+     * its own, and a target that names it writes it beside the animation it belongs to.
+     */
+    it("carries a set's paperdoll into a target that names one", () => {
+        const set = read(
+            { CDMB1G11: band(), CDMD1INV: multiCycle(4, 1) },
+            { paperdollPrefix: "CDMD", prefixByArmour: new Map([[1, "CDMB"]]) },
+        );
+
+        const result = converted(set, IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "XYZ" });
+
+        expect(result.writes.map((write) => write.resref)).toContain("XYZ1INV");
+    });
+
+    it("converts the rest of the set where the paperdoll itself will not parse", () => {
+        // A lost part rather than a dead set - the posture every layer below this one already takes.
+        const set = read(
+            { CDMB1G11: band(), CDMD1INV: new Uint8Array([1, 2, 3]) },
+            { paperdollPrefix: "CDMD", prefixByArmour: new Map([[1, "CDMB"]]) },
+        );
+
+        const result = converted(set, IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "XYZ" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZ1G11"]);
+    });
+
+    it("says the paperdoll did not travel where the target names no such thing", () => {
+        const set = read(
+            { CDMB1G11: band(), CDMD1INV: multiCycle(4, 1) },
+            { paperdollPrefix: "CDMD", prefixByArmour: new Map([[1, "CDMB"]]) },
+        );
+
+        const result = converted(set, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "action-codes" });
+
+        expect(result.report.losses.map((loss) => loss.detail).join(" ")).toContain("Inventory has no counterpart");
+    });
+
+    /**
      * A source already painted in the target's own palette costs no colour at all, so the conversion says
      * nothing about colours - the quantization line is for art that genuinely moved, and firing it on every
      * conversion would make it the line readers learn to skip.

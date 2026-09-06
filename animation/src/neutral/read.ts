@@ -10,7 +10,7 @@ import { type Animation, loadImage } from "@bgforge/image";
 import { type IeDirectionSlot } from "@bgforge/image/ie-direction";
 import { type AnimationSet, armourLevels } from "../animation-index";
 import { type BandConfidence } from "../animation-schemes/bands";
-import { setStances, type StanceIo } from "../set-stances";
+import { isPaperdoll, setMembers, setStances, type StanceIo } from "../set-stances";
 import { type NeutralAction, type NeutralCycles, type NeutralSet, type NeutralVariant } from "./model";
 
 export interface NeutralReadOptions {
@@ -52,6 +52,35 @@ function cyclesOf(slots: readonly IeDirectionSlot[], confidence: BandConfidence)
     };
 }
 
+/**
+ * The set's inventory paperdolls at one armour level, as ordered actions.
+ *
+ * Not a stance and not a shape of its own: measured across a classic and an Enhanced install every one is a
+ * single cycle, so the model's ordered-cycle arm already describes it exactly. Reading it here rather than
+ * from the stance list is what keeps it out of the direction rose while still carrying it to a target.
+ */
+function paperdollActions(
+    set: AnimationSet,
+    armour: number,
+    io: StanceIo,
+    files: Map<string, Animation>,
+): NeutralAction[] {
+    const actions: NeutralAction[] = [];
+    for (const member of setMembers(set, armour, io.exists).filter((candidate) => isPaperdoll(candidate))) {
+        const parsed = files.get(member.resref) ?? parseMember(member.resref, io);
+        if (parsed === undefined) continue;
+        files.set(member.resref, parsed);
+        actions.push({
+            label: member.label,
+            action: member.action,
+            resrefs: [member.resref],
+            band: 0,
+            cycles: { kind: "ordered", sequenceIndices: parsed.sequences.map((_, index) => index) },
+        });
+    }
+    return actions;
+}
+
 export function readNeutralSet(set: AnimationSet, io: StanceIo, options: NeutralReadOptions): NeutralSet {
     const variants: NeutralVariant[] = [];
     for (const armour of armourLevels(set)) {
@@ -78,6 +107,7 @@ export function readNeutralSet(set: AnimationSet, io: StanceIo, options: Neutral
                 cycles: cyclesOf(stance.slots, stance.confidence),
             });
         }
+        actions.push(...paperdollActions(set, armour, io, files));
         if (actions.length > 0) variants.push({ armour, files, actions });
     }
 

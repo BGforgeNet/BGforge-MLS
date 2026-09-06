@@ -145,6 +145,18 @@ describe("planning a conversion", () => {
     });
 
     /**
+     * A character animation is drawn weaponless and the engine layers the weapon on from its own separate
+     * files, which belong to the item rather than to this set - so they are not a member a conversion could
+     * carry. A target that bakes the weapon into the art instead has no such layer, and the result is an
+     * unarmed figure: worth one line, because nothing in the written files says it.
+     */
+    it("says a target that bakes weapons into its art gets no weapon layer", () => {
+        const report = reportOf(planConversion(setWithActions([directional("WK - walk", WEST_ARC_8)]), FALLOUT_FRM));
+
+        expect(report.items.map((item) => item.detail).join(" ")).toContain("weapon");
+    });
+
+    /**
      * A fixed-palette target remaps by construction rather than degrading this particular source, so it is
      * stated once and does not make the conversion lossy - the classification the loss report already makes.
      */
