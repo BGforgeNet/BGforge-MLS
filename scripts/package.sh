@@ -74,7 +74,9 @@ done
 
 # Strip all remaining pnpm symlinks from server/node_modules.
 for entry in server/node_modules/*; do
-    [ -L "$entry" ] && rm "$entry"
+    if [ -L "$entry" ]; then
+        rm "$entry"
+    fi
 done
 
 # Strip pnpm internal real dirs from server/node_modules.
