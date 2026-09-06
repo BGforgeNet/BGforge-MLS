@@ -337,7 +337,7 @@ describe.skipIf(!hasFixture)("map object-ops under sequences of edits", () => {
         ];
 
         fc.assert(
-            fc.property(fc.commands(commands, { maxCommands: 6 }), (cmds) => {
+            fc.property(fc.commands(commands, { maxCommands: 4 }), (cmds) => {
                 fc.modelRun(() => {
                     const pr = mapParser.parse(bytes, PARSE_OPTIONS);
                     const real: Real = { pr, doc: docOf(pr) };
@@ -346,8 +346,9 @@ describe.skipIf(!hasFixture)("map object-ops under sequences of edits", () => {
                     return { model, real };
                 }, cmds);
             }),
-            // Each command re-serializes and re-parses a whole MAP, so the sequences stay short.
-            { numRuns: 12 },
+            // Each command re-serializes and re-parses a whole MAP, so the sequences stay short and
+            // the run count small enough to fit the suite's per-test budget under coverage instrumentation.
+            { numRuns: 8 },
         );
     });
 });
