@@ -12,11 +12,12 @@
  * and a creature can carry an id no table names. The union is therefore the id set, and a set says what it
  * could not work out rather than guessing.
  */
-import { type AnimationIni, parseAnimationIni } from "./animation-ini";
+import { type AnimationIni, declaredFamily, parseAnimationIni } from "./animation-ini";
 import { characterFacetsOf, type CharacterFacets } from "./animation-facets";
 import { type AnimationTable, type TableAnimation } from "./animation-tables/table";
 import { tableForFlavour } from "./animation-tables";
 import { type Layout, layoutOf } from "./animation-schemes/layout";
+import { layerPrefixes } from "./animation-schemes/layers";
 import { declaredStride } from "./animation-schemes/bands";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
@@ -64,6 +65,12 @@ export interface AnimationSet {
      * inference. Resolved here rather than per consumer so the section itself stays private to the index.
      */
     bandStride?: number;
+    /**
+     * Prefixes this animation draws a SECOND set of files under - a weapon overlay, or the burrowing
+     * family's supporting stills. Absent for the families that draw from one set. See `layers.ts` for why
+     * they are members of their own rather than parts of the base ones.
+     */
+    layerPrefixes?: readonly string[];
     /** Present only where the id declares them - a monster or a named individual has none. */
     facets?: CharacterFacets;
 }
@@ -121,7 +128,7 @@ function prefixesOfTable(tabled: TableAnimation | undefined): Map<number, string
  * a vendored row's section for an animation the install declares itself.
  */
 function sectionOf(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): string | undefined {
-    return ini === undefined ? tabled?.section : ini.section;
+    return ini === undefined ? tabled?.section : declaredFamily(ini);
 }
 
 function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): AnimationScheme {
@@ -209,6 +216,11 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
         const tabled = ini === undefined ? table?.get(id) : undefined;
         const section = sectionOf(ini, tabled);
         const stride = declaredStride(section);
+        const layers = layerPrefixes(
+            section,
+            ini === undefined ? tabled?.prefixes[0] : ini.resref,
+            ini === undefined ? (tabled?.overlays ?? []) : ini.weaponOverlays,
+        );
         sets.push({
             id,
             code: codes.get(id) ?? "",
@@ -217,6 +229,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
             scheme: schemeFrom(ini, tabled),
             ...(section === undefined ? {} : { section }),
+            ...(layers.length === 0 ? {} : { layerPrefixes: layers }),
             ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
             ...(stride === undefined ? {} : { bandStride: stride }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),

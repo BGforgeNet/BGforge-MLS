@@ -16,6 +16,7 @@ import { type AnimationSet } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
 import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
+import { layerLabel } from "./animation-schemes/layers";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-labels";
 
@@ -52,8 +53,15 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
             ];
         });
     }
-    if (set.layout === undefined) return [];
-    return schemeMembers(set.layout, set.prefixByArmour.get(armour), exists);
+    const layout = set.layout;
+    if (layout === undefined) return [];
+    const label = layerLabel(set.section);
+    return [
+        ...schemeMembers(layout, set.prefixByArmour.get(armour), exists),
+        // After the base members, not interleaved: a layer numbers its cycles exactly as the base does, so
+        // a reader scanning the picker sees each family's own run rather than alternating pairs.
+        ...(set.layerPrefixes ?? []).flatMap((prefix) => schemeMembers(layout, prefix, exists, label)),
+    ];
 }
 
 /** One file's cycle table, which is all the band reading needs - no frame is decoded here. */

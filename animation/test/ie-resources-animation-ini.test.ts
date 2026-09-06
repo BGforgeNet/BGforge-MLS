@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { parseAnimationIni } from "../src/animation-ini";
+import { declaredFamily, parseAnimationIni } from "../src/animation-ini";
 import { miniGame } from "./ie-game-fixtures";
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -26,6 +26,28 @@ describe("parseAnimationIni", () => {
         expect(ini.armorMax).toBe(4);
         expect(ini.splitBams).toBe(true);
         expect(ini.falseColor).toBe(true);
+    });
+
+    /**
+     * `[monster_layered]` heads two different families, and only the spell-layered one ships the weapon
+     * overlay files - so a reader that took the header alone would open half of one family's art.
+     */
+    it("separates the two families that share the layered section header", () => {
+        const spell = encode("[general]\nanimation_type=2000\n[monster_layered]\nresref=MOGM\n");
+        const plain = encode("[general]\nanimation_type=8000\n[monster_layered]\nresref=MFLE\n");
+
+        expect(parseAnimationIni(spell).section).toBe("monster_layered");
+        expect(declaredFamily(parseAnimationIni(spell))).toBe("monster_layered_spell");
+        expect(declaredFamily(parseAnimationIni(plain))).toBe("monster_layered");
+    });
+
+    /** Type 1000 heads both tiled families, so there the header is the finer signal and has to win. */
+    it("keeps the header where it says more than the declared type does", () => {
+        const quadrant = encode("[general]\nanimation_type=1000\n[monster_quadrant]\nresref=MTAN\n");
+        const tiled = encode("[general]\nanimation_type=1000\n[multi_new]\nresref=MDR1\n");
+
+        expect(declaredFamily(parseAnimationIni(quadrant))).toBe("monster_quadrant");
+        expect(declaredFamily(parseAnimationIni(tiled))).toBe("multi_new");
     });
 
     it("reads a hex animation_type that is not all digits", () => {

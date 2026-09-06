@@ -24,7 +24,7 @@ import * as path from "path";
 // By path rather than by package name: this runs under tsx from the repo root, where the package specifier
 // resolves to the workspace package's built entry point and so would need a build first.
 import { openGame } from "../../../binary/src/index";
-import { parseAnimationIni } from "../../src/animation-ini";
+import { declaredFamily, parseAnimationIni } from "../../src/animation-ini";
 import { characterDrawsBody } from "../../src/animation-schemes/character";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
@@ -40,6 +40,7 @@ interface Row {
     prefixes: string[];
     section: string;
     paperdoll?: string;
+    overlays?: string[];
 }
 
 /**
@@ -71,12 +72,16 @@ function readRows(gameDir: string): Row[] {
         if (ref.ext?.toLowerCase() !== "ini" || !HEX_RESREF.test(ref.resref)) continue;
         const ini = parseAnimationIni(game.read(ref.resref, "ini"));
         const prefixes = prefixesOf(ini);
-        if (ini.section === undefined || prefixes.length === 0) continue;
+        // The family, not the bare header: the header alone puts the spell-layered animations in the plain
+        // layered family, which draws none of their overlay files.
+        const section = declaredFamily(ini);
+        if (section === undefined || prefixes.length === 0) continue;
         rows.push({
             id: Number.parseInt(ref.resref, 16),
             prefixes,
-            section: ini.section,
+            section,
             ...(ini.resrefPaperdoll === undefined ? {} : { paperdoll: ini.resrefPaperdoll }),
+            ...(ini.weaponOverlays.length === 0 ? {} : { overlays: [...ini.weaponOverlays] }),
         });
     }
     return rows.sort((a, b) => a.id - b.id);
@@ -113,7 +118,9 @@ function render(rows: readonly Row[]): string {
     const lines = rows.map((row) => {
         const prefixes = row.prefixes.map((prefix) => `"${prefix}"`).join(", ");
         const paperdoll = row.paperdoll === undefined ? "" : `, paperdoll: "${row.paperdoll}"`;
-        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${paperdoll} }],`;
+        const overlays =
+            row.overlays === undefined ? "" : `, overlays: [${row.overlays.map((o) => `"${o}"`).join(", ")}]`;
+        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${paperdoll}${overlays} }],`;
     });
     return [BEGIN_MARKER, ...lines, END_MARKER].join("\n");
 }

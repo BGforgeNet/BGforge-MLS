@@ -179,11 +179,16 @@ export function schemeMembers(
     layout: Layout,
     resref: string | undefined,
     exists: (resref: string) => boolean,
+    layer?: string,
 ): SchemeMember[] {
     if (resref === undefined) return [];
     return candidates(layout, resref).flatMap((member) => {
         const parts = member.parts.filter(exists);
         const first = parts[0];
-        return first === undefined ? [] : [{ label: member.label, action: member.action, resref: first, parts }];
+        if (first === undefined) return [];
+        // The layer is named in the LABEL only: what the member depicts is still what its cycle code says,
+        // and a picker showing two bare `G1` rows could not say which file each opened.
+        const label = layer === undefined ? member.label : `${member.label} (${layer})`;
+        return [{ label, action: member.action, resref: first, parts }];
     });
 }

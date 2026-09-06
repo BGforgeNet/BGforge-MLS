@@ -42,10 +42,40 @@ export interface AnimationIni {
     splitBams: boolean | undefined;
     falseColor: boolean | undefined;
     quadrants: number | undefined;
+    /**
+     * `resref_weapon1` and `resref_weapon2` - the one-handed and two-handed weapon overlays of the
+     * spell-layered family, each declared as a short code whose FIRST character is appended to `resref` to
+     * name the overlay's files. Empty where the animation declares no overlay of that grip.
+     */
+    weaponOverlays: readonly string[];
 }
 
 /** Sections that describe the animation but not how it draws. */
 const NON_DRAWING = new Set(["general", "sounds"]);
+
+/**
+ * The declared type whose family the section header cannot name on its own.
+ *
+ * `[monster_layered]` heads two families: the plain one and the spell-layered one, which ships a second
+ * overlay layer under `resref_weapon1`. Only the type separates them, and both reference implementations
+ * classify off the type for exactly this reason.
+ */
+const LAYERED_SPELL_TYPE = 0x2000;
+
+/**
+ * Which layout family a declaration names, in the vocabulary both reference implementations use.
+ *
+ * The header is the finer signal almost everywhere - type 1000 covers `monster_quadrant` and `multi_new`,
+ * and nothing but the header separates those - so it is what the family is read from, with the one
+ * ambiguity above resolved by the type. Separate from `section`, which stays the header verbatim: writing a
+ * set back out means naming a header an install would recognise, and `monster_layered_spell` is not one.
+ */
+export function declaredFamily(ini: AnimationIni): string | undefined {
+    if (ini.section === "monster_layered" && ini.animationType === LAYERED_SPELL_TYPE) {
+        return "monster_layered_spell";
+    }
+    return ini.section;
+}
 
 function hex(value: string | undefined): number | undefined {
     if (value === undefined) return undefined;
@@ -98,5 +128,11 @@ export function parseAnimationIni(bytes: Uint8Array): AnimationIni {
         splitBams: flag(drawing("split_bams")),
         falseColor: flag(drawing("false_color")),
         quadrants: decimal(drawing("quadrants")),
+        // Only the first character names the files; the rest of the code says which weapons the overlay
+        // covers, which is a property of the creature's inventory rather than of the animation.
+        weaponOverlays: ["resref_weapon1", "resref_weapon2"].flatMap((key) => {
+            const letter = upper(key)?.slice(0, 1);
+            return letter === undefined ? [] : [letter];
+        }),
     };
 }

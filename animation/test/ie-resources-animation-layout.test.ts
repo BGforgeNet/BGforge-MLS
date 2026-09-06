@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
 import { layoutOf } from "../src/animation-schemes/layout";
+import { layerPrefixes } from "../src/animation-schemes/layers";
 import { schemeMembers } from "../src/animation-schemes/members";
 import { parseAnimationIni } from "../src/animation-ini";
 import { buildAnimationIndex } from "../src/animation-index";
@@ -40,11 +41,54 @@ describe("layoutOf", () => {
     });
 });
 
+describe("layerPrefixes", () => {
+    /**
+     * The spell-layered family names its overlay by the FIRST character of the declared code; the rest of
+     * the code says which weapons it covers, which is the creature's business rather than the animation's.
+     */
+    it("appends a declared weapon overlay's letter to the resref", () => {
+        expect(layerPrefixes("monster_layered_spell", "MOGM", ["S"])).toEqual(["MOGMS"]);
+        expect(layerPrefixes("monster_layered_spell", "MSIR", ["B"])).toEqual(["MSIRB"]);
+    });
+
+    it("gives a spell-layered animation that declares no overlay no second layer", () => {
+        expect(layerPrefixes("monster_layered_spell", "MDKN", [])).toEqual([]);
+    });
+
+    /** The burrowing family's second set is not declared anywhere - the engine names it by the family. */
+    it("gives the burrowing family its undeclared second set", () => {
+        expect(layerPrefixes("monster_ankheg", "MAKH", [])).toEqual(["MAKHD"]);
+    });
+
+    it("gives a family that draws from one set of files no second layer", () => {
+        expect(layerPrefixes("monster_layered", "MFLE", ["S"])).toEqual([]);
+        expect(layerPrefixes(undefined, "MFLE", [])).toEqual([]);
+        expect(layerPrefixes("monster_ankheg", undefined, [])).toEqual([]);
+    });
+});
+
 describe("schemeMembers", () => {
     const has = (...names: string[]) => {
         const set = new Set(names);
         return (resref: string): boolean => set.has(resref);
     };
+
+    /**
+     * A layer is a member of its own rather than a part of the base one: measured on a classic archive, an
+     * overlay file's palette differs from its base's, and the composer merges indexed pixels on the
+     * assumption that parts share one.
+     */
+    it("names a layer's members apart from the base ones", () => {
+        const members = schemeMembers("cycles", "MOGMS", has("MOGMSG1", "MOGMSG1E"), "weapon overlay");
+        expect(members).toEqual([
+            {
+                label: "G1 (weapon overlay)",
+                action: cycleAction("G1"),
+                resref: "MOGMSG1",
+                parts: ["MOGMSG1", "MOGMSG1E"],
+            },
+        ]);
+    });
 
     it("offers the resref itself where the layout carries no suffix", () => {
         expect(schemeMembers("bare", "SNOMC", has("SNOMC"))).toEqual([

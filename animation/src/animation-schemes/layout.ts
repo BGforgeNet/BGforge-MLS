@@ -56,6 +56,9 @@ const FIXED: Readonly<Record<string, Layout>> = {
     ambient: "cycles",
     ambient_static: "cycles",
     monster_layered: "cycles",
+    // The same cycle-numbered files as the plain family; what it adds is the overlay layer, which is a part
+    // of each member rather than a layout of its own.
+    monster_layered_spell: "cycles",
     monster_ankheg: "cycles",
     monster_large: "cycles",
     monster_quadrant: "quadrant",

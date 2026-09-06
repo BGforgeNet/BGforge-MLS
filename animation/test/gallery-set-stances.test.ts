@@ -133,6 +133,23 @@ describe("setMembers", () => {
     });
 
     /**
+     * The spell-layered and burrowing families each draw a second set of files the base members never name.
+     * They come after the base ones and say which layer they are, since both sets number their cycles alike.
+     */
+    it("offers a family's second layer after its base members", () => {
+        const set = monsterSet({ section: "monster_layered_spell", layerPrefixes: ["MOGHS"] });
+        const members = setMembers(set, 1, (resref) => resref === "MOGHG1" || resref === "MOGHSG1");
+
+        expect(members.map((member) => member.resref)).toEqual(["MOGHG1", "MOGHSG1"]);
+        expect(members.map((member) => member.label)).toEqual(["G1", "G1 (weapon overlay)"]);
+    });
+
+    it("leaves a set with no second layer exactly as it was", () => {
+        const set = monsterSet({ section: "monster_layered" });
+        expect(setMembers(set, 1, (resref) => resref === "MOGHG1").map((member) => member.label)).toEqual(["G1"]);
+    });
+
+    /**
      * A set the index could not give a layout to draws nothing, rather than falling through to a default
      * scheme: a guessed naming scheme resolves to files that either do not exist or belong to another set.
      */

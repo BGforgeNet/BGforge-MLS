@@ -27,6 +27,11 @@ export interface TableAnimation {
     readonly section: string;
     /** `resref_paperdoll` where it differs from the body; an aliasing set keeps its own inventory image. */
     readonly paperdoll?: string;
+    /**
+     * The weapon-overlay letters of the spell-layered family, each appended to the prefix to name a second
+     * set of files. Absent for every other family, and for a spell-layered animation that declares none.
+     */
+    readonly overlays?: readonly string[];
 }
 
 export type AnimationTable = ReadonlyMap<number, TableAnimation>;
