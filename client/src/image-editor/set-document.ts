@@ -16,7 +16,7 @@ import {
     type SchemeMember,
     type StanceIo,
     armourLabel,
-    armourLevels,
+    drawnArmourLevels,
     firstArmour,
     schemeForStride,
     setMembers,
@@ -148,13 +148,23 @@ export class AnimationSetState {
     private readonly models: MemberModels;
     private current: ArmourLevel;
     private open: OpenAction;
+    /** Resolved once at open: the archive answer costs a lookup per action per level. */
+    private readonly levels: readonly number[];
 
-    private constructor(set: AnimationSet, io: StanceIo, models: MemberModels, level: ArmourLevel, open: OpenAction) {
+    private constructor(
+        set: AnimationSet,
+        io: StanceIo,
+        models: MemberModels,
+        level: ArmourLevel,
+        open: OpenAction,
+        levels: readonly number[],
+    ) {
         this.set = set;
         this.io = io;
         this.models = models;
         this.current = level;
         this.open = open;
+        this.levels = levels;
     }
 
     /**
@@ -179,17 +189,19 @@ export class AnimationSetState {
     }
 
     static open(set: AnimationSet, io: StanceIo, armour?: number): AnimationSetState | undefined {
-        const levels = armourLevels(set);
-        const chosen = armour !== undefined && levels.includes(armour) ? armour : (firstArmour(set) ?? 1);
+        // The levels this install DRAWS, not the ones the family declares: a classic archive ships no
+        // plate-armoured thief, and offering the declared four gives the picker three empty rows.
+        const levels = drawnArmourLevels(set, io.exists);
+        const chosen = armour !== undefined && levels.includes(armour) ? armour : (levels[0] ?? firstArmour(set) ?? 1);
         const level = resolveLevel(set, io, chosen);
         const models: MemberModels = new Map();
         const first = firstDrawn(io, models, level);
-        return first === undefined ? undefined : new AnimationSetState(set, io, models, level, first);
+        return first === undefined ? undefined : new AnimationSetState(set, io, models, level, first, levels);
     }
 
-    /** Every armour level the set declares, lowest first - what the armour picker offers. */
+    /** Every armour level this install draws the set at, lowest first - what the armour picker offers. */
     get armours(): readonly number[] {
-        return armourLevels(this.set);
+        return this.levels;
     }
 
     get armour(): number {
@@ -258,7 +270,7 @@ export class AnimationSetState {
         const known = this.models.get(resref);
         const action =
             known?.action ??
-            armourLevels(this.set)
+            this.levels
                 .flatMap((level) => resolveLevel(this.set, this.io, level).actions)
                 .find((candidate) => candidate.resref === resref);
         if (action === undefined) return;
@@ -314,17 +326,14 @@ export function setView(state: AnimationSetState): SetView {
         actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
         action: state.action.resref,
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
-        ...(state.set.bandStride === undefined ? {} : { bands: declaredBands(state.set) }),
+        ...(state.set.bandStride === undefined
+            ? {}
+            : { bands: declaredBands(state.set.bandStride, state.set.coarseBands) }),
     };
 }
 
-/** A declared band width and the block scheme it implies, where one covers it. */
-function declaredBands(set: AnimationSet): NonNullable<SetView["bands"]> {
-    const stride = set.bandStride ?? 0;
+/** A declared band width, the block scheme it implies where one covers it, and how many facings it holds. */
+function declaredBands(stride: number, coarse: true | undefined): NonNullable<SetView["bands"]> {
     const scheme = schemeForStride(stride);
-    return {
-        stride,
-        ...(scheme === undefined ? {} : { scheme }),
-        ...(set.coarseBands === true ? { coarse: true as const } : {}),
-    };
+    return { stride, ...(scheme === undefined ? {} : { scheme }), ...(coarse === undefined ? {} : { coarse }) };
 }

@@ -42,6 +42,14 @@ export interface AnimationSet {
      * when nothing in the install declares them.
      */
     prefixByArmour: ReadonlyMap<number, string>;
+    /**
+     * The prefix a character level's files fall back to when the level's own names no such file.
+     *
+     * A character set declares two prefixes and which of them holds a given action varies BY FILE: a classic
+     * archive puts a thief's leather body under the class prefix and its other levels under the base one.
+     * Absent where the declaration names one prefix, and for every non-character family.
+     */
+    basePrefix?: string;
     /** `resref_paperdoll`. Separate from the body: an aliasing set keeps its own inventory image. */
     paperdollPrefix: string | undefined;
     scheme: AnimationScheme;
@@ -118,6 +126,18 @@ function prefixesFrom(ini: AnimationIni): Map<number, string> {
         prefixes.set(level, letter === undefined ? ini.resref : ini.resref.slice(0, 3) + letter);
     }
     return prefixes;
+}
+
+/**
+ * The prefix a level's files fall back to, where the declaration names one distinct from the level's own.
+ *
+ * The base letter replaces the prefix's fourth character exactly as the specific one does; `prefixesFrom`
+ * already spends it on the lower levels, and this is the same letter offered as the alternative at every
+ * level - which is how both reference implementations resolve these files.
+ */
+function basePrefixFrom(ini: AnimationIni): string | undefined {
+    if (ini.resref === undefined || ini.armorBase === undefined) return undefined;
+    return ini.resref.slice(0, 3) + ini.armorBase;
 }
 
 /** One prefix per armour level, from a table row - the array's index is the level, counting from one. */
@@ -221,6 +241,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
         const tabled = ini === undefined ? table?.get(id) : undefined;
         const section = sectionOf(ini, tabled);
         const stride = declaredStride(section);
+        const base = ini === undefined ? tabled?.base : basePrefixFrom(ini);
         const layers = layerPrefixes(
             section,
             ini === undefined ? tabled?.prefixes[0] : ini.resref,
@@ -231,6 +252,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             code: codes.get(id) ?? "",
             name: names.get(id) ?? "",
             prefixByArmour: ini === undefined ? prefixesOfTable(tabled) : prefixesFrom(ini),
+            ...(base === undefined ? {} : { basePrefix: base }),
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
             scheme: schemeFrom(ini, tabled),
             ...(section === undefined ? {} : { section }),

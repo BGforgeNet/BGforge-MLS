@@ -169,6 +169,36 @@ describe("AnimationSetState", () => {
         expect(drawnPixel(state!)).toBe(1);
     });
 
+    /**
+     * The declared level count is the animation family's, not the install's: a classic archive ships no
+     * plate-armoured thief, and a picker offering the declared level hands the reader an empty row.
+     */
+    it("offers only the armour levels this install draws", () => {
+        const set = setOf({
+            prefixByArmour: new Map([
+                [1, "TSTB"],
+                [2, "TSTC"],
+                [3, "TSTD"],
+            ]),
+        });
+        const state = AnimationSetState.open(set, fakeIo({ TSTBG1: baseFileBam(1), TSTDG1: baseFileBam(1) }));
+
+        expect(state?.armours).toEqual([1, 3]);
+    });
+
+    it("opens on the lowest level that draws rather than the lowest declared", () => {
+        const set = setOf({
+            prefixByArmour: new Map([
+                [1, "TSTB"],
+                [2, "TSTC"],
+            ]),
+        });
+        const state = AnimationSetState.open(set, fakeIo({ TSTCG1: baseFileBam(1) }));
+
+        expect(state?.armour).toBe(2);
+        expect(state?.armours).toEqual([2]);
+    });
+
     it("re-resolves the action list when the armour changes", () => {
         const set = setOf({
             prefixByArmour: new Map([
@@ -279,7 +309,10 @@ describe("setView", () => {
                 [2, "TSTC"],
             ]),
         });
-        const state = AnimationSetState.open(set, fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: baseFileBam(1) }));
+        // Both levels ship a file: the picker offers the levels this install DRAWS, so a level with no
+        // files here would leave the second option out and the test would stop covering the labelling.
+        const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: baseFileBam(1), TSTCG1: baseFileBam(1) });
+        const state = AnimationSetState.open(set, io);
 
         expect(setView(state!)).toEqual({
             id: 0x1234,
@@ -324,5 +357,16 @@ describe("setView", () => {
         expect(setView(wide!).bands).toEqual({ stride: 16 });
         expect(setView(narrow!).bands).toEqual({ stride: 8, scheme: "ie8" });
         expect(setView(AnimationSetState.open(setOf(), io)!)).not.toHaveProperty("bands");
+    });
+
+    /**
+     * A wide band holds eight pictures unless the animation declares a smooth path, and the rose is what
+     * puts a facing name on each slot - so the flag has to reach the webview with the width.
+     */
+    it("carries how many facings a wide band holds beside its width", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(1) });
+        const coarse = AnimationSetState.open(setOf({ bandStride: 16, coarseBands: true }), io);
+
+        expect(setView(coarse!).bands).toEqual({ stride: 16, coarse: true });
     });
 });

@@ -35,7 +35,7 @@ export interface SetTile {
 export function setPreviewResref(set: AnimationSet, exists: (resref: string) => boolean): string | undefined {
     if (set.scheme.kind === "character") {
         const armour = firstArmour(set);
-        return armour === undefined ? undefined : characterMember(set, armour, { kind: "misc", detail: 1 });
+        return armour === undefined ? undefined : characterMember(set, armour, { kind: "misc", detail: 1 }, exists);
     }
     if (set.layout === undefined) return undefined;
     return schemeMembers(set.layout, set.prefixByArmour.get(firstArmour(set) ?? 1), exists)[0]?.resref;

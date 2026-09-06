@@ -66,6 +66,28 @@ describe("buildAnimationIndex", () => {
         expect(set?.code).toBe("");
     });
 
+    /**
+     * Three declarations the index turns into set fields, each absent for the families that do not carry
+     * it - so a reader can tell "this family has no second layer" from "nobody looked".
+     */
+    it("carries the second layer, the fallback prefix and the coarse-band flag only where declared", () => {
+        const layered = setFor(0x2200);
+        expect(layered?.section).toBe("monster_layered_spell");
+        expect(layered?.layerPrefixes).toEqual(["MOGMS"]);
+        expect(layered?.coarseBands).toBeUndefined();
+
+        const tiled = setFor(0x1100);
+        expect(tiled?.coarseBands).toBe(true);
+        expect(tiled?.layerPrefixes).toBeUndefined();
+
+        const cleric = setFor(0x6004);
+        expect(cleric?.basePrefix).toBe("CDMB");
+        expect(cleric?.layerPrefixes).toBeUndefined();
+        expect(cleric?.coarseBands).toBeUndefined();
+
+        expect(setFor(0xa000)?.basePrefix).toBeUndefined();
+    });
+
     it("draws under the prefix the INI declares, not under the animation's own code", () => {
         // The gnome cleric's code is CGMC; its body is the dwarf one.
         expect(setFor(0x6004)?.prefixByArmour.get(1)).toBe("CDMB");

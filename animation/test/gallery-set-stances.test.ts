@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
 import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
-import { setMembers, setStances, type StanceIo } from "../src/set-stances";
+import { drawnArmourLevels, setMembers, setStances, type StanceIo } from "../src/set-stances";
 import { bandedPair, multiCycle, skeletonBands } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
@@ -160,6 +160,29 @@ describe("setMembers", () => {
     it("names one member per action for a character set", () => {
         const members = setMembers(characterSet(), 1, (resref) => resref === "CDMB1G1");
         expect(members.map((member) => member.resref)).toEqual(["CDMB1G1"]);
+    });
+});
+
+describe("drawnArmourLevels", () => {
+    /** The declared count is the family's; a classic archive ships no plate-armoured thief. */
+    it("drops a declared level this install has no body files for", () => {
+        const set = characterSet();
+        set.prefixByArmour = new Map([
+            [1, "CDMB"],
+            [2, "CDMB"],
+            [3, "CDMC"],
+        ]);
+        expect(drawnArmourLevels(set, (resref) => resref === "CDMB1G1" || resref === "CDMC3G1")).toEqual([1, 3]);
+    });
+
+    /**
+     * The paperdoll is keyed by its own prefix, so a level whose only surviving file is an inventory image
+     * animates nothing - offering it would open a picker with one unplayable row.
+     */
+    it("does not count a level whose only file is the inventory image", () => {
+        const set = characterSet();
+        set.paperdollPrefix = "CGMC";
+        expect(drawnArmourLevels(set, (resref) => resref === "CGMC1INV")).toEqual([]);
     });
 });
 

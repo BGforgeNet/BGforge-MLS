@@ -51,16 +51,48 @@ export function characterActionCode(action: Action): string {
     }
 }
 
-/** The resref this set draws for one armour level and action, or undefined when it has no such member. */
-export function characterMember(set: AnimationSet, armour: number, action: Action): string | undefined {
+/**
+ * The prefixes one level's files may be named under, the level's own first and the set's base one after.
+ *
+ * A character set declares two, and which of them holds a given action's file varies BY FILE rather than by
+ * level: a classic archive puts the thief body's leather level under the class prefix and its other levels
+ * under the base one, so a resolver that took one prefix per level draws nothing at three levels in four.
+ * Both reference implementations resolve per file, and so does this.
+ *
+ * The order is theirs rather than load-bearing: measured on an Enhanced install, across 160 armour levels
+ * of sets declaring two distinct prefixes, none has a file under both - so no shipped level can tell the
+ * two orders apart.
+ */
+function prefixesAt(set: AnimationSet, armour: number): string[] {
+    const own = set.prefixByArmour.get(armour);
+    if (own === undefined) return [];
+    const base = set.basePrefix;
+    return base === undefined || base === own ? [own] : [own, base];
+}
+
+/**
+ * The resref this set draws for one armour level and action, or undefined when it has no such member.
+ *
+ * `exists` picks between the level's two candidate prefixes. Where neither answers, the level's own name is
+ * returned rather than nothing: a caller naming a file to CREATE wants the set's own answer, and a caller
+ * asking what to OPEN filters on existence anyway.
+ */
+export function characterMember(
+    set: AnimationSet,
+    armour: number,
+    action: Action,
+    exists: (resref: string) => boolean,
+): string | undefined {
+    const code = characterActionCode(action);
     if (action.kind === "paperdoll") {
         // The paperdoll is keyed by its own prefix AND still by armour level, so a set with no paperdoll
-        // declaration has no inventory image rather than borrowing the body's.
+        // declaration has no inventory image rather than borrowing the body's. One prefix, not two: the
+        // base/specific split is a property of the body art.
         if (set.paperdollPrefix === undefined || !set.prefixByArmour.has(armour)) return undefined;
-        return `${set.paperdollPrefix}${armour}${characterActionCode(action)}`;
+        return `${set.paperdollPrefix}${armour}${code}`;
     }
-    const prefix = set.prefixByArmour.get(armour);
-    return prefix === undefined ? undefined : `${prefix}${armour}${characterActionCode(action)}`;
+    const names = prefixesAt(set, armour).map((prefix) => `${prefix}${armour}${code}`);
+    return names.find((name) => exists(name)) ?? names[0];
 }
 
 /** Every action the scheme can name, in the order a picker should offer them. */
@@ -81,7 +113,7 @@ const CANDIDATES: Action[] = [
  */
 export function characterActions(set: AnimationSet, armour: number, exists: (resref: string) => boolean): Action[] {
     return CANDIDATES.filter((action) => {
-        const resref = characterMember(set, armour, action);
+        const resref = characterMember(set, armour, action, exists);
         return resref !== undefined && exists(resref);
     });
 }

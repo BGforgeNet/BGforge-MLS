@@ -12,7 +12,7 @@ import {
     type IeDirectionSlot,
     type SequenceShape,
 } from "@bgforge/image/ie-direction";
-import { type AnimationSet } from "./animation-index";
+import { type AnimationSet, armourLevels } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
 import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
@@ -36,7 +36,7 @@ export interface StanceIo {
 export function setMembers(set: AnimationSet, armour: number, exists: (resref: string) => boolean): SchemeMember[] {
     if (set.scheme.kind === "character") {
         return characterActions(set, armour, exists).flatMap((action) => {
-            const resref = characterMember(set, armour, action);
+            const resref = characterMember(set, armour, action, exists);
             if (resref === undefined) return [];
             // A character action is one file. The older layout ships a second one holding the facings
             // the engine mirrors for everyone else, so where it exists it is a PART of this member -
@@ -175,6 +175,20 @@ function bandsOf(
 /** Whether a member is the inventory paperdoll rather than something a rose can be drawn from. */
 export function isPaperdoll(member: SchemeMember): boolean {
     return member.action.id === "paperdoll";
+}
+
+/**
+ * The armour levels this set actually draws a body at, lowest first.
+ *
+ * The DECLARED count belongs to the animation family, not to the install: a classic archive ships no
+ * plate-armoured thief, so offering the declared four hands the reader three empty rows. Both reference
+ * implementations derive the count from the archive for the same reason.
+ *
+ * The paperdoll is excluded because it is keyed by its own prefix: a level whose only surviving file is an
+ * inventory image draws no body, and counting it would offer a level nothing animates at.
+ */
+export function drawnArmourLevels(set: AnimationSet, exists: (resref: string) => boolean): number[] {
+    return armourLevels(set).filter((level) => setMembers(set, level, exists).some((member) => !isPaperdoll(member)));
 }
 
 /**

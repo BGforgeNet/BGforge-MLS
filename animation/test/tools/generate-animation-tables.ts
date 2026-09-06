@@ -25,7 +25,7 @@ import * as path from "path";
 // resolves to the workspace package's built entry point and so would need a build first.
 import { openGame } from "../../../binary/src/index";
 import { declaredFamily, parseAnimationIni } from "../../src/animation-ini";
-import { characterDrawsBody } from "../../src/animation-schemes/character";
+import { characterActions } from "../../src/animation-schemes/character";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const TABLE_DIR = path.join(REPO_ROOT, "animation/src/animation-tables");
@@ -41,6 +41,7 @@ interface Row {
     section: string;
     paperdoll?: string;
     overlays?: string[];
+    base?: string;
 }
 
 /**
@@ -76,39 +77,56 @@ function readRows(gameDir: string): Row[] {
         // layered family, which draws none of their overlay files.
         const section = declaredFamily(ini);
         if (section === undefined || prefixes.length === 0) continue;
+        // Emitted only where it is not already one of the per-level prefixes: the fallback exists to reach a
+        // prefix the levels do not name, and a row repeating one it already carries says nothing.
+        const base = ini.armorBase === undefined ? undefined : `${ini.resref?.slice(0, 3) ?? ""}${ini.armorBase}`;
         rows.push({
             id: Number.parseInt(ref.resref, 16),
             prefixes,
             section,
             ...(ini.resrefPaperdoll === undefined ? {} : { paperdoll: ini.resrefPaperdoll }),
             ...(ini.weaponOverlays.length === 0 ? {} : { overlays: [...ini.weaponOverlays] }),
+            ...(base === undefined || prefixes.includes(base) === true ? {} : { base }),
         });
     }
     return rows.sort((a, b) => a.id - b.id);
 }
 
 /**
- * Which rows the classic archive contradicts: a character row naming files it does not have.
+ * Which armour levels the classic archive contradicts: a character row naming files it does not have.
  *
  * Asked through `characterActions`, the same resolver the panel uses, rather than by testing one sequence
  * name. A hand-rolled check here was a second derivation of which files a set draws, and it disagreed - it
- * looked for `G1`, which the thief-body sets do not ship, and reported twenty rows as missing that resolve.
+ * looked for `G1`, which the thief-body sets do not ship.
+ *
+ * PER LEVEL, not per row. A row asked only whether it draws AT ALL passes on one surviving level while the
+ * other three offer the reader an empty picker, which is exactly how twenty thief rows shipped naming files
+ * the classic archive keeps under a different prefix.
  */
-function unsupported(rows: readonly Row[], classicDir: string): Row[] {
+function unsupported(rows: readonly Row[], classicDir: string): { row: Row; levels: number[] }[] {
     const game = openGame(classicDir);
     if (game === undefined) throw new Error(`no Infinity Engine install at ${classicDir}`);
     const exists = (resref: string): boolean => game.canRead(resref, "bam");
-    return rows.filter((row) => {
-        if (row.section !== "character") return false;
+    return rows.flatMap((row) => {
+        if (row.section !== "character") return [];
         const set = {
             id: row.id,
             code: "",
             name: "",
             prefixByArmour: new Map(row.prefixes.map((prefix, at) => [at + 1, prefix])),
+            ...(row.base === undefined ? {} : { basePrefix: row.base }),
             paperdollPrefix: row.paperdoll,
             scheme: { kind: "character" as const },
         };
-        return !characterDrawsBody(set, exists);
+        // The paperdoll is excluded: it is keyed by its own prefix, so a level whose only surviving file is
+        // an inventory image draws no body, and counting it would pass a row on a picture nothing animates.
+        const blank = row.prefixes
+            .map((_, at) => at + 1)
+            .filter(
+                (level) =>
+                    characterActions(set, level, exists).filter((action) => action.kind !== "paperdoll").length === 0,
+            );
+        return blank.length === 0 ? [] : [{ row, levels: blank }];
     });
 }
 
@@ -120,7 +138,8 @@ function render(rows: readonly Row[]): string {
         const paperdoll = row.paperdoll === undefined ? "" : `, paperdoll: "${row.paperdoll}"`;
         const overlays =
             row.overlays === undefined ? "" : `, overlays: [${row.overlays.map((o) => `"${o}"`).join(", ")}]`;
-        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${paperdoll}${overlays} }],`;
+        const base = row.base === undefined ? "" : `, base: "${row.base}"`;
+        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${base}${paperdoll}${overlays} }],`;
     });
     return [BEGIN_MARKER, ...lines, END_MARKER].join("\n");
 }
@@ -150,10 +169,13 @@ const rows = readRows(eeDir);
 const classicDir = arg("classic");
 if (classicDir !== undefined) {
     const contradicted = unsupported(rows, classicDir);
-    for (const row of contradicted) {
-        process.stderr.write(`classic archive has no ${row.prefixes.join("/")}: ${hex(row.id)}\n`);
+    for (const { row, levels } of contradicted) {
+        const named = levels.map((level) => `${row.prefixes[level - 1] ?? "?"}${level}`).join(" ");
+        process.stderr.write(`classic archive draws nothing for ${hex(row.id)} at ${named}\n`);
     }
-    process.stderr.write(`${rows.length} rows, ${contradicted.length} contradicted by the classic archive\n`);
+    process.stderr.write(
+        `${rows.length} rows, ${contradicted.length} with an armour level the classic archive contradicts\n`,
+    );
 }
 
 const updated = splice(fs.readFileSync(target, "utf8"), render(rows));

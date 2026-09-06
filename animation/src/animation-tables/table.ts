@@ -25,6 +25,12 @@ export interface TableAnimation {
     readonly prefixes: readonly string[];
     /** The engine's own section name for the layout, as an EE install spells it, e.g. `character`. */
     readonly section: string;
+    /**
+     * The prefix a character level falls back to when its own names no such file. Distinct from `prefixes`,
+     * which the classic archive's split layout cannot be expressed in: the thief bodies put one level under
+     * the class prefix and the rest under this one.
+     */
+    readonly base?: string;
     /** `resref_paperdoll` where it differs from the body; an aliasing set keeps its own inventory image. */
     readonly paperdoll?: string;
     /**

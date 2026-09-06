@@ -80,6 +80,34 @@ resref_armor_base=B
 resref_armor_specific=C
 `;
 
+/** The spell-layered family: its weapon overlay is a second set of files under a declared letter. */
+const INI_2200 = `// MOGM ogre_mage
+
+[general]
+animation_type=2000
+ellipse=16
+
+[monster_layered]
+false_color=1
+resref=MOGM
+resref_weapon1=S1
+resref_weapon2=
+`;
+
+/** A tiled animation that declares no smooth path, so its sixteen slots hold eight pictures. */
+const INI_1100 = `// MTAN tanarri
+
+[general]
+animation_type=1000
+ellipse=16
+
+[monster_quadrant]
+false_color=0
+path_smooth=0
+quadrants=4
+resref=MTAN
+`;
+
 const INI_A000 = `// MWYV wyvern
 
 [general]
@@ -117,6 +145,9 @@ const BAMS = [
     "CGMC1INV",
     "CHMM1G1",
     "MWYVG1",
+    "MOGMG1",
+    "MOGMSG1",
+    "MTANG11",
 ];
 
 const TEXT: Record<string, string> = {
@@ -125,6 +156,8 @@ const TEXT: Record<string, string> = {
     "6000.ini": INI_6000,
     "6004.ini": INI_6004,
     "A000.ini": INI_A000,
+    "2200.ini": INI_2200,
+    "1100.ini": INI_1100,
 };
 
 const key = (resref: string, type: string): string => `${resref.toUpperCase()}.${type.toLowerCase()}`;

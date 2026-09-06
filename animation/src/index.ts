@@ -45,7 +45,7 @@ export {
 } from "./animation-schemes/bands";
 
 // Reading one set out of an install.
-export { type StanceIo, setMembers, setStances } from "./set-stances";
+export { type StanceIo, drawnArmourLevels, setMembers, setStances } from "./set-stances";
 export { type SetTile, setPreviewResref, setTile } from "./set-tiles";
 
 // The neutral model: one set, read out of a game and writable back to it.

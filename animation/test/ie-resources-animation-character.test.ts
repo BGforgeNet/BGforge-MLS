@@ -55,48 +55,94 @@ const mage = setOf({
     scheme: { kind: "character" },
 });
 
+/**
+ * A thief set as a CLASSIC archive lays it out: the class prefix holds the leather body alone and every
+ * other level is under the base one. An Enhanced install puts all four under the class prefix, which is
+ * why a row derived from one names files a classic archive does not have.
+ */
+const thief = setOf({
+    id: 0x6300,
+    code: "CHMT",
+    name: "THIEF_MALE_HUMAN",
+    prefixByArmour: new Map([
+        [1, "CHMT"],
+        [2, "CHMT"],
+        [3, "CHMT"],
+        [4, "CHMT"],
+    ]),
+    basePrefix: "CHMB",
+    scheme: { kind: "character" },
+});
+
 describe("characterMember", () => {
     it("takes the prefix from the armour level, not from the set", () => {
-        expect(characterMember(cleric, 1, { kind: "misc", detail: 1 })).toBe("CDMB1G1");
-        expect(characterMember(cleric, 4, { kind: "misc", detail: 1 })).toBe("CDMC4G1");
+        expect(characterMember(cleric, 1, { kind: "misc", detail: 1 }, () => true)).toBe("CDMB1G1");
+        expect(characterMember(cleric, 4, { kind: "misc", detail: 1 }, () => true)).toBe("CDMC4G1");
+    });
+
+    /**
+     * The level's own prefix first and the set's base one after it - resolved per FILE, which is what both
+     * reference implementations do and what a classic archive's split layout needs.
+     */
+    it("falls back to the set's base prefix for a level its own prefix has no file at", () => {
+        const shipped = new Set(["CHMB1G1", "CHMT2G1", "CHMB3G1"]);
+        const at = (level: number) =>
+            characterMember(thief, level, { kind: "misc", detail: 1 }, (resref) => shipped.has(resref));
+
+        expect(at(1)).toBe("CHMB1G1");
+        expect(at(2)).toBe("CHMT2G1");
+        expect(at(3)).toBe("CHMB3G1");
+    });
+
+    it("names the level's own prefix where neither has a file, rather than nothing", () => {
+        expect(characterMember(thief, 4, { kind: "misc", detail: 1 }, () => false)).toBe("CHMT4G1");
+    });
+
+    it("offers every level a classic archive draws, not only the one the class prefix covers", () => {
+        const shipped = new Set(["CHMB1G1", "CHMT2G1", "CHMB3G1"]);
+        const drawn = [1, 2, 3, 4].filter(
+            (level) => characterActions(thief, level, (resref) => shipped.has(resref)).length > 0,
+        );
+        expect(drawn).toEqual([1, 2, 3]);
     });
 
     it("names the file for elf/female/mage, leather, shoot-bow", () => {
-        expect(characterMember(mage, 2, { kind: "shoot", weapon: "bow" })).toBe("CEFW2SA");
+        expect(characterMember(mage, 2, { kind: "shoot", weapon: "bow" }, () => true)).toBe("CEFW2SA");
     });
 
     it("distinguishes the three shooting weapons", () => {
-        expect(characterMember(mage, 1, { kind: "shoot", weapon: "sling" })).toBe("CEFW1SS");
-        expect(characterMember(mage, 1, { kind: "shoot", weapon: "crossbow" })).toBe("CEFW1SX");
+        expect(characterMember(mage, 1, { kind: "shoot", weapon: "sling" }, () => true)).toBe("CEFW1SS");
+        expect(characterMember(mage, 1, { kind: "shoot", weapon: "crossbow" }, () => true)).toBe("CEFW1SX");
     });
 
     it("numbers attacks and the higher misc cycles", () => {
-        expect(characterMember(mage, 1, { kind: "attack", detail: 5 })).toBe("CEFW1A5");
-        expect(characterMember(mage, 1, { kind: "misc", detail: 13 })).toBe("CEFW1G13");
-        expect(characterMember(mage, 1, { kind: "cast" })).toBe("CEFW1CA");
+        expect(characterMember(mage, 1, { kind: "attack", detail: 5 }, () => true)).toBe("CEFW1A5");
+        expect(characterMember(mage, 1, { kind: "misc", detail: 13 }, () => true)).toBe("CEFW1G13");
+        expect(characterMember(mage, 1, { kind: "cast" }, () => true)).toBe("CEFW1CA");
     });
 
     it("takes the paperdoll from its own declaration, not from the body", () => {
         // The gnome cleric's body is a dwarf one; only its inventory image carries its own code.
-        expect(characterMember(cleric, 1, { kind: "paperdoll" })).toBe("CGMC1INV");
+        expect(characterMember(cleric, 1, { kind: "paperdoll" }, () => true)).toBe("CGMC1INV");
     });
 
     it("has no member for an armour level the set does not have", () => {
         const monk = setOf({ prefixByArmour: new Map([[1, "CHMM"]]), paperdollPrefix: "CHMM" });
-        expect(characterMember(monk, 4, { kind: "cast" })).toBeUndefined();
+        expect(characterMember(monk, 4, { kind: "cast" }, () => true)).toBeUndefined();
     });
 
     it("has no paperdoll where none is declared", () => {
         const bare = setOf({ prefixByArmour: new Map([[1, "CHMB"]]) });
-        expect(characterMember(bare, 1, { kind: "paperdoll" })).toBeUndefined();
+        expect(characterMember(bare, 1, { kind: "paperdoll" }, () => true)).toBeUndefined();
     });
 });
 
 describe("characterActions", () => {
     it("reports only the actions whose files the install actually has", () => {
         const shipped = new Set(["CEFW1G1", "CEFW1A1", "CEFW1SA", "CEFW1CA"]);
-        const actions = characterActions(mage, 1, (resref) => shipped.has(resref));
-        expect(actions.map((action) => characterMember(mage, 1, action))).toEqual([
+        const has = (resref: string): boolean => shipped.has(resref);
+        const actions = characterActions(mage, 1, has);
+        expect(actions.map((action) => characterMember(mage, 1, action, has))).toEqual([
             "CEFW1G1",
             "CEFW1A1",
             "CEFW1CA",

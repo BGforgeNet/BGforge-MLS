@@ -2,12 +2,12 @@
  * Baldur's Gate II animations - the table a classic Shadows of Amn, Throne of Bhaal or BGT install needs.
  *
  * The rows below the marker are derived from the declarations an Enhanced Edition install of this family
- * ships, by `client/test/tools/generate-animation-tables.ts`. Every character row was then resolved against a
- * classic archive through the panel's own resolver; nine named files it does not have, and those nine are the
- * hand-authored block above.
+ * ships, by `animation/test/tools/generate-animation-tables.ts`. Every character row was then resolved
+ * against a classic archive through the panel's own resolver, ARMOUR LEVEL BY ARMOUR LEVEL; the levels it
+ * contradicts are covered by the two hand-authored blocks above.
  *
  * Regenerate with:
- *   pnpm exec tsx client/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --classic <dir>
+ *   pnpm exec tsx animation/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --classic <dir>
  */
 
 import { EFFECT_ROWS } from "./effects";
@@ -21,16 +21,45 @@ import { animationTable, type AnimationTable, type TableRows } from "./table";
  * unconditionally because nothing reaches this table while an install declares its own animations: an EE
  * install answers from its INIs and never asks.
  */
+/**
+ * The thief bodies, which a classic archive splits across two prefixes.
+ *
+ * An Enhanced install ships all four armour levels under the class prefix and declares its base letter as
+ * that same letter, so a row derived from one names files the classic archive does not have: it keeps only
+ * the studded-leather level under the class prefix and the rest under the base body. Naming the base here is
+ * what lets the per-file fallback reach them - without it three levels in four draw nothing.
+ */
+const CLASSIC_THIEF_BODIES: TableRows = [
+    [0x5300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
+    [0x5301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMT"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
+    [0x5302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x5303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMT"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
+    [0x5310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
+    [0x5311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFT"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
+    [0x5313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
+    [0x6300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
+    [0x6301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMT"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
+    [0x6302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x6303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMT"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
+    [0x6304, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CGMT" }],
+    [0x6305, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "COMT" }],
+    [0x6310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
+    [0x6311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFT"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
+    [0x6313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
+    [0x6314, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CGFT" }],
+    [0x6315, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "COFT" }],
+];
+
 const CLASSIC_DELTAS: TableRows = [
     [0x5012, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMC"], section: "character", paperdoll: "CDMC" }],
     [0x5112, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMF"], section: "character", paperdoll: "CDMF" }],
     [0x5212, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
-    [0x5312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", paperdoll: "CDMT" }],
+    [0x5312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
     [0x6012, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMC"], section: "character", paperdoll: "CDMC" }],
     [0x6112, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMF"], section: "character", paperdoll: "CDMF" }],
     [0x6212, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
     [0x6214, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
-    [0x6312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", paperdoll: "CDMT" }],
+    [0x6312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
 ];
 
 const DERIVED: TableRows = [
@@ -510,4 +539,9 @@ const DERIVED: TableRows = [
  * Effects first, then the derived rows, then the deltas: a later entry wins the Map, so a row this game's
  * own INIs cover overrides the family-wide effect row, and the hand-authored block overrides both.
  */
-export const BG2_TABLE: AnimationTable = animationTable([...EFFECT_ROWS, ...DERIVED, ...CLASSIC_DELTAS]);
+export const BG2_TABLE: AnimationTable = animationTable([
+    ...EFFECT_ROWS,
+    ...DERIVED,
+    ...CLASSIC_THIEF_BODIES,
+    ...CLASSIC_DELTAS,
+]);
