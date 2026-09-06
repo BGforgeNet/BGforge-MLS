@@ -222,7 +222,7 @@ describe("safeEvaluate", () => {
         });
 
         it("throws on mismatched parentheses (missing closing)", () => {
-            expect(() => safeEvaluate("(1 + 2")).toThrow(/Expected token type \d+, got \d+ at position 4/);
+            expect(() => safeEvaluate("(1 + 2")).toThrow("Expected token ')', got 'end of input' at position 4");
         });
 
         it("throws on mismatched parentheses (extra closing)", () => {
