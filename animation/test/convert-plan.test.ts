@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type Facing, type LossReport } from "@bgforge/image";
-import { type NeutralAction, type NeutralSet } from "../src/neutral/model";
-import { readNeutralSet } from "../src/neutral/read";
-import { type AnimationSet } from "../src/animation-index";
-import { type StanceIo } from "../src/set-stances";
+import { type NeutralAction } from "../src/neutral/model";
 import {
     FALLOUT_FRM,
     IE_16_POINT_FULL,
@@ -13,43 +10,7 @@ import {
 } from "../src/convert/target";
 import { type ConversionPlan, planConversion } from "../src/convert/plan";
 import { decodeActionCode } from "../src/animation-schemes/actions";
-import { bandedPair } from "../../image/test/bam-fixtures.ts";
-
-/**
- * A real parsed member, so a planned set holds the animation a reader would have given it.
- *
- * The planner reads the interpretation rather than the pixels, so the tests below vary the actions while
- * keeping one genuinely parsed file underneath - a set whose files map was empty would not be a set.
- */
-function setWithActions(actions: NeutralAction[]): NeutralSet {
-    const set: AnimationSet = {
-        id: 0x6004,
-        code: "CGMC",
-        name: "CLERIC_MALE_GNOME",
-        prefixByArmour: new Map([[1, "CDMB"]]),
-        paperdollPrefix: undefined,
-        scheme: { kind: "character" },
-        section: "character",
-    };
-    const files: Record<string, Uint8Array> = { CDMB1G1: bandedPair(4, [0, 1, 2, 3, 4]) };
-    const io: StanceIo = { exists: (resref) => resref in files, read: (resref) => files[resref] };
-    const read = readNeutralSet(set, io, { flavour: "tob" });
-    return { ...read, variants: [{ ...read.variants[0]!, actions }] };
-}
-
-/** One directional action storing exactly the facings named. */
-function directional(label: string, facings: Facing[]): NeutralAction {
-    return {
-        label,
-        action: decodeActionCode("character", "G1"),
-        resrefs: ["CDMB1G1"],
-        band: 0,
-        cycles: {
-            kind: "directional",
-            directions: facings.map((facing, at) => ({ facing, sequenceIndex: at })),
-        },
-    };
-}
+import { directional, setWithActions } from "./ie-game-fixtures";
 
 /** The report of a plan that went ahead, failing loudly rather than silently skipping if it was refused. */
 function reportOf(plan: ConversionPlan): LossReport {

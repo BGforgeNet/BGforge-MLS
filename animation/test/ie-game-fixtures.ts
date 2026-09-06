@@ -11,7 +11,14 @@
  * not digits, a body prefix that changes between armour levels, a set whose paperdoll aliases away from its
  * body, an id one table names and the other does not, and a scheme with no implementation.
  */
+import { type Facing } from "@bgforge/image";
 import type { GameHandle } from "../src/game-handle";
+import { type AnimationSet } from "../src/animation-index";
+import { type NeutralAction, type NeutralSet } from "../src/neutral/model";
+import { readNeutralSet } from "../src/neutral/read";
+import { type StanceIo } from "../src/set-stances";
+import { decodeActionCode } from "../src/animation-schemes/actions";
+import { bandedPair } from "../../image/test/bam-fixtures.ts";
 
 /** Which real resource each fixture row was copied from. Read this before changing any value here. */
 export const MINI_GAME_PROVENANCE = {
@@ -187,5 +194,40 @@ export function miniGame(): GameHandle {
             })),
             ...BAMS.map((resref) => ({ resref, ext: "bam" })),
         ],
+    };
+}
+
+/** The gnome cleric declaration the conversion suites build their test sets from. */
+export const CLERIC_MALE_GNOME_SET: AnimationSet = {
+    id: 0x6004,
+    code: "CGMC",
+    name: "CLERIC_MALE_GNOME",
+    prefixByArmour: new Map([[1, "CDMB"]]),
+    paperdollPrefix: undefined,
+    scheme: { kind: "character" },
+    section: "character",
+};
+
+/**
+ * A parsed gnome cleric set, walking, with its variant's actions replaced by the ones given.
+ *
+ * The planner and notes suites read the interpretation rather than the pixels, so this keeps one genuinely
+ * parsed file underneath while varying the actions - a set whose files map was empty would not be a set.
+ */
+export function setWithActions(actions: NeutralAction[]): NeutralSet {
+    const files: Record<string, Uint8Array> = { CDMB1G1: bandedPair(4, [0, 1, 2, 3, 4]) };
+    const io: StanceIo = { exists: (resref) => resref in files, read: (resref) => files[resref] };
+    const read = readNeutralSet(CLERIC_MALE_GNOME_SET, io, { flavour: "tob" });
+    return { ...read, variants: [{ ...read.variants[0]!, actions }] };
+}
+
+/** One directional action storing exactly the facings named, under the given code (default `G1`). */
+export function directional(label: string, facings: Facing[], code = "G1"): NeutralAction {
+    return {
+        label,
+        action: decodeActionCode("character", code),
+        resrefs: ["CDMB1G1"],
+        band: 0,
+        cycles: { kind: "directional", directions: facings.map((facing, at) => ({ facing, sequenceIndex: at })) },
     };
 }

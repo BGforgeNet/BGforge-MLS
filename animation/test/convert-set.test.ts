@@ -8,21 +8,13 @@ import { FALLOUT_FRM, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/conv
 import { type ConversionOptions, convertSet } from "../src/convert/convert";
 import { decodeActionCode } from "../src/animation-schemes/actions";
 import { bandedPair, multiCycle, packedBands } from "../../image/test/bam-fixtures.ts";
+import { CLERIC_MALE_GNOME_SET } from "./ie-game-fixtures";
 
 /** A west-arc band: five drawn facings and three the engine mirrors, which is the stored IE shape. */
 const band = () => bandedPair(4, [0, 1, 2, 3, 4]);
 
 function setOf(over: Partial<AnimationSet> = {}): AnimationSet {
-    return {
-        id: 0x6004,
-        code: "CGMC",
-        name: "CLERIC_MALE_GNOME",
-        prefixByArmour: new Map([[1, "CDMB"]]),
-        paperdollPrefix: undefined,
-        scheme: { kind: "character" },
-        section: "character",
-        ...over,
-    };
+    return { ...CLERIC_MALE_GNOME_SET, ...over };
 }
 
 function read(files: Record<string, Uint8Array>, over: Partial<AnimationSet> = {}): NeutralSet {
