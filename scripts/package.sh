@@ -84,7 +84,9 @@ done
 # (see workspace_links above), which the publish step needs.
 rm -rf server/node_modules/.bin server/node_modules/.vite
 for dir in server/node_modules/@*/; do
-    [ -d "$dir" ] && rm -rf "$dir"
+    if [ -d "$dir" ]; then
+        rm -rf "$dir"
+    fi
 done
 
 # Step 3: Package without re-running prepublish.
