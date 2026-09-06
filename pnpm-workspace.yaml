@@ -22,20 +22,33 @@ packages:
 # instead of a literal range, so an out-of-lockstep bump in one package.json fails
 # `pnpm install` rather than silently drifting until noticed by convention.
 catalog:
-  vscode-languageclient: 10.1.0
-  vscode-languageserver: 10.1.0
-  vscode-languageserver-protocol: 3.18.2
+  vscode-languageclient: 10.1.1
+  vscode-languageserver: 10.1.1
+  vscode-languageserver-protocol: 3.18.3
   ts-morph: ^28.0.0
   typescript: ^6.0.3
   vitest: ^4.1.11
+  # Peer-depends on the exact vitest version, so it cannot float independently of it.
+  "@vitest/coverage-v8": ^4.1.11
   "@types/node": ^24.13.3
+  # Generates the SyntaxType enums the server imports as one set, from four grammar packages.
+  "@asgerf/dts-tree-sitter": ^0.21.0
   cac: ^7.0.0
   diff: ^9.0.0
+  # One esbuild release cut in two forms: the native build bundles the client, the WASM build
+  # backs the transpilers.
+  esbuild: ^0.28.2
   esbuild-wasm: ^0.28.2
   fast-check: ^4.9.0
+  # Declared by both client and server.
+  fast-glob: ^3.3.3
   quick-lru: ^7.3.0
   tsdown: ^0.22.14
-  web-tree-sitter: ^0.26.13
+  # The CLI generates the parsers web-tree-sitter loads, so both must agree on the parser ABI.
+  tree-sitter-cli: 0.27.0
+  web-tree-sitter: ^0.27.0
+  # Declared by both the root workspace and server.
+  yaml: ^2.9.0
 
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive

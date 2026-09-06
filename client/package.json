@@ -27,7 +27,7 @@
         "@types/node": "catalog:",
         "@types/vscode": "~1.91.0",
         "@vscode/test-electron": "^3.1.0",
-        "fast-glob": "^3.3.3"
+        "fast-glob": "catalog:"
     },
     "engines": {
         "vscode": "^1.91.0"

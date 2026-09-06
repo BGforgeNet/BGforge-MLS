@@ -327,8 +327,8 @@ activate()
 **VSCode engine floor (1.91):** The extension declares `engines.vscode: ^1.91.0`
 (`package.json`, mirrored by `client/package.json` `engines` and `@types/vscode`).
 The floor was raised from 1.73 to 1.91 when the LSP stack moved to
-`vscode-languageclient` / `vscode-languageserver` 10.x (protocol 3.18.2):
-`vscode-languageclient@10.1.0` itself declares `engines.vscode: ^1.91.0`, and the
+`vscode-languageclient` / `vscode-languageserver` 10.x (protocol 3.18.3):
+`vscode-languageclient@10.1.1` itself declares `engines.vscode: ^1.91.0`, and the
 `createOutputChannel(name, { log: true })` LogOutputChannel API the 10.x client
 requires arrived in 1.74 - both well above the older `vscode.CustomEditorProvider`
 (1.46) and `semanticTokenTypes` (1.43) contributions. Raise it further only if a

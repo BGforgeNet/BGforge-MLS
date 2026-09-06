@@ -30,6 +30,6 @@
         "playground": "tree-sitter playground"
     },
     "devDependencies": {
-        "@asgerf/dts-tree-sitter": "^0.21.0"
+        "@asgerf/dts-tree-sitter": "catalog:"
     }
 }
