@@ -1,12 +1,31 @@
 #!/bin/bash
 
 # Shared library for grammar test scripts.
-# Source this after setting GRAMMAR_NAME and SAMPLE_EXTS; do not execute it directly.
+# Source this after setting GRAMMAR_NAME; do not execute it directly.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TS="$ROOT_DIR/node_modules/.bin/tree-sitter"
 OXLINT="$ROOT_DIR/node_modules/.bin/oxlint"
 GRAMMAR_DIR="$ROOT_DIR/grammars/$GRAMMAR_NAME"
+
+# Sets SAMPLE_EXTS in the caller's scope to the grammar's `find` name predicates, and
+# rejects a grammar with no arm here rather than letting the sample steps match nothing.
+sample_exts_for() {
+    case "$1" in
+        fallout-ssl) SAMPLE_EXTS=(-name "*.ssl") ;;
+        weidu-baf) SAMPLE_EXTS=(-name "*.baf") ;;
+        weidu-d) SAMPLE_EXTS=(-name "*.d") ;;
+        weidu-tp2) SAMPLE_EXTS=(-name "*.tp2" -o -name "*.tpa" -o -name "*.tph" -o -name "*.tpp") ;;
+        weidu-tra) SAMPLE_EXTS=(-name "*.tra") ;;
+        fallout-msg) SAMPLE_EXTS=(-name "*.msg") ;;
+        *)
+            echo "Unknown grammar: $1"
+            exit 1
+            ;;
+    esac
+}
+
+sample_exts_for "$GRAMMAR_NAME"
 
 # shellcheck source=scripts/timing-lib.sh
 source "$ROOT_DIR/scripts/timing-lib.sh"
