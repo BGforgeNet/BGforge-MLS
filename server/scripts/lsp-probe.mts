@@ -5,7 +5,8 @@
  * real request flow.
  *
  * Usage: pnpm lsp-probe <request> <file> [line] [col] [flags]
- *   request:  hover | completion | definition | references | symbols | signature | inlay | rename
+ *   request:  hover | completion | definition | references | symbols | signature | inlay | rename |
+ *             codeaction
  *   line/col: 1-based (editor-style); required for position requests, ignored for symbols/inlay
  *   flags:    --lang <id>        override the extension-derived languageId (e.g. weidu-ssl for .ssl)
  *             --workspace <dir>  workspace root sent at initialize (default: the file's directory)
@@ -22,6 +23,9 @@
  * is drawn from a half-built index and prints exactly like a complete one. If the scan
  * outlasts the wait, the partial answer is still printed, with a warning on stderr saying
  * so; point --workspace at a smaller directory when that happens.
+ *
+ * `codeaction` sends the diagnostics the server itself published for that position, the way an
+ * editor does, so it waits for the first publishDiagnostics for the file before asking.
  */
 
 import { spawn } from "node:child_process";
@@ -32,6 +36,9 @@ import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
 
 /** How long to wait for the workspace scan before answering anyway, loudly. Under the 30s overall timeout. */
 const SCAN_WAIT_MS = 20_000;
+
+/** How long `codeaction` waits for the file's first diagnostics before asking with none. */
+const DIAGNOSTICS_WAIT_MS = 5_000;
 
 const LANG_BY_EXT: Record<string, string> = {
     ".ssl": "fallout-ssl",
@@ -51,7 +58,17 @@ const LANG_BY_EXT: Record<string, string> = {
     ".td": "typescript",
 };
 
-const REQUESTS = ["hover", "completion", "definition", "references", "symbols", "signature", "inlay", "rename"];
+const REQUESTS = [
+    "hover",
+    "completion",
+    "definition",
+    "references",
+    "symbols",
+    "signature",
+    "inlay",
+    "rename",
+    "codeaction",
+];
 const POSITIONLESS = new Set(["symbols", "inlay"]);
 
 function usage(message?: string): never {
@@ -60,6 +77,7 @@ function usage(message?: string): never {
         "Usage: pnpm lsp-probe <request> <file> [line] [col] [--lang id] [--workspace dir] [--new-name n] [--game dir] [--tlk-encoding e] [--scan-timeout ms] [--json] [--verbose]",
     );
     console.error(`Requests: ${REQUESTS.join(", ")}. line/col are 1-based.`);
+    console.error("codeaction sends the diagnostics the server published at that position.");
     process.exit(1);
 }
 
@@ -177,13 +195,37 @@ child.stdout.on("data", (chunk: Buffer) => {
     }
 });
 
+interface Range {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+}
+
+interface DiagnosticLike {
+    range: Range;
+    message?: string;
+    source?: string;
+}
+
 interface RpcMessage {
     id?: number;
     method?: string;
-    params?: { type?: number; message?: string; items?: readonly unknown[] };
+    params?: {
+        type?: number;
+        message?: string;
+        items?: readonly unknown[];
+        uri?: string;
+        diagnostics?: readonly DiagnosticLike[];
+    };
     result?: unknown;
     error?: unknown;
 }
+
+/** The latest diagnostics the server published for the opened file; the input a code action needs. */
+let published: readonly DiagnosticLike[] = [];
+let diagnosticsPublished: () => void = () => {};
+const firstDiagnostics = new Promise<void>((resolvePromise) => {
+    diagnosticsPublished = resolvePromise;
+});
 
 /** Resolves when the server reports the startup workspace scan finished; see `waitForWorkspaceScan`. */
 let scanComplete: () => void = () => {};
@@ -210,6 +252,11 @@ function handleMessage(message: RpcMessage): void {
         // Server-to-client request (e.g. capability registration): answer null so nothing hangs.
         if (args.verbose) console.error(`[probe] answering null to ${message.method}`);
         send({ id: message.id, result: null });
+    } else if (message.method === "textDocument/publishDiagnostics") {
+        if (message.params?.uri === uri) {
+            published = message.params.diagnostics ?? [];
+            diagnosticsPublished();
+        }
     } else if (message.method === "window/logMessage") {
         if (message.params?.message?.includes(LSP_LOG_WORKSPACE_SCAN_COMPLETE)) scanComplete();
         if (args.verbose) console.error(`[server] ${message.params?.message}`);
@@ -248,6 +295,31 @@ async function waitForWorkspaceScan(): Promise<void> {
     }
 }
 
+/**
+ * Hold a code-action request until the server has published diagnostics for the file.
+ *
+ * Validation is asynchronous, so asking straight after didOpen sends an empty diagnostic list and the
+ * server correctly answers with no actions - a null that reads exactly like "this position has no fix".
+ */
+async function waitForDiagnostics(): Promise<void> {
+    const deadline = new Promise<"timeout">((resolvePromise) => {
+        setTimeout(() => resolvePromise("timeout"), DIAGNOSTICS_WAIT_MS).unref();
+    });
+    if ((await Promise.race([firstDiagnostics, deadline])) === "timeout") {
+        console.error(
+            `lsp-probe: no diagnostics published for this file after ${DIAGNOSTICS_WAIT_MS}ms - asking for code ` +
+                `actions with none, which yields none. Re-run with --verbose to watch the server.`,
+        );
+    }
+}
+
+/** The published diagnostics covering the requested position, as an editor would send them. */
+function diagnosticsAtPosition(): DiagnosticLike[] {
+    const atOrAfter = (a: { line: number; character: number }, b: { line: number; character: number }): boolean =>
+        a.line > b.line || (a.line === b.line && a.character >= b.character);
+    return published.filter((d) => atOrAfter(position, d.range.start) && atOrAfter(d.range.end, position));
+}
+
 child.stderr.on("data", (chunk: Buffer) => {
     if (args.verbose) process.stderr.write(chunk);
 });
@@ -283,6 +355,14 @@ const REQUEST_SHAPES: Record<string, () => [string, unknown]> = {
         { textDocument, range: { start: { line: 0, character: 0 }, end: endOfDocument() } },
     ],
     rename: () => ["textDocument/rename", { textDocument, position, newName: args.newName }],
+    codeaction: () => [
+        "textDocument/codeAction",
+        {
+            textDocument,
+            range: { start: position, end: position },
+            context: { diagnostics: diagnosticsAtPosition() },
+        },
+    ],
 };
 
 interface CompletionItemLike {
@@ -290,7 +370,20 @@ interface CompletionItemLike {
     kind?: unknown;
 }
 
+interface CodeActionLike {
+    title?: unknown;
+    kind?: unknown;
+}
+
 function printResult(result: unknown): void {
+    if (args.request === "codeaction" && !args.json) {
+        // The edits are verbose; the titles and kinds are what a caller checks first.
+        const actions = (Array.isArray(result) ? result : []) as CodeActionLike[];
+        console.log(`${actions.length} code actions:`);
+        for (const action of actions) console.log(`  ${action.title} (${action.kind})`);
+        if (actions.length > 0) console.log("  (--json for the edits)");
+        return;
+    }
     if (args.request === "completion" && !args.json && result !== null && typeof result === "object") {
         // Real completion lists run to thousands of items; summarize unless --json asked for all.
         const items = (Array.isArray(result) ? result : (result as { items?: CompletionItemLike[] }).items) ?? [];
@@ -311,6 +404,15 @@ await request("initialize", {
 send({ method: "initialized", params: {} });
 send({ method: "textDocument/didOpen", params: { textDocument: { uri, languageId, version: 1, text } } });
 await waitForWorkspaceScan();
+if (args.request === "codeaction") {
+    await waitForDiagnostics();
+    const covering = diagnosticsAtPosition();
+    console.error(
+        `lsp-probe: ${published.length} diagnostic(s) published for this file, ${covering.length} covering ` +
+            `${args.line}:${args.col}` +
+            covering.map((d) => `\n  [${d.source ?? "no source"}] ${d.message ?? ""}`).join(""),
+    );
+}
 
 const shape = REQUEST_SHAPES[args.request];
 if (!shape) usage(`request ${args.request} has no request shape`);

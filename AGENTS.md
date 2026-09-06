@@ -16,10 +16,12 @@ Project documentation is not here. Index: `docs/README.md`. Contributor workflow
 Pick the cheapest tool that answers the actual question.
 
 - **"What does the server return here?"** ->
-  `pnpm lsp-probe <hover|completion|definition|references|symbols|signature|inlay|rename> <file> <line> <col>`
-  (1-based). Needs `pnpm build:dev`. Add `--game <dir>` (plus `--tlk-encoding` where the install needs it) for
-  anything resolving TLK strrefs - without it strref hovers and hints come back empty. Waits for the workspace scan,
-  so cross-file answers are complete (`--scan-timeout`, default 20s, warns on stderr rather than answering silently).
+  `pnpm lsp-probe <request> <file> <line> <col>` (1-based), request being one of `hover`, `completion`,
+  `definition`, `references`, `symbols`, `signature`, `inlay`, `rename`, `codeaction`. Needs `pnpm build:dev`. Add
+  `--game <dir>` (plus `--tlk-encoding` where the install needs it) for anything resolving TLK strrefs - without it
+  strref hovers and hints come back empty. Waits for the workspace scan, so cross-file answers are complete
+  (`--scan-timeout`, default 20s, warns on stderr rather than answering silently).
+  `codeaction` sends the diagnostics the server published at that position, so it also reports what was published.
   Not a substitute for a UI/webview drive.
 - **"Does this one SSL construct match the reference compiler?"** -> `pnpm ssl-diff <file.ssl>` or `-e '<source>'`
   (`-O1`/`-O2`, `--keep`), about a second. Not the corpus sweep - that answers "did anything regress" and belongs at
