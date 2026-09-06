@@ -31,11 +31,11 @@ export interface SchemeMember {
     /** The file that identifies this member - the first one it draws. */
     resref: string;
     /**
-     * Every file this member draws from.
+     * Every file this member draws from, the one it is named for first.
      *
-     * More than one only for a quadrant animation, whose sprite is too large for a single BAM and ships
-     * as four files holding one quarter each. Those are pieces of one picture rather than alternatives,
-     * so they are ONE member here and the caller composes them.
+     * More than one where the picture is split (a quadrant animation ships four files holding one quarter
+     * each) or where the facings are (an unmirrored scheme keeps its eastern ones in an `E` twin). Neither
+     * is a set of alternatives: they are ONE member here and the caller composes them.
      */
     parts: readonly string[];
 }
@@ -107,6 +107,18 @@ function cycleMember(label: string, parts: readonly string[]): MemberShape {
     return { label, action: decodeActionCode("cycle-numbers", label), parts };
 }
 
+/**
+ * A file and the eastern twin holding the facings it does not, base first.
+ *
+ * Every unmirrored scheme stores the western facings in the main file and the three eastern ones in an `E`
+ * twin at the same cycle positions, so a member that lists only the main file draws whatever the base pads
+ * those slots with - and in some sections the base's table stops before reaching them at all. Listing the
+ * twin costs nothing where the install ships none: `schemeMembers` drops parts that do not exist.
+ */
+function withEast(resref: string): string[] {
+    return [resref, `${resref}E`];
+}
+
 function candidates(layout: Layout, resref: string): MemberShape[] {
     switch (layout) {
         case "bare":
@@ -114,14 +126,15 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
             // the file back as the bare resref when a set is written.
             return [{ label: resref, action: decodeActionCode("cycle-numbers", ""), parts: [resref] }];
         case "cycles":
-            return CYCLES.map((cycle) => cycleMember(cycle, [`${resref}${cycle}`]));
+            return CYCLES.map((cycle) => cycleMember(cycle, withEast(`${resref}${cycle}`)));
         case "quadrant":
-            // One member per cycle, drawing that cycle's four quarters together.
+            // One member per cycle, drawing that cycle's four quarters together - and each quarter's own
+            // eastern twin after them, since the split is of the picture, not of the facings.
             return CYCLES.map((cycle) =>
-                cycleMember(
-                    cycle,
-                    QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}`),
-                ),
+                cycleMember(cycle, [
+                    ...QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}`),
+                    ...QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}E`),
+                ]),
             );
         case "pieces":
             // One member per stance group, drawing every tile of every facing that stance stores. They are
@@ -137,7 +150,7 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
             return Object.keys(ACTION_CODES).map((code) => ({
                 label: actionLabel(code),
                 action: decodeActionCode("action-codes", code),
-                parts: [`${resref}${code}`],
+                parts: withEast(`${resref}${code}`),
             }));
         case "mixed":
             return [

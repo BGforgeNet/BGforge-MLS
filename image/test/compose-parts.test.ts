@@ -107,9 +107,9 @@ describe("composeParts", () => {
         expect(composed?.sequences[0]?.frameRefs).toEqual([0]);
     });
 
-    test("refuses parts whose cycles do not line up, rather than drawing a mismatch", () => {
+    test("spans the longest part's cycle table rather than the first part's", () => {
         const parts = [animation([frame(2, 2, 2, 2, 1)], [[0]]), animation([frame(2, 2, 0, 2, 2)], [[0], [0]])];
-        expect(composeParts(parts)).toBeUndefined();
+        expect(composeParts(parts)?.sequences).toHaveLength(2);
     });
 
     test("refuses a cycle two parts both draw at different lengths", () => {
@@ -161,10 +161,17 @@ describe("composeParts", () => {
         expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(21);
     });
 
-    test("still refuses parts that hold different numbers of cycles", () => {
-        // An empty cycle is an absence; a missing cycle is a disagreement about what the file even holds.
-        const parts = [animation([frame(2, 2, 2, 2, 1)], [[0], []]), animation([frame(2, 2, 0, 2, 2)], [[0]])];
-        expect(composeParts(parts)).toBeUndefined();
+    // A missing cycle is an absence, the same as an empty one: an eastern twin stores only the facings it
+    // draws, so its table runs PAST a base file that stops at the western five. Refusing the pair on the
+    // length difference dropped the eastern facings of most of one shipped section.
+    test("takes a cycle the base file does not reach from the part that holds it", () => {
+        const west = animation([frame(2, 2, 2, 2, 11)], [[0]]);
+        const east = animation([frame(2, 2, 0, 2, 22), frame(2, 2, 0, 2, 33)], [[], [0, 1]]);
+
+        const composed = composeParts([west, east]);
+
+        expect(composed?.sequences.map((cycle) => cycle.frameRefs.length)).toEqual([1, 2]);
+        expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(22);
     });
 
     test("refuses an empty part list", () => {

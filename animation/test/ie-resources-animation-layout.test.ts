@@ -59,6 +59,15 @@ describe("schemeMembers", () => {
         ]);
     });
 
+    // Every unmirrored scheme keeps its three eastern facings in a twin at the same cycle positions, so a
+    // member listing only the base file draws whatever the base pads those slots with.
+    it("draws a cycle's eastern twin as part of the same member", () => {
+        expect(schemeMembers("cycles", "MOGH", has("MOGHG1", "MOGHG1E"))).toEqual([
+            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1", "MOGHG1E"] },
+        ]);
+        expect(schemeMembers("actions", "METN", has("METNWK", "METNWKE"))[0]?.parts).toEqual(["METNWK", "METNWKE"]);
+    });
+
     it("gathers a cycle's four quarters into ONE member", () => {
         // The quarters are pieces of a single sprite, so offering them separately would offer corners.
         expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"))).toEqual([
@@ -68,6 +77,16 @@ describe("schemeMembers", () => {
                 resref: "MWYVG11",
                 parts: ["MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"],
             },
+        ]);
+    });
+
+    it("puts every quarter's eastern twin after the quarters themselves", () => {
+        // The split is of the picture, not of the facings, so each quarter has its own twin; the quarters
+        // stay together ahead of them, since a member is identified by the first file it draws.
+        expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG11E", "MWYVG12"))[0]?.parts).toEqual([
+            "MWYVG11",
+            "MWYVG12",
+            "MWYVG11E",
         ]);
     });
 

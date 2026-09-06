@@ -63,6 +63,14 @@ export interface SetView {
     /** The actions this armour level draws; `resref` is what a pick posts back. */
     actions: { label: string; resref: string }[];
     action: string;
+    /**
+     * The animation type the install declares for this set, where it declares one.
+     *
+     * Carried because several types pack different stances into the same sequence token, block scheme and
+     * block count - so the block-name table needs the declaration to tell them apart, and a file opened on
+     * its own (no set, no declaration) is exactly the case that falls back to numbered blocks.
+     */
+    section?: string;
 }
 
 interface AnimationViewBase {

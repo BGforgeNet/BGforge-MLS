@@ -20,11 +20,12 @@ import { type NeutralActionRef } from "./actions";
  * Sections whose files band at sixteen cycles rather than eight or nine.
  *
  * Structural inference cannot tell these apart on its own - a sixteen-cycle band divides evenly into two
- * eight-slot blocks, so such a file reads as twice as many stances at half the facings. Measured across
- * an install's own declarations, only these two sections carry the wide band; every other section that
- * resolves is the eight-stride shape inference already reads correctly, so nothing else is overridden.
+ * eight-slot blocks, so such a file reads as twice as many stances at half the facings, and the reading
+ * looks sound because each half IS uniform. Nothing structural can settle it, so the membership comes from
+ * the schemes' own documented orientation lists: these three publish sixteen, every other section that
+ * resolves publishes eight or nine.
  */
-const WIDE_BAND_SECTIONS = new Set(["monster_quadrant", "monster_large16"]);
+const WIDE_BAND_SECTIONS = new Set(["monster_quadrant", "monster_large16", "town_static"]);
 
 const WIDE_BAND_STRIDE = 16;
 
@@ -121,20 +122,27 @@ export interface SetStance {
  * banding the first file alone reports the facings that file happens to hold. A member it cannot answer
  * for is dropped rather than listed, since a row that resolves to nothing is worse than no row. Bands
  * with no drawable facing go the same way.
+ *
+ * `section` is the animation's own declared type, passed on to the block table: several sections pack
+ * different stances into the same token, scheme and block count, so without it those files take another
+ * family's names.
  */
 export function stancesOfMembers(
     members: readonly SchemeMember[],
     bandsFor: (member: SchemeMember) => FileBands | undefined,
+    section?: string,
 ): SetStance[] {
     const stances: SetStance[] = [];
     for (const member of members) {
         const file = bandsFor(member);
         if (file === undefined) continue;
-        const groups = ieGroups(member.resref, file.bands.length, file.scheme);
+        const groups = ieGroups(member.resref, file.bands.length, file.scheme, section);
         for (const [band, slots] of file.bands.entries()) {
             // The index is kept as it stands: a filtered band is still where it was in the file, and that
-            // position is what addresses it there.
-            if (slots.length === 0 || file.drawn[band] !== true) continue;
+            // position is what addresses it there. A band the scheme addresses no sequence to goes with the
+            // undrawn ones - it is padding the format forces on the file, and it holds a frame per facing,
+            // so only the declaration can rule it out.
+            if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
             stances.push({
                 label: bandLabel(member.label, groups?.[band]?.label, band, file.bands.length),
                 action: bandAction(member.action, groups?.[band]),

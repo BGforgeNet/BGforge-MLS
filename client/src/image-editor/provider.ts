@@ -584,7 +584,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // all rotations. Undefined only when the user dismisses a picker.
             let pick: FrmShapePick | undefined = {};
             if (target === "frm") {
-                pick = await this.resolveFrmShape(anim, path.basename(document.uri.fsPath));
+                pick = await this.resolveFrmShape(
+                    anim,
+                    path.basename(document.uri.fsPath),
+                    document.setState?.set.section,
+                );
                 if (pick === undefined) return; // user dismissed the picker
             }
             const { writes, report } = buildCrossFormatSave(anim, target, targetPath, {
@@ -701,11 +705,15 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      * non-directional multi-cycle animation converts one chosen cycle into all six rotations. Returns
      * an empty pick when no choice is needed, undefined when the user dismisses a picker.
      */
-    private async resolveFrmShape(anim: IndexedAnimation, sourceName: string): Promise<FrmShapePick | undefined> {
+    private async resolveFrmShape(
+        anim: IndexedAnimation,
+        sourceName: string,
+        section: string | undefined,
+    ): Promise<FrmShapePick | undefined> {
         const groupCount = ieGroupCount(anim);
         if (groupCount !== undefined) {
             if (groupCount === 1) return { ieGroup: 0 };
-            const ieGroup = await this.pickDirectionGroup(sourceName, groupCount, anim.meta.directionLayout);
+            const ieGroup = await this.pickDirectionGroup(sourceName, groupCount, anim.meta.directionLayout, section);
             return ieGroup === undefined ? undefined : { ieGroup };
         }
         if (needsCyclePick(anim)) {
@@ -721,9 +729,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         sourceName: string,
         groupCount: number,
         layout: DirectionLayout | undefined,
+        section: string | undefined,
     ): Promise<number | undefined> {
         const scheme = ieSchemeOf(layout);
-        const labels = ieGroupLabels(sourceName, groupCount, scheme);
+        const labels = ieGroupLabels(sourceName, groupCount, scheme, section);
         const items = Array.from({ length: groupCount }, (_, i) => ieGroupOptionText(labels, i, scheme));
         const picked = await vscode.window.showQuickPick(items, {
             title: "Which direction group should the FRM use? (its north/south cycles have no FRM rotation)",
@@ -858,7 +867,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             if (document.animation.meta.sourceFormat === "frm") {
                 const indexed = adapted.animation;
                 if (isRgbaAnimation(indexed)) throw new Error("handleImport: an FRM document adapted to true colour");
-                const pick = await this.resolveFrmShape(indexed, next.name);
+                const pick = await this.resolveFrmShape(indexed, next.name, document.setState?.set.section);
                 if (pick === undefined) return; // user dismissed the picker
                 document.replaceSequences(reshapeImportToFrm(indexed, pick), "replace");
                 return;

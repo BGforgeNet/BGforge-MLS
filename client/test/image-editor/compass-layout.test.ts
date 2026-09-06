@@ -219,6 +219,20 @@ test("firstDrawnBlock skips the placeholder blocks a packed file pads its skelet
     expect(firstDrawnBlock(view, interpretation)).toBe(1);
 });
 
+// The burrowing scheme's `G1` opens on a block it addresses no sequence to. That block's padding is a
+// frame per facing at the sprite's own size rather than a single pixel, so it passes the does-this-draw
+// test and would otherwise be what a reader lands on: a full-size stage of transparent tiles.
+test("firstDrawnBlock skips a block the scheme addresses no sequence to", () => {
+    const { view, interpretation } = skeletonView();
+    // Both blocks hold real sprites, so only the declaration can rule the first one out.
+    view.sequences = view.sequences.map((sequence) => ({ ...sequence, frameRefs: [1] }));
+
+    expect(firstDrawnBlock(view, interpretation)).toBe(0);
+    expect(firstDrawnBlock(view, interpretation, [{ label: "(unused)", unused: true }, { label: "WK - walk" }])).toBe(
+        1,
+    );
+});
+
 test("firstDrawnBlock opens on the first block where nothing in the file draws", () => {
     const { view, interpretation } = skeletonView();
     // Every cycle on the placeholder: there is no better block to offer than the first.

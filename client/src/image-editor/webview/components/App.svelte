@@ -21,7 +21,7 @@
     } from "../render/compass-layout";
     import { interpretIeDirections } from "@bgforge/image/ie-direction";
     import { analyzeCycleGrid } from "../render/cycle-grouping";
-    import { ieGroupLabels } from "@bgforge/animation/group-labels";
+    import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
     import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
@@ -143,8 +143,15 @@
     // eslint-disable-next-line prefer-const -- reassigned via onGroupChange in the LayoutModeControls markup
     let roseGroup = $state(0);
     const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
+    // The scheme's own reading of this file's blocks, where one matched: what names them below, and what
+    // says which of them the scheme addresses no sequence to.
+    const roseBlocks = $derived(
+        view && roseGroupCount > 1
+            ? ieGroups(view.basename, roseGroupCount, ieRose?.scheme, view.set?.section)
+            : undefined,
+    );
     // Which block a newly opened animation lands on: the first that draws, not block 0 (firstDrawnBlock).
-    const firstDrawnGroup = $derived(view && ieRose ? firstDrawnBlock(view, ieRose) : 0);
+    const firstDrawnGroup = $derived(view && ieRose ? firstDrawnBlock(view, ieRose, roseBlocks) : 0);
     $effect(() => {
         const v = view;
         const seed = firstDrawnGroup;
@@ -152,9 +159,7 @@
         groupSeededView = v;
         roseGroup = seed;
     });
-    const roseGroupLabels = $derived(
-        view && roseGroupCount > 1 ? ieGroupLabels(view.basename, roseGroupCount, ieRose?.scheme) : undefined,
-    );
+    const roseGroupLabels = $derived(roseBlocks?.map((block) => block.label));
     const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
         if (!view) return [];

@@ -299,5 +299,6 @@ export function setView(state: AnimationSetState): SetView {
         armour: state.armour,
         actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
         action: state.action.resref,
+        ...(state.set.section === undefined ? {} : { section: state.set.section }),
     };
 }

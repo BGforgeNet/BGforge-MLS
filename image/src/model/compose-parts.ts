@@ -6,8 +6,8 @@ import type { Frame, IndexedAnimation, Sequence } from "./animation.ts";
  *
  * Three shapes reach here, and they differ only in which files carry what: an oversized creature's four
  * quarters, a huge one's 3x3 grid of tiles (one file per tile PER cycle, the rest of its cycle table left
- * as placeholders), and an older character file paired with the twin holding the facings the engine
- * mirrors for everyone else. In all three the pieces are NOT alternatives - each is part of one picture -
+ * as placeholders), and any unmirrored animation paired with the eastern twin holding the facings the
+ * engine mirrors for everyone else. In all three the pieces are NOT alternatives - each is part of one picture -
  * and they reassemble by their anchors: a frame is drawn at `-offset`, so the parts tile around a shared
  * origin and the union of their rectangles is the whole.
  *
@@ -20,7 +20,9 @@ import type { Frame, IndexedAnimation, Sequence } from "./animation.ts";
  */
 export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimation | undefined {
     const [reference] = parts;
-    if (reference === undefined || !cyclesAgree(parts, reference)) return undefined;
+    if (reference === undefined) return undefined;
+    const spine = spineOf(parts, reference);
+    if (!cyclesAgree(parts, spine)) return undefined;
 
     const transparent = reference.meta.transparentIndex ?? 0;
     const frames: Frame[] = [];
@@ -28,7 +30,7 @@ export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimati
     // table by the number of cycles. Key by the parts' own frame refs: the same combination composes once.
     const byRefs = new Map<string, number>();
 
-    const sequences: Sequence[] = reference.sequences.map((sequence, cycle) => {
+    const sequences: Sequence[] = spine.sequences.map((sequence, cycle) => {
         // Only the parts that DRAW this cycle contribute: a part holding a placeholder for it would
         // otherwise be laid over the art of the part that has it, which is the mirrored-twin shape.
         const contributing = contributorsTo(parts, cycle);
@@ -132,15 +134,30 @@ function contributorsTo(parts: readonly IndexedAnimation[], cycle: number): read
 }
 
 /**
- * Every part must hold the same NUMBER of cycles, and the parts that DRAW a cycle must agree on its length.
+ * The part whose cycle table the composition follows: the longest one.
+ *
+ * A twin that holds only the facings it draws still has to reach the cycle POSITIONS those facings sit at,
+ * and the base file stops short of them - so following the first part would compose away exactly the
+ * facings the twin exists to supply.
+ */
+function spineOf(parts: readonly IndexedAnimation[], reference: IndexedAnimation): IndexedAnimation {
+    return parts.reduce(
+        (longest, part) => (part.sequences.length > longest.sequences.length ? part : longest),
+        reference,
+    );
+}
+
+/**
+ * The parts that DRAW a cycle must agree on its length.
  *
  * A placeholder is an absence rather than a disagreement - that is the whole shape of the mirrored twin,
- * whose partner pads exactly the cycles it draws. Two parts that both draw a cycle at different lengths
- * are a real disagreement: composing them would pair frames that are not the same moment.
+ * whose partner pads exactly the cycles it draws. So is a MISSING entry: a twin that holds only the
+ * facings it draws stops its table short of the ones it does not, which is why the parts need not hold the
+ * same number of cycles. Two parts that both draw a cycle at different lengths are a real disagreement:
+ * composing them would pair frames that are not the same moment.
  */
-function cyclesAgree(parts: readonly IndexedAnimation[], reference: IndexedAnimation): boolean {
-    if (parts.some((part) => part.sequences.length !== reference.sequences.length)) return false;
-    return reference.sequences.every((_, cycle) => {
+function cyclesAgree(parts: readonly IndexedAnimation[], spine: IndexedAnimation): boolean {
+    return spine.sequences.every((_, cycle) => {
         const lengths = contributorsTo(parts, cycle).map((part) => part.sequences[cycle]?.frameRefs.length ?? 0);
         return new Set(lengths.filter((length) => length > 0)).size <= 1;
     });

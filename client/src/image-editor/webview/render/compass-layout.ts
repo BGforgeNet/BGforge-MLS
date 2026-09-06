@@ -3,6 +3,7 @@ import type { Facing } from "@bgforge/image";
 // crash a browser webview bundle on load (see render/anchor.ts).
 import { cycleDrawsArt } from "@bgforge/image/compose-parts";
 import type { IeDirectionAnalysis, IeDirectionSlot } from "@bgforge/image/ie-direction";
+import type { IeGroup } from "@bgforge/animation/group-labels";
 import type { AnimationView, SequenceView } from "../messages";
 
 /**
@@ -184,11 +185,21 @@ export function defaultLayoutMode(
  * A file of a packed family carries every block of that family's skeleton and draws only the one its own
  * name promises, so opening on block 0 shows a character file's placeholders - a stage of single pixels,
  * which reads as a broken editor rather than as "this block is not the one".
+ *
+ * `blocks` is the scheme's own reading of them, where one was resolved. A block the scheme addresses no
+ * sequence to is skipped even though it passes the does-this-draw test: its padding is a frame per facing
+ * at the sprite's own size, transparent throughout, so nothing but the declaration rules it out.
  */
-export function firstDrawnBlock(view: AnimationView, interpretation: IeDirectionAnalysis): number {
+export function firstDrawnBlock(
+    view: AnimationView,
+    interpretation: IeDirectionAnalysis,
+    blocks?: readonly IeGroup[],
+): number {
     const areas = view.frames.map((frame) => frame.width * frame.height);
-    const at = interpretation.groups.findIndex((slots) =>
-        slots.some((slot) => cycleDrawsArt(view.sequences[slot.seqIndex]?.frameRefs ?? [], areas)),
+    const at = interpretation.groups.findIndex(
+        (slots, block) =>
+            blocks?.[block]?.unused !== true &&
+            slots.some((slot) => cycleDrawsArt(view.sequences[slot.seqIndex]?.frameRefs ?? [], areas)),
     );
     return at === -1 ? 0 : at;
 }

@@ -24,9 +24,12 @@ function bands(count: number, slots = 5, scheme: FileBands["scheme"] = "ie8"): F
 }
 
 describe("declaredStride", () => {
-    it("settles the two sections whose files band at sixteen", () => {
+    // Nothing structural can settle these: a sixteen-cycle band divides evenly into two eight-slot blocks
+    // and each half is uniform, so the reading looks sound while doubling the stances at half the facings.
+    it("settles the sections whose files band at sixteen", () => {
         expect(declaredStride("monster_quadrant")).toBe(16);
         expect(declaredStride("monster_large16")).toBe(16);
+        expect(declaredStride("town_static")).toBe(16);
     });
 
     /**
@@ -127,6 +130,28 @@ describe("stancesOfMembers", () => {
         const stances = stancesOfMembers([member("CA", "MOGHCA")], () => bands(8));
 
         expect(stances.map((s) => s.action.id)).toEqual(Array.from({ length: 8 }, () => "spell"));
+    });
+
+    // The burrowing G1 opens on a block no sequence addresses. It still holds a frame per facing, so it
+    // passes the does-this-draw test and would otherwise be offered as a stance nobody can play.
+    it("drops a band the scheme addresses no sequence to", () => {
+        const stances = stancesOfMembers([member("G1", "MAKHG1")], () => bands(4, 8), "monster_ankheg");
+
+        expect(stances.map((s) => s.label)).toEqual(["DE - die", "TW - twitch", "SD - stand"]);
+        // The index is the band's address in the file, so dropping the first one must not renumber the rest.
+        expect(stances.map((s) => s.band)).toEqual([1, 2, 3]);
+    });
+
+    it("takes the declared section's names over the ones the structural key alone would give", () => {
+        const anonymous = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8));
+        const declared = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8), "monster_ankheg");
+
+        expect(anonymous.map((s) => s.label)).toEqual([
+            "A1 - attack",
+            "A2/CA - attack or cast",
+            "A3/SP - attack or spell",
+        ]);
+        expect(declared.map((s) => s.label)).toEqual(["SC - combat stance", "EMERGE - emerge", "HIDE - burrow"]);
     });
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {

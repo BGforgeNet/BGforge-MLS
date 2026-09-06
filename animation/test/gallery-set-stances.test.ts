@@ -42,6 +42,19 @@ describe("setStances over the character layouts", () => {
         expect(stances.map((stance) => stance.parts)).toEqual([["CDMB1G1", "CDMB1G1E"]]);
     });
 
+    // The shape the action-code sections ship: the base file stops at the five western facings, and the
+    // twin's own table runs past it to the positions the eastern three sit at. Reading the base's table as
+    // the member's would compose away exactly the facings the twin exists to supply.
+    it("reads a member over the twin's longer table where the base file stops short", () => {
+        const base = multiCycle(4, 5);
+        const twin = bandedPair(4, [5, 6, 7]);
+        const io: StanceIo = {
+            exists: (resref) => resref === "CDMB1G1" || resref === "CDMB1G1E",
+            read: (resref) => (resref === "CDMB1G1" ? base : resref === "CDMB1G1E" ? twin : undefined),
+        };
+        expect(setStances(characterSet(), 1, io)[0]?.slots).toHaveLength(8);
+    });
+
     it("lists no stance for a file the archive cannot read", () => {
         const io: StanceIo = { exists: () => true, read: () => new Uint8Array([1, 2, 3]) };
         expect(setStances(characterSet(), 1, io)).toEqual([]);
@@ -198,6 +211,51 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
                 expect(stance.label.length, `${stance.resref} band ${stance.band}`).toBeGreaterThan(0);
             }
         }
+    });
+
+    // The burrowing set is the one whose whole shape is documented and whose own files contradict the
+    // structural key: three blocks of an eight-wide G2 are another family's attacks under that key, and its
+    // G1 opens on a block no sequence addresses.
+    it("names the burrowing scheme's blocks and leaves out the one it addresses nothing to", () => {
+        const { sets, io } = install();
+        const set = sets.find((candidate) => candidate.section === "monster_ankheg");
+        if (set === undefined) return; // an install without the section proves nothing either way
+        const armour = firstArmour(set);
+        expect(armour, `${set.code} declares no prefix`).toBeDefined();
+
+        const stances = setStances(set, armour!, io);
+
+        expect(stances.map((stance) => stance.label)).toEqual([
+            "DE - die",
+            "TW - twitch",
+            "SD - stand",
+            "SC - combat stance",
+            "EMERGE - emerge",
+            "HIDE - burrow",
+            "A1 - attack",
+            "CA - cast",
+        ]);
+        // Every one draws all eight facings, which takes the eastern twin: the base file stores five.
+        expect(stances.map((stance) => stance.slots.length)).toEqual(Array.from({ length: 8 }, () => 8));
+    });
+
+    it("names most stances from the schemes' own block tables rather than numbering them", () => {
+        const { sets, io } = install();
+        let named = 0;
+        let numbered = 0;
+        for (const set of sets) {
+            const armour = firstArmour(set);
+            if (armour === undefined) continue;
+            for (const stance of setStances(set, armour, io)) {
+                if (/ - group \d+$/.test(stance.label)) numbered += 1;
+                else named += 1;
+            }
+        }
+        process.stdout.write(`  ${named} stances named from a block table, ${numbered} numbered\n`);
+        expect(named + numbered, "no stance resolved, so nothing was exercised").toBeGreaterThan(0);
+        // The numbered remainder is the sixteen-wide sections, which no block table names; anything close
+        // to half would mean a token or a section key stopped matching.
+        expect(numbered).toBeLessThan(named / 4);
     });
 
     it("never lists a stance whose file the archive lacks", () => {

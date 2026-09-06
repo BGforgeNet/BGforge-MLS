@@ -288,4 +288,16 @@ describe("setView", () => {
         const state = AnimationSetState.open(setOf({ name: "", code: "" }), fakeIo({ TSTBG1: baseFileBam(1) }));
         expect(setView(state!).title).toBe("0x1234");
     });
+
+    // Several animation types pack different stances into the same sequence token, block scheme and block
+    // count, so the block-name table needs the declaration to tell them apart - and a set the install
+    // declares nothing for has to say so rather than name a type it does not have.
+    it("carries the declared animation type, and omits it where the install declares none", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(1) });
+        const declared = AnimationSetState.open(setOf({ section: "monster_ankheg" }), io);
+        const undeclared = AnimationSetState.open(setOf(), io);
+
+        expect(setView(declared!).section).toBe("monster_ankheg");
+        expect(setView(undeclared!)).not.toHaveProperty("section");
+    });
 });

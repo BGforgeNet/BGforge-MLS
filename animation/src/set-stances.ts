@@ -87,17 +87,26 @@ function cycleHoldsArt(sequence: SequenceShape | undefined, areas: readonly numb
  * Per cycle, a part that DRAWS it beats one that only holds a placeholder for it - `drawsCycle` is the
  * composer's own test, so what the band reads and what the viewer draws agree by construction. Reading
  * the first part alone would report a slot as unstored while a sibling file holds its art, which is
- * exactly the older character layout, whose mirrored twin holds the eastern facings the base file pads.
- * Cycle indices line up across parts, so a merged entry addresses the same cycle of the composed
- * animation.
+ * exactly the unmirrored layouts, whose eastern twin holds the facings the base file pads.
+ *
+ * Where SEVERAL parts draw one cycle the first wins, which is also what the pixel composer settles on:
+ * measured across both shipped installs, the parts that share a drawn cycle agree on its length in all but
+ * a handful of members, and the composer refuses exactly those - so preferring a later part here would
+ * make the bands describe a picture that then falls back to the base file alone. Cycle indices line up
+ * across parts, so a merged entry addresses the same cycle of the composed animation.
  */
 function mergedTables(parts: PartTables[]): MergedTables | undefined {
     const [first] = parts;
     if (first === undefined) return undefined;
-    const sequences = first.sequences.map((seq, cycle) =>
-        drawsCycle(seq)
-            ? seq
-            : (parts.map((part) => part.sequences[cycle]).find((candidate) => drawsCycle(candidate)) ?? seq),
+    // The longest part's table, not the first's: a twin holding only the facings it draws still reaches the
+    // cycle positions those sit at, and the base file stops short of them - the same spine the composer
+    // follows, so the bands read here and the picture drawn from them span the same cycles.
+    const spine = parts.reduce(
+        (longest, part) => (part.sequences.length > longest.length ? part.sequences : longest),
+        first.sequences,
+    );
+    const sequences = spine.map(
+        (seq, cycle) => parts.map((part) => part.sequences[cycle]).find((candidate) => drawsCycle(candidate)) ?? seq,
     );
     // Judged per part, because a cycle's refs index the frame table of the file they came from - and a
     // cycle draws where ANY part holds pixels for it, which is the same reading the merge above takes.
@@ -165,10 +174,13 @@ export function isPaperdoll(member: SchemeMember): boolean {
  */
 export function setStances(set: AnimationSet, armour: number, io: StanceIo): SetStance[] {
     const members = setMembers(set, armour, io.exists).filter((member) => !isPaperdoll(member));
-    return stancesOfMembers(members, (member) =>
-        bandsOf(
-            member.parts.map((resref) => io.read(resref)),
-            set.bandStride,
-        ),
+    return stancesOfMembers(
+        members,
+        (member) =>
+            bandsOf(
+                member.parts.map((resref) => io.read(resref)),
+                set.bandStride,
+            ),
+        set.section,
     );
 }
