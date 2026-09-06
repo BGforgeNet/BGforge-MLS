@@ -17,6 +17,7 @@ import {
     pvrzResourceName,
     readBamV2Structure,
     serializeBamV1,
+    splitIeBamBlocks,
     splitIeBamPair,
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
@@ -260,9 +261,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * Untouched members produce no write - a set is a dozen files, and copying all of them into the
      * override folder over one edit would put eleven unrequested copies there.
      *
-     * Throws for an edited member drawn from SEVERAL files: its model is those files composed into one
-     * picture, and writing that picture back means cutting it up again - which this cannot do, so it says
-     * so rather than writing the whole composition over the first quarter.
+     * A member drawn from a base file and its eastern twin is cut back along the same 8-slot blocks it was
+     * composed on, and both halves are written. Anything else drawn from SEVERAL files throws: a split
+     * picture (a quadrant animation's quarters, a tiled one's grid) leaves no record of where its seams
+     * were, so writing it back would put the whole composition over the first quarter.
      */
     setSaveWrites(): ResourceWrite[] | undefined {
         const state = this.setState;
@@ -272,15 +274,49 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         // game directory would address every write at the filesystem root instead of failing.
         if (address === undefined) throw new Error(`${this.uri.toString()} is not an animation set address.`);
         const { gameDir } = address;
-        return state.editedMembers().map(({ action, model }) => {
-            if (action.parts.length > 1) {
-                throw new Error(
-                    `${action.resref} is drawn from ${action.parts.length} files composed together, ` +
-                        `which cannot be saved back in place - use Save As instead.`,
-                );
-            }
-            return { uri: resourceUri(gameDir, action.resref, "bam"), bytes: model.saveArtifacts().bytes };
+        const write = (resref: string, bytes: Uint8Array): ResourceWrite => ({
+            uri: resourceUri(gameDir, resref, "bam"),
+            bytes,
         });
+        return state.editedMembers().flatMap(({ action, model }): ResourceWrite[] => {
+            const [base, east] = action.parts;
+            if (action.parts.length === 1) return [write(action.resref, model.saveArtifacts().bytes)];
+            if (action.parts.length === 2 && base !== undefined && east === `${base}E`) {
+                return ImageEditorDocument.eastPairWrites(base, east, model, state, write);
+            }
+            throw new Error(
+                `${action.resref} is drawn from ${action.parts.length} files composed together, ` +
+                    `which cannot be saved back in place - use Save As instead.`,
+            );
+        });
+    }
+
+    /**
+     * A base file and its eastern twin, cut back out of the one model they were composed into.
+     *
+     * The split is by SLOT, not by where each frame came from: the composition keeps no record of that, and
+     * the scheme's own rule - western facings in the base, eastern in the twin - says where each belongs.
+     * A base whose stored table stopped short of the eastern slots gains them as empty cycles, which is the
+     * shape the twin already ships and what the engine reads past.
+     */
+    private static eastPairWrites(
+        base: string,
+        east: string,
+        model: ImageDocumentModel,
+        state: AnimationSetState,
+        write: (resref: string, bytes: Uint8Array) => ResourceWrite,
+    ): ResourceWrite[] {
+        const indexed = model.indexedAnimation();
+        // A pair is a BAM v1 shape: both halves were parsed as one before they were composed.
+        if (indexed === undefined) throw new Error(`${base} is true colour and has no base/east pair to split.`);
+        const split = splitIeBamBlocks(indexed);
+        if (split === undefined) {
+            throw new Error(`${base} no longer fits the 8-cycle direction blocks its pair splits on.`);
+        }
+        return [
+            write(base, serializeBamAs(split.base, state.storedFormat(base))),
+            write(east, serializeBamAs(split.east, state.storedFormat(east))),
+        ];
     }
 
     /**

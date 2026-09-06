@@ -1,4 +1,5 @@
 import type { AnimationMeta, Facing, Rgba, SourceFormat } from "@bgforge/image";
+import type { IeScheme } from "@bgforge/image/ie-direction";
 import { isRecord } from "../../is-record";
 
 /**
@@ -71,6 +72,16 @@ export interface SetView {
      * its own (no set, no declaration) is exactly the case that falls back to numbered blocks.
      */
     section?: string;
+    /**
+     * How this set's files divide into direction bands, where its declared type settles that.
+     *
+     * Resolved host-side for the same reason the labels above are: the answer is a property of the
+     * install's own declaration, and a webview reading it from a table of its own would be a second
+     * statement of it. Absent where the type settles nothing, which leaves the reading to block structure.
+     * `scheme` is absent for a band width no block scheme covers - a sixteen-wide one, whose stances the
+     * block table therefore cannot name.
+     */
+    bands?: { stride: number; scheme?: IeScheme };
 }
 
 interface AnimationViewBase {

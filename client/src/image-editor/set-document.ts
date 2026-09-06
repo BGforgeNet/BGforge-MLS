@@ -9,6 +9,7 @@
  * and a tiled set far more, and the editor draws one of them at a time.
  */
 import { type Game } from "@bgforge/binary";
+import { isBamc } from "@bgforge/image";
 import {
     type AnimationIndexResolver,
     type AnimationSet,
@@ -17,6 +18,7 @@ import {
     armourLabel,
     armourLevels,
     firstArmour,
+    schemeForStride,
     setMembers,
     setTitle,
 } from "@bgforge/animation";
@@ -235,6 +237,18 @@ export class AnimationSetState {
     }
 
     /**
+     * How one of a member's files is stored, so a save writes each back in the encoding it was read in.
+     *
+     * A compressed file rewritten uncompressed still loads, but it is not the file the install shipped -
+     * and a member drawn from two files is written by splitting one model, so each half has to be asked
+     * separately rather than inheriting the model's own source format.
+     */
+    storedFormat(resref: string): "bam" | "bamc" {
+        const bytes = this.io.read(resref);
+        return bytes !== undefined && isBamc(bytes) ? "bamc" : "bam";
+    }
+
+    /**
      * Replace a member's model with one restored from a hot-exit backup.
      *
      * Ignores a resref this set does not draw: the install can have changed since the backup was written,
@@ -300,5 +314,12 @@ export function setView(state: AnimationSetState): SetView {
         actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
         action: state.action.resref,
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
+        ...(state.set.bandStride === undefined ? {} : { bands: declaredBands(state.set.bandStride) }),
     };
+}
+
+/** A declared band width and the block scheme it implies, where one covers it. */
+function declaredBands(stride: number): NonNullable<SetView["bands"]> {
+    const scheme = schemeForStride(stride);
+    return { stride, ...(scheme === undefined ? {} : { scheme }) };
 }

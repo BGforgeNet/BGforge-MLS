@@ -12,6 +12,7 @@
     import { createPlayback, tick, type PlaybackState } from "../render/playback";
     import {
         defaultLayoutMode,
+        directionBlocks,
         firstDrawnBlock,
         ieRoseTiles,
         layoutSequences,
@@ -19,7 +20,6 @@
         type LayoutMode,
         type RoseTile,
     } from "../render/compass-layout";
-    import { interpretIeDirections } from "@bgforge/image/ie-direction";
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
@@ -112,7 +112,9 @@
     // Stage layout (rose vs grid). A fresh open shows the default the file's structure implies; the
     // selector writes `layoutChoice`, which then wins for the webview's lifetime.
     const facingLayout = $derived(view ? layoutSequences(view) : null);
-    const ieRose = $derived(view ? interpretIeDirections(view.sequences, view.frames.length) : undefined);
+    // The set's declared band width where the install states one, so a wide-band animation is not read as
+    // twice as many stances at half the facings; a file opened on its own has only its block structure.
+    const ieRose = $derived(view ? directionBlocks(view, view.set?.bands) : undefined);
     const roseAvailable = $derived(facingLayout?.mode === "compass" || ieRose !== undefined);
     const defaultMode: LayoutMode = $derived(defaultLayoutMode(facingLayout, ieRose));
     // Seeded from the interpretation's block size, so the flat grid falls into rows=sequences x
@@ -145,13 +147,13 @@
     const roseGroupCount = $derived(facingLayout?.mode === "compass" ? 0 : (ieRose?.groups.length ?? 0));
     // The scheme's own reading of this file's blocks, where one matched: what names them below, and what
     // says which of them the scheme addresses no sequence to.
-    const roseBlocks = $derived(
+    const roseBlockNames = $derived(
         view && roseGroupCount > 1
             ? ieGroups(view.basename, roseGroupCount, ieRose?.scheme, view.set?.section)
             : undefined,
     );
     // Which block a newly opened animation lands on: the first that draws, not block 0 (firstDrawnBlock).
-    const firstDrawnGroup = $derived(view && ieRose ? firstDrawnBlock(view, ieRose, roseBlocks) : 0);
+    const firstDrawnGroup = $derived(view && ieRose ? firstDrawnBlock(view, ieRose, roseBlockNames) : 0);
     $effect(() => {
         const v = view;
         const seed = firstDrawnGroup;
@@ -159,7 +161,7 @@
         groupSeededView = v;
         roseGroup = seed;
     });
-    const roseGroupLabels = $derived(roseBlocks?.map((block) => block.label));
+    const roseGroupLabels = $derived(roseBlockNames?.map((block) => block.label));
     const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
         if (!view) return [];

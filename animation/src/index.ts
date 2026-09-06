@@ -40,6 +40,7 @@ export {
     type FileBands,
     type SetStance,
     declaredStride,
+    schemeForStride,
     stancesOfMembers,
 } from "./animation-schemes/bands";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
-import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
+import { type Frame, type IndexedAnimation, type Rgba, encodeBamc, serializeBamV1 } from "@bgforge/image";
 import { AnimationSetState, createAnimationSetSource, setView } from "../../src/image-editor/set-document";
 import type { Game } from "@bgforge/binary";
 
@@ -83,6 +83,19 @@ describe("AnimationSetState", () => {
     it("offers one action per file, however many direction bands the file packs", () => {
         const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(3) }));
         expect(state?.actions.map((action) => action.resref)).toEqual(["TSTBG1"]);
+    });
+
+    /**
+     * A save writes each half of a two-file member back in the encoding it was read in, so the state has to
+     * answer per file rather than from the one model both halves were composed into.
+     */
+    it("reports each member file's stored encoding", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG1E: encodeBamc(baseFileBam(1)) });
+        const state = AnimationSetState.open(setOf(), io);
+
+        expect(state?.storedFormat("TSTBG1")).toBe("bam");
+        expect(state?.storedFormat("TSTBG1E")).toBe("bamc");
+        expect(state?.storedFormat("TSTBCA")).toBe("bam");
     });
 
     it("has no document for a set the install ships nothing of", () => {
@@ -299,5 +312,17 @@ describe("setView", () => {
 
         expect(setView(declared!).section).toBe("monster_ankheg");
         expect(setView(undeclared!)).not.toHaveProperty("section");
+    });
+
+    // Nothing structural can tell a sixteen-cycle band from two eight-cycle ones, so the declaration is the
+    // only thing that stops the stage reading such a file as twice as many stances at half the facings.
+    it("carries the declared band width, and the block scheme only where one covers it", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(1) });
+        const wide = AnimationSetState.open(setOf({ bandStride: 16 }), io);
+        const narrow = AnimationSetState.open(setOf({ bandStride: 8 }), io);
+
+        expect(setView(wide!).bands).toEqual({ stride: 16 });
+        expect(setView(narrow!).bands).toEqual({ stride: 8, scheme: "ie8" });
+        expect(setView(AnimationSetState.open(setOf(), io)!)).not.toHaveProperty("bands");
     });
 });

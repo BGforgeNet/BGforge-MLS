@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as vscode from "vscode";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
 import type { AnimationSetLookup, AnimationSetSource } from "../../src/image-editor/set-document";
-import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
+import { type Frame, type IndexedAnimation, type Rgba, parseBamV1, serializeBamV1 } from "@bgforge/image";
 
 const GAME_SCHEME = "bgforge-ie-resource";
 const GAME_QUERY = "g=%2Fgames%2Fbgee";
@@ -80,8 +80,8 @@ function palette(): Rgba[] {
     return Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
 }
 
-/** One 8-cycle block, five slots drawn and three padded - the shape the direction interpreter reads. */
-function baseFileBam(): Uint8Array {
+/** One 8-cycle block, `drawn` naming the slots that hold art and the rest padded with one repeated frame. */
+function blockBam(drawn: (slot: number) => boolean): Uint8Array {
     const frame = (seed: number): Frame => ({
         width: 2,
         height: 2,
@@ -92,7 +92,7 @@ function baseFileBam(): Uint8Array {
     const frames: Frame[] = [frame(0)];
     const sequences = [];
     for (let slot = 0; slot < 8; slot++) {
-        if (slot < 5) {
+        if (drawn(slot)) {
             const first = frames.length;
             frames.push(frame(first), frame(first + 1));
             sequences.push({ frameRefs: [first, first + 1], facing: "none" as const });
@@ -102,6 +102,16 @@ function baseFileBam(): Uint8Array {
     }
     const animation: IndexedAnimation = { palette: palette(), sequences, frames, meta: { sourceFormat: "bam" } };
     return serializeBamV1(animation);
+}
+
+/** The shape the direction interpreter reads a base file as: the western arc drawn, the east padded. */
+function baseFileBam(): Uint8Array {
+    return blockBam((slot) => slot < 5);
+}
+
+/** Its eastern twin: the three facings the base pads, and nothing else. */
+function eastFileBam(): Uint8Array {
+    return blockBam((slot) => slot >= 5);
 }
 
 const SET: AnimationSet = {
@@ -228,6 +238,32 @@ describe("opening an animation set", () => {
         document.applyMetaPatch({ transparentIndex: 3 });
 
         expect(() => document.setSaveWrites()).toThrow(/drawn from 4 files/);
+    });
+
+    /**
+     * A member drawn from a base file and its eastern twin: the composition is along the scheme's own
+     * 8-slot blocks, so the save cuts it back along them and writes both files rather than refusing.
+     */
+    it("writes both halves of a member composed from its eastern twin", async () => {
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => found(SET, ioFor({ TSTBG1: baseFileBam(), TSTBG1E: eastFileBam() }))),
+        );
+        document.applyMetaPatch({ transparentIndex: 3 });
+
+        const writes = document.setSaveWrites() ?? [];
+
+        expect(writes.map((write) => write.uri.path)).toEqual(["/tstbg1.bam", "/tstbg1e.bam"]);
+        // Each half keeps the block's full cycle count, holding empty cycles where the other side draws -
+        // the shape the engine addresses a facing by position in.
+        for (const write of writes) {
+            expect(parseBamV1(write.bytes).sequences).toHaveLength(8);
+        }
+        const [base, east] = writes.map((write) => parseBamV1(write.bytes));
+        expect(base?.sequences.slice(5).every((cycle) => cycle.frameRefs.length === 0)).toBe(true);
+        expect(east?.sequences.slice(0, 5).every((cycle) => cycle.frameRefs.length === 0)).toBe(true);
     });
 
     it("has no set writes for a document opened on a file", async () => {

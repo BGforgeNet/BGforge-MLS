@@ -2,7 +2,12 @@ import type { Facing } from "@bgforge/image";
 // The pure subpath, not the "@bgforge/image" barrel: the barrel's png/bamc codecs need Buffer/zlib and
 // crash a browser webview bundle on load (see render/anchor.ts).
 import { cycleDrawsArt } from "@bgforge/image/compose-parts";
-import type { IeDirectionAnalysis, IeDirectionSlot } from "@bgforge/image/ie-direction";
+import {
+    type IeDirectionSlot,
+    type IeScheme,
+    ieBandsOfStride,
+    interpretIeDirections,
+} from "@bgforge/image/ie-direction";
 import type { IeGroup } from "@bgforge/animation/group-labels";
 import type { AnimationView, SequenceView } from "../messages";
 
@@ -160,6 +165,42 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
 }
 
 /**
+ * A file's cycles as direction blocks, however that reading was arrived at.
+ *
+ * Structurally wider than the interpreter's own answer in one place: a sixteen-cycle band matches no block
+ * scheme, so a declared reading of one names none, and the block table then has nothing to key on.
+ */
+export interface DirectionBlocks {
+    groups: IeDirectionSlot[][];
+    scheme?: IeScheme;
+    /**
+     * The band width came from the animation's declared type rather than from its block structure.
+     *
+     * Which makes ONE block enough to draw a rose from: the block-count test below is a proxy for "these
+     * cycles are facings", and a declaration says so outright.
+     */
+    declared?: true;
+}
+
+/**
+ * How the stage divides a file's cycles into direction blocks.
+ *
+ * `declared` is the animation's own band width where its install states one, and it WINS: nothing
+ * structural can tell a sixteen-cycle band from two eight-cycle ones - each half is uniform either way -
+ * so inference reads such a file as twice as many stances at half the facings, and reads each facing
+ * twice. Everything else falls back to the interpreter, which is all a file opened on its own offers.
+ */
+export function directionBlocks(
+    view: AnimationView,
+    declared?: { stride: number; scheme?: IeScheme },
+): DirectionBlocks | undefined {
+    if (declared === undefined) return interpretIeDirections(view.sequences, view.frames.length);
+    const groups = ieBandsOfStride(view.sequences, view.frames.length, declared.stride);
+    if (groups === undefined) return undefined;
+    return { groups, declared: true, ...(declared.scheme === undefined ? {} : { scheme: declared.scheme }) };
+}
+
+/**
  * Which layout a fresh open shows.
  *
  * Rose whenever the file's structure says it holds directions: tagged compass facings (FRM), or an IE
@@ -169,14 +210,17 @@ export function layoutSequences(view: AnimationView): CompassLayout | GridLayout
  * is conservative on purpose - a file it rejects can still plainly be direction blocks, and both shipped
  * installs carry such files. Being wrong about the declaration writes bad blocks; being wrong about the
  * default costs one click, so the default reads the weaker structural signal. Block count separates the
- * corpus cleanly: no single-block animation in either install is a character or is detected.
+ * corpus cleanly: no single-block animation in either install is a character or is detected. None of that
+ * applies to a reading the animation's own type DECLARED: there the cycles are facings by declaration, and
+ * one block of them is a rose - which is the whole of a wide-band animation's walk.
  */
 export function defaultLayoutMode(
     facingLayout: CompassLayout | GridLayout | null,
-    ieDirections: IeDirectionAnalysis | undefined,
+    ieDirections: DirectionBlocks | undefined,
 ): LayoutMode {
     if (facingLayout?.mode === "compass") return "rose";
-    return ieDirections !== undefined && ieDirections.groups.length > 1 ? "rose" : "grid";
+    if (ieDirections === undefined) return "grid";
+    return ieDirections.declared === true || ieDirections.groups.length > 1 ? "rose" : "grid";
 }
 
 /**
@@ -192,7 +236,7 @@ export function defaultLayoutMode(
  */
 export function firstDrawnBlock(
     view: AnimationView,
-    interpretation: IeDirectionAnalysis,
+    interpretation: DirectionBlocks,
     blocks?: readonly IeGroup[],
 ): number {
     const areas = view.frames.map((frame) => frame.width * frame.height);
@@ -205,7 +249,7 @@ export function firstDrawnBlock(
 }
 
 /** Rose tiles for one direction block of an IE-interpreted untagged BAM (@bgforge/image/ie-direction). */
-export function ieRoseTiles(view: AnimationView, interpretation: IeDirectionAnalysis, group: number): RoseTile[] {
+export function ieRoseTiles(view: AnimationView, interpretation: DirectionBlocks, group: number): RoseTile[] {
     const slots: readonly IeDirectionSlot[] = interpretation.groups[group] ?? [];
     return slots.flatMap((slot) => {
         const seq = view.sequences[slot.seqIndex];

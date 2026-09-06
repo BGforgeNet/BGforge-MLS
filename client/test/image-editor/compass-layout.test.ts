@@ -3,6 +3,8 @@ import { FRM_FACINGS, type Facing } from "@bgforge/image";
 import { type IeDirectionAnalysis, interpretIeDirections } from "@bgforge/image/ie-direction";
 import {
     compassPosition,
+    defaultLayoutMode,
+    directionBlocks,
     firstDrawnBlock,
     ieRoseTiles,
     layoutSequences,
@@ -172,6 +174,42 @@ test("compass tiles carry the display facing (identical to the sequence's own ta
     const result = layoutSequences(makeView(FRM_FACINGS));
     if (result.mode !== "compass") throw new Error("expected compass mode");
     expect(result.tiles.map((tile) => tile.facing)).toEqual(result.tiles.map((tile) => tile.seq.facing));
+});
+
+/**
+ * The reading a declared band width settles and inference cannot: a sixteen-cycle band divides evenly into
+ * two eight-slot blocks and each half is uniform, so a file of one wide band reads as two narrow ones -
+ * twice the stances, half the facings, and each facing drawn twice.
+ */
+test("directionBlocks reads a wide band at its declared width rather than inferring two narrow ones", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+
+    const inferred = directionBlocks(view);
+    expect(inferred?.groups).toHaveLength(2);
+    expect(inferred?.scheme).toBe("ie8");
+
+    const declared = directionBlocks(view, { stride: 16 });
+    expect(declared?.groups).toHaveLength(1);
+    expect(declared?.groups[0]).toHaveLength(16);
+    // A sixteen-wide band matches no block scheme, so the block-name table has nothing to key on.
+    expect(declared?.scheme).toBeUndefined();
+});
+
+// A wide-band animation packs its whole walk into ONE band, so the block-count proxy for "these cycles
+// are facings" says grid where the declaration says rose.
+test("defaultLayoutMode opens a single DECLARED band on the rose, and a single inferred one on the grid", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+
+    expect(defaultLayoutMode(null, directionBlocks(view, { stride: 16 }))).toBe("rose");
+    expect(defaultLayoutMode(null, { groups: [[{ seqIndex: 0, facing: "S" }]] })).toBe("grid");
+});
+
+test("directionBlocks refuses a declared width no IE scheme stores, rather than falling back to a guess", () => {
+    expect(directionBlocks(makeView(Array.from({ length: 16 }, () => "none" as const)), { stride: 7 })).toBeUndefined();
 });
 
 test("ieRoseTiles builds one direction block's rose from untagged cycles, at the IE slot facings", () => {
