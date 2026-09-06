@@ -53,6 +53,7 @@ transpilers/
 # server/out at build time, so nothing under them is read from disk at runtime.
 # (binary/binary-editor/format each had per-subdir excludes before; the wholesale
 # form fails closed - a newly added file under them cannot silently ship.)
+animation/
 binary/
 binary-editor/
 compilers/
