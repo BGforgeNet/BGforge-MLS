@@ -24,6 +24,9 @@ export default defineConfig({
         hookTimeout: 60000,
         coverage: coverageConfig({
             reportsDirectory: "coverage/animation",
+            // Repo-root-relative, matching the absolute test include above: the coverage tier runs every
+            // package's config from the repo root, where a bare `src/**` widens the denominator to the
+            // workspace sources this config aliases in (binary/src, image/src) instead of restricting it.
             include: ["animation/src/**/*.ts"],
             // Floors set to the measured actuals when this package was split out of the client, per the
             // convention the sibling configs follow: they may be raised as coverage improves, never lowered.
