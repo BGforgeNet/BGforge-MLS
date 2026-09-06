@@ -88,19 +88,19 @@ export function createCachedParserModule(
     const base = createParserModule(wasmFileName, name);
 
     // Keyed by full document text, not URI+version with incremental `tree.edit()`
-    // reparsing. Incremental parsing was measured and declined: a full reparse of a
-    // typical script averages ~6 ms and a 12250-line TP2 installer ~58 ms
-    // (server/test/perf/parser-cache.bench.ts, tp2-parse.bench.ts). At single-digit
-    // ms for the common case, the incremental machinery (threading didChange edit
-    // ranges through to `oldTree`, tree lifetime management, per-grammar
-    // golden-equivalence tests) is not justified by the saving. If large-file
+    // reparsing. Incremental parsing was measured and declined: a full reparse stays
+    // cheap even for a 12250-line TP2 installer
+    // (server/test/perf/parser-cache.bench.ts, tp2-parse.bench.ts), so the
+    // incremental machinery (threading didChange edit ranges through to `oldTree`,
+    // tree lifetime management, per-grammar golden-equivalence tests) is not
+    // justified by the saving. If large-file
     // keystroke latency is ever a concern, debouncing the tree-sitter validation is
     // the cheaper mitigation than incremental reparsing.
     // A Tree owns a wasm allocation that web-tree-sitter frees only on an explicit delete() - it
     // registers no FinalizationRegistry, so dropping the JS reference reclaims nothing. Every path that
     // removes a tree from this cache therefore deletes it, or the process leaks one tree per distinct
-    // text it ever parsed: measured at ~115 MB unreclaimable after a 1700-file workspace scan, and
-    // ~0.92 MB per parse while editing a single document, growing linearly with no plateau.
+    // text it ever parsed: measured as unreclaimable memory growing linearly with every workspace scan
+    // and every edit of a single document, with no plateau.
     //
     // Safe because no caller holds a tree across a yield: parseWithCache's result is consumed
     // synchronously at every call site, so a tree cannot be evicted while still in use. A caller that

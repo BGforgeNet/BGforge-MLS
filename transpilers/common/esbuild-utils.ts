@@ -174,7 +174,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
             // No plugin marks modules `sideEffects: false` here. One used to, for TSSL, which now
             // compiles through compilers/tssl and never reaches this function. It matched every import
             // and awaited build.resolve() per module - 18 nested round-trips into the wasm on a real
-            // mod file, ~150ms of a ~270ms bundle - while esbuild's own tree-shaking already dropped
+            // mod file, over half the bundle's wall time - while esbuild's own tree-shaking already dropped
             // the same modules: output was byte-identical across the external corpus without it.
         ],
     });
