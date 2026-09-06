@@ -44,6 +44,7 @@
         viewState,
         showSet,
         showSetChoice,
+        idle,
     }: {
         bridge: Bridge;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
@@ -58,6 +59,15 @@
          * own set picker, which would otherwise be the same choice offered twice.
          */
         showSetChoice?: boolean;
+        /**
+         * Whether nothing is chosen YET, as opposed to something being on its way.
+         *
+         * The surface draws its whole self either way - controls, stage and toolbar keep their places from
+         * the moment the tab opens, so choosing a set moves nothing the reader was using to choose with.
+         * Without this the two states are indistinguishable from here and an empty tab reads as a hang:
+         * the loading placeholder below is for a set that IS coming.
+         */
+        idle?: boolean;
     } = $props();
 
     let view = $state<AnimationView | null>(null);
@@ -323,7 +333,7 @@
         <h2>Could not open file</h2>
         <p>{errorMessage}</p>
     </div>
-{:else if !view}
+{:else if !view && idle !== true}
     {#if initTimedOut}
         <div class="error-state">
             <h2>No response from the host</h2>
@@ -335,7 +345,7 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
-    {#if nameMeaning}
+    {#if view && nameMeaning}
         <header class="name-banner">
             <span class="name-banner-file">{view.basename}</span>
             <span class="name-banner-meaning">{nameMeaning}</span>
@@ -345,7 +355,7 @@
          the save/import bar spans the bottom. -->
     <div class="editor-layout">
         <div class="stage" bind:this={stageEl} style:--tile-bg={tileBackground}>
-            {#if playback}
+            {#if view && playback}
                 {#if layoutMode === "rose"}
                     <CompassRose
                         {view}
@@ -374,9 +384,14 @@
                     Loading frames {tileCount - tilesAwaitingPixels}/{tileCount}
                 </p>
             {/if}
+            {#if !view}
+                <!-- The empty state says what belongs here rather than leaving the stage blank, and it
+                     sits INSIDE the stage so the controls beside it keep their width and position. -->
+                <p class="stage-empty">Choose an animation set to draw it here.</p>
+            {/if}
         </div>
         <aside class="controls-column">
-            {#if view.set && showSet !== false}
+            {#if view?.set && showSet !== false}
                 <!-- First in the column: it selects WHAT is shown, where everything below it selects how. -->
                 <SetControls
                     set={view.set}
@@ -421,7 +436,7 @@
                     onGroupChange={(g) => (roseGroup = g)}
                 />
             {/if}
-            {#if view.colorModel === "indexed" && view.sourceFormat !== "frm"}
+            {#if view?.colorModel === "indexed" && view.sourceFormat !== "frm"}
                 <CreatureControls
                     {creatures}
                     active={activeCreature}
@@ -429,8 +444,10 @@
                     onchoose={(resref) => bridge.send({ type: "setCreature", resref })}
                 />
             {/if}
-            <MetaControls {view} {bridge} />
-            {#if layoutMode === "grid" && cycleAnalysis?.multiSequence}
+            {#if view}
+                <MetaControls {view} {bridge} />
+            {/if}
+            {#if view && layoutMode === "grid" && cycleAnalysis?.multiSequence}
                 <CycleLayoutControls
                     cycleCount={view.sequences.length}
                     analysis={cycleAnalysis}
@@ -443,5 +460,9 @@
             {/if}
         </aside>
     </div>
-    <Toolbar {view} {bridge} />
+    {#if view}
+        <!-- Gated on the model rather than disabled: every button here acts on a picture, and one that is
+             pressable with nothing loaded is an action offered against data that does not exist. -->
+        <Toolbar {view} {bridge} />
+    {/if}
 {/if}

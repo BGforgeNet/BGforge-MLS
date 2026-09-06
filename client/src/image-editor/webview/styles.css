@@ -40,6 +40,15 @@
     flex-direction: column;
 }
 
+/* What the stage says before anything is chosen. Centred by the stage's own flex + auto margins, the
+   same way the rose and the grid are, so the surface has one centring rule rather than a second for its
+   empty state. */
+.stage-empty {
+    margin: auto;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+}
+
 /* Frame-fetch progress, overlaid on the stage rather than placed in the flow: it appears and
    disappears as frames arrive, and a element in the flow would reflow the tiles each time. */
 .frame-progress {

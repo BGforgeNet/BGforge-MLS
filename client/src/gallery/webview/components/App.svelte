@@ -2,7 +2,7 @@
     import { matchesTag, resourceTags } from "../../resource-tags";
     import { filterTiles } from "../grid-window";
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
-    import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
+    import { type GalleryTab, resolveTab, showTabStrip, viewerMounted } from "../tabs";
     import Grid from "./Grid.svelte";
     import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
@@ -107,7 +107,11 @@
             return;
         }
         if (message.type === "showing") {
-            const mounted = showing !== undefined;
+            // Whether the SURFACE is up, which is not the same as something being drawn on it: the sets
+            // tab mounts it empty. Keyed on `showing` alone, the first choice on that tab looked like a
+            // mount, the ready went unsent, and the host never answered with the contents - an idle
+            // surface that stayed idle.
+            const mounted = viewerMounted(tab, showing !== undefined);
             showing = message.set === undefined && message.item === undefined ? undefined : message;
             // Only when the surface was ALREADY up: a first show mounts it, and its own bridge asks for
             // the contents as it subscribes. Asking twice would cost the whole view a second time.
@@ -183,14 +187,23 @@
         </div>
     {/if}
 {/if}
-{#if showing}
+{#if viewerMounted(tab, showing !== undefined)}
     <!-- Mounted once and kept: it holds the reader's zoom, background and layout choice, which a remount
-         per selection would reset under them. A new selection reaches it as another `init`. -->
+         per selection would reset under them. A new selection reaches it as another `init`.
+
+         Not gated on something being drawn: the sets tab IS this surface, so it draws its whole self from
+         the moment the tab opens and the picker above it chooses what goes on the stage. Gating it left
+         the tab bare until a set was chosen, which is the cut-down preview this panel exists not to be. -->
     <div class="stage-pane">
         <!-- The set's controls answer to the tab, not to what happens to be drawn: a reader who has moved
              to the file list is not choosing an animation set, and a set left on the stage behind them
              should not keep offering its own pickers there. -->
-        <AnimationApp bridge={viewerBridge} showSet={tab === "sets"} showSetChoice={false} />
+        <AnimationApp
+            bridge={viewerBridge}
+            showSet={tab === "sets"}
+            showSetChoice={false}
+            idle={showing === undefined}
+        />
     </div>
 {/if}
 </div>

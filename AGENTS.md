@@ -24,6 +24,11 @@ Pick the cheapest tool that answers the actual question.
 - **"Does this one SSL construct match the reference compiler?"** -> `pnpm ssl-diff <file.ssl>` or `-e '<source>'`
   (`-O1`/`-O2`, `--keep`), about a second. Not the corpus sweep - that answers "did anything regress" and belongs at
   close-out. Full loop: `compilers/ssl/AGENTS.md`.
+- **"What does this install say about animation X?"** ->
+  `pnpm anim-probe <gameDir> <set|members|ini|exists|files> <arg>...` (an id is hex with or without `0x`; a name
+  matches `ANIMATE.IDS`/`ANISND.IDS`). Answers through the same index and resolvers the gallery uses, so its answer
+  and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can. Not a substitute for
+  a gallery drive.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
   order: `pnpm -C binary build` (only if `binary/src` changed) -> `pnpm exec tsx binary-editor/test/harness/build.mts`
   (after any webview/Svelte/`styles.css` edit) -> a driver (`render-pro-eff.mts`, `render-itm.mts`, `render-spl.mts`,
@@ -38,9 +43,11 @@ Pick the cheapest tool that answers the actual question.
 ## Verification tiers
 
 Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run` prints the plan) -> `pnpm test`
--> `pnpm build:all` + `pnpm test:all` at close-out.
+-> `pnpm test:cov <pkg>...` -> `pnpm build:all` + `pnpm test:all` at close-out.
 
 **`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
+**Run `pnpm test:cov` on the packages you touched before the full gate**: it enforces the same per-package
+thresholds in seconds, where learning a 0.02% miss from `test:all` costs a full run and closing it costs another.
 Full tier guidance, and the rule that every vitest config runs from any cwd: `docs/development.md`.
 
 ## Testing against real external files

@@ -1,5 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { GALLERY_TABS, resolveTab, showTabStrip, tabLabel } from "../src/gallery/webview/tabs";
+import { GALLERY_TABS, resolveTab, showTabStrip, tabLabel, viewerMounted } from "../src/gallery/webview/tabs";
+
+/**
+ * The sets tab IS the animation surface, so it draws its whole self from the moment it opens rather than
+ * staying bare until something is chosen. Both readers of this take the same answer: the template renders
+ * the surface, and the `showing` handler decides whether a first selection still needs the ready handshake.
+ */
+describe("viewerMounted", () => {
+    it("mounts the surface on the sets tab with nothing chosen", () => {
+        expect(viewerMounted("sets", false)).toBe(true);
+    });
+
+    /**
+     * The regression this pins: read apart, the two callers disagreed - the surface rendered on the empty
+     * tab while the handshake still assumed a mount was coming, so the first set chosen there was never
+     * asked for and the tab sat idle with its name in the picker.
+     */
+    it("still counts as mounted when the first set arrives, so the handshake fires", () => {
+        expect(viewerMounted("sets", true)).toBe(true);
+    });
+
+    it("keeps the surface on the files tab only while something is drawn there", () => {
+        expect(viewerMounted("files", true)).toBe(true);
+        expect(viewerMounted("files", false)).toBe(false);
+    });
+});
 
 describe("resolveTab", () => {
     it("shows the sets tab when the panel has animations behind it", () => {

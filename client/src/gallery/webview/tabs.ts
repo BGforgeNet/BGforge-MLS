@@ -29,3 +29,19 @@ export function resolveTab(requested: GalleryTab | undefined, hasSets: boolean):
 export function showTabStrip(hasSets: boolean): boolean {
     return hasSets;
 }
+
+/**
+ * Whether the animation surface is on screen - which is NOT the same as something being drawn on it.
+ *
+ * The sets tab IS that surface, so it mounts empty from the moment the tab opens and the picker above it
+ * chooses what goes on the stage; the files tab keeps it only while a selection is still drawn there.
+ *
+ * One definition because two readers need the same answer and they answer different questions with it: the
+ * template decides whether to render it, and the `showing` handler decides whether a first selection needs
+ * the ready handshake or will get one from a fresh mount. Read apart, they disagreed - the surface rendered
+ * on the empty tab while the handshake still assumed a mount was coming, so the first set chosen there was
+ * never asked for and the tab sat idle with the picker showing a name.
+ */
+export function viewerMounted(tab: GalleryTab, showing: boolean): boolean {
+    return showing || tab === "sets";
+}
