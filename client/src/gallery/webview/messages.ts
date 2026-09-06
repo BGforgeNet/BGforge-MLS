@@ -7,6 +7,10 @@
  */
 
 import type { SetTile } from "@bgforge/animation";
+import type {
+    HostToWebview as AnimationHostToWebview,
+    WebviewToHost as AnimationWebviewToHost,
+} from "../../image-editor/webview/messages";
 
 export interface GalleryTile {
     id: string;
@@ -21,41 +25,6 @@ export interface GalleryTile {
  * shape has one home; it crosses this channel unchanged, being plain fields only.
  */
 export type { SetTile } from "@bgforge/animation";
-
-/**
- * The five facet controls.
- *
- * The first three re-resolve WHICH animation is selected; the last two pick a file within it - one union
- * because the view sends them through one message and the host answers all five together.
- */
-export type FacetFamily = "race" | "gender" | "charClass" | "armour" | "action";
-
-/** One option of a facet control, as the webview draws it. Disabled options keep their reason. */
-export interface FacetOption {
-    value: string;
-    label: string;
-    available: boolean;
-    reason?: string;
-}
-
-/**
- * Everything the facet browser draws, resolved by the host.
- *
- * The host resolves rather than the webview because availability is decided against files in the archive,
- * which only the host can see. The webview holds a selection and renders this answer.
- */
-export interface FacetState {
-    selection: { race: string; gender: string; charClass: string; armour: number; action: string };
-    races: FacetOption[];
-    genders: FacetOption[];
-    classes: FacetOption[];
-    armours: FacetOption[];
-    /** Only the actions this set actually ships at this armour level. */
-    actions: FacetOption[];
-    /** The file the selection resolves to, or undefined with `unavailable` saying why. */
-    resref: string | undefined;
-    unavailable: string | undefined;
-}
 
 export type HostToWebview =
     /**
@@ -84,30 +53,38 @@ export type HostToWebview =
      *  `directional` says the source is a creature animation, so the picture is ONE frame by design and the
      *  view marks it as such rather than leaving it looking like a still. */
     | { type: "thumbnail"; id: string; dataUri?: string; directional?: boolean }
-    /** The facet browser's whole state, sent on open and after every selection change. */
-    | { type: "facets"; state: FacetState };
+    /**
+     * The animation surface's own protocol, carried inside this one.
+     *
+     * The panel draws the picture with the editor's components, so it has to speak the editor's contract;
+     * an envelope keeps the two vocabularies apart on one channel rather than merging them into a union
+     * whose members would then have to avoid each other's names. What is shown is stated here, not there:
+     * `showing` is the browser's own state, and the editor's `init` says nothing about which row it came
+     * from.
+     */
+    | { type: "viewer"; message: AnimationHostToWebview }
+    /**
+     * What the panel is drawing, or `undefined` for nothing yet - which is the state a freshly opened
+     * gallery is in, and the one a failed open returns it to.
+     */
+    | { type: "showing"; set?: number; item?: string };
 
 export type WebviewToHost =
     | { type: "ready" }
     /** Only what the viewport needs, so opening a game-wide grid does not decode thousands of files. */
     | { type: "requestThumbnails"; ids: string[]; size: number }
+    /**
+     * Show this item.
+     *
+     * Whether that means drawing it here or handing it to another editor is the host's to decide, because
+     * the answer is per format: an animation draws on this panel's own stage, and a format this panel has
+     * no stage for opens where it does. A webview-side branch would be a second statement of which formats
+     * the animation surface covers.
+     */
     | { type: "open"; id: string }
-    /**
-     * Open a BAM by resref.
-     *
-     * One message for both entry points - a set row and the facet browser's resolved file - so the two
-     * cannot drift into opening resources by different routes.
-     */
-    | { type: "openResref"; resref: string }
-    /** A facet control changed; the host re-resolves and answers with a whole `FacetState`. */
-    | { type: "selectFacet"; family: FacetFamily; value: string }
-    /**
-     * Open the whole set in the animation editor, where it is drawn, played, inspected and saved.
-     *
-     * The panel draws no set of its own. It once had a viewer page, retired when the editor learned to
-     * open a set: two surfaces for one animation meant two copies of the stance list, the transport and
-     * the rose, and only one of them could ever save.
-     */
-    | { type: "openSetEditor"; id: number }
+    /** Draw a whole animation set on this panel, with the set and action pickers the editor tab has. */
+    | { type: "showSet"; id: number }
+    /** The animation surface's own protocol, going the other way. See the `viewer` message above. */
+    | { type: "viewer"; message: AnimationWebviewToHost }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };

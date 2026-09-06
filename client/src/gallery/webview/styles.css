@@ -16,18 +16,52 @@ body {
     height: 100vh;
 }
 
-.toolbar {
+/* The browse controls fill the panel until there is something to look at, then step aside into a column
+   beside it. One surface either way: what changes is how much of it the list is entitled to, and a grid
+   of thumbnails is worth the whole width only while nothing has been chosen out of it. */
+.browse {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.gallery.showing {
+    flex-direction: row;
+}
+
+.gallery.showing .browse {
+    flex: 0 0 18rem;
+    border-right: 1px solid var(--vscode-panel-border);
+}
+
+/* The animation surface's own root expects a flex column to lay its banner, stage and toolbar down. */
+.stage-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* `browse-` prefixed, not `.toolbar`: this panel loads the animation editor's stylesheet too, and that
+   one owns `.toolbar` for the save/import bar inside the surface this panel now draws. */
+.browse-toolbar {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px;
     border-bottom: 1px solid var(--vscode-panel-border);
     flex: 0 0 auto;
+    /* Wraps, because this bar shares a narrow column with the picture once one is being drawn - unwrapped,
+       the two fixed-width selects took the whole row and squeezed the search field to nothing. */
+    flex-wrap: wrap;
 }
 
-.toolbar input {
-    flex: 1 1 auto;
-    min-width: 0;
+.browse-toolbar input {
+    flex: 1 1 12ch;
+    min-width: 12ch;
     padding: 4px 6px;
     color: var(--vscode-input-foreground);
     background: var(--vscode-input-background);
@@ -35,7 +69,7 @@ body {
     border-radius: 2px;
 }
 
-.toolbar input:focus {
+.browse-toolbar input:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
 }
@@ -248,15 +282,27 @@ body {
     width: 13ch;
 }
 
-/* The facet browser. */
-.facetbar {
-    align-items: end;
-    border-bottom: 1px solid var(--vscode-panel-border);
+/* The animation filters and the picker they narrow, as one block of controls. */
+.setfilters {
     display: flex;
     flex: 0 0 auto;
     flex-wrap: wrap;
     gap: 4px 12px;
+    padding: 8px 8px 0;
+}
+.setpicker {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 2px;
     padding: 8px;
+    max-width: 26rem;
+}
+/* Bounded, not full-width: this column also holds a grid of thumbnails, and a control stretched to its
+   width would read as the panel's subject rather than as one of four above the list. */
+.setfilters .facet {
+    flex: 1 1 8rem;
+    max-width: 14rem;
 }
 .facet {
     display: flex;
@@ -267,40 +313,6 @@ body {
     color: var(--vscode-descriptionForeground);
     font-size: 11px;
 }
-/* The box is sized by the component and reserved before any picture arrives, for the same reason a grid
-   tile's is: a preview that appeared with its bytes would shift the list under the reader's cursor. */
-.facetpreview {
-    align-items: center;
-    position: relative;
-    background: var(--vscode-editorWidget-background);
-    border-radius: 2px;
-    display: flex;
-    flex: 0 0 auto;
-    justify-content: center;
-    margin: 6px 8px 0;
-}
-.facetpreview img {
-    max-width: 100%;
-    max-height: 100%;
-    /* Pixel art: the browser must not smooth it back into the blur the downscale avoided. */
-    image-rendering: pixelated;
-}
-
-/* Fixed height: this line swaps between a file plus its button and a one-line reason on every selection
-   change, and a reflow here would shift the whole list below it each time. */
-.facetresult {
-    align-items: center;
-    display: flex;
-    flex: 0 0 auto;
-    gap: 8px;
-    margin: 0;
-    min-height: 30px;
-    padding: 0 8px;
-}
-.facetfile {
-    font-family: var(--vscode-editor-font-family, monospace);
-}
-
 /* A creature animation's picture is ONE frame on purpose - its other cycles are the same pose turned round.
    Three dots read as a row of facings and say the file is directional, which a bare still cannot. Text would
    not fit a 64px tile, and a colour alone would carry meaning nothing else states. */
@@ -318,23 +330,6 @@ body {
     position: absolute;
     transform: translateX(-50%);
     width: 19px;
-}
-.facetopen {
-    background: var(--vscode-button-background);
-    border: none;
-    border-radius: 2px;
-    color: var(--vscode-button-foreground);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: var(--vscode-font-size);
-    padding: 3px 10px;
-}
-.facetopen:hover {
-    background: var(--vscode-button-hoverBackground);
-}
-.facetopen:focus {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: 2px;
 }
 .facetnone {
     color: var(--vscode-descriptionForeground);

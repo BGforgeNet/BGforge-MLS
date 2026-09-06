@@ -32,7 +32,7 @@
     const display = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 </script>
 
-<div class="toolbar">
+<div class="browse-toolbar">
     <input
         type="search"
         placeholder="Filter {title} by name"

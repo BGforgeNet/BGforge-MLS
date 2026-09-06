@@ -17,6 +17,13 @@ const GAME_QUERY = "g=%2Fgames%2Fbgee";
 const { readFileMock } = vi.hoisted(() => ({ readFileMock: vi.fn() }));
 
 vi.mock("vscode", () => {
+    // The provider hands one back from `attach`, so the surfaces showing a document can be detached.
+    class Disposable {
+        readonly dispose: () => void;
+        constructor(onDispose: () => void) {
+            this.dispose = onDispose;
+        }
+    }
     class EventEmitter {
         readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
         fire(): void {}
@@ -32,6 +39,7 @@ vi.mock("vscode", () => {
     });
     return {
         EventEmitter,
+        Disposable,
         Uri: {
             file: make,
             // The set save addresses each member by its own resource URI, which is built this way.

@@ -11,9 +11,10 @@ import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGaller
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
-import { openAnimationSet } from "../ie-resources/open-set";
+import { animationSetAddress } from "../ie-resources/open-set";
+import { drawsAnimation } from "../image-editor/formats";
+import { type AnimationStageHost } from "./stage";
 import { type AnimationIndexResolver, setTile } from "@bgforge/animation";
-import { createFacetBrowser, type FacetBrowser } from "./facet-state";
 import { type SetTile } from "./webview/messages";
 import { type Game } from "@bgforge/binary";
 
@@ -26,6 +27,8 @@ export interface GalleryHostDeps {
     revealResource: (resref: string, ext: string) => Promise<void>;
     /** Fires when the open install changes; a wired panel re-reads the corpus on it. */
     onDidChangeGame: vscode.Event<void>;
+    /** The animation editor, which a panel draws inside itself rather than handing animations to. */
+    animation?: AnimationStageHost;
 }
 
 export function registerGallery(context: vscode.ExtensionContext, deps: GalleryHostDeps): void {
@@ -36,32 +39,27 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         return (deps.animations(current.dir) ?? []).map((set) => setTile(set, exists));
     };
 
-    /** Open an animation's BAM, through the same resource URI every other game item opens by. */
-    const openResref = async (resref: string): Promise<void> => {
+    /** A whole set, at the set-scoped address the animation surface shows it by. */
+    const setUri = (id: number): vscode.Uri | undefined => {
         const current = deps.gameSession();
-        if (current === undefined) return;
-        await vscode.commands.executeCommand("vscode.open", resourceUri(current.dir, resref, "bam"));
+        return current === undefined ? undefined : animationSetAddress(deps.animations, current.dir, id);
     };
 
     /**
-     * A facet browser over the open game, or undefined with none.
+     * The address of a listed item, when this panel can draw it itself.
      *
-     * Availability is asked of the archive rather than of the index, because a table can name a combination
-     * whose files the install does not ship - and the browser must not offer a file that will not open.
+     * Undefined for everything else - the gallery lists every format it can make a thumbnail of, which is
+     * a wider set than the animation surface draws.
      */
-    const facets = (): FacetBrowser | undefined => {
-        const current = deps.gameSession();
-        if (current === undefined) return undefined;
-        const animations = deps.animations(current.dir);
-        if (animations === undefined) return undefined;
-        return createFacetBrowser(animations, (resref) => current.game.canRead(resref, "bam"));
-    };
-
-    /** Hand a whole set to the animation editor, through the same open the editor's own picker uses. */
-    const openSetEditor = async (id: number): Promise<void> => {
-        const current = deps.gameSession();
-        if (current === undefined) return;
-        await openAnimationSet(deps.animations, current.dir, id);
+    const animationUri = (source: GallerySource, id: string): vscode.Uri | undefined => {
+        const item = source.list().find((entry) => entry.id === id);
+        if (item === undefined || !drawsAnimation(item.ext)) return undefined;
+        if (source.kind === "game") {
+            const current = deps.gameSession();
+            return current === undefined ? undefined : resourceUri(current.dir, item.label, item.ext);
+        }
+        const at = source.locate(id);
+        return at?.kind === "file" ? vscode.Uri.file(at.path) : undefined;
     };
 
     const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
@@ -111,10 +109,10 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     const panelDeps = {
         sourceFor,
         open,
+        animationUri,
         sets,
-        openResref,
-        facets,
-        openSetEditor,
+        setUri,
+        ...(deps.animation === undefined ? {} : { animation: deps.animation }),
         onDidChangeGame: deps.onDidChangeGame,
     } satisfies GalleryDeps;
 

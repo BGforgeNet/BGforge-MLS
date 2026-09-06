@@ -83,19 +83,4 @@ export {
     characterFacetsOf,
     characterIdFor,
 } from "./animation-facets";
-export {
-    type FacetChoice,
-    type FacetResolution,
-    ARMOUR_LABELS,
-    CLASSES,
-    GENDERS,
-    RACES,
-    actionLabel,
-    armourLabel,
-    facetChoices,
-    facetIndex,
-    facetKey,
-    facetLabel,
-    resolveFacets,
-    setForFacets,
-} from "./facet-browser";
+export { ARMOUR_LABELS, actionLabel, armourLabel, facetLabel } from "./facet-labels";

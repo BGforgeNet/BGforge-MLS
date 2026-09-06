@@ -3,17 +3,18 @@ import { type AnimationIndexResolver, setTitle } from "@bgforge/animation";
 import { animationSetUri } from "./uri";
 
 /**
- * Show a whole animation set in the editor, by the set-scoped address that editor opens.
+ * The address a whole animation set is shown by.
  *
- * Shared because two surfaces reach the same set: the gallery's open button and the editor's own set
- * picker. One of them building the address itself would be a second statement of what a set's tab is
- * called, and the two would drift on the first change to either.
- *
- * Labelled with the set's own name so the tab reads as the animation rather than as an id; an id the
- * install declares nothing for simply opens under its number.
+ * Both surfaces build it here: the editor tab opens it as a document, the gallery hands it to the stage in
+ * the panel it already has. Labelled with the set's own name so it reads as the animation rather than as an
+ * id; an id the install declares nothing for simply resolves under its number.
  */
-export async function openAnimationSet(animations: AnimationIndexResolver, gameDir: string, id: number): Promise<void> {
+export function animationSetAddress(animations: AnimationIndexResolver, gameDir: string, id: number): vscode.Uri {
     const set = (animations(gameDir) ?? []).find((entry) => entry.id === id);
-    const uri = animationSetUri(gameDir, id, set === undefined ? undefined : setTitle(set));
-    await vscode.commands.executeCommand("vscode.open", uri);
+    return animationSetUri(gameDir, id, set === undefined ? undefined : setTitle(set));
+}
+
+/** Open a set as a TAB - the editor tab's answer to its own set picker, where the gallery draws it inline. */
+export async function openAnimationSet(animations: AnimationIndexResolver, gameDir: string, id: number): Promise<void> {
+    await vscode.commands.executeCommand("vscode.open", animationSetAddress(animations, gameDir, id));
 }

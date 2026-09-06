@@ -1,19 +1,19 @@
 <script lang="ts">
     import { matchesTag, resourceTags } from "../../resource-tags";
-    import { filterTiles, ladderSize } from "../grid-window";
-    import {
-        type FacetState,
-        type GalleryTile,
-        type HostToWebview,
-        type SetTile,
-        type WebviewToHost,
-    } from "../messages";
+    import { filterTiles } from "../grid-window";
+    import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip } from "../tabs";
-    import FacetBar from "./FacetBar.svelte";
+    import { ANY_SELECTION, type FilterSelection, filterControls, filterSets } from "../set-filter";
     import Grid from "./Grid.svelte";
-    import SetList from "./SetList.svelte";
+    import SetFilters from "./SetFilters.svelte";
+    import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
     import Toolbar from "./Toolbar.svelte";
+    // The animation surface itself, not a copy of it: this panel draws what the editor tab draws, with the
+    // same components over the same protocol, and adds only the controls that choose what is on it.
+    import AnimationApp from "../../../image-editor/webview/components/App.svelte";
+    import { Bridge } from "../../../image-editor/webview/state/bridge";
+    import type { HostToWebview as AnimationHostToWebview } from "../../../image-editor/webview/messages";
 
     interface Props {
         post: (message: WebviewToHost) => void;
@@ -25,10 +25,32 @@
     const { post, ladder, tileSize = 64 }: Props = $props();
 
     /**
-     * The preview's drawn size: the ladder's top step, since this is the one picture the animations tab is
-     * about rather than one tile among hundreds.
+     * What the stage is drawing, or `undefined` for nothing yet.
+     *
+     * Also the mount gate: the animation surface times out waiting for contents it was never going to be
+     * sent, so it goes up when there is something to put on it and not before.
      */
-    const PREVIEW_PX = 128;
+    let showing: { set?: number; item?: string } | undefined = $state();
+    /** Installed by the surface's own bridge, so a message can only be delivered once it is listening. */
+    let deliverToViewer: ((message: AnimationHostToWebview) => void) | undefined;
+
+    /**
+     * The surface's end of its protocol, carried inside this panel's own.
+     *
+     * `ready` is posted from the subscribe rather than on mount: it is the message that asks the host for
+     * the contents, and the host answers immediately, so it must not go out before there is something here
+     * to receive the answer.
+     */
+    const viewerBridge = new Bridge(
+        (message) => post({ type: "viewer", message }),
+        (cb) => {
+            deliverToViewer = cb;
+            post({ type: "viewer", message: { type: "ready" } });
+            return () => {
+                if (deliverToViewer === cb) deliverToViewer = undefined;
+            };
+        },
+    );
 
     let title = $state("resources");
     let items: GalleryTile[] = $state([]);
@@ -47,8 +69,9 @@
     let thumbnails: Map<string, string | undefined> = $state(new Map());
     /** Which answered items are creature animations, so a tile can say why its picture holds one frame. */
     let directional: Set<string> = $state(new Set());
-    let facets: FacetState | undefined = $state();
-    /** The animation this panel was opened on, if any: the sets tab marks its row. */
+    /** How the animation list is narrowed. All ANY is where a panel opens: everything the install declares. */
+    let filters: FilterSelection = $state({ ...ANY_SELECTION });
+    /** The animation this panel was opened on, if any - kept for the note when the install has no such id. */
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
 
@@ -69,36 +92,11 @@
     );
     /** The formats, on the same terms: one format alone is not a choice. */
     const formats = $derived([...new Set(items.map((tile) => tile.ext))].sort());
-    /** The sets tab searches by the same box, over the label the tile shows. */
-    const shownSets = $derived(
-        sets.filter((set) => set.label.toLowerCase().includes(query.trim().toLowerCase())),
-    );
+    const filterBar = $derived(filterControls(sets, filters));
+    const shownSets = $derived(filterSets(sets, filters));
     const hasSets = $derived(sets.length > 0);
 
     const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
-
-    /**
-     * The Files tile for the animation the facets resolve to.
-     *
-     * Found among the tiles the host already sent rather than requested by name: the thumbnail pump is keyed
-     * by tile id, so going through the tile is what lets the preview reuse the same decode path - and the
-     * archive's own spelling of the resref, which need not be the one the animation table gave.
-     */
-    const facetTile = $derived(
-        facets?.resref === undefined
-            ? undefined
-            : items.find(
-                  (tile) => tile.ext === "bam" && tile.label.toUpperCase() === facets?.resref?.toUpperCase(),
-              ),
-    );
-    const previewSize = $derived(ladderSize(PREVIEW_PX, globalThis.devicePixelRatio ?? 1, ladder));
-
-    // Ask once per file: the map holds an entry even for a picture that could not be drawn, so a second
-    // request for the same failure never goes out.
-    $effect(() => {
-        const id = facetTile?.id;
-        if (id !== undefined && !thumbnails.has(id)) post({ type: "requestThumbnails", ids: [id], size: previewSize });
-    });
 
     function onMessage(event: MessageEvent<HostToWebview>): void {
         const message = event.data;
@@ -108,14 +106,25 @@
             sets = message.sets;
             note = message.note;
             focusSet = message.focusSet;
+            // Back to ANY with the corpus: this is a new install's animations, and a race carried over from
+            // the last one would narrow the list to nothing while every control still reads as a choice.
+            filters = { ...ANY_SELECTION };
             // A restored panel can ask for a tab this source cannot fill; resolveTab decides, not the
             // stored value. A panel opened ON an animation asks for the sets tab.
             tab = resolveTab(message.focusSet === undefined ? tab : "sets", message.sets.length > 0);
             loaded = true;
             return;
         }
-        if (message.type === "facets") {
-            facets = message.state;
+        if (message.type === "showing") {
+            const mounted = showing !== undefined;
+            showing = message.set === undefined && message.item === undefined ? undefined : message;
+            // Only when the surface was ALREADY up: a first show mounts it, and its own bridge asks for
+            // the contents as it subscribes. Asking twice would cost the whole view a second time.
+            if (mounted && showing !== undefined) post({ type: "viewer", message: { type: "ready" } });
+            return;
+        }
+        if (message.type === "viewer") {
+            deliverToViewer?.(message.message);
             return;
         }
         // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
@@ -130,58 +139,37 @@
     });
 </script>
 
-<div class="gallery">
+<div class="gallery" class:showing={showing !== undefined}>
+<div class="browse">
 {#if showTabStrip(hasSets)}
     <Tabs current={tab} onSelect={(next) => (tab = next)} />
 {/if}
-<Toolbar
-    {query}
-    shown={tab === "files" ? shown.length : shownSets.length}
-    total={tab === "files" ? items.length : sets.length}
-    title={tab === "files" ? title : "animations"}
-    onQuery={(v) => (query = v)}
-    tags={tab === "files" ? tags : []}
-    tag={activeTag}
-    onTag={(v) => (tag = v)}
-    formats={tab === "files" ? formats : []}
-    {format}
-    onFormat={(v) => (format = v)}
-/>
+{#if tab === "files"}
+    <!-- The animations tab has no search box of its own: its picker carries the typing, so a second field
+         filtering the same list would be two controls for one choice. -->
+    <Toolbar
+        {query}
+        shown={shown.length}
+        total={items.length}
+        {title}
+        onQuery={(v) => (query = v)}
+        {tags}
+        tag={activeTag}
+        onTag={(v) => (tag = v)}
+        {formats}
+        {format}
+        onFormat={(v) => (format = v)}
+    />
+{/if}
 {#if tab === "sets"}
-    {#if facets}
-        <FacetBar
-            state={facets}
-            onSelect={(family, value) => post({ type: "selectFacet", family, value })}
-        />
-        <div class="facetpreview" style="width: {PREVIEW_PX}px; height: {PREVIEW_PX}px">
-            {#if facetTile && thumbnails.get(facetTile.id)}
-                <img src={thumbnails.get(facetTile.id)} alt={`${facets.resref} frame`} />
-                {#if directional.has(facetTile.id)}
-                    <span class="rose" title="Creature animation: one frame of several directions"></span>
-                {/if}
-            {/if}
-        </div>
-        <p class="facetresult">
-            {#if facets.resref}
-                <span class="facetfile">{facets.resref}.BAM</span>
-                <button
-                    type="button"
-                    class="facetopen"
-                    onclick={() => facets?.resref && post({ type: "openResref", resref: facets.resref })}
-                >
-                    Open in editor
-                </button>
-            {:else}
-                <span class="facetnone">{facets.unavailable}</span>
-            {/if}
-        </p>
-    {/if}
+    <SetFilters
+        controls={filterBar}
+        onSelect={(family, value) => (filters = { ...filters, [family]: value })}
+    />
+    <SetPicker sets={shownSets} current={showing?.set} onChoose={(id) => post({ type: "showSet", id })} />
     {#if focusSet !== undefined && !sets.some((set) => set.id === focusSet)}
         <p class="facetnone">This install has no animation {hex(focusSet)}.</p>
     {/if}
-    <!-- A row opens the set in the animation editor. The panel draws no set of its own: a set is a
-         document there, with the same controls, save path and backup as a single file. -->
-    <SetList sets={shownSets} focus={focusSet} onOpen={(id) => post({ type: "openSetEditor", id })} />
 {:else if loaded && items.length === 0}
     <p class="empty">{note ?? "No drawable resources here."}</p>
 {:else}
@@ -194,5 +182,13 @@
         onOpen={(id) => post({ type: "open", id })}
         onNeed={(ids, size) => post({ type: "requestThumbnails", ids, size })}
     />
+{/if}
+</div>
+{#if showing}
+    <!-- Mounted once and kept: it holds the reader's zoom, background and layout choice, which a remount
+         per selection would reset under them. A new selection reaches it as another `init`. -->
+    <div class="stage-pane">
+        <AnimationApp bridge={viewerBridge} />
+    </div>
 {/if}
 </div>

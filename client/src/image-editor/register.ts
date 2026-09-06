@@ -16,10 +16,13 @@ export function registerImageEditor(
     creatureColors?: CreatureColorSource,
     animationSets?: AnimationSetSource,
     confirmGroupWrite?: (uris: readonly vscode.Uri[]) => Promise<void>,
-): vscode.Disposable {
+): { registration: vscode.Disposable; provider: ImageEditorProvider } {
     const provider = new ImageEditorProvider(context, resourceBytes, creatureColors, animationSets, confirmGroupWrite);
-    return vscode.window.registerCustomEditorProvider(ImageEditorProvider.viewType, provider, {
+    // The provider comes back out because the gallery draws this same surface in its own panel; the
+    // registration is only what binds it to a file type.
+    const registration = vscode.window.registerCustomEditorProvider(ImageEditorProvider.viewType, provider, {
         supportsMultipleEditorsPerDocument: true,
         webviewOptions: { retainContextWhenHidden: true },
     });
+    return { registration, provider };
 }

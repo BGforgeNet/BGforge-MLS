@@ -71,27 +71,30 @@ export async function activate(context: ExtensionContext) {
 
     // Register binary file and animation editors. Kept as its own push: merging with the
     // push above would reorder the intervening setup.
+    const imageEditor = registerImageEditor(
+        context,
+        gameLookups.resourceBytes,
+        { creatures: gameLookups.creatures, gradients: gameLookups.colorGradient },
+        createAnimationSetSource({
+            animations: gameLookups.animations,
+            gameAt: gameLookups.gameAt,
+        }),
+        gameLookups.confirmGroupWrite,
+    );
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
-        registerImageEditor(
-            context,
-            gameLookups.resourceBytes,
-            { creatures: gameLookups.creatures, gradients: gameLookups.colorGradient },
-            createAnimationSetSource({
-                animations: gameLookups.animations,
-                gameAt: gameLookups.gameAt,
-            }),
-            gameLookups.confirmGroupWrite,
-        ),
+        imageEditor.registration,
         registerScriptViews(context, gameLookups.bcsSymbols, gameLookups.onDidChangeGame),
     );
 
-    // The image gallery. After the resource viewer, whose game session and reveal it borrows.
+    // The image gallery. After the resource viewer, whose game session and reveal it borrows, and after the
+    // animation editor, which it draws inside itself rather than handing animations over to.
     registerGallery(context, {
         gameSession: gameLookups.gameSession,
         animations: gameLookups.animations,
         revealResource: gameLookups.revealResource,
         onDidChangeGame: gameLookups.onDidChangeGame,
+        animation: imageEditor.provider,
     });
 
     // If the extension is launched in debug mode then the debug server options are used

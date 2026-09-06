@@ -121,6 +121,49 @@ interface ActiveCreature {
 }
 
 /**
+ * The two things that differ between the surfaces this protocol is spoken on.
+ *
+ * The animation UI is one implementation drawn in two places - an editor tab, which is a VS Code document,
+ * and the gallery panel, which is not. Everything else about them is identical by construction; these two
+ * questions have genuinely different answers, because only a document has VS Code's save behind it and only
+ * the gallery has a list to move the selection within.
+ */
+export interface AnimationSurface {
+    /** Persist the open document where it came from. */
+    save(document: ImageEditorDocument): Promise<void>;
+    /** Show another set of the same install here. */
+    showSet(gameDir: string, id: number): Promise<void>;
+}
+
+/**
+ * One surface's end of the animation protocol.
+ *
+ * A `vscode.Webview` would nearly do, except that the gallery speaks this protocol and its own down one
+ * channel and so has to wrap and unwrap; asking for the two directions instead lets it.
+ */
+export interface AnimationChannel {
+    post(message: HostToWebview): void;
+    /**
+     * The handler's promise is RETURNED to the caller, not dropped. VS Code ignores it, but a message that
+     * writes files is only finished when it settles, and a channel that swallowed it would leave every
+     * caller unable to tell a completed save from a started one.
+     */
+    onMessage(handler: (message: WebviewToHost) => Promise<void>): vscode.Disposable;
+}
+
+/** The plain case: a webview showing nothing but this. */
+export function webviewChannel(webview: vscode.Webview): AnimationChannel {
+    return {
+        post: (message) => void webview.postMessage(message),
+        onMessage: (handler) =>
+            webview.onDidReceiveMessage((message: unknown) =>
+                // Malformed or unknown-shape message: ignore rather than act on partial data.
+                isWebviewToHost(message) ? handler(message) : undefined,
+            ),
+    };
+}
+
+/**
  * Custom editor for Fallout FRM / Infinity Engine BAM animations. Unlike the binary editor,
  * `@bgforge/image` is a pure, fast in-process library - no worker thread is needed, and the
  * provider calls it directly from the extension host.
@@ -133,8 +176,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     >();
     readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
-    /** Open panel-to-document map, for broadcasting a refresh to every panel showing a document. */
-    private readonly active = new Map<vscode.WebviewPanel, ImageEditorDocument>();
+    /**
+     * Open channel-to-document map, for broadcasting a refresh to every surface showing a document.
+     *
+     * Keyed by channel rather than by panel because the gallery draws this UI inside a panel of its own
+     * that shows other things too - the protocol, not the window, is what the two surfaces share.
+     */
+    private readonly active = new Map<AnimationChannel, ImageEditorDocument>();
 
     private readonly extensionUri: vscode.Uri;
 
@@ -179,10 +227,26 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // the unsaved edits; reading the files instead would silently discard them while the editor still
         // shows as dirty.
         const backup = await readBackup(uri, openContext.backupId);
-        const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes, this.animationSets);
+        const document = await this.openDocument(uri, backup);
         document.onDidChangeCustomDocument((event) => this._onDidChangeCustomDocument.fire(event));
+        return document;
+    }
+
+    /**
+     * Open a document against this provider's game resources, wired to redraw the surfaces showing it.
+     *
+     * Public because the gallery opens documents too. The edit-stack forwarding above is NOT part of it:
+     * that is what makes a tab dirty and asks to save on close, which a panel has no standing to do.
+     */
+    async openDocument(uri: vscode.Uri, backup?: DocumentBackup): Promise<ImageEditorDocument> {
+        const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes, this.animationSets);
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: initialView(document) }));
         return document;
+    }
+
+    /** Persist a document in place - the write behind both the tab's save and the gallery's. */
+    async saveDocument(document: ImageEditorDocument): Promise<void> {
+        await this.writeSave(document, document.saveUri);
     }
 
     async resolveCustomEditor(
@@ -196,19 +260,38 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir, sharedUiDir] };
         panel.webview.html = this.getHtml(panel.webview);
 
-        this.active.set(panel, document);
-        panel.onDidDispose(() => this.active.delete(panel));
+        const attached = this.attach(document, webviewChannel(panel.webview), {
+            // Through VS Code's own save so its dirty tracking clears - scoped to this document's URI, so
+            // it saves the right one even if focus moved since the click.
+            save: async (doc) => {
+                await vscode.workspace.save(doc.uri);
+            },
+            // A set IS this document's address, so another set is another document - and opening it this
+            // way leaves the reader the one they came from.
+            showSet: (gameDir, id) => openAnimationSet((dir) => this.animationSets?.list(dir), gameDir, id),
+        });
+        panel.onDidDispose(() => attached.dispose());
+    }
 
-        panel.webview.onDidReceiveMessage(async (message: unknown) => {
-            if (!isWebviewToHost(message)) {
-                // Malformed or unknown-shape message: ignore rather than act on partial data.
-                return;
-            }
+    /**
+     * Speak the animation protocol on a webview, for as long as it lives.
+     *
+     * The seam the gallery reaches this editor through: it owns a webview of its own and drives the same
+     * components with the same messages, so the two surfaces are one implementation rather than a viewer
+     * and an editor that would drift apart on the first change to either.
+     */
+    attach(document: ImageEditorDocument, channel: AnimationChannel, surface: AnimationSurface): vscode.Disposable {
+        this.active.set(channel, document);
+        const subscription = channel.onMessage(async (message) => {
             try {
-                await this.handleWebviewMessage(document, panel, message);
+                await this.handleWebviewMessage(document, channel, message, surface);
             } catch (error) {
-                this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+                this.post(channel, { type: "error", message: error instanceof Error ? error.message : String(error) });
             }
+        });
+        return new vscode.Disposable(() => {
+            subscription.dispose();
+            this.active.delete(channel);
         });
     }
 
@@ -264,15 +347,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     private async handleWebviewMessage(
         document: ImageEditorDocument,
-        panel: vscode.WebviewPanel,
+        channel: AnimationChannel,
         message: WebviewToHost,
+        surface: AnimationSurface,
     ): Promise<void> {
         switch (message.type) {
             case "ready":
                 // Before the decode, not after: this is what tells the webview's deadline that the
                 // host is alive, and building the view is the part that outlasts the budget.
-                this.post(panel, { type: "loading" });
-                this.post(panel, { type: "init", view: initialView(document) });
+                this.post(channel, { type: "loading" });
+                this.post(channel, { type: "init", view: initialView(document) });
                 break;
             case "requestFrames": {
                 const all = document.animation.frames;
@@ -285,7 +369,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                     return frame ? [{ index, frame }] : [];
                 });
                 const { frames, pixels } = packFramePixels(answered.map((a) => a.frame));
-                this.post(panel, { type: "frames", indices: answered.map((a) => a.index), frames, pixels });
+                this.post(channel, { type: "frames", indices: answered.map((a) => a.index), frames, pixels });
                 break;
             }
             case "selectSetAction":
@@ -302,17 +386,17 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 // A refusal reposts the view AND says so: the picker offers what the archive's index lists,
                 // and a file listed there can still be undecodable - a control that silently snapped back
                 // would leave the reader thinking the click missed.
-                this.post(panel, { type: "init", view: initialView(document) });
-                this.post(panel, { type: "error", message: "That part of the set could not be drawn." });
+                this.post(channel, { type: "init", view: initialView(document) });
+                this.post(channel, { type: "error", message: "That part of the set could not be drawn." });
                 break;
             }
             case "pickSet":
-                await this.pickSet(document);
+                await this.pickSet(document, surface);
                 break;
             case "beginConversion": {
                 const found = this.lookupSet(document);
                 if (found === undefined) break;
-                this.post(panel, {
+                this.post(channel, {
                     type: "conversionSetup",
                     setup: {
                         profiles: CONVERSION_PROFILES.map((profile) => ({ id: profile.id, label: profile.label })),
@@ -333,7 +417,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                     targetId: 0,
                     notes: false,
                 });
-                this.post(panel, {
+                this.post(channel, {
                     type: "conversionPlan",
                     plan: {
                         profileId: message.profileId,
@@ -347,12 +431,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 break;
             }
             case "runConversion":
-                await this.runConversion(panel, document, message.request);
+                await this.runConversion(channel, document, message.request);
                 break;
             case "save":
-                // Route through VS Code's own save so its dirty tracking clears - scoped to this
-                // document's URI, so it saves the right one even if focus moved since the click.
-                await vscode.workspace.save(document.uri);
+                await surface.save(document);
                 break;
             case "editMeta":
                 document.applyMetaPatch(message.patch);
@@ -361,7 +443,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 document.setExternalPalette(message.enabled);
                 break;
             case "requestCreatures": {
-                this.post(panel, { type: "creatures", entries: this.creatureOptions(document) });
+                this.post(channel, { type: "creatures", entries: this.creatureOptions(document) });
                 break;
             }
             case "setCreature": {
@@ -654,10 +736,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      *
      * The host's own quick pick rather than a control in the webview: an install declares hundreds of
      * sets, so this is a search, and the quick pick is the search this editor's readers already use for
-     * every other resource. Opening rather than swapping the document: a set IS the document's address,
-     * so another set is another document - and this way the reader keeps the one they came from.
+     * every other resource. Where the pick then lands is the surface's - a tab opens the set as another
+     * document, the gallery shows it in the one it has.
      */
-    private async pickSet(document: ImageEditorDocument): Promise<void> {
+    private async pickSet(document: ImageEditorDocument, surface: AnimationSurface): Promise<void> {
         const address = parseAnimationSetUri(document.uri);
         if (address === undefined || this.animationSets === undefined) return;
         const items = this.animationSets.list(address.gameDir).map((set) => ({
@@ -673,7 +755,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             matchOnDescription: true,
         });
         if (picked === undefined || picked.id === address.id) return;
-        await openAnimationSet((dir) => this.animationSets?.list(dir), address.gameDir, picked.id);
+        await surface.showSet(address.gameDir, picked.id);
     }
 
     /**
@@ -700,7 +782,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      * ignores and the next reader cannot account for. The notes file beside them says what to declare.
      */
     private async runConversion(
-        panel: vscode.WebviewPanel,
+        channel: AnimationChannel,
         document: ImageEditorDocument,
         request: ConversionRequestView,
     ): Promise<void> {
@@ -708,7 +790,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         if (found === undefined) return;
         const result = convertOpenSet(found.set, found.io, found.flavour, request);
         if (result.outcome === "refused") {
-            this.post(panel, { type: "error", message: result.reason ?? "This set cannot be converted." });
+            this.post(channel, { type: "error", message: result.reason ?? "This set cannot be converted." });
             return;
         }
         const [folder] =
@@ -998,14 +1080,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         );
     }
 
-    private post(panel: vscode.WebviewPanel, message: HostToWebview): void {
-        void panel.webview.postMessage(message);
+    private post(channel: AnimationChannel, message: HostToWebview): void {
+        channel.post(message);
     }
 
-    /** Post a message to every webview panel currently showing the given document. */
+    /** Post a message to every surface currently showing the given document. */
     private postToDocumentPanels(document: ImageEditorDocument, message: HostToWebview): void {
-        for (const [panel, doc] of this.active) {
-            if (doc === document) this.post(panel, message);
+        for (const [channel, doc] of this.active) {
+            if (doc === document) this.post(channel, message);
         }
     }
 

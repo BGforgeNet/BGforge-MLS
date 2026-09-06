@@ -17,7 +17,7 @@ import { characterActionCode, characterActions, characterMember } from "./animat
 import { decodeActionCode } from "./animation-schemes/actions";
 import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
-import { actionLabel } from "./facet-browser";
+import { actionLabel } from "./facet-labels";
 
 export interface StanceIo {
     exists(resref: string): boolean;

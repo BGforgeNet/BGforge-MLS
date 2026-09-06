@@ -14,6 +14,7 @@
         "paths": {
             "@bgforge/animation": ["../animation/src/index.ts"],
             "@bgforge/animation/group-labels": ["../animation/src/group-labels.ts"],
+            "@bgforge/animation/facet-labels": ["../animation/src/facet-labels.ts"],
             "@bgforge/binary": ["../binary/src/index.ts"],
             "@bgforge/image": ["../image/src/index.ts"],
             "@bgforge/image/frame-anchor": ["../image/src/model/frame-anchor.ts"],

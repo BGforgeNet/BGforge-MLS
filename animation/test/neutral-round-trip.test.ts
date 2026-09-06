@@ -182,6 +182,33 @@ describe("writing a neutral set back to the game it came from", () => {
     });
 
     /**
+     * A file two armour levels both draw is written once.
+     *
+     * A non-character layout builds its names from the prefix alone, with no armour digit in them - so two
+     * levels sharing a prefix are two levels drawing the SAME file, and writing it per level would emit the
+     * same bytes twice and imply the levels are separable.
+     */
+    it("writes a file shared between armour levels once", () => {
+        const ogre: AnimationSet = {
+            id: 0x9000,
+            code: "MOGR",
+            name: "OGRE",
+            scheme: { kind: "unimplemented", scheme: 0x9000, reason: "the monster_large scheme..." },
+            layout: "cycles",
+            prefixByArmour: new Map([
+                [1, "MOGR"],
+                [2, "MOGR"],
+            ]),
+            paperdollPrefix: undefined,
+        };
+        const io = archiveOf({ MOGRG1: multiCycle(4, 3) });
+
+        const writes = writeNeutralSet(readNeutralSet(ogre, io, { flavour: "tob" }));
+
+        expect(writes.map((write) => write.resref)).toEqual(["MOGRG1"]);
+    });
+
+    /**
      * A compressed member goes back compressed. Every classic install ships its animations as BAMC, so
      * this is the arm the corpus gate actually exercises - and writing a bare v1 where a BAMC was read
      * would still load in the game, which is why nothing downstream would report it.

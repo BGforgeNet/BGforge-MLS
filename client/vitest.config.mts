@@ -15,6 +15,7 @@ export default defineConfig({
         alias: {
             // Subpath before the barrel, for the reason spelled out for @bgforge/image below.
             "@bgforge/animation/group-labels": path.resolve(import.meta.dirname, "../animation/src/group-labels.ts"),
+            "@bgforge/animation/facet-labels": path.resolve(import.meta.dirname, "../animation/src/facet-labels.ts"),
             "@bgforge/animation": path.resolve(import.meta.dirname, "../animation/src/index.ts"),
             "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
             "@bgforge/binary-editor": path.resolve(import.meta.dirname, "../binary-editor/src/index.ts"),
@@ -171,10 +172,10 @@ export default defineConfig({
             // lowered; raising them when a test bump pulls the actual numbers
             // up turns the gate into a ratchet against future regressions.
             thresholds: {
-                lines: 97,
-                functions: 94,
-                branches: 90,
-                statements: 96,
+                lines: 97.29,
+                functions: 97.04,
+                branches: 91.67,
+                statements: 96.19,
             },
         }),
     },

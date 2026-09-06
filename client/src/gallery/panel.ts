@@ -10,10 +10,10 @@ import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
-import { DEFAULT_SELECTION, type FacetBrowser, type FacetSelection } from "./facet-state";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
+import { type AnimationStageHost, createAnimationStage } from "./stage";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "./webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
@@ -22,6 +22,18 @@ const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "gallery", "webview", "main.js");
 const WORKER_JS = path.join("client", "out", "gallery", "worker.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
+/**
+ * The animation surface's own stylesheets, loaded into this panel too.
+ *
+ * The panel draws that surface with its own components, so it needs the rules they were written against;
+ * anything else would be a second stylesheet for one set of components, drifting on the first change.
+ */
+const ANIMATION_WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
+const ANIMATION_CSS = path.join(ANIMATION_WEBVIEW_DIR, "styles.css");
+const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
+const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
+const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
+const SHARED_TILES_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
 
 export const GALLERY_VIEW_TYPE = "bgforge.gallery";
 
@@ -40,8 +52,20 @@ export interface GalleryPanelState {
 export interface GalleryDeps {
     /** The source for a kind, or undefined when it is not available (no game open, no workspace folders). */
     sourceFor(kind: "game" | "workspace"): GallerySource | undefined;
-    /** Open an item in its editor. */
+    /**
+     * Open an item this panel has no stage for, in whichever editor owns it.
+     *
+     * Only for those: an animation is drawn on the panel's own stage, which is what makes the gallery one
+     * surface rather than a launcher.
+     */
     open(source: GallerySource, id: string): Promise<void>;
+    /**
+     * Where an item of this source lives, as a URI the animation surface can open, or undefined for one
+     * it cannot draw. The source knows the format, so the branch stays on the side that does.
+     */
+    animationUri(source: GallerySource, id: string): vscode.Uri | undefined;
+    /** The animation editor, which this panel draws inside itself. Absent when it is not registered. */
+    animation?: AnimationStageHost;
     /**
      * The open game's animations, or an empty list with no game.
      *
@@ -49,12 +73,8 @@ export interface GalleryDeps {
      * source has no game behind it to answer for. Empty is what hides the tab strip.
      */
     sets(): readonly SetTile[];
-    /** Open a BAM by resref - what both the set rows and the facet browser open through. */
-    openResref(resref: string): Promise<void>;
-    /** The facet browser over the open game's animations, or undefined with no game. */
-    facets(): FacetBrowser | undefined;
-    /** Open a whole set in the animation editor - the browser hands the set over, it does not edit it. */
-    openSetEditor(id: number): Promise<void>;
+    /** An animation set's address, by id. Undefined with no game open. */
+    setUri(id: number): vscode.Uri | undefined;
     /**
      * Fires when the open game changes - opened, replaced, or closed.
      *
@@ -90,9 +110,12 @@ export function wireGalleryPanel(
         enableScripts: true,
         localResourceRoots: [
             vscode.Uri.joinPath(context.extensionUri, "client", "out"),
-            // The stylesheet is a source file, not a build output, so its directory is a root too - without
-            // it `asWebviewUri` resolves to a URI the webview refuses to load and the panel renders unstyled.
+            // The stylesheets are source files, not build outputs, so their directories are roots too -
+            // without them `asWebviewUri` resolves to a URI the webview refuses to load and the panel
+            // renders unstyled. Three of them, because the animation surface drawn here brings its own.
             vscode.Uri.joinPath(context.extensionUri, "client", "src", "gallery", "webview"),
+            vscode.Uri.joinPath(context.extensionUri, ANIMATION_WEBVIEW_DIR),
+            vscode.Uri.joinPath(context.extensionUri, SHARED_UI_DIR),
         ],
     };
     panel.webview.html = buildGalleryHtml(panel.webview, context.extensionUri);
@@ -108,17 +131,43 @@ export function wireGalleryPanel(
 
     let source: GallerySource | undefined;
     let pump: ThumbnailPump | undefined;
-    // The selection lives with the panel, not the browser: two gallery panels over one game browse
-    // independently, and a restored panel starts from the default rather than inheriting a stale pick.
-    let browser: FacetBrowser | undefined;
-    let selection: FacetSelection = DEFAULT_SELECTION;
+    /** What the stage is drawing, echoed to the webview so the browse list can mark the row it came from. */
+    let showing: { set?: number; item?: string } = {};
+
+    const stage =
+        deps.animation &&
+        createAnimationStage({
+            host: deps.animation,
+            post: (message) => void panel.webview.postMessage({ type: "viewer", message } satisfies HostToWebview),
+            showSet: (_gameDir, id) => showSet(id),
+        });
+
+    /**
+     * Draw something on the stage, and say what.
+     *
+     * Attached before `showing` goes out, and the picture only after: `showing` is what mounts the surface
+     * in the webview, and a mounted surface asks for its own contents. Announcing it before the document
+     * is attached would put that request to a stage holding nothing.
+     */
+    const showOnStage = async (uri: vscode.Uri, at: { set?: number; item?: string }): Promise<void> => {
+        if (stage === undefined) return;
+        // Only what actually landed is announced: a show overtaken by a later pick would otherwise mark a
+        // row the stage is not drawing.
+        if (!(await stage.show(uri))) return;
+        showing = at;
+        void panel.webview.postMessage({ type: "showing", ...at } satisfies HostToWebview);
+    };
+
+    const showSet = async (id: number): Promise<void> => {
+        const uri = deps.setUri(id);
+        if (uri !== undefined) await showOnStage(uri, { set: id });
+    };
 
     /**
      * Take a reading of the corpus this panel browses.
      *
      * Re-run whenever the game changes, so everything downstream is rebuilt against the new install rather
-     * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game, and the
-     * facet browser holds that game's animation table.
+     * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game.
      */
     const mount = (): void => {
         source = deps.sourceFor(state.source);
@@ -129,15 +178,6 @@ export function wireGalleryPanel(
                 post: (message: HostToWebview) => void panel.webview.postMessage(message),
                 send: (request) => port.postMessage(request),
             });
-        browser = deps.facets();
-        // Seated before the first `facets` message, so a link lands with its animation already selected
-        // rather than showing the default and moving under the reader.
-        selection = (state.focusSet === undefined ? undefined : browser?.seat(state.focusSet)) ?? DEFAULT_SELECTION;
-    };
-
-    const postFacets = (): void => {
-        if (browser === undefined) return;
-        void panel.webview.postMessage({ type: "facets", state: browser.state(selection) } satisfies HostToWebview);
     };
 
     /** The whole reading in one message: which corpus, what is in it, and the note shown when it is empty. */
@@ -151,7 +191,9 @@ export function wireGalleryPanel(
             ...(state.focusSet === undefined ? {} : { focusSet: state.focusSet }),
             ...(source === undefined ? { note: emptyNote } : {}),
         } satisfies HostToWebview);
-        postFacets();
+        // Stated on every reading, not only when it changes: `init` replaces the webview's whole world, so
+        // a stage left drawn without this would be a picture the browse list no longer marks a row for.
+        void panel.webview.postMessage({ type: "showing", ...showing } satisfies HostToWebview);
     };
 
     mount();
@@ -167,23 +209,30 @@ export function wireGalleryPanel(
         switch (message.type) {
             case "ready":
                 postInit();
-                break;
-            case "selectFacet":
-                if (browser === undefined) break;
-                selection = browser.select(selection, message.family, message.value);
-                postFacets();
+                // A panel opened ON an animation draws it straight away: the link was a request to look at
+                // that set, and landing on its row with an empty stage would answer only half of it.
+                if (state.focusSet !== undefined) void showSet(state.focusSet);
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);
                 break;
-            case "open":
-                if (source) void deps.open(source, message.id);
+            case "open": {
+                if (source === undefined) break;
+                // Drawn here when this panel has a stage for it, handed to its own editor when it does not:
+                // the gallery lists more formats than the animation surface can draw. The handed-over path
+                // still reveals the item in the resource tree and this one does not, deliberately: a reveal
+                // answers "where did the thing I am now looking at come from" when the view has moved, and
+                // moving focus out of the panel to answer it here would take the reader off the picture.
+                const uri = deps.animationUri(source, message.id);
+                if (uri === undefined) void deps.open(source, message.id);
+                else void showOnStage(uri, { item: message.id });
                 break;
-            case "openResref":
-                void deps.openResref(message.resref);
+            }
+            case "showSet":
+                void showSet(message.id);
                 break;
-            case "openSetEditor":
-                void deps.openSetEditor(message.id);
+            case "viewer":
+                stage?.receive(message.message);
                 break;
             // Parity with the other panels: a fatal error in the webview reaches the output channel and a
             // toast instead of leaving a silently blank panel.
@@ -199,6 +248,10 @@ export function wireGalleryPanel(
     });
 
     const gameChanged = deps.onDidChangeGame(() => {
+        // The stage is cleared, not redrawn: what it holds was opened out of the install that just went
+        // away, and a picture of an archive nobody has open any more is worse than an empty stage.
+        stage?.dispose();
+        showing = {};
         mount();
         postInit();
     });
@@ -206,6 +259,7 @@ export function wireGalleryPanel(
     panel.onDidDispose(() => {
         gameChanged.dispose();
         port.dispose();
+        stage?.dispose();
     });
 }
 
@@ -214,11 +268,17 @@ function buildGalleryHtml(webview: vscode.Webview, extensionUri: vscode.Uri): st
     let html = getCachedHtmlAsset("gallery", extensionPath, WEBVIEW_HTML);
     // See docs/architecture.md (Webview CSP): styles load as <link> stylesheets resolved through
     // asWebviewUri and authorised by `style-src {{cspSource}}`, not inlined with a nonce.
-    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, WEBVIEW_CSS));
-    const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, CODICONS_DIR, "codicon.css"));
+    const asUri = (...segments: string[]): string =>
+        webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...segments)).toString();
     // Function replacers: the URIs contain `$`-adjacent characters String.replace would read as patterns.
-    html = html.replace("{{stylesUri}}", () => stylesUri.toString());
-    html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
+    // The gallery's own sheet goes LAST, so a rule of its own wins over the animation surface's where the
+    // two name the same thing.
+    html = html.replace("{{stylesUri}}", () => asUri(WEBVIEW_CSS));
+    html = html.replace("{{codiconsUri}}", () => asUri(CODICONS_DIR, "codicon.css"));
+    html = html.replace("{{baseUri}}", () => asUri(SHARED_UI_BASE_CSS));
+    html = html.replace("{{primitivesUri}}", () => asUri(SHARED_UI_CSS));
+    html = html.replace("{{sharedTilesUri}}", () => asUri(SHARED_TILES_CSS));
+    html = html.replace("{{animationStylesUri}}", () => asUri(ANIMATION_CSS));
     html = inlineWebviewScript(html, getCachedJsAsset("gallery", extensionPath, WEBVIEW_JS), generateNonce());
     return html.replaceAll("{{cspSource}}", webview.cspSource);
 }

@@ -72,18 +72,25 @@ const context = { extensionUri: { fsPath: "/ext" }, subscriptions: [] } as unkno
 describe("wireGalleryPanel over a game that opens later", () => {
     let open = false;
     let listener: (() => void) | undefined;
-    /** The sets handed to the animation editor, in order - the panel's only answer to a set row. */
-    let handedOver: number[] = [];
+    /** The addresses put on the panel's own stage, in order. */
+    let staged: string[] = [];
+
+    const animation = {
+        openDocument: async (uri: vscodeTypes.Uri) => {
+            staged.push(uri.toString());
+            return {} as never;
+        },
+        attach: () => ({ dispose: () => {} }),
+        saveDocument: async () => {},
+    };
 
     const deps = {
         sourceFor: () => (open ? fakeSource() : undefined),
         open: async () => {},
+        animationUri: () => undefined,
         sets: (): readonly SetTile[] => (open ? [SET] : []),
-        openResref: async () => {},
-        openSetEditor: async (id: number) => {
-            handedOver.push(id);
-        },
-        facets: () => undefined,
+        setUri: (id: number) => ({ toString: () => `set:${id}` }) as vscodeTypes.Uri,
+        animation,
         makePort: () => ({
             postMessage: () => {},
             onMessage: () => {},
@@ -99,7 +106,7 @@ describe("wireGalleryPanel over a game that opens later", () => {
     beforeEach(() => {
         open = false;
         listener = undefined;
-        handedOver = [];
+        staged = [];
     });
 
     it("says which empty state it is in while no game is open", () => {
@@ -143,19 +150,20 @@ describe("wireGalleryPanel over a game that opens later", () => {
     });
 
     /**
-     * The panel used to answer a set row with a page of its own. It hands the set to the editor instead,
-     * and draws nothing further itself - so the absence of a reply is half of what this pins.
+     * A set row draws HERE. It used to open an editor tab; the announcement back is what mounts the
+     * animation surface in this panel, so its absence would leave the row click doing nothing visible.
      */
-    it("hands a set to the animation editor rather than drawing one", () => {
+    it("draws a set on its own stage and says which one", async () => {
         const { panel, posted, send } = fakePanel();
         open = true;
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
-        const answered = posted.length;
 
-        send({ type: "openSetEditor", id: SET.id });
+        send({ type: "showSet", id: SET.id });
+        await vi.waitFor(() =>
+            expect(posted.findLast((message) => message.type === "showing")).toMatchObject({ set: SET.id }),
+        );
 
-        expect(handedOver).toEqual([SET.id]);
-        expect(posted).toHaveLength(answered);
+        expect(staged).toEqual([`set:${SET.id}`]);
     });
 });

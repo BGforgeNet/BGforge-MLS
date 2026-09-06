@@ -18,6 +18,13 @@ const GAME_QUERY = "g=%2Fgames%2Fbgee";
 const { readFileMock, writeFileMock } = vi.hoisted(() => ({ readFileMock: vi.fn(), writeFileMock: vi.fn() }));
 
 vi.mock("vscode", () => {
+    // The provider hands one back from `attach`, so the surfaces showing a document can be detached.
+    class Disposable {
+        readonly dispose: () => void;
+        constructor(onDispose: () => void) {
+            this.dispose = onDispose;
+        }
+    }
     class EventEmitter {
         readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
         fire(): void {}
@@ -33,6 +40,7 @@ vi.mock("vscode", () => {
     });
     return {
         EventEmitter,
+        Disposable,
         Uri: {
             file: (fsPath: string) => make("file", fsPath, ""),
             parse: (value: string) => make("file", value, ""),

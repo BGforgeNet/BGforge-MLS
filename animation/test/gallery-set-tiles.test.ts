@@ -91,6 +91,17 @@ describe("setTile", () => {
         expect(setTile(setOf({ id: 0xe440 }), nothing).label).toBe("0xe440");
     });
 
+    /**
+     * The facets travel on the tile because the browser filters on them, and their ABSENCE is the load-
+     * bearing half: a monster has no race, so a race filter must exclude it rather than match it on a
+     * value invented here.
+     */
+    it("carries a character's facets and leaves a monster without any", () => {
+        const facets = { race: "gnome", gender: "male", charClass: "cleric" } as const;
+        expect(setTile(setOf({ ...cleric, facets }), nothing).facets).toEqual(facets);
+        expect("facets" in setTile(setOf({ id: 0xa000, code: "MWYV" }), nothing)).toBe(false);
+    });
+
     // The three reasons a row draws nothing are different answers to "what do I do about this?", and only
     // the middle one is ours to fix.
     it("says the naming is undeclared - not the animation - and offers the code to search on", () => {
