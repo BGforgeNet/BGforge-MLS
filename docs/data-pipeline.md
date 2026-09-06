@@ -7,7 +7,7 @@ EXTERNAL SOURCES
 ─────────────────────────────────────────────────────────────────────────────
 
   sfall repo                    IESDP repo              IESDP ids pages
-  (BGforgeNet/sfall)            (BGforgeNet/iesdp)      (BGforgeNet/iesdp)
+  (sfall-team/sfall)            (BGforgeNet/iesdp)      (BGforgeNet/iesdp)
         │                             │                        │
         ▼                             ▼                        ▼
   fallout-update.sh            ie-update.sh            baf-ids-update.ts
