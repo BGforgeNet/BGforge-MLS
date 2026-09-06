@@ -24,8 +24,8 @@ export default defineConfig({
         isolate: false,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
-        // and the test/td + test/tbaf fixture-driven integration suites in
-        // scripts/test.sh - not by this vitest project. Threshold values are
+        // and the server/test/td + server/test/tbaf fixture-driven integration
+        // suites in scripts/test.sh - not by this vitest project. Threshold values are
         // ratcheted to just under the unit-suite actuals (74.3/79.4/59.0/72.8
         // at last ratchet); keep raising them as standalone unit tests are
         // added. See docs/architecture.md "Coverage thresholds" for the full
@@ -36,7 +36,7 @@ export default defineConfig({
             // LOAD, so a cross-workspace import drags another package in at whatever coverage it gets
             // here - `compilers/ssl/src` arrived that way once the TSSL front end started targeting the
             // IR, ~6000 lines at 1-2%, and those files already answer to their own far stricter gate.
-            include: ["common/**/*.ts", "src/**/*.ts", "tbaf/src/**/*.ts", "td/src/**/*.ts", "tssl/src/**/*.ts"],
+            include: ["common/**/*.ts", "src/**/*.ts", "tbaf/src/**/*.ts", "td/src/**/*.ts"],
             // The include above scopes what is INSIDE this package; it cannot reach a file outside it,
             // whose path relativises to `../..` and slips past every pattern. Cross-workspace imports
             // therefore need excluding by name - both these packages gate their own coverage, and far
