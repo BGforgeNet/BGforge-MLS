@@ -331,7 +331,11 @@
                 "extensions": [
                     ".d"
                 ],
-                "configuration": "./language-configurations/weidu-d.language-configuration.json"
+                "configuration": "./language-configurations/weidu-d.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-baf.png",
+                    "dark": "./themes/icons/weidu-baf.png"
+                }
             },
             {
                 "id": "weidu-d-tooltip"
