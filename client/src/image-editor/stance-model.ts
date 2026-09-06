@@ -45,6 +45,8 @@ export function stanceModel(
         try {
             return [ImageDocumentModel.fromBytes(bytes, `${resref}.BAM`)];
         } catch {
+            // A part that will not parse is dropped so the rest still compose, as the header above states:
+            // three quarters of a creature beats none of it.
             return [];
         }
     });

@@ -268,8 +268,17 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
 
 export type AnimationIndexResolver = (gameDir: string) => readonly AnimationSet[] | undefined;
 
+/**
+ * Told that an install could not be read at all. The caller decides where that goes; this package has no
+ * channel of its own.
+ */
+type AnimationIndexFailureReporter = (gameDir: string, error: unknown) => void;
+
 /** Cached per game directory: whether an install's animations can be listed is a property of the install. */
-export function createAnimationIndexResolver(currentGame: GameSource): AnimationIndexResolver {
+export function createAnimationIndexResolver(
+    currentGame: GameSource,
+    reportFailure?: AnimationIndexFailureReporter,
+): AnimationIndexResolver {
     const cache = new Map<string, readonly AnimationSet[] | null>();
     return (gameDir) => {
         const cached = cache.get(gameDir);
@@ -278,8 +287,12 @@ export function createAnimationIndexResolver(currentGame: GameSource): Animation
         try {
             const game = currentGame.gameAt(gameDir);
             if (game !== undefined) index = buildAnimationIndex(game, tableForFlavour(game.identity.flavour));
-        } catch {
-            // An unreadable game is "no animations", the posture every other resolver here takes.
+        } catch (error) {
+            // A throw here is the whole install failing to open, not the per-resource case buildAnimationIndex
+            // swallows. Report it and return WITHOUT caching, so a transient read failure retries instead of
+            // pinning an empty gallery for the rest of the session.
+            reportFailure?.(gameDir, error);
+            return;
         }
         cache.set(gameDir, index);
         return index ?? undefined;

@@ -983,6 +983,8 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             await vscode.workspace.fs.stat(uri);
             return true;
         } catch {
+            // stat throws for an absent path as well as an unreadable one; both mean nothing is here to
+            // overwrite, which is what the caller asked.
             return false;
         }
     }

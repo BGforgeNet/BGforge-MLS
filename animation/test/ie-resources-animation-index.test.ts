@@ -296,6 +296,34 @@ describe("createAnimationIndexResolver", () => {
 
         expect(resolve("/games/broken")).toBeUndefined();
     });
+
+    /**
+     * A throw is the whole install failing to open, unlike the per-resource swallow inside
+     * buildAnimationIndex - so it must not be cached as "this game has no animations": a read that failed
+     * once (a locked archive, a drive not yet mounted) would then keep answering empty for the session.
+     */
+    it("reports a failed open and retries it instead of caching the emptiness", () => {
+        const failures: { dir: string; message: string }[] = [];
+        let attempts = 0;
+        const resolve = createAnimationIndexResolver(
+            {
+                gameAt: (dir) => {
+                    attempts += 1;
+                    if (attempts === 1) throw new Error("unreadable archive");
+                    return dir === "/games/one" ? miniGame() : undefined;
+                },
+            },
+            (dir, error) => failures.push({ dir, message: error instanceof Error ? error.message : String(error) }),
+        );
+
+        expect(resolve("/games/one")).toBeUndefined();
+        expect(failures).toEqual([{ dir: "/games/one", message: "unreadable archive" }]);
+
+        // The second call reaches gameAt again, which is the whole point of not caching the failure.
+        expect(resolve("/games/one")?.length).toBeGreaterThan(0);
+        expect(attempts).toBe(2);
+        expect(failures).toHaveLength(1);
+    });
 });
 
 /**

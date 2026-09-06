@@ -170,7 +170,12 @@ export function registerIeResources(context: vscode.ExtensionContext): {
 
     // Built here rather than per consumer: the gallery and the animation editor both browse the declared
     // animations, and the resolver caches one index per install.
-    const animationIndex = createAnimationIndexResolver(currentGame);
+    const animationIndex = createAnimationIndexResolver(currentGame, (dir, error) => {
+        conlog(
+            `ieResources: cannot list the animations of ${dir}: ${error instanceof Error ? error.message : String(error)}`,
+            "error",
+        );
+    });
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured

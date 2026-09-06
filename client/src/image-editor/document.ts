@@ -427,6 +427,8 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             if (format !== "bam" && format !== "bamc") return undefined;
             return { animation, format };
         } catch {
+            // A sibling that will not decode is not a pair, which is the same answer as one that is the
+            // wrong format - the caller opens the file on its own.
             return undefined;
         }
     }
@@ -450,6 +452,8 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         try {
             return await vscode.workspace.fs.readFile(uri);
         } catch {
+            // Probing for an optional companion file: an absent one is the ordinary case, and its callers
+            // read undefined as "no such sibling" rather than as a failure.
             return undefined;
         }
     }
@@ -461,6 +465,7 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         try {
             return await vscode.workspace.fs.readFile(vscode.Uri.file(sidecarPalPath(uri.fsPath)));
         } catch {
+            // The sidecar palette is optional; most FRMs ship without one, so its absence is not a failure.
             return undefined;
         }
     }
