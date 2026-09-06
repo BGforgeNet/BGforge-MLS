@@ -1,4 +1,4 @@
-import { type ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/node";
+import { CodeActionKind, type ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/node";
 import { semanticTokensLegend } from "./shared/semantic-tokens";
 import {
     LSP_COMMAND_PARSE_DIALOG,
@@ -34,6 +34,7 @@ export function getServerCapabilities(): ServerCapabilities {
         foldingRangeProvider: true,
         selectionRangeProvider: true,
         callHierarchyProvider: true,
+        codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix] },
         executeCommandProvider: {
             commands: [
                 COMMAND_compile,

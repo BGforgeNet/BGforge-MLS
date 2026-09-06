@@ -130,6 +130,40 @@ Rationale:
 - standard LSP `workspace/symbol` provides only a free-form `query` string, with no current document URI or language id
 - a dedicated per-language executeCommand carries the scope explicitly instead of overloading the query string
 
+### Quick fixes (`textDocument/codeAction`)
+
+The server advertises `codeActionProvider` with `codeActionKinds: ["quickfix"]` and answers
+`textDocument/codeAction` from the diagnostics the client passes in `context.diagnostics`. No action is
+computed from the document text, so a client that sends an empty `context.diagnostics` gets an empty result.
+
+One fix is offered today, for the syntax diagnostics published under the `BGforge MLS (syntax)` source. A
+diagnostic worded `missing '<token>'` comes from a tree-sitter MISSING node, which names the exact token the
+grammar expected at a zero-width position; the action inserts that token at the diagnostic's start:
+
+```jsonc
+{
+  "title": "Insert missing ')'",
+  "kind": "quickfix",
+  "isPreferred": true,
+  "diagnostics": [/* the diagnostic passed in */],
+  "edit": {
+    "documentChanges": [{ "textDocument": { "uri": "...", "version": 3 }, "edits": [{ "range": {}, "newText": ")" }] }],
+  },
+}
+```
+
+The edit is delivered as `documentChanges` with the document version, so a client applying a fix computed
+against text the user has since edited rejects it rather than inserting at a position that has moved.
+
+Two diagnostic shapes deliberately get no action:
+
+- `Syntax error near '<token>'` comes from a tree-sitter ERROR node, which carries no expected token, so no
+  single edit follows from it.
+- `missing '<name>'` where the name is a grammar rule rather than punctuation (`identifier`, `string`):
+  inserting the rule name would be a guess at content only the author has.
+
+Compiler diagnostics (source `BGforge MLS`) name a symbol rather than a token and get no action either.
+
 ### Knowing when cross-file results are complete
 
 The startup workspace scan is deliberately backgrounded: awaiting it would gate the `initialize` handshake on a

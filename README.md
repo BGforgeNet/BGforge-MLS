@@ -37,6 +37,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 | Rename            |               ✓                |                        |    ✓    |           Same file            |
 | Inlay hints       |             `.msg`             |         `.tra`         | `.tra`  |             `.tra`             |
 | Diagnostics       |               ✓                |           ✓            |    ✓    |               ✓                |
+| Quick fixes       |               ✓                |           ✓            |    ✓    |               ✓                |
 | JSDoc             |               ✓                |                        |    ✓    |               ✓                |
 | Folding           |               ✓                |           ✓            |    ✓    |               ✓                |
 | Dialog editor     |               ✓                |                        |    ✓    |                                |
