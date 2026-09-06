@@ -39,7 +39,9 @@
     {#if showChoice}
         <label class="view-field" title="Which animation set this editor is pointed at">
             <span class="view-label">Set</span>
-            <button type="button" class="set-pick" onclick={onPickSet}>{set?.title ?? ""}</button>
+            <button type="button" class="set-pick" onclick={onPickSet}>
+                {set?.title ?? "Choose a set..."}
+            </button>
         </label>
     {/if}
     {#if set !== null && set.armours.length > 1}
@@ -59,16 +61,21 @@
     <label class="view-field" title="Which of the set's animations to show">
         <span class="view-label">Action</span>
         <select
+            class="set-action"
             value={set?.action}
             onchange={(e) => onActionChange(e.currentTarget.value)}
+            disabled={set === null}
             aria-label="Set action"
         >
+            {#if set === null}
+                <option value="">No set chosen</option>
+            {/if}
             {#each set?.actions ?? [] as action (action.resref)}
                 <option value={action.resref}>{action.label}</option>
             {/each}
         </select>
     </label>
-    <button type="button" class="convert-open" onclick={onConvert}>
+    <button type="button" class="convert-open" onclick={onConvert} disabled={set === null}>
         Convert this set...
     </button>
 </div>

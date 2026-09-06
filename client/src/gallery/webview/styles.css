@@ -1,15 +1,6 @@
 /* The gallery grid. Colours come from VS Code's theme variables throughout, so the panel follows whatever
    theme is active rather than pinning one palette. */
 
-body {
-    margin: 0;
-    padding: 0;
-    font-family: var(--vscode-font-family);
-    font-size: var(--vscode-font-size);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-}
-
 .gallery {
     display: flex;
     flex-direction: column;

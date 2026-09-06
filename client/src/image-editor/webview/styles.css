@@ -256,6 +256,12 @@ select {
 .set-pick:hover {
     background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
+/* The action picker keeps this width with no set open. A select sizes to its widest option, so an empty one
+   collapses to a stub at the row's right edge and jumps the row when a set fills it in. */
+.set-action {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
 
 /* --- Conversion mode ------------------------------------------------------ */
 
