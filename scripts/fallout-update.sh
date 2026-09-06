@@ -4,28 +4,22 @@ set -xeu -o pipefail
 
 # launch from root repo dir
 
+# shellcheck source=scripts/external-repos-lib.sh
+source ./scripts/external-repos-lib.sh
+
 external="external/fallout"
 sfall_repo="https://github.com/BGforgeNet/sfall.git"
 sfall_dir="sfall"
+# Pinned so a regeneration of the tracked sfall data is reproducible; bump it deliberately
+# to the commit of an sfall release tag.
+sfall_commit="63606b96d7bb844f0ef82f1c347affca026453b5" # sfall v4.5
 sfall_file="server/data/fallout-ssl-sfall.yml"
 
 if [ ! -d "$external" ]; then
     mkdir "$external"
 fi
 
-# sfall
-pushd .
-cd "$external"
-if [ ! -d "$sfall_dir" ]; then
-    git clone "$sfall_repo" "$sfall_dir"
-fi
-cd "$sfall_dir"
-git checkout master
-git pull
-git fetch --tags
-last_v="v$(git tag | grep "^v" | sed 's|^v||' | sort -V | tail -1)"
-git checkout "$last_v"
-popd
+checkout_pinned_repo "$sfall_repo" "$sfall_commit" "$external/$sfall_dir"
 
 pnpm exec tsx scripts/fallout-update/src/fallout-update.ts -s "$external" --sfall-file "$sfall_file"
 

@@ -22,11 +22,37 @@ init_submodules() {
     fi
 }
 
+# Put $3 on commit $2 of $1, shallow and detached, creating the checkout when it is
+# missing. An existing checkout already on the commit is left alone; one on any other
+# commit is moved, because bumping a pin has to move the local tree or the consumer keeps
+# reading the old content and reports on it as if it were the pinned one.
+checkout_pinned_repo() {
+    local url="$1"
+    local commit="$2"
+    local repo_dir="$3"
+    local name
+    name=$(basename "$repo_dir")
+
+    if [[ ! -d "$repo_dir" ]]; then
+        echo "  Cloning: $name @ ${commit:0:12}"
+        git init -q "$repo_dir"
+        git -C "$repo_dir" remote add origin "$url"
+    elif [[ "$(git -C "$repo_dir" rev-parse HEAD 2>/dev/null || true)" == "$commit" ]]; then
+        echo "  Already cloned: $name"
+        return 0
+    else
+        echo "  Repinning: $name @ ${commit:0:12}"
+    fi
+
+    git -C "$repo_dir" fetch --depth 1 -q origin "$commit"
+    # --force: these checkouts are disposable fixtures that consumers are free to dirty,
+    # and reset-external.sh discards local edits in them anyway.
+    git -C "$repo_dir" -c advice.detachedHead=false checkout -q --force FETCH_HEAD
+}
+
 # Clone each repo listed in $1 into $2.
-# An existing checkout is left alone unless the list pins a commit it is not
-# on: bumping a pin has to move the local tree, or the tests keep reading the
-# old corpus and report on it as if it were the pinned one. Submodules are
-# initialised on every path so pre-existing checkouts converge with fresh ones.
+# Submodules are initialised on every path so pre-existing checkouts converge with fresh
+# ones.
 clone_repos() {
     local txt_file="$1"
     local target_dir="$2"
@@ -39,30 +65,10 @@ clone_repos() {
         commit=$(awk '{print $2}' <<<"$line")
         name=$(basename "$url" .git)
 
-        if [[ -d "$target_dir/$name" ]]; then
-            local head_sha=""
-            if [[ -n "$commit" ]]; then
-                head_sha=$(git -C "$target_dir/$name" rev-parse HEAD 2>/dev/null || true)
-            fi
-            if [[ -n "$commit" && "$head_sha" != "$commit" ]]; then
-                echo "  Repinning: $name @ ${commit:0:12}"
-                git -C "$target_dir/$name" fetch --depth 1 -q origin "$commit"
-                # --force: these checkouts are disposable fixtures that tests are free to
-                # dirty, and reset-external.sh discards local edits in them anyway.
-                git -C "$target_dir/$name" -c advice.detachedHead=false checkout -q --force FETCH_HEAD
-            else
-                echo "  Already cloned: $name"
-            fi
-            init_submodules "$target_dir/$name"
-            continue
-        fi
-
         if [[ -n "$commit" ]]; then
-            echo "  Cloning: $name @ ${commit:0:12}"
-            git init -q "$target_dir/$name"
-            git -C "$target_dir/$name" remote add origin "$url"
-            git -C "$target_dir/$name" fetch --depth 1 -q origin "$commit"
-            git -C "$target_dir/$name" -c advice.detachedHead=false checkout -q FETCH_HEAD
+            checkout_pinned_repo "$url" "$commit" "$target_dir/$name"
+        elif [[ -d "$target_dir/$name" ]]; then
+            echo "  Already cloned: $name"
         else
             echo "  Cloning: $name (HEAD)"
             git clone --depth 1 -q "$url" "$target_dir/$name"
