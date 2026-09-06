@@ -88,7 +88,6 @@ const REQUIRED_VALUE_EXPORTS = [
     "exportPngDirectory",
     "importPngDirectory",
     "exportApngPerDirection",
-    "importApng",
 ] as const;
 
 /**

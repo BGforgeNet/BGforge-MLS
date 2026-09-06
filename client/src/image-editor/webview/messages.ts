@@ -201,7 +201,7 @@ export type WebviewToHost =
     // Design choice: PNG-directory is the only import path. APNG stays export/preview-only - it round-trips
     // poorly (a single flat sequence, no offsets/facings, palette re-quantized), and ingesting an
     // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
-    // the library decoder (importApng in @bgforge/image) is still present.
+    // the library decoder (importApng in image/src/io/apng-io.ts, not on the package barrel) is still present.
     | { type: "import"; mode: "replace" | "append" }
     // The install's creatures, for choosing whose colours to draw an IE creature animation in.
     | { type: "requestCreatures" }

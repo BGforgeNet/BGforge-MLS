@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type IndexedAnimation, type Frame, emptyPalette, exportApngPerDirection, importApng } from "@bgforge/image";
+import { type IndexedAnimation, type Frame, emptyPalette, exportApngPerDirection } from "@bgforge/image";
+import { importApng } from "../src/io/apng-io.ts";
 
 // Two sequences with distinct frame counts and pixel content, so the per-sequence
 // split can be distinguished from a mixed-up one.

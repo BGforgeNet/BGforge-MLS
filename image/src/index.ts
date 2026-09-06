@@ -73,4 +73,6 @@ export {
 // Import/export codecs (PNG directory with manifest, APNG preview). The manifest wire-format
 // internals (readManifest/writeManifest and friends) stay io/-internal, like the PNG codec.
 export { exportPngDirectory, importPngDirectory } from "./io/png-directory.ts";
-export { exportApngPerDirection, importApng } from "./io/apng-io.ts";
+// `importApng` stays io/-internal: no consumer outside this package decodes an APNG, and its round-trip
+// test reaches it by module path.
+export { exportApngPerDirection } from "./io/apng-io.ts";
