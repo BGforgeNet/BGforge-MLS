@@ -1102,7 +1102,9 @@ translation~`;
         it("resolves a windows-1252 .tra file's accented text (read path)", async () => {
             // 0xE9 = 'e' with acute accent in both windows-1252 and Latin-1; not valid UTF-8 on its own.
             const raw = cp1252Bytes("@100 = ~Caf", 0xe9, "~\n@101 = ~Non-accented~");
-            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(raw)).toThrow();
+            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(raw)).toThrow(
+                "The encoded data was not valid for encoding utf-8",
+            );
             fs.writeFileSync(path.join(tempDir, "cp1252.tra"), raw);
 
             const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
@@ -1155,7 +1157,9 @@ translation~`;
 
             const updated = fs.readFileSync(traPath);
             // Still not valid UTF-8: round-tripped as windows-1252, not transcoded.
-            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(updated)).toThrow();
+            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(updated)).toThrow(
+                "The encoded data was not valid for encoding utf-8",
+            );
             // The untouched entry 101's line is byte-identical to the original, accented byte included.
             const line101 = "@101 = ~Caf";
             const originalLine = raw.subarray(raw.indexOf(line101, 0, "ascii"));

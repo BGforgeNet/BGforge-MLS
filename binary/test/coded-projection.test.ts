@@ -180,18 +180,18 @@ describe("flagArrayZodSchema", () => {
 
     it("rejects unknown flag names", () => {
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["unknown"])).toThrow();
+        expect(() => schema.parse(["unknown"])).toThrow("with N in [0, 8) and not overlapping a named bit");
     });
 
     it("rejects duplicate entries", () => {
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["hidden", "hidden"])).toThrow();
+        expect(() => schema.parse(["hidden", "hidden"])).toThrow("flag array must not contain duplicate entries");
     });
 
     it("rejects non-array shapes", () => {
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse("hidden")).toThrow();
-        expect(() => schema.parse({ flags: [] })).toThrow();
+        expect(() => schema.parse("hidden")).toThrow("expected array, received string");
+        expect(() => schema.parse({ flags: [] })).toThrow("expected array, received object");
     });
 
     it("accepts bit<N> for unnamed positions within codec width", () => {
@@ -203,12 +203,12 @@ describe("flagArrayZodSchema", () => {
     it("rejects bit<N> with N >= codecBitWidth", () => {
         // u8 codec -> N must be in [0, 8).
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["bit8"])).toThrow();
+        expect(() => schema.parse(["bit8"])).toThrow("with N in [0, 8) and not overlapping a named bit");
     });
 
     it("rejects bit<N> overlapping a named-bit position", () => {
         const schema = flagArrayZodSchema(table, 8);
         // bit 0 is named "hidden" (mask 0x01); a literal "bit0" must use the slug.
-        expect(() => schema.parse(["bit0"])).toThrow();
+        expect(() => schema.parse(["bit0"])).toThrow("with N in [0, 8) and not overlapping a named bit");
     });
 });

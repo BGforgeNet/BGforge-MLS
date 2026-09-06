@@ -132,6 +132,8 @@ describe("parseYamlDocStrict", () => {
     });
 
     it("throws on other parse errors", () => {
-        expect(() => parseYamlDocStrict("a: [unclosed\n")).toThrow();
+        expect(() => parseYamlDocStrict("a: [unclosed\n")).toThrow(
+            "Flow sequence in block collection must be sufficiently indented and end with a ]",
+        );
     });
 });

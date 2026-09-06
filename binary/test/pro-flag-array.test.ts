@@ -45,21 +45,25 @@ describe("PRO header.flags - flat-array shape", () => {
     it("rejects a raw integer for the flags field", () => {
         const doc = validBase();
         (doc.header as Record<string, unknown>).flags = 0x20000000;
-        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow("expected array, received number");
     });
 
     it("rejects a wrapper-object shape (legacy)", () => {
         const doc = validBase();
         (doc.header as Record<string, unknown>).flags = { flags: ["lightThru"] };
-        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow("expected array, received object");
     });
 
     it("rejects an unknown flag name", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["unknownFlag"]))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["unknownFlag"]))).toThrow(
+            "with N in [0, 32) and not overlapping a named bit",
+        );
     });
 
     it("rejects duplicate entries", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru", "lightThru"]))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru", "lightThru"]))).toThrow(
+            "flag array must not contain duplicate entries",
+        );
     });
 
     it("accepts bit<N> for unnamed positions within the codec width", () => {
@@ -68,12 +72,16 @@ describe("PRO header.flags - flat-array shape", () => {
     });
 
     it("rejects bit<N> with N >= codec width", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit32"]))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit32"]))).toThrow(
+            "with N in [0, 32) and not overlapping a named bit",
+        );
     });
 
     it("rejects bit<N> overlapping a named-bit position", () => {
         // 0x20000000 == bit 29, named `lightThru`; the literal "bit29" must use the slug.
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit29"]))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit29"]))).toThrow(
+            "with N in [0, 32) and not overlapping a named bit",
+        );
     });
 });
 
@@ -107,7 +115,9 @@ describe("PRO header.flags - strict-disjoint invariant at the wire boundary", ()
         // so a permissive parse never produces a `["bit29"]` value here -
         // assert the schema gate fires on the doc form too.
         const overlapDoc = validBase(["bit29"]);
-        expect(() => proCanonicalDocumentSchemaPermissive.parse(overlapDoc)).toThrow();
+        expect(() => proCanonicalDocumentSchemaPermissive.parse(overlapDoc)).toThrow(
+            "with N in [0, 32) and not overlapping a named bit",
+        );
     });
 
     it("packs the array back to the same int through intToFlagArray <-> flagArrayToInt", () => {

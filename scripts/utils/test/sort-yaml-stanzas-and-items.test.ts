@@ -151,7 +151,9 @@ other:
 
 describe("sortYamlStanzasAndItems error branches", () => {
     it("throws on invalid YAML", () => {
-        expect(() => sortYamlStanzasAndItems("key: [unclosed")).toThrow();
+        expect(() => sortYamlStanzasAndItems("key: [unclosed")).toThrow(
+            "Flow sequence in block collection must be sufficiently indented and end with a ]",
+        );
     });
 
     it("throws when top-level is not a mapping", () => {
@@ -163,7 +165,9 @@ describe("sortYamlStanzasAndItems error branches", () => {
 
 describe("sortYamlSequenceByPath error branches", () => {
     it("throws on invalid YAML", () => {
-        expect(() => sortYamlSequenceByPath("key: [unclosed", ["key"], "name")).toThrow();
+        expect(() => sortYamlSequenceByPath("key: [unclosed", ["key"], "name")).toThrow(
+            "Flow sequence in block collection must be sufficiently indented and end with a ]",
+        );
     });
 
     it("throws when top-level is not a mapping", () => {
@@ -199,7 +203,9 @@ describe("sortYamlSequenceByPath error branches", () => {
 
 describe("sortSequenceInAllMapEntries error branches", () => {
     it("throws on invalid YAML", () => {
-        expect(() => sortSequenceInAllMapEntries("key: [unclosed", [], "patterns", "match")).toThrow();
+        expect(() => sortSequenceInAllMapEntries("key: [unclosed", [], "patterns", "match")).toThrow(
+            "Flow sequence in block collection must be sufficiently indented and end with a ]",
+        );
     });
 
     it("throws when top-level is not a mapping", () => {

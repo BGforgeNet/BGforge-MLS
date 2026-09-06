@@ -469,7 +469,8 @@ describe("TLK (dialog.tlk)", () => {
     });
 
     it("throws on an unsupported encoding label", () => {
-        expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow();
+        // TextDecoder's own rejection; the class is the stable part of it, the wording is the runtime's.
+        expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow(RangeError);
     });
 
     describe("search", () => {

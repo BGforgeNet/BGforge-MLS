@@ -117,12 +117,14 @@ describe("readManifest", () => {
 
     it("throws on malformed sequences", () => {
         const written = writeManifest(makeAnimation());
-        expect(() => readManifest({ ...written, sequences: [{ id: "NE", facing: "NE", offsets: "nope" }] })).toThrow();
+        expect(() => readManifest({ ...written, sequences: [{ id: "NE", facing: "NE", offsets: "nope" }] })).toThrow(
+            "manifest sequences are malformed",
+        );
     });
 
     it("throws when sequences is not an array", () => {
         const written = writeManifest(makeAnimation());
-        expect(() => readManifest({ ...written, sequences: {} })).toThrow();
+        expect(() => readManifest({ ...written, sequences: {} })).toThrow("manifest sequences are malformed");
     });
 
     it("throws when the manifest itself is not an object", () => {

@@ -80,7 +80,7 @@
         "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "oxlint && pnpm lint:types && pnpm lint:tests && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:types": "oxlint --type-aware -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
-        "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect",
+        "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect -D vitest/require-to-throw-message",
         "lint:md-links": "remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
         "ie-binary-update": "./scripts/ie-binary-update.sh",

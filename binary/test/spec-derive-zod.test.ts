@@ -17,13 +17,13 @@ describe("toZodSchema", () => {
 
     it("rejects out-of-range values per codec", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
-        expect(() => toZodSchema(spec).parse({ a: -1 })).toThrow();
-        expect(() => toZodSchema(spec).parse({ a: 4294967296 })).toThrow();
+        expect(() => toZodSchema(spec).parse({ a: -1 })).toThrow("Too small: expected number to be >=0");
+        expect(() => toZodSchema(spec).parse({ a: 4294967296 })).toThrow("Too big: expected number to be <=4294967295");
     });
 
     it("rejects non-integer values", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
-        expect(() => toZodSchema(spec).parse({ a: 1.5 })).toThrow();
+        expect(() => toZodSchema(spec).parse({ a: 1.5 })).toThrow("expected int, received number");
     });
 
     it("applies domain bounds tighter than the codec range", () => {
@@ -32,12 +32,12 @@ describe("toZodSchema", () => {
         } satisfies Record<string, FieldSpec>;
         const z = toZodSchema(spec);
         expect(z.parse({ x: 8 })).toEqual({ x: 8 });
-        expect(() => z.parse({ x: 9 })).toThrow();
+        expect(() => z.parse({ x: 9 })).toThrow("Too big: expected number to be <=8");
     });
 
     it("rejects unknown fields (strict object)", () => {
         const spec = { a: { codec: u8 } } satisfies Record<string, FieldSpec>;
-        expect(() => toZodSchema(spec).parse({ a: 1, extra: 2 })).toThrow();
+        expect(() => toZodSchema(spec).parse({ a: 1, extra: 2 })).toThrow(/Unrecognized key: \\"extra\\"/);
     });
 
     it("supports fixed-count arrays with element validation", () => {
@@ -46,8 +46,8 @@ describe("toZodSchema", () => {
         } satisfies Record<string, FieldSpec>;
         const z = toZodSchema(spec);
         expect(z.parse({ values: [0, 100, 255] })).toEqual({ values: [0, 100, 255] });
-        expect(() => z.parse({ values: [0, 100] })).toThrow(); // wrong length
-        expect(() => z.parse({ values: [0, 100, 256] })).toThrow(); // element OOR
+        expect(() => z.parse({ values: [0, 100] })).toThrow("Too small: expected array to have exactly 3 items");
+        expect(() => z.parse({ values: [0, 100, 256] })).toThrow("Too big: expected number to be <=255");
     });
 
     it("packed-field parts derive zod bounds from bit width, not codec width", () => {
@@ -66,13 +66,19 @@ describe("toZodSchema", () => {
         });
 
         // 26-bit max + 1 -> reject.
-        expect(() => z.parse({ destTile: 0x04000000, destElevation: 0, destMap: 0 })).toThrow();
+        expect(() => z.parse({ destTile: 0x04000000, destElevation: 0, destMap: 0 })).toThrow(
+            "Too big: expected number to be <=67108863",
+        );
 
         // 6-bit max + 1 -> reject.
-        expect(() => z.parse({ destTile: 0, destElevation: 0x40, destMap: 0 })).toThrow();
+        expect(() => z.parse({ destTile: 0, destElevation: 0x40, destMap: 0 })).toThrow(
+            "Too big: expected number to be <=63",
+        );
 
         // Negative values -> reject (parts are unsigned bit fields).
-        expect(() => z.parse({ destTile: -1, destElevation: 0, destMap: 0 })).toThrow();
+        expect(() => z.parse({ destTile: -1, destElevation: 0, destMap: 0 })).toThrow(
+            "Too small: expected number to be >=0",
+        );
     });
 
     it("lengthFrom array rejects when count field disagrees with array length", () => {
@@ -83,8 +89,8 @@ describe("toZodSchema", () => {
         const z = toZodSchema(spec);
 
         expect(z.parse({ n: 3, xs: [1, 2, 3] })).toEqual({ n: 3, xs: [1, 2, 3] });
-        expect(() => z.parse({ n: 3, xs: [1, 2] })).toThrow();
-        expect(() => z.parse({ n: 0, xs: [1] })).toThrow();
+        expect(() => z.parse({ n: 3, xs: [1, 2] })).toThrow(/has length 2 but count field .+ is 3\./);
+        expect(() => z.parse({ n: 0, xs: [1] })).toThrow(/has length 1 but count field .+ is 0\./);
     });
 
     it("fromCtx array does not get a same-struct linked-count refinement", () => {
@@ -99,7 +105,8 @@ describe("toZodSchema", () => {
 
         expect(z.parse({ xs: [1, 2, 3] })).toEqual({ xs: [1, 2, 3] });
         expect(z.parse({ xs: [] })).toEqual({ xs: [] });
-        expect(() => z.parse({ xs: [256] })).toThrow(); // element OOR still enforced
+        // Element OOR still enforced.
+        expect(() => z.parse({ xs: [256] })).toThrow("Too big: expected number to be <=255");
     });
 
     it("packed-field part with domain narrows below the bit-width max", () => {
@@ -111,7 +118,7 @@ describe("toZodSchema", () => {
 
         expect(z.parse({ elevation: 3, tile: 0 })).toEqual({ elevation: 3, tile: 0 });
         // 4 fits in 6 bits but exceeds domain.max.
-        expect(() => z.parse({ elevation: 4, tile: 0 })).toThrow();
+        expect(() => z.parse({ elevation: 4, tile: 0 })).toThrow("Too big: expected number to be <=3");
     });
 });
 
@@ -130,7 +137,7 @@ describe("toZodSchema (permissive mode)", () => {
         const strict = toZodSchema(spec, { mode: "strict" });
         const permissive = toZodSchema(spec, { mode: "permissive" });
 
-        expect(() => strict.parse({ kind: 99 })).toThrow();
+        expect(() => strict.parse({ kind: 99 })).toThrow("expected one of 0, 1");
         expect(permissive.parse({ kind: 99 })).toEqual({ kind: 99 });
     });
 
@@ -142,7 +149,7 @@ describe("toZodSchema (permissive mode)", () => {
         const strict = toZodSchema(spec, { mode: "strict" });
         const permissive = toZodSchema(spec, { mode: "permissive" });
 
-        expect(() => strict.parse({ x: 99 })).toThrow();
+        expect(() => strict.parse({ x: 99 })).toThrow("Too big: expected number to be <=8");
         expect(permissive.parse({ x: 99 })).toEqual({ x: 99 });
     });
 
@@ -155,15 +162,15 @@ describe("toZodSchema (permissive mode)", () => {
         const strict = toZodSchema(spec, { mode: "strict" });
         const permissive = toZodSchema(spec, { mode: "permissive" });
 
-        expect(() => strict.parse({ n: 3, xs: [1, 2] })).toThrow();
+        expect(() => strict.parse({ n: 3, xs: [1, 2] })).toThrow(/has length 2 but count field .+ is 3\./);
         expect(permissive.parse({ n: 3, xs: [1, 2] })).toEqual({ n: 3, xs: [1, 2] });
     });
 
     it("still rejects values outside the codec's numeric range", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
-        expect(() => permissive.parse({ a: -1 })).toThrow();
-        expect(() => permissive.parse({ a: 4294967296 })).toThrow();
+        expect(() => permissive.parse({ a: -1 })).toThrow("Too small: expected number to be >=0");
+        expect(() => permissive.parse({ a: 4294967296 })).toThrow("Too big: expected number to be <=4294967295");
     });
 
     it("still rejects packed-field parts that overflow the bit width", () => {
@@ -172,14 +179,16 @@ describe("toZodSchema (permissive mode)", () => {
             destElevation: { codec: u32, packedAs: "w", bitRange: [26, 6] },
         } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
-        expect(() => permissive.parse({ destTile: 0x04000000, destElevation: 0 })).toThrow();
+        expect(() => permissive.parse({ destTile: 0x04000000, destElevation: 0 })).toThrow(
+            "Too big: expected number to be <=67108863",
+        );
     });
 
     it("still rejects unknown fields and non-integer values", () => {
         const spec = { a: { codec: u8 } } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
-        expect(() => permissive.parse({ a: 1, extra: 2 })).toThrow();
-        expect(() => permissive.parse({ a: 1.5 })).toThrow();
+        expect(() => permissive.parse({ a: 1, extra: 2 })).toThrow(/Unrecognized key: \\"extra\\"/);
+        expect(() => permissive.parse({ a: 1.5 })).toThrow("expected int, received number");
     });
 
     it("still rejects fixed-count array length mismatches", () => {
@@ -187,13 +196,13 @@ describe("toZodSchema (permissive mode)", () => {
             xs: arraySpec({ element: { codec: u8 }, count: 3 }),
         } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
-        expect(() => permissive.parse({ xs: [1, 2] })).toThrow();
+        expect(() => permissive.parse({ xs: [1, 2] })).toThrow("Too small: expected array to have exactly 3 items");
     });
 
     it("default mode is strict (back-compat with existing callers)", () => {
         const spec = {
             kind: { codec: u32, enum: { 0: "A" } },
         } satisfies Record<string, FieldSpec>;
-        expect(() => toZodSchema(spec).parse({ kind: 99 })).toThrow();
+        expect(() => toZodSchema(spec).parse({ kind: 99 })).toThrow("expected one of 0");
     });
 });

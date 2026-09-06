@@ -238,12 +238,12 @@ describe.each([
         it("throws when the edit point is outside the owner's range", () => {
             expect(() =>
                 shiftEffectRefs(doc([0, 2], [[2, 3]], 5), { at: 1, delta: 1, owner: { kind: "ability", index: 0 } }),
-            ).toThrow();
+            ).toThrow("at=1 is outside ability 0 range [2, 5)");
         });
         it("throws when removing at the owner's exclusive end boundary", () => {
             expect(() =>
                 shiftEffectRefs(doc([0, 2], [[2, 2]], 4), { at: 4, delta: -1, owner: { kind: "ability", index: 0 } }),
-            ).toThrow();
+            ).toThrow("at=4 is outside ability 0 range [2, 4)");
         });
         it("clamps an empty equipping range to 0 instead of -1 on owner remove at index 0", () => {
             const after = shiftEffectRefs(doc([0, 0], [[0, 1]], 1), {
@@ -316,7 +316,9 @@ describe("effect-partition (headerless, orderless CRE memo config)", () => {
     });
 
     it("throws when only one header field is supplied", () => {
-        expect(() => createEffectPartition({ headerStart: "x", abilityStart: "a", abilityCount: "c" })).toThrow();
+        expect(() => createEffectPartition({ headerStart: "x", abilityStart: "a", abilityCount: "c" })).toThrow(
+            "headerStart and headerCount must be supplied together or both omitted",
+        );
     });
 
     it("accepts an in-order contiguous partition", () => {

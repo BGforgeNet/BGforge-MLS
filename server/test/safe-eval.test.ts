@@ -22,7 +22,7 @@ describe("safeEvaluate", () => {
 
         it("evaluates leading decimal (.5) as NaN-producing", () => {
             // Tokenizer starts number parsing from '0'-'9', so '.' is not a valid start
-            expect(() => safeEvaluate(".5")).toThrow();
+            expect(() => safeEvaluate(".5")).toThrow("Unsupported character '.' at position 0");
         });
 
         it("evaluates trailing decimal (5.) as 5", () => {
@@ -222,11 +222,11 @@ describe("safeEvaluate", () => {
         });
 
         it("throws on mismatched parentheses (missing closing)", () => {
-            expect(() => safeEvaluate("(1 + 2")).toThrow();
+            expect(() => safeEvaluate("(1 + 2")).toThrow(/Expected token type \d+, got \d+ at position 4/);
         });
 
         it("throws on mismatched parentheses (extra closing)", () => {
-            expect(() => safeEvaluate("1 + 2)")).toThrow();
+            expect(() => safeEvaluate("1 + 2)")).toThrow("Unexpected token at position 3");
         });
     });
 
@@ -242,27 +242,33 @@ describe("safeEvaluate", () => {
 
     describe("error cases", () => {
         it("rejects identifiers", () => {
-            expect(() => safeEvaluate("x + 1")).toThrow();
+            expect(() => safeEvaluate("x + 1")).toThrow("Unsupported character 'x' at position 0");
         });
 
         it("rejects assignment", () => {
-            expect(() => safeEvaluate("x = 5")).toThrow();
+            // The identifier is rejected before the tokenizer reaches the '='.
+            expect(() => safeEvaluate("x = 5")).toThrow("Unsupported character 'x' at position 0");
+            expect(() => safeEvaluate("1 = 5")).toThrow("Unsupported token: assignment '=' at position 2");
         });
 
         it("rejects single &", () => {
-            expect(() => safeEvaluate("1 & 2")).toThrow();
+            expect(() => safeEvaluate("1 & 2")).toThrow(
+                "Unsupported token: '&' at position 2. Use '&&' for logical AND.",
+            );
         });
 
         it("rejects single |", () => {
-            expect(() => safeEvaluate("1 | 2")).toThrow();
+            expect(() => safeEvaluate("1 | 2")).toThrow(
+                "Unsupported token: '|' at position 2. Use '||' for logical OR.",
+            );
         });
 
         it("rejects empty expression", () => {
-            expect(() => safeEvaluate("")).toThrow();
+            expect(() => safeEvaluate("")).toThrow("Unexpected token at position 0 in expression");
         });
 
         it("rejects whitespace-only expression", () => {
-            expect(() => safeEvaluate("   ")).toThrow();
+            expect(() => safeEvaluate("   ")).toThrow("Unexpected token at position 0 in expression");
         });
     });
 });
