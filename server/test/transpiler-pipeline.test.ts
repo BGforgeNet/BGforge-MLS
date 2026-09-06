@@ -24,7 +24,6 @@ describe("createTranspiler", () => {
         const transpiler = createTranspiler<string>({
             sourceExtension: ".td",
             targetExtension: ".d",
-            name: "TD",
             async transpileCore() {
                 return "compiled output";
             },

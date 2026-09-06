@@ -34,44 +34,46 @@ export interface TSSLResult {
     sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
-const tssl = createTranspiler<TSSLResult, TranspileBatchState | undefined>({
-    sourceExtension: EXT_TSSL,
-    targetExtension: ".ssl",
-    name: "TSSL",
+/** Built per call so the caller's batch state, when there is one, reaches transpileCore. */
+function tsslFor(batch?: TranspileBatchState) {
+    return createTranspiler<TSSLResult>({
+        sourceExtension: EXT_TSSL,
+        targetExtension: ".ssl",
 
-    async transpileCore(filePath, text, traTag, batch) {
-        // Reuse the caller's project, or stand one up for this compile alone (single-file mode).
-        const state = batch ?? createBatchState();
-        const entrySource = prepareEntry(state, filePath, text);
+        async transpileCore(filePath, text, traTag) {
+            // Reuse the caller's project, or stand one up for this compile alone (single-file mode).
+            const state = batch ?? createBatchState();
+            const entrySource = prepareEntry(state, filePath, text);
 
-        const program = buildProgramModel(
-            state.project,
-            entrySource,
-            filePath,
-            engineProcedureNames,
-            (source) => extractInlineFunctions(source, state.inlineFunctionCache),
-            state.moduleWalkCache,
-        );
-        conlog(`Found ${program.inlineFunctions.size} inline functions`);
+            const program = buildProgramModel(
+                state.project,
+                entrySource,
+                filePath,
+                engineProcedureNames,
+                (source) => extractInlineFunctions(source, state.inlineFunctionCache),
+                state.moduleWalkCache,
+            );
+            conlog(`Found ${program.inlineFunctions.size} inline functions`);
 
-        const ctx: TsslContext = {
-            inlineFunctions: program.inlineFunctions,
-            definedFunctions: program.definedFunctions,
-            functionJsDocs: new Map(),
-            doStatementCounter: 0,
-            localEnumNames: program.localEnumNames,
-            externEnumNames: program.externEnumNames,
-            // Swapped per module by the emitter; empty until it starts.
-            importRenames: new Map(),
-        };
-        extractJsDocs(entrySource, ctx);
+            const ctx: TsslContext = {
+                inlineFunctions: program.inlineFunctions,
+                definedFunctions: program.definedFunctions,
+                functionJsDocs: new Map(),
+                doStatementCounter: 0,
+                localEnumNames: program.localEnumNames,
+                externEnumNames: program.externEnumNames,
+                // Swapped per module by the emitter; empty until it starts.
+                importRenames: new Map(),
+            };
+            extractJsDocs(entrySource, ctx);
 
-        const emitted = exportSSL(program, path.parse(filePath).base, extractIncludes(text), ctx, traTag);
-        return { output: emitted.text, sourceMap: emitted.origins };
-    },
+            const emitted = exportSSL(program, path.parse(filePath).base, extractIncludes(text), ctx, traTag);
+            return { output: emitted.text, sourceMap: emitted.origins };
+        },
 
-    getOutput: (result) => result.output,
-});
+        getOutput: (result) => result.output,
+    });
+}
 
 export interface TSSLCompileResult {
     sslPath: string;
@@ -86,8 +88,7 @@ export interface TSSLCompileResult {
  */
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
     // No batch state on the LSP compile path - TSSL CLI directory mode is the only batch consumer.
-    // eslint-disable-next-line unicorn/no-useless-undefined -- the third arg is a non-optional rest tuple element typed `TranspileBatchState | undefined`; omitting fails the typecheck
-    const { outPath, events, result } = await tssl.compile(uri, text, undefined);
+    const { outPath, events, result } = await tsslFor().compile(uri, text);
     return { sslPath: outPath, events, sourceMap: result.sourceMap };
 }
 
@@ -98,7 +99,7 @@ export async function compile(uri: string, text: string): Promise<TSSLCompileRes
  * @param batch Optional shared state for batch processing (pass createBatchState() result)
  */
 export async function transpile(filePath: string, text: string, batch?: TranspileBatchState): Promise<string> {
-    const result = await tssl.transpile(filePath, text, batch);
+    const result = await tsslFor(batch).transpile(filePath, text);
     return result.output;
 }
 
@@ -111,7 +112,7 @@ export async function transpileWithSourceMap(
     text: string,
     batch?: TranspileBatchState,
 ): Promise<TSSLResult> {
-    return tssl.transpile(filePath, text, batch);
+    return tsslFor(batch).transpile(filePath, text);
 }
 
 /**
