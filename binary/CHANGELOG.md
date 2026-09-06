@@ -2,6 +2,21 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## 0.8.0
+
+### Removed
+
+Breaking: the package-root entry point no longer re-exports these. Each is either an internal helper of
+the display/presentation layer or already reachable through the `./archive` entry point.
+
+- Display and presentation helpers: `resolveDisplayValue`, `resolveEnumLookup`, `resolveFlagLookup`,
+  `resolveStoredFieldValue`, `resolveRawValueFromDisplay`, `formatEnumDisplayValue`, `toNumericOptionMap`,
+  `createSemanticFieldKeyFromId`, `isFlagActive`, `isCharAllowedInCharset` and `validateNumericValue`.
+  `resolveFieldPresentation`, `resolveStringCharset`, `isStringAllowedInCharset`, `getNumericTypeRange`
+  and `getDomainRange` remain.
+- `parseBif`, `parseTlk` and `engineOverrideFolders`: import them from `@bgforge/binary/archive`.
+- `DEFAULT_ENGINE`: `opcodeReading` and `engineForFlavour` own the engine match and its fallback.
+
 ## 0.7.0
 
 ### Added

@@ -12,8 +12,6 @@ import * as zlib from "zlib";
 import {
     parseKey,
     openBif,
-    parseBif,
-    parseTlk,
     openTlk,
     openGame,
     detectGameIdentity,
@@ -22,6 +20,8 @@ import {
     resourceTypeCode,
     type ByteSource,
 } from "@bgforge/binary";
+// Reached through the `./archive` entry point: the package root re-exports only the openers.
+import { parseBif, parseTlk } from "../src/archive";
 
 const RESTYPE_ITM = 0x03ed;
 const RESTYPE_SPL = 0x03ee;

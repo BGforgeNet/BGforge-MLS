@@ -43,32 +43,20 @@ const REQUIRED_VALUE_EXPORTS = [
     // Presentation
     "createFieldKey",
     "toSemanticFieldKey",
-    "createSemanticFieldKeyFromId",
     "resolveFieldPresentation",
     // Display lookups
-    "resolveDisplayValue",
-    "resolveEnumLookup",
-    "resolveFlagLookup",
-    "formatEnumDisplayValue",
-    "resolveRawValueFromDisplay",
-    "resolveStoredFieldValue",
+    "resolveStringCharset",
     // Numeric contracts
-    "validateNumericValue",
     "getNumericTypeRange",
     "getDomainRange",
-    // Flags
-    "isFlagActive",
     // Concrete parsers
     "proParser",
     "mapParser",
     // KEY/BIF archive support
     "parseKey",
     "openBif",
-    "parseBif",
     "openTlk",
-    "parseTlk",
     "openGame",
-    "engineOverrideFolders",
     "detectGameIdentity",
     "bufferSource",
     "fileSource",

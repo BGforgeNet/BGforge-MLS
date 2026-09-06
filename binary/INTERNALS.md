@@ -274,17 +274,16 @@ toTypedBinarySchema toZodSchema walkStruct  derive-domain  derive-presentation
 
 `binary/src/index.ts` is the package's public surface, pinned by `public-api.test.ts`:
 
-| Export                                                                                                                                             | Purpose                                                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `parserRegistry`, `BinaryParser`, `ParseOptions`, `ParseResult`, `ParsedField`, `ParsedFieldType`, `ParsedGroup`, `ParseOpaqueRange`               | Core registry + types                                                    |
-| `proParser`, `mapParser`                                                                                                                           | Concrete parsers (auto-registered as a side effect of importing `index`) |
-| `createBinaryJsonSnapshot`, `parseBinaryJsonSnapshot`, `loadBinaryJsonSnapshot`                                                                    | Canonical schemaVersion:1 snapshot create/parse/load                     |
-| `getSnapshotPath`, `getOutputPathForJsonSnapshot`                                                                                                  | Sidecar path resolution                                                  |
-| `formatAdapterRegistry`, `BinaryFormatAdapter`, `ProjectedEntry`                                                                                   | Editor-facing format metadata                                            |
-| `createFieldKey`, `toSemanticFieldKey`, `createSemanticFieldKeyFromId`, `resolveFieldPresentation`                                                 | Stable semantic field-key system                                         |
-| `resolveDisplayValue`, `resolveEnumLookup`, `resolveFlagLookup`, `formatEnumDisplayValue`, `resolveRawValueFromDisplay`, `resolveStoredFieldValue` | Display <-> raw value conversions                                        |
-| `validateNumericValue`                                                                                                                             | Type-aware numeric clamp                                                 |
-| `isFlagActive`                                                                                                                                     | Bit predicate                                                            |
+| Export                                                                                                                               | Purpose                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `parserRegistry`, `BinaryParser`, `ParseOptions`, `ParseResult`, `ParsedField`, `ParsedFieldType`, `ParsedGroup`, `ParseOpaqueRange` | Core registry + types                                                    |
+| `proParser`, `mapParser`                                                                                                             | Concrete parsers (auto-registered as a side effect of importing `index`) |
+| `createBinaryJsonSnapshot`, `parseBinaryJsonSnapshot`, `loadBinaryJsonSnapshot`                                                      | Canonical schemaVersion:1 snapshot create/parse/load                     |
+| `getSnapshotPath`, `getOutputPathForJsonSnapshot`                                                                                    | Sidecar path resolution                                                  |
+| `formatAdapterRegistry`, `BinaryFormatAdapter`, `ProjectedEntry`                                                                     | Editor-facing format metadata                                            |
+| `createFieldKey`, `toSemanticFieldKey`, `resolveFieldPresentation`                                                                   | Stable semantic field-key system                                         |
+| `resolveStringCharset`, `isStringAllowedInCharset`, `StringCharset`                                                                  | String-field charset restrictions                                        |
+| `getNumericTypeRange`, `getDomainRange`, `NumericRange`                                                                              | Numeric contracts                                                        |
 
 Internal modules (spec primitives, format-specific specs, parse helpers) are NOT exported - they're only consumed inside the package.
 

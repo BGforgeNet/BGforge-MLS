@@ -52,35 +52,18 @@ export type {
 } from "./layout-schema-types";
 
 // Presentation schema
-export {
-    createFieldKey,
-    toSemanticFieldKey,
-    createSemanticFieldKeyFromId,
-    resolveFieldPresentation,
-    toNumericOptionMap,
-} from "./presentation-schema";
+export { createFieldKey, toSemanticFieldKey, resolveFieldPresentation } from "./presentation-schema";
 
 // Display lookups
-export {
-    resolveDisplayValue,
-    resolveEnumLookup,
-    resolveFlagLookup,
-    resolveStringCharset,
-    formatEnumDisplayValue,
-    resolveRawValueFromDisplay,
-    resolveStoredFieldValue,
-} from "./display-lookups";
+export { resolveStringCharset } from "./display-lookups";
 
 // Numeric contracts
-export { validateNumericValue, getNumericTypeRange, getDomainRange } from "./binary-format-contract";
+export { getNumericTypeRange, getDomainRange } from "./binary-format-contract";
 export type { NumericRange } from "./binary-format-contract";
-
-// Flags
-export { isFlagActive } from "./flags";
 
 // String field charsets - single source of truth for "what does ascii-printable mean".
 export type { StringCharset } from "./string-charset";
-export { isCharAllowedInCharset, isStringAllowedInCharset } from "./string-charset";
+export { isStringAllowedInCharset } from "./string-charset";
 
 // Concrete parser implementations
 export { proParser } from "./pro";
@@ -114,27 +97,18 @@ export {
 // engine match and the fallback, so a consumer cannot pick a different reading than the rest of the editor.
 export { OpcodeReadings } from "./ie-common/opcode-relationships";
 export type { OpcodeRelationship } from "./ie-common/opcode-relationships";
-export {
-    opcodeReading,
-    opcodeNames,
-    opcodeNameDiffers,
-    engineForFlavour,
-    DEFAULT_ENGINE,
-} from "./ie-common/opcode-reading";
+export { opcodeReading, opcodeNames, opcodeNameDiffers, engineForFlavour } from "./ie-common/opcode-reading";
 
 // Infinity Engine KEY/BIF archives: read an installed game's resource namespace (chitin.key + its BIFs).
 // Read-only and streamed - a large BIF is never bulk-loaded. Entry point: openGame(dir).
 export {
     parseKey,
     openBif,
-    parseBif,
     openTlk,
     parseIds,
     parse2daRowNames,
     parse2daTable,
-    parseTlk,
     openGame,
-    engineOverrideFolders,
     detectGameIdentity,
     bufferSource,
     fileSource,

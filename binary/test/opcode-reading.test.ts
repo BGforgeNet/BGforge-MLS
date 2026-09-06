@@ -7,7 +7,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ENGINE, engineForFlavour, opcodeNameDiffers, opcodeNames, opcodeReading } from "../src";
+import { engineForFlavour, opcodeNameDiffers, opcodeNames, opcodeReading } from "../src";
+import { DEFAULT_ENGINE } from "../src/ie-common/opcode-reading";
 import { OpcodeReadings } from "../src/ie-common/opcode-relationships";
 import { Opcodes } from "../src/ie-common/opcodes";
 
