@@ -103,7 +103,7 @@ describe("webview CSP", () => {
      */
     it.each([
         ["binary editor", "client/src/binary-editor/webview", {}],
-        ["animation editor", "client/src/image-editor/webview", { "{{sharedStylesUri}}": SHARED_TILES_CSS }],
+        ["animation editor", "client/src/image-editor/webview", { "{{sharedTilesUri}}": SHARED_TILES_CSS }],
         [
             "gallery",
             "client/src/gallery/webview",

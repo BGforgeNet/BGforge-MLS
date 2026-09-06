@@ -1127,7 +1127,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             js: WEBVIEW_JS,
             css: WEBVIEW_CSS,
             // The animation components' own layout, without which the rose draws its facings in one column.
-            extraStyles: { "{{sharedStylesUri}}": SHARED_TILES_CSS },
+            extraStyles: { "{{sharedTilesUri}}": SHARED_TILES_CSS },
         });
     }
 }
