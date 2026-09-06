@@ -18,11 +18,12 @@ vi.mock("vscode", () => ({
     window: { showErrorMessage: showErrorMessageMock },
 }));
 
-vi.mock("../src/webview-assets", () => ({
-    getCachedHtmlAsset: () => "<html>{{stylesUri}}{{sharedStylesUri}}{{codiconsUri}}{{cspSource}}</html>",
-    getCachedJsAsset: () => "",
-    inlineWebviewScript: (html: string) => html,
-    generateNonce: () => "nonce",
+// The panel's chrome comes from the shared builder, which reads real template and bundle files off disk;
+// what this suite drives is the message pump, so the builder is stubbed out wholesale.
+vi.mock("../src/webview-html", () => ({
+    SHARED_TILES_CSS: "client/src/webview-ui/animation-tiles.css",
+    buildSharedWebviewHtml: () => "<html></html>",
+    sharedWebviewRoots: () => [],
 }));
 
 const { wireGalleryPanel } = await import("../src/gallery/panel");
@@ -276,5 +277,41 @@ describe("wireGalleryPanel message routing", () => {
         send({ type: "runtimeError", message: "boom", stack: "at foo" });
 
         expect(showErrorMessageMock).toHaveBeenCalledWith("Image gallery failed for game: boom");
+    });
+
+    /**
+     * The panel narrows what arrives before acting on it, as the binary, animation and dialog panels do. A
+     * shape it does not recognise means the two sides disagree about the contract, so it is reported rather
+     * than acted on halfway - a `requestThumbnails` with no `ids` would otherwise reach the pump.
+     */
+    it.each([
+        ["a wrong-typed field", { type: "requestThumbnails", ids: "MOGHG1.bam", size: 64 }],
+        ["a missing field", { type: "open" }],
+        ["an unknown type", { type: "detonate" }],
+        ["a non-object", "ready"],
+    ])("refuses %s and says so instead of acting on it", (_name, message) => {
+        const { panel, posted, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+        const before = posted.length;
+
+        send(message as never);
+
+        expect(showErrorMessageMock).toHaveBeenCalledWith(
+            expect.stringContaining("Image gallery failed for game: unrecognized message of type"),
+        );
+        expect(posted, "a refused message must not reach the pump").toHaveLength(before);
+    });
+
+    it("still accepts the shapes the contract declares", () => {
+        const { panel, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+
+        send({ type: "ready" });
+        send({ type: "requestThumbnails", ids: [ITEM.id], size: 64 });
+        send({ type: "showSet", id: SET.id });
+        send({ type: "viewer", message: { type: "ready" } });
+
+        expect(showErrorMessageMock, "a valid message was refused").not.toHaveBeenCalled();
     });
 });

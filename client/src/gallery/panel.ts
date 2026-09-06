@@ -8,20 +8,19 @@
 import * as path from "path";
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
 import { type AnimationStageHost, createAnimationStage } from "./stage";
-import { type HostToWebview, type SetTile, type WebviewToHost } from "./webview/messages";
+import { type HostToWebview, type SetTile, isWebviewToHost } from "./webview/messages";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "gallery", "webview", "main.js");
 const WORKER_JS = path.join("client", "out", "gallery", "worker.js");
-const CODICONS_DIR = path.join("client", "out", "codicons");
 /**
  * The animation surface's own stylesheets, loaded into this panel too.
  *
@@ -30,10 +29,6 @@ const CODICONS_DIR = path.join("client", "out", "codicons");
  */
 const ANIMATION_WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
 const ANIMATION_CSS = path.join(ANIMATION_WEBVIEW_DIR, "styles.css");
-const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
-const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
-const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
-const SHARED_TILES_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
 
 export const GALLERY_VIEW_TYPE = "bgforge.gallery";
 
@@ -88,9 +83,15 @@ export interface GalleryDeps {
 }
 
 function defaultPort(extensionUri: vscode.Uri): GalleryPort {
-    // `process.execPath`-relative, not a bare PATH lookup: the worker bundle is shipped beside the extension
-    // and `worker_threads` resolves it from the extension host's own runtime.
+    // An absolute path under the installed extension, not a bare specifier: `new Worker` resolves a relative
+    // one against the extension host's cwd, which is not the extension directory.
     return galleryWorkerPort(new Worker(vscode.Uri.joinPath(extensionUri, WORKER_JS).fsPath));
+}
+
+/** The `type` of a message the panel refused, for the error text; the message itself may be any shape. */
+function describeMessageType(message: unknown): string {
+    if (typeof message !== "object" || message === null || !("type" in message)) return typeof message;
+    return String((message as { type: unknown }).type);
 }
 
 /**
@@ -107,16 +108,11 @@ export function wireGalleryPanel(
     deps: GalleryDeps,
 ): void {
     panel.webview.options = {
+        // Two of its own on top of the shared roots, because the animation surface drawn here brings its own
+        // stylesheet. The script is inlined and the worker is spawned by the host, so nothing else under
+        // `client/out` is fetched by this webview.
         enableScripts: true,
-        localResourceRoots: [
-            vscode.Uri.joinPath(context.extensionUri, "client", "out"),
-            // The stylesheets are source files, not build outputs, so their directories are roots too -
-            // without them `asWebviewUri` resolves to a URI the webview refuses to load and the panel
-            // renders unstyled. Three of them, because the animation surface drawn here brings its own.
-            vscode.Uri.joinPath(context.extensionUri, "client", "src", "gallery", "webview"),
-            vscode.Uri.joinPath(context.extensionUri, ANIMATION_WEBVIEW_DIR),
-            vscode.Uri.joinPath(context.extensionUri, SHARED_UI_DIR),
-        ],
+        localResourceRoots: sharedWebviewRoots(context.extensionUri, WEBVIEW_DIR, ANIMATION_WEBVIEW_DIR),
     };
     panel.webview.html = buildGalleryHtml(panel.webview, context.extensionUri);
 
@@ -205,7 +201,18 @@ export function wireGalleryPanel(
         void vscode.window.showErrorMessage(`Image gallery worker stopped: ${err.message}`);
     });
 
-    panel.webview.onDidReceiveMessage((message: WebviewToHost) => {
+    panel.webview.onDidReceiveMessage((message: unknown) => {
+        if (!isWebviewToHost(message)) {
+            // A shape this panel does not recognise means the webview and the host disagree about the
+            // contract, which is a bug rather than input: report it on the channels a webview throw uses
+            // rather than acting on partial data or dropping it silently.
+            surfaceWebviewRuntimeError({
+                editor: "Image gallery",
+                file: state.source,
+                message: `unrecognized message of type ${describeMessageType(message)}`,
+            });
+            return;
+        }
         switch (message.type) {
             case "ready":
                 postInit();
@@ -264,21 +271,12 @@ export function wireGalleryPanel(
 }
 
 function buildGalleryHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-    const extensionPath = extensionUri.fsPath;
-    let html = getCachedHtmlAsset("gallery", extensionPath, WEBVIEW_HTML);
-    // See docs/architecture.md (Webview CSP): styles load as <link> stylesheets resolved through
-    // asWebviewUri and authorised by `style-src {{cspSource}}`, not inlined with a nonce.
-    const asUri = (...segments: string[]): string =>
-        webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...segments)).toString();
-    // Function replacers: the URIs contain `$`-adjacent characters String.replace would read as patterns.
-    // The gallery's own sheet goes LAST, so a rule of its own wins over the animation surface's where the
-    // two name the same thing.
-    html = html.replace("{{stylesUri}}", () => asUri(WEBVIEW_CSS));
-    html = html.replace("{{codiconsUri}}", () => asUri(CODICONS_DIR, "codicon.css"));
-    html = html.replace("{{baseUri}}", () => asUri(SHARED_UI_BASE_CSS));
-    html = html.replace("{{primitivesUri}}", () => asUri(SHARED_UI_CSS));
-    html = html.replace("{{sharedTilesUri}}", () => asUri(SHARED_TILES_CSS));
-    html = html.replace("{{animationStylesUri}}", () => asUri(ANIMATION_CSS));
-    html = inlineWebviewScript(html, getCachedJsAsset("gallery", extensionPath, WEBVIEW_JS), generateNonce());
-    return html.replaceAll("{{cspSource}}", webview.cspSource);
+    return buildSharedWebviewHtml(webview, {
+        cacheKey: "gallery",
+        extensionUri,
+        html: WEBVIEW_HTML,
+        js: WEBVIEW_JS,
+        css: WEBVIEW_CSS,
+        extraStyles: { "{{sharedTilesUri}}": SHARED_TILES_CSS, "{{animationStylesUri}}": ANIMATION_CSS },
+    });
 }

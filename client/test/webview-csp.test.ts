@@ -1,8 +1,34 @@
 import * as fs from "fs";
 import * as path from "path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { inlineWebviewScript } from "../src/webview-assets";
 import { REPO_ROOT } from "./repo-root";
+
+vi.mock("vscode", () => ({
+    Uri: {
+        joinPath: (base: { fsPath: string }, ...segments: string[]) => ({
+            toString: () => [base.fsPath, ...segments].join("/"),
+            fsPath: [base.fsPath, ...segments].join("/"),
+        }),
+    },
+}));
+
+// The webview bundle is a build artifact this test must not depend on; everything it asserts is about the
+// TEMPLATE, which is a source file. Only the script inlining is stubbed out.
+vi.mock("../src/webview-assets", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("../src/webview-assets")>()),
+    getCachedJsAsset: () => "",
+}));
+
+const { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } = await import("../src/webview-html");
+
+/** A webview that resolves an extension URI to itself, so the produced HTML carries the repo-relative path. */
+const fakeWebview = {
+    cspSource: "vscode-webview:",
+    asWebviewUri: (uri: { toString: () => string }) => uri,
+} as unknown as import("vscode").Webview;
+
+const extensionUri = { fsPath: REPO_ROOT } as unknown as import("vscode").Uri;
 
 describe("webview script inlining", () => {
     it("inlines the script verbatim (no String.replace $-pattern expansion)", () => {
@@ -71,21 +97,58 @@ describe("webview CSP", () => {
      * panel mounting one links a SECOND sheet - through the same asWebviewUri placeholder, since a sheet the
      * provider forgets to map or to put under localResourceRoots is dropped exactly as silently as a
      * nonce-only one, and the primitive then renders as bare browser chrome inside an otherwise themed panel.
+     *
+     * Driven through the shared builder rather than read off the provider source: the three panels resolve
+     * their chrome there, so an unmapped placeholder is a produced-HTML fact, not a spelling in one file.
      */
     it.each([
-        ["binary editor", "client/src/binary-editor/webview/index.html", "client/src/binary-editor/provider.ts"],
-        ["animation editor", "client/src/image-editor/webview/index.html", "client/src/image-editor/provider.ts"],
-    ])("%s links both shared stylesheets through asWebviewUri", (_name, htmlPath, providerPath) => {
-        const html = fs.readFileSync(path.join(REPO_ROOT, htmlPath), "utf8");
-        expect(html).toContain('<link href="{{baseUri}}" rel="stylesheet" />');
-        expect(html).toContain('<link href="{{primitivesUri}}" rel="stylesheet" />');
+        ["binary editor", "client/src/binary-editor/webview", {}],
+        ["animation editor", "client/src/image-editor/webview", { "{{sharedStylesUri}}": SHARED_TILES_CSS }],
+        [
+            "gallery",
+            "client/src/gallery/webview",
+            {
+                "{{sharedTilesUri}}": SHARED_TILES_CSS,
+                "{{animationStylesUri}}": path.join("client", "src", "image-editor", "webview", "styles.css"),
+            },
+        ],
+    ])("%s resolves every stylesheet placeholder its template carries", (_name, dir, extraStyles) => {
+        const template = fs.readFileSync(path.join(REPO_ROOT, dir, "index.html"), "utf8");
+        expect(template).toContain('<link href="{{baseUri}}" rel="stylesheet" />');
+        expect(template).toContain('<link href="{{primitivesUri}}" rel="stylesheet" />');
 
-        const provider = fs.readFileSync(path.join(REPO_ROOT, providerPath), "utf8");
-        expect(provider).toContain("SHARED_UI_BASE_CSS");
-        expect(provider).toContain("SHARED_UI_CSS");
-        expect(provider).toContain('html.replace("{{baseUri}}"');
-        expect(provider).toContain('html.replace("{{primitivesUri}}"');
-        expect(provider).toContain("localResourceRoots: [codiconsDir, webviewDir, sharedUiDir]");
+        const html = buildSharedWebviewHtml(fakeWebview, {
+            cacheKey: `csp-test-${dir}`,
+            extensionUri,
+            html: path.join(dir, "index.html"),
+            js: path.join(dir, "index.html"), // stubbed out above; never inspected
+            css: path.join(dir, "styles.css"),
+            extraStyles,
+        });
+
+        // The decisive property: nothing template-shaped survives into the panel. An unmapped `{{...}}` is
+        // what a forgotten sheet looks like, and it renders as a dropped stylesheet rather than an error.
+        expect(html).not.toMatch(/\{\{[a-zA-Z]+\}\}/);
+        expect(html).toContain("client/src/webview-ui/base.css");
+        expect(html).toContain("client/src/webview-ui/primitives.css");
+        expect(html).toContain("client/out/codicons/codicon.css");
+        expect(html).toContain(path.join(dir, "styles.css"));
+        for (const sheet of Object.values(extraStyles)) expect(html).toContain(sheet);
+    });
+
+    /**
+     * `asWebviewUri` only resolves a resource beneath a declared root, so a sheet outside one is dropped as
+     * silently as a nonce-only style-src. Every sheet the builder maps must therefore fall under a root.
+     */
+    it("declares a root covering the codicon and shared-UI sheets", () => {
+        const roots = sharedWebviewRoots(extensionUri, path.join("client", "src", "gallery", "webview")).map((uri) =>
+            uri.toString(),
+        );
+        expect(roots).toEqual([
+            `${REPO_ROOT}/client/out/codicons`,
+            `${REPO_ROOT}/client/src/webview-ui`,
+            `${REPO_ROOT}/client/src/gallery/webview`,
+        ]);
     });
 
     it("binary editor CSP allows codicon font via cspSource", () => {

@@ -5,7 +5,7 @@ import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { backupHandle } from "../hot-exit-backup";
 import { hasViewerFor } from "../ie-resources/editor-routing";
 import { canThumbnail, thumbnailDataUri } from "../ie-resources/thumbnails";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
 import {
     type ColorGradientResolver,
     type NamingTableResolver,
@@ -58,10 +58,6 @@ const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
-const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
-const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
-const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
-const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /**
  * The `<name>.json` snapshot sidecar URI for a destination.
@@ -150,12 +146,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel: vscode.WebviewPanel,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
-        const webviewDir = vscode.Uri.joinPath(this.extensionUri, WEBVIEW_DIR);
-        const sharedUiDir = vscode.Uri.joinPath(this.extensionUri, SHARED_UI_DIR);
-        // Both roots must be readable for the <link> stylesheets: codicon.css/.ttf live under CODICONS_DIR,
-        // styles.css under WEBVIEW_DIR. asWebviewUri only resolves resources beneath a declared root.
-        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir, sharedUiDir] };
+        panel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: sharedWebviewRoots(this.extensionUri, WEBVIEW_DIR),
+        };
         panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
@@ -557,28 +551,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     }
 
     private getHtml(webview: vscode.Webview): string {
-        const extensionPath = this.extensionUri.fsPath;
-        let html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
-        // Styles load as <link> stylesheets resolved through asWebviewUri and authorised by
-        // `style-src {{cspSource}}` - not inlined as <style nonce>. The VS Code webview layer only honours
-        // style-src sources it attributes to the webview origin (cspSource); a bare `style-src 'nonce-...'`
-        // is honoured by raw Chromium but silently ignored here, leaving the panel unstyled. See
-        // docs/architecture.md (Webview CSP).
-        // codicon.css links directly too: its @font-face `url("./codicon.ttf")` resolves relative to the
-        // stylesheet's webview URI (same dir, both under localResourceRoots), so no font-URL rewrite is needed.
-        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
-        const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
-        const baseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_BASE_CSS));
-        const primitivesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_CSS));
-        // Function replacers: the URIs contain `$`-adjacent characters that String.replace would otherwise
-        // interpret as `$&`/`$'` patterns.
-        html = html.replace("{{stylesUri}}", () => stylesUri.toString());
-        html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
-        html = html.replace("{{baseUri}}", () => baseUri.toString());
-        html = html.replace("{{primitivesUri}}", () => primitivesUri.toString());
-        const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
-        const nonce = generateNonce();
-        html = inlineWebviewScript(html, script, nonce);
-        return html.replaceAll("{{cspSource}}", webview.cspSource);
+        return buildSharedWebviewHtml(webview, {
+            cacheKey: "binary-editor-v2",
+            extensionUri: this.extensionUri,
+            html: WEBVIEW_HTML,
+            js: WEBVIEW_JS,
+            css: WEBVIEW_CSS,
+        });
     }
 }

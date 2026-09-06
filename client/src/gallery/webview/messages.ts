@@ -7,9 +7,10 @@
  */
 
 import type { SetTile } from "@bgforge/animation";
-import type {
-    HostToWebview as AnimationHostToWebview,
-    WebviewToHost as AnimationWebviewToHost,
+import {
+    type HostToWebview as AnimationHostToWebview,
+    type WebviewToHost as AnimationWebviewToHost,
+    isWebviewToHost as isAnimationWebviewToHost,
 } from "../../image-editor/webview/messages";
 
 export interface GalleryTile {
@@ -88,3 +89,33 @@ export type WebviewToHost =
     | { type: "viewer"; message: AnimationWebviewToHost }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+/**
+ * Runtime narrow of an incoming webview message before the panel acts on it. A same-origin webview channel is
+ * not an external trust boundary, so this is defense-in-depth, matching the sibling panels' per-field narrowing
+ * posture instead of a blanket cast. What the `viewer` envelope carries is the animation surface's contract,
+ * so it is narrowed by that surface's own predicate rather than a second statement of the same shapes.
+ */
+export function isWebviewToHost(m: unknown): m is WebviewToHost {
+    if (!isRecord(m) || typeof m.type !== "string") return false;
+    switch (m.type) {
+        case "ready":
+            return true;
+        case "requestThumbnails":
+            return Array.isArray(m.ids) && m.ids.every((id) => typeof id === "string") && typeof m.size === "number";
+        case "open":
+            return typeof m.id === "string";
+        case "showSet":
+            return typeof m.id === "number";
+        case "viewer":
+            return isAnimationWebviewToHost(m.message);
+        case "runtimeError":
+            return typeof m.message === "string" && (m.stack === undefined || typeof m.stack === "string");
+        default:
+            return false;
+    }
+}

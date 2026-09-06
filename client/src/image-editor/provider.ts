@@ -16,7 +16,7 @@ import {
 import { ieSchemeOf } from "@bgforge/image/ie-direction";
 import type { CreatureEntry } from "../ie-resources/creature-index";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
@@ -72,12 +72,6 @@ const WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.js");
-const SHARED_UI_DIR = path.join("client", "src", "webview-ui");
-const SHARED_UI_BASE_CSS = path.join(SHARED_UI_DIR, "base.css");
-const SHARED_UI_CSS = path.join(SHARED_UI_DIR, "primitives.css");
-/** The animation components' own layout, without which the rose draws its facings in one column. */
-const SHARED_TILES_CSS = path.join(SHARED_UI_DIR, "animation-tiles.css");
-const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /** An animation resref opens with a 4-character code naming the animation; the rest is variant and action. */
 const ANIMATION_CODE_CHARS = 4;
@@ -254,10 +248,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         panel: vscode.WebviewPanel,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
-        const webviewDir = vscode.Uri.joinPath(this.extensionUri, WEBVIEW_DIR);
-        const sharedUiDir = vscode.Uri.joinPath(this.extensionUri, SHARED_UI_DIR);
-        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir, sharedUiDir] };
+        panel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: sharedWebviewRoots(this.extensionUri, WEBVIEW_DIR),
+        };
         panel.webview.html = this.getHtml(panel.webview);
 
         const attached = this.attach(document, webviewChannel(panel.webview), {
@@ -1126,27 +1120,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     private getHtml(webview: vscode.Webview): string {
-        const extensionPath = this.extensionUri.fsPath;
-        let html = getCachedHtmlAsset("animation-editor", extensionPath, WEBVIEW_HTML);
-        // See docs/architecture.md (Webview CSP): styles load as <link> stylesheets resolved
-        // through asWebviewUri and authorised by `style-src {{cspSource}}`, not inlined with a
-        // nonce - the wrapped webview silently drops a nonce-only style-src.
-        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
-        const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
-        const baseUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_BASE_CSS));
-        const primitivesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_UI_CSS));
-        // Function replacers: the URIs contain `$`-adjacent characters that String.replace would
-        // otherwise interpret as `$&`/`$'` patterns.
-        html = html.replace("{{stylesUri}}", () => stylesUri.toString());
-        html = html.replace("{{sharedStylesUri}}", () =>
-            webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, SHARED_TILES_CSS)).toString(),
-        );
-        html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
-        html = html.replace("{{baseUri}}", () => baseUri.toString());
-        html = html.replace("{{primitivesUri}}", () => primitivesUri.toString());
-        const script = getCachedJsAsset("animation-editor", extensionPath, WEBVIEW_JS);
-        const nonce = generateNonce();
-        html = inlineWebviewScript(html, script, nonce);
-        return html.replaceAll("{{cspSource}}", webview.cspSource);
+        return buildSharedWebviewHtml(webview, {
+            cacheKey: "animation-editor",
+            extensionUri: this.extensionUri,
+            html: WEBVIEW_HTML,
+            js: WEBVIEW_JS,
+            css: WEBVIEW_CSS,
+            // The animation components' own layout, without which the rose draws its facings in one column.
+            extraStyles: { "{{sharedStylesUri}}": SHARED_TILES_CSS },
+        });
     }
 }
