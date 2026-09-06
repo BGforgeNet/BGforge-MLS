@@ -7,6 +7,10 @@
 # not shfmt, or the reverse), so a self-contained, checksum-verified download is the one
 # path that works everywhere. Sourced by lint-workflows.sh (actionlint, zizmor),
 # lint-shell.sh (shfmt) and ensure-weidu.sh; do not execute it directly.
+#
+# It also owns the shellcheck pin, because two gates run shellcheck: lint-shell.sh over the
+# project's own scripts, and lint-workflows.sh through actionlint's `-shellcheck` on embedded
+# `run:` blocks. One home keeps them on the same version.
 
 # ensure_verified_tool LABEL URL EXPECTED_SHA256 DEST_BIN [ARCHIVE_MEMBER]
 #
@@ -59,4 +63,38 @@ ensure_verified_tool() {
     fi
     chmod +x "$dest_bin"
     rm -rf "$tmp_dir"
+}
+
+# GitHub-hosted runners preinstall shellcheck, so the pinned binary has to win over PATH:
+# otherwise a runner-image bump changes which checks the gates run. koalaman/shellcheck
+# publishes no checksums manifest, so the hashes are pinned from the sha256 of the immutable
+# v0.11.0 release tarballs.
+SHELLCHECK_VERSION="0.11.0"
+declare -A SHELLCHECK_SHA256=(
+    ["linux.x86_64"]="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
+    ["linux.aarch64"]="68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+)
+
+# Set PINNED_SHELLCHECK to the repo-root-relative path of the pinned shellcheck, downloading it on
+# first use; on a platform with no pinned build leave it empty and return 1, so the caller can
+# decide whether the host's own shellcheck will do. It answers through a global rather than stdout
+# because a command substitution would swallow the abort below into a subshell.
+export PINNED_SHELLCHECK=""
+ensure_pinned_shellcheck() {
+    local sc_arch=""
+    if [[ "$(uname -s)" == "Linux" ]]; then
+        case "$(uname -m)" in
+            x86_64) sc_arch="linux.x86_64" ;;
+            aarch64 | arm64) sc_arch="linux.aarch64" ;;
+        esac
+    fi
+    [[ -n "$sc_arch" ]] || return 1
+
+    local dest_bin=".dev/shellcheck-${SHELLCHECK_VERSION}/shellcheck"
+    # A failed download or a checksum mismatch aborts the caller rather than returning: falling
+    # back to the host's shellcheck there would run a version the pin does not vouch for.
+    ensure_verified_tool "shellcheck v${SHELLCHECK_VERSION}" \
+        "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.${sc_arch}.tar.gz" \
+        "${SHELLCHECK_SHA256[$sc_arch]}" "$dest_bin" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" || exit 1
+    export PINNED_SHELLCHECK="$dest_bin"
 }
