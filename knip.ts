@@ -24,6 +24,23 @@ const config: KnipConfig = {
     // `@public` JSDoc tag and knip treats them as used.
     tags: ["+public"],
     workspaces: {
+        ".": {
+            // Maintenance scripts started by path - from a shell script under scripts/ or by hand
+            // through `pnpm exec tsx` - so nothing imports them and knip cannot derive them from
+            // package.json. Listing them individually rather than ignoring scripts/** keeps
+            // unused-export detection on everything they reach, scripts/utils/src included.
+            entry: [
+                "scripts/build-webviews.mjs",
+                "scripts/verify-vsix-runtime-deps.mjs",
+                "scripts/fallout-update/src/fallout-update.ts",
+                "scripts/ie-binary-update/src/main.ts",
+                "scripts/ie-update/src/iesdp-update.ts",
+                "scripts/utils/src/check-editor-captures.ts",
+                "scripts/utils/src/extract-engine-proc-docs.ts",
+                "scripts/utils/src/generate-editor-queries.ts",
+                "scripts/utils/src/update-ssl-engine-arity.ts",
+            ],
+        },
         client: {
             entry: [
                 // esbuild entry points (moved from package.json to scripts/*.sh)
@@ -193,16 +210,18 @@ const config: KnipConfig = {
         "grammars/**",
         // external repositories cloned for testing
         "external/**",
-        // standalone update scripts run via pnpm exec tsx, not imported by main code
-        "scripts/**",
+        // ambient declarations for the sibling esbuild plugin .mjs files, read by tsc only
+        "scripts/*.d.mts",
         // spawned as a child process by the --jobs fan-out tests, never imported
         "shared/cli/test/fixtures/**",
     ],
+    // Host binaries the scripts and their tests spawn: xmllint validates the generated Geany and
+    // Notepad++ editor definitions, strings reads capture names out of a Zed binary. Both are
+    // environment prerequisites of a hand-run tool, not declarable dependencies.
+    ignoreBinaries: ["xmllint", "strings"],
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",
-        // invoked via pnpm vsce in scripts/package.sh
-        "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported
         "remark-validate-links",
     ],
