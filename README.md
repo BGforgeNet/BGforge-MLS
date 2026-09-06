@@ -133,3 +133,9 @@ Compiled Infinity Engine `.dlg` files open in the same editor: the states, trans
 Supported animation formats are BAM and FRM. PNG import/export is available, as well as cross-format save (conversion).
 
 ![animation viewer example](docs/animation-viewer.png)
+
+### Image gallery
+
+`BGforge: Game Image Gallery` (`bgforge.gallery.showGame`) browses the images of the game at `bgforge.weidu.gamePath`; `BGforge: Workspace Image Gallery` (`bgforge.gallery.showWorkspace`) browses the open folder. Both draw a thumbnail grid filtered by name, resource type and format, and draw a picked file on the panel's own animation surface.
+
+A game gallery carries a second tab for the animation sets the install declares. Picking one draws the whole set, whose members can be edited and saved back, or converted into another engine's animation files.
