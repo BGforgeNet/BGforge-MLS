@@ -7,7 +7,7 @@
  */
 import { type Action, characterMiscBlock } from "./animation-schemes/character";
 
-export const ARMOUR_LABELS: Record<number, string> = {
+const ARMOUR_LABELS: Record<number, string> = {
     1: "None",
     2: "Leather",
     3: "Robe",

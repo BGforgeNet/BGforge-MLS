@@ -34,7 +34,7 @@ export { type AnimationTable, type TableAnimation, type TableRows, animationTabl
 export { type Layout, layoutOf } from "./animation-schemes/layout";
 export { type ActionScheme, type NeutralActionId, type NeutralActionRef } from "./animation-schemes/actions";
 export { type SchemeMember, schemeMembers } from "./animation-schemes/members";
-export { type Action, characterActions, characterDrawsBody, characterMember } from "./animation-schemes/character";
+export { type Action, characterActions, characterMember } from "./animation-schemes/character";
 export {
     type BandConfidence,
     type FileBands,
@@ -84,4 +84,4 @@ export {
     characterFacetsOf,
     characterIdFor,
 } from "./animation-facets";
-export { ARMOUR_LABELS, actionLabel, armourLabel } from "./facet-labels";
+export { actionLabel, armourLabel } from "./facet-labels";
