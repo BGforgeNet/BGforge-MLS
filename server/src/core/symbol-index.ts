@@ -14,7 +14,7 @@
 
 import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./normalized-uri";
-import { type NameCase, nameCaseKey } from "../../../shared/name-case";
+import { type NameCase, nameCaseKey } from "./name-case";
 import {
     type SymbolKind,
     type IndexedSymbol,
@@ -71,7 +71,7 @@ interface QueryOptions {
 interface SymbolsOptions {
     /**
      * How this instance compares identifiers. Defaults to `"exact"`; a language whose identifiers bind
-     * case-insensitively passes `"fold"` (see `shared/name-case.ts`).
+     * case-insensitively passes `"fold"` (see `core/name-case.ts`).
      */
     nameCase?: NameCase;
 

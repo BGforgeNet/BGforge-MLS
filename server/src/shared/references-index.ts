@@ -8,7 +8,7 @@
 
 import type { Location } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
-import { type NameCase, nameCaseKey } from "../../../shared/name-case";
+import { type NameCase, nameCaseKey } from "../core/name-case";
 
 /** One file's references: locations under the spelling the source used, plus the fold grouping when needed. */
 interface FileRefs {
@@ -24,7 +24,7 @@ const EMPTY: readonly string[] = [];
 interface ReferencesIndexOptions {
     /**
      * How this instance compares identifiers. Defaults to `"exact"`; a language whose identifiers bind
-     * case-insensitively passes `"fold"` (see `shared/name-case.ts`).
+     * case-insensitively passes `"fold"` (see `core/name-case.ts`).
      */
     nameCase?: NameCase;
 }

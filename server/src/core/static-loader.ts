@@ -216,11 +216,11 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
         return {
             ...base,
             kind: kind as
-                | SymbolKind.Function
-                | SymbolKind.Procedure
-                | SymbolKind.Macro
-                | SymbolKind.Action
-                | SymbolKind.Trigger,
+                | typeof SymbolKind.Function
+                | typeof SymbolKind.Procedure
+                | typeof SymbolKind.Macro
+                | typeof SymbolKind.Action
+                | typeof SymbolKind.Trigger,
             callable,
         } satisfies CallableSymbol;
     }

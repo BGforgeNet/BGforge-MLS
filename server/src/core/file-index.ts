@@ -11,7 +11,7 @@ import type { IndexedSymbol } from "./symbol";
 import type { ParseResult } from "./parse-result";
 import { Symbols } from "./symbol-index";
 import { ReferencesIndex } from "../shared/references-index";
-import { nameCaseFor } from "../../../shared/name-case";
+import { nameCaseFor } from "./name-case";
 
 /**
  * Wraps Symbols + ReferencesIndex with a single update/remove API.
@@ -23,7 +23,7 @@ export class FileIndex {
 
     /**
      * @param languageId Language whose symbols this index holds. It decides how identifiers compare - SSL
-     * binds them case-insensitively where D labels and tp2 variables do not (see `shared/name-case.ts`).
+     * binds them case-insensitively where D labels and tp2 variables do not (see `core/name-case.ts`).
      */
     constructor(languageId: string) {
         const nameCase = nameCaseFor(languageId);

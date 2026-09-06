@@ -25,7 +25,7 @@ import {
     CompletionItemKind,
     SymbolKind as VscodeSymbolKind,
 } from "vscode-languageserver/node";
-import type { NameCase } from "../../../shared/name-case";
+import type { NameCase } from "./name-case";
 // =============================================================================
 // Symbol Kind
 // =============================================================================
@@ -34,24 +34,26 @@ import type { NameCase } from "../../../shared/name-case";
  * Classification of symbols across all supported languages.
  * More granular than LSP SymbolKind to capture language-specific distinctions.
  */
-export const enum SymbolKind {
+export const SymbolKind = {
     // Callables
-    Function = "function", // TP2 DEFINE_*_FUNCTION
-    Procedure = "procedure", // SSL procedure
-    Macro = "macro", // SSL #define or TP2 DEFINE_*_MACRO
-    Action = "action", // WeiDU action (BAF/D/TP2)
-    Trigger = "trigger", // WeiDU trigger (BAF/D)
+    Function: "function", // TP2 DEFINE_*_FUNCTION
+    Procedure: "procedure", // SSL procedure
+    Macro: "macro", // SSL #define or TP2 DEFINE_*_MACRO
+    Action: "action", // WeiDU action (BAF/D/TP2)
+    Trigger: "trigger", // WeiDU trigger (BAF/D)
 
     // Data
-    Variable = "variable", // General variable
-    Constant = "constant", // Constant value
-    Parameter = "parameter", // Function/procedure parameter
-    LoopVariable = "loop_variable", // Loop iteration variable
+    Variable: "variable", // General variable
+    Constant: "constant", // Constant value
+    Parameter: "parameter", // Function/procedure parameter
+    LoopVariable: "loop_variable", // Loop iteration variable
 
     // Structures
-    State = "state", // Dialog state (D files)
-    Component = "component", // TP2 component
-}
+    State: "state", // Dialog state (D files)
+    Component: "component", // TP2 component
+} as const;
+
+export type SymbolKind = (typeof SymbolKind)[keyof typeof SymbolKind];
 
 // =============================================================================
 // Scope
@@ -61,13 +63,15 @@ export const enum SymbolKind {
  * Scope level determines variable visibility and lookup order.
  * Listed from broadest to narrowest scope.
  */
-export const enum ScopeLevel {
-    Global = "global", // Built-in/static symbols
-    Workspace = "workspace", // From workspace headers (.h, .tph)
-    File = "file", // Script-scope (SSL) or file-scope (TP2)
-    Function = "function", // Inside procedure (SSL) or function (TP2)
-    Loop = "loop", // Loop variables (TP2 PHP_EACH, FOR_EACH)
-}
+export const ScopeLevel = {
+    Global: "global", // Built-in/static symbols
+    Workspace: "workspace", // From workspace headers (.h, .tph)
+    File: "file", // Script-scope (SSL) or file-scope (TP2)
+    Function: "function", // Inside procedure (SSL) or function (TP2)
+    Loop: "loop", // Loop variables (TP2 PHP_EACH, FOR_EACH)
+} as const;
+
+export type ScopeLevel = (typeof ScopeLevel)[keyof typeof ScopeLevel];
 
 /**
  * Scope information for a symbol.
@@ -91,13 +95,15 @@ export interface SymbolScope {
 /**
  * Where the symbol data originated from.
  */
-export const enum SourceType {
-    Static = "static", // Built-in from YAML/JSON data files
-    Workspace = "workspace", // Parsed from workspace headers
-    External = "external", // From external headers directory
-    Document = "document", // From current open document
-    Navigation = "navigation", // Non-header workspace files (for Ctrl+T search only, excluded from completion)
-}
+export const SourceType = {
+    Static: "static", // Built-in from YAML/JSON data files
+    Workspace: "workspace", // Parsed from workspace headers
+    External: "external", // From external headers directory
+    Document: "document", // From current open document
+    Navigation: "navigation", // Non-header workspace files (for Ctrl+T search only, excluded from completion)
+} as const;
+
+export type SourceType = (typeof SourceType)[keyof typeof SourceType];
 
 // =============================================================================
 // Callable Context and Definition Type
@@ -258,7 +264,7 @@ interface BaseSymbol {
 
     /**
      * How this symbol's name compares, when its language folds identifier case. Omitted means the
-     * language's own rule (see `shared/name-case.ts`). Set it only to opt OUT of a fold: an SSL `#define`
+     * language's own rule (see `core/name-case.ts`). Set it only to opt OUT of a fold: an SSL `#define`
      * name is matched case-sensitively by the preprocessor even though SSL folds everything else.
      */
     readonly nameCase?: NameCase;
@@ -274,11 +280,11 @@ interface BaseSymbol {
  */
 export interface CallableSymbol extends BaseSymbol {
     readonly kind:
-        | SymbolKind.Function
-        | SymbolKind.Procedure
-        | SymbolKind.Macro
-        | SymbolKind.Action
-        | SymbolKind.Trigger;
+        | typeof SymbolKind.Function
+        | typeof SymbolKind.Procedure
+        | typeof SymbolKind.Macro
+        | typeof SymbolKind.Action
+        | typeof SymbolKind.Trigger;
     readonly callable: CallableInfo;
 }
 
@@ -287,7 +293,7 @@ export interface CallableSymbol extends BaseSymbol {
  * Contains VariableInfoData with type and value.
  */
 export interface VariableSymbol extends BaseSymbol {
-    readonly kind: SymbolKind.Variable | SymbolKind.Parameter | SymbolKind.LoopVariable;
+    readonly kind: typeof SymbolKind.Variable | typeof SymbolKind.Parameter | typeof SymbolKind.LoopVariable;
     readonly variable: VariableInfoData;
 }
 
@@ -295,7 +301,7 @@ export interface VariableSymbol extends BaseSymbol {
  * Constant symbols.
  */
 export interface ConstantSymbol extends BaseSymbol {
-    readonly kind: SymbolKind.Constant;
+    readonly kind: typeof SymbolKind.Constant;
     readonly constant: {
         readonly value: string;
         readonly type?: string;
@@ -306,14 +312,14 @@ export interface ConstantSymbol extends BaseSymbol {
  * State symbols (for dialog files).
  */
 export interface StateSymbol extends BaseSymbol {
-    readonly kind: SymbolKind.State;
+    readonly kind: typeof SymbolKind.State;
 }
 
 /**
  * Component symbols (for TP2 mod installers).
  */
 export interface ComponentSymbol extends BaseSymbol {
-    readonly kind: SymbolKind.Component;
+    readonly kind: typeof SymbolKind.Component;
 }
 
 /**
