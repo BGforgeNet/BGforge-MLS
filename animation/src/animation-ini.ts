@@ -43,6 +43,12 @@ export interface AnimationIni {
     falseColor: boolean | undefined;
     quadrants: number | undefined;
     /**
+     * `path_smooth` - whether the tiled families store a picture per sixteenth of the compass, or eight
+     * pictures each occupying two of those slots. Undeclared is the coarse reading, which is what the
+     * engine and the reference browser both default it to.
+     */
+    pathSmooth: boolean | undefined;
+    /**
      * `resref_weapon1` and `resref_weapon2` - the one-handed and two-handed weapon overlays of the
      * spell-layered family, each declared as a short code whose FIRST character is appended to `resref` to
      * name the overlay's files. Empty where the animation declares no overlay of that grip.
@@ -128,6 +134,7 @@ export function parseAnimationIni(bytes: Uint8Array): AnimationIni {
         splitBams: flag(drawing("split_bams")),
         falseColor: flag(drawing("false_color")),
         quadrants: decimal(drawing("quadrants")),
+        pathSmooth: flag(drawing("path_smooth")),
         // Only the first character names the files; the rest of the code says which weapons the overlay
         // covers, which is a property of the creature's inventory rather than of the animation.
         weaponOverlays: ["resref_weapon1", "resref_weapon2"].flatMap((key) => {

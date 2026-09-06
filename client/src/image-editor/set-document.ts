@@ -314,12 +314,17 @@ export function setView(state: AnimationSetState): SetView {
         actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
         action: state.action.resref,
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
-        ...(state.set.bandStride === undefined ? {} : { bands: declaredBands(state.set.bandStride) }),
+        ...(state.set.bandStride === undefined ? {} : { bands: declaredBands(state.set) }),
     };
 }
 
 /** A declared band width and the block scheme it implies, where one covers it. */
-function declaredBands(stride: number): NonNullable<SetView["bands"]> {
+function declaredBands(set: AnimationSet): NonNullable<SetView["bands"]> {
+    const stride = set.bandStride ?? 0;
     const scheme = schemeForStride(stride);
-    return { stride, ...(scheme === undefined ? {} : { scheme }) };
+    return {
+        stride,
+        ...(scheme === undefined ? {} : { scheme }),
+        ...(set.coarseBands === true ? { coarse: true as const } : {}),
+    };
 }

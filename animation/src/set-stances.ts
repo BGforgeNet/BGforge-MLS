@@ -133,7 +133,11 @@ function mergedTables(parts: PartTables[]): MergedTables | undefined {
  * A set that declares its stride is banded at it; the rest fall back to reading the block structure,
  * which is what a lone file offers and what the image editor has always done.
  */
-function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | undefined): FileBands | undefined {
+function bandsOf(
+    parts: readonly (Uint8Array | undefined)[],
+    stride: number | undefined,
+    coarse: boolean,
+): FileBands | undefined {
     const tables: PartTables[] = [];
     for (const bytes of parts) {
         if (bytes === undefined) continue;
@@ -149,7 +153,7 @@ function bandsOf(parts: readonly (Uint8Array | undefined)[], stride: number | un
     const drawn = (bands: readonly (readonly IeDirectionSlot[])[]): boolean[] =>
         bands.map((slots) => slots.some((slot) => merged.holdsArt[slot.seqIndex] === true));
     if (stride !== undefined) {
-        const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride);
+        const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride, coarse);
         // The stride came from the animation's own declared type, so the facings on them are declared too.
         // A stride the block table has a scheme for keeps its stance names; a wider one is numbered.
         return bands === undefined
@@ -188,6 +192,7 @@ export function setStances(set: AnimationSet, armour: number, io: StanceIo): Set
             bandsOf(
                 member.parts.map((resref) => io.read(resref)),
                 set.bandStride,
+                set.coarseBands === true,
             ),
         set.section,
     );

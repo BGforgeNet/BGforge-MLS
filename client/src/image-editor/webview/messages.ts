@@ -81,7 +81,7 @@ export interface SetView {
      * `scheme` is absent for a band width no block scheme covers - a sixteen-wide one, whose stances the
      * block table therefore cannot name.
      */
-    bands?: { stride: number; scheme?: IeScheme };
+    bands?: { stride: number; scheme?: IeScheme; coarse?: true };
 }
 
 interface AnimationViewBase {

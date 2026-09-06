@@ -30,6 +30,21 @@ const WIDE_BAND_SECTIONS = new Set(["monster_quadrant", "monster_large16", "town
 const WIDE_BAND_STRIDE = 16;
 
 /**
+ * Sections whose sixteen slots hold eight pictures unless the animation declares a smooth path.
+ *
+ * `path_smooth` is declared by the two tiled families alone, and its absence is the coarse reading rather
+ * than the fine one - the engine and the reference browser both default it off, and a classic archive
+ * declares nothing at all. Confirmed against the art: in every wide-band file measured on both installs the
+ * slots pair off, neighbouring slots opening on byte-identical frames.
+ */
+const SMOOTH_PATH_SECTIONS = new Set(["monster_quadrant", "multi_new"]);
+
+/** Whether a band's sixteen slots hold eight facings doubled rather than sixteen distinct ones. */
+export function coarseBands(section: string | undefined, pathSmooth: boolean | undefined): boolean {
+    return section !== undefined && SMOOTH_PATH_SECTIONS.has(section) && pathSmooth !== true;
+}
+
+/**
  * Sections whose bands are eight cycles with every facing DRAWN rather than mirrored.
  *
  * Inference reads a LONE base file correctly: its eastern slots are dummies, and that is precisely the

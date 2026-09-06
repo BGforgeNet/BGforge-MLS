@@ -186,6 +186,66 @@ describe("setStances with a declared stride", () => {
         expect(stances.map((stance) => stance.band)).toEqual([0, 1]);
         expect(stances.every((stance) => stance.confidence === "declared")).toBe(true);
     });
+
+    /**
+     * The tiled families store eight pictures in their sixteen slots unless they declare a smooth path, so
+     * a slot's facing is its pair's - naming the odd ones by half-step points labels art that is not there.
+     */
+    it("pairs a coarse-path band's slots off rather than naming sixteen distinct facings", () => {
+        const set: AnimationSet = {
+            id: 0x1100,
+            code: "MTAN",
+            name: "TANARRI",
+            prefixByArmour: new Map([[1, "MTAN"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "cycles",
+            bandStride: 16,
+            section: "monster_quadrant",
+            coarseBands: true,
+        };
+        const io: StanceIo = { exists: (resref) => resref === "MTANG1", read: () => multiCycle(4, 16) };
+
+        const [stance] = setStances(set, 1, io);
+
+        expect(stance?.slots.map((slot) => slot.facing)).toEqual([
+            "S",
+            "S",
+            "SW",
+            "SW",
+            "W",
+            "W",
+            "NW",
+            "NW",
+            "N",
+            "N",
+            "NE",
+            "NE",
+            "E",
+            "E",
+            "SE",
+            "SE",
+        ]);
+    });
+
+    it("keeps the sixteen distinct facings for a set that declares the smooth path", () => {
+        const set: AnimationSet = {
+            id: 0x1000,
+            code: "MWYV",
+            name: "WYVERN",
+            prefixByArmour: new Map([[1, "MWYV"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "cycles",
+            bandStride: 16,
+            section: "monster_quadrant",
+        };
+        const io: StanceIo = { exists: (resref) => resref === "MWYVG1", read: () => multiCycle(4, 16) };
+
+        const [stance] = setStances(set, 1, io);
+
+        expect(stance?.slots.map((slot) => slot.facing).slice(0, 4)).toEqual(["S", "SSW", "SW", "WSW"]);
+    });
 });
 
 /** Built per test, not in the describe body: `skipIf` still evaluates the body, so opening a game there

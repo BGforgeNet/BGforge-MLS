@@ -148,6 +148,15 @@ function partitionBlocks(facings: Facing[], lengths: number[], arc?: number): Ie
     return groups;
 }
 
+/**
+ * The wheel as an animation with no smooth path stores it: the eight-point compass, each facing occupying
+ * a pair of neighbouring slots.
+ *
+ * The slot COUNT is the same sixteen - the engine still addresses a band by the raw sixteen-point
+ * orientation - so this changes only which picture each slot holds, and therefore what to call it.
+ */
+const IE_DOUBLED_FACINGS: Facing[] = IE_SLOT_FACINGS.flatMap((facing) => [facing, facing]);
+
 /** The facing order each stride stores its cycles in. */
 const FACINGS_BY_STRIDE = new Map<number, Facing[]>([
     [IE_SLOT_FACINGS.length, IE_SLOT_FACINGS],
@@ -155,15 +164,23 @@ const FACINGS_BY_STRIDE = new Map<number, Facing[]>([
     [IE_WHEEL_FACINGS.length, IE_WHEEL_FACINGS],
 ]);
 
+function facingsFor(stride: number, coarse?: boolean): Facing[] | undefined {
+    // Only the wheel has a coarse reading: the narrower schemes store one picture per slot either way.
+    if (coarse === true && stride === IE_WHEEL_FACINGS.length) return IE_DOUBLED_FACINGS;
+    return FACINGS_BY_STRIDE.get(stride);
+}
+
 /**
  * The facings a stride stores its cycles in, in stored order; empty for a stride no IE scheme uses.
  *
  * The one published reading of these orders, so a caller describing what a target holds names a stride
  * rather than restating the wheel - a second copy of a facing order is how two layers come to disagree
  * about which cycle is west.
+ *
+ * `coarse` is the reading an animation whose path is not smooth stores: same sixteen slots, eight pictures.
  */
-export function ieFacingsForStride(stride: number): readonly Facing[] {
-    return FACINGS_BY_STRIDE.get(stride) ?? [];
+export function ieFacingsForStride(stride: number, coarse?: boolean): readonly Facing[] {
+    return facingsFor(stride, coarse) ?? [];
 }
 
 /**
@@ -178,8 +195,9 @@ export function ieBandsOfStride(
     sequences: SequenceShape[],
     frameCount: number,
     stride: number,
+    coarse?: boolean,
 ): IeDirectionSlot[][] | undefined {
-    const facings = FACINGS_BY_STRIDE.get(stride);
+    const facings = facingsFor(stride, coarse);
     if (facings === undefined || sequences.length === 0) return undefined;
     const realRefs = (seq: SequenceShape): number[] => seq.frameRefs.filter((r) => r >= 0 && r < frameCount);
     const lengths = sequences.map((seq) => realRefs(seq).length);

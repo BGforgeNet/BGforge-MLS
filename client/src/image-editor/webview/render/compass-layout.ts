@@ -192,10 +192,10 @@ export interface DirectionBlocks {
  */
 export function directionBlocks(
     view: AnimationView,
-    declared?: { stride: number; scheme?: IeScheme },
+    declared?: { stride: number; scheme?: IeScheme; coarse?: true },
 ): DirectionBlocks | undefined {
     if (declared === undefined) return interpretIeDirections(view.sequences, view.frames.length);
-    const groups = ieBandsOfStride(view.sequences, view.frames.length, declared.stride);
+    const groups = ieBandsOfStride(view.sequences, view.frames.length, declared.stride, declared.coarse);
     if (groups === undefined) return undefined;
     return { groups, declared: true, ...(declared.scheme === undefined ? {} : { scheme: declared.scheme }) };
 }

@@ -18,7 +18,7 @@ import { type AnimationTable, type TableAnimation } from "./animation-tables/tab
 import { tableForFlavour } from "./animation-tables";
 import { type Layout, layoutOf } from "./animation-schemes/layout";
 import { layerPrefixes } from "./animation-schemes/layers";
-import { declaredStride } from "./animation-schemes/bands";
+import { coarseBands, declaredStride } from "./animation-schemes/bands";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
@@ -71,6 +71,11 @@ export interface AnimationSet {
      * they are members of their own rather than parts of the base ones.
      */
     layerPrefixes?: readonly string[];
+    /**
+     * Whether a wide band's sixteen slots hold eight pictures rather than sixteen. Only the tiled families
+     * declare it, and only when they store the finer set - so absent means the sixteen slots are distinct.
+     */
+    coarseBands?: true;
     /** Present only where the id declares them - a monster or a named individual has none. */
     facets?: CharacterFacets;
 }
@@ -230,6 +235,7 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             scheme: schemeFrom(ini, tabled),
             ...(section === undefined ? {} : { section }),
             ...(layers.length === 0 ? {} : { layerPrefixes: layers }),
+            ...(coarseBands(section, ini?.pathSmooth) ? { coarseBands: true as const } : {}),
             ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
             ...(stride === undefined ? {} : { bandStride: stride }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),

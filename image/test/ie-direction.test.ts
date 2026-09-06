@@ -379,6 +379,39 @@ describe("ieFacingsForStride", () => {
         ]);
     });
 
+    /**
+     * An animation whose path is not smooth stores the same sixteen slots, but only eight pictures: each
+     * facing sits in a pair of neighbouring slots. Naming the odd slots by their half-step points would put
+     * `SSW` on a slot drawing due south.
+     */
+    test("names a coarse-path band's slots as eight facings, each stored twice", () => {
+        expect(ieFacingsForStride(16, true)).toEqual([
+            "S",
+            "S",
+            "SW",
+            "SW",
+            "W",
+            "W",
+            "NW",
+            "NW",
+            "N",
+            "N",
+            "NE",
+            "NE",
+            "E",
+            "E",
+            "SE",
+            "SE",
+        ]);
+    });
+
+    // The coarse reading is a property of the sixteen-slot wheel alone: the narrower schemes store one
+    // picture per slot whatever the path attribute says.
+    test("leaves the narrower schemes alone when asked for the coarse reading", () => {
+        expect(ieFacingsForStride(8, true)).toEqual(ieFacingsForStride(8));
+        expect(ieFacingsForStride(9, true)).toEqual(ieFacingsForStride(9));
+    });
+
     // A caller asking about a stride no scheme stores gets nothing to iterate, rather than a wheel that
     // silently answers for a different resolution than the one it asked about.
     test("answers with no facings for a stride no IE scheme stores", () => {
