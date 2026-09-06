@@ -8,6 +8,7 @@ export default defineConfig({
         // other package config here does. `@bgforge/binary` is test-only: the corpus suites open a real
         // install, while src/ reads a game through the structural GameHandle.
         alias: {
+            "@bgforge/animation": path.resolve(import.meta.dirname, "./src/index.ts"),
             "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
             "@bgforge/image/ie-direction": path.resolve(import.meta.dirname, "../image/src/model/ie-direction.ts"),
             "@bgforge/image": path.resolve(import.meta.dirname, "../image/src/index.ts"),

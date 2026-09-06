@@ -2,9 +2,10 @@
  * Curated public surface for Infinity Engine animation sets: which animations a game declares, which files
  * each one draws, how a file's cycles band into directions, and how a character set's facets resolve.
  *
- * The vendored per-game tables (`animation-tables/bg2.ts`, `animation-tables/effects.ts`) are consulted
- * through `tableForFlavour` and are deliberately not re-exported - a caller picking a table by hand would
- * bypass the rule that an install's own declaration always wins.
+ * Scope rule: only what a consumer outside this package reaches, pinned by `test/public-api.test.ts`. The
+ * layer the entry points below are built on - the per-set `.ini` reader, the vendored per-game tables, the
+ * scheme and band inference, the conversion planner and the facet decomposition - stays module-local. A
+ * caller picking a table by hand would bypass the rule that an install's own declaration always wins.
  *
  * `ieGroupLabels` is not here either: it has its own `@bgforge/animation/group-labels` entry point, because
  * the animation editor's webview needs it and this barrel reaches the image library's Node-only codecs.
@@ -13,52 +14,27 @@
 // The index: what a game declares.
 export {
     type AnimationIndexResolver,
-    type AnimationScheme,
     type AnimationSet,
     animationIdHex,
-    armourLevels,
-    buildAnimationIndex,
     createAnimationIndexResolver,
     firstArmour,
     setTitle,
 } from "./animation-index";
 export { type GameHandle, type GameSource } from "./game-handle";
-export { type AnimationIni, parseAnimationIni } from "./animation-ini";
 export { readIdsCodes } from "./ids-tables";
 
-// The fallback tables, for installs that declare nothing.
-export { tableForFlavour } from "./animation-tables";
-export { type AnimationTable, type TableAnimation, type TableRows, animationTable } from "./animation-tables/table";
-
 // Schemes: how an animation's files are named, and how their cycles band.
-export { type Layout, layoutOf } from "./animation-schemes/layout";
-export { type ActionScheme, type NeutralActionId, type NeutralActionRef } from "./animation-schemes/actions";
-export { type SchemeMember, schemeMembers } from "./animation-schemes/members";
-export { type Action, characterActions, characterMember } from "./animation-schemes/character";
-export {
-    type BandConfidence,
-    type FileBands,
-    type SetStance,
-    declaredStride,
-    schemeForStride,
-    stancesOfMembers,
-} from "./animation-schemes/bands";
+export { type ActionScheme } from "./animation-schemes/actions";
+export { type SchemeMember } from "./animation-schemes/members";
+export { type SetStance, schemeForStride } from "./animation-schemes/bands";
 
 // Reading one set out of an install.
-export { type StanceIo, drawnArmourLevels, setMembers, setStances } from "./set-stances";
-export { type SetTile, setPreviewResref, setTile } from "./set-tiles";
+export { type StanceIo, drawnArmourLevels, setMembers } from "./set-stances";
+export { type SetTile, setTile } from "./set-tiles";
 
-// The neutral model: one set, read out of a game and writable back to it.
-export {
-    type NeutralAction,
-    type NeutralCycles,
-    type NeutralDirection,
-    type NeutralIdentity,
-    type NeutralSet,
-    type NeutralVariant,
-} from "./neutral/model";
+// The neutral model: one set, read out of a game and written back to it.
 export { readNeutralSet } from "./neutral/read";
-export { type MemberWrite, writeNeutralSet } from "./neutral/write";
+export { type MemberWrite } from "./neutral/write";
 
 // Conversion: what a target can hold, and what converting into it would cost.
 export {
@@ -69,19 +45,8 @@ export {
     IE_8_POINT_MIRRORED,
     IE_8_POINT_PAIRED,
 } from "./convert/target";
-export { type ConversionPlan, planConversion } from "./convert/plan";
-export { type ConversionOptions, type ConversionResult, convertSet } from "./convert/convert";
-export { type NotesOptions, type PlannedConversion, conversionNotes } from "./convert/notes";
-export { type RetargetedAction, retargetAction } from "./convert/retarget";
+export { convertSet } from "./convert/convert";
 export { allocateAnimationId } from "./convert/allocate";
 
-// Character facets: race, gender, class, armour, action.
-export {
-    type CharClass,
-    type CharacterFacets,
-    type Gender,
-    type Race,
-    characterFacetsOf,
-    characterIdFor,
-} from "./animation-facets";
-export { actionLabel, armourLabel } from "./facet-labels";
+// Display labels for a set's armour levels.
+export { armourLabel } from "./facet-labels";
