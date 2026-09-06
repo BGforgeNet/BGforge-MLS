@@ -86,6 +86,7 @@ server/src/
 |   +-- selection-range.ts    # onSelectionRanges
 |   +-- inlay-hints.ts        # inlayHint.on
 |   +-- semantic-tokens.ts    # semanticTokens.on
+|   +-- code-action.ts        # onCodeAction - quick fixes for diagnostics
 |   +-- execute-command.ts    # onExecuteCommand + dialog editor commands
 |
 +-- core/
@@ -523,18 +524,18 @@ This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax
 
 ## Feature Matrix
 
-| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Selection Range | Diagnostics | JSDoc | Semantic Tokens |
-| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :-------------: | :---------: | :---: | :-------------: |
-| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |        Y        |      Y      |   Y   |        Y        |
-| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |        Y        |      Y      |  n/a  |                 |
-| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |   Y   |                 |
-| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |   Y   |        Y        |
-| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |  n/a  |       n/a       |
-| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |  n/a  |       n/a       |
-| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |       |                 |
-| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |       |                 |
-| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |        Y        |
-| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |       |                 |
+| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Selection Range | Diagnostics | Quick Fixes | JSDoc | Semantic Tokens |
+| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :-------------: | :---------: | :---------: | :---: | :-------------: |
+| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
+| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |        Y        |      Y      |      Y      |  n/a  |                 |
+| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |      Y      |   Y   |                 |
+| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
+| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
+| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
+| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |             |       |                 |
+| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |             |       |                 |
+| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |             |       |        Y        |
+| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |             |       |                 |
 
 ### Deliberate N/A
 

@@ -72,6 +72,7 @@ const FEATURE_TO_COLUMN: Record<string, string> = {
     Rename: "Rename",
     "Inlay hints": "Inlay",
     Diagnostics: "Diagnostics",
+    "Quick fixes": "Quick Fixes",
     JSDoc: "JSDoc",
     Folding: "Folding",
 };
