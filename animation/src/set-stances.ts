@@ -6,7 +6,12 @@
  * the only place that reads bytes, so both stay unit-testable without a game.
  */
 import { readBamV1Tables } from "@bgforge/image";
-import { ieBandsOfStride, interpretIeDirections, type IeDirectionSlot } from "@bgforge/image/ie-direction";
+import {
+    ieBandsOfStride,
+    interpretIeDirections,
+    type IeDirectionSlot,
+    type IeScheme,
+} from "@bgforge/image/ie-direction";
 import { type PartTables, mergeParts } from "./animation-schemes/part-tables";
 import { type AnimationSet, armourLevels } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
@@ -87,7 +92,7 @@ function bandsOf(
     parts: readonly (Uint8Array | undefined)[],
     stride: number | undefined,
     coarse: boolean,
-    overlaying: FileBands | undefined,
+    overlaying?: FileBands,
 ): FileBands | undefined {
     const tables: PartTables[] = [];
     for (const bytes of parts) {
@@ -174,4 +179,32 @@ export function setStances(set: AnimationSet, armour: number, io: StanceIo): Set
             ),
         set.section,
     );
+}
+
+/**
+ * The band width to read an overlay member at: the one the member it is drawn over is read at.
+ *
+ * For a surface that bands ONE member and so cannot see the base - the editor panel reinterprets whatever
+ * member is open, and an overlay's own files need not carry the structure to cut on (`bandsOverlaying`).
+ * Undefined where the member overlays nothing, or where the base's bands are not all one width: a stride
+ * cannot express those, and inventing one would cut the overlay somewhere the base does not.
+ */
+export function overlaidStride(
+    set: AnimationSet,
+    armour: number,
+    io: StanceIo,
+    member: SchemeMember,
+): { stride: number; scheme?: IeScheme } | undefined {
+    if (member.overlays === undefined) return undefined;
+    const base = setMembers(set, armour, io.exists).find((row) => row.resref === member.overlays);
+    if (base === undefined) return undefined;
+    const bands = bandsOf(
+        base.parts.map((resref) => io.read(resref)),
+        set.bandStride,
+        set.coarseBands === true,
+    );
+    const stride = bands?.bands[0]?.length;
+    if (bands === undefined || stride === undefined) return undefined;
+    if (!bands.bands.every((slots) => slots.length === stride)) return undefined;
+    return { stride, ...(bands.scheme === undefined ? {} : { scheme: bands.scheme }) };
 }

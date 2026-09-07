@@ -153,6 +153,10 @@ export interface SetStance {
  * takes, so a block whose cycles it does not have is dropped rather than left addressing past its end.
  * Measured across both installs: eight of the nine overlay members match their base's cycle count
  * exactly, and Volo's stores five of its base's six blocks.
+ *
+ * Matching the base's BANDS is not matching its drawn facings, and one overlay looks like a defect for
+ * that reason: Volo's weapon twin holds a copy of the western art where its base's twin holds the eastern
+ * facings, so that member draws five facings from an eight-slot band. It is what the install ships.
  */
 export function bandsOverlaying(base: FileBands, cycleCount: number): readonly (readonly IeDirectionSlot[])[] {
     return base.bands.filter((slots) => slots.every((slot) => slot.seqIndex < cycleCount));

@@ -32,6 +32,7 @@ const REQUIRED_VALUE_EXPORTS = [
     // Schemes and stances
     "schemeForStride",
     "drawnArmourLevels",
+    "overlaidStride",
     "replacementPaletteNames",
     "setMembers",
     "setTile",

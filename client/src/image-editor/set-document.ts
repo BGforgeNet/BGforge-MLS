@@ -18,10 +18,12 @@ import {
     armourLabel,
     drawnArmourLevels,
     firstArmour,
+    overlaidStride,
     schemeForStride,
     setMembers,
     setTitle,
 } from "@bgforge/animation";
+import { type IeScheme } from "@bgforge/image/ie-direction";
 import { type ImageDocumentModel } from "./document-model";
 import { type SetView } from "./webview/messages";
 import { stanceIo, stanceModel } from "./stance-model";
@@ -249,6 +251,16 @@ export class AnimationSetState {
     }
 
     /**
+     * The band width the open member is read at where it is drawn over another - see `overlaidStride`.
+     *
+     * Here rather than in `setView` because the archive handle is this object's: a caller outside it would
+     * need one passed in solely to ask.
+     */
+    overlaidStride(): { stride: number; scheme?: IeScheme } | undefined {
+        return overlaidStride(this.set, this.current.level, this.io, this.open.action);
+    }
+
+    /**
      * How one of a member's files is stored, so a save writes each back in the encoding it was read in.
      *
      * A compressed file rewritten uncompressed still loads, but it is not the file the install shipped -
@@ -326,10 +338,24 @@ export function setView(state: AnimationSetState): SetView {
         actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
         action: state.action.resref,
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
-        ...(state.set.bandStride === undefined
-            ? {}
-            : { bands: declaredBands(state.set.bandStride, state.set.coarseBands) }),
+        ...bandsOf(state),
     };
+}
+
+/**
+ * The band width to send for the open member, where anything but the file itself settles it.
+ *
+ * The set's own declared stride first. Failing that, the member the open one is drawn OVER, if any: the
+ * panel bands whatever single member is open, and an overlay's own files need not carry the structure to
+ * cut on - the burrowing family's are one still per cycle, and its rose came back three facings short of
+ * the body it is drawn on. Nothing here for an ordinary member, which the panel reads structurally.
+ */
+function bandsOf(state: AnimationSetState): Pick<SetView, "bands"> | Record<string, never> {
+    if (state.set.bandStride !== undefined) {
+        return { bands: declaredBands(state.set.bandStride, state.set.coarseBands) };
+    }
+    const overlaid = state.overlaidStride();
+    return overlaid === undefined ? {} : { bands: overlaid };
 }
 
 /** A declared band width, the block scheme it implies where one covers it, and how many facings it holds. */
