@@ -9,6 +9,7 @@
  * carries no meaning past this decode, so keeping it would only oblige every consumer to resolve it.
  */
 import { MAX_FRAME_PIXELS } from "../limits.ts";
+import type { Rgba } from "../model/animation.ts";
 
 export interface BmpImage {
     width: number;
@@ -66,6 +67,28 @@ export function readBmpRgba(bytes: Uint8Array): BmpImage {
         for (let x = 0; x < width; x++) readPixel(rowStart, x, rgba, (y * width + x) * 4);
     }
     return { width, height, rgba };
+}
+
+/**
+ * The colour table of an indexed BMP, or undefined for a true-colour one.
+ *
+ * An animation's replacement palette ships as a BMP whose PAYLOAD is this table - a colour variant of a
+ * shared body is nothing else - so it is worth reading without decoding pixels nobody looks at. Always the
+ * depth's full length, so an index the art uses resolves to a colour rather than to nothing.
+ */
+export function readBmpPalette(bytes: Uint8Array): Rgba[] | undefined {
+    if (bytes.length < FILE_HEADER_BYTES + CORE_DIB_BYTES || bytes[0] !== 0x42 || bytes[1] !== 0x4d) return undefined;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const headerSize = view.getUint32(14, true);
+    const bpp = view.getUint16(28, true);
+    if (bpp > 8) return undefined;
+    const packed = readPalette(view, bytes, headerSize, bpp);
+    return Array.from({ length: packed.length / 4 }, (_entry, i) => ({
+        r: packed[i * 4] ?? 0,
+        g: packed[i * 4 + 1] ?? 0,
+        b: packed[i * 4 + 2] ?? 0,
+        a: 255,
+    }));
 }
 
 function readPalette(view: DataView, bytes: Uint8Array, headerSize: number, bpp: number): Uint8Array {

@@ -97,6 +97,26 @@ describe.skipIf(table === undefined)("a vendored table against the install it is
         expect(missing).toEqual([]);
     });
 
+    /**
+     * A declared replacement palette is only worth reading if the install ships it. The tiled families
+     * number theirs per tile (`MDR1_GR1`..`_GR5`) and the rest carry the bare name, so a check for the bare
+     * name alone reports the numbered ones absent - which is exactly the wrong answer, and was the one this
+     * arrived at first.
+     */
+    it("names a replacement palette the install actually ships, wherever one is declared", () => {
+        const sets = buildAnimationIndex(game!, table).filter((set) => set.newPalette !== undefined);
+        const tiers = ["", "1", "2", "3", "4", "5"];
+        const dead = sets.filter((set) => !tiers.some((tier) => game!.canRead(`${set.newPalette}${tier}`, "bmp")));
+
+        // An install with no INIs declares none, and has nothing to answer for here.
+        if (sets.length === 0) {
+            process.stdout.write("  (this install declares no replacement palettes)\n");
+            return;
+        }
+        process.stdout.write(`  ${sets.length - dead.length}/${sets.length} declared palettes resolve\n`);
+        expect(dead.map((set) => `0x${set.id.toString(16).padStart(4, "0")} -> ${set.newPalette}`)).toEqual([]);
+    });
+
     it("leaves the ids it does not cover listed rather than dropping or guessing them", () => {
         const sets = buildAnimationIndex(game!, table);
         const uncovered = sets.filter((set) => set.scheme.kind !== "character" && set.prefixByArmour.size === 0);

@@ -29,7 +29,7 @@ export { ieFacingsForStride, interpretIeDirections } from "./model/ie-direction.
 export { composeParts, cycleDrawsArt, drawsCycle } from "./model/compose-parts.ts";
 
 // Format codecs.
-export { readBmpRgba } from "./bmp/parse.ts";
+export { readBmpPalette, readBmpRgba } from "./bmp/parse.ts";
 export { parseFrm } from "./frm/parse.ts";
 export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";

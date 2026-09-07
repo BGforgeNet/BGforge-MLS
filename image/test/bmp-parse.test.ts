@@ -3,7 +3,7 @@
  * uncompressed, plus 32-bit with channel masks. RLE and the exotic depths are refused rather than guessed at.
  */
 import { describe, expect, it } from "vitest";
-import { readBmpRgba } from "../src/bmp/parse.ts";
+import { readBmpPalette, readBmpRgba } from "../src/bmp/parse.ts";
 
 /** A BMP, assembled from its parts so a test can state exactly which variant it is exercising. */
 function bmp(input: {
@@ -266,5 +266,38 @@ describe("readBmpRgba", () => {
 
     it("refuses a zero or negative width", () => {
         expect(() => readBmpRgba(bmp({ width: 0, height: 1, bpp: 24, rows: [[0, 0, 0]] }))).toThrow(/dimensions/);
+    });
+});
+
+/**
+ * An animation's replacement palette ships as an indexed BMP whose PAYLOAD is its colour table - the
+ * pixels are irrelevant, and a colour variant of a shared body is nothing but this table. So the table is
+ * readable on its own, without decoding an image nobody looks at.
+ */
+describe("readBmpPalette", () => {
+    it("returns the colour table of an indexed file, padded to the depth's full length", () => {
+        const file = bmp({
+            width: 2,
+            height: 1,
+            bpp: 8,
+            palette: [
+                [10, 20, 30],
+                [40, 50, 60],
+            ],
+            rows: [[0, 1]],
+        });
+
+        const palette = readBmpPalette(file);
+        expect(palette?.slice(0, 2)).toEqual([
+            { r: 10, g: 20, b: 30, a: 255 },
+            { r: 40, g: 50, b: 60, a: 255 },
+        ]);
+        // A short table still fills the depth, so an index the art uses always resolves to something.
+        expect(palette).toHaveLength(256);
+        expect(palette?.[255]).toEqual({ r: 0, g: 0, b: 0, a: 255 });
+    });
+
+    it("has no colour table to return for a true-colour file", () => {
+        expect(readBmpPalette(bmp({ width: 1, height: 1, bpp: 24, rows: [[1, 2, 3]] }))).toBeUndefined();
     });
 });

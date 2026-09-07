@@ -141,6 +141,13 @@ export class ImageDocumentModel {
     private animationValue: Animation;
     private readonly basename: string;
     private sidecarPalette: Rgba[] | undefined;
+    /**
+     * The replacement colour table this document's ANIMATION declares, where the install ships one.
+     *
+     * Set by the opener rather than read here: the declaration lives in the animation index and the file
+     * in the game archive, neither of which a document model reaches.
+     */
+    private declaredPalette: Rgba[] | undefined;
     private hasSidecar = false;
     private externalEnabled = false;
     /**
@@ -201,6 +208,16 @@ export class ImageDocumentModel {
     static fromAnimation(animation: IndexedAnimation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
+    }
+
+    /**
+     * Point this document at the replacement colour table its animation declares.
+     *
+     * Applied after construction because it is a property of the ANIMATION rather than of the file: the
+     * six colour dragons are one body under six declared palettes, and the file cannot say which.
+     */
+    useDeclaredPalette(palette: Rgba[] | undefined): void {
+        this.declaredPalette = palette;
     }
 
     private setSidecar(sidecarPalette: Rgba[] | undefined): void {
@@ -268,6 +285,7 @@ export class ImageDocumentModel {
             embedded: indexed.palette,
             sidecar: this.sidecarPalette,
             externalEnabled: this.externalEnabled,
+            ...(this.declaredPalette === undefined ? {} : { declared: this.declaredPalette }),
         });
     }
 

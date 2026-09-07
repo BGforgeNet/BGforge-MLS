@@ -10,8 +10,26 @@ test("sidecarPalPath swaps the extension for .pal", () => {
 describe("chooseActivePalette", () => {
     const sidecar = Array.from({ length: 256 }, () => ({ r: 1, g: 2, b: 3, a: 255 }));
     const embedded = Array.from({ length: 256 }, () => ({ r: 9, g: 9, b: 9, a: 255 }));
-    test("BAM always uses the embedded palette", () => {
+    const declared = Array.from({ length: 256 }, () => ({ r: 7, g: 7, b: 7, a: 255 }));
+    test("BAM uses the embedded palette", () => {
         expect(chooseActivePalette({ sourceFormat: "bam", embedded, sidecar, externalEnabled: true })).toBe(embedded);
+    });
+
+    /**
+     * A colour variant of a shared body is nothing but a replacement colour table: the six colour dragons
+     * all draw MDR1's art and differ only in the palette their animation declares. So a declared palette
+     * outranks the one baked into the file - without it they are all the red one.
+     */
+    test("a declared replacement palette outranks the one baked into the BAM", () => {
+        expect(chooseActivePalette({ sourceFormat: "bam", embedded, sidecar, externalEnabled: true, declared })).toBe(
+            declared,
+        );
+    });
+
+    test("an FRM's sidecar still wins over a declared palette, which no Fallout art has", () => {
+        expect(chooseActivePalette({ sourceFormat: "frm", embedded, sidecar, externalEnabled: true, declared })).toBe(
+            sidecar,
+        );
     });
     test("FRM uses the sidecar only when enabled and present", () => {
         expect(chooseActivePalette({ sourceFormat: "frm", embedded, sidecar, externalEnabled: true })).toBe(sidecar);

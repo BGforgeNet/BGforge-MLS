@@ -234,6 +234,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      */
     async openDocument(uri: vscode.Uri, backup?: DocumentBackup): Promise<ImageEditorDocument> {
         const document = await ImageEditorDocument.open(uri, backup, this.resourceBytes, this.animationSets);
+        // Before the first view is built: the declared palette is what a colour variant IS, so a document
+        // shown once without it would draw as whichever variant the shared art was saved under.
+        const read = this.resourceBytes;
+        if (read !== undefined) document.applyDeclaredPalette((resref, ext) => read(uri, resref, ext));
         document.onDidRefresh(() => this.postToDocumentPanels(document, { type: "init", view: initialView(document) }));
         return document;
     }

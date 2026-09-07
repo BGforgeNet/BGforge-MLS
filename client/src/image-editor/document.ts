@@ -16,6 +16,7 @@ import {
     loadImage,
     pvrzResourceName,
     readBamV2Structure,
+    readBmpPalette,
     serializeBamV1,
     splitIeBamBlocks,
     splitIeBamPair,
@@ -118,6 +119,26 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.model.onChange = undefined;
         this.model = model;
         this.model.onChange = () => this._onDidRefresh.fire();
+        this.model.useDeclaredPalette(this.declaredPalette);
+    }
+
+    /** Resolved once per document; a model swap re-applies it, since the declaration is the SET's. */
+    private declaredPalette: Rgba[] | undefined;
+
+    /**
+     * Draw this document under the replacement colour table its animation declares, where the install
+     * ships one. `read` fetches a resource from the open game.
+     *
+     * The declaration is the animation's, not the file's - the six colour dragons are one body under six
+     * palettes - so it comes from the set rather than from anything the opened bytes carry. A name the
+     * install does not resolve leaves the file's own palette in place: the tiled families number theirs per
+     * tile (`MDR1_GR1`..`_GR5`), which needs a palette per part and so a palette-aware compose.
+     */
+    applyDeclaredPalette(read: (resref: string, ext: string) => Uint8Array | undefined): void {
+        const resref = this.setState?.set.newPalette;
+        const bytes = resref === undefined ? undefined : read(resref, "bmp");
+        this.declaredPalette = bytes === undefined ? undefined : readBmpPalette(bytes);
+        this.model.useDeclaredPalette(this.declaredPalette);
     }
 
     /**

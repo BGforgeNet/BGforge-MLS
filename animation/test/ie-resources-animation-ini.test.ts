@@ -29,6 +29,29 @@ describe("parseAnimationIni", () => {
     });
 
     /**
+     * The replacement palette a colour variant draws under, declared in `[general]` beside the family
+     * number rather than in the drawing section. Without it the six colour dragons are the red one: they
+     * share `MDR1`'s art and differ only here.
+     *
+     * The value is the resref itself, already composed - the magic golems' `MFIEG1B` is spelled out in the
+     * install rather than derived, so nothing here has a special case for it.
+     */
+    it("reads the replacement palette from the general section", () => {
+        const green = parseAnimationIni(
+            encode("[general]\nanimation_type=1000\nnew_palette=MDR1_GR\n[multi_new]\nresref=MDR1\n"),
+        );
+        expect(green.newPalette).toBe("MDR1_GR");
+
+        const golem = parseAnimationIni(
+            encode("[general]\nanimation_type=7000\nnew_palette=MFIEG1B\n[monster]\nresref=MFIE\n"),
+        );
+        expect(golem.newPalette).toBe("MFIEG1B");
+
+        const plain = parseAnimationIni(encode("[general]\nanimation_type=7000\n[monster]\nresref=MBER\n"));
+        expect(plain.newPalette).toBeUndefined();
+    });
+
+    /**
      * `[monster_layered]` heads two different families, and only the spell-layered one ships the weapon
      * overlay files - so a reader that took the header alone would open half of one family's art.
      */

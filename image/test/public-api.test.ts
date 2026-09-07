@@ -43,6 +43,7 @@ const REQUIRED_VALUE_EXPORTS = [
     "cycleDrawsArt",
     "drawsCycle",
     // Format codecs
+    "readBmpPalette",
     "readBmpRgba",
     "parseFrm",
     "serializeFrm",

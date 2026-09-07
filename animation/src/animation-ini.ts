@@ -43,6 +43,14 @@ export interface AnimationIni {
     falseColor: boolean | undefined;
     quadrants: number | undefined;
     /**
+     * `new_palette` - the resref of a replacement colour table this animation draws under, declared in
+     * `[general]` rather than in the drawing section. It is what separates the colour variants of a shared
+     * body: the six colour dragons all draw `MDR1`'s art and differ only here.
+     *
+     * Already composed by the install, magic golems included, so nothing derives it.
+     */
+    newPalette: string | undefined;
+    /**
      * `path_smooth` - whether the tiled families store a picture per sixteenth of the compass, or eight
      * pictures each occupying two of those slots. Undeclared is the coarse reading, which is what the
      * engine and the reference browser both default it to.
@@ -134,6 +142,8 @@ export function parseAnimationIni(bytes: Uint8Array): AnimationIni {
         splitBams: flag(drawing("split_bams")),
         falseColor: flag(drawing("false_color")),
         quadrants: decimal(drawing("quadrants")),
+        // `[general]`, not the drawing section - the one drawing-relevant key the install puts there.
+        newPalette: values.get("general.new_palette")?.toUpperCase() || undefined,
         pathSmooth: flag(drawing("path_smooth")),
         // Only the first character names the files; the rest of the code says which weapons the overlay
         // covers, which is a property of the creature's inventory rather than of the animation.

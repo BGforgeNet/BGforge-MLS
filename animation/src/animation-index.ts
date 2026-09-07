@@ -79,19 +79,23 @@ export interface AnimationSet {
      * they are members of their own rather than parts of the base ones.
      */
     layerPrefixes?: readonly string[];
-    /**
-     * TODO: two more overlay kinds are declared and not modelled here, both measured against BG2:ToB.
-     *
-     * A character animation declares a HELMET flag and a WEAPON body-size letter, which pick the equipment
-     * BAMs drawn over the body - 78 of the classic table's rows carry one. And three effect rows name a
-     * SHADOW resref drawn under the sprite (`SKLH` + `SPSHADOW`). Neither is a naming variant of the base
-     * files, so neither can be inferred: both are separate art the declaration points at.
-     */
+    // TODO: two more overlay kinds are declared and not modelled here, both measured against BG2:ToB.
+    // A character animation declares a HELMET flag and a WEAPON body-size letter, which pick the equipment
+    // BAMs drawn over the body - 78 of the classic table's rows carry one. And three effect rows name a
+    // SHADOW resref drawn under the sprite (`SKLH` + `SPSHADOW`). Neither is a naming variant of the base
+    // files, so neither can be inferred: both are separate art the declaration points at.
     /**
      * Whether a wide band's sixteen slots hold eight pictures rather than sixteen. Only the tiled families
      * declare it, and only when they store the finer set - so absent means the sixteen slots are distinct.
      */
     coarseBands?: true;
+    /**
+     * The replacement colour table this animation declares (`new_palette`), where it declares one.
+     *
+     * What separates the colour variants of a shared body: the six colour dragons all draw `MDR1`'s art
+     * and differ only here. Carried as declared - the resref is already composed, magic golems included.
+     */
+    newPalette?: string;
     /** Present only where the id declares them - a monster or a named individual has none. */
     facets?: CharacterFacets;
 }
@@ -268,6 +272,8 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             ...(coarseBands(section, ini?.pathSmooth) ? { coarseBands: true as const } : {}),
             ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
             ...(stride === undefined ? {} : { bandStride: stride }),
+            // Only an install that ships INIs declares one; a classic archive's table carries no such column.
+            ...(ini?.newPalette === undefined ? {} : { newPalette: ini.newPalette }),
             ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),
         });
     }
