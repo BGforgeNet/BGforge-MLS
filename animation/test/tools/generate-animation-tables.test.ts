@@ -4,35 +4,45 @@
  * when the corpus is present - gated the same way the animation package's other real-install suites already
  * gate on `BGFORGE_IE_GAME`.
  *
- * A CLASSIC install ships no animation INIs at all and would report every row as drift: point
- * `BGFORGE_IE_GAME` at an Enhanced Edition install to run this.
+ * Gated on the install's FAMILY, not merely on it being an Enhanced Edition. A classic install ships no
+ * animation INIs and would report every row as drift; a BG:EE one ships INIs for the same ids under its own
+ * answers, so it reports drift on exactly the rows where the two games disagree - two of them, which read as
+ * a defect in the table rather than as the wrong install. Both were misreadings this gate handed out before
+ * it asked which game it was pointed at.
  */
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { openGame } from "@bgforge/binary";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
 
 const EE_GAME = process.env.BGFORGE_IE_GAME;
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
+/** The Enhanced Editions of the family `bg2.ts` is the table for - the only installs that can judge it. */
+const BG2_FAMILY = new Set(["bg2ee", "eet"]);
+const FLAVOUR = EE_GAME === undefined ? undefined : openGame(EE_GAME).identity.flavour;
 
-describe.skipIf(EE_GAME === undefined)("the vendored bg2 table against a real EE install", () => {
-    it("carries no drift from what the install declares", () => {
-        const result = spawnSync(
-            "pnpm",
-            [
-                "exec",
-                "tsx",
-                "animation/test/tools/generate-animation-tables.ts",
-                "--table",
-                "bg2",
-                "--ee",
-                EE_GAME!,
-                "--check",
-            ],
-            { cwd: REPO_ROOT, encoding: "utf8", timeout: SPAWN_TIMEOUT_MS },
-        );
+describe.skipIf(FLAVOUR === undefined || !BG2_FAMILY.has(FLAVOUR))(
+    "the vendored bg2 table against a real EE install of its own family",
+    () => {
+        it("carries no drift from what the install declares", () => {
+            const result = spawnSync(
+                "pnpm",
+                [
+                    "exec",
+                    "tsx",
+                    "animation/test/tools/generate-animation-tables.ts",
+                    "--table",
+                    "bg2",
+                    "--ee",
+                    EE_GAME!,
+                    "--check",
+                ],
+                { cwd: REPO_ROOT, encoding: "utf8", timeout: SPAWN_TIMEOUT_MS },
+            );
 
-        expect(result.error).toBeUndefined();
-        expect(result.status, result.stderr).toBe(0);
-    });
-});
+            expect(result.error).toBeUndefined();
+            expect(result.status, result.stderr).toBe(0);
+        });
+    },
+);

@@ -6,6 +6,17 @@
  * against a classic archive through the panel's own resolver, ARMOUR LEVEL BY ARMOUR LEVEL; the levels it
  * contradicts are covered by the two hand-authored blocks above.
  *
+ * The Enhanced Edition must be THIS family's. The two games declare the same ids differently - `0x7f3c` is
+ * `MASL` in one and `MASG` in the other, `0xe293` is `MGVE` against `MGHI` - so rows derived from the wrong
+ * one look like ordinary drift rather than like the wrong install. The gate in
+ * `test/tools/generate-animation-tables.test.ts` skips on any other flavour rather than judging the table.
+ *
+ * Where a reference implementation disagrees with a row here, the disagreement is recorded at the row. Two
+ * are worth knowing about in advance, because both look like defects: `0x7f3c` is a different creature in a
+ * classic install (`ANTISOLAR`) than in the Enhanced Editions (`DEVA_MONADIC`), and one reference table
+ * carries the Enhanced reading back to the classic game; and the ids one of them lists that this index does
+ * not are ids no install's own `ANIMATE.IDS` or `ANISND.IDS` names, which is why nothing lists them.
+ *
  * Regenerate with:
  *   pnpm exec tsx animation/test/tools/generate-animation-tables.ts --table bg2 --ee <dir> --classic <dir>
  */
@@ -323,7 +334,7 @@ const DERIVED: TableRows = [
     [0x7f39, { prefixes: ["MMST"], section: "monster" }],
     [0x7f3a, { prefixes: ["NIRO"], section: "monster" }],
     [0x7f3b, { prefixes: ["MSOG"], section: "monster" }],
-    [0x7f3c, { prefixes: ["MASL"], section: "monster" }],
+    [0x7f3c, { prefixes: ["MASG"], section: "monster" }],
     [0x7f3d, { prefixes: ["MMEL"], section: "monster" }],
     [0x7f3e, { prefixes: ["MFIG"], section: "monster" }],
     [0x7f3f, { prefixes: ["MFIG"], section: "monster" }],
@@ -498,7 +509,7 @@ const DERIVED: TableRows = [
     [0xe290, { prefixes: ["MDH2"], section: "monster_icewind" }],
     [0xe291, { prefixes: ["MBU2"], section: "monster_icewind" }],
     [0xe292, { prefixes: ["METN"], section: "monster_icewind" }],
-    [0xe293, { prefixes: ["MGVE"], section: "monster_icewind" }],
+    [0xe293, { prefixes: ["MGHI"], section: "monster_icewind" }],
     [0xe294, { prefixes: ["MBON"], section: "monster_icewind" }],
     [0xe300, { prefixes: ["MGHO"], section: "monster_icewind" }],
     [0xe310, { prefixes: ["MGH2"], section: "monster_icewind" }],

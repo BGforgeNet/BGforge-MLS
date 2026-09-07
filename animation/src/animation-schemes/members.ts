@@ -153,6 +153,11 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
                 parts: withEast(`${resref}${code}`),
             }));
         case "mixed":
+            // TODO: the id range above the tiled dragons numbers a THIRD digit after the quadrant -
+            // `<resref>G<group><quadrant><variant>` - and none of the candidates below generates it. Measured
+            // on a Baldur's Gate II Enhanced Edition install: `MDEM` (the only animation in the family that
+            // uses it) ships 52 files, of which the quadrant candidate reaches the 8 whose stance carries no
+            // variant digit. The other 44 are a naming family of their own, not a variant of these.
             return [
                 ...candidates("quadrant", resref),
                 ...candidates("pieces", resref),

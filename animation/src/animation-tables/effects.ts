@@ -36,10 +36,14 @@ export const EFFECT_ROWS: TableRows = [
     [0x0230, { prefixes: ["SPBLOOD"], section: "effect" }],
     [0x0240, { prefixes: ["SPBLOOD"], section: "effect" }],
     [0x0300, { prefixes: ["SPSMPUFF"], section: "effect" }],
+    // Kept though one reference implementation's classic table has no row for this id at all: every install
+    // checked names it in `ANIMATE.IDS` and ships `SPSMPUFF`, so the absence is that table's, not the game's.
     [0x0301, { prefixes: ["SPSMPUFF"], section: "effect" }],
     [0x0400, { prefixes: ["SKLH"], section: "effect" }],
     // Both this and the `SPGLYPHI` the Baldur's Gate II rows carry exist in every install checked; that
     // row comes from a game's own declaration, so it wins where it applies and this covers the rest.
+    // Both reference implementations name this one for every game, including Baldur's Gate II - and a
+    // classic install's own `ANISND.IDS` code is `GLPH`, so which name it drew is genuinely unsettled.
     [0x0410, { prefixes: ["GLPHWRDH"], section: "effect" }],
     [0x0500, { prefixes: ["STNKCLDD"], section: "effect" }],
     [0x0510, { prefixes: ["STNKCLDD"], section: "effect" }],
