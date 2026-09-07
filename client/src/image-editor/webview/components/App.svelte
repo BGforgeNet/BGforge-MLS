@@ -70,7 +70,14 @@
         idle?: boolean;
     } = $props();
 
-    let view = $state<AnimationView | null>(null);
+    /**
+     * The open document, as the host sent it. Raw, not deep: this is a wire payload that is only ever
+     * REPLACED - an init, a refresh, a palette swap - never written into, so per-field reactivity buys
+     * nothing and costs a proxy trap plus a signal read on every access to its 256-entry palette and its
+     * frame table. The pixel loop reads the palette per pixel, which turned those traps into the dominant
+     * cost of playback.
+     */
+    let view = $state.raw<AnimationView | null>(null);
     let errorMessage = $state<string | undefined>();
     /** The install's creatures, once asked for; the resref currently drawn in, if any. */
     let creatures = $state<CreatureOption[]>([]);
