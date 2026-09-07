@@ -23,8 +23,8 @@
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
-    import { tileSizePx } from "../render/anchor";
-    import { autoZoomLevel, fitZoomByMeasuring, TILE_BASE_PX, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
+    import { DEFAULT_TILE_BOX, tileBoxPx } from "../render/anchor";
+    import { autoZoomLevel, fitZoomByMeasuring, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -136,7 +136,7 @@
     let groupSeededView: AnimationView | undefined;
     // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
-    const tileBase = $derived(view ? tileSizePx(view) : TILE_BASE_PX);
+    const tileBox = $derived(view ? tileBoxPx(view) : DEFAULT_TILE_BOX);
 
     // Stage layout (rose vs grid). A fresh open shows the default the file's structure implies; the
     // selector writes `layoutChoice`, which then wins for the webview's lifetime.
@@ -397,7 +397,7 @@
                         tiles={roseTiles}
                         frame={playback.frame}
                         {zoom}
-                        {tileBase}
+                        {tileBox}
                         {showOffsetMarker}
                     />
                 {:else}
@@ -407,7 +407,7 @@
                         tiles={gridTiles}
                         frame={playback.frame}
                         {zoom}
-                        {tileBase}
+                        {tileBox}
                         {showOffsetMarker}
                         columns={cycleColumns}
                     />

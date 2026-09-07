@@ -2,6 +2,7 @@
     import type { Facing } from "@bgforge/image";
     import type { AnimationView, FrameView, SequenceView } from "../messages";
     import { createFrameFallback } from "../render/frame-loading";
+    import type { TileBox } from "../render/anchor";
     import FrameCanvas from "./FrameCanvas.svelte";
 
     // The one frame-resolution path for every layout (rose, grid): resolves the shared playback
@@ -13,7 +14,7 @@
         facing,
         frame,
         zoom,
-        tileBase,
+        tileBox,
         showOffsetMarker,
     }: {
         view: AnimationView;
@@ -27,7 +28,7 @@
         facing?: Facing;
         frame: number;
         zoom: number;
-        tileBase: number;
+        tileBox: TileBox;
         showOffsetMarker: boolean;
     } = $props();
 
@@ -56,7 +57,7 @@
         sourceFormat={view.sourceFormat}
         dirOffsetX={seq.dirOffsetX}
         dirOffsetY={seq.dirOffsetY}
-        {tileBase}
+        {tileBox}
         {showOffsetMarker}
         ariaLabel={shownFacing === "none" ? "Animation frame" : `Animation frame facing ${shownFacing}`}
     />

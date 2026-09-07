@@ -2,7 +2,7 @@
     import type { Rgba, SourceFormat } from "@bgforge/image";
     import type { FrameView } from "../messages";
     import { frameToRgba, paletteLut, rgbaFrameToRgba } from "../render/indexed-to-rgba";
-    import { frameTopLeft, referenceMarkerPercent } from "../render/anchor";
+    import { frameTopLeft, referenceMarkerPercent, type TileBox } from "../render/anchor";
 
     // The per-tile backdrop (.frame-tile-bg, fed by the stage's --tile-bg variable) must stay UNDER
     // every sprite: anchor-shifted canvases overhang their 96px box, so backdrops and canvases carry
@@ -19,7 +19,7 @@
         sourceFormat,
         dirOffsetX,
         dirOffsetY,
-        tileBase,
+        tileBox,
         showOffsetMarker = false,
         ariaLabel = "Animation frame",
     }: {
@@ -35,7 +35,7 @@
         sourceFormat: SourceFormat;
         dirOffsetX: number;
         dirOffsetY: number;
-        tileBase: number; // unzoomed tile footprint (tileSizePx of the whole view, uniform per animation)
+        tileBox: TileBox; // unzoomed tile footprint and reference point, uniform across the animation
         showOffsetMarker?: boolean;
         ariaLabel?: string;
     } = $props();
@@ -53,13 +53,13 @@
                 dirOffsetX,
                 dirOffsetY,
             },
-            tileBase,
+            tileBox,
         ),
     );
 
     // The offset marker sits on the sprite's actual anchor - the tile reference point the sprite is
     // positioned by (BAM: tile centre; FRM: the feet line, which depends on the frame height).
-    const markerPos = $derived(referenceMarkerPercent(sourceFormat, frame.height, tileBase));
+    const markerPos = $derived(referenceMarkerPercent(sourceFormat, frame.height, tileBox));
 
     // Resolved per PALETTE, never per frame: the draw below runs on every playback step, and folding
     // the palette into it made the per-pixel lookup the whole cost of playing an animation.
@@ -103,7 +103,7 @@
 
 </script>
 
-<div class="frame-tile" style:width="{tileBase * zoom}px" style:height="{tileBase * zoom}px">
+<div class="frame-tile" style:width="{tileBox.w * zoom}px" style:height="{tileBox.h * zoom}px">
     <div class="frame-tile-bg" aria-hidden="true"></div>
     <!-- The element carries the ZOOMED size; its backing store holds the frame at native resolution
          (see the effect above), so the two must be set together or the sprite draws at the wrong scale. -->

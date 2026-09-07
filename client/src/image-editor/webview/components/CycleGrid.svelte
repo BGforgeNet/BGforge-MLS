@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { AnimationView } from "../messages";
     import type { GridTile } from "../render/compass-layout";
+    import type { TileBox } from "../render/anchor";
     import SequenceTile from "./SequenceTile.svelte";
 
     // Presentational: the caller (App) owns the layout decision and tile derivation - the grid can hold
@@ -12,7 +13,7 @@
         tiles,
         frame,
         zoom,
-        tileBase,
+        tileBox,
         showOffsetMarker = false,
         columns = 0,
     }: {
@@ -21,7 +22,7 @@
         tiles: GridTile[];
         frame: number;
         zoom: number;
-        tileBase: number;
+        tileBox: TileBox;
         showOffsetMarker?: boolean;
         columns?: number; // >0 pins the grid to that many columns (rows=sequences); 0 = auto-wrap
     } = $props();
@@ -34,7 +35,7 @@
 >
     {#each tiles as tile (tile.index)}
         <div class="cycle-cell">
-            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBase} {showOffsetMarker} />
+            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBox} {showOffsetMarker} />
             {#if tiles.length > 1}
                 <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
                      there is nothing to distinguish it from. -->

@@ -25,7 +25,10 @@ Cheapest first:
 1. `scripts/test-scoped.sh [paths...]` while iterating - maps changed paths (default: uncommitted changes) to the
    affected suites. `--dry-run` prints the plan.
 2. `pnpm test` when a change outgrows the scoped suites.
-3. `pnpm build:all` + `pnpm test:all` before submitting, and for anything spanning subsystems or touching shared
+3. `pnpm test:cov <pkg>...` on the packages you touched, once code has moved between files - it is the cheap way
+   to find a coverage breach, which otherwise surfaces only at the end of the full gate. See
+   `scripts/test-coverage.sh` for why it is a tier of its own.
+4. `pnpm build:all` + `pnpm test:all` before submitting, and for anything spanning subsystems or touching shared
    build infra, grammars, transpilers, or the server.
 
 `pnpm test` is not a close-out gate however green: the coverage thresholds live only in `test:all` and CI, which is
