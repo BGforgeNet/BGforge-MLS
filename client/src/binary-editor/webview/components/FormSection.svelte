@@ -19,7 +19,8 @@
           // rendered by a sibling ChildEntryList mini-list instead, so showing them here would duplicate.
           hideGroupPrefix?: string } = $props();
 
-    let rows = $state<Row[]>([]);
+    // Raw: fetched wholesale and replaced wholesale; an edit goes to the host, not into a row.
+    let rows = $state.raw<Row[]>([]);
     $effect(() => {
         void version; // dependency: a bump re-fetches after the cache is cleared
         let cancelled = false;

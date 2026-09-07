@@ -13,7 +13,8 @@
     const { row, onedit }: { row: Row; onedit: (value: string) => void } = $props();
     const fetchList = useResourceList();
 
-    let resrefs = $state<readonly string[]>([]);
+    // Raw: the install's resref list, replaced wholesale - it runs to five figures.
+    let resrefs = $state.raw<readonly string[]>([]);
     // Loaded on first open rather than on mount: a record carries many resref fields and their lists run to
     // thousands of entries, so fetching every one up front would cost far more than the few a user opens.
     let requested = false;

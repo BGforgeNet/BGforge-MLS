@@ -18,7 +18,8 @@
         onedit: (id: string, v: number | string) => void;
     } = $props();
 
-    let view = $state<SpellbookView | undefined>();
+    // Raw: a whole joined view fetched per version and replaced wholesale.
+    let view = $state.raw<SpellbookView | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned via the type-subtab onselect
     let activeType = $state<number | undefined>();
 

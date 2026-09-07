@@ -10,8 +10,13 @@
 
     const { bridge }: { bridge: Bridge } = $props();
 
+    // Deliberately DEEP, unlike the other host payloads in this editor's webviews: the changeSet branch
+    // below patches changed rows into `open.layout.layout.fields` in place, and it is that per-field
+    // reactivity which re-renders the layout. `$state.raw` here leaves an edited field showing its old
+    // value until something else replaces the document.
     let open = $state<OpenResult | undefined>();
-    let diagnostics = $state<Diagnostic[]>([]);
+    // Raw: replaced wholesale on every init and changeSet, never written into.
+    let diagnostics = $state.raw<Diagnostic[]>([]);
     let version = $state(0);
     // If the host never posts "init" (a dropped/failed open, a stalled worker), surface it rather than
     // sit on "Loading..." forever. Timer mechanics shared with the dialog editor's App.svelte via

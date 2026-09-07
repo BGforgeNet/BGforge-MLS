@@ -56,7 +56,8 @@
     // Full row set fetched on demand when a filter query is active. Client-side full-fetch filtering is
     // simple and correct for the entry counts in practice (effects/abilities are small; even thousands of
     // MAP objects are lightweight rows). A core-side filter is deferred as not needed at current scale.
-    let allRows = $state<Row[]>([]);
+    // Raw: a fetched window of rows, replaced wholesale; nothing writes into a row.
+    let allRows = $state.raw<Row[]>([]);
 
     const activeQuery = $derived(filterQuery.trim().toLowerCase());
     const filteredRows = $derived(activeQuery ? filterRows(allRows, filterQuery) : undefined);

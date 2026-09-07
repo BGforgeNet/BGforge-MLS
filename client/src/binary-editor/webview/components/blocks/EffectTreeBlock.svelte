@@ -32,7 +32,8 @@
         labels?: Record<string, string>;
     } = $props();
 
-    let view = $state<EffectTreeView | undefined>();
+    // Raw: a whole joined view fetched per version and replaced wholesale.
+    let view = $state.raw<EffectTreeView | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned by row clicks / host selection
     let selected = $state<{ nodeId: NodeId; kind: "ability" | "effect" } | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned by chevron clicks

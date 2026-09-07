@@ -51,8 +51,14 @@
     );
 
     let title = $state("resources");
-    let items: GalleryTile[] = $state([]);
-    let sets: SetTile[] = $state([]);
+    /**
+     * The host's resource list and its animation sets. Raw, not deep: both are wire payloads replaced
+     * wholesale by `init`, and an install's list runs to five figures - deep state would put a proxy trap
+     * and a signal read behind every field of every tile, which the filter chain below re-reads per
+     * keystroke.
+     */
+    let items: GalleryTile[] = $state.raw([]);
+    let sets: SetTile[] = $state.raw([]);
     let note: string | undefined = $state();
     let query = $state("");
     let tag = $state("");

@@ -73,7 +73,8 @@
     // The gradient picker. The table is the install's, not the record's, so it is fetched once per panel and
     // only when a picker is first opened - a record with no colour field never asks for it.
     const fetchGradients = useGradientTable();
-    let gradients = $state<readonly (readonly string[])[]>([]);
+    // Raw: the gradient table, fetched once and replaced wholesale.
+    let gradients = $state.raw<readonly (readonly string[])[]>([]);
     let pickerOpen = $state(false);
     function togglePicker(): void {
         if (pickerOpen) {

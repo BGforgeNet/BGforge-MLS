@@ -31,7 +31,8 @@
         byNode: Map<string, Diagnostic[]>;
     } = $props();
 
-    let rows = $state<Row[]>([]);
+    // Raw: fetched wholesale and replaced wholesale; an edit goes to the host, not into a row.
+    let rows = $state.raw<Row[]>([]);
     $effect(() => {
         void version; // a bump re-fetches after the cache is cleared
         let cancelled = false;

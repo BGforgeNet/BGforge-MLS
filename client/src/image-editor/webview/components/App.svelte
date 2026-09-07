@@ -24,7 +24,7 @@
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
     import { tileSizePx } from "../render/anchor";
-    import { autoZoomLevel, TILE_BASE_PX } from "../render/tile";
+    import { autoZoomLevel, fitZoomByMeasuring, TILE_BASE_PX, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -79,12 +79,19 @@
      */
     let view = $state.raw<AnimationView | null>(null);
     let errorMessage = $state<string | undefined>();
-    /** The install's creatures, once asked for; the resref currently drawn in, if any. */
-    let creatures = $state<CreatureOption[]>([]);
+    /**
+     * The install's creatures, once asked for; the resref currently drawn in, if any.
+     *
+     * Raw: a host payload replaced wholesale, and an install ships thousands of them.
+     */
+    let creatures = $state.raw<CreatureOption[]>([]);
     let activeCreature = $state<string | undefined>();
-    /** The conversion mode: present once the reader opens it, and what the host answered for the target. */
-    let conversionSetup = $state<ConversionSetupView | undefined>();
-    let conversionPlan = $state<ConversionPlanView | undefined>();
+    /**
+     * The conversion mode: present once the reader opens it, and what the host answered for the target.
+     * Raw for the same reason as the view above - host payloads, replaced, never written into.
+     */
+    let conversionSetup = $state.raw<ConversionSetupView | undefined>();
+    let conversionPlan = $state.raw<ConversionPlanView | undefined>();
     // If the host never posts "init" (a dropped/failed open), surface it rather than sit on
     // "Loading..." forever. Timer mechanics shared with the binary/dialog editors' App.svelte
     // via installInitTimeout (webview-utils.ts).
@@ -102,7 +109,12 @@
      */
     let requestedFrames = new Set<number>();
 
-    let playback = $state<PlaybackState | null>(null);
+    /**
+     * The transport's state. Raw: every transition returns a NEW state (render/playback.ts), so nothing
+     * writes into it - and the frame index is read once per tile per step, where a proxy trap is a cost
+     * paid at the frame rate.
+     */
+    let playback = $state.raw<PlaybackState | null>(null);
     // eslint-disable-next-line prefer-const -- reassigned via onZoomChange in the ViewControls markup
     let zoom = $state(1);
     // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
@@ -298,11 +310,10 @@
         return () => cancelAnimationFrame(raf);
     });
 
-    // Auto-zoom on open: size for the largest FRAME (sprite legibility), bounded so the whole composite
-    // layout still fits the stage - see autoZoomLevel in render/tile.ts. Runs once per opened view, and
-    // only while zoom is still the default 1 - a restored or user-chosen zoom is left alone. Reads only
+    // Auto-zoom on open: the whole composite layout fits the stage, sized for the largest FRAME where
+    // there is room to spare - see autoZoomLevel in render/tile.ts. Runs once per opened view, and only
+    // while zoom is still the default 1 - a restored or user-chosen zoom is left alone. Reads only
     // `view`, never `playback`, so a per-frame playback write can't re-trigger it.
-    const AUTO_ZOOM_CAP = 4; // top zoom preset - see ViewControls ZOOM_MAX
     let autoZoomedView: AnimationView | undefined;
     $effect(() => {
         const v = view;
@@ -321,17 +332,33 @@
         if (!(content instanceof HTMLElement) || availW <= 0 || availH <= 0) return;
         autoZoomedView = v;
         if (zoom !== 1) return; // a persisted or user-chosen zoom wins
-        const box = content.getBoundingClientRect(); // measured at zoom 1; both dims scale with zoom
-        const z = autoZoomLevel({
+        const box = content.getBoundingClientRect(); // measured at zoom 1
+        const start = autoZoomLevel({
             maxFrameW: Math.max(0, ...v.frames.map((f) => f.width)),
             maxFrameH: Math.max(0, ...v.frames.map((f) => f.height)),
             contentW: box.width,
             contentH: box.height,
             availW,
             availH,
-            cap: AUTO_ZOOM_CAP,
+            cap: ZOOM_MAX,
         });
-        if (z !== 1) zoom = z;
+        // Then shrink to fit by measuring, because a wrapping grid's footprint is not linear in zoom
+        // (fitZoomByMeasuring). Both callbacks go inert once the view has been replaced, so a search
+        // still unwinding cannot write a zoom chosen for a document that has left the stage.
+        await fitZoomByMeasuring(
+            start,
+            ZOOM_MIN,
+            async (next) => {
+                if (view !== v) return;
+                zoom = next;
+                await svelteTick();
+            },
+            () => {
+                if (view !== v) return true;
+                const now = content.getBoundingClientRect();
+                return now.width <= availW && now.height <= availH;
+            },
+        );
     }
 </script>
 

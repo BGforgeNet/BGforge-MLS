@@ -78,7 +78,11 @@ await page.screenshot({ path: shotPath("shot-frm-green.png"), fullPage: true });
 
 // Zoom-redraw regression: the player is paused (the default playback state - no autoplay was started),
 // so nothing else drives a redraw. Bump the zoom via the 400% preset button and confirm the tile
-// canvas resized AND repainted.
+// grew on screen AND repainted.
+//
+// The RENDERED size is the assertion, not the backing store: the backing store holds the frame at its
+// native resolution and CSS scales the element (FrameCanvas.svelte), so a canvas whose `width` tracked
+// the zoom would mean the per-step conversion had gone back to working at zoomed size.
 const zoomButton = page.getByRole("button", { name: "400%", exact: true });
 await zoomButton.click();
 check("zoom: 400% preset activates", (await zoomButton.getAttribute("aria-pressed")) === "true", "aria-pressed");
@@ -86,7 +90,7 @@ await page
     .waitForFunction(
         (expected) => {
             const canvas = document.querySelector<HTMLCanvasElement>(".compass-rose canvas");
-            return !!canvas && canvas.width === expected;
+            return !!canvas && Math.round(canvas.getBoundingClientRect().width) === expected;
         },
         TILE_SIZE * 4,
         { timeout: 3000 },
@@ -95,9 +99,12 @@ await page
 
 const zoomed = await page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>(".compass-rose canvas");
-    if (!canvas) return { width: 0, height: 0, hasOpaquePixel: false, distinctColors: 0 };
+    const blank = { width: 0, height: 0, backing: 0, hasOpaquePixel: false, distinctColors: 0 };
+    if (!canvas) return blank;
+    const box = canvas.getBoundingClientRect();
+    const size = { width: Math.round(box.width), height: Math.round(box.height), backing: canvas.width };
     const ctx = canvas.getContext("2d");
-    if (!ctx) return { width: canvas.width, height: canvas.height, hasOpaquePixel: false, distinctColors: 0 };
+    if (!ctx) return { ...size, hasOpaquePixel: false, distinctColors: 0 };
     const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
     let hasOpaquePixel = false;
     const colors = new Set<string>();
@@ -107,12 +114,17 @@ const zoomed = await page.evaluate(() => {
             colors.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
         }
     }
-    return { width: canvas.width, height: canvas.height, hasOpaquePixel, distinctColors: colors.size };
+    return { ...size, hasOpaquePixel, distinctColors: colors.size };
 });
 check(
-    "zoom: tile canvas resizes to the new zoom level",
+    "zoom: the tile grows on screen to the new zoom level",
     zoomed.width === TILE_SIZE * 4 && zoomed.height === TILE_SIZE * 4,
     `${zoomed.width}x${zoomed.height}`,
+);
+check(
+    "zoom: the backing store stays at the frame's native resolution",
+    zoomed.backing === TILE_SIZE,
+    `backing=${zoomed.backing}`,
 );
 check(
     "zoom: tile canvas redraws while paused, not left blank (zoom-while-paused regression)",

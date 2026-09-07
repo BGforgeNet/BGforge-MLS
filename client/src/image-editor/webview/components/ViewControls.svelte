@@ -1,17 +1,15 @@
 <script lang="ts">
     import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Background } from "../render/indexed-to-rgba";
+    // Continuous fractional zoom. The ladder lives beside the auto-zoom that has to respect it, so the
+    // control and the automatic choice cannot disagree about the range - see render/tile.ts.
+    import { ZOOM_MAX, ZOOM_MIN, ZOOM_PRESETS, ZOOM_STEP } from "../render/tile";
 
     const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
         { value: "transparent", label: "Transparent" },
         { value: "checkered", label: "Checkered" },
         { value: "green", label: "Green" },
     ];
-    // Continuous fractional zoom, 50% - 400%. Step 0.05 = 5% increments.
-    const ZOOM_MIN = 0.5;
-    const ZOOM_MAX = 4;
-    const ZOOM_STEP = 0.05;
-    const ZOOM_PRESETS = [0.5, 1, 2, 4]; // 50% / 100% / 200% / 400% - one-click common levels
 
     function isPreset(preset: number): boolean {
         return Math.abs(zoom - preset) < 0.001;
