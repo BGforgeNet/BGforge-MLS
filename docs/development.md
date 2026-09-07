@@ -31,6 +31,12 @@ Cheapest first:
 `pnpm test` is not a close-out gate however green: the coverage thresholds live only in `test:all` and CI, which is
 why its unit phase prints `no coverage` in its own name. A change can pass `pnpm test` and still commit a breach.
 
+`pnpm test:harness` is a tier of its own, outside `test:all`: it mounts the real webview bundle in headless
+Chromium, so it is the only thing that sees a render, mount, CSP or layout regression - and the only thing that
+needs a browser (`pnpm exec playwright install chromium`). It gates every push and PR in the `Harness` workflow,
+which is why `test:all` leaves it out; run it yourself after a webview change rather than finding out on push. The
+harness READMEs cover the individual drivers.
+
 Every vitest config and suite runs from any working directory; includes and fixture paths are anchored to their own
 file. Keep it that way.
 

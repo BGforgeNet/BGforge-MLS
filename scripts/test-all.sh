@@ -81,6 +81,10 @@ parallel \
     "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && (cd server && pnpm exec vitest run --config vitest.integration.config.mts)" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars"
 
+# The webview drivers (`pnpm test:harness`) are deliberately NOT here: they gate every push and PR in
+# their own workflow, where the ~150MB Chromium download and the browser runs cost no wall-clock to any
+# other check. Run them yourself after a webview change - see AGENTS.md.
+
 # transpile-external is the one suite that WRITES to external/: it transpiles in place and verifies the
 # result by `git diff` against the committed output, restoring the generated .ssl afterwards. That
 # method needs a clean tree and no concurrent reader, so it runs alone after the block rather than in it.

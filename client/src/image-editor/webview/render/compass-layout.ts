@@ -180,6 +180,16 @@ export interface DirectionBlocks {
      * cycles are facings", and a declaration says so outright.
      */
     declared?: true;
+    /**
+     * The interpreter's own strong fingerprint for the scheme it read (`ie9`: every one of a block's nine
+     * cycles carries frames). Absent where it did not fire - which is not a denial, since it is
+     * deliberately conservative.
+     *
+     * Carried for the same reason as `declared`: it is a positive statement that these cycles are facings,
+     * so one block of them is a rose. Boolean rather than the `true`-only shape `declared` uses, so the
+     * interpreter's own answer is this type without a translation step.
+     */
+    detected?: boolean;
 }
 
 /**
@@ -203,16 +213,21 @@ export function directionBlocks(
 /**
  * Which layout a fresh open shows.
  *
- * Rose whenever the file's structure says it holds directions: tagged compass facings (FRM), or an IE
- * interpretation that found MORE THAN ONE direction block. The block count is the discriminator rather
- * than the interpretation's own `detected` fingerprint, because the two answer different questions:
- * `detected` decides what the file is DECLARED to be, is stamped at parse and read by the save path, and
- * is conservative on purpose - a file it rejects can still plainly be direction blocks, and both shipped
- * installs carry such files. Being wrong about the declaration writes bad blocks; being wrong about the
- * default costs one click, so the default reads the weaker structural signal. Block count separates the
- * corpus cleanly: no single-block animation in either install is a character or is detected. None of that
- * applies to a reading the animation's own type DECLARED: there the cycles are facings by declaration, and
- * one block of them is a rose - which is the whole of a wide-band animation's walk.
+ * Rose on any POSITIVE statement that the cycles are facings, and grid otherwise. Three say it: tagged
+ * compass facings (FRM); the animation's own declared band width, where the cycles are facings by
+ * declaration and one block of them is the whole of a wide-band animation's walk; and the interpreter's
+ * `detected` fingerprint.
+ *
+ * Failing all three, MORE THAN ONE block is the fallback - a structural proxy for the same claim, and a
+ * weaker one, which is why it is last. `detected` is conservative by design (it also decides what the
+ * file is DECLARED to be, where being wrong writes bad blocks), so a file it rejects can still plainly be
+ * direction blocks, and both shipped installs carry such files - hence the proxy rather than only the
+ * fingerprint. Being wrong about the DEFAULT costs one click either way.
+ *
+ * The block count alone used to decide it, on the reading that no single-block animation in either
+ * install is detected. That is false: nine of them are, all the ToB dragons, whose single nine-facing
+ * wheel opened as a flat row of cycles. Adding `detected` moves exactly those nine and nothing else -
+ * measured across both installs' declared sets.
  */
 export function defaultLayoutMode(
     facingLayout: CompassLayout | GridLayout | null,
@@ -220,7 +235,8 @@ export function defaultLayoutMode(
 ): LayoutMode {
     if (facingLayout?.mode === "compass") return "rose";
     if (ieDirections === undefined) return "grid";
-    return ieDirections.declared === true || ieDirections.groups.length > 1 ? "rose" : "grid";
+    const statesFacings = ieDirections.declared === true || ieDirections.detected === true;
+    return statesFacings || ieDirections.groups.length > 1 ? "rose" : "grid";
 }
 
 /**

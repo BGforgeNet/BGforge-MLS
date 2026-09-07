@@ -62,4 +62,4 @@ jobs:
         run: ./scripts/reset-external.sh
 
       - name: Run render/drive harnesses
-        run: ./scripts/test-harness.sh
+        run: pnpm test:harness

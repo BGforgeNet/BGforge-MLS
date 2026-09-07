@@ -54,6 +54,7 @@
         "test:all": "./scripts/test-all.sh",
         "test:cov": "./scripts/test-coverage.sh",
         "test:grammars": "./scripts/test-grammars.sh",
+        "test:harness": "./scripts/test-harness.sh",
         "test:integration": "cd server && pnpm test:integration",
         "test:external": "./scripts/reset-external.sh && ./scripts/test-external.sh",
         "test:transpile-external": "./scripts/test-transpile-external.sh",

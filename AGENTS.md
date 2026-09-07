@@ -49,6 +49,9 @@ Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run`
 
 **`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
 **Run `pnpm test:cov` on the packages you touched before the full gate** - see `scripts/test-coverage.sh` for why.
+**After a webview change, run `pnpm test:harness`** - it is deliberately outside `test:all` (its own CI workflow
+gates it), and it is the only tier that mounts the real bundle in a browser, so a render, mount, CSP or layout
+regression passes every other suite. Needs `pnpm exec playwright install chromium`.
 Full tier guidance, and the rule that every vitest config runs from any cwd: `docs/development.md`.
 
 ## Testing against real external files
