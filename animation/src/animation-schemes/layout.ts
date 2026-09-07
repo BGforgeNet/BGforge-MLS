@@ -69,7 +69,17 @@ const FIXED: Readonly<Record<string, Layout>> = {
     monster_large16: "mixed",
 };
 
-/** The layout an animation uses, or undefined for a section nothing here covers. */
+/**
+ * The layout an animation uses, or undefined for a section nothing here covers.
+ *
+ * The install's own `quadrants` count (9 for a dragon's 3x3, 4 for the demon's 2x2) is NOT read here,
+ * though it looks like it should settle the `mixed` sections outright and two other tools encode the same
+ * difference as separate animation types. Measured on BG:EE: making the count exclusive drops real files
+ * on 70 of the 75 prefixes it decides - a wyvern declaring four ships `MWYVG1` AND `MWYVG11`, and both
+ * are full-size sixteen-cycle animations rather than a picture and its quarter, so which of them the set
+ * actually draws is unsettled. Until that is settled the archive stays the authority, and the count is
+ * carried on the set (`AnimationSet.quadrants`) for a reader that wants it.
+ */
 export function layoutOf(section: string | undefined, splitBams?: boolean): Layout | undefined {
     if (section === undefined) return undefined;
     if (section === "monster") return splitBams === true ? "quadrant" : "cycles";

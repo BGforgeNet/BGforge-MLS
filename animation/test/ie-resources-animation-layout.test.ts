@@ -35,6 +35,14 @@ describe("layoutOf", () => {
         expect(layoutOf("monster_large16", undefined)).toBe("mixed");
     });
 
+    /**
+     * The install's quadrant count looks like it should settle these outright - and deliberately does not.
+     * See `layoutOf`: making it exclusive drops real files on 70 of the 75 BG:EE prefixes it would decide.
+     */
+    it("leaves a mixed section to the archive even where the install declares a quadrant count", () => {
+        expect(layoutOf("multi_new", true)).toBe("mixed");
+    });
+
     it("gives no layout to a section nothing here covers", () => {
         expect(layoutOf("monster_wyvern", undefined)).toBeUndefined();
         expect(layoutOf(undefined, undefined)).toBeUndefined();
