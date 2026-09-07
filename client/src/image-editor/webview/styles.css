@@ -142,6 +142,19 @@ select {
 .zoom-presets {
     justify-content: flex-start;
 }
+/* The zoom ladder is ONE row of equal columns, however many levels it holds: as a wrapping flex row the
+   last level dropped onto a line of its own, which reads as a stray control rather than as part of the
+   set. Auto-flow columns take the count from the content, so the ladder can gain a level without a
+   second statement of how many there are. The labels are four characters at most, so they fit a track
+   that a worded button would not. */
+.zoom-presets {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+}
+.zoom-presets .bg-option {
+    padding-inline: 0.25rem;
+}
 /* Creature colours: the picker takes the row's full width under its label rather than sharing it, so
    "<name> (<resref>)" fits - an 8-character resref alone identifies nothing, and a truncated one defeats
    the list's purpose. The combobox box itself is inline-block, so it needs the fill spelled out. */
