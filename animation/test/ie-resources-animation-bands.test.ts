@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "@bgforge/image";
-import { declaredStride, type FileBands, schemeForStride, stancesOfMembers } from "../src/animation-schemes/bands";
+import {
+    bandsOverlaying,
+    declaredStride,
+    type FileBands,
+    schemeForStride,
+    stancesOfMembers,
+} from "../src/animation-schemes/bands";
 import { decodeActionCode } from "../src/animation-schemes/actions";
 import { type SchemeMember } from "../src/animation-schemes/members";
 
@@ -59,6 +65,46 @@ describe("schemeForStride", () => {
 
     it("leaves a wider band without a scheme, since the block table names none", () => {
         expect(schemeForStride(16)).toBeUndefined();
+    });
+});
+
+describe("bandsOverlaying", () => {
+    /**
+     * Consecutive blocks, each addressing its own run of cycles - which `bands` above does not do (its
+     * blocks all index the same slots), and which is the whole thing truncation reads.
+     */
+    function consecutive(count: number, slots = 8): FileBands {
+        return {
+            ...bands(count, slots),
+            bands: Array.from({ length: count }, (_block, block) =>
+                Array.from({ length: slots }, (_slot, i) => ({ seqIndex: block * slots + i, facing: "S" as Facing })),
+            ),
+        };
+    }
+
+    it("keeps every block an overlay of the same length reaches", () => {
+        expect(bandsOverlaying(consecutive(4), 32)).toHaveLength(4);
+    });
+
+    /**
+     * A shorter overlay carries a PREFIX of its base's blocks - the same rule the block tables take for a
+     * shorter file of a family. Volo's stores five of its base's six, so the sixth addresses cycles it
+     * does not have and is dropped rather than pointing past the end of the file.
+     */
+    it("drops the blocks an overlay's own cycles do not reach", () => {
+        expect(bandsOverlaying(consecutive(6), 40)).toHaveLength(5);
+    });
+
+    it("keeps the blocks' own slot indices, so each still addresses its cycles in the file", () => {
+        expect(
+            bandsOverlaying(consecutive(6), 40)
+                .at(-1)
+                ?.map((slot) => slot.seqIndex),
+        ).toEqual([32, 33, 34, 35, 36, 37, 38, 39]);
+    });
+
+    it("keeps no block where the overlay reaches none of them", () => {
+        expect(bandsOverlaying(consecutive(4), 0)).toEqual([]);
     });
 });
 
@@ -203,6 +249,36 @@ describe("stancesOfMembers", () => {
         const stances = stancesOfMembers([overlay], () => bands(2, 10, undefined));
 
         expect(stances.map((s) => s.label)).toEqual(["G2 (second piece) - group 1", "G2 (second piece) - group 2"]);
+    });
+
+    /**
+     * An overlay is drawn over its base facing for facing, so its band geometry IS the base's - and its
+     * own files cannot always supply it: the burrowing family's overlay is one still per cycle, which
+     * gives the block reader nothing to cut on.
+     */
+    it("bands a member that overlays another from the member it overlays", () => {
+        const base = member("G1", "MAKHG1");
+        const overlay = { ...member("G1", "MAKHDG1"), layer: "second piece", overlays: "MAKHG1" };
+        const seen: (FileBands | undefined)[] = [];
+
+        stancesOfMembers([base, overlay], (row, from) => {
+            seen.push(from);
+            return bands(row.resref === "MAKHG1" ? 4 : 3, 8);
+        });
+
+        expect(seen[0]).toBeUndefined();
+        expect(seen[1]?.bands).toHaveLength(4);
+    });
+
+    it("bands a member that overlays nothing from its own files", () => {
+        const seen: (FileBands | undefined)[] = [];
+
+        stancesOfMembers([member("G1", "MOGHG1")], (_row, from) => {
+            seen.push(from);
+            return bands(2);
+        });
+
+        expect(seen).toEqual([undefined]);
     });
 
     it("drops a member the archive cannot band rather than offering a dead row", () => {

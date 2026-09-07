@@ -342,12 +342,11 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         ]);
         // Every one draws all eight facings, which takes the eastern twin: the base file stores five.
         //
-        // The base run only. The second piece is a still per facing - every one of its cycles is one frame
-        // long - so nothing in those files varies for the block reader to cut on, and their bands come back
-        // at widths the base's do not share. What they SHOULD be is the base's, since the overlay is drawn
-        // over it facing for facing; nothing yet relates a layer member to the member it overlays.
-        expect(stances.slice(0, blocks.length).map((stance) => stance.slots.length)).toEqual(
-            Array.from({ length: blocks.length }, () => 8),
+        // The second piece included, and it is the case that needs saying: it is a still per facing, so
+        // nothing in its own files varies for the block reader to cut on. Its geometry comes from the
+        // member it overlays, which is what an overlay is drawn against.
+        expect(stances.map((stance) => stance.slots.length)).toEqual(
+            Array.from({ length: blocks.length * 2 }, () => 8),
         );
     });
 

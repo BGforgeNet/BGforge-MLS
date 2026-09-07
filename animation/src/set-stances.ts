@@ -11,7 +11,13 @@ import { type PartTables, mergeParts } from "./animation-schemes/part-tables";
 import { type AnimationSet, armourLevels } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
-import { type FileBands, type SetStance, schemeForStride, stancesOfMembers } from "./animation-schemes/bands";
+import {
+    type FileBands,
+    type SetStance,
+    bandsOverlaying,
+    schemeForStride,
+    stancesOfMembers,
+} from "./animation-schemes/bands";
 import { layerLabel } from "./animation-schemes/layers";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-labels";
@@ -52,11 +58,22 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
     const layout = set.layout;
     if (layout === undefined) return [];
     const label = layerLabel(set.section);
+    const base = schemeMembers(layout, set.prefixByArmour.get(armour), exists);
+    // Which base member each overlay is drawn over, keyed on the cycle code both were built from rather
+    // than on the label - the layer's label has the family's name appended, and pairing on it would be
+    // reading a relation back out of display text.
+    const baseByCode = new Map(base.map((member) => [member.action.code, member.resref]));
     return [
-        ...schemeMembers(layout, set.prefixByArmour.get(armour), exists),
+        ...base,
         // After the base members, not interleaved: a layer numbers its cycles exactly as the base does, so
-        // a reader scanning the picker sees each family's own run rather than alternating pairs.
-        ...(set.layerPrefixes ?? []).flatMap((prefix) => schemeMembers(layout, prefix, exists, label)),
+        // a reader scanning the picker sees each family's own run rather than alternating pairs. Order is
+        // also what lets the band reader have the base's answer in hand before it reaches the overlay.
+        ...(set.layerPrefixes ?? []).flatMap((prefix) =>
+            schemeMembers(layout, prefix, exists, label).map((member) => {
+                const over = baseByCode.get(member.action.code);
+                return over === undefined ? member : { ...member, overlays: over };
+            }),
+        ),
     ];
 }
 
@@ -70,6 +87,7 @@ function bandsOf(
     parts: readonly (Uint8Array | undefined)[],
     stride: number | undefined,
     coarse: boolean,
+    overlaying: FileBands | undefined,
 ): FileBands | undefined {
     const tables: PartTables[] = [];
     for (const bytes of parts) {
@@ -85,6 +103,12 @@ function bandsOf(
     /** A band draws where any of its cycles holds art - the rest are the skeleton a packed file carries. */
     const drawn = (bands: readonly (readonly IeDirectionSlot[])[]): boolean[] =>
         bands.map((slots) => slots.some((slot) => merged.holdsArt[slot.seqIndex] === true));
+    if (overlaying !== undefined) {
+        // The geometry and the scheme are the base's; which of those bands DRAW stays this file's own,
+        // since an overlay need not cover every stance the thing it is drawn over has.
+        const bands = bandsOverlaying(overlaying, merged.sequences.length);
+        return { bands, drawn: drawn(bands), scheme: overlaying.scheme, confidence: overlaying.confidence };
+    }
     if (stride !== undefined) {
         const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride, coarse);
         // The stride came from the animation's own declared type, so the facings on them are declared too.
@@ -141,11 +165,12 @@ export function setStances(set: AnimationSet, armour: number, io: StanceIo): Set
     const members = setMembers(set, armour, io.exists).filter((member) => !isPaperdoll(member));
     return stancesOfMembers(
         members,
-        (member) =>
+        (member, overlaying) =>
             bandsOf(
                 member.parts.map((resref) => io.read(resref)),
                 set.bandStride,
                 set.coarseBands === true,
+                overlaying,
             ),
         set.section,
     );

@@ -45,6 +45,14 @@ export interface SchemeMember {
      * table discards the member's label, and the two runs are then indistinguishable (`bands.ts`).
      */
     layer?: string;
+    /**
+     * The base member this one is drawn over, by its resref - absent for a base member, and for a layer
+     * member the base does not have a counterpart for.
+     *
+     * An overlay's band geometry is the base's, and its own files need not carry enough structure to say
+     * so, which is why the relation is declared here rather than re-derived from the two labels.
+     */
+    overlays?: string;
 }
 
 /** A member before the archive has been asked which of its files exist. */

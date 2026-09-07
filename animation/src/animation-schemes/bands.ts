@@ -142,15 +142,36 @@ export interface SetStance {
  * different stances into the same token, scheme and block count, so without it those files take another
  * family's names.
  */
+/**
+ * An overlay file's bands: the member it overlays, cut to the blocks its own cycles reach.
+ *
+ * The geometry is the base's by construction - an overlay is drawn over it facing for facing - and the
+ * overlay's own files cannot always supply it: the burrowing family's is one still per cycle, which
+ * leaves the block reader nothing to cut on and came back three facings short of its base.
+ *
+ * A shorter overlay carries a PREFIX of the base's blocks, the same rule a shorter file of a family
+ * takes, so a block whose cycles it does not have is dropped rather than left addressing past its end.
+ * Measured across both installs: eight of the nine overlay members match their base's cycle count
+ * exactly, and Volo's stores five of its base's six blocks.
+ */
+export function bandsOverlaying(base: FileBands, cycleCount: number): readonly (readonly IeDirectionSlot[])[] {
+    return base.bands.filter((slots) => slots.every((slot) => slot.seqIndex < cycleCount));
+}
+
 export function stancesOfMembers(
     members: readonly SchemeMember[],
-    bandsFor: (member: SchemeMember) => FileBands | undefined,
+    bandsFor: (member: SchemeMember, overlaying?: FileBands) => FileBands | undefined,
     section?: string,
 ): SetStance[] {
     const stances: SetStance[] = [];
+    // A member that overlays another is banded from it, so the base's reading has to be in hand first.
+    // Members arrive base-first (`setMembers` appends the layers), and a layer whose base was dropped
+    // falls back to its own files rather than vanishing with it.
+    const banded = new Map<string, FileBands>();
     for (const member of members) {
-        const file = bandsFor(member);
+        const file = bandsFor(member, member.overlays === undefined ? undefined : banded.get(member.overlays));
         if (file === undefined) continue;
+        banded.set(member.resref, file);
         const groups = ieGroups(member.resref, file.bands.length, file.scheme, section);
         for (const [band, slots] of file.bands.entries()) {
             // The index is kept as it stands: a filtered band is still where it was in the file, and that
