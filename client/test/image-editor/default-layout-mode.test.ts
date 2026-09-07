@@ -14,8 +14,11 @@ import {
     type DirectionBlocks,
 } from "../../src/image-editor/webview/render/compass-layout";
 
+/** `count` blocks of nine DRAWN facings each - a block's slots are the ones that actually draw. */
 const blocks = (count: number, extra?: Partial<DirectionBlocks>): DirectionBlocks => ({
-    groups: Array.from({ length: count }, () => []),
+    groups: Array.from({ length: count }, (_block, block) =>
+        Array.from({ length: 9 }, (_slot, index) => ({ seqIndex: block * 9 + index, facing: "S" as const })),
+    ),
     scheme: "ie9",
     ...extra,
 });
@@ -62,16 +65,18 @@ describe("defaultLayoutMode", () => {
 });
 
 /**
- * A nine-cycle wheel whose every cycle carries frames - the shape `ie9` detects, and the dragons'.
+ * A nine-cycle view. `drawn` says which cycles hold real art; the rest carry the same NUMBER of frames
+ * at 1x1, which is how a packed family's files ship - every file holds the whole cycle table and draws
+ * only the one its name numbers, the other eight being single-pixel placeholders.
+ *
  * Built as a view so the test runs the reading the panel runs, rather than hand-stating its answer.
  */
-function nineFacingView(framesPerCycle: number): AnimationView {
-    const frames = Array.from({ length: 9 * framesPerCycle }, () => ({
-        width: 8,
-        height: 8,
-        offsetX: 0,
-        offsetY: 0,
-    }));
+function nineFacingView(framesPerCycle: number, drawn?: readonly number[]): AnimationView {
+    const draws = (cycle: number): boolean => drawn === undefined || drawn.includes(cycle);
+    const frames = Array.from({ length: 9 * framesPerCycle }, (_f, index) => {
+        const size = draws(Math.floor(index / framesPerCycle)) ? 8 : 1;
+        return { width: size, height: size, offsetX: 0, offsetY: 0 };
+    });
     return {
         colorModel: "indexed",
         palette: Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 })),
@@ -96,5 +101,27 @@ describe("directionBlocks", () => {
         const read = directionBlocks(nineFacingView(4), undefined);
         expect(read?.detected).toBe(true);
         expect(defaultLayoutMode({ mode: "grid", tiles: [] }, read)).toBe("rose");
+    });
+
+    /**
+     * One tile file of a packed family (MDR11100 and its 80 siblings): nine cycles, of which the one its
+     * name numbers draws and eight are 1x1 placeholders. It is one facing of one tile, not a wheel, and
+     * reading it as a rose puts eight empty compass points on the stage.
+     *
+     * The reference browser never hits this because it does not read the file structurally at all - the
+     * animation's declared type tells it which cycle of which file is which facing, so a placeholder
+     * cycle is simply never addressed. Reading structurally, the equivalent is that a cycle holding no
+     * art is not a drawn facing.
+     */
+    it("does not read a cycle table of placeholders as a wheel", () => {
+        const read = directionBlocks(nineFacingView(12, [0]), undefined);
+        expect(read?.groups[0]).toHaveLength(1);
+        expect(defaultLayoutMode({ mode: "grid", tiles: [] }, read)).toBe("grid");
+    });
+
+    it("keeps the drawn facings of a partly-packed file", () => {
+        // Whichever cycle a file's name numbers is the one that draws - here the last.
+        const read = directionBlocks(nineFacingView(12, [8]), undefined);
+        expect(read?.groups[0]).toHaveLength(1);
     });
 });

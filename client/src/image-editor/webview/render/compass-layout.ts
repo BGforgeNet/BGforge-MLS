@@ -204,7 +204,22 @@ export function directionBlocks(
     view: AnimationView,
     declared?: { stride: number; scheme?: IeScheme; coarse?: true },
 ): DirectionBlocks | undefined {
-    if (declared === undefined) return interpretIeDirections(view.sequences, view.frames.length);
+    if (declared === undefined) {
+        const read = interpretIeDirections(view.sequences, view.frames.length);
+        if (read === undefined) return undefined;
+        // A cycle holding no art is not a drawn facing. Every file of a packed family carries the whole
+        // cycle table and draws only the one its name numbers, so a structural reading of one file would
+        // otherwise report nine facings where there is one. The reference browser never meets this: its
+        // animation type names the cycle to read per facing, so a placeholder is never addressed.
+        //
+        // Only the structural path filters. A DECLARED band is the install stating that these cycles are
+        // facings, and a declared facing whose art is missing is a gap worth seeing, not one to hide.
+        const areas = view.frames.map((frame) => frame.width * frame.height);
+        const groups = read.groups.map((slots) =>
+            slots.filter((slot) => cycleDrawsArt(view.sequences[slot.seqIndex]?.frameRefs ?? [], areas)),
+        );
+        return { ...read, groups };
+    }
     const groups = ieBandsOfStride(view.sequences, view.frames.length, declared.stride, declared.coarse);
     if (groups === undefined) return undefined;
     return { groups, declared: true, ...(declared.scheme === undefined ? {} : { scheme: declared.scheme }) };
@@ -235,6 +250,9 @@ export function defaultLayoutMode(
 ): LayoutMode {
     if (facingLayout?.mode === "compass") return "rose";
     if (ieDirections === undefined) return "grid";
+    // A wheel needs at least two facings to be one. Blocks carry only DRAWN slots by the time they get
+    // here, so a file that turned out to hold a single picture reads as the one cycle it is.
+    if (!ieDirections.groups.some((slots) => slots.length > 1)) return "grid";
     const statesFacings = ieDirections.declared === true || ieDirections.detected === true;
     return statesFacings || ieDirections.groups.length > 1 ? "rose" : "grid";
 }
